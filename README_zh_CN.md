@@ -1,4 +1,4 @@
-# AE2 闪电科技 Reborn
+# AE2 闪电科技：重生
 
 [English](README.md)
 
@@ -8,7 +8,7 @@
 
 ## 关于
 
-AE2 闪电科技 Reborn 把闪电变成一种可用的资源。收集自然雷电，精炼成 **高压闪电** 与 **极高压闪电**，再交给机器培育 **过载水晶** —— 一切过载 ME 网络的基础。它带来了远超原版 AE2 的传输能力、无线样板路由，以及全新的加工流水线。
+AE2 闪电科技：重生 把闪电变成一种可用的资源。收集自然雷电，精炼成 **高压闪电** 与 **极高压闪电**，再交给机器培育 **过载水晶** —— 一切过载 ME 网络的基础。它带来了远超原版 AE2 的传输能力、无线样板路由，以及全新的加工流水线。
 
 ## 特性
 
@@ -66,7 +66,7 @@ AE2 闪电科技 Reborn 把闪电变成一种可用的资源。收集自然雷�
 [![源码许可证](https://img.shields.io/badge/Source-LGPL--3.0-blue)](LICENSE)
 [![材质许可证](https://img.shields.io/badge/Assets-CC%20BY--NC--SA%203.0-lightgrey)](LICENSE_ASSETS.md)
 
-AE2 闪电科技 Reborn对源码和材质使用不同的许可证：
+AE2 闪电科技：重生对源码和材质使用不同的许可证：
 
 - 源码以 [GNU LGPL 3.0](https://www.gnu.org/licenses/lgpl-3.0.html) 协议开源。
 - 材质与其他视觉资产以 [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) 协议授权。

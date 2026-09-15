@@ -20,7 +20,7 @@ item_ids:
 
 <ItemImage id="ae2lt:firmament_alloy_ingot" scale="2" float="left" />
 
-苍穹材料是 AE2 闪电科技 Reborn面向**末地**的高阶材料体系。一切始于只能在末地获取的苍穹粉，再经苍穹转换核心与过载处理工厂逐级精炼，最终成为苍穹织雷护甲与电磁炮的核心组件。
+苍穹材料是 AE2 闪电科技：重生面向**末地**的高阶材料体系。一切始于只能在末地获取的苍穹粉，再经苍穹转换核心与过载处理工厂逐级精炼，最终成为苍穹织雷护甲与电磁炮的核心组件。
 
 <ItemGrid>
   <ItemIcon id="ae2lt:firmament_dust" />

@@ -1,12 +1,12 @@
 ---
 navigation:
-  title: AE2 闪电科技 Reborn
+  title: AE2 闪电科技：重生
   position: 66
 ---
 
-# AE2 闪电科技 Reborn
+# AE2 闪电科技：重生
 
-AE2 闪电科技 Reborn（AE2 Lightning Tech Reborn）~~雷霆科技~~是 Applied Energistics 2 的扩展模组。它为 ME 网络引入了一种全新的存储类型——**闪电**，并围绕闪电提供了完整的材料链、加工机器，以及突破原版频道上限的「过载」网络设备。
+AE2 闪电科技：重生（AE2 Lightning Tech Reborn）~~雷霆科技~~是 Applied Energistics 2 的扩展模组。它为 ME 网络引入了一种全新的存储类型——**闪电**，并围绕闪电提供了完整的材料链、加工机器，以及突破原版频道上限的「过载」网络设备。
 
 主要特性：
 
