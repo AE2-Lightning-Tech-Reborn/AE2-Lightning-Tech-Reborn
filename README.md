@@ -1,4 +1,4 @@
-# AE2 Lightning Tech
+# AE2 Lightning Tech Reborn
 
 [![Modrinth](https://img.shields.io/modrinth/dt/ArHeh5Fz?style=flat&logo=modrinth&label=Modrinth)](https://modrinth.com/mod/ae2-lightning-tech) [![CurseForge](https://img.shields.io/curseforge/dt/1527395?style=flat&logo=curseforge&label=CurseForge)](https://www.curseforge.com/minecraft/mc-mods/ae2-lightning-tech)
 
@@ -10,7 +10,7 @@ An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energis
 
 ## About
 
-AE2 Lightning Tech turns lightning into a usable resource. Capture natural strikes, refine them into High Voltage and Extreme High Voltage tiers, and feed them into machines to grow Overload Crystals — the foundation of an overloaded ME network with vastly higher throughput, wireless pattern routing, and new processing pipelines.
+AE2 Lightning Tech Reborn turns lightning into a usable resource. Capture natural strikes, refine them into High Voltage and Extreme High Voltage tiers, and feed them into machines to grow Overload Crystals — the foundation of an overloaded ME network with vastly higher throughput, wireless pattern routing, and new processing pipelines.
 
 ## Features
 
@@ -68,7 +68,7 @@ Found a bug or have a suggestion? Please open an issue on the project tracker wi
 [![Source License](https://img.shields.io/badge/Source-LGPL--3.0-blue)](LICENSE)
 [![Assets License](https://img.shields.io/badge/Assets-CC%20BY--NC--SA%203.0-lightgrey)](LICENSE_ASSETS.md)
 
-AE2 Lightning Tech uses separate licenses for source code and textures:
+AE2 Lightning Tech Reborn uses separate licenses for source code and textures:
 
 - Source code is licensed under [GNU LGPL 3.0](https://www.gnu.org/licenses/lgpl-3.0.html).
 - Textures and other visual assets are licensed under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/).

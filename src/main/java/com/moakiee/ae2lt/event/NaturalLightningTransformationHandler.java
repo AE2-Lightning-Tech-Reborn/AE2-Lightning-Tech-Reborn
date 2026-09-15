@@ -60,7 +60,7 @@ public final class NaturalLightningTransformationHandler {
         var data = lightningBolt.getPersistentData();
         if (data.getBoolean(TRANSFORMATION_CHECKED_TAG)) {
             // The transformation_checked tag is set but our own marker isn't — another
-            // mod (e.g. Thunderbolt Core) intercepted the lightning at higher priority
+            // mod (e.g. Thunderbolt Core Reborn) intercepted the lightning at higher priority
             // and ran its own pipeline. The collector's captureLightning() will not be
             // called for this strike, which means LightningCollectedEvent will not
             // fire either. Warn once so server operators can correlate missing
@@ -68,7 +68,7 @@ public final class NaturalLightningTransformationHandler {
             if (!data.getBoolean(MAIN_HANDLED_TAG) && !warnedTakeover) {
                 warnedTakeover = true;
                 LOG.warn(
-                        "AE2 Lightning Tech: a LightningBolt arrived with "
+                        "AE2 Lightning Tech Reborn: a LightningBolt arrived with "
                                 + "{} already set but {} unset. Another mod is "
                                 + "intercepting natural lightning before this mod's "
                                 + "handler runs; LightningCollectorBlockEntity.captureLightning "

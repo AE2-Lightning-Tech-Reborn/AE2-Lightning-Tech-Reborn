@@ -12,7 +12,7 @@ item_ids:
 
 <ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
 
-The **Lightning Collapse Matrix** is one of the key end-tier components in AE2 Lightning Tech. It is not a consumable — instead, it acts as a **substitution / parallelism catalyst**. Keeping a matrix in a machine's matrix slot unlocks the machine's higher-tier operating mode.
+The **Lightning Collapse Matrix** is one of the key end-tier components in AE2 Lightning Tech Reborn. It is not a consumable — instead, it acts as a **substitution / parallelism catalyst**. Keeping a matrix in a machine's matrix slot unlocks the machine's higher-tier operating mode.
 
 `A high-strength alloy compresses and confines immense lightning into a stable form; its waveform is the inverse of volatile Overload TNT.`
 

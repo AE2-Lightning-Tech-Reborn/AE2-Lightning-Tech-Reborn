@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.api.ids;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Frozen registry IDs for the public-facing recipe types of AE2 Lightning Tech.
+ * Frozen registry IDs for the public-facing recipe types of AE2 Lightning Tech Reborn.
  *
  * <p>These constants are part of the API contract. The mod will not change the
  * registered ID of any of these recipe types without a major version bump.

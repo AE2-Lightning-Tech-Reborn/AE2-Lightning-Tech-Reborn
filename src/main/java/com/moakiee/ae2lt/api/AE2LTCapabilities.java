@@ -11,7 +11,7 @@ import com.moakiee.ae2lt.api.ids.AE2LTBlockEntityIds;
 import com.moakiee.ae2lt.api.lightning.ILightningEnergyHandler;
 
 /**
- * Public AE2 Lightning Tech capabilities, modeled on
+ * Public AE2 Lightning Tech Reborn capabilities, modeled on
  * {@code appeng.api.AECapabilities}.
  *
  * <p>The {@link ResourceLocation}s used to register these capabilities are part of

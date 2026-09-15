@@ -21,7 +21,7 @@ item_ids:
 
 <ItemImage id="ae2lt:overload_crystal" scale="2" float="left" />
 
-The **Overload Crystal** is the most fundamental and most important material in AE2 Lightning Tech. Nearly every mid- and late-game recipe needs it or one of its derivatives.
+The **Overload Crystal** is the most fundamental and most important material in AE2 Lightning Tech Reborn. Nearly every mid- and late-game recipe needs it or one of its derivatives.
 
 ## How to Obtain
 
