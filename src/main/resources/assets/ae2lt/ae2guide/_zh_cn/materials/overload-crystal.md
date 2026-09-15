@@ -21,7 +21,7 @@ item_ids:
 
 <ItemImage id="ae2lt:overload_crystal" scale="2" float="left" />
 
-**过载水晶**是 AE2 闪电科技 Reborn中最基础也最重要的材料，几乎所有中后期配方都需要它或其衍生产物。
+**过载水晶**是 AE2 闪电科技：重生中最基础也最重要的材料，几乎所有中后期配方都需要它或其衍生产物。
 
 ## 获取方式
 
