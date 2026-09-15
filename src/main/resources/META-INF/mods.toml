@@ -1,13 +1,13 @@
 modLoader = "javafml"
 loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
-issueTrackerURL = "https://github.com/MOAKIEE/AE2-Lightning-Tech/issues"
+issueTrackerURL = "https://github.com/AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn/issues"
 
 [[mods]]
 modId = "${mod_id}"
 version = "${mod_version}"
 displayName = "${mod_name}"
-displayURL = "https://github.com/MOAKIEE/AE2-Lightning-Tech"
+displayURL = "https://github.com/AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn"
 logoFile = "ae2lt.png"
 authors = "${mod_authors}"
 description = '''${mod_description}'''

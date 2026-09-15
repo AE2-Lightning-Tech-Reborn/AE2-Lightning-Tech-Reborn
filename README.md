@@ -1,10 +1,10 @@
-# AE2 Lightning Tech — Forge 1.20.1 Port
+# AE2 Lightning Tech Reborn — Forge 1.20.1 Port
 
 [中文文档](README_zh_CN.md)
 
 An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) addon that introduces a lightning energy system, advanced machines, and overloaded network components.
 
-> Requires AE2 and Thunderbolt Core · Built for Minecraft 1.20.1 / Forge 47.1.3+
+> Requires AE2 and Thunderbolt Core Reborn · Built for Minecraft 1.20.1 / Forge 47.1.3+
 
 This branch is the maintained Forge 1.20.1 port. The primary project targets newer Minecraft and NeoForge versions; behavior changes are ported back where the 1.20.1 APIs support them.
 
@@ -25,7 +25,7 @@ This branch is the maintained Forge 1.20.1 port. The primary project targets new
 | Minecraft 1.20.1 | Required |
 | Forge 47.1.3+ | Required |
 | Applied Energistics 2 15.4.10+ | Required |
-| Thunderbolt Core 2.0.0-beta.3 to `<2.1.0` | Required |
+| Thunderbolt Core Reborn 2.0.0-beta.3 to `<2.1.0` | Required |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |

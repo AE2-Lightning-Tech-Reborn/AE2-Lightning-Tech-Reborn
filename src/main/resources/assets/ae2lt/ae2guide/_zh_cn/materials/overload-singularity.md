@@ -15,7 +15,7 @@ item_ids:
   <ItemIcon id="ae2lt:ultimate_overload_core" />
 </ItemGrid>
 
-这是 AE2 闪电科技中最高级的合成材料，用于制造终极设备。
+这是 AE2 闪电科技 Reborn中最高级的合成材料，用于制造终极设备。
 
 ## 过载奇点
 

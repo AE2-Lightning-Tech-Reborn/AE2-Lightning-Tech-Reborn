@@ -20,7 +20,7 @@ item_ids:
 
 <ItemImage id="ae2lt:firmament_alloy_ingot" scale="2" float="left" />
 
-Firmament materials are AE2 Lightning Tech's End-tier material line. Everything starts from Firmament Dust, which can only be obtained in the End, and is refined step by step — through the Firmament Conversion Core and the Overload Processing Factory — into the core components of the Celestweave armor set and the Electromagnetic Railgun.
+Firmament materials are AE2 Lightning Tech Reborn's End-tier material line. Everything starts from Firmament Dust, which can only be obtained in the End, and is refined step by step — through the Firmament Conversion Core and the Overload Processing Factory — into the core components of the Celestweave armor set and the Electromagnetic Railgun.
 
 <ItemGrid>
   <ItemIcon id="ae2lt:firmament_dust" />

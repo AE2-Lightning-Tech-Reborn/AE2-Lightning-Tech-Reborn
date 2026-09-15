@@ -1,5 +1,5 @@
 /**
- * Public, first-party API for AE2 Lightning Tech (mod id {@code ae2lt}).
+ * Public, first-party API for AE2 Lightning Tech Reborn (mod id {@code ae2lt}).
  *
  * <p>This package, and its sub-packages
  * {@link com.moakiee.ae2lt.api.lightning lightning},

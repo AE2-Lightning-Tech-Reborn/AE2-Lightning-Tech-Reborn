@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.api.ids;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Frozen registry IDs for the public-facing block entities of AE2 Lightning Tech.
+ * Frozen registry IDs for the public-facing block entities of AE2 Lightning Tech Reborn.
  *
  * <p>These constants are part of the API contract. The mod will not change the
  * registered ID of any of these block entities without a major version bump.
@@ -15,7 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 public final class AE2LTBlockEntityIds {
 
     /**
-     * Mod id of AE2 Lightning Tech. Frozen as part of the API contract.
+     * Mod id of AE2 Lightning Tech Reborn. Frozen as part of the API contract.
      */
     public static final String MOD_ID = "ae2lt";
 

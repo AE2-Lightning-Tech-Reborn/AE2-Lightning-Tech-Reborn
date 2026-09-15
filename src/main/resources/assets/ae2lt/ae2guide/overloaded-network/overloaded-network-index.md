@@ -8,7 +8,7 @@ navigation:
 
 # Overloaded Network
 
-AE2 Lightning Tech provides a family of "Overloaded" network devices that let large bases break past vanilla AE2's channel and capacity limits.
+AE2 Lightning Tech Reborn provides a family of "Overloaded" network devices that let large bases break past vanilla AE2's channel and capacity limits.
 
 Compared to vanilla:
 

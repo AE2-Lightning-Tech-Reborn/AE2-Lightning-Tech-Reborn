@@ -8,7 +8,7 @@ navigation:
 
 # Materials & Items
 
-AE2 Lightning Tech introduces a large set of new materials. The pages below cover each major item and material group in detail.
+AE2 Lightning Tech Reborn introduces a large set of new materials. The pages below cover each major item and material group in detail.
 
 <SubPages />
 

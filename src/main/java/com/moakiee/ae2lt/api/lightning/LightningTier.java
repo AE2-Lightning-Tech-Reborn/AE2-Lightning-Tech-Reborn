@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.StringRepresentable;
 
 /**
- * Public, addon-facing tier of lightning energy stored on an AE2 Lightning Tech grid.
+ * Public, addon-facing tier of lightning energy stored on an AE2 Lightning Tech Reborn grid.
  *
  * <p>The two constants and their {@linkplain #getSerializedName() serialized names}
  * (<code>"high_voltage"</code> / <code>"extreme_high_voltage"</code>) are part of the

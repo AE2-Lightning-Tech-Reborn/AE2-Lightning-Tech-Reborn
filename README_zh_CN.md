@@ -1,10 +1,10 @@
-# AE2 闪电科技 — Forge 1.20.1 移植版
+# AE2 闪电科技 Reborn — Forge 1.20.1 移植版
 
 [English](README.md)
 
 这是 [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) 的附属模组，添加闪电能源、进阶机器和过载 ME 网络组件。
 
-> 必需依赖 AE2 与 Thunderbolt Core · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
+> 必需依赖 AE2 与 Thunderbolt Core Reborn · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
 
 本分支是持续维护的 Forge 1.20.1 移植。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
 
@@ -25,7 +25,7 @@
 | Minecraft 1.20.1 | 必需 |
 | Forge 47.1.3+ | 必需 |
 | Applied Energistics 2 15.4.10+ | 必需 |
-| Thunderbolt Core 2.0.0-beta.3 至 `<2.1.0` | 必需 |
+| Thunderbolt Core Reborn 2.0.0-beta.3 至 `<2.1.0` | 必需 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |

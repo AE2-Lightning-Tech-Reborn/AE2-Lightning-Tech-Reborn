@@ -32,7 +32,7 @@ public final class AE2LTClientConfig {
         builder.push("compatibility");
         DISABLE_CORE_SHADER_RENDERING = builder
                 .comment(
-                        "Compatibility switch: disable custom core shaders provided by AE2 Lightning Tech.",
+                        "Compatibility switch: disable custom core shaders provided by AE2 Lightning Tech Reborn.",
                         "Enable only when a graphics driver or another rendering mod is incompatible with them.")
                 .define("disableCoreShaderRendering", false);
         builder.pop();

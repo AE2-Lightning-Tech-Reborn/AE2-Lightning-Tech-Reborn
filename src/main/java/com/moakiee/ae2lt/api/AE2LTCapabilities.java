@@ -7,7 +7,7 @@ import net.minecraftforge.common.capabilities.CapabilityToken;
 import com.moakiee.ae2lt.api.lightning.ILightningEnergyHandler;
 
 /**
- * Public AE2 Lightning Tech capabilities, modeled on Forge 1.20.1's
+ * Public AE2 Lightning Tech Reborn capabilities, modeled on Forge 1.20.1's
  * capability system.
  *
  * <p>Forge 1.20.1 keys capabilities by interface token rather than by

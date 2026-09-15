@@ -61,7 +61,7 @@ public final class NaturalLightningTransformationHandler {
             if (!data.getBoolean(MAIN_HANDLED_TAG) && !warnedTakeover) {
                 warnedTakeover = true;
                 LOG.warn(
-                        "AE2 Lightning Tech: a LightningBolt arrived with "
+                        "AE2 Lightning Tech Reborn: a LightningBolt arrived with "
                                 + "{} already set but {} unset. Another mod is "
                                 + "intercepting natural lightning before this mod's "
                                 + "handler runs; LightningCollectorBlockEntity.captureLightning "

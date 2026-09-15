@@ -15,7 +15,7 @@ item_ids:
   <ItemIcon id="ae2lt:ultimate_overload_core" />
 </ItemGrid>
 
-These are the highest-tier crafting materials in AE2 Lightning Tech, needed for end-game devices.
+These are the highest-tier crafting materials in AE2 Lightning Tech Reborn, needed for end-game devices.
 
 ## Overload Singularity
 
