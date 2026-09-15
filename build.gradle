@@ -1,0 +1,859 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'idea'
+    id 'net.neoforged.moddev' version '2.0.140'
+}
+
+def releaseTag = System.getenv('TAG')?.trim()
+if (releaseTag) {
+    if (!releaseTag.startsWith('v')) {
+        throw new GradleException("Release tags must start with v: ${releaseTag}")
+    }
+    version = releaseTag.substring(1)
+} else {
+    version = mod_version
+}
+def resolvedProjectVersion = project.version.toString()
+group = mod_group_id
+
+def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+def githubPackagesToken = System.getenv('GITHUB_PACKAGES_TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.key')
+
+repositories {
+    mavenLocal()
+    if (githubPackagesUser && githubPackagesToken) {
+        maven {
+            name = 'ThunderboltGitHubPackages'
+            url = uri('https://maven.pkg.github.com/ae2lt/Thunderbolt-Core')
+            credentials {
+                username = githubPackagesUser
+                password = githubPackagesToken
+            }
+            content {
+                includeGroup 'com.moakiee.thunderbolt'
+            }
+        }
+    }
+    mavenCentral()
+    maven {
+        name = "Sleeping Town"
+        url = "https://repo.sleeping.town/"
+        content {
+            includeGroup "dev.emi"
+        }
+    }
+    maven {
+        url = "https://modmaven.dev/"
+        content {
+            includeGroup "de.mari_023"
+            includeGroup "dev.technici4n"
+            includeGroup "mekanism"
+        }
+    }
+    maven {
+        name = "Curios"
+        url = "https://maven.theillusivec4.top/"
+    }
+    maven {
+        name = "BlameJared"
+        url = "https://maven.blamejared.com"
+    }
+    maven {
+        name = "InventoryProfilesNext"
+        url = "https://maven.ipn-mod.org/releases"
+        content {
+            includeGroup "org.anti_ad.mc"
+        }
+    }
+    maven {
+        url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+    }
+    maven {
+        url = "https://maven.createmod.net"
+    }
+    maven {
+        url = "https://www.cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+}
+
+base {
+    archivesName = mod_id
+}
+
+tasks.register('printProjectVersion') {
+    group = 'help'
+    description = 'Prints the version used for this build.'
+    doLast {
+        println resolvedProjectVersion
+    }
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// JDB-only helpers are available to development runs, but are intentionally
+// excluded from the published mod jar.
+sourceSets {
+    jdb {
+        java.srcDir 'src/jdb/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + sourceSets.main.runtimeClasspath
+    }
+}
+
+configurations {
+    jdbImplementation.extendsFrom implementation
+    jdbCompileOnly.extendsFrom compileOnly
+    jdbRuntimeOnly.extendsFrom runtimeOnly
+}
+
+neoForge {
+    // Specify the version of NeoForge to use.
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    // This line is optional. Access Transformers are automatically detected
+    // accessTransformers.add('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
+        client {
+            client()
+            jvmArguments.add '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
+            if (System.getProperty('os.name').toLowerCase().contains('mac')) {
+                jvmArguments.addAll '-Xdock:name=Minecraft AE2LT Dev', '-Dapple.awt.application.name=Minecraft AE2LT Dev'
+            }
+
+            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+
+            // Profiling-only: uncomment to force HotSpot to NOT inline the hot-path
+            // methods that tickNormal calls directly, so a spark sampler can break
+            // out their individual self-time. Off by default — leaving these args
+            // on adds 1-2 µs of method-dispatch overhead per tickNormal call (no
+            // free lunch). See dev-profiling.compilecommands for the per-method
+            // list and a longer explanation.
+            // jvmArguments.addAll(
+            //     '-XX:+UnlockDiagnosticVMOptions',
+            //     "-XX:CompileCommandFile=${project.file('dev-profiling.compilecommands').absolutePath}".toString()
+            // )
+        }
+
+        // Second dev client for local multiplayer testing — runs as
+        // "Dev2" with an isolated game directory so options.txt /
+        // saves / resource packs don't collide with the primary client.
+        // Launch via `./gradlew runClient2`; the primary client opens
+        // the world to LAN and this one joins via localhost.
+        client2 {
+            client()
+            programArguments.addAll '--username', 'Dev2'
+            gameDirectory = project.file('run2')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+
+            // Same profiling overrides as `client` — see comment there.
+            // jvmArguments.addAll(
+            //     '-XX:+UnlockDiagnosticVMOptions',
+            //     "-XX:CompileCommandFile=${project.file('dev-profiling.compilecommands').absolutePath}".toString()
+            // )
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // This run config launches GameTestServer and runs all registered gametests, then exits.
+        // By default, the server will crash when no gametests are provided.
+        // The gametest system is also enabled by default for other run configs under the /test command.
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // Fully generated wireless-I/O fixture: no saved world or manual block setup.
+        wirelessIoGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-wireless-io-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'ae2lt.wirelessIoBenchmark', 'true'
+            systemProperty 'ae2lt.wirelessIoBenchmark.warmupTicks',
+                    providers.gradleProperty('ae2ltBenchmarkWarmupTicks').getOrElse('40')
+            systemProperty 'ae2lt.wirelessIoBenchmark.sampleTicks',
+                    providers.gradleProperty('ae2ltBenchmarkSampleTicks').getOrElse('300')
+            systemProperty 'ae2lt.wirelessIoBenchmark.scenario',
+                    providers.gradleProperty('ae2ltBenchmarkScenario')
+                            .getOrElse('gametest-import-1024x27-continuous')
+            systemProperty 'ae2lt.wirelessIoBenchmark.commit',
+                    providers.gradleProperty('ae2ltBenchmarkCommit').getOrElse('working-tree')
+            systemProperty 'ae2lt.wirelessIoBenchmark.gitHead',
+                    providers.gradleProperty('ae2ltBenchmarkGitHead').getOrElse('unknown')
+            systemProperty 'ae2lt.wirelessIoBenchmark.worktreeDirty',
+                    providers.gradleProperty('ae2ltBenchmarkWorktreeDirty').getOrElse('false')
+            systemProperty 'ae2lt.wirelessIoBenchmark.diagnostics',
+                    providers.gradleProperty('ae2ltBenchmarkDiagnostics').getOrElse('false')
+            systemProperty 'ae2lt.wirelessIoGameTest.control',
+                    providers.gradleProperty('ae2ltBenchmarkControl').getOrElse('false')
+            systemProperty 'ae2lt.wirelessIoBenchmark.includeEligibility',
+                    providers.gradleProperty('ae2ltBenchmarkIncludeEligibility').getOrElse('false')
+        }
+
+        data {
+            data()
+
+            // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
+            // gameDirectory = project.file('run-data')
+
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        // applies to all the run configs above
+        configureEach {
+            // Recommended logging data for a userdev environment
+            // The markers can be added/remove as needed separated by commas.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        // define mod <-> source bindings
+        // these are used to tell the game which sources are for which mod
+        // mostly optional in a single mod project
+        // but multi mod projects should define one per mod
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            sourceSet(sourceSets.jdb)
+        }
+    }
+
+}
+
+// Include resources generated by data generators.
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+
+// Optional real-mod jars for JDB integration probes. Kept opt-in so normal builds and
+// published artifacts never depend on machine-local modpack paths.
+def jdbProbeModPaths = providers.gradleProperty('ae2ltJdbProbeMods')
+        .getOrElse('')
+        .split(java.io.File.pathSeparator)
+        .findAll { !it.isBlank() }
+def enableVeilDevRuntime = providers.gradleProperty('ae2ltEnableVeilDevRuntime')
+        .getOrElse('false')
+        .toBoolean()
+
+dependencies {
+    // Thunderbolt Core — the extracted AE2 infrastructure layer (fast crafting planner,
+    // channel/batch/cell/matrix algorithms). Provided at runtime as a separate mod jar in the modpack,
+    // so compileOnly here. Published to mavenLocal via `./gradlew publishToMavenLocal` in Thunderbolt Core.
+    compileOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
+    runtimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
+    testRuntimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
+    jdbProbeModPaths.each { runtimeOnly files(it) }
+
+    implementation "curse.maven:applied-energistics-2-223794:7027323"
+    compileOnly("foundry.veil:veil-neoforge-${minecraft_version}:${veil_version}") {
+        exclude group: "maven.modrinth"
+        exclude group: "me.fallenbreath"
+    }
+    // Veil is optional in published builds. This opt-in runtime switch exists only so both
+    // rendering backends can be exercised from the development client.
+    if (enableVeilDevRuntime) {
+        runtimeOnly("foundry.veil:veil-neoforge-${minecraft_version}:${veil_version}") {
+            exclude group: "maven.modrinth"
+            exclude group: "me.fallenbreath"
+        }
+    }
+    // The API is embedded so the wireless terminal item remains loadable when the optional
+    // AE2WTLib implementation is not installed. This is the integration pattern used by
+    // AE2WTLib's other external terminal mods.
+    jarJar implementation("de.mari_023:ae2wtlib_api:${ae2wtlib_version}") {
+        transitive = false
+    }
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+    runtimeOnly("de.mari_023:ae2wtlib:${ae2wtlib_version}") {
+        transitive = false
+    }
+    compileOnly "org.appliedenergistics:guideme:${guideme_version}"
+    runtimeOnly "org.appliedenergistics:guideme:${guideme_version}"
+    compileOnly("org.anti_ad.mc:InventoryProfilesNext-neoforge-1.21.1:${ipn_version}") {
+        transitive = false
+    }
+    compileOnly "curse.maven:jei-238222:7391682"
+    runtimeOnly "curse.maven:jei-238222:7391682"
+    // Optional Polymorphic Energistics integration. Only the Polymorph client API is needed at
+    // compile time; the compatibility bootstrap never loads API-backed classes unless both mods
+    // are installed by the modpack.
+    compileOnly "curse.maven:polymorph-388800:${polymorph_curse_file_id}"
+    compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
+    runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    compileOnly "curse.maven:jade-324717:6291517"
+    runtimeOnly "curse.maven:jade-324717:6291517"
+    runtimeOnly "curse.maven:mekanism-268560:7904058"
+    runtimeOnly "curse.maven:mekanism-generators-268566:7904061"
+    compileOnly "curse.maven:extendedae-892005:7727948"
+    runtimeOnly "curse.maven:extendedae-892005:7727948"
+    compileOnly "curse.maven:glodium-957920:5821676"
+    runtimeOnly "curse.maven:glodium-957920:5821676"
+    compileOnly "curse.maven:advancedae-1084104:7668664"
+    runtimeOnly "curse.maven:advancedae-1084104:7668664"
+    runtimeOnly "curse.maven:geckolib-388172:7707149"
+    compileOnly "curse.maven:applied-flux-965012:7429565"
+    runtimeOnly "curse.maven:applied-flux-965012:7429565"
+    compileOnly "dev.technici4n:GrandPower:3.0.0"
+    compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
+    compileOnly "curse.maven:flux-networks-248020:6089446"
+    compileOnly "curse.maven:ae2-jei-integration-1074338:7727898"
+    runtimeOnly "curse.maven:ae2-jei-integration-1074338:7727898"
+    runtimeOnly "curse.maven:applied-mekanistics-574300:7096962"
+    runtimeOnly "curse.maven:mekanism-extras-1026040:8677677"
+    runtimeOnly "curse.maven:just-enough-characters-250702:7320033"
+    runtimeOnly "curse.maven:building-gadgets-298187:6850515"
+    runtimeOnly "curse.maven:ftb-ultimine-forge-386134:7570482"
+    runtimeOnly "curse.maven:ftb-library-forge-404465:7746959"
+    runtimeOnly "curse.maven:architectury-api-419699:5786327"
+    runtimeOnly "curse.maven:spark-361579:6225208"
+    runtimeOnly "curse.maven:construction-sticks-1156098:7687867"
+    runtimeOnly "curse.maven:toms-storage-378609:7659872"
+    runtimeOnly "curse.maven:kubejs-238086:7278501"
+    runtimeOnly "curse.maven:rhino-416294:7104526"
+
+    // Runtime boss/execution compatibility probes.
+    runtimeOnly "curse.maven:mmmmmmmmmmmm-225738:7943676"
+    runtimeOnly "curse.maven:selene-499980:7928091"
+    runtimeOnly "curse.maven:codechicken-lib-1-8-242818:7281427"
+    runtimeOnly "curse.maven:brandons-core-231382:7130990"
+    runtimeOnly "curse.maven:draconic-evolution-223565:7584459"
+
+    runtimeOnly files("libs/observable-5.4.4.jar")
+    runtimeOnly "curse.maven:kotlin-for-forge-351264:7471280"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    // Example mod dependency with JEI
+    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
+    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
+    // compileOnly "mezz.jei:jei-${mc_version}-forge-api:${jei_version}"
+    // runtimeOnly "mezz.jei:jei-${mc_version}-forge:${jei_version}"
+
+    // Example mod dependency using a mod jar from ./libs with a flat dir repository
+    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
+    // The group id is ignored when searching -- in this case, it is "blank"
+    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
+
+    // Example mod dependency using a file as dependency
+    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
+
+    // Example project dependency using a sister or child project:
+    // implementation project(":myproject")
+
+    // For more info:
+    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
+    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform {
+        excludeTags 'adaptive-batch-stress'
+    }
+}
+
+tasks.register('adaptiveBatchStress', Test) {
+    description = 'Runs the executable 512-target adaptive batch acceptance models.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'adaptive-batch-stress'
+    }
+    shouldRunAfter tasks.named('test')
+}
+
+def wirelessIoStressReportArg = providers.gradleProperty('ae2ltBenchmarkStressReport').getOrElse('')
+def wirelessIoControlReportArg = providers.gradleProperty('ae2ltBenchmarkControlReport').getOrElse('')
+def wirelessIoStressReportPath = wirelessIoStressReportArg
+        ? file(wirelessIoStressReportArg).absolutePath : ''
+def wirelessIoControlReportPath = wirelessIoControlReportArg
+        ? file(wirelessIoControlReportArg).absolutePath : ''
+def wirelessIoMaxP99Ms = providers.gradleProperty('ae2ltBenchmarkMaxIoP99Ms')
+        .getOrElse('12.0')
+
+tasks.register('checkWirelessIoBenchmark') {
+    description = 'Checks live server MSPT/TPS reports against the wireless I/O performance budget.'
+    group = 'verification'
+    inputs.property 'stressReportPath', wirelessIoStressReportPath
+    inputs.property 'controlReportPath', wirelessIoControlReportPath
+    inputs.property 'maxIoP99Ms', wirelessIoMaxP99Ms
+    doLast {
+        def stressPath = inputs.properties.stressReportPath as String
+        def controlPath = inputs.properties.controlReportPath as String
+        if (!stressPath || !controlPath) {
+            throw new GradleException(
+                    'Pass -Pae2ltBenchmarkStressReport=<json> and '
+                            + '-Pae2ltBenchmarkControlReport=<json>.')
+        }
+
+        def parser = new groovy.json.JsonSlurper()
+        def stress = parser.parse(new File(stressPath))
+        def control = parser.parse(new File(controlPath))
+        if (stress.scenario?.contains('equal-load-') || control.scenario?.contains('equal-load-')) {
+            throw new GradleException('Equal-load profiles are loaded repetitions; use checkWirelessIoBenchmarkRegression')
+        }
+        def failures = []
+        def requireAtMost = { label, actualValue, maximumValue ->
+            double actual = actualValue as double
+            double maximum = maximumValue as double
+            if (actual > maximum) {
+                failures << "${label} ${String.format(java.util.Locale.ROOT, '%.3f', actual)} > ${maximum}"
+            }
+        }
+        def requireAtLeast = { label, actualValue, minimumValue ->
+            double actual = actualValue as double
+            double minimum = minimumValue as double
+            if (actual < minimum) {
+                failures << "${label} ${String.format(java.util.Locale.ROOT, '%.3f', actual)} < ${minimum}"
+            }
+        }
+
+        if (stress.partial || stress.samples < 1200) {
+            failures << "stress report is partial or has fewer than 1200 samples"
+        }
+        if (control.partial || control.samples < 1200) {
+            failures << "control report is partial or has fewer than 1200 samples"
+        }
+        requireAtMost('stress mean MSPT', stress.tickMs.mean as double, 25.0)
+        requireAtMost('stress p95 MSPT', stress.tickMs.p95 as double, 35.0)
+        requireAtMost('stress p99 MSPT', stress.tickMs.p99 as double, 45.0)
+        requireAtMost('ticks over 50 ms ratio', stress.ticksOver50MsRatio as double, 0.001)
+        requireAtMost('GC pause ratio',
+                (stress.gcMillis as double) / ((stress.samples as double) * 50.0), 0.02)
+        requireAtLeast('capacity TPS', stress.capacityTps as double, 19.8)
+        requireAtMost('mean MSPT delta from control',
+                (stress.tickMs.mean as double) - (control.tickMs.mean as double), 10.0)
+        requireAtMost('p99 MSPT delta from control',
+                (stress.tickMs.p99 as double) - (control.tickMs.p99 as double), 15.0)
+        double maxIoP99 = (inputs.properties.maxIoP99Ms as String).toDouble()
+        requireAtMost('wireless I/O p99', stress.wirelessIoMs.p99 as double, maxIoP99)
+        if ((stress.fastInterfaceCalls as long) != (stress.interfaceCalls as long)) {
+            failures << 'not every measured wireless interface call used FAST mode'
+        }
+        if ((stress.interfaceCalls as long) <= 0L) {
+            failures << 'stress report did not measure any wireless interface calls'
+        }
+
+        println "Live wireless I/O benchmark: stress=${stress.scenario}, control=${control.scenario}"
+        println("MSPT mean/p95/p99=${stress.tickMs.mean}/${stress.tickMs.p95}/${stress.tickMs.p99}, "
+                + "wirelessIoP99=${stress.wirelessIoMs.p99}, capacityTPS=${stress.capacityTps}")
+        if (!failures.isEmpty()) {
+            throw new GradleException('Wireless I/O live benchmark failed:\n' + failures.join('\n'))
+        }
+        println 'Wireless I/O live MSPT/TPS acceptance: PASS'
+    }
+}
+
+def wirelessIoLiveBaselineStressArg = providers.gradleProperty(
+        'ae2ltBenchmarkBaselineStressReports').getOrElse('')
+def wirelessIoLiveBaselineControlArg = providers.gradleProperty(
+        'ae2ltBenchmarkBaselineControlReports').getOrElse('')
+def wirelessIoLiveCandidateStressArg = providers.gradleProperty(
+        'ae2ltBenchmarkCandidateStressReports').getOrElse('')
+def wirelessIoLiveCandidateControlArg = providers.gradleProperty(
+        'ae2ltBenchmarkCandidateControlReports').getOrElse('')
+def wirelessIoLiveComparisonOutput = file(providers.gradleProperty('ae2ltBenchmarkLiveComparisonDir')
+        .getOrElse(layout.buildDirectory.dir('reports/wireless-interface-io-live-comparison')
+                .get().asFile.absolutePath)).absolutePath
+
+tasks.register('checkWirelessIoBenchmarkRegression') {
+    description = 'Compares five paired baseline and candidate live wireless I/O benchmark runs.'
+    group = 'verification'
+    inputs.property 'baselineStressReports', wirelessIoLiveBaselineStressArg
+    inputs.property 'baselineControlReports', wirelessIoLiveBaselineControlArg
+    inputs.property 'candidateStressReports', wirelessIoLiveCandidateStressArg
+    inputs.property 'candidateControlReports', wirelessIoLiveCandidateControlArg
+    inputs.property 'maxIoP99Ms', wirelessIoMaxP99Ms
+    inputs.files([wirelessIoLiveBaselineStressArg, wirelessIoLiveBaselineControlArg,
+                  wirelessIoLiveCandidateStressArg, wirelessIoLiveCandidateControlArg]
+            .collectMany { it.split(';').collect { path -> path.trim() }.findAll { !it.isEmpty() } })
+            .withPropertyName('liveReportContents')
+    inputs.property 'projectDirectory', projectDir.absolutePath
+    outputs.dir wirelessIoLiveComparisonOutput
+    doLast {
+        def splitReports = { value, label ->
+            def paths = (value as String).split(';').collect { it.trim() }
+                    .findAll { !it.isEmpty() }
+            if (paths.size() != 5) {
+                throw new GradleException("${label} must contain exactly five JSON paths separated by ';'")
+            }
+            def parser = new groovy.json.JsonSlurper()
+            return paths.collect { path ->
+                File rawFile = new File(path)
+                File file = rawFile.isAbsolute()
+                        ? rawFile : new File(inputs.properties.projectDirectory as String, path)
+                if (!file.isFile()) {
+                    throw new GradleException("Missing live benchmark report: ${file}")
+                }
+                def report = parser.parse(file)
+                if (report.partial || (report.samples as int) < 1200) {
+                    throw new GradleException("Incomplete live benchmark report: ${file}")
+                }
+                boolean normalBuffer = report.scenario ==~ /^gametest-(control|stress)-import-buffered-normal-1024x27-run[1-5]$/
+                long expectedFastCalls = normalBuffer ? 0L : (report.interfaceCalls as long)
+                if ((report.interfaceCalls as long) <= 0
+                        || (report.fastInterfaceCalls as long) != expectedFastCalls) {
+                    throw new GradleException("Report does not use the profile's I/O mode: ${file}")
+                }
+                return report
+            }
+        }
+        def median = { values ->
+            def sorted = values.collect { it as double }.sort()
+            int middle = sorted.size().intdiv(2)
+            return sorted.size() % 2 == 0
+                    ? (sorted[middle - 1] + sorted[middle]) / 2.0
+                    : sorted[middle] as double
+        }
+        def summarize = { stress, control, repeatedLoad ->
+            def measured = repeatedLoad ? stress + control : stress
+            def pairedMean = []
+            def pairedP99 = []
+            for (int i = 0; !repeatedLoad && i < stress.size(); i++) {
+                pairedMean << ((stress[i].tickMs.mean as double)
+                        - (control[i].tickMs.mean as double))
+                pairedP99 << ((stress[i].tickMs.p99 as double)
+                        - (control[i].tickMs.p99 as double))
+            }
+            return [
+                    mean: median(measured.collect { it.tickMs.mean }),
+                    p95: median(measured.collect { it.tickMs.p95 }),
+                    p99: median(measured.collect { it.tickMs.p99 }),
+                    over50: median(measured.collect { it.ticksOver50MsRatio }),
+                    capacityTps: median(measured.collect { it.capacityTps }),
+                    ioP99: median(measured.collect { it.wirelessIoMs.p99 }),
+                    ioMean: measured.every { it.wirelessIoMs.mean != null }
+                            ? median(measured.collect { it.wirelessIoMs.mean }) : null,
+                    gcRatio: median(measured.collect {
+                        (it.gcMillis as double) / ((it.samples as double) * 50.0)
+                    }),
+                    heap: median(measured.collect { it.peakUsedHeapBytes }),
+                    adjustedMean: repeatedLoad ? null : median(pairedMean),
+                    adjustedP99: repeatedLoad ? null : median(pairedP99)
+            ]
+        }
+        def baselineStress = splitReports(inputs.properties.baselineStressReports,
+                'baseline stress reports')
+        def baselineControl = splitReports(inputs.properties.baselineControlReports,
+                'baseline control reports')
+        def candidateStress = splitReports(inputs.properties.candidateStressReports,
+                'candidate stress reports')
+        def candidateControl = splitReports(inputs.properties.candidateControlReports,
+                'candidate control reports')
+        def groups = [baselineStress, baselineControl, candidateStress, candidateControl]
+        def allReports = groups.flatten()
+        def profiles = []
+        groups.eachWithIndex { reports, groupIndex ->
+            def expectedRole = groupIndex % 2 == 0 ? 'stress' : 'control'
+            def runIds = []
+            reports.each { report ->
+                def match = (report.scenario =~ /^gametest-(control|stress)-(.+)-run([1-5])$/)
+                if (!match.matches() || match[0][1] != expectedRole) {
+                    throw new GradleException("Unexpected benchmark role/scenario: ${report.scenario}")
+                }
+                profiles << match[0][2]
+                runIds << match[0][3]
+                if (report.workloadObservationMode?.startsWith('diagnostic')) {
+                    throw new GradleException('Diagnostic reports cannot be used for formal comparison')
+                }
+            }
+            if (runIds.toSet().size() != 5) throw new GradleException('Duplicate benchmark run IDs')
+            reports.sort { a, b -> a.scenario <=> b.scenario }
+        }
+        if (profiles.toSet().size() != 1) throw new GradleException('Mixed benchmark profiles')
+        boolean repeatedLoad = profiles[0].startsWith('equal-load-')
+        boolean exportProfile = profiles[0].startsWith('export-')
+        boolean repeatedIdle = profiles[0] ==~ /^export-(empty|mismatch)-\d+$/
+        boolean repeated = repeatedLoad || repeatedIdle
+        String comparisonKind = repeatedIdle ? 'repeated-idle' : (repeatedLoad ? 'repeated-load' : 'idle-control')
+        def measurementScopes = allReports.collect { it.ioMeasurementScope ?: 'wireless-io-body' }.toSet()
+        if (measurementScopes.size() != 1) {
+            throw new GradleException('Incompatible I/O measurement scopes; rerun both versions with the same probe')
+        }
+        if (allReports.collect { it.gcMeasurementWindow ?: 'legacy-workload-to-shutdown' }.toSet().size() != 1) {
+            throw new GradleException('Incompatible GC measurement windows; rerun both versions with the same probe')
+        }
+        if (allReports.any { it.comparisonKind != null && it.comparisonKind != comparisonKind }) {
+            throw new GradleException('Comparison kind conflicts with benchmark profile')
+        }
+        if (profiles[0] == 'import-buffered-normal-1024x27') {
+            allReports.each { r ->
+                boolean consuming = r.scenario.startsWith('gametest-stress-')
+                long planned = consuming ? ((r.warmupTicks as long) + (r.samples as long) - 40L) * 1024 * 27 * 10 : 0L
+                if (r.configuredConnectionVisits != (r.interfaceCalls as long) * 1024
+                        || r.workloadPlannedProductionItems != planned
+                        || r.workloadProductionOpportunities * 270L != planned
+                        || r.workloadActualProductionItems + r.workloadBlockedProductionEvents * 270L != planned
+                        || r.workloadProducedItems != r.workloadActualProductionItems
+                        || r.workloadExtractedItems != r.workloadProducedItems
+                        || r.workloadNetworkImportedItems != r.workloadProducedItems
+                        || r.workloadBufferedItems != 0 || r.workloadFinalRemainingItems != 0) {
+                    throw new GradleException("Buffered NORMAL workload or ownership mismatch: ${r.scenario}")
+                }
+            }
+        }
+        ['samples', 'warmupTicks', 'javaVersion', 'serverVersion'].each { field ->
+            if (allReports.any { it[field] == null } || allReports.collect { it[field] }.toSet().size() != 1) {
+                throw new GradleException("Incompatible benchmark ${field}")
+            }
+        }
+        if (repeatedLoad) {
+            ['workloadPlannedProductionItems', 'workloadActualProductionItems',
+             'workloadProducedItems', 'workloadExtractedItems', 'workloadNetworkImportedItems',
+             'workloadRecoveryTick'].each { field ->
+                if (allReports.any { it[field] == null } || allReports.collect { it[field] }.toSet().size() != 1) {
+                    throw new GradleException("Unequal workload: ${field}")
+                }
+            }
+            allReports.each { r ->
+                if (!(r.workloadProducedItems > 0)
+                        || r.workloadPlannedProductionItems != r.workloadActualProductionItems
+                        || r.workloadProducedItems != r.workloadActualProductionItems
+                        || r.workloadProducedItems != r.workloadNetworkImportedItems
+                        || r.workloadFinalRemainingItems != 0 || r.workloadBufferedItems != 0
+                        || r.workloadBlockedProductionEvents != 0
+                        || r.workloadMinimumWindowThroughput == null || r.workloadMinimumWindowThroughput < 0.99
+                        || r.workloadMinimumTargetThroughput == null || r.workloadMinimumTargetThroughput < 0.99) {
+                    throw new GradleException("Incomplete or blocked fixed workload: ${r.scenario}")
+                }
+            }
+        }
+        if (exportProfile) {
+            def match = profiles[0] =~ /^export-(empty|mismatch|continuous)-(64|256|1024)(?:x(1|27))?$/
+            if (!match.matches()) throw new GradleException('Unknown export benchmark profile')
+            String kind = match[0][1]
+            int targets = match[0][2] as int
+            int itemKeys = match[0][3] == null ? 0 : match[0][3] as int
+            if ((kind == 'continuous') != (itemKeys > 0)) throw new GradleException('Invalid export key count')
+            int configuredKeys = kind == 'mismatch' ? 1 : itemKeys
+            allReports.each { r ->
+                def w = r.exportWorkload
+                boolean consuming = !repeatedIdle && r.scenario.startsWith('gametest-stress-')
+                long demandTicks = (r.warmupTicks as long) + (r.samples as long) - 40L
+                long plannedEvents = consuming ? targets * demandTicks : 0L
+                long steadyEvents = consuming ? targets * (demandTicks - 40L) : 0L
+                long supplied = targets * (demandTicks + 1) * itemKeys * 64L
+                def nonnegative = ['suppliedItems', 'networkRemainingItems', 'targetRemainingItems', 'bufferedItems',
+                        'plannedItems', 'consumedItems', 'plannedEvents', 'completedEvents', 'starvedEvents', 'maxStarveStreak',
+                        'steadyPlannedEvents', 'steadyCompletedEvents', 'steadyStarvedEvents', 'steadyMaxStarveStreak']
+                if (r.schema == null || r.schema < 4
+                        || r.ioMeasurementScope != 'grid-item-io-including-eligibility'
+                        || w == null || w.contract != 'consumer-start40-steady80-v1'
+                        || w.profile != profiles[0] || w.targets != targets
+                        || w.itemKeys != itemKeys || w.configuredKeys != configuredKeys || w.unitsPerKey != 64
+                        || w.consuming != consuming || demandTicks < 140
+                        || r.configuredConnectionVisits != (r.interfaceCalls as long) * targets
+                        || nonnegative.any { w[it] == null || w[it] < 0 }) {
+                    throw new GradleException("Invalid export fixture or timing metadata: ${r.scenario}")
+                }
+                if (w.suppliedItems != supplied || w.plannedEvents != plannedEvents
+                        || w.plannedItems != plannedEvents * itemKeys * 64L
+                        || w.consumedItems != w.completedEvents * itemKeys * 64L
+                        || w.completedEvents > w.plannedEvents || w.starvedEvents != w.plannedEvents - w.completedEvents
+                        || w.steadyPlannedEvents != steadyEvents || w.steadyCompletedEvents > steadyEvents
+                        || w.steadyCompletedEvents > w.completedEvents
+                        || w.steadyStarvedEvents != steadyEvents - w.steadyCompletedEvents
+                        || w.steadyStarvedEvents > w.starvedEvents || w.steadyMaxStarveStreak > w.maxStarveStreak
+                        || w.suppliedItems != w.networkRemainingItems + w.targetRemainingItems + w.bufferedItems + w.consumedItems
+                        || w.bufferedItems != 0 || w.targetRemainingItems != targets * itemKeys * 64L) {
+                    throw new GradleException("Export workload or ownership mismatch: ${r.scenario}")
+                }
+                if (consuming && (w.minimumWindowThroughput == null || w.minimumWindowThroughput < 0.99
+                        || w.minimumTargetThroughput == null || w.minimumTargetThroughput < 0.99
+                        || (w.steadyStarvedEvents as double) / steadyEvents > 0.001 || w.steadyMaxStarveStreak > 2)) {
+                    throw new GradleException("Export starvation or throughput gate failed: ${r.scenario}")
+                }
+                if (kind == 'continuous' && (w.startupWaitTicks == null || w.startupWaitTicks < 0 || w.startupWaitTicks > 40)) {
+                    throw new GradleException("Export startup exceeded its budget: ${r.scenario}")
+                }
+                if (!consuming && (w.minimumWindowThroughput != -1 || w.minimumTargetThroughput != -1)) {
+                    throw new GradleException("Idle export incorrectly reports consumer throughput: ${r.scenario}")
+                }
+            }
+        }
+        def baseline = summarize(baselineStress, baselineControl, repeated)
+        def candidate = summarize(candidateStress, candidateControl, repeated)
+        def failures = []
+        def notes = []
+        def atMost = { label, actualValue, limitValue ->
+            double actual = actualValue as double
+            double limit = limitValue as double
+            if (actual > limit) {
+                failures << String.format(java.util.Locale.ROOT,
+                        '%s %.6f > %.6f', label, actual, limit)
+            }
+        }
+        def noRegression = { label, beforeValue, afterValue,
+                             relativeTolerance, absoluteTolerance ->
+            double before = beforeValue as double
+            double after = afterValue as double
+            double tolerance = Math.max(absoluteTolerance as double,
+                    Math.abs(before) * (relativeTolerance as double))
+            if (after > before + tolerance) {
+                failures << String.format(java.util.Locale.ROOT,
+                        '%s regressed %.6f -> %.6f (tolerance %.6f)',
+                        label, before, after, tolerance)
+            } else if (after < before - tolerance) {
+                notes << String.format(java.util.Locale.ROOT,
+                        '%s improved %.6f -> %.6f', label, before, after)
+            }
+        }
+
+        atMost('candidate median mean MSPT', candidate.mean, 25.0)
+        atMost('candidate median p95 MSPT', candidate.p95, 35.0)
+        atMost('candidate median p99 MSPT', candidate.p99, 45.0)
+        atMost('candidate median >50 ms ratio', candidate.over50, 0.001)
+        atMost('candidate median GC pause ratio', candidate.gcRatio, 0.02)
+        if (!repeated) {
+            atMost('candidate paired control-adjusted mean MSPT', candidate.adjustedMean, 10.0)
+            atMost('candidate paired control-adjusted p99 MSPT', candidate.adjustedP99, 15.0)
+        }
+        atMost('candidate median wireless I/O p99', candidate.ioP99, (inputs.properties.maxIoP99Ms as String).toDouble())
+        if ((candidate.capacityTps as double) < 19.8) {
+            failures << "candidate median capacity TPS ${candidate.capacityTps} < 19.8"
+        }
+        noRegression('median mean MSPT', baseline.mean, candidate.mean, 0.03, 0.20)
+        noRegression('median p99 MSPT', baseline.p99, candidate.p99, 0.05, 0.5)
+        if (!repeated) {
+            noRegression('paired control-adjusted mean MSPT', baseline.adjustedMean,
+                candidate.adjustedMean, 0.03, 0.20)
+            noRegression('paired control-adjusted p99 MSPT', baseline.adjustedP99,
+                candidate.adjustedP99, 0.05, 0.5)
+        }
+        noRegression('median >50 ms ratio', baseline.over50, candidate.over50,
+                0.0, 1.0 / 1200.0)
+        noRegression('median wireless I/O p99', baseline.ioP99, candidate.ioP99,
+                0.05, 0.05)
+        noRegression('median GC pause ratio', baseline.gcRatio, candidate.gcRatio,
+                0.10, 0.001)
+        noRegression('median heap peak', baseline.heap, candidate.heap, 0.10,
+                1024.0 * 1024.0)
+
+        boolean measurableImprovement = notes.any {
+            it.startsWith('median mean MSPT improved')
+                    || it.startsWith('median p99 MSPT improved')
+                    || it.startsWith('paired control-adjusted mean MSPT improved')
+                    || it.startsWith('paired control-adjusted p99 MSPT improved')
+                    || it.startsWith('median wireless I/O p99 improved')
+        }
+        File outputDirectory = new File(wirelessIoLiveComparisonOutput)
+        outputDirectory.mkdirs()
+        File markdown = new File(outputDirectory, 'live-comparison.md')
+        def body = new StringBuilder('# Wireless I/O live comparison\n\n')
+                .append(repeatedIdle
+                        ? 'Method: ten repeated idle runs per version; control/stress are filename labels. No control subtraction.\n\n'
+                        : repeatedLoad
+                        ? 'Method: ten repeated loaded runs per version; control/stress are filename labels. No control subtraction.\n\n'
+                        : 'Method: five stress runs with paired idle controls.\n\n')
+                .append("I/O scope: `${measurementScopes.first()}`; P99 budget: ${inputs.properties.maxIoP99Ms} ms.\n\n")
+                .append("Result: **${failures.isEmpty() ? 'PASS' : 'FAIL'}**\n\n")
+                .append("Optimization status: **${measurableImprovement
+                        ? 'MEASURABLE_IMPROVEMENT' : 'NO_MEASURABLE_IMPROVEMENT'}**\n\n")
+                .append('| metric | baseline median | candidate median |\n')
+                .append('|---|---:|---:|\n')
+        ['mean', 'p95', 'p99', 'adjustedMean', 'adjustedP99', 'over50',
+         'capacityTps', 'ioMean', 'ioP99', 'gcRatio', 'heap'].each { metric ->
+            body.append("| ${metric} | ${baseline[metric] == null ? 'N/A' : baseline[metric]} | ${candidate[metric] == null ? 'N/A' : candidate[metric]} |\n")
+        }
+        body.append('\n## Failures\n\n')
+        if (failures.isEmpty()) body.append('- None\n')
+        else failures.each { body.append("- ${it}\n") }
+        body.append('\n## Improvements outside tolerance\n\n')
+        if (notes.isEmpty()) body.append('- None\n')
+        else notes.each { body.append("- ${it}\n") }
+        markdown.setText(body.toString(), 'UTF-8')
+        println("Live benchmark comparison: ${failures.isEmpty() ? 'PASS' : 'FAIL'}, "
+                + "optimization=${measurableImprovement ? 'MEASURABLE' : 'NOT_MEASURABLE'}")
+        println "Report: ${markdown}"
+        if (!failures.isEmpty()) {
+            throw new GradleException('Wireless I/O live regression check failed:\n'
+                    + failures.join('\n'))
+        }
+    }
+}
+
+// Keep the source and adapted third-party licensing notices inside every published mod jar.
+tasks.named('jar', Jar) {
+    from('LICENSE') {
+        into 'META-INF'
+    }
+    from('THIRD_PARTY_NOTICES.md') {
+        into 'META-INF'
+    }
+}
+
+// This block of code expands all declared replace properties in the specified resource targets.
+// A missing property will result in an error. Properties are expanded using ${} Groovy notation.
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [minecraft_version      : minecraft_version,
+                             minecraft_version_range: minecraft_version_range,
+                             neo_version            : neo_version,
+                             neo_version_range      : neo_version_range,
+                             loader_version_range   : loader_version_range,
+                             mod_id                 : mod_id,
+                             mod_name               : mod_name,
+                             mod_license            : mod_license,
+                             mod_version            : project.version,
+                             thunderbolt_version_range: thunderbolt_version_range,
+                             mod_authors            : mod_authors,
+                             mod_description        : mod_description]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+
+// Include the output of "generateModMetadata" as an input directory for the build
+// this works with both building through Gradle and the IDE.
+sourceSets.main.resources.srcDir generateModMetadata
+// To avoid having to run "generateModMetadata" manually, make it run on every project reload
+neoForge.ideSyncTask generateModMetadata
+
+// Example configuration to allow publishing using the maven-publish plugin
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+// IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
