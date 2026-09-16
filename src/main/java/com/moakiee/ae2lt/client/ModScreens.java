@@ -2,12 +2,15 @@ package com.moakiee.ae2lt.client;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 import appeng.client.gui.style.StyleManager;
+import appeng.menu.me.crafting.CraftConfirmMenu;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.FrequencyScreen;
@@ -35,6 +38,7 @@ import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuSeedStorageMenu;
 import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
+import com.moakiee.ae2lt.mixin.client.MenuScreensAccessor;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
 /**
@@ -42,6 +46,17 @@ import com.moakiee.ae2lt.registry.ModBlocks;
  */
 @EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ModScreens {
+
+    @SubscribeEvent
+    public static void setupCraftingReport(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            MenuScreens.ScreenConstructor<CraftConfirmMenu, AE2LtCraftConfirmScreen> constructor =
+                    (menu, inventory, title) -> new AE2LtCraftConfirmScreen(
+                            menu, inventory, title,
+                            StyleManager.loadStyleDoc("/screens/ae2lt_craft_confirm.json"));
+            MenuScreensAccessor.ae2lt$getScreens().put(CraftConfirmMenu.TYPE, constructor);
+        });
+    }
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {

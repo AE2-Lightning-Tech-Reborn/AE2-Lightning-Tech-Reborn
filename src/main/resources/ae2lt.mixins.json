@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ServerLevelMixin",
+    "CraftingCalculationReportMixin",
+    "CraftConfirmMenuReportMixin",
     "AEBaseMenuManagedSlotClickMixin",
     "PigmeeRecipeTransferStorageMixin",
     "AnnihilationPlaneFirmamentDustMixin",
@@ -40,6 +42,7 @@
   ],
   "client": [
     "client.CableBusRenderStateMixin",
+    "client.MenuScreensAccessor",
     "client.CableBusContainerRenderMixin",
     "client.CableBusBakedModelMixin",
     "client.SettingToggleButtonMixin",

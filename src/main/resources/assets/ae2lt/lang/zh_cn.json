@@ -1332,5 +1332,11 @@
   "ae2lt.tianshu.reserve.empty": "尚未配置全局保留项",
   "ae2lt.tianshu.issue.chunks_unloaded": "结构覆盖的区块未完整加载",
   "ae2lt.gui.matrix_port.search": "搜索矩阵样板",
-  "ae2lt.gui.matrix_port.title": "样板管理"
+  "ae2lt.gui.matrix_port.title": "样板管理",
+  "gui.ae2lt.crafting_report.calculating": "正在计算合成计划……",
+  "gui.ae2lt.crafting_report.missing": "无法开始：%s 项材料存在缺失。",
+  "gui.ae2lt.crafting_report.no_cpu": "无法开始：没有可用的合成 CPU。",
+  "gui.ae2lt.crafting_report.ready": "计划已完成，请选择 CPU 后开始合成。",
+  "gui.ae2lt.crafting_report.ready_with_algorithm": "计划已完成（%s），请选择 CPU 后开始合成。",
+  "gui.ae2lt.crafting_report.submit_error": "合成无法开始：%s"
 }
