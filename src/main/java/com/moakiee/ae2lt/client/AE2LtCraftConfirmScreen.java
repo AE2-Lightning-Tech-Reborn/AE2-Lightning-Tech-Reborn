@@ -11,7 +11,6 @@ import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 
 import appeng.client.gui.AEBaseScreen;
@@ -21,25 +20,14 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.crafting.CraftingPlanSummary;
-import appeng.util.ReadableNumberConverter;
 
 import com.moakiee.ae2lt.crafting.report.CraftingReportMenuState;
-import com.moakiee.thunderbolt.core.crafting.algorithm.menu.CraftingAlgorithmNameMenu;
-
 public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu> {
-    private static final int TEXT_COLOR = 0x403E53;
-    private static final long TERA_BYTE = 1_000_000_000_000L;
     private static final MathContext TIME_PRECISION = new MathContext(4, RoundingMode.HALF_UP);
-    private static final int INFO_X = 11;
-    private static final int INFO_Y = 202;
-    private static final int INFO_WIDTH = 114;
-    private static final int INFO_MAX_LINES = 4;
-
     private final AE2LtCraftConfirmTableRenderer table;
     private final Button start;
     private final Button selectCpu;
     private final Scrollbar scrollbar;
-    private Component reportInfo = Component.empty();
 
     public AE2LtCraftConfirmScreen(
             CraftConfirmMenu menu, Inventory playerInventory, Component title, ScreenStyle style) {
@@ -58,11 +46,6 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         super.updateBeforeRender();
 
         var errorResult = menu.submitError.result();
-        if (errorResult != null && errorResult.errorCode() != null) {
-            reportInfo = Component.translatable(
-                    "gui.ae2lt.crafting_report.submit_error", errorResult.errorCode().name());
-        }
-
         CraftingPlanSummary plan = menu.getPlan();
         boolean startable = plan != null && !plan.isSimulation();
         start.active = !menu.hasNoCPU() && startable;
@@ -71,58 +54,58 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
 
         long calculationNanos = menu instanceof CraftingReportMenuState state
                 ? state.ae2lt$getCalculationNanos() : 0L;
+        Component cpuDetails = Component.empty();
+        if (errorResult != null && errorResult.errorCode() != null) {
+            cpuDetails = Component.translatable(
+                    "gui.ae2lt.crafting_report.submit_error", errorResult.errorCode().name());
+        } else if (plan != null) {
+            if (plan.isSimulation()) {
+                cpuDetails = GuiText.PartialPlan.text();
+            } else if (menu.getCpuAvailableBytes() > 0) {
+                cpuDetails = GuiText.ConfirmCraftCpuStatus.text(
+                        menu.getCpuAvailableBytes(), menu.getCpuCoProcessors());
+            } else {
+                cpuDetails = GuiText.ConfirmCraftNoCpu.text();
+            }
+        }
         setTextContent(TEXT_ID_DIALOG_TITLE, Component.empty());
+        setTextContent("cpu_status", cpuDetails);
         setTextContent("calculation_time", plan == null
                 ? Component.literal("...")
-                : Component.literal(formatDuration(calculationNanos)));
+                : formatDuration(calculationNanos));
         setTextContent("bytes_used", plan == null
                 ? Component.literal("-")
-                : Component.literal(formatBytes(plan.getUsedBytes())));
+                : formatBytes(plan.getUsedBytes()));
 
-        if (errorResult == null || errorResult.errorCode() == null) {
-            reportInfo = buildReportInfo(plan);
-        }
         int size = plan == null ? 0 : plan.getEntries().size();
         scrollbar.setRange(0, table.getScrollableRows(size), 1);
     }
 
-    private Component buildReportInfo(@Nullable CraftingPlanSummary plan) {
-        if (plan == null) {
-            return Component.translatable("gui.ae2lt.crafting_report.calculating");
-        }
-        if (plan.isSimulation()) {
-            long missingTypes = plan.getEntries().stream()
-                    .filter(entry -> entry.getMissingAmount() > 0)
-                    .count();
+
+    private static Component formatBytes(long bytes) {
+        return Component.translatable(
+                "gui.ae2lt.crafting_report.bytes",
+                NumberFormat.getIntegerInstance().format(bytes));
+    }
+
+    private static Component formatDuration(long nanos) {
+        if (nanos < 1_000L) {
             return Component.translatable(
-                    "gui.ae2lt.crafting_report.missing", missingTypes);
+                    "gui.ae2lt.crafting_report.time.nanoseconds", nanos);
         }
-        if (menu.hasNoCPU()) {
-            return Component.translatable("gui.ae2lt.crafting_report.no_cpu");
-        }
-        Component algorithm = menu instanceof CraftingAlgorithmNameMenu named
-                ? named.thunderbolt$getCraftingAlgorithmName() : Component.empty();
-        if (!algorithm.getString().isEmpty()) {
-            return Component.translatable("gui.ae2lt.crafting_report.ready_with_algorithm", algorithm);
-        }
-        return Component.translatable("gui.ae2lt.crafting_report.ready");
-    }
-
-    private static String formatBytes(long bytes) {
-        if (bytes >= TERA_BYTE) {
-            return ReadableNumberConverter.format(bytes, 4) + " B";
-        }
-        return NumberFormat.getIntegerInstance().format(bytes) + " B";
-    }
-
-    private static String formatDuration(long nanos) {
         if (nanos < 1_000_000L) {
-            return formatDecimal(BigDecimal.valueOf(nanos, 3)) + " us";
+            return Component.translatable(
+                    "gui.ae2lt.crafting_report.time.microseconds",
+                    formatDecimal(BigDecimal.valueOf(nanos, 3)));
         }
         if (nanos < 1_000_000_000L) {
-            return formatDecimal(BigDecimal.valueOf(nanos, 6)) + " ms";
+            return Component.translatable(
+                    "gui.ae2lt.crafting_report.time.milliseconds",
+                    formatDecimal(BigDecimal.valueOf(nanos, 6)));
         }
-        return formatDecimal(BigDecimal.valueOf(nanos, 9)) + " s";
+        return Component.translatable(
+                "gui.ae2lt.crafting_report.time.seconds",
+                formatDecimal(BigDecimal.valueOf(nanos, 9)));
     }
 
     private static String formatDecimal(BigDecimal value) {
@@ -149,12 +132,6 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         CraftingPlanSummary plan = menu.getPlan();
         if (plan != null) {
             table.render(graphics, mouseX, mouseY, plan.getEntries(), scrollbar.getCurrentScroll());
-        }
-        var lines = font.split(reportInfo, INFO_WIDTH);
-        int lineCount = Math.min(INFO_MAX_LINES, lines.size());
-        for (int i = 0; i < lineCount; i++) {
-            FormattedCharSequence line = lines.get(i);
-            graphics.drawString(font, line, INFO_X, INFO_Y + i * 11, TEXT_COLOR, false);
         }
     }
 

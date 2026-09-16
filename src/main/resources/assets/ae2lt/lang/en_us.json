@@ -1338,5 +1338,10 @@
   "gui.ae2lt.crafting_report.no_cpu": "Cannot start: no crafting CPU is available.",
   "gui.ae2lt.crafting_report.ready": "Plan complete. Select a CPU and start crafting.",
   "gui.ae2lt.crafting_report.ready_with_algorithm": "Plan complete (%s). Select a CPU and start crafting.",
-  "gui.ae2lt.crafting_report.submit_error": "Crafting could not start: %s"
+  "gui.ae2lt.crafting_report.submit_error": "Crafting could not start: %s",
+  "gui.ae2lt.crafting_report.bytes": "%s B",
+  "gui.ae2lt.crafting_report.time.nanoseconds": "%s ns",
+  "gui.ae2lt.crafting_report.time.microseconds": "%s us",
+  "gui.ae2lt.crafting_report.time.milliseconds": "%s ms",
+  "gui.ae2lt.crafting_report.time.seconds": "%s s"
 }

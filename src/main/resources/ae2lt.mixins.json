@@ -42,7 +42,7 @@
   ],
   "client": [
     "client.CableBusRenderStateMixin",
-    "client.MenuScreensAccessor",
+    "client.CraftConfirmReportRoutingMixin",
     "client.CableBusContainerRenderMixin",
     "client.CableBusBakedModelMixin",
     "client.SettingToggleButtonMixin",

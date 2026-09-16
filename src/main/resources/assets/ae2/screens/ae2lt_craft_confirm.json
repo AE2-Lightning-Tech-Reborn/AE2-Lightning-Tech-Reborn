@@ -12,36 +12,40 @@
       "position": { "left": 8, "top": 7 }
     },
     "calculation_time": {
-      "position": { "left": 51, "top": 10 },
-      "align": "CENTER"
+      "position": { "left": 28, "top": 10 },
+      "align": "LEFT"
     },
     "bytes_used": {
-      "position": { "left": 150, "top": 10 },
+      "position": { "left": 93, "top": 10 },
+      "align": "LEFT"
+    },
+    "cpu_status": {
+      "position": { "left": 119, "top": 220 },
       "align": "CENTER"
     }
   },
   "widgets": {
     "scrollbar": {
-      "left": 221,
+      "left": 218,
       "top": 26,
       "height": 161
     },
     "selectCpu": {
-      "left": 130,
-      "top": 202,
-      "width": 102,
+      "left": 29,
+      "top": 192,
+      "width": 180,
       "height": 20
     },
     "cancel": {
-      "left": 130,
-      "top": 226,
-      "width": 49,
+      "left": 6,
+      "top": 236,
+      "width": 50,
       "height": 20
     },
     "start": {
-      "left": 183,
-      "top": 226,
-      "width": 49,
+      "left": 162,
+      "top": 236,
+      "width": 50,
       "height": 20
     }
   }
