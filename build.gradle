@@ -267,6 +267,14 @@ dependencies {
     compileOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
     runtimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
     testRuntimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
+    // NeoECO owns the optional FastPath API. AE2LT only consumes it from a guarded compatibility
+    // class, so installing NeoECO remains optional at runtime.
+    def localNeoEcoApiJar = providers.gradleProperty("neoecoae_api_jar").orNull
+    if (localNeoEcoApiJar) {
+        compileOnly files(localNeoEcoApiJar)
+    } else {
+        compileOnly "maven.modrinth:neoecoae:21.2.0-beta4"
+    }
     jdbProbeModPaths.each { runtimeOnly files(it) }
 
     implementation "curse.maven:applied-energistics-2-223794:7027323"
