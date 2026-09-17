@@ -10,18 +10,17 @@ import cn.dancingsnow.neoecoae.api.me.ECOFastPathFacade;
 import cn.dancingsnow.neoecoae.api.me.provider.ECOIndeterminateBatchException;
 
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
-import com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapter;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchProviderResolver;
 import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 
 /** Tianshu-only bridge from its allocated batch contract to NeoECO's public FastPath API. */
-public final class NeoEcoFastPathBatchAdapter implements BatchProviderAdapter {
+public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
     @Override
-    public @Nullable IBatchCraftingProvider adapt(
-            ICraftingProvider provider, IPatternDetails pattern, BatchJobView job) {
-        return ECOFastPathFacade.supports(provider) ? new AdaptedProvider(provider, job) : null;
+    public @Nullable IBatchCraftingProvider resolve(ICraftingProvider provider) {
+        return ECOFastPathFacade.supports(provider) ? new AdaptedProvider(provider) : null;
     }
 
-    private record AdaptedProvider(ICraftingProvider delegate, BatchJobView job)
+    private record AdaptedProvider(ICraftingProvider delegate)
             implements IBatchCraftingProvider {
         @Override
         public java.util.List<IPatternDetails> getAvailablePatterns() {
@@ -42,6 +41,12 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderAdapter {
 
         @Override
         public long pushBatch(IPatternDetails details, KeyCounter[] oneCopy, long maxCraft) {
+            // Allocated FastPath requires a current job. Leave ownership with context-free callers.
+            return Math.max(0L, maxCraft);
+        }
+
+        @Override
+        public long pushBatch(IPatternDetails details, KeyCounter[] oneCopy, long maxCraft, BatchJobView job) {
             if (maxCraft <= 0L) {
                 return 0L;
             }

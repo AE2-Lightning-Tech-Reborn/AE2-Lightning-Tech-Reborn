@@ -272,8 +272,10 @@ dependencies {
     def localNeoEcoApiJar = providers.gradleProperty("neoecoae_api_jar").orNull
     if (localNeoEcoApiJar) {
         compileOnly files(localNeoEcoApiJar)
+        testRuntimeOnly files(localNeoEcoApiJar)
     } else {
         compileOnly "maven.modrinth:neoecoae:21.2.0-beta4"
+        testRuntimeOnly "maven.modrinth:neoecoae:21.2.0-beta4"
     }
     jdbProbeModPaths.each { runtimeOnly files(it) }
 
