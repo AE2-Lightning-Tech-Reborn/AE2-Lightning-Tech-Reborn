@@ -20,7 +20,7 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
         return ECOFastPathFacade.supports(provider) ? new AdaptedProvider(provider) : null;
     }
 
-    private record AdaptedProvider(ICraftingProvider delegate)
+    record AdaptedProvider(ICraftingProvider delegate)
             implements IBatchCraftingProvider {
         @Override
         public java.util.List<IPatternDetails> getAvailablePatterns() {
@@ -53,7 +53,7 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
             var prepared = ECOFastPathFacade.prepareAllocated(
                     delegate, details, oneCopy, maxCraft, job.level(), job.craftingId());
             if (prepared == null) {
-                return maxCraft;
+                return pushSingleCopy(details, oneCopy, maxCraft);
             }
 
             long offered = prepared.craftCount();
@@ -67,7 +67,9 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
                     public void refund() {
                     }
                 });
-                return accepted ? maxCraft - offered : maxCraft;
+                if (accepted) {
+                    return maxCraft - offered;
+                }
             } catch (ECOIndeterminateBatchException uncertain) {
                 // Ownership may already have crossed the API boundary. Account the prepared part
                 // as dispatched so BatchExecutor cannot refund it and duplicate the materials.
@@ -77,6 +79,20 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
                         uncertain);
                 return maxCraft - offered;
             }
+            return pushSingleCopy(details, oneCopy, maxCraft);
+        }
+
+        private long pushSingleCopy(IPatternDetails details, KeyCounter[] oneCopy, long maxCraft) {
+            // supports() includes bridged providers that prepareAllocated() cannot serve, and
+            // native FastPath providers can also decline a particular recipe. A declined batch
+            // must still get the ordinary attempt before BatchExecutor blocks this provider.
+            // pushPattern takes ownership; the batch template itself is borrowed read-only.
+            var inputs = new KeyCounter[oneCopy.length];
+            for (int slot = 0; slot < oneCopy.length; slot++) {
+                inputs[slot] = new KeyCounter();
+                inputs[slot].addAll(oneCopy[slot]);
+            }
+            return delegate.pushPattern(details, inputs) ? maxCraft - 1L : maxCraft;
         }
     }
 }

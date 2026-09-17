@@ -1339,7 +1339,7 @@
   "gui.ae2lt.crafting_report.ready": "计划已完成，请选择 CPU 后开始合成。",
   "gui.ae2lt.crafting_report.ready_with_algorithm": "计划已完成（%s），请选择 CPU 后开始合成。",
   "gui.ae2lt.crafting_report.submit_error": "合成无法开始：%s",
-  "gui.ae2lt.crafting_report.bytes": "%s B",
+  "gui.ae2lt.crafting_report.bytes": "字节: %sB   (%s)",
   "gui.ae2lt.crafting_report.time.nanoseconds": "%s ns",
   "gui.ae2lt.crafting_report.time.microseconds": "%s us",
   "gui.ae2lt.crafting_report.time.milliseconds": "%s ms",

@@ -1,9 +1,7 @@
 package com.moakiee.ae2lt.client;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.util.Locale;
 
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -20,10 +18,9 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.crafting.CraftingPlanSummary;
+import appeng.util.ReadableNumberConverter;
 
-import com.moakiee.ae2lt.crafting.report.CraftingReportMenuState;
 public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu> {
-    private static final MathContext TIME_PRECISION = new MathContext(4, RoundingMode.HALF_UP);
     private final AE2LtCraftConfirmTableRenderer table;
     private final Button start;
     private final Button selectCpu;
@@ -52,8 +49,6 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         selectCpu.active = startable;
         selectCpu.setMessage(getNextCpuButtonLabel());
 
-        long calculationNanos = menu instanceof CraftingReportMenuState state
-                ? state.ae2lt$getCalculationNanos() : 0L;
         Component cpuDetails = Component.empty();
         if (errorResult != null && errorResult.errorCode() != null) {
             cpuDetails = Component.translatable(
@@ -70,9 +65,6 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         }
         setTextContent(TEXT_ID_DIALOG_TITLE, Component.empty());
         setTextContent("cpu_status", cpuDetails);
-        setTextContent("calculation_time", plan == null
-                ? Component.literal("...")
-                : formatDuration(calculationNanos));
         setTextContent("bytes_used", plan == null
                 ? Component.literal("-")
                 : formatBytes(plan.getUsedBytes()));
@@ -85,34 +77,8 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
     private static Component formatBytes(long bytes) {
         return Component.translatable(
                 "gui.ae2lt.crafting_report.bytes",
-                NumberFormat.getIntegerInstance().format(bytes));
-    }
-
-    private static Component formatDuration(long nanos) {
-        if (nanos < 1_000L) {
-            return Component.translatable(
-                    "gui.ae2lt.crafting_report.time.nanoseconds", nanos);
-        }
-        if (nanos < 1_000_000L) {
-            return Component.translatable(
-                    "gui.ae2lt.crafting_report.time.microseconds",
-                    formatDecimal(BigDecimal.valueOf(nanos, 3)));
-        }
-        if (nanos < 1_000_000_000L) {
-            return Component.translatable(
-                    "gui.ae2lt.crafting_report.time.milliseconds",
-                    formatDecimal(BigDecimal.valueOf(nanos, 6)));
-        }
-        return Component.translatable(
-                "gui.ae2lt.crafting_report.time.seconds",
-                formatDecimal(BigDecimal.valueOf(nanos, 9)));
-    }
-
-    private static String formatDecimal(BigDecimal value) {
-        BigDecimal rounded = value.round(TIME_PRECISION);
-        int integerDigits = rounded.precision() - rounded.scale();
-        int scale = Math.max(0, TIME_PRECISION.getPrecision() - integerDigits);
-        return rounded.setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+                NumberFormat.getIntegerInstance(Locale.US).format(bytes),
+                ReadableNumberConverter.format(bytes, 4));
     }
 
     private Component getNextCpuButtonLabel() {
