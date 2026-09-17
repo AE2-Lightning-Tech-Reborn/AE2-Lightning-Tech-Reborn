@@ -1,5 +1,18 @@
 package com.moakiee.ae2lt.crafting.timewheel;
 
+import com.moakiee.thunderbolt.core.crafting.plan.PlannedInputAssignments;
+import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
+import com.moakiee.thunderbolt.core.crafting.planner.CraftPattern;
+import com.moakiee.thunderbolt.core.crafting.planner.CraftInput;
+import com.moakiee.thunderbolt.core.crafting.planner.CraftPlan;
+import appeng.api.crafting.IPatternDetails;
+import net.minecraft.world.level.Level;
+import appeng.crafting.CraftingPlan;
+import appeng.api.stacks.AEItemKey;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.List;
+
 import static appeng.api.config.Actionable.MODULATE;
 import static appeng.api.config.Actionable.SIMULATE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,6 +96,50 @@ class RequesterOutputDeliveryTest {
         assertEquals(demand, fixture.disk.stored);
         assertEquals(0, fixture.remaining());
         assertEquals(0, fixture.held());
+    }
+
+    @Test
+    void plannedInputTasksKeepSeparateCopiesWithoutDuplicatingPendingOutput() throws Exception {
+        var input = new IPatternDetails.IInput() {
+            @Override public GenericStack[] getPossibleInputs() {
+                return new GenericStack[] {new GenericStack(OUTPUT, 1), new GenericStack(OTHER, 1)};
+            }
+            @Override public long getMultiplier() { return 1; }
+            @Override public boolean isValid(AEKey key, Level level) { return true; }
+            @Override public AEKey getRemainingKey(AEKey key) { return null; }
+        };
+        var source = new IPatternDetails() {
+            @Override public AEItemKey getDefinition() { return null; }
+            @Override public IInput[] getInputs() { return new IInput[] {input}; }
+            @Override public List<GenericStack> getOutputs() { return List.of(new GenericStack(OUTPUT, 1)); }
+        };
+        var firstInputs = List.of(CraftInput.of(OTHER, 1));
+        var secondInputs = List.of(CraftInput.of(OUTPUT, 1));
+        var first = new CraftPattern<>(OUTPUT, BigInteger.ONE,
+                firstInputs, List.of(), source, List.of(firstInputs));
+        var second = new CraftPattern<>(OUTPUT, BigInteger.ONE,
+                secondInputs, List.of(), source, List.of(secondInputs));
+        var internal = new CraftPlan<>(true, true,
+                Map.of(first, 2L, second, 3L), Map.of(), Map.of(), Map.of(), Map.of(), 0, false);
+        var plan = new CraftingPlan(new GenericStack(OUTPUT, 5), 100L, false, false,
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), Map.of(source, 5L));
+        PlannedInputAssignments.record(plan, internal);
+        var jobClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TimeWheelJob");
+        var constructor = jobClass.getDeclaredConstructor(ICraftingPlan.class, Consumer.class,
+                CraftingLink.class, Integer.class, ElapsedTimeTracker.class);
+        constructor.setAccessible(true);
+        var job = constructor.newInstance(plan, (Consumer<AEKey>) key -> {}, null, null, new Tracker());
+        var tasks = (Map<?, ?>) field(job, "tasks").get(job);
+        assertEquals(2, tasks.size());
+        var copiesByKey = new HashMap<AEKey, Long>();
+        for (var entry : tasks.entrySet()) {
+            var planned = (PlannedInputPattern) entry.getKey();
+            copiesByKey.put(planned.allocations().getFirst().keySet().iterator().next(),
+                    field(entry.getValue(), "value").getLong(entry.getValue()));
+            org.junit.jupiter.api.Assertions.assertSame(source, planned.providerLookupPattern());
+        }
+        assertEquals(Map.of(OTHER, 2L, OUTPUT, 3L), copiesByKey);
+        assertEquals(5L, ((KeyCounter) field(job, "pendingOutputs").get(job)).get(OUTPUT));
     }
 
     @Test

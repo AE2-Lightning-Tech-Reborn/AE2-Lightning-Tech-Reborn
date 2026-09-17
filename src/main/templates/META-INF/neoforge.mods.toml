@@ -122,6 +122,15 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
+modId = "neoecoae"
+type = "optional"
+versionRange = "[21.2.0-beta3,)"
+# FastPath is used at runtime; NeoECO already orders itself after AE2LT.
+# Requiring the reverse order here would create a loading cycle.
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
 modId = "flywheel"
 type = "optional"
 versionRange = "[0,)"

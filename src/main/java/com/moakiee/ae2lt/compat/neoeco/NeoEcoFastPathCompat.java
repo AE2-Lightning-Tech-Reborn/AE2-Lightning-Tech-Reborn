@@ -16,7 +16,9 @@ public final class NeoEcoFastPathCompat {
 
     @Nullable
     public static BatchProviderAdapter createAdapter() {
-        if (!ModList.get().isLoaded("neoecoae")) {
+        // Plain unit tests do not initialize the NeoForge mod list.
+        var modList = ModList.get();
+        if (modList == null || !modList.isLoaded("neoecoae")) {
             return null;
         }
         try {

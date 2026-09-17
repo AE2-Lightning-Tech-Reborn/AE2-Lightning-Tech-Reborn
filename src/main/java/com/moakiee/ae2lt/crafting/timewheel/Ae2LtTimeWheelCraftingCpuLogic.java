@@ -81,6 +81,8 @@ import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternD
 import com.moakiee.thunderbolt.core.crafting.loop.PatternFiringExpander;
 import com.moakiee.ae2lt.crafting.runtime.ExecuteLoopPattern;
 import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
+import com.moakiee.thunderbolt.core.crafting.plan.PlannedInputAssignments;
+import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
 public final class Ae2LtTimeWheelCraftingCpuLogic {
@@ -638,7 +640,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         // entry and need no leading clear. This halves the per-copy KeyCounter clearing that showed
         // up as ~7% of the CPU tick in profiling.
         var extractionInventory = reservedCraftingInventory(details);
-        KeyCounter[] craftingContainer = CraftingCpuHelper.extractPatternInputs(
+        KeyCounter[] craftingContainer = ParallelBatchCpuHelper.extractPatternInputs(
                 details, extractionInventory, level, expectedOutputs, expectedContainerItems);
         if (craftingContainer == null) {
             clearScratchCounter(expectedOutputs);
@@ -3014,9 +3016,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 insertWaitingFor(entry.getKey(), entry.getLongValue());
                 addMaxItems(timeTracker, entry.getLongValue(), entry.getKey().getType());
             }
+            var inputAssignments = PlannedInputAssignments.get(plan);
             for (var entry : plan.patternTimes().entrySet()) {
                 if (entry.getKey() instanceof ReusableSeedPattern) closedLoopJob = true;
-                var expanded = entry.getKey() instanceof PatternFiringExpander expander
+                var assigned = inputAssignments.get(entry.getKey());
+                var expanded = assigned != null ? assigned.stream().collect(java.util.stream.Collectors.toMap(
+                        PlannedInputAssignments.Task::pattern, PlannedInputAssignments.Task::copies))
+                        : entry.getKey() instanceof PatternFiringExpander expander
                         ? expander.expandPatternFirings(entry.getValue())
                         : Map.of(entry.getKey(), entry.getValue());
                 for (var concrete : expanded.entrySet()) {
@@ -3126,6 +3132,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                 details, consumerId, initialSeed, inputSeed,
                                 outputCredits, sharedOutputCredits);
                     }
+                    details = PlannedInputPattern.readFromTag(details, item, registries);
                     var task = tasks.computeIfAbsent(details, ignored -> new TaskProgress());
                     task.value = com.moakiee.thunderbolt.core.crafting.planner.Sat.add(
                             task.value, remaining);
@@ -3226,6 +3233,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         : entry.getKey().getDefinition();
                 var item = definition.toTag(registries);
                 item.putLong(NBT_CRAFTING_PROGRESS, entry.getValue().value);
+                if (entry.getKey() instanceof PlannedInputPattern planned) {
+                    planned.writeToTag(item, registries);
+                }
                 if (entry.getKey() instanceof ExecuteLoopPattern loopPattern) {
                     item.putUUID(NBT_SEED_CONSUMER, loopPattern.seedConsumerId());
                     var initialSeed = loopPattern.initialSeed();

@@ -1,5 +1,17 @@
 package com.moakiee.ae2lt.compat.neoeco;
 
+import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
+import com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper;
+import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
+import appeng.crafting.inv.ListCraftingInventory;
+import com.moakiee.ae2lt.me.key.LightningKey;
+import net.minecraft.world.level.Level;
+import appeng.api.stacks.GenericStack;
+import appeng.api.config.Actionable;
+import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEKey;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Proxy;
@@ -17,6 +29,49 @@ class NeoEcoFastPathBatchAdapterTest {
     private final BatchJobView job = (BatchJobView) Proxy.newProxyInstance(
             BatchJobView.class.getClassLoader(), new Class<?>[] {BatchJobView.class},
             (proxy, method, args) -> null);
+
+    @Test
+    void declinedFastPathFallbackKeepsThePlannedMaterialAndRefundsOnlyUnacceptedCopies() {
+        var a = LightningKey.HIGH_VOLTAGE;
+        var b = LightningKey.EXTREME_HIGH_VOLTAGE;
+        var source = new IPatternDetails() {
+            @Override public AEItemKey getDefinition() { return null; }
+            @Override public IInput[] getInputs() {
+                return new IInput[] {new IInput() {
+                    @Override public GenericStack[] getPossibleInputs() {
+                        return new GenericStack[] {
+                                new GenericStack(b, 1), new GenericStack(a, 1)};
+                    }
+                    @Override public long getMultiplier() { return 1; }
+                    @Override public boolean isValid(AEKey key, Level level) { return true; }
+                    @Override public AEKey getRemainingKey(AEKey key) { return null; }
+                }};
+            }
+            @Override public List<GenericStack> getOutputs() { return List.of(); }
+        };
+        var planned = new PlannedInputPattern(
+                source, List.of(Map.of(a, 1L)));
+        var inventory = new ListCraftingInventory(key -> {});
+        inventory.insert(a, 2, Actionable.MODULATE);
+        inventory.insert(b, 2, Actionable.MODULATE);
+        var result = ParallelBatchCpuHelper.bulkExtract(
+                planned, inventory, 2, true, Map.of(), null);
+        assertNotNull(result);
+        var provider = new NativeProvider();
+        var adapter = new NeoEcoFastPathBatchAdapter.AdaptedProvider(provider);
+        var template = ParallelBatchCpuHelper.cloneSingleCopy(result);
+        long leftover = adapter.pushBatch(
+                CraftingPatternDelegates.forBatchExecution(planned),
+                template, result.actualCopies, job);
+        assertEquals(1, leftover);
+        assertSame(source, ((OrdinaryProvider) provider).receivedPattern);
+        assertEquals(1, ((OrdinaryProvider) provider).receivedSlot.get(a));
+        assertEquals(0, ((OrdinaryProvider) provider).receivedSlot.get(b));
+        ParallelBatchCpuHelper.markDispatched(result, 1);
+        ParallelBatchCpuHelper.reinject(result, leftover, inventory);
+        assertEquals(1, inventory.list.get(a));
+        assertEquals(2, inventory.list.get(b));
+    }
 
     @Test
     void providerWithoutAllocatedFastPathStillReceivesOneOrdinaryCopy() {
@@ -80,6 +135,7 @@ class NeoEcoFastPathBatchAdapterTest {
         private int calls;
         private KeyCounter[] received;
         private KeyCounter receivedSlot;
+        private IPatternDetails receivedPattern;
 
         private OrdinaryProvider(boolean accepted) {
             this.accepted = accepted;
@@ -89,6 +145,7 @@ class NeoEcoFastPathBatchAdapterTest {
         @Override public boolean isBusy() { return false; }
         @Override public boolean pushPattern(IPatternDetails pattern, KeyCounter[] inputs) {
             calls++;
+            receivedPattern = pattern;
             received = inputs;
             receivedSlot = inputs[0];
             if (accepted) inputs[0] = null;
