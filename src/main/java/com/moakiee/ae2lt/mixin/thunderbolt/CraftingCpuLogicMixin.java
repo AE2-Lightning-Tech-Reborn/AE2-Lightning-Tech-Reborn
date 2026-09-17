@@ -29,6 +29,7 @@ import com.moakiee.ae2lt.mixin.thunderbolt.accessor.CraftingCpuLogicAccessor;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ExecutingCraftingJobAccessor;
+import com.moakiee.ae2lt.integration.gtlcore.GTLCoreCompat;
 import com.moakiee.ae2lt.overload.runtime.cpu.InsertContext;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadClaimResult;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuInsertSupport;
@@ -178,6 +179,9 @@ public abstract class CraftingCpuLogicMixin {
             return false;
         }
 
+        // One push can stand for several crafting operations under GTLCore's pattern auto-expand,
+        // which scales both the inputs consumed and the outputs that come back.
+        long pushedCopies = GTLCoreCompat.pushedCopies(logic, provider, details);
         boolean pushed = original.call(provider, details, inputHolder);
         if (pushed) {
             var job = ((CraftingCpuLogicAccessor) logic).ae2lt$getJob();
@@ -191,7 +195,7 @@ public abstract class CraftingCpuLogicMixin {
                     overloadDetails.overloadPatternDetailsView(),
                     java.util.Arrays.asList(details.getOutputs()),
                     finalOutputKey,
-                    1L);
+                    pushedCopies);
         }
         return pushed;
     }

@@ -29,6 +29,7 @@ import appeng.menu.me.crafting.CraftingStatusEntry;
 
 import com.moakiee.ae2lt.crafting.timewheel.Ae2LtTimeWheelCraftingCpuLogic;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
+import com.moakiee.ae2lt.integration.gtlcore.GTLCoreCompat;
 
 @Mixin(value = CraftingCPUMenu.class, remap = false)
 public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
@@ -61,11 +62,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Inject(method = "setCPU(Lappeng/api/networking/crafting/ICraftingCPU;)V", at = @At("HEAD"), cancellable = true)
     private void thunderbolt$setTimeWheelCpu(ICraftingCPU selected, CallbackInfo ci) {
-        if (this.thunderbolt$timeWheelCpu != null) {
-            this.thunderbolt$timeWheelCpu.getCraftingLogic().removeListener(cpuChangeListener);
-            this.thunderbolt$timeWheelCpu = null;
-            this.thunderbolt$jobPresent = false;
-        }
+        thunderbolt$clearTimeWheelSelection();
 
         if (!(selected instanceof TimeWheelCraftingCPU timeWheelCpu)) {
             return;
@@ -83,12 +80,39 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
         thunderbolt$queueAllItems(timeWheelCpu.getCraftingLogic());
         timeWheelCpu.getCraftingLogic().addListener(cpuChangeListener);
 
+        // GTLCore's menu hook cancels this same setCPU call for its transfinite CPU, so taking the
+        // selection here means that hook never runs and its selection field would stay populated.
+        GTLCoreCompat.clearTransfiniteSelection((CraftingCPUMenu) (Object) this, cpuChangeListener);
+
         ci.cancel();
+    }
+
+    @Unique
+    private void thunderbolt$clearTimeWheelSelection() {
+        if (this.thunderbolt$timeWheelCpu != null) {
+            this.thunderbolt$timeWheelCpu.getCraftingLogic().removeListener(cpuChangeListener);
+            this.thunderbolt$timeWheelCpu = null;
+            this.thunderbolt$jobPresent = false;
+        }
+    }
+
+    @Unique
+    private boolean thunderbolt$foreignCpuSelected() {
+        return GTLCoreCompat.isTransfiniteSelected((CraftingCPUMenu) (Object) this);
     }
 
     @Inject(method = "cancelCrafting", at = @At("TAIL"))
     private void thunderbolt$cancelTimeWheelCrafting(CallbackInfo ci) {
-        if (!isClientSide() && this.thunderbolt$timeWheelCpu != null) {
+        if (isClientSide()) {
+            return;
+        }
+
+        // A foreign CPU family that cancels the same setCPU head can have taken the selection while
+        // this field is still populated; cancelling would then hit a CPU that is not displayed.
+        if (this.thunderbolt$timeWheelCpu != null && thunderbolt$foreignCpuSelected()) {
+            thunderbolt$clearTimeWheelSelection();
+        }
+        if (this.thunderbolt$timeWheelCpu != null) {
             this.thunderbolt$timeWheelCpu.cancelJob();
         }
     }
@@ -105,7 +129,16 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Inject(method = "broadcastChanges()V", at = @At("HEAD"), remap = true)
     private void thunderbolt$broadcastTimeWheelStatus(CallbackInfo ci) {
-        if (!isServerSide() || this.thunderbolt$timeWheelCpu == null) {
+        if (!isServerSide()) {
+            return;
+        }
+
+        // Whichever hook runs second at the setCPU head is skipped by the other's cancel, so the
+        // TimeWheel selection can be stale while another CPU family drives this menu.
+        if (this.thunderbolt$timeWheelCpu != null && thunderbolt$foreignCpuSelected()) {
+            thunderbolt$clearTimeWheelSelection();
+        }
+        if (this.thunderbolt$timeWheelCpu == null) {
             return;
         }
 

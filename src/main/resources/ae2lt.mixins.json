@@ -31,6 +31,7 @@
     "ServerGamePacketListenerCelestweaveCreativeSyncMixin",
     "thunderbolt.accessor.ElapsedTimeTrackerAccessor",
     "thunderbolt.accessor.ExecutingCraftingJobAccessor",
+    "thunderbolt.accessor.TaskProgressAccessor",
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.accessor.ECOCraftingCpuAccessor",

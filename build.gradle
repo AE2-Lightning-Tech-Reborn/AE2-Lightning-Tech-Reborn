@@ -33,7 +33,9 @@ def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: project.findProperty('
 def githubPackagesToken = System.getenv('GITHUB_PACKAGES_TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.key')
 
 base {
-    archivesName = "${mod_id}-forge-${minecraft_version}"
+    // The GTL branch ships an extra runtime-gated compatibility layer for GTLCore; the suffix keeps
+    // its distributable jar distinguishable from the plain 1.20.1 build inside a modpack folder.
+    archivesName = "${mod_id}-forge-${minecraft_version}-gtl"
 }
 
 tasks.register('printProjectVersion') {
@@ -258,7 +260,8 @@ dependencies {
     }
 
     // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
-    // Provided at runtime as a separate mod jar in the modpack.
+    // Provided at runtime as a separate mod jar in the modpack. The GTL branch needs the Thunderbolt
+    // build that hands its crafting mixins over to GTLCore, hence the pinned floor in gradle.properties.
     compileOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }
