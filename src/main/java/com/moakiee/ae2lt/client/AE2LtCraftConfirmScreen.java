@@ -106,18 +106,6 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         CraftingPlanSummary plan = menu.getPlan();
         if (plan != null) {
             table.render(graphics, mouseX, mouseY, plan.getEntries(), scrollbar.getCurrentScroll());
-            var exact = ExactPlanReports.get(plan);
-            if (exact != null && mouseX >= leftPos + 8 && mouseX < leftPos + 214
-                    && mouseY >= topPos + 7 && mouseY < topPos + 24) {
-                var lines = new java.util.ArrayList<Component>();
-                lines.add(Component.translatable("gui.ae2lt.crafting_report.exact_preview"));
-                String bytes = ExactAmountFormatter.full(exact.bytes(), 1);
-                for (int i = 0; i < bytes.length(); i += 64) {
-                    lines.add(Component.literal(bytes.substring(i, Math.min(i + 64, bytes.length()))));
-                }
-                if (exact.incomplete()) lines.add(Component.translatable("gui.ae2lt.crafting_report.exact_route"));
-                graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
-            }
         }
     }
 
