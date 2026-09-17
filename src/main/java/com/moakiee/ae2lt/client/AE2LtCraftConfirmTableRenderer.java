@@ -13,6 +13,8 @@ import appeng.client.gui.me.crafting.AbstractTableRenderer;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftingPlanSummaryEntry;
 
+import com.moakiee.thunderbolt.ae2.crafting.ExactPlanPresentation;
+
 /** AE2 plan cells fitted to the seven-row AE2LT report texture. */
 final class AE2LtCraftConfirmTableRenderer
         extends AbstractTableRenderer<CraftingPlanSummaryEntry> {
@@ -22,6 +24,8 @@ final class AE2LtCraftConfirmTableRenderer
 
     @Override
     protected List<Component> getEntryDescription(CraftingPlanSummaryEntry entry) {
+        var exact = ExactPlanPresentation.describe(entry, false);
+        if (exact != null) return exact;
         List<Component> lines = new ArrayList<>(3);
         if (entry.getStoredAmount() > 0) {
             lines.add(GuiText.FromStorage.text(
@@ -45,6 +49,8 @@ final class AE2LtCraftConfirmTableRenderer
 
     @Override
     protected List<Component> getEntryTooltip(CraftingPlanSummaryEntry entry) {
+        var exact = ExactPlanPresentation.describe(entry, true);
+        if (exact != null) return exact;
         List<Component> lines = AEKeyRendering.getTooltip(entry.getWhat());
         if (entry.getStoredAmount() > 0) {
             lines.add(GuiText.FromStorage.text(

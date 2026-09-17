@@ -20,6 +20,9 @@ import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.crafting.CraftingPlanSummary;
 import appeng.util.ReadableNumberConverter;
 
+import com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter;
+import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReports;
+
 public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu> {
     private final AE2LtCraftConfirmTableRenderer table;
     private final Button start;
@@ -44,7 +47,8 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
 
         var errorResult = menu.submitError.result();
         CraftingPlanSummary plan = menu.getPlan();
-        boolean startable = plan != null && !plan.isSimulation();
+        var exact = ExactPlanReports.get(plan);
+        boolean startable = plan != null && !plan.isSimulation() && exact == null;
         start.active = !menu.hasNoCPU() && startable;
         selectCpu.active = startable;
         selectCpu.setMessage(getNextCpuButtonLabel());
@@ -54,7 +58,9 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
             cpuDetails = Component.translatable(
                     "gui.ae2lt.crafting_report.submit_error", errorResult.errorCode().name());
         } else if (plan != null) {
-            if (plan.isSimulation()) {
+            if (exact != null) {
+                cpuDetails = Component.translatable("gui.ae2lt.crafting_report.exact_preview");
+            } else if (plan.isSimulation()) {
                 cpuDetails = GuiText.PartialPlan.text();
             } else if (menu.getCpuAvailableBytes() > 0) {
                 cpuDetails = GuiText.ConfirmCraftCpuStatus.text(
@@ -67,7 +73,9 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         setTextContent("cpu_status", cpuDetails);
         setTextContent("bytes_used", plan == null
                 ? Component.literal("-")
-                : formatBytes(plan.getUsedBytes()));
+                : exact == null ? formatBytes(plan.getUsedBytes())
+                        : Component.translatable("gui.ae2lt.crafting_report.exact_bytes",
+                                ExactAmountFormatter.compact(exact.bytes(), 1)));
 
         int size = plan == null ? 0 : plan.getEntries().size();
         scrollbar.setRange(0, table.getScrollableRows(size), 1);
@@ -98,6 +106,18 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         CraftingPlanSummary plan = menu.getPlan();
         if (plan != null) {
             table.render(graphics, mouseX, mouseY, plan.getEntries(), scrollbar.getCurrentScroll());
+            var exact = ExactPlanReports.get(plan);
+            if (exact != null && mouseX >= leftPos + 8 && mouseX < leftPos + 214
+                    && mouseY >= topPos + 7 && mouseY < topPos + 24) {
+                var lines = new java.util.ArrayList<Component>();
+                lines.add(Component.translatable("gui.ae2lt.crafting_report.exact_preview"));
+                String bytes = ExactAmountFormatter.full(exact.bytes(), 1);
+                for (int i = 0; i < bytes.length(); i += 64) {
+                    lines.add(Component.literal(bytes.substring(i, Math.min(i + 64, bytes.length()))));
+                }
+                if (exact.incomplete()) lines.add(Component.translatable("gui.ae2lt.crafting_report.exact_route"));
+                graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+            }
         }
     }
 
