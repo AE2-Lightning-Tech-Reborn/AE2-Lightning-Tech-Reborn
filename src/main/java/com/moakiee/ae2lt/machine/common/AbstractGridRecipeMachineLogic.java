@@ -11,6 +11,7 @@ import appeng.blockentity.grid.AENetworkedBlockEntity;
 import appeng.core.definitions.AEItems;
 
 import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public abstract class AbstractGridRecipeMachineLogic<
         H extends AENetworkedBlockEntity & GridRecipeMachineHost<L, C> & IUpgradeableObject,
@@ -18,6 +19,7 @@ public abstract class AbstractGridRecipeMachineLogic<
         C> implements IGridTickable {
 
     protected final H host;
+    private final MachineRechargeController rechargeController = new MachineRechargeController();
 
     protected AbstractGridRecipeMachineLogic(H host) {
         this.host = host;
@@ -230,11 +232,25 @@ public abstract class AbstractGridRecipeMachineLogic<
             return;
         }
 
+        long demand = Math.min(Integer.MAX_VALUE, getCurrentMaxEnergyPerTick());
+        Optional<L> recipe = host.getLockedRecipe();
+        if (recipe.isPresent()) {
+            long remaining = Math.max(0L, getTotalEnergy(recipe.get()) - host.getConsumedEnergy());
+            demand = Math.min(demand, Math.min(remaining,
+                    getMinDurationLimitedMaxEnergyPerTick(remaining, host.getProcessingTicksSpent())));
+        }
+        if (!rechargeController.shouldRecharge(
+                host.getMachineStoredEnergy(), host.getMachineEnergyCapacity(), demand,
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE))) {
+            return;
+        }
+
         host.getMainNode().ifPresent((grid, node) -> {
             AppFluxHelper.pullPowerFromNetwork(
                     grid.getStorageService().getInventory(),
                     host.getMachineEnergyStorage(),
                     appeng.api.networking.security.IActionSource.ofMachine(host));
+            rechargeController.afterRecharge(host.getMachineStoredEnergy(), host.getMachineEnergyCapacity());
         });
     }
 

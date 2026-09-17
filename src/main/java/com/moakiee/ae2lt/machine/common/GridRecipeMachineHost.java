@@ -39,6 +39,10 @@ public interface GridRecipeMachineHost<L, C> {
 
     IEnergyStorage getMachineEnergyStorage();
 
+    default long getMachineEnergyCapacity() {
+        return getMachineEnergyStorage().getMaxEnergyStored();
+    }
+
     int extractMachineEnergy(long amount);
 
     void onEnergyConsumed(int consumed);

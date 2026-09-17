@@ -216,12 +216,16 @@ public class TeslaCoilBlockEntity extends AENetworkedBlockEntity
     }
 
     public boolean hasEnoughEnergyForSelectedStart() {
+        return getBatchSizeForMode(selectedMode) > 0L
+                && energyStorage.getStoredEnergyLong() >= getRequiredEnergyForSelectedStart();
+    }
+
+    public long getRequiredEnergyForSelectedStart() {
         long batchSize = getBatchSizeForMode(selectedMode);
-        return batchSize > 0L
-                && energyStorage.getStoredEnergyLong() >= selectedMode.requiredEnergyForTick(
+        return batchSize > 0L ? selectedMode.requiredEnergyForTick(
                         0,
                         0L,
-                        getTotalEnergyFor(selectedMode, batchSize));
+                        getTotalEnergyFor(selectedMode, batchSize)) : 0L;
     }
 
     public long getConsumedEnergy() {

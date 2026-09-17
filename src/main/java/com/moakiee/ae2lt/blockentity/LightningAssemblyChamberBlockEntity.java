@@ -673,6 +673,11 @@ public class LightningAssemblyChamberBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
+    public long getMachineEnergyCapacity() {
+        return energyStorage.getCapacityLong();
+    }
+
+    @Override
     public int extractMachineEnergy(long amount) {
         return energyStorage.extractInternal(amount, false);
     }
