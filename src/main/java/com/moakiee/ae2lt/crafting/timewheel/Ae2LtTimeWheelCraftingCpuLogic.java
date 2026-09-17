@@ -94,6 +94,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     private static final int MAX_TASK_PROBES_PER_TICK = 262_144;
     private static final int RETRY_DELAY_TICKS = 4;
     private static final int PARKED_TASK_SAFETY_DELAY_TICKS = 32;
+    private static final boolean CRAFTING_DIAGNOSTICS = Boolean.getBoolean("ae2lt.debugCrafting");
+    private final CraftingBoundaryDiagnostics boundaryDiagnostics = new CraftingBoundaryDiagnostics();
     private static final String TAG_INVENTORY = "inventory";
     private static final String TAG_JOB = "job";
     private static final String TAG_OVERLOAD_STATE = "ae2ltOverloadState";
@@ -353,6 +355,16 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                        long maxCopies,
                                        TickProviderDispatchSchedule dispatchSchedule) {
         resolvePendingLoad();
+        if (CRAFTING_DIAGNOSTICS && job != null) {
+            var active = job;
+            boundaryDiagnostics.snapshot(TickHandler.instance().getCurrentTick(), active.link.getCraftingID(),
+                    () -> "tasks=" + active.tasks.size() + " queued=" + queuedTasks.size()
+                            + " active=" + cpu.isActive() + " suspended=" + active.suspended
+                            + " ops=" + maxOps + " copies=" + maxCopies
+                            + " inventory=" + CraftingBoundaryDiagnostics.counter(inventory.list)
+                            + " waiting=" + CraftingBoundaryDiagnostics.counter(active.waitingFor.list)
+                            + " undispatchedOutputs=" + CraftingBoundaryDiagnostics.counter(active.pendingOutputs));
+        }
         if (this.pendingJobTag != null) {
             return TickUsage.EMPTY;
         }
@@ -461,7 +473,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                               Level level,
                                               TickProviderDispatchSchedule dispatchSchedule) {
         var activeJob = this.job;
-        if (activeJob == null || maxOps <= 0 || requestedCopyLimit <= 0L) {
+        if (activeJob == null || activeJob.suspended || maxOps <= 0 || requestedCopyLimit <= 0L) {
             return TickUsage.EMPTY;
         }
 
@@ -501,7 +513,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         energyService,
                         level,
                         dispatchSchedule);
+                if (activeJob.suspended) break;
                 if (batchResult.consumedCpuOps() > 0) {
+                    traceTask(activeJob, details, "batchAccepted", batchResult.dispatchedCopies());
                     usedOps += batchResult.consumedCpuOps();
                     usedCopies = saturatingAdd(usedCopies, batchResult.dispatchedCopies());
                     preferTaskWhilePending(activeJob, details);
@@ -520,6 +534,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         level,
                         dispatchSchedule);
                 if (bulk != null) {
+                    traceTask(activeJob, details, "bulkVisit", bulk.dispatched());
                     usedOps += bulk.dispatched();
                     usedCopies = saturatingAdd(usedCopies, bulk.dispatched());
                     if (bulk.dispatched() > 0) {
@@ -537,6 +552,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         energyService,
                         level,
                         dispatchSchedule);
+                traceTask(activeJob, details, outcome.name(), outcome == DispatchOutcome.PUSHED ? 1L : 0L);
                 if (outcome == DispatchOutcome.PUSHED) {
                     usedOps++;
                     usedCopies = saturatingAdd(usedCopies, 1L);
@@ -547,6 +563,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     rescheduleFailedTask(activeJob, details, outcome);
                 }
             }
+        } catch (RuntimeException failure) {
+            failExecution(activeJob, failure instanceof AmbiguousDispatchException
+                    ? "AMBIGUOUS_PROVIDER_OWNERSHIP" : "DISPATCH_ACCOUNTING_FAILURE", failure);
         } finally {
             endStatusChangeBatch();
         }
@@ -690,7 +709,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
                 pushed = true;
                 craftingContainer = null;
-                energyService.extractAEPower(patternPower, Actionable.MODULATE, PowerMultiplier.CONFIG);
                 var remainderLoopCredits = recordLoopPatternDispatch(
                         details, 1L, false, actualLoopSeedInput);
                 recordPushedPattern(
@@ -698,9 +716,14 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         remainderLoopCredits);
 
                 consumeTaskCopies(activeJob, details, 1L);
+                energyService.extractAEPower(patternPower, Actionable.MODULATE, PowerMultiplier.CONFIG);
                 return DispatchOutcome.PUSHED;
             }
                 return DispatchOutcome.RETRY_SOON;
+        } catch (AmbiguousDispatchException failure) {
+            // The provider may have consumed the input before throwing.
+            pushed = true;
+            throw failure;
         } finally {
             if (!pushed && craftingContainer != null) {
                 CraftingCpuHelper.reinjectPatternInputs(extractionInventory, craftingContainer);
@@ -747,6 +770,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 craftingService, details, dispatchSchedule).iterator();
         var firstProvider = nextFreeProvider(providers);
         if (firstProvider == null) {
+            traceTask(activeJob, details, "noReadyProvider", 0L);
             return new BulkPush(0, 1);
         }
 
@@ -775,6 +799,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             }
         }
         if (affordable <= 0) {
+            traceTask(activeJob, details, "insufficientPower", 0L);
             ParallelBatchCpuHelper.reinject(result, actual, inventory);
             return new BulkPush(0, RETRY_DELAY_TICKS);
         }
@@ -789,16 +814,32 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     if (pending == null) {
                         pending = ParallelBatchCpuHelper.cloneSingleCopy(result);
                     }
-                    if (!tryPushPattern(resolvedProvider, pending, dispatchSchedule)) {
+                    boolean accepted;
+                    try {
+                        accepted = tryPushPattern(resolvedProvider, pending, dispatchSchedule);
+                    } catch (AmbiguousDispatchException failure) {
+                        pending = null;
+                        dispatched++;
+                        ParallelBatchCpuHelper.markDispatched(result, 1);
+                        throw failure;
+                    }
+                    if (!accepted) {
                         // A rejecting provider must not consume the container, so the clone stays
                         // valid and is reused for the next provider instead of re-cloning.
                         freeProviderRejected = true;
                         break;
                     }
                     pending = null; // ownership transferred to the provider
-                    energyService.extractAEPower(powerOne, Actionable.MODULATE, PowerMultiplier.CONFIG);
-                    ParallelBatchCpuHelper.markDispatched(result, 1);
                     dispatched++;
+                    ParallelBatchCpuHelper.markDispatched(result, 1);
+                    ParallelBatchCpuHelper.registerExpectedOutputs(
+                            scratchBatchJobView.bind(activeJob, details), details, result, 1L);
+                    if (details instanceof ExecuteLoopPattern) {
+                        recordLoopPatternDispatch(details, 1L, false);
+                    }
+                    consumeTaskCopies(activeJob, details, 1L);
+                    cpu.markDirty();
+                    energyService.extractAEPower(powerOne, Actionable.MODULATE, PowerMultiplier.CONFIG);
                 }
                 resolvedProvider = nextFreeProvider(providers);
             }
@@ -807,14 +848,12 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             if (leftover > 0) {
                 ParallelBatchCpuHelper.reinject(result, leftover, inventory);
             }
+            if (dispatched > 0 && !(details instanceof ExecuteLoopPattern)) {
+                reconcileRetainedInventory();
+            }
         }
 
         if (dispatched > 0) {
-            var jobView = scratchBatchJobView.bind(activeJob, details);
-            ParallelBatchCpuHelper.registerExpectedOutputs(jobView, details, result, dispatched);
-            recordLoopPatternDispatch(details, dispatched, false);
-            consumeTaskCopies(activeJob, details, dispatched);
-            cpu.markDirty();
             // Energy-capped visits back off on the energy cadence; otherwise re-poll immediately
             // (delay 0) so the remaining copies keep filling providers this tick.
             return new BulkPush(dispatched, affordable < actual ? RETRY_DELAY_TICKS : 0);
@@ -848,20 +887,54 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         var provider = resolvedProvider.provider();
         try {
             if (!provider.pushPattern(resolvedProvider.pattern(), inputs)) {
+                traceProvider(resolvedProvider, "providerRejected");
                 dispatchSchedule.recordFailure(resolvedProvider.pattern(), provider);
                 return false;
             }
+            dispatchSchedule.recordSuccess(resolvedProvider.pattern(), provider);
+            traceProvider(resolvedProvider, "providerAccepted");
+            return true;
         } catch (Throwable t) {
-            AELog.warn("[ae2lt] ICraftingProvider %s threw during pushPattern; blocking this pattern for the current tick. %s",
-                    provider, t);
-            dispatchSchedule.recordFailure(resolvedProvider.pattern(), provider);
-            return false;
+            throw new AmbiguousDispatchException(t);
         }
-        dispatchSchedule.recordSuccess(resolvedProvider.pattern(), provider);
-        return true;
+    }
+
+    private static final class AmbiguousDispatchException extends RuntimeException {
+        private AmbiguousDispatchException(Throwable cause) { super(cause); }
+    }
+
+    private void failExecution(TimeWheelJob activeJob, String reason, Throwable failure) {
+        activeJob.failExecution(reason);
+        cpu.markDirty();
+        AELog.warn("[ae2lt] Crafting job suspended permanently: %s. %s", reason, failure);
+    }
+
+    private void traceProvider(ResolvedProvider resolved, String outcome) {
+        if (!CRAFTING_DIAGNOSTICS || job == null) return;
+        boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), job.link.getCraftingID(),
+                outcome, () -> "provider=" + resolved.provider().getClass().getName()
+                        + "@" + Integer.toHexString(System.identityHashCode(resolved.provider()))
+                        + " pattern=" + resolved.pattern().getClass().getSimpleName()
+                        + "@" + Integer.toHexString(System.identityHashCode(resolved.pattern())));
     }
 
     public long insert(AEKey what, long amount, Actionable type) {
+        if (!CRAFTING_DIAGNOSTICS || type != Actionable.MODULATE || job == null || what == null) {
+            return insertInternal(what, amount, type);
+        }
+        var active = job;
+        long heldBefore = inventory.list.get(what);
+        long waitingBefore = active.waitingFor.list.get(what);
+        long accepted = insertInternal(what, amount, type);
+        boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), active.link.getCraftingID(),
+                "return", () -> "key=" + what + " offered=" + amount + " accepted=" + accepted
+                        + " held=" + heldBefore + "->" + inventory.list.get(what)
+                        + " waiting=" + waitingBefore + "->" + active.waitingFor.list.get(what)
+                        + " jobChanged=" + (job != active));
+        return accepted;
+    }
+
+    private long insertInternal(AEKey what, long amount, Actionable type) {
         var activeJob = this.job;
         if (what == null || activeJob == null || amount <= 0) {
             return 0;
@@ -994,12 +1067,12 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
         long accepted = 0L;
         if (type == Actionable.MODULATE) {
-            deductClaimedWaitingFor(activeJob, claims);
             rekeyOverloadReusableSeeds(what, claims);
             if (activeJob.softCancelling) {
                 long claimed = claims.claimedAmount();
                 decrementItems(activeJob.timeTracker, claimed, what.getType());
                 inventory.insert(what, claimed, Actionable.MODULATE);
+                deductClaimedWaitingFor(activeJob, claims);
                 accepted += claimed;
                 if (activeJob.waitingKeys.isEmpty()
                         && !OverloadCpuStateManager.INSTANCE.hasAnyPending(this)) {
@@ -1009,6 +1082,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 long publicInventory = overloadPublicInventory(claims);
                 retainedRequester = Math.min(retainedRequester, publicInventory);
                 long inventoryAccepted = applyInventoryClaims(activeJob, what, claims);
+                deductClaimedWaitingFor(activeJob, claims);
+                wakeSchedulerForReturnedInput(what);
                 markRetainedRequesterClaim(what, retainedRequester);
                 long deferredCommitted = Math.min(
                         deferredRequester,
@@ -1040,6 +1115,18 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private long acceptStrictWaitingItem(TimeWheelJob activeJob, AEKey what, long amount, Actionable type) {
+        // Publish intermediate material before retiring its in-flight credit. Consumers are
+        // woken only after both sides of the transfer have been updated.
+        if (!activeJob.softCancelling && !what.matches(activeJob.finalOutput)) {
+            if (type == Actionable.MODULATE) {
+                inventory.insert(what, amount, Actionable.MODULATE);
+                extractWaitingFor(activeJob, what, amount);
+                decrementItems(activeJob.timeTracker, amount, what.getType());
+                wakeSchedulerForReturnedInput(what);
+                cpu.markDirty();
+            }
+            return amount;
+        }
         if (type == Actionable.MODULATE) {
             decrementItems(activeJob.timeTracker, amount, what.getType());
             extractWaitingFor(activeJob, what, amount);
@@ -1166,7 +1253,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void finishSuccessfulIfReady(TimeWheelJob activeJob) {
-        if (job != activeJob || activeJob.softCancelling) return;
+        if (job != activeJob || activeJob.softCancelling || activeJob.executionError != null) return;
         // Also repairs persisted jobs written by versions that could leave deferred credits after
         // the final demand had already reached zero.
         capPendingRequesterOutputsToRemaining(activeJob.remainingAmount, null);
@@ -1429,8 +1516,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 // borrowed as another recipe input while the requester is temporarily unable to
                 // accept it; only retainedFinalOutputs is intentionally consumable by its loop.
                 reserved = addSaturated(reserved, pendingRequesterOutputs.get(aeKey));
-                if (allowedLoop == null || !allowedLoop.isInputSeedKey(aeKey)) {
+                if (allowedLoop != null && !allowedLoop.isInputSeedKey(aeKey)) {
                     reserved = addSaturated(reserved, retainedFinalOutputs.get(aeKey));
+                } else if (allowedLoop == null) {
+                    long ordinaryDemand = job == null || retainedFinalOutputs.get(aeKey) <= 0
+                            ? 0L : pendingOrdinaryInputDemand(job, aeKey);
+                    reserved = addSaturated(reserved,
+                            Math.max(0L, retainedFinalOutputs.get(aeKey) - ordinaryDemand));
                 }
                 return reserved > 0 ? reserved : null;
             }
@@ -1463,6 +1555,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             long copies,
             boolean sharedBatch,
             @Nullable List<ExecuteLoopPattern.ActualSeedUse> actualInputSeed) {
+        if (!(details instanceof ExecuteLoopPattern) && copies > 0) {
+            reconcileRetainedInventory();
+        }
         if (!(details instanceof ExecuteLoopPattern loopPattern)
                 || copies <= 0) {
             return Map.of();
@@ -1529,7 +1624,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 || !what.dropSecondary().equals(activeJob.finalOutput.what().dropSecondary())) {
             return 0L;
         }
-        long demand = pendingLoopSeedDemand(activeJob, what);
+        long demand = addSaturated(pendingLoopSeedDemand(activeJob, what), pendingOrdinaryInputDemand(activeJob, what));
         long alreadyRetained = 0L;
         for (var retained : retainedFinalOutputs) {
             if (sharesPendingLoopConsumer(activeJob, what, retained.getKey())) {
@@ -1537,6 +1632,33 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             }
         }
         return Math.min(amount, Math.max(0L, demand - alreadyRetained));
+    }
+
+    /** Conservative reservation across valid alternatives; no material is created by this bound. */
+    private long pendingOrdinaryInputDemand(TimeWheelJob activeJob, AEKey key) {
+        long demand = 0L;
+        for (var task : activeJob.tasks.entrySet()) {
+            if (task.getValue().value <= 0 || task.getKey() instanceof ExecuteLoopPattern) continue;
+            for (var input : task.getKey().getInputs()) {
+                long unit = 0L;
+                for (var possible : input.getPossibleInputs()) {
+                    if (key.equals(possible.what())) unit = Math.max(unit, possible.amount());
+                }
+                demand = addSaturated(demand, multiplySaturated(
+                        multiplySaturated(unit, input.getMultiplier()), task.getValue().value));
+            }
+        }
+        return demand;
+    }
+
+    private void reconcileRetainedInventory() {
+        for (var entry : retainedFinalOutputs) {
+            long free = Math.max(0L, inventory.list.get(entry.getKey())
+                    - Math.max(seedReturnQuota.get(entry.getKey()), loopSeedLedgers.totalReserved(entry.getKey()))
+                    - pendingRequesterOutputs.get(entry.getKey()));
+            entry.setValue(Math.min(entry.getLongValue(), free));
+        }
+        retainedFinalOutputs.removeZeros();
     }
 
     private boolean sharesPendingLoopConsumer(
@@ -1659,22 +1781,24 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         if (activeJob == null || retainedFinalOutputs.isEmpty()) return;
         var retained = new ArrayList<GenericStack>();
         for (var entry : retainedFinalOutputs) {
-            if (entry.getLongValue() > 0 && pendingLoopSeedDemand(activeJob, entry.getKey()) <= 0) {
+            if (entry.getLongValue() > 0 && pendingLoopSeedDemand(activeJob, entry.getKey()) <= 0
+                    && pendingOrdinaryInputDemand(activeJob, entry.getKey()) <= 0) {
                 retained.add(new GenericStack(entry.getKey(), entry.getLongValue()));
             }
         }
         for (var entry : retained) {
             long held = inventory.extract(entry.what(), Long.MAX_VALUE, Actionable.SIMULATE);
-            long free = Math.max(0L, held - loopSeedLedgers.totalReserved(entry.what()));
+            long free = Math.max(0L, held - Math.max(seedReturnQuota.get(entry.what()),
+                    loopSeedLedgers.totalReserved(entry.what())));
             long offer = Math.min(entry.amount(), Math.min(free, activeJob.remainingAmount));
             if (offer <= 0) continue;
-            long accepted = offerToRequester(
+            long accepted = offerReleasedOutput(
                     activeJob, entry.what(), offer, Actionable.SIMULATE);
             if (accepted <= 0) continue;
             if (job != activeJob || activeJob.link.isCanceled()) return;
             long removed = inventory.extract(entry.what(), accepted, Actionable.MODULATE);
             if (removed <= 0) continue;
-            long delivered = offerToRequester(
+            long delivered = offerReleasedOutput(
                     activeJob, entry.what(), removed, Actionable.MODULATE);
             if (delivered < removed) {
                 inventory.insert(entry.what(), removed - delivered, Actionable.MODULATE);
@@ -2109,12 +2233,17 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         return job != null && job.suspended;
     }
 
+    @Nullable
+    public String getExecutionError() {
+        return job != null ? job.executionError : null;
+    }
+
     public boolean isSoftCancelling() {
         return job != null && job.softCancelling;
     }
 
     public void setJobSuspended(boolean suspended) {
-        if (job != null && job.suspended != suspended) {
+        if (job != null && job.executionError == null && job.suspended != suspended) {
             job.suspended = suspended;
             cpu.markDirty();
         }
@@ -2365,7 +2494,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
         decrementItems(activeJob.timeTracker, claimed, incoming.getType());
         inventory.insert(incoming, claimed, Actionable.MODULATE);
-        wakeSchedulerForReturnedInput(incoming);
         return claimed;
     }
 
@@ -2467,6 +2595,11 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void insertWaitingFor(TimeWheelJob activeJob, AEKey what, long amount) {
+        if (CRAFTING_DIAGNOSTICS) {
+            boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), activeJob.link.getCraftingID(),
+                    "expectOutput", () -> "key=" + what + " amount=" + amount
+                            + " waitingBefore=" + activeJob.waitingFor.list.get(what));
+        }
         if (activeJob.insertWaitingFor(what, amount)) {
             markWaitingKeysChanged();
         }
@@ -2474,6 +2607,12 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     private long extractWaitingFor(TimeWheelJob activeJob, AEKey what, long amount) {
         var result = activeJob.extractWaitingFor(what, amount);
+        if (CRAFTING_DIAGNOSTICS) {
+            boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), activeJob.link.getCraftingID(),
+                    "consumeWaiting", () -> "key=" + what + " requested=" + amount
+                            + " extracted=" + result.extracted() + " keyRemoved=" + result.removedKey()
+                            + " remaining=" + activeJob.waitingFor.list.get(what));
+        }
         if (result.removedKey()) {
             markWaitingKeysChanged();
         }
@@ -2488,6 +2627,45 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     private void markWaitingKeysChanged() {
         waitingKeysModifiedOnTick = TickHandler.instance().getCurrentTick();
+    }
+
+    private long offerReleasedOutput(TimeWheelJob activeJob, AEKey what, long amount, Actionable type) {
+        if (!activeJob.link.isStandalone()) return offerToRequester(activeJob, what, amount, type);
+        var grid = cpu.getGrid();
+        if (grid == null || amount <= 0) return 0L;
+        var previous = requesterOutputInFlight;
+        requesterOutputInFlight = what;
+        try {
+            return Math.max(0L, Math.min(amount, grid.getStorageService().getInventory()
+                    .insert(what, amount, type, cpu.getSrc())));
+        } finally {
+            requesterOutputInFlight = previous;
+        }
+    }
+
+    private void traceTask(TimeWheelJob activeJob, IPatternDetails details, String outcome, long copies) {
+        if (!CRAFTING_DIAGNOSTICS) return;
+        boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), activeJob.link.getCraftingID(),
+                outcome, () -> {
+                    var task = activeJob.tasks.get(details);
+                    var inputs = new StringBuilder();
+                    var reserved = reservedSeedStock(details);
+                    int shown = 0;
+                    for (var input : details.getInputs()) {
+                        for (var candidate : input.getPossibleInputs()) {
+                            if (shown++ >= 16) break;
+                            inputs.append(candidate).append(" x").append(input.getMultiplier())
+                                    .append(" held=").append(inventory.list.get(candidate.what()))
+                                    .append(" reserved=").append(reserved.getOrDefault(candidate.what(), 0L))
+                                    .append(';');
+                        }
+                        if (shown >= 16) break;
+                    }
+                    return "task=" + details.getClass().getSimpleName() + "@"
+                            + Integer.toHexString(System.identityHashCode(details))
+                            + " copies=" + copies + " remaining=" + (task == null ? 0L : task.value)
+                            + " outputs=" + details.getOutputs() + " inputs=" + inputs;
+                });
     }
 
     private void prepareScheduler(TimeWheelJob activeJob) {
@@ -2797,6 +2975,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
 
         var tasksToWake = tasksParkedByMissingKey.wake(what.getPrimaryKey());
+        if (CRAFTING_DIAGNOSTICS) {
+            boundaryDiagnostics.event(TickHandler.instance().getCurrentTick(), job.link.getCraftingID(),
+                    "wake", () -> "key=" + what + " tasks=" + tasksToWake.size());
+        }
         if (tasksToWake.isEmpty()) {
             return;
         }
@@ -2992,6 +3174,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         @Nullable
         private Integer playerId;
         private boolean suspended;
+        private String executionError;
+        private Tag failedTaskSnapshot;
+
+        private void failExecution(String reason) {
+            suspended = true;
+            if (executionError == null) executionError = reason;
+        }
         private boolean softCancelling;
         private boolean closedLoopJob;
 
@@ -3063,6 +3252,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     new ElapsedTimeTracker(data.getCompound(NBT_TIME_TRACKER)));
             job.remainingAmount = data.getLong(NBT_REMAINING_AMOUNT);
             job.suspended = data.getBoolean(NBT_SUSPENDED);
+            if (data.contains("executionError", Tag.TAG_STRING)) {
+                job.failExecution(data.getString("executionError"));
+            }
             job.softCancelling = data.getBoolean(NBT_SOFT_CANCELLING);
             job.closedLoopJob = data.getBoolean(NBT_CLOSED_LOOP_JOB) || job.softCancelling;
             job.sharedBatchSeedConsumers.readFromNBT(data);
@@ -3070,11 +3262,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             job.rebuildWaitingKeys();
             job.tasks.clear();
             job.pendingOutputs.clear();
-            job.readTasks(data.getList(NBT_TASKS, Tag.TAG_COMPOUND), registries, cpu.getLevel());
+            job.restoreTasks(data, registries, cpu.getLevel());
             job.rebuildPendingOutputs();
             if (!job.closedLoopJob) {
-                // Saves from before the closedLoopJob tag lack the flag for running loop jobs;
-                // loop tasks only ever come from a closed-loop macro, so infer it from them.
+                // Saves from before the closedLoopJob tag lack the flag for running loop jobs.
                 for (var details : job.tasks.keySet()) {
                     if (details instanceof ExecuteLoopPattern) {
                         job.closedLoopJob = true;
@@ -3085,19 +3276,41 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return job;
         }
 
+        private void restoreTasks(CompoundTag data, HolderLookup.Provider registries, @Nullable Level level) {
+            if (data.contains("executionError", Tag.TAG_STRING)) failExecution(data.getString("executionError"));
+            var savedTasks = data.getList(NBT_TASKS, Tag.TAG_COMPOUND);
+            try {
+                if (!data.contains(NBT_TASKS, Tag.TAG_LIST)
+                        || !(data.get(NBT_TASKS) instanceof ListTag rawTasks)
+                        || (!rawTasks.isEmpty() && rawTasks.getElementType() != Tag.TAG_COMPOUND)) {
+                    throw new IllegalArgumentException("Invalid persisted task list");
+                }
+                readTasks(savedTasks, registries, level);
+            } catch (RuntimeException failure) {
+                tasks.clear();
+                var raw = data.get(NBT_TASKS);
+                failedTaskSnapshot = raw != null ? raw.copy() : new ListTag();
+                failExecution("EXECUTION_METADATA_LOST");
+                AELog.warn("[ae2lt] Cannot restore complete crafting task list; job suspended. %s", failure);
+            }
+        }
+
         private void readTasks(ListTag tasksTag, HolderLookup.Provider registries, @Nullable Level level) {
             if (level == null) {
-                return;
+                throw new IllegalArgumentException("Cannot restore crafting tasks without a level");
             }
 
             for (int i = 0; i < tasksTag.size(); i++) {
                 var item = tasksTag.getCompound(i);
                 var pattern = AEItemKey.fromTag(registries, item);
                 if (pattern == null) {
-                    continue;
+                    throw new IllegalArgumentException("Invalid persisted crafting pattern");
                 }
                 IPatternDetails details = PatternDetailsHelper.decodePattern(pattern, level);
                 var remaining = item.getLong(NBT_CRAFTING_PROGRESS);
+                if (details == null || remaining <= 0) {
+                    throw new IllegalArgumentException("Invalid persisted task or remaining count");
+                }
                 if (details != null && remaining > 0) {
                     var inputSeed = readCounter(
                             item.getList(NBT_INPUT_SEED, Tag.TAG_COMPOUND), registries);
@@ -3131,6 +3344,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         details = new ExecuteLoopPattern(
                                 details, consumerId, initialSeed, inputSeed,
                                 outputCredits, sharedOutputCredits);
+                    }
+                    if (item.getBoolean("requiresPlannedInputs")
+                            && !item.contains(PlannedInputPattern.NBT_INPUTS, Tag.TAG_LIST)) {
+                        throw new IllegalArgumentException("Planned task lost its input assignments");
                     }
                     details = PlannedInputPattern.readFromTag(details, item, registries);
                     var task = tasks.computeIfAbsent(details, ignored -> new TaskProgress());
@@ -3234,6 +3451,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 var item = definition.toTag(registries);
                 item.putLong(NBT_CRAFTING_PROGRESS, entry.getValue().value);
                 if (entry.getKey() instanceof PlannedInputPattern planned) {
+                    item.putBoolean("requiresPlannedInputs", true);
                     planned.writeToTag(item, registries);
                 }
                 if (entry.getKey() instanceof ExecuteLoopPattern loopPattern) {
@@ -3270,6 +3488,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 data.putInt(NBT_PLAYER_ID, playerId);
             }
             data.putBoolean(NBT_SUSPENDED, suspended);
+            if (executionError != null) data.putString("executionError", executionError);
+            if (failedTaskSnapshot != null) data.put(NBT_TASKS, failedTaskSnapshot.copy());
             data.putBoolean(NBT_SOFT_CANCELLING, softCancelling);
             data.putBoolean(NBT_CLOSED_LOOP_JOB, closedLoopJob);
             sharedBatchSeedConsumers.writeToNBT(data);
@@ -3411,6 +3631,11 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         @Override
         public void addContainerMaxItems(long count, AEKeyType type) {
             addMaxItems(activeJob.timeTracker, count, type);
+        }
+
+        @Override
+        public void failDispatch(String reason, Throwable cause) {
+            failExecution(activeJob, reason, cause);
         }
     }
 

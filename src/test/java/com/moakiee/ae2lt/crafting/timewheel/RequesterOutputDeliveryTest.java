@@ -264,6 +264,180 @@ class RequesterOutputDeliveryTest {
         assertEquals(16, fixture.disk.stored);
     }
 
+    @ParameterizedTest
+    @CsvSource({"true", "false"})
+    void finalOutputNeededByOrdinaryTaskStaysAvailableUntilConsumed(boolean standalone) throws Exception {
+        var fixture = new Fixture(8, standalone, false);
+        var pattern = new IPatternDetails() {
+            @Override public AEItemKey getDefinition() { return null; }
+            @Override public IInput[] getInputs() {
+                return new IInput[]{new IInput() {
+                    @Override public GenericStack[] getPossibleInputs() {
+                        return new GenericStack[]{new GenericStack(OUTPUT, 1)};
+                    }
+                    @Override public long getMultiplier() { return 1; }
+                    @Override public boolean isValid(AEKey key, Level level) { return OUTPUT.equals(key); }
+                    @Override public AEKey getRemainingKey(AEKey key) { return null; }
+                }};
+            }
+            @Override public List<GenericStack> getOutputs() { return List.of(new GenericStack(OTHER, 1)); }
+        };
+        var progressClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TaskProgress");
+        var constructor = progressClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        var progress = constructor.newInstance();
+        field(progress, "value").setLong(progress, 4L);
+        var tasks = (Map<IPatternDetails, Object>) field(fixture.job, "tasks").get(fixture.job);
+        tasks.put(pattern, progress);
+
+        assertEquals(4L, fixture.produce(4));
+        fixture.flush();
+        assertEquals(8L, fixture.remaining());
+        assertEquals(4L, fixture.held());
+        assertEquals(0L, fixture.disk.stored);
+        var reserveMethod = fixture.logic.getClass().getDeclaredMethod("reservedCraftingInventory", IPatternDetails.class);
+        reserveMethod.setAccessible(true);
+        var available = (appeng.crafting.inv.ICraftingInventory) reserveMethod.invoke(fixture.logic, pattern);
+        assertEquals(4L, available.extract(OUTPUT, 4L, SIMULATE));
+        assertEquals(4L, available.extract(OUTPUT, 4L, MODULATE));
+        var reconcile = fixture.logic.getClass().getDeclaredMethod("reconcileRetainedInventory");
+        reconcile.setAccessible(true);
+        reconcile.invoke(fixture.logic);
+        tasks.clear();
+        assertEquals(0L, ((KeyCounter) field(fixture.logic, "retainedFinalOutputs").get(fixture.logic)).get(OUTPUT));
+        fixture.flush();
+        assertEquals(8L, fixture.remaining(), "consumed intermediate material cannot complete final demand");
+    }
+
+    @Test
+    void dispatchFailureCannotBeResumedOrMarkedSuccessful() throws Exception {
+        var fixture = new Fixture(1, true, false);
+        var fail = fixture.logic.getClass().getDeclaredMethod("failExecution",
+                fixture.job.getClass(), String.class, Throwable.class);
+        fail.setAccessible(true);
+        fail.invoke(fixture.logic, fixture.job, "AMBIGUOUS_PROVIDER_OWNERSHIP", new IllegalStateException("provider"));
+        fixture.logic.setJobSuspended(false);
+        assertTrue(fixture.logic.isJobSuspended());
+        assertEquals("AMBIGUOUS_PROVIDER_OWNERSHIP", fixture.logic.getExecutionError());
+        field(fixture.job, "remainingAmount").setLong(fixture.job, 0);
+        fixture.flush();
+        assertFalse(fixture.link.completed);
+    }
+
+    @Test
+    void ordinaryBulkStopsAfterAmbiguousPushOrAcceptedAccountingFailure() throws Exception {
+        for (boolean providerThrows : List.of(true, false)) {
+            var fixture = new Fixture(2, true, false);
+            var source = new IPatternDetails() {
+                public AEItemKey getDefinition() { return null; }
+                public IInput[] getInputs() {
+                    return new IInput[] {new IInput() {
+                        public GenericStack[] getPossibleInputs() { return new GenericStack[] {new GenericStack(OTHER, 1)}; }
+                        public long getMultiplier() { return 1; }
+                        public boolean isValid(AEKey key, Level level) { return key.equals(OTHER); }
+                        public AEKey getRemainingKey(AEKey key) { return null; }
+                    }};
+                }
+                public List<GenericStack> getOutputs() { return List.of(new GenericStack(OUTPUT, 1)); }
+            };
+            var planned = new PlannedInputPattern(source, List.of(Map.of(OTHER, 1L)));
+            var progressClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TaskProgress");
+            var constructor = progressClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            var progress = constructor.newInstance();
+            field(progress, "value").setLong(progress, 2);
+            ((Map) field(fixture.job, "tasks").get(fixture.job)).put(planned, progress);
+            ((Set) field(fixture.logic, "nonBatchTasksThisTick").get(fixture.logic)).add(planned);
+            var stock = (ListCraftingInventory) field(fixture.logic, "inventory").get(fixture.logic);
+            stock.insert(OTHER, 10, MODULATE);
+            int[] pushes = {0};
+            var providerType = appeng.api.networking.crafting.ICraftingProvider.class;
+            var provider = Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {providerType},
+                    (proxy, method, args) -> {
+                        if (method.getName().equals("isBusy")) return false;
+                        if (method.getName().equals("pushPattern")) {
+                            pushes[0]++;
+                            if (providerThrows) throw new IllegalStateException("accepted then threw");
+                            return true;
+                        }
+                        return null;
+                    });
+            var schedule = new com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule();
+            var scheduleClass = Class.forName(schedule.getClass().getName() + "$PatternSchedule");
+            var scheduleConstructor = scheduleClass.getDeclaredConstructor(List.class);
+            scheduleConstructor.setAccessible(true);
+            ((Map) field(schedule, "patterns").get(schedule)).put(source,
+                    scheduleConstructor.newInstance(List.of(provider)));
+            if (!providerThrows) {
+                field(fixture.job, "waitingFor").set(fixture.job, new ListCraftingInventory(key -> {
+                    throw new IllegalStateException("notification failed after acceptance");
+                }));
+            }
+            var energyType = appeng.api.networking.energy.IEnergyService.class;
+            var energy = Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {energyType},
+                    (proxy, method, args) -> method.getName().equals("extractAEPower") ? args[0] : null);
+            var execute = fixture.logic.getClass().getDeclaredMethod("executeCraftingBudgeted", int.class,
+                    long.class, appeng.me.service.CraftingService.class, energyType, Level.class, schedule.getClass());
+            execute.setAccessible(true);
+            execute.invoke(fixture.logic, 2, 2L, null, energy, null, schedule);
+            assertEquals(1, pushes[0]);
+            assertEquals(9, stock.list.get(OTHER), "only the submitted copy is withheld");
+            assertTrue(fixture.logic.isJobSuspended());
+            fixture.logic.setJobSuspended(false);
+            execute.invoke(fixture.logic, 2, 2L, null, energy, null, schedule);
+            assertEquals(1, pushes[0], "failed work must not replay");
+        }
+    }
+
+    @Test
+    void invalidTaskListIsPreservedAndSuspendedInsteadOfRestoringAPartialJob() throws Exception {
+        var fixture = new Fixture(1, true, false);
+        var data = new CompoundTag();
+        data.putString("tasks", "corrupt task list");
+        var restore = fixture.job.getClass().getDeclaredMethod("restoreTasks", CompoundTag.class,
+                net.minecraft.core.HolderLookup.Provider.class, Level.class);
+        restore.setAccessible(true);
+        restore.invoke(fixture.job, data, null, null);
+        assertTrue(fixture.logic.isJobSuspended());
+        assertEquals("EXECUTION_METADATA_LOST", fixture.logic.getExecutionError());
+        assertEquals(data.get("tasks"), field(fixture.job, "failedTaskSnapshot").get(fixture.job));
+        assertTrue(((Map<?, ?>) field(fixture.job, "tasks").get(fixture.job)).isEmpty());
+        fixture.logic.setJobSuspended(false);
+        assertTrue(fixture.logic.isJobSuspended());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true", "false"})
+    void releasedRetainedOutputIsDeliveredOnlyOnce(boolean standalone) throws Exception {
+        var fixture = new Fixture(8, standalone, false);
+        var inventory = (ListCraftingInventory) field(fixture.logic, "inventory").get(fixture.logic);
+        inventory.insert(OUTPUT, 4L, MODULATE);
+        ((KeyCounter) field(fixture.logic, "retainedFinalOutputs").get(fixture.logic)).add(OUTPUT, 4L);
+        invoke(fixture.logic, "flushUnusedRetainedFinalOutputs", fixture.job);
+        invoke(fixture.logic, "flushUnusedRetainedFinalOutputs", fixture.job);
+        assertEquals(4L, fixture.disk.stored);
+        assertEquals(4L, fixture.remaining());
+        assertEquals(0L, fixture.held());
+    }
+
+    @Test
+    void intermediateReturnPublishesStockBeforeWaitingNotification() throws Exception {
+        var fixture = new Fixture(8, false, true);
+        var inventory = (ListCraftingInventory) field(fixture.logic, "inventory").get(fixture.logic);
+        var waiting = new ListCraftingInventory(key -> {
+            assertEquals(1L, inventory.list.get(OTHER), "waiting retirement must observe physical stock");
+        });
+        waiting.list.add(OTHER, 1L);
+        field(fixture.job, "waitingFor").set(fixture.job, waiting);
+        assertEquals(1L, fixture.logic.insert(OTHER, 1L, SIMULATE));
+        assertEquals(0L, inventory.list.get(OTHER));
+        assertEquals(1L, fixture.waiting(OTHER));
+        assertEquals(1L, fixture.logic.insert(OTHER, 1L, MODULATE));
+        assertEquals(0L, fixture.waiting(OTHER));
+        assertEquals(1L, inventory.list.get(OTHER));
+        assertEquals(0L, fixture.logic.insert(OTHER, 1L, MODULATE));
+    }
+
     private static final class Fixture {
         final NetworkStorage network = new NetworkStorage();
         final Disk disk = new Disk();
@@ -313,6 +487,7 @@ class RequesterOutputDeliveryTest {
 
         void flush() throws Exception {
             invoke(logic, "flushPendingRequesterOutputs", job);
+            invoke(logic, "flushUnusedRetainedFinalOutputs", job);
             invoke(logic, "recoverTerminalFinalOutputFromInventory", job);
             invoke(logic, "finishSuccessfulIfReady", job);
         }
