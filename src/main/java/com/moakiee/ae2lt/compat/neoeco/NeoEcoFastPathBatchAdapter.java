@@ -1,5 +1,9 @@
 package com.moakiee.ae2lt.compat.neoeco;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
 import org.jetbrains.annotations.Nullable;
 
 import appeng.api.crafting.IPatternDetails;
@@ -7,6 +11,7 @@ import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.stacks.KeyCounter;
 
 import cn.dancingsnow.neoecoae.api.me.ECOFastPathFacade;
+import cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider;
 import cn.dancingsnow.neoecoae.api.me.provider.ECOIndeterminateBatchException;
 
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
@@ -16,12 +21,34 @@ import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 /** Tianshu-only bridge from its allocated batch contract to NeoECO's public FastPath API. */
 public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
     @Override
+    public boolean cacheResolutionAcrossTicks() { return true; }
+
+    @Override
     public @Nullable IBatchCraftingProvider resolve(ICraftingProvider provider) {
-        return ECOFastPathFacade.supports(provider) ? new AdaptedProvider(provider) : null;
+        // prepareAllocated only accepts native providers. supports() also includes bridges
+        // that require NeoECO's inventory-owned transaction and cannot use this contract.
+        return provider instanceof ECOFastPathDispatchProvider ? new AdaptedProvider(provider) : null;
     }
 
-    record AdaptedProvider(ICraftingProvider delegate)
-            implements IBatchCraftingProvider {
+    static final class AdaptedProvider implements IBatchCraftingProvider {
+        private final ICraftingProvider delegate;
+        // Capability identity is stable; ordinary fallback is only valid for its physical tick.
+        private final Set<IPatternDetails> ordinaryPatterns =
+                Collections.newSetFromMap(new IdentityHashMap<>());
+
+        AdaptedProvider(ICraftingProvider delegate) {
+            this.delegate = delegate;
+        }
+
+        private long dispatchTick = Long.MIN_VALUE;
+
+        @Override
+        public void beginDispatchTick(long tick) {
+            if (dispatchTick == tick) return;
+            dispatchTick = tick;
+            ordinaryPatterns.clear();
+        }
+
         @Override
         public java.util.List<IPatternDetails> getAvailablePatterns() {
             return delegate.getAvailablePatterns();
@@ -36,7 +63,8 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
         public long getBatchCapacity(IPatternDetails details) {
             // NeoECO performs the authoritative recipe, cache, coolant and lane checks while
             // preparing the concrete allocated batch below.
-            return delegate.isBusy() ? 0L : Long.MAX_VALUE;
+            if (delegate.isBusy()) return 0L;
+            return ordinaryPatterns.contains(details) ? 1L : Long.MAX_VALUE;
         }
 
         @Override
@@ -83,9 +111,11 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
         }
 
         private long pushSingleCopy(IPatternDetails details, KeyCounter[] oneCopy, long maxCraft) {
-            // supports() includes bridged providers that prepareAllocated() cannot serve, and
-            // native FastPath providers can also decline a particular recipe. A declined batch
-            // must still get the ordinary attempt before BatchExecutor blocks this provider.
+            // Do not extract and refund a full batch again for every subsequent single copy.
+            // Capacity 1 sends later visits through the CPU's ordinary bulk-extraction path.
+            ordinaryPatterns.add(details);
+            // A declined batch must still get the ordinary attempt before BatchExecutor
+            // blocks this provider.
             // pushPattern takes ownership; the batch template itself is borrowed read-only.
             var inputs = new KeyCounter[oneCopy.length];
             for (int slot = 0; slot < oneCopy.length; slot++) {

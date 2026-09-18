@@ -86,6 +86,7 @@ public class ClosedLoopExpandedPatternDetails
         this.executionInputs = this.plannedSeedInputSlots.isEmpty()
                 ? pinReusableSeedInputs(delegate, this.seedKeys)
                 : pinReusableSeedInputs(delegate, this.plannedSeedInputSlots);
+        pinOrdinaryInputs(this.executionInputs, this.plannedSeedInputSlots, this.seedKeys);
         this.sharedOutputAmounts = sharedOutputAmounts(delegate, seedAmounts);
         this.persistenceDefinition = Objects.requireNonNull(
                 persistenceDefinition, "persistenceDefinition");
@@ -166,6 +167,34 @@ public class ClosedLoopExpandedPatternDetails
 
     public IPatternDetails delegate() {
         return delegate;
+    }
+
+    /** Matches the analyzer's primary-key demand for non-cycle inputs of the macro. */
+    static void pinOrdinaryInputs(IInput[] inputs, Map<Integer, appeng.api.stacks.AEKey> seedSlots,
+                                  Set<appeng.api.stacks.AEKey> seedKeys) {
+        for (int slot = 0; slot < inputs.length; slot++) {
+            var source = inputs[slot];
+            var possible = source.getPossibleInputs();
+            boolean seed = seedSlots.containsKey(slot);
+            if (seedSlots.isEmpty()) {
+                for (var candidate : possible) seed |= seedKeys.contains(candidate.what());
+            }
+            if (seed) continue;
+            if (possible.length == 0 || possible[0].what() == null) {
+                throw new IllegalArgumentException("Missing closed-loop ordinary input");
+            }
+            var selected = possible[0];
+            inputs[slot] = new IInput() {
+                @Override public GenericStack[] getPossibleInputs() { return new GenericStack[] {selected}; }
+                @Override public long getMultiplier() { return source.getMultiplier(); }
+                @Override public boolean isValid(appeng.api.stacks.AEKey key, net.minecraft.world.level.Level level) {
+                    return selected.what().equals(key) && source.isValid(key, level);
+                }
+                @Override public appeng.api.stacks.AEKey getRemainingKey(appeng.api.stacks.AEKey key) {
+                    return source.getRemainingKey(key);
+                }
+            };
+        }
     }
 
     @Override
