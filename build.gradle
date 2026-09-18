@@ -190,6 +190,12 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        cpuSelectionGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-cpu-selection-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_cpu_selection'
+        }
+
         // Fully generated wireless-I/O fixture: no saved world or manual block setup.
         wirelessIoGameTestServer {
             type = "gameTestServer"
@@ -364,6 +370,8 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    // Submission callback tests load Thunderbolt's Mixin class directly, outside the mod loader.
+    testRuntimeOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
     // Example mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

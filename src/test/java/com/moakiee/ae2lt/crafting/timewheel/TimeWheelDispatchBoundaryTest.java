@@ -153,7 +153,7 @@ class TimeWheelDispatchBoundaryTest {
         }
     }
 
-    private static Level emptyLevel() throws Exception {
+    static Level emptyLevel() throws Exception {
         // No world blocks are needed: extraction only reads game time. Avoid starting a server.
         var unsafeType = Class.forName("sun.misc.Unsafe");
         var unsafe = field(unsafeType, "theUnsafe").get(null);
@@ -162,7 +162,7 @@ class TimeWheelDispatchBoundaryTest {
         return level;
     }
 
-    private static Field field(Class<?> type, String name) throws Exception {
+    static Field field(Class<?> type, String name) throws Exception {
         var field = type.getDeclaredField(name);
         field.setAccessible(true);
         return field;
@@ -180,7 +180,7 @@ class TimeWheelDispatchBoundaryTest {
         }));
     }
 
-    private static final class Tracker extends ElapsedTimeTracker implements ElapsedTimeTrackerAccessor {
+    static final class Tracker extends ElapsedTimeTracker implements ElapsedTimeTrackerAccessor {
         @Override public void ae2lt$addMaxItems(long amount, AEKeyType type) { forward("addMaxItems", amount, type); }
         @Override public void ae2lt$decrementItems(long amount, AEKeyType type) { forward("decrementItems", amount, type); }
         private void forward(String name, long amount, AEKeyType type) {

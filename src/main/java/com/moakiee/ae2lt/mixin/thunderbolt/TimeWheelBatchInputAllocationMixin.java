@@ -17,7 +17,9 @@ import org.spongepowered.asm.mixin.injection.At;
 /** Reuses native batch dispatch; allocation is active only inside an LT CPU-owned scope. */
 @Mixin(value = BatchExecutor.class, remap = false)
 public abstract class TimeWheelBatchInputAllocationMixin {
-    @WrapOperation(method = "runBatchOnly", at = @At(value = "INVOKE",
+    // The short overloads delegate to the implementation containing bulkExtract.
+    // Match every overload; a bare name only selects the first matching method.
+    @WrapOperation(method = "runBatchOnly*", at = @At(value = "INVOKE",
             target = "Lcom/moakiee/thunderbolt/core/crafting/batch/ParallelBatchCpuHelper;bulkExtract"
                     + "(Lappeng/api/crafting/IPatternDetails;Lappeng/crafting/inv/ListCraftingInventory;"
                     + "JZLjava/util/Map;Lnet/minecraft/world/level/Level;)"

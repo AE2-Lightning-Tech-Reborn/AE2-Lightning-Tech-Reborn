@@ -260,6 +260,15 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         if (!isActive() || !canHandle(plan)) {
             return CraftingSubmitResult.CPU_OFFLINE;
         }
+        // Manual selection retains a menu's CPU reference and bypasses the service's automatic
+        // candidate lookup. A split/merge or port rebind can leave that reference active in a
+        // different grid, or absent from this service's tick/return routing. Reject it before
+        // creating a virtual CPU or extracting materials; both paths must use the owning service.
+        if (host.getGrid() != grid
+                || !(grid.getCraftingService() instanceof CraftingService craftingService)
+                || !craftingService.hasCpu(this)) {
+            return CraftingSubmitResult.CPU_OFFLINE;
+        }
 
         boolean infiniteStorage = hasInfiniteStorage();
         long reservedBytes = infiniteStorage ? 0L : Math.max(0L, plan.bytes());
