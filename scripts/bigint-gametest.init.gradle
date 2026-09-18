@@ -1,0 +1,12 @@
+// Isolated real NeoForge/AE2 tests; experimental dependencies remain out of release artifacts.
+allprojects {
+    afterEvaluate {
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('bigint-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_bigint'
+        }
+    }
+}

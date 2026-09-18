@@ -55,6 +55,9 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
     @Unique
     private TimeWheelCraftingCPU thunderbolt$timeWheelCpu;
 
+    @Unique private com.moakiee.ae2lt.crafting.big.BigCraftingCpu ae2lt$bigCpu;
+    @Unique private int ae2lt$bigStatusTicks;
+
     protected TimeWheelCraftingCPUMenuMixin(MenuType<?> menuType, int id, Inventory playerInventory, Object host) {
         super(menuType, id, playerInventory, host);
     }
@@ -66,6 +69,13 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
             this.thunderbolt$timeWheelCpu = null;
         }
 
+        ae2lt$bigCpu=null;
+        if (selected instanceof com.moakiee.ae2lt.crafting.big.BigCraftingCpu big) {
+            if (cpu != null) { cpu.craftingLogic.removeListener(cpuChangeListener); cpu=null; }
+            incrementalUpdateHelper.reset(); cachedSuspend=false;
+            ae2lt$bigCpu=big; ae2lt$bigStatusTicks=0;
+            ci.cancel(); return;
+        }
         if (!(selected instanceof TimeWheelCraftingCPU timeWheelCpu)) {
             return;
         }
@@ -91,6 +101,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Inject(method = "cancelCrafting", at = @At("TAIL"))
     private void thunderbolt$cancelTimeWheelCrafting(CallbackInfo ci) {
+        if (!isClientSide() && ae2lt$bigCpu != null) ae2lt$bigCpu.cancelJob();
         if (!isClientSide() && this.thunderbolt$timeWheelCpu != null) {
             this.thunderbolt$timeWheelCpu.cancelJob();
         }
@@ -98,6 +109,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Inject(method = "toggleScheduling", at = @At("TAIL"))
     private void thunderbolt$toggleTimeWheelScheduling(CallbackInfo ci) {
+        if (!isClientSide() && ae2lt$bigCpu != null) ae2lt$bigCpu.toggleSuspended();
         if (!isClientSide() && this.thunderbolt$timeWheelCpu != null) {
             var logic = this.thunderbolt$timeWheelCpu.getCraftingLogic();
             logic.setJobSuspended(!logic.isJobSuspended());
@@ -113,6 +125,12 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Inject(method = "broadcastChanges", at = @At("HEAD"))
     private void thunderbolt$broadcastTimeWheelStatus(CallbackInfo ci) {
+        if (isServerSide() && ae2lt$bigCpu != null) {
+            schedulingMode=ae2lt$bigCpu.getSelectionMode();
+            cantStoreItems=ae2lt$bigCpu.isBusy() && ae2lt$bigCpu.job().returning;
+            if (ae2lt$bigStatusTicks++ % 5 == 0)
+                sendPacketToClient(new CraftingStatusPacket(containerId,com.moakiee.ae2lt.crafting.big.BigCraftingStatus.create(ae2lt$bigCpu)));
+        }
         if (!isServerSide() || this.thunderbolt$timeWheelCpu == null) {
             return;
         }

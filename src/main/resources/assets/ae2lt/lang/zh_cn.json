@@ -1351,5 +1351,7 @@
   "tooltip.ae2lt.tianshu_unit.amplifier": "增幅量子或过载主核心的计算能力，最多 15 个。",
   "tooltip.ae2lt.tianshu_unit.baseline": "内置 1 MiB 存储与 128 次派发/t，无需功能单元即可运行。",
   "tooltip.ae2lt.tianshu_unit.storage": "超算核心舱扩展：提供 64 MiB 基础外部存储。",
-  "tooltip.ae2lt.tianshu_unit.parallel": "超算核心舱扩展：在主核心基础上增加 128 点基础派发。"
+  "tooltip.ae2lt.tianshu_unit.parallel": "超算核心舱扩展：在主核心基础上增加 128 点基础派发。",
+  "gui.ae2lt.crafting_report.planning_failed": "计算未完成，请重试",
+  "gui.ae2lt.crafting_report.unverified": "未找到可执行的合成顺序"
 }

@@ -1351,5 +1351,7 @@
   "tooltip.ae2lt.tianshu_unit.amplifier": "Amplifies Quantum or Overload computing capacity; at most 15.",
   "tooltip.ae2lt.tianshu_unit.baseline": "Built-in 1 MiB storage and 128 dispatches/t; no functional units required.",
   "tooltip.ae2lt.tianshu_unit.storage": "CPU core-chamber expansion: provides 64 MiB of base external storage.",
-  "tooltip.ae2lt.tianshu_unit.parallel": "CPU core-chamber expansion: adds 128 base dispatch points to the main core."
+  "tooltip.ae2lt.tianshu_unit.parallel": "CPU core-chamber expansion: adds 128 base dispatch points to the main core.",
+  "gui.ae2lt.crafting_report.planning_failed": "Calculation did not complete. Please retry.",
+  "gui.ae2lt.crafting_report.unverified": "No executable crafting order found."
 }

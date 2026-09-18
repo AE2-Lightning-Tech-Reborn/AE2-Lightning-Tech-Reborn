@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        configurations.runtimeOnly.dependencies.removeIf { dep -> !(dep.group in ['com.moakiee.thunderbolt','org.appliedenergistics']) }
+        neoForge.runs.client {
+            gameDirectory = project.layout.buildDirectory.dir('bigint-client-probe').get().asFile
+            systemProperty 'ae2lt.bigNativeProbe','true'
+            programArguments.addAll '--quickPlaySingleplayer','BigIntProbe','--width','1280','--height','900'
+        }
+    }
+}
