@@ -1,7 +1,8 @@
 package com.moakiee.ae2lt.crafting.timewheel;
 
-import com.moakiee.thunderbolt.core.crafting.plan.PlannedInputAssignments;
 import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
+
+import com.moakiee.thunderbolt.core.crafting.plan.PlannedInputAssignments;
 import com.moakiee.thunderbolt.core.crafting.planner.CraftPattern;
 import com.moakiee.thunderbolt.core.crafting.planner.CraftInput;
 import com.moakiee.thunderbolt.core.crafting.planner.CraftPlan;
@@ -99,7 +100,7 @@ class RequesterOutputDeliveryTest {
     }
 
     @Test
-    void plannedInputTasksKeepSeparateCopiesWithoutDuplicatingPendingOutput() throws Exception {
+    void plannedInputMetadataDoesNotPermanentlyBindTimeWheelTasks() throws Exception {
         var input = new IPatternDetails.IInput() {
             @Override public GenericStack[] getPossibleInputs() {
                 return new GenericStack[] {new GenericStack(OUTPUT, 1), new GenericStack(OTHER, 1)};
@@ -130,16 +131,23 @@ class RequesterOutputDeliveryTest {
         constructor.setAccessible(true);
         var job = constructor.newInstance(plan, (Consumer<AEKey>) key -> {}, null, null, new Tracker());
         var tasks = (Map<?, ?>) field(job, "tasks").get(job);
-        assertEquals(2, tasks.size());
-        var copiesByKey = new HashMap<AEKey, Long>();
-        for (var entry : tasks.entrySet()) {
-            var planned = (PlannedInputPattern) entry.getKey();
-            copiesByKey.put(planned.allocations().getFirst().keySet().iterator().next(),
-                    field(entry.getValue(), "value").getLong(entry.getValue()));
-            org.junit.jupiter.api.Assertions.assertSame(source, planned.providerLookupPattern());
-        }
-        assertEquals(Map.of(OTHER, 2L, OUTPUT, 3L), copiesByKey);
+        assertEquals(1, tasks.size());
+        org.junit.jupiter.api.Assertions.assertSame(source, tasks.keySet().iterator().next());
+        var task = tasks.values().iterator().next();
+        assertEquals(5L, field(task, "value").getLong(task));
+        assertEquals(2, PlannedInputAssignments.get(plan).get(source).size(),
+                "the original plan and its optional metadata are not modified");
         assertEquals(5L, ((KeyCounter) field(job, "pendingOutputs").get(job)).get(OUTPUT));
+
+        var legacy = new CraftingPlan(new GenericStack(OUTPUT, 5), 100L, false, false,
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), Map.of(
+                        new PlannedInputPattern(source, List.of(Map.of(OTHER, 1L))), 2L,
+                        new PlannedInputPattern(source, List.of(Map.of(OUTPUT, 1L))), 3L));
+        var legacyJob = constructor.newInstance(legacy, (Consumer<AEKey>) key -> {}, null, null, new Tracker());
+        var merged = (Map<?, ?>) field(legacyJob, "tasks").get(legacyJob);
+        assertEquals(1, merged.size(), "legacy bindings of the same original task must merge");
+        assertEquals(5L, field(merged.get(source), "value").getLong(merged.get(source)));
+        assertEquals(5L, ((KeyCounter) field(legacyJob, "pendingOutputs").get(legacyJob)).get(OUTPUT));
     }
 
     @Test
