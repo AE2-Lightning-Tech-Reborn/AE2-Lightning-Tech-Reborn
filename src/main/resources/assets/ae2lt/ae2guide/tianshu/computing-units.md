@@ -76,7 +76,7 @@ Craft the Baseline Main Core at a crafting table with 4 AE 64k Crafting Storage 
 
 Install the Baseline Main Core and fill the other 26 cells with Tianshu Blank Units for **1 MiB storage, 128 successful dispatches/t, and 256 maximum copies/t**. Built-in dispatch is not counted as an installed Parallel Unit. One Parallel Unit raises dispatch to 256/t; three reach the Baseline cap of 512/t.
 
-Blank Units are the shared manufacturing base for both structures and no longer consume Supercomputer Casings. Amplifier Units remain a Lightning Assembly Chamber recipe using a Blank Unit, Overload Processors, Overload Alloy Plates, Dense Topological Lattices, and Singularities. Parallel and Storage Units retain their advanced manufacturing steps as later expansions.
+Blank Units are the shared manufacturing base for both structures and no longer consume Supercomputer Casings. Each Amplifier Unit consumes one Ultimate Overload Core in the Lightning Assembly Chamber, together with a Blank Unit, Overload Processors, Overload Alloy Plates, Dense Topological Lattices, and Singularities. Parallel and Storage Units retain their advanced manufacturing steps as later expansions.
 
 ## Performance Parameters
 

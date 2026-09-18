@@ -3,6 +3,7 @@
   "priority": 0,
   "inputs": [
     { "ingredient": { "item": "ae2lt:tianshu_blank_unit" }, "count": 1 },
+    { "ingredient": { "item": "ae2lt:ultimate_overload_core" }, "count": 1 },
     { "ingredient": { "item": "ae2lt:overload_processor" }, "count": 16 },
     { "ingredient": { "item": "ae2lt:overload_alloy_plate" }, "count": 16 },
     { "ingredient": { "item": "ae2lt:dense_topological_lattice" }, "count": 4 },
