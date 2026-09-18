@@ -17,7 +17,15 @@ import org.spongepowered.asm.mixin.injection.At;
 /** Reuses native batch dispatch; allocation is active only inside an LT CPU-owned scope. */
 @Mixin(value = BatchExecutor.class, remap = false)
 public abstract class TimeWheelBatchInputAllocationMixin {
-    @WrapOperation(method = "runBatchOnly", at = @At(value = "INVOKE",
+    @WrapOperation(method = "runBatchOnly"
+            + "(ILcom/moakiee/thunderbolt/core/crafting/batch/BatchCpuAccounting$Mode;"
+            + "Lappeng/me/service/CraftingService;Lappeng/api/networking/energy/IEnergyService;"
+            + "Lcom/moakiee/thunderbolt/api/crafting/batch/BatchJobView;"
+            + "Lappeng/crafting/inv/ListCraftingInventory;Ljava/util/Map;Ljava/lang/Runnable;"
+            + "Ljava/util/Map;IJZLcom/moakiee/thunderbolt/core/crafting/batch/TickProviderDispatchSchedule;"
+            + "Lcom/moakiee/thunderbolt/api/crafting/batch/BatchProviderAdapter;)"
+            + "Lcom/moakiee/thunderbolt/core/crafting/batch/BatchExecutor$BatchRunResult;",
+            remap = false, at = @At(value = "INVOKE", remap = false,
             target = "Lcom/moakiee/thunderbolt/core/crafting/batch/ParallelBatchCpuHelper;bulkExtract"
                     + "(Lappeng/api/crafting/IPatternDetails;Lappeng/crafting/inv/ListCraftingInventory;"
                     + "JZLjava/util/Map;Lnet/minecraft/world/level/Level;)"

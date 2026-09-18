@@ -87,6 +87,29 @@ class NeoEcoFastPathBatchAdapterTest {
     }
 
     @Test
+    void ordinaryProviderIsNotAdvertisedAsAnAllocatedBatchEndpoint() {
+        assertNull(new NeoEcoFastPathBatchAdapter().resolve(new OrdinaryProvider(true)));
+    }
+
+    @Test
+    void singleCopyFallbackDowngradesOnlyThisPatternForTheCurrentEndpoint() {
+        var provider = new OrdinaryProvider(true);
+        var adapter = new NeoEcoFastPathBatchAdapter.AdaptedProvider(provider);
+        IPatternDetails otherPattern = (IPatternDetails) Proxy.newProxyInstance(
+                IPatternDetails.class.getClassLoader(), new Class<?>[] {IPatternDetails.class},
+                (proxy, method, args) -> null);
+
+        assertEquals(Long.MAX_VALUE, adapter.getBatchCapacity(null));
+        assertEquals(99L, adapter.pushBatch(null, new KeyCounter[] {new KeyCounter()}, 100L, job));
+        assertEquals(1L, adapter.getBatchCapacity(null),
+                "later visits must not extract and refund another 100-copy batch");
+        assertEquals(Long.MAX_VALUE, adapter.getBatchCapacity(otherPattern));
+        assertEquals(Long.MAX_VALUE,
+                new NeoEcoFastPathBatchAdapter.AdaptedProvider(provider).getBatchCapacity(null),
+                "next tick must be allowed to retry FastPath");
+    }
+
+    @Test
     void rejectedOrdinaryCopyLeavesTheWholeBatchForCallerRollback() {
         var provider = new OrdinaryProvider(false);
         var adapter = new NeoEcoFastPathBatchAdapter.AdaptedProvider(provider);
@@ -128,6 +151,7 @@ class NeoEcoFastPathBatchAdapterTest {
         assertNotNull(adapter);
         assertEquals(2L, adapter.pushBatch(pattern, new KeyCounter[] {new KeyCounter()}, 3L, job));
         assertEquals(1, ((OrdinaryProvider) provider).calls);
+        assertEquals(1L, adapter.getBatchCapacity(pattern));
     }
 
     private static class OrdinaryProvider implements ICraftingProvider {
