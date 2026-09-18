@@ -21,6 +21,6 @@ AE2 闪电科技：重生（AE2 Lightning Tech Reborn）~~雷霆科技~~是 Appl
 * [加工机器](machines/machines-index.md) — 闪电模拟室、闪电装配室、过载处理工厂等
 * [材料与物品](materials/materials-index.md) — 过载水晶、合金、处理器与其他关键材料
 * [天枢物质扭曲矩阵](matrix/matrix-index.md) — 大规模并行合成、样板仓与可调核心阵列
-* [天枢超算阵列](tianshu/tianshu-index.md) — 共享合成容量、多任务并发与可配置计算单元
+* [天枢超算](tianshu/tianshu-index.md) — 共享合成容量、多任务并发与可配置计算单元
 * [过载网络](overloaded-network/overloaded-network-index.md) — 过载控制器、线缆、接口、样板供应器
 * [过载设备](devices-index.md) — 电磁炮、苍穹织雷及其模块

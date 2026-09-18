@@ -794,6 +794,43 @@ class ExecutionInputAllocatorTest {
     }
 
     @Test
+    void wideFlexibleComponentCannotLatchAnExactTaskIntoPermanentWait() {
+        AEKey[] keys = new AEKey[17_000];
+        for (int i = 0; i < keys.length; i++) keys[i] = new TestKey("capacity_" + i);
+        var flexible = pattern(X, input(keys));
+        var otherFlexible = pattern(Y, input(keys));
+        var exact = pattern(C, input(keys[0]));
+        var tasks = tasks(flexible, 1, otherFlexible, 1, exact, 1);
+        var allocator = new ExecutionInputAllocator(tasks, value -> value, true, true);
+        var inventory = new ListCraftingInventory(allocator::onInventoryChange);
+        inventory.insert(keys[0], 1, Actionable.MODULATE);
+        inventory.insert(keys[1], 2, Actionable.MODULATE);
+        assertFalse(allocator.allocate(flexible, inventory, null, 1).allowed(),
+                "the deliberately oversized ambiguous search must respect its memory bound");
+        assertTrue(allocator.allocate(exact, inventory, null, 1).allowed(),
+                "an exact forced choice needs no wide matching and must still make progress");
+    }
+
+    @Test
+    void completedRowsDoNotKeepRemainingWorkOverTheCapacityBound() {
+        AEKey[] keys = new AEKey[17_000];
+        for (int i = 0; i < keys.length; i++) keys[i] = new TestKey("completed_capacity_" + i);
+        var flexible = pattern(X, input(keys));
+        var completed = pattern(Y, input(keys));
+        var exact = pattern(C, input(keys[0]));
+        var tasks = tasks(flexible, 1, completed, 1, exact, 1);
+        var allocator = new ExecutionInputAllocator(tasks, value -> value, true, true);
+        var inventory = new ListCraftingInventory(allocator::onInventoryChange);
+        inventory.insert(keys[0], 1, Actionable.MODULATE);
+        inventory.insert(keys[1], 2, Actionable.MODULATE);
+        assertFalse(allocator.allocate(flexible, inventory, null, 1).allowed());
+        tasks.remove(completed);
+        allocator.onTaskChange(completed);
+        assertTrue(allocator.allocate(flexible, inventory, null, 1).allowed(),
+                "task completion alone must invalidate the capacity failure");
+    }
+
+    @Test
     void pendingSparseSolveResumesAndRevalidatesAnArrivalOrRemoval() {
         int size = 700;
         AEKey[] keys = new AEKey[size + 1];

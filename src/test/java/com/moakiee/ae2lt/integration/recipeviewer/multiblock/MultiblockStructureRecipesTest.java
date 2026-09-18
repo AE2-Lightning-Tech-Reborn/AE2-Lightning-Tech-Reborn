@@ -64,7 +64,7 @@ class MultiblockStructureRecipesTest {
         var attempt = TianshuMultiblockScanner.scan(
                 CONTROLLER, Direction.WEST, components::get);
 
-        assertEquals(1, parallelUnits);
+        assertEquals(0, parallelUnits);
         assertTrue(attempt.formed(), attempt.issues().toString());
     }
 
@@ -99,9 +99,7 @@ class MultiblockStructureRecipesTest {
                     : TianshuMultiblockComponent.COOLING;
             case CORE_RESERVED -> pos.equals(new BlockPos(3, 3, 3))
                     ? TianshuMultiblockComponent.MAIN_BASELINE
-                    : MultiblockStructureRecipes.isDefaultTianshuParallelPosition(pos)
-                            ? TianshuMultiblockComponent.PARALLEL_UNIT
-                            : TianshuMultiblockComponent.BLANK_UNIT;
+                    : TianshuMultiblockComponent.BLANK_UNIT;
         };
     }
 }

@@ -11,9 +11,9 @@ item_ids:
 
 # Port, Jobs, and Fast Planning
 
-## Tianshu Supercomputing Array Port
+## Tianshu Supercomputer Port
 
-After formation, the <ItemLink id="ae2lt:tianshu_supercomputer_port" /> publishes the multiblock to the ME network as a crafting CPU named “Tianshu Supercomputing Array.” ME cables can connect on all six sides only while the structure is formed; they cannot connect while it is unformed. The formed multiblock consumes **1 channel**. Port idle power depends on the installed Main Core: Baseline uses **256 AE/t**, Quantum uses **8,192 AE/t**, Overload uses **262,144 AE/t**, and Multidimensional uses **8 AE/t**. If the ME network cannot supply that power, the port is not active and terminals cannot bind to the array.
+After formation, the <ItemLink id="ae2lt:tianshu_supercomputer_port" /> publishes the multiblock to the ME network as a crafting CPU named “Tianshu Supercomputer.” ME cables can connect on all six sides only while the structure is formed; they cannot connect while it is unformed. The formed multiblock consumes **1 channel**. Port idle power depends on the installed Main Core: Baseline uses **256 AE/t**, Quantum uses **8,192 AE/t**, Overload uses **262,144 AE/t**, and Multidimensional uses **8 AE/t**. If the ME network cannot supply that power, the port is not active and terminals cannot bind to the array.
 
 The supercomputer does not accept new jobs while its port is offline, its ME network is unpowered, or the structure is unformed. Saved job state persists across chunk unloads and can continue after the structure and network return.
 
@@ -25,14 +25,14 @@ The [Tianshu Pattern Encoding Terminal](pattern-encoding-terminal.md) extends th
 
 ## Shared Capacity and Concurrent Jobs
 
-Unlike a conventional crafting CPU, the Tianshu Supercomputing Array can retain and execute multiple crafting jobs at once.
+Unlike a conventional crafting CPU, the Tianshu Supercomputer can retain and execute multiple crafting jobs at once.
 
 * Each new job reserves its plan's byte requirement from the total crafting storage
 * Additional jobs can use the same supercomputer while sufficient unreserved storage remains
 * Completing or cancelling a job releases its reservation
 * All active jobs share the core configuration's successful-dispatch budget; each job receives its own full per-tick copy budget, but only batch-compatible patterns and targets can use more than one copy per dispatch
 
-If the crafting confirmation screen reports insufficient CPU storage, wait for active jobs to release capacity, add Tianshu Storage Units, or install a higher-tier Main Core.
+If the crafting confirmation screen reports insufficient CPU storage, wait for active jobs to release capacity, add Tianshu Supercomputer Storage Units, or install a higher-tier Main Core.
 
 ## Controller Screen
 
@@ -47,7 +47,7 @@ Use the <ItemLink id="ae2lt:tianshu_supercomputer_controller" /> to view:
 * Each job's per-tick copy budget `T`; note that the parallelism shown in AE2's crafting confirmation counts successful dispatches only, not the copy budget
 * Controls for shell auto-build and Fast Planning
 
-Replacing a core-chamber unit, or removing closed-loop storage from a cooling-compatible position, temporarily unforms the structure while the position is empty. If the port retains active jobs, the new profile takes effect after all existing jobs end; restoring the structure and network allows retained jobs to continue. A Phase-Change Cooling Unit is valid in the same cooling-compatible position but provides no corresponding closed-loop capacity.
+Replacing a core-chamber unit, or removing closed-loop storage from a cooling-compatible position, temporarily unforms the structure while the position is empty. If the port retains active jobs, the new profile takes effect after all existing jobs end; restoring the structure and network allows retained jobs to continue. A Tianshu Supercomputer Cooling Unit is valid in the same cooling-compatible position but provides no corresponding closed-loop capacity.
 
 ## Fast Planning
 
@@ -63,7 +63,7 @@ While the structure is unformed, the controller screen shows the first detected 
 
 **Structure and building**
 
-* **The structure will not form:** Check each point of the [manual construction rules](construction.md#manual-construction-rules) — complete casing and glass, exactly one port, all 17 non-port cooling-compatible positions filled with Phase-Change Cooling Units or closed-loop storage, the Tianshu Main Core centered in the core chamber, and all 26 peripheral cells filled with units supported by that Main Core
+* **The structure will not form:** Check each point of the [manual construction rules](construction.md#manual-construction-rules) — complete casing and glass, exactly one port, all 17 non-port cooling-compatible positions filled with Tianshu Supercomputer Cooling Units or closed-loop storage, the Tianshu Main Core centered in the core chamber, and all 26 peripheral cells filled with units supported by that Main Core
 * **Auto-build does not start:** Clear the coordinates reported by the controller and ensure all materials are in the player inventory
 
 **Network and jobs**

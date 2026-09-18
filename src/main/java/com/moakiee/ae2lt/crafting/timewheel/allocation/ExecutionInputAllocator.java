@@ -121,6 +121,10 @@ public final class ExecutionInputAllocator {
         for (var conflict : byPattern.getOrDefault(pattern, List.of())) {
             conflict.dirtyTasks.add(pattern);
             conflict.revision++;
+            // Completion can shrink an oversized component without changing inventory (for
+            // example after a provider accepts its final batch). Capacity failure is a snapshot,
+            // not a permanent job state; retry against the remaining live rows.
+            if (conflict.capacityLimited) invalidate(conflict);
         }
         for (var primary : outputPrimaries.getOrDefault(pattern, Set.of())) {
             var family = families.get(primary);
@@ -280,7 +284,6 @@ public final class ExecutionInputAllocator {
 
     private CraftingInputAllocation computeConflict(Conflict conflict, IPatternDetails selected,
             ICraftingInventory inventory, Level level, long maxCopies) {
-        if (conflict.budgetExceeded) return CraftingInputAllocation.WAIT;
         var pending = conflict.pending;
         if (tracksInventoryChanges && tracksTaskChanges && inventory instanceof ListCraftingInventory
                 && pending != null && pending.revision == conflict.revision && pending.inventory == inventory
@@ -315,6 +318,9 @@ public final class ExecutionInputAllocator {
             ambiguous |= row.options.size() > 1;
         }
         if (!ambiguous) return CraftingInputAllocation.UNRESTRICTED;
+        // A previous wide fuzzy search must not prevent an exact forced choice from progressing.
+        // Only ambiguous selections need the component-wide matching and its capacity bound.
+        if (conflict.budgetExceeded) return CraftingInputAllocation.WAIT;
         snapshotCount++;
         for (var family : conflict.families) {
             refresh(family, inventory);
@@ -323,14 +329,14 @@ public final class ExecutionInputAllocator {
         var rows = new ArrayList<Row>();
         long work = 0;
         for (var row : conflict.rows) {
+            row.copies = copies(row.pattern);
+            if (row.copies <= 0) continue;
             work = add(work, candidateWork(row));
             if (work > MAX_PAIRS) {
                 conflict.budgetExceeded = true;
                 conflict.capacityLimited = true;
                 return CraftingInputAllocation.WAIT;
             }
-            row.copies = copies(row.pattern);
-            if (row.copies <= 0) continue;
             updateOptions(row, level);
             // A guarded inventory is private to the selected consumer. Requiring another loop's
             // already-hidden seed here double-reserves it and can block the ordinary producer that

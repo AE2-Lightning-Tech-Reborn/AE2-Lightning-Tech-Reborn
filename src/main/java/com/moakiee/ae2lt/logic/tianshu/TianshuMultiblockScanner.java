@@ -147,9 +147,6 @@ public final class TianshuMultiblockScanner {
         } else if (ports.size() > 1) {
             addOnce(issues, TianshuMultiblockScanIssue.MULTIPLE_PORTS);
         }
-        if (mainCore != CpuMainCoreTier.MULTIDIMENSIONAL && parallelUnits == 0) {
-            addOnce(issues, TianshuMultiblockScanIssue.MISSING_PARALLEL_UNIT);
-        }
         if (mainCore == CpuMainCoreTier.MULTIDIMENSIONAL
                 && storageUnits + parallelUnits + amplifierUnits > 0) {
             addOnce(issues, TianshuMultiblockScanIssue.INVALID_PERIPHERAL_UNIT);
