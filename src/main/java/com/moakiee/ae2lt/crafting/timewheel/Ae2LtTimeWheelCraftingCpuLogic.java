@@ -67,7 +67,7 @@ import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelBatchInputAlloca
 import com.moakiee.ae2lt.crafting.timewheel.allocation.ExecutionTaskInputs;
 import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import com.moakiee.ae2lt.crafting.runtime.api.CraftingTaskPriorities;
-import com.moakiee.ae2lt.compat.neoeco.NeoEcoFastPathCompat;
+import com.moakiee.ae2lt.compat.OptionalBatchProviders;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.thunderbolt.core.crafting.loop.CraftingTaskPersistenceDefinition;
@@ -89,8 +89,8 @@ import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
 public final class Ae2LtTimeWheelCraftingCpuLogic {
     @Nullable
-    private static final BatchProviderAdapter NEOECO_FAST_PATH_ADAPTER =
-            NeoEcoFastPathCompat.createAdapter();
+    private static final BatchProviderAdapter OPTIONAL_BATCH_ADAPTER =
+            OptionalBatchProviders.createAdapter();
     private static final int WHEEL_SIZE = 64;
     private static final int WHEEL_MASK = WHEEL_SIZE - 1;
     private static final int MAX_TASK_PROBES_PER_TICK = 262_144;
@@ -608,7 +608,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 remainingCopies,
                 cpu.hasUnboundedBatch(),
                 dispatchSchedule,
-                NEOECO_FAST_PATH_ADAPTER));
+                OPTIONAL_BATCH_ADAPTER));
         if (result.dispatchedCopies() > 0) {
             // T is a per-virtual-CPU tick budget, not a per-call width. Let the time wheel revisit
             // the task while its private T and the physical CPU's shared successful-dispatch
