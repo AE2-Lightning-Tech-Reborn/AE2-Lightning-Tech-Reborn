@@ -22,6 +22,9 @@ public final class UselessBatchAdapter implements BatchProviderResolver {
     }
 
     @Override
+    public boolean cacheResolutionAcrossTicks() { return true; }
+
+    @Override
     public @Nullable IBatchCraftingProvider resolve(ICraftingProvider provider) {
         return api.providerType.isInstance(provider) ? new AdaptedProvider(provider, api) : null;
     }
@@ -35,6 +38,15 @@ public final class UselessBatchAdapter implements BatchProviderResolver {
         AdaptedProvider(ICraftingProvider delegate, UselessBatchApi api) {
             this.delegate = delegate;
             this.api = api;
+        }
+
+        private long dispatchTick = Long.MIN_VALUE;
+
+        @Override
+        public void beginDispatchTick(long tick) {
+            if (dispatchTick == tick) return;
+            dispatchTick = tick;
+            ordinaryPatterns.clear();
         }
 
         @Override

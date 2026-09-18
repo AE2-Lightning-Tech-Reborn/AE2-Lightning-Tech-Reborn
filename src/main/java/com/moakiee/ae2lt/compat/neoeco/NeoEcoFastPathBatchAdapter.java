@@ -21,6 +21,9 @@ import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 /** Tianshu-only bridge from its allocated batch contract to NeoECO's public FastPath API. */
 public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
     @Override
+    public boolean cacheResolutionAcrossTicks() { return true; }
+
+    @Override
     public @Nullable IBatchCraftingProvider resolve(ICraftingProvider provider) {
         // prepareAllocated only accepts native providers. supports() also includes bridges
         // that require NeoECO's inventory-owned transaction and cannot use this contract.
@@ -29,13 +32,21 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
 
     static final class AdaptedProvider implements IBatchCraftingProvider {
         private final ICraftingProvider delegate;
-        // The resolution cache owns this endpoint for one physical tick. A temporary
-        // rejection must not disable FastPath for future ticks or unrelated recipes.
+        // Capability identity is stable; ordinary fallback is only valid for its physical tick.
         private final Set<IPatternDetails> ordinaryPatterns =
                 Collections.newSetFromMap(new IdentityHashMap<>());
 
         AdaptedProvider(ICraftingProvider delegate) {
             this.delegate = delegate;
+        }
+
+        private long dispatchTick = Long.MIN_VALUE;
+
+        @Override
+        public void beginDispatchTick(long tick) {
+            if (dispatchTick == tick) return;
+            dispatchTick = tick;
+            ordinaryPatterns.clear();
         }
 
         @Override
