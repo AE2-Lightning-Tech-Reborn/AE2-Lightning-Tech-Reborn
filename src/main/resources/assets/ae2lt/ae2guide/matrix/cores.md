@@ -69,7 +69,7 @@ The number of pattern executions the matrix performs each tick is determined in 
 2. Base capacity beyond the Main Core's per-tick cap is cut off at the cap.
 3. The result is multiplied by the current thermal efficiency to give the actual throughput.
 
-The Multidimensional Main Core has no execution cap, but the matrix still issues at most 16,384 crafting calls per tick. Matrix throughput depends only on its own core configuration and heat; it is independent of the Tianshu Supercomputing Array's dispatch and copy budgets.
+The Multidimensional Main Core has no execution cap, but the matrix still issues at most 16,384 crafting calls per tick. Matrix throughput depends only on its own core configuration and heat; it is independent of the Tianshu Supercomputer's dispatch and copy budgets.
 
 ## Peripheral Units
 
@@ -77,7 +77,7 @@ The Multidimensional Main Core has no execution cap, but the matrix still issues
 |-----------------|----------|---------|
 | Thread Unit T1 | Stable: 1,024; Quantum/Overload: 1 thread point | Raises base crafting capacity per tick |
 | Thread Unit T2 | Stable: 3,584; Quantum/Overload: 2 thread points | Provides dedicated Stable capacity; in Quantum and Overload, two thread points per slot save core positions |
-| Tianshu Amplifier Unit | `R` +1 | Raises the amplification factor of Quantum and Overload cores; the same block is shared with the Tianshu Supercomputing Array |
+| Tianshu Amplifier Unit | `R` +1 | Raises the amplification factor of Quantum and Overload cores; the same block is shared with the Tianshu Supercomputer |
 | Thermal Control Unit T1 | 1 cooling point | Raises heat capacity and cooling rate; the actual effect decays with distance from the Main Core |
 | Thermal Control Unit T2 | 2 cooling points | Twice the cooling points per slot, with the same distance decay |
 | Tianshu Blank Unit | — | Shared by both Tianshu multiblocks; fills a required core slot without adding performance attributes |

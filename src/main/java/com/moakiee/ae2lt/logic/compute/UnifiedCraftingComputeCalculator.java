@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.logic.compute;
 public final class UnifiedCraftingComputeCalculator {
     public static final long STORAGE_PER_UNIT = 64L << 20;
     public static final int DISPATCH_PER_UNIT = 128;
+    public static final int CPU_BASE_DISPATCH = 128;
 
     private UnifiedCraftingComputeCalculator() {
     }
@@ -29,7 +30,9 @@ public final class UnifiedCraftingComputeCalculator {
         }
 
         long dispatchGain = dispatchGain(tier, units.amplifierUnits());
-        long rawDispatch = saturatedMultiply(rawDispatch(units), dispatchGain);
+        // The main core can dispatch on its own; physical units extend that budget.
+        long rawDispatch = saturatedMultiply(
+                saturatedAdd(CPU_BASE_DISPATCH, rawDispatch(units)), dispatchGain);
         int successfulDispatches = (int) Math.min(rawDispatch, tier.dispatchCap());
         boolean dispatchCapped = rawDispatch >= tier.dispatchCap();
 
@@ -120,8 +123,8 @@ public final class UnifiedCraftingComputeCalculator {
     private static void validate(ComputeTier tier, ComputingUnitTotals units, boolean cpu) {
         if (tier == null || units == null) throw new IllegalArgumentException("Tier and units are required");
         validateAmplifiers(tier, units.amplifierUnits());
-        if (!tier.multidimensional() && units.dispatchUnits() <= 0) {
-            throw new IllegalArgumentException("A finite compute structure requires at least one dispatch unit");
+        if (!cpu && !tier.multidimensional() && units.dispatchUnits() <= 0) {
+            throw new IllegalArgumentException("A finite crafting matrix requires at least one dispatch unit");
         }
         if (cpu && units.coolingUnits() > 0) {
             throw new IllegalArgumentException("A crafting CPU cannot use cooling units");
