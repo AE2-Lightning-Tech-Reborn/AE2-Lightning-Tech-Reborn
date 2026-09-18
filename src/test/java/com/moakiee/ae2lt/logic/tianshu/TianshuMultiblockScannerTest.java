@@ -15,6 +15,27 @@ class TianshuMultiblockScannerTest {
     private static final BlockPos CONTROLLER = new BlockPos(40, 70, -20);
 
     @Test
+    void baselineWithOnlyBlankUnitsFormsAndKeepsPhysicalCountsAtZero() {
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            var blocks = completeStructure(direction);
+            blocks.replaceAll((pos, component) -> component == TianshuMultiblockComponent.STORAGE_UNIT
+                    || component == TianshuMultiblockComponent.PARALLEL_UNIT
+                    ? TianshuMultiblockComponent.BLANK_UNIT : component);
+            var attempt = TianshuMultiblockScanner.scan(CONTROLLER, direction, blocks::get);
+            assertTrue(attempt.formed(), direction + ": " + attempt.issues());
+            var profile = attempt.result().coreProfile();
+            assertEquals(0, profile.parallelUnitCount());
+            assertEquals(0, profile.storageUnitCount());
+            assertEquals(0, profile.amplifierUnitCount());
+            assertEquals(1L << 20, profile.storageBytes());
+            assertEquals(128, profile.successfulDispatchesPerTick());
+            assertEquals(256, profile.maxCopiesPerTick());
+            assertEquals(127, profile.coProcessors());
+            assertTrue(attempt.result().functionProfile().supportsInventoryMaintenance());
+        }
+    }
+
+    @Test
     void templateMatchesReferenceDimensionsAndCore() {
         int coreCount = 0;
         int occupiedCount = 0;
@@ -115,7 +136,7 @@ class TianshuMultiblockScannerTest {
         assertEquals(1, attempt.result().coreProfile().parallelUnitCount());
         assertEquals((1L << 20) + CpuInternalCoreCalculator.STORAGE_PER_UNIT,
                 attempt.result().coreProfile().storageBytes());
-        assertEquals(CpuInternalCoreCalculator.PARALLEL_PER_UNIT, attempt.result().coreProfile().parallelism());
+        assertEquals(256, attempt.result().coreProfile().parallelism());
     }
 
     @Test

@@ -4,7 +4,13 @@ import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockUpdateScheduler;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockUpdateScheduler;
+import java.util.List;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -35,6 +41,29 @@ public class TianshuSupercomputingUnitBlock extends Block implements MatrixMulti
 
     public TianshuMultiblockComponent component() {
         return component;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context,
+                                List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        String description = switch (component) {
+            case BLANK_UNIT -> "blank";
+            case AMPLIFIER_UNIT -> "amplifier";
+            case MAIN_BASELINE -> "baseline";
+            case STORAGE_UNIT -> "storage";
+            case PARALLEL_UNIT -> "parallel";
+            default -> null;
+        };
+        if (description != null) {
+            tooltip.add(Component.translatable("tooltip.ae2lt.tianshu_unit." + description)
+                    .withStyle(ChatFormatting.GRAY));
+        }
+        if (component == TianshuMultiblockComponent.BLANK_UNIT
+                || component == TianshuMultiblockComponent.AMPLIFIER_UNIT) {
+            tooltip.add(Component.translatable("tooltip.ae2lt.tianshu_unit.shared")
+                    .withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
     }
 
     @Override

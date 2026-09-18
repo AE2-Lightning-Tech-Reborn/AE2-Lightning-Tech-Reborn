@@ -19,7 +19,7 @@ item_ids:
 
 # Main Cores, Computing Units, and Performance
 
-The core chamber occupies the central 3×3×3 volume. Its exact center requires one Main Core, while the remaining 26 cells accept only Tianshu Blank, Storage, Parallel, or Amplifier Units. Closed-Loop Pattern Storage and Closed-Loop Seed Storage are installed in the shell's cooling-compatible positions, which share their placement rules with Phase-Change Cooling Units. The selected Main Core tier determines which combinations are valid. The scene below removes the shell to show the Main Core's central position.
+The core chamber occupies the central 3×3×3 volume. Its exact center requires one Main Core, while the remaining 26 cells accept only Tianshu Blank, Storage, Parallel, or Amplifier Units. Closed-Loop Pattern Storage and Closed-Loop Seed Storage are installed in the shell's cooling-compatible positions, which share their placement rules with Tianshu Supercomputer Cooling Units. The selected Main Core tier determines which combinations are valid. The scene below removes the shell to show the Main Core's central position.
 
 <GameScene zoom="4" background="transparent" interactive={true}>
   <ImportStructure src="../assets/assemblies/tianshu_supercomputer_core.snbt" />
@@ -33,8 +33,8 @@ The core chamber occupies the central 3×3×3 volume. Its exact center requires 
 
 The central 3×3×3 volume contains Storage, Parallel, Amplifier, and Tianshu Blank Units, with a Main Core fixed at the exact center.
 
-Storage Units determine the CPU's crafting-storage capacity, like AE2 Crafting Storage.
-Parallel Units provide dispatch parallelism, like AE2 Co-Processing Units.
+The Main Core has built-in crafting storage; Storage Units add capacity, like AE2 Crafting Storage.
+The Main Core has 128 base dispatch points; Parallel Units extend that budget, like AE2 Co-Processing Units.
 Amplifier Units scale dispatch, external storage, and batch-copy capacity for supported cores; at most 15 may be installed.
 Tianshu Blank Units are structural placeholders and provide no performance benefit.
 
@@ -51,7 +51,7 @@ All 27 cells in the central 3×3×3 volume must be filled for the structure to f
 
 ### Shell Positions and Replacements
 
-Each of the shell's 17 cooling-compatible positions accepts a Phase-Change Cooling Unit, Closed-Loop Pattern Storage, or Closed-Loop Seed Storage. Exactly one of the two port candidates must contain the Tianshu Port that connects the structure to the ME network; the other remains a cooling-compatible position.
+Each of the shell's 17 cooling-compatible positions accepts a Tianshu Supercomputer Cooling Unit, Closed-Loop Pattern Storage, or Closed-Loop Seed Storage. Exactly one of the two port candidates must contain the Tianshu Port that connects the structure to the ME network; the other remains a cooling-compatible position.
 
 > See the detailed sections below for the complete parameters.
 
@@ -68,7 +68,15 @@ The Main Core provides internal crafting storage and sets the ceilings for the s
 | <ItemLink id="ae2lt:tianshu_overload_main_core" /> | 64 GiB | 16,384 | 4,194,304 | 0–15 |
 | <ItemLink id="ae2lt:tianshu_multidimensional_main_core" /> | Infinite | 16,384 | Infinite | Unsupported |
 
-Baseline, Quantum, and Overload require at least one Parallel Unit; Storage Units are optional. Multidimensional uses only its main-core budget: its 26 peripheral cells cannot contain Storage, Parallel, or Amplifier Units and must all be filled with Blank Units.
+Baseline, Quantum, and Overload have built-in dispatch and run without functional units; Storage and Parallel Units are optional. Multidimensional uses only its main-core budget: its 26 peripheral cells cannot contain Storage, Parallel, or Amplifier Units and must all be filled with Blank Units.
+
+## Starting Before the Lightning Assembly Chamber
+
+Craft the Baseline Main Core at a crafting table with 4 AE 64k Crafting Storage blocks, 2 Overload Processors, 2 Overload Crystal Blocks, and 1 Tianshu Supercomputer Casing. Basic lightning processing and an AE Inscriber provide the processors; this starting route needs no Lightning Assembly Chamber, Overload Processing Factory, or topological lattice.
+
+Install the Baseline Main Core and fill the other 26 cells with Tianshu Blank Units for **1 MiB storage, 128 successful dispatches/t, and 256 maximum copies/t**. Built-in dispatch is not counted as an installed Parallel Unit. One Parallel Unit raises dispatch to 256/t; three reach the Baseline cap of 512/t.
+
+Blank Units are the shared manufacturing base for both structures and no longer consume Supercomputer Casings. Each Amplifier Unit consumes one Ultimate Overload Core in the Lightning Assembly Chamber, together with a Blank Unit, Overload Processors, Overload Alloy Plates, Dense Topological Lattices, and Singularities. Parallel and Storage Units retain their advanced manufacturing steps as later expansions.
 
 ## Performance Parameters
 
@@ -94,7 +102,7 @@ Batch copies do not duplicate items: every execution still consumes inputs, ener
 
 ## Unit Counts and Formulas
 
-Let **S**, **P**, and **A** be the counts of Storage, Parallel, and Amplifier Units. Each Storage Unit supplies 64 MiB of external storage, and each Parallel Unit supplies 128 points of base dispatch capacity. Finite tiers require `P ≥ 1`; Quantum and Overload also require `0 ≤ A ≤ 15`.
+Let **S**, **P**, and **A** be the counts of Storage, Parallel, and Amplifier Units. Each Storage Unit supplies 64 MiB of external storage, and each Parallel Unit supplies 128 points of base dispatch capacity. The Main Core contributes another 128 base dispatch points without occupying a peripheral slot. Finite tiers allow `P = 0`; Quantum and Overload also require `0 ≤ A ≤ 15`.
 
 | Main Core | Dispatch Gain | External-storage Gain | Copy Gain per Successful Dispatch |
 |-----------|--------------:|----------------------:|----------------------------------:|
@@ -104,11 +112,11 @@ Let **S**, **P**, and **A** be the counts of Storage, Parallel, and Amplifier Un
 
 The resulting parameters are calculated as follows:
 
-* Successful dispatches equal `128 × P × dispatch gain`, capped by the Main Core.
+* Successful dispatches equal `128 × (1 + P) × dispatch gain`, capped by the Main Core.
 * Total crafting storage equals the internal storage plus `64 MiB × S × external-storage gain`.
 * Maximum copies equal successful dispatches times the copy gain, capped by the Main Core's copy ceiling.
 
-For example, a Quantum core with 20 Parallel Units, 5 Amplifier Units, and 1 Storage Unit: the dispatch gain is ×12, so the formula gives `128 × 20 × 12 = 30,720` dispatches, capped at **6,144** by the Quantum ceiling; external storage is `64 MiB × 1 × 12 = 768 MiB`, giving **1 GiB** with the 256 MiB internal storage; the copy gain is ×6, so the formula gives `6,144 × 6 = 36,864` copies, capped at **20,480**. The controller screen indicates when a parameter has reached its cap.
+For example, a Quantum core with 3 Parallel Units, 5 Amplifier Units, 1 Storage Unit, and 17 Blank Units: the dispatch gain is ×12, so the formula gives `128 × (1 + 3) × 12 = 6,144` dispatches, exactly reaching the Quantum ceiling of **6,144**; external storage is `64 MiB × 1 × 12 = 768 MiB`, giving **1 GiB** with the 256 MiB internal storage; the copy gain is ×6, so the formula gives `6,144 × 6 = 36,864` copies, capped at **20,480**. The controller screen indicates when a parameter has reached its cap.
 
 To illustrate how the two budgets relate, consider a configuration with 512 successful dispatches and 1,024 maximum copies per tick: sending only single-copy patterns uses at most 512 of those copies per tick, while batch-capable targets can combine multiple executions of the same pattern within the same 512 accepted calls and use the full 1,024 copies. The provider and the target machine determine the actual grouping; a single machine is not guaranteed to accept the complete budget.
 
@@ -121,10 +129,10 @@ To illustrate how the two budgets relate, consider a configuration with 512 succ
 
 ## Amplifier, Blank, and Closed-Loop Storage
 
-The <ItemLink id="ae2lt:tianshu_amplifier_unit" /> increases dispatch, external-storage, and batch-copy capacity for Quantum and Overload cores. Baseline and Multidimensional reject Amplifier Units; Quantum and Overload accept at most 15.
+The <ItemLink id="ae2lt:tianshu_amplifier_unit" /> is shared by the Tianshu Supercomputer and Tianshu Matter Warping Matrix. In a Supercomputer, it increases dispatch, external-storage, and batch-copy capacity for Quantum and Overload cores. Baseline and Multidimensional reject Amplifier Units; Quantum and Overload accept at most 15.
 
-The <ItemLink id="ae2lt:tianshu_blank_unit" /> is the neutral placeholder shared by the Tianshu Supercomputing Array and Tianshu Matter Warping Matrix. It keeps a peripheral cell structurally valid but contributes no crafting storage, dispatch capacity, amplification, pattern slots, or seed capacity.
+The <ItemLink id="ae2lt:tianshu_blank_unit" /> is the neutral placeholder shared by the Tianshu Supercomputer and Tianshu Matter Warping Matrix. It keeps a peripheral cell structurally valid but contributes no crafting storage, dispatch capacity, amplification, pattern slots, or seed capacity.
 
-Closed-loop analysis and execution are built into the Main Core and require no separate closed-loop compute core. Closed-Loop Pattern Storage and Closed-Loop Seed Storage remain external physical storage installed in the shell's cooling-compatible positions, where each replaces a Phase-Change Cooling Unit. They provide pattern capacity or seed storage but do not occupy the 26 core-chamber peripheral cells and do not count toward **S**, **P**, or **A**. Use Blank Units for core-chamber cells that need no compute attribute.
+Closed-loop analysis and execution are built into the Main Core and require no separate closed-loop compute core. Closed-Loop Pattern Storage and Closed-Loop Seed Storage remain external physical storage installed in the shell's cooling-compatible positions, where each replaces a Tianshu Supercomputer Cooling Unit. They provide pattern capacity or seed storage but do not occupy the 26 core-chamber peripheral cells and do not count toward **S**, **P**, or **A**. Use Blank Units for core-chamber cells that need no compute attribute.
 
 Closed-Loop Seed Storage contains 10 cell slots and can hold seeds only after an **ME Storage Cell** compatible with the seed type is installed. Players cannot place seed items directly into these slots. Open the closed-loop page of the Tianshu Pattern Encoding Terminal and select **Refill Seeds** to transfer seeds automatically from the current ME network. If the terminal reports that seed storage cannot accept items, check for installed cells, free bytes, type capacity, and cell partitions.
