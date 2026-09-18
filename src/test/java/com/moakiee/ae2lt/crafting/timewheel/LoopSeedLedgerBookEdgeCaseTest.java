@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.crafting.timewheel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import appeng.api.stacks.AEKey;
@@ -11,6 +12,12 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.config.Actionable;
+import appeng.crafting.inv.ICraftingInventory;
+import appeng.crafting.inv.ListCraftingInventory;
+import appeng.crafting.execution.CraftingCpuHelper;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.ExecutionInputAllocator;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelInputExtractor;
 import com.moakiee.thunderbolt.core.crafting.loop.ISeedPreservingCraftingTask;
 import com.moakiee.ae2lt.crafting.runtime.ExecuteLoopPattern;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternDetails;
@@ -30,9 +37,179 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
 class LoopSeedLedgerBookEdgeCaseTest {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void lastLoopMemberDoesNotBlockTheOrdinaryProducerItIsWaitingFor(boolean batch) throws Exception {
+        var a = key("cycle_a", "");
+        var b = key("cycle_b", "");
+        var glass = key("ordinary_glass", "");
+        var intermediate = key("ordinary_intermediate", "");
+        var group = UUID.randomUUID();
+        var firstId = UUID.randomUUID();
+        var secondId = UUID.randomUUID();
+        var first = new ExecuteLoopPattern(new FakeSeedPattern(
+                new IPatternDetails.IInput[] {new FakeInput(new GenericStack[] {stack(a, 1)})},
+                List.of(stack(b, 1)), group, false), firstId, counter(a, 1), counter(a, 1),
+                Map.of(secondId, counter(b, 1)));
+        var second = new ExecuteLoopPattern(new FakeSeedPattern(
+                new IPatternDetails.IInput[] {new FakeInput(new GenericStack[] {stack(b, 1)}),
+                        new FakeInput(new GenericStack[] {stack(intermediate, 1)})},
+                List.of(stack(a, 1)), group, false), secondId, new KeyCounter(), counter(b, 1),
+                Map.of(firstId, counter(a, 1)));
+        var ordinary = new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(b, 1), stack(glass, 1)})},
+                List.of(stack(intermediate, 1)), UUID.randomUUID(), false);
+        var tasks = new java.util.LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(first, 1L); tasks.put(second, 1L); tasks.put(ordinary, 1L);
+        var allocator = new ExecutionInputAllocator(tasks, value -> value, true, true,
+                (pattern, slot) -> pattern instanceof ExecuteLoopPattern loop && loop.isInputSeedSlot(slot));
+        var inventory = new ListCraftingInventory(allocator::onInventoryChange);
+        inventory.insert(a, 1, Actionable.MODULATE);
+        inventory.insert(glass, 1, Actionable.MODULATE);
+        var ledgers = new LoopSeedLedgerBook();
+        ledgers.initialize(List.of(first, second));
+
+        var firstView = guarded(inventory, ledgers.reservationView(firstId, first::isInputSeedKey));
+        var taken = TimeWheelInputExtractor.extractPatternInputs(first, firstView, null,
+                new KeyCounter(), new KeyCounter(), allocator.allocate(first, firstView, null, 1));
+        assertNotNull(taken);
+        ledgers.recordDispatch(first, 1, false, null);
+        tasks.put(first, 0L); allocator.onTaskChange(first);
+        inventory.insert(b, 1, Actionable.MODULATE); // A's last in-flight output is now physical.
+
+        var secondView = guarded(inventory, ledgers.reservationView(secondId, second::isInputSeedKey));
+        assertNull(TimeWheelInputExtractor.extractPatternInputs(second, secondView, null,
+                new KeyCounter(), new KeyCounter(), allocator.allocate(second, secondView, null, 1)),
+                "the last loop member legitimately waits for the ordinary intermediate");
+        var ordinaryView = guarded(inventory, ledgers.reservationView(null, ignored -> false));
+        assertEquals(0, ordinaryView.extract(b, 1, Actionable.SIMULATE));
+        assertEquals(1, ordinaryView.extract(glass, 1, Actionable.SIMULATE));
+        var allocation = allocator.allocate(ordinary, ordinaryView, null, 1);
+        assertTrue(allocation.allowed(), "do not demand the loop's already hidden B reserve again from public stock");
+        var rejected = extract(ordinary, inventory, ledgers.reservationView(null, ignored -> false), allocator, batch);
+        assertNotNull(rejected);
+        assertEquals(1, rejected[0].get(glass));
+        CraftingCpuHelper.reinjectPatternInputs(ordinaryView, rejected);
+        var accepted = extract(ordinary, inventory, ledgers.reservationView(null, ignored -> false), allocator, batch);
+        assertNotNull(accepted);
+        assertEquals(1, inventory.list.get(b), "the ordinary recipe cannot steal the loop seed");
+        tasks.put(ordinary, 0L); allocator.onTaskChange(ordinary);
+        inventory.insert(intermediate, 1, Actionable.MODULATE);
+        assertNotNull(TimeWheelInputExtractor.extractPatternInputs(second, secondView, null,
+                new KeyCounter(), new KeyCounter(), allocator.allocate(second, secondView, null, 1)));
+        ledgers.recordDispatch(second, 1, false, null);
+        tasks.put(second, 0L); allocator.onTaskChange(second);
+        inventory.insert(a, 1, Actionable.MODULATE);
+        assertEquals(Map.of(a, 1L), ledgers.positiveSnapshot());
+        assertEquals(1, inventory.list.get(a));
+        assertEquals(0, inventory.list.get(b));
+        assertTrue(tasks.values().stream().allMatch(count -> count == 0));
+    }
+
+    @Test
+    void loopOrdinaryConsumableSlotsStillKeepTheirFiniteMaterialProtection() throws Exception {
+        var seed = key("private_seed", "");
+        var exactMaterial = key("loop_consumable", "");
+        var substitute = key("ordinary_substitute", "");
+        var loopId = UUID.randomUUID();
+        var loop = new ExecuteLoopPattern(new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(seed, 1)}),
+                new FakeInput(new GenericStack[] {stack(exactMaterial, 1)})},
+                List.of(stack(key("returned_state", ""), 1)), UUID.randomUUID(), false),
+                loopId, counter(seed, 1), counter(seed, 1), Map.of());
+        var ordinary = new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(exactMaterial, 1), stack(substitute, 1)})},
+                List.of(stack(key("ordinary_output", ""), 1)), UUID.randomUUID(), false);
+        assertTrue(loop.isInputSeedSlot(0));
+        assertFalse(loop.isInputSeedSlot(1));
+        var tasks = new java.util.LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(loop, 1L); tasks.put(ordinary, 1L);
+        var allocator = loopAllocator(tasks);
+        var inventory = new ListCraftingInventory(allocator::onInventoryChange);
+        inventory.insert(seed, 1, Actionable.MODULATE);
+        inventory.insert(exactMaterial, 1, Actionable.MODULATE);
+        inventory.insert(substitute, 1, Actionable.MODULATE);
+        var ledgers = new LoopSeedLedgerBook();
+        ledgers.initialize(List.of(loop));
+        var taken = extract(ordinary, inventory, ledgers.reservationView(null, ignored -> false), allocator, true);
+        assertNotNull(taken);
+        assertEquals(1, taken[0].get(substitute));
+        assertEquals(1, inventory.list.get(seed));
+        assertEquals(1, inventory.list.get(exactMaterial), "only seed slots are exempt from lifetime reservation");
+    }
+
+    @Test
+    void selectedFuzzyLoopUsesReadySeedOnlyAndWakesWhenTheNextActualSeedArrives() {
+        var seed = key("late_seed", "");
+        var strict = key("ordinary_exact", "");
+        var returned = key("seed_return", "");
+        var loopId = UUID.randomUUID();
+        var loop = new ExecuteLoopPattern(new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(seed, 1), stack(strict, 1)})},
+                List.of(stack(returned, 1)), UUID.randomUUID(), false),
+                loopId, counter(seed, 2), counter(seed, 1), Map.of(loopId, counter(returned, 1)));
+        var ordinary = new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(strict, 1)})},
+                List.of(stack(key("exact_output", ""), 1)), UUID.randomUUID(), false);
+        var tasks = new java.util.LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(loop, 2L); tasks.put(ordinary, 1L);
+        var allocator = loopAllocator(tasks);
+        var inventory = new ListCraftingInventory(allocator::onInventoryChange);
+        inventory.insert(seed, 1, Actionable.MODULATE); // The second precredited seed is still in flight.
+        inventory.insert(strict, 1, Actionable.MODULATE);
+        var ledgers = new LoopSeedLedgerBook();
+        ledgers.initialize(List.of(loop));
+        var reserved = ledgers.reservationView(loopId, loop::isInputSeedKey);
+        var first = TimeWheelInputExtractor.bulkExtract(loop, inventory, 2, false, reserved, null,
+                (visible, copies) -> allocator.allocate(loop, visible, null, copies));
+        assertNotNull(first, "a ready seed must not wait for all remaining copies' seeds");
+        assertEquals(1, first.actualCopies);
+        assertEquals(1, first.scaledInputs[0].get(seed));
+        assertEquals(1, inventory.list.get(strict));
+        tasks.put(loop, 1L); allocator.onTaskChange(loop);
+        ledgers.recordDispatch(loop, 1, false, null);
+        assertNull(TimeWheelInputExtractor.bulkExtract(loop, inventory, 1, false, reserved, null,
+                (visible, copies) -> allocator.allocate(loop, visible, null, copies)),
+                "a future credit is not physical stock, and the other recipe's exact material stays protected");
+        inventory.insert(seed, 1, Actionable.MODULATE);
+        var last = TimeWheelInputExtractor.bulkExtract(loop, inventory, 1, false, reserved, null,
+                (visible, copies) -> allocator.allocate(loop, visible, null, copies));
+        assertNotNull(last);
+        assertEquals(1, last.scaledInputs[0].get(seed));
+        assertEquals(1, inventory.list.get(strict));
+    }
+
+    private static ExecutionInputAllocator loopAllocator(Map<IPatternDetails, Long> tasks) {
+        return new ExecutionInputAllocator(tasks, value -> value, true, true,
+                (pattern, slot) -> pattern instanceof ExecuteLoopPattern loop && loop.isInputSeedSlot(slot));
+    }
+
+    private static KeyCounter[] extract(IPatternDetails pattern, ListCraftingInventory inventory,
+            Map<AEKey, Long> reservations, ExecutionInputAllocator allocator, boolean batch) throws Exception {
+        if (batch) {
+            var result = TimeWheelInputExtractor.bulkExtract(pattern, inventory, 1, false, reservations, null,
+                    (visible, copies) -> allocator.allocate(pattern, visible, null, copies));
+            return result == null ? null : result.scaledInputs;
+        }
+        var visible = guarded(inventory, reservations);
+        return TimeWheelInputExtractor.extractPatternInputs(pattern, visible, null,
+                new KeyCounter(), new KeyCounter(), allocator.allocate(pattern, visible, null, 1));
+    }
+
+    private static ICraftingInventory guarded(ICraftingInventory inventory, Map<AEKey, Long> reservations)
+            throws Exception {
+        // Exercise the real CPU adapter, including its non-enumerable reservation view contract.
+        var type = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$ReservedCraftingInventory");
+        var constructor = type.getDeclaredConstructor(ICraftingInventory.class, Map.class);
+        constructor.setAccessible(true);
+        return (ICraftingInventory) constructor.newInstance(inventory, reservations);
+    }
+
     @Test
     void dispatchPrecreditsOutputButStillProtectsItFromAnotherConsumer() {
         var a = key("a", "");

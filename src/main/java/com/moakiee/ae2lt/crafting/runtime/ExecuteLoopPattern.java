@@ -447,9 +447,12 @@ public final class ExecuteLoopPattern implements IPatternDetails, IProviderLooku
         return Collections.unmodifiableMap(result);
     }
 
-    private boolean isSeedSlot(int slot) {
+    /** This slot is independently protected by the CPU seed ledger. */
+    public boolean isInputSeedSlot(int slot) {
         return slot >= 0 && slot < seedSlots.length && seedSlots[slot];
     }
+
+    private boolean isSeedSlot(int slot) { return isInputSeedSlot(slot); }
 
     private boolean computeIsSeedSlot(int slot) {
         var inputs = executionInputs;
