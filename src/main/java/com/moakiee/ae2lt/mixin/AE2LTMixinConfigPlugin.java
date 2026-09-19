@@ -14,7 +14,10 @@ import net.minecraftforge.fml.loading.LoadingModList;
 public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     private static final Map<String, String> REQUIRED_MODS = Map.of(
             "AdvCraftingCpuAccessor", "advanced_ae",
-            "AdvCraftingCpuLogicMixin", "advanced_ae");
+            "AdvCraftingCpuLogicMixin", "advanced_ae",
+            "TransfiniteCraftingLogicMixin", "gtlcore",
+            "TransfiniteComputationArrayMachineMixin", "gtlcore",
+            "MECraftingCPUInterfacePartMachineMixin", "gtlcore");
 
     @Override
     public void onLoad(String mixinPackage) {

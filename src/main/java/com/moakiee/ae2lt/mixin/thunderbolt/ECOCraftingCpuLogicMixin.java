@@ -21,7 +21,12 @@ import net.minecraft.nbt.CompoundTag;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.networking.IGrid;
+import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.networking.crafting.ICraftingProvider;
+import appeng.api.networking.crafting.ICraftingRequester;
+import appeng.api.networking.crafting.ICraftingSubmitResult;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
 import appeng.api.stacks.GenericStack;
@@ -31,6 +36,7 @@ import appeng.crafting.inv.ListCraftingInventory;
 
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.util.MixinReflectionSupport;
+import com.moakiee.ae2lt.crafting.runtime.ClosedLoopCpuSubmitGuard;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ECOCraftingCpuAccessor;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.ae2lt.overload.runtime.cpu.InsertContext;
@@ -139,6 +145,16 @@ public abstract class ECOCraftingCpuLogicMixin {
     private InsertContext ae2lt$insertContext;
 
     // ========================= Injection Handlers =========================
+
+    @Inject(method = "trySubmitJob", at = @At("HEAD"), cancellable = true)
+    private void ae2lt$rejectClosedLoopPlan(
+            IGrid grid,
+            ICraftingPlan plan,
+            IActionSource source,
+            ICraftingRequester requester,
+            CallbackInfoReturnable<ICraftingSubmitResult> cir) {
+        ClosedLoopCpuSubmitGuard.rejectIfClosedLoop(plan, cir);
+    }
 
     @Inject(method = "insert", at = @At("HEAD"))
     private void ae2lt$beginInsertContext(AEKey what, long amount, Actionable type,

@@ -62,6 +62,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
     private boolean fastPlanningEnabled = true;
     private long remainingStorage;
     private boolean cpuListChanged;
+    private long lastPhysicalTick;
+    private boolean physicalTickStarted;
     private final TickProviderDispatchSchedule dispatchSchedule = new TickProviderDispatchSchedule();
 
     public TimeWheelCraftingCpuPool(TimeWheelCraftingCpuPoolHost host,
@@ -132,11 +134,27 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         return List.copyOf(result);
     }
 
+    /**
+     * One physical server tick may visit the same pool from AE2LT's HEAD injector
+     * and Thunderbolt's FIELD injector. The second visit must not dispatch again.
+     */
+    boolean beginPhysicalTick(long currentTick) {
+        if (physicalTickStarted && lastPhysicalTick == currentTick) {
+            return false;
+        }
+        physicalTickStarted = true;
+        lastPhysicalTick = currentTick;
+        return true;
+    }
+
     @Override
     public long tickCraftingLogic(IEnergyService energyService, ICraftingService craftingService) {
         if (!(craftingService instanceof CraftingService concreteCraftingService)) {
             throw new IllegalArgumentException(
                     "TimeWheel requires AE2's concrete CraftingService implementation");
+        }
+        if (!beginPhysicalTick(TickHandler.instance().getCurrentTick())) {
+            return Long.MIN_VALUE;
         }
         resolvePendingLoad();
         var latestChange = new long[] {Long.MIN_VALUE};

@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.crafting.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,6 +66,10 @@ class LoopCraftingPlanTest {
                         .map(LoopCraftingPlan.HostReusableSeedAllocation::reusableSeedGroupId)
                         .collect(java.util.stream.Collectors.toSet()));
         assertSame(delegate, fast.delegate());
+        assertTrue(ClosedLoopCpuSubmitGuard.isClosedLoop(fast),
+                "a wrapped loop plan must be rejected by foreign CPU submit guards");
+        assertFalse(ClosedLoopCpuSubmitGuard.isClosedLoop(delegate),
+                "an ordinary AE2 plan must still be accepted by vanilla CPUs");
     }
 
     @Test
@@ -165,18 +170,18 @@ class LoopCraftingPlanTest {
                 source.storageScope(), source.poolScope(), source.routingScope(), seed, seed);
     }
 
-    private static final class TestLoopPattern
+    static final class TestLoopPattern
             implements IPatternDetails, CraftingCpuRestrictedPattern, ReusableSeedPattern {
         private final AEKey seed;
         private final UUID groupId;
         private final boolean shared;
         private final Set<AEKey> acceptedVariants;
 
-        private TestLoopPattern(AEKey seed, UUID groupId, boolean shared) {
+        TestLoopPattern(AEKey seed, UUID groupId, boolean shared) {
             this(seed, groupId, shared, Set.of(seed));
         }
 
-        private TestLoopPattern(
+        TestLoopPattern(
                 AEKey seed, UUID groupId, boolean shared, Set<AEKey> acceptedVariants) {
             this.seed = seed;
             this.groupId = groupId;
@@ -204,11 +209,11 @@ class LoopCraftingPlanTest {
         }
     }
 
-    private static final class TestKey extends AEKey {
+    static final class TestKey extends AEKey {
         private static final TestKeyType TYPE = new TestKeyType();
         private final String id;
 
-        private TestKey(String id) { this.id = id; }
+        TestKey(String id) { this.id = id; }
         @Override public AEKeyType getType() { return TYPE; }
         @Override public AEKey dropSecondary() { return this; }
         @Override public CompoundTag toTag() {

@@ -261,7 +261,8 @@ dependencies {
 
     // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
     // Provided at runtime as a separate mod jar in the modpack. The GTL branch needs the Thunderbolt
-    // build that hands its crafting mixins over to GTLCore, hence the pinned floor in gradle.properties.
+    // 1.20.1_GTL planner-attach build: CPU dispatch stands down, computePlan wrapping stays on.
+    // Same GAV as earlier 2.0.0-beta.5 jars, so mavenLocal must be republished before this compile.
     compileOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }

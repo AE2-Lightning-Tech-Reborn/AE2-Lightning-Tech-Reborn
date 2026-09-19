@@ -37,7 +37,11 @@ import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuStateManager;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadPatternReference;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
 
-@Mixin(value = appeng.crafting.execution.CraftingCpuLogic.class, remap = false)
+// GTLCore @Overwrite-s executeCrafting at mixin priority 1100. Applying after
+// that overwrite is what keeps WrapOperation on provider.pushPattern alive.
+// Closed-loop leftover rejection lives in CraftingCpuLogicClosedLoopSubmitMixin
+// so a wrap miss cannot fail this class under defaultRequire: 1.
+@Mixin(value = appeng.crafting.execution.CraftingCpuLogic.class, remap = false, priority = 1200)
 public abstract class CraftingCpuLogicMixin {
     @Shadow(remap = false)
     CraftingCPUCluster cluster;
@@ -145,7 +149,9 @@ public abstract class CraftingCpuLogicMixin {
                     value = "INVOKE",
                     target = "Lappeng/api/networking/crafting/ICraftingProvider;pushPattern(Lappeng/api/crafting/IPatternDetails;[Lappeng/api/stacks/KeyCounter;)Z"
             ),
-            remap = false
+            remap = false,
+            require = 0,
+            expect = 0
     )
     private boolean ae2lt$registerOverloadExpectedOutputs(ICraftingProvider provider, IPatternDetails details,
                                                           KeyCounter[] inputHolder, Operation<Boolean> original) {

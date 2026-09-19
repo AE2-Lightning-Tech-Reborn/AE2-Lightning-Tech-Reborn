@@ -28,7 +28,9 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingProviderChangeTracker;
 import com.moakiee.thunderbolt.core.crafting.loop.ReusableSeedPattern;
+import com.moakiee.ae2lt.crafting.algorithm.ExclusiveCraftingPlanning;
 import com.moakiee.thunderbolt.api.crafting.ConfigurableCraftingAlgorithmProvider;
+import com.moakiee.thunderbolt.api.crafting.CraftingAlgorithmSelection;
 import com.moakiee.thunderbolt.api.crafting.DefaultCraftingAlgorithmProviderState;
 import com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPool;
@@ -62,6 +64,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -143,7 +146,10 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
             new CraftingProviderChangeTracker();
     private final DefaultCraftingAlgorithmProviderState algorithmProvider =
             new DefaultCraftingAlgorithmProviderState(
-                    ThunderboltV2PlanningEngine.ID, 0, this::algorithmProviderChanged);
+                    ThunderboltV2PlanningEngine.ID,
+                    ExclusiveCraftingPlanning.ownedAlgorithms(),
+                    0,
+                    this::algorithmProviderChanged);
 
     public TianshuSupercomputerControllerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TIANSHU_SUPERCOMPUTER_CONTROLLER.get(), pos, state);
@@ -252,6 +258,16 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
 
     public int getCraftingAlgorithmPriority() {
         return algorithmProvider.getPriority();
+    }
+
+    public ResourceLocation getExclusivePlanningAlgorithm() {
+        return ExclusiveCraftingPlanning.normalize(algorithmProvider.getSelectedAlgorithm());
+    }
+
+    public void cycleExclusivePlanningAlgorithm() {
+        var next = ExclusiveCraftingPlanning.cycle(algorithmProvider.getSelectedAlgorithm());
+        algorithmProvider.setSelection(
+                new CraftingAlgorithmSelection(next, algorithmProvider.getPriority()));
     }
 
     @Override
@@ -1355,6 +1371,11 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         cpuPool.setFastPlanningEnabled(fastPlanningEnabled);
         if (tag.contains(TAG_ALGORITHM_PROVIDER, Tag.TAG_COMPOUND)) {
             algorithmProvider.readFromNBT(tag.getCompound(TAG_ALGORITHM_PROVIDER));
+        }
+        var exclusive = ExclusiveCraftingPlanning.normalize(algorithmProvider.getSelectedAlgorithm());
+        if (!exclusive.equals(algorithmProvider.getSelectedAlgorithm())) {
+            algorithmProvider.setSelection(
+                    new CraftingAlgorithmSelection(exclusive, algorithmProvider.getPriority()));
         }
         if (tag.contains(TAG_MAIN_CORE, Tag.TAG_STRING)) {
             try {

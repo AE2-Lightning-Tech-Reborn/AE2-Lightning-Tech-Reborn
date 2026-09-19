@@ -5,6 +5,7 @@ import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanIssue;
 import com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu;
 import com.moakiee.ae2lt.network.TianshuControllerActionPacket;
 
+import java.util.List;
 import java.util.Locale;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,6 +21,7 @@ import appeng.menu.implementations.PriorityMenu;
 
 public class TianshuSupercomputerControllerScreen
         extends MultiblockControllerScreen<TianshuSupercomputerControllerMenu> {
+    private TextureToggleButton algorithmButton;
 
     public TianshuSupercomputerControllerScreen(
             TianshuSupercomputerControllerMenu menu, Inventory inventory, Component title) {
@@ -39,13 +41,16 @@ public class TianshuSupercomputerControllerScreen
         build.setPosition(x, y);
         addRenderableWidget(build);
 
-        var selection = new TextureToggleButton(
+        algorithmButton = new TextureToggleButton(
                 TextureToggleButton.ButtonType.CPU_SELECTION,
-                state -> sendAction(TianshuControllerActionPacket.Action.OPEN_ALGORITHM_SELECTION));
-        selection.setTooltip(Tooltip.create(Component.translatable(
-                "ae2lt.tianshu.gui.algorithm_selection")));
-        selection.setPosition(x, y + 22);
-        addRenderableWidget(selection);
+                state -> sendAction(TianshuControllerActionPacket.Action.CYCLE_ALGORITHM));
+        algorithmButton.setTooltipAt(0, List.of(Component.translatable("ae2lt.tianshu.gui.algorithm.v2")));
+        algorithmButton.setTooltipAt(1, List.of(Component.translatable("ae2lt.tianshu.gui.algorithm.cp_sat")));
+        algorithmButton.setTooltipAt(2, List.of(Component.translatable("ae2lt.tianshu.gui.algorithm.vanilla")));
+        algorithmButton.setStateIndex(menu.getAlgorithmIndex());
+        algorithmButton.setTooltip(Tooltip.create(Component.translatable(menu.getAlgorithmTranslationKey())));
+        algorithmButton.setPosition(x, y + 22);
+        addRenderableWidget(algorithmButton);
 
         var cpuPriorityLabel = Component.translatable("ae2lt.tianshu.gui.cpu_priority");
         var priority = new TabButton(
@@ -61,6 +66,16 @@ public class TianshuSupercomputerControllerScreen
     private void sendAction(TianshuControllerActionPacket.Action action) {
         NetworkInit.sendToServer(
                 new TianshuControllerActionPacket(menu.token(), menu.getBlockPos(), action));
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        if (algorithmButton != null) {
+            algorithmButton.setStateIndex(menu.getAlgorithmIndex());
+            algorithmButton.setTooltip(Tooltip.create(
+                    Component.translatable(menu.getAlgorithmTranslationKey())));
+        }
     }
 
     @Override

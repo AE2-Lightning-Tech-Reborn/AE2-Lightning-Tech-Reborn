@@ -18,6 +18,7 @@ import com.moakiee.ae2lt.logic.tianshu.TianshuFunctionProfile;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternRepository;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceService;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPoolProvider;
+import com.moakiee.ae2lt.crafting.algorithm.ExclusiveCraftingPlanning;
 import com.moakiee.thunderbolt.api.crafting.CraftingAlgorithmProvider;
 import com.moakiee.thunderbolt.api.crafting.CraftingAlgorithmSelection;
 import com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine;
@@ -120,11 +121,16 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
+    public List<net.minecraft.resources.ResourceLocation> getProvidedAlgorithms() {
+        return ExclusiveCraftingPlanning.ownedAlgorithms();
+    }
+
+    @Override
     public net.minecraft.resources.ResourceLocation getSelectedAlgorithm() {
         var controller = getController();
         return controller != null
-                ? controller.getCraftingAlgorithmProvider().getSelectedAlgorithm()
-                : ThunderboltV2PlanningEngine.ID;
+                ? controller.getExclusivePlanningAlgorithm()
+                : ExclusiveCraftingPlanning.normalize(null);
     }
 
     @Override
@@ -136,8 +142,11 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkBlockEntity
     @Override
     public void setSelection(CraftingAlgorithmSelection selection) {
         var controller = getController();
-        if (controller != null) {
-            controller.getCraftingAlgorithmProvider().setSelection(selection);
+        if (controller != null && selection != null) {
+            controller.getCraftingAlgorithmProvider().setSelection(
+                    new CraftingAlgorithmSelection(
+                            ExclusiveCraftingPlanning.normalize(selection.algorithmId()),
+                            selection.priority()));
         }
     }
 
