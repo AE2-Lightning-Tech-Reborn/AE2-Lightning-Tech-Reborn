@@ -26,6 +26,21 @@ import cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider;
 import org.junit.jupiter.api.Test;
 
 class NeoEcoFastPathBatchAdapterTest {
+    @Test
+    void persistentEndpointResetsOnlyItsTickLocalFallback() {
+        var resolver = new NeoEcoFastPathBatchAdapter();
+        assertTrue(resolver.cacheResolutionAcrossTicks());
+        var provider = new OrdinaryProvider(true);
+        var endpoint = new NeoEcoFastPathBatchAdapter.AdaptedProvider(provider);
+        endpoint.beginDispatchTick(10);
+        assertEquals(1, endpoint.pushBatch(null, new KeyCounter[] {new KeyCounter()}, 2, job));
+        assertEquals(1, endpoint.getBatchCapacity(null));
+        endpoint.beginDispatchTick(10);
+        assertEquals(1, endpoint.getBatchCapacity(null));
+        endpoint.beginDispatchTick(11);
+        assertEquals(Long.MAX_VALUE, endpoint.getBatchCapacity(null));
+    }
+
     private final BatchJobView job = (BatchJobView) Proxy.newProxyInstance(
             BatchJobView.class.getClassLoader(), new Class<?>[] {BatchJobView.class},
             (proxy, method, args) -> null);

@@ -11,6 +11,25 @@ import appeng.api.stacks.KeyCounter;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
 class UselessBatchAdapterTest {
+    @Test
+    void persistentEndpointRetriesRecoveredTargetOnTheNextTick() throws Exception {
+        var provider = new Provider();
+        provider.target.success = false;
+        var resolver = adapter();
+        assertTrue(resolver.cacheResolutionAcrossTicks());
+        var endpoint = resolver.resolve(provider);
+        endpoint.beginDispatchTick(10);
+        assertEquals(9, endpoint.pushBatch(null, inputs(), 10));
+        assertEquals(1, endpoint.getBatchCapacity(null));
+        endpoint.beginDispatchTick(10);
+        assertEquals(1, endpoint.getBatchCapacity(null));
+        provider.target.success = true;
+        endpoint.beginDispatchTick(11);
+        assertEquals(Long.MAX_VALUE, endpoint.getBatchCapacity(null));
+        assertEquals(7, endpoint.pushBatch(null, inputs(), 10));
+        assertEquals(1, provider.ordinaryCalls);
+    }
+
     private UselessBatchAdapter adapter() throws Exception {
         return new UselessBatchAdapter(new UselessBatchApi(
                 Provider.class, Target.class, Capacity.class, Batch.class, Binding.class));
