@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.menu;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerControllerBlockEntity;
+import com.moakiee.ae2lt.crafting.algorithm.ExclusiveCraftingPlanning;
 import com.moakiee.ae2lt.logic.tianshu.CpuMainCoreTier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -38,6 +39,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
     private final DataSlot parallelism = DataSlot.standalone();
     private final DataSlot capped = DataSlot.standalone();
     private final DataSlot issue = DataSlot.standalone();
+    private final DataSlot algorithmIndex = DataSlot.standalone();
     private final DataSlot[] storage = {DataSlot.standalone(), DataSlot.standalone(),
             DataSlot.standalone(), DataSlot.standalone()};
     private final DataSlot[] maxCopiesPerTick = {DataSlot.standalone(), DataSlot.standalone(),
@@ -65,6 +67,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
         setMaxCopiesPerTick(buf.readLong());
         capped.set(buf.readBoolean() ? 1 : 0);
         issue.set(buf.readVarInt());
+        algorithmIndex.set(buf.readVarInt());
     }
 
     public static void writeExtraData(
@@ -82,6 +85,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
         buf.writeLong(profile.maxCopiesPerTick());
         buf.writeBoolean(profile.parallelCapped());
         buf.writeVarInt(host.getPrimaryIssueOrdinal());
+        buf.writeVarInt(ExclusiveCraftingPlanning.displayIndex(host.getExclusivePlanningAlgorithm()));
     }
 
     @Override
@@ -102,6 +106,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
         parallelism.set(profile.parallelism());
         capped.set(profile.parallelCapped() ? 1 : 0);
         issue.set(host.getPrimaryIssueOrdinal());
+        algorithmIndex.set(ExclusiveCraftingPlanning.displayIndex(host.getExclusivePlanningAlgorithm()));
         setStorage(profile.storageBytes());
         setMaxCopiesPerTick(profile.maxCopiesPerTick());
     }
@@ -111,6 +116,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
         addDataSlot(amplifierUnits);
         addDataSlot(closedLoopPatternStorages); addDataSlot(closedLoopSeedStorages);
         addDataSlot(parallelism); addDataSlot(capped); addDataSlot(issue);
+        addDataSlot(algorithmIndex);
         for (var slot : storage) addDataSlot(slot);
         for (var slot : maxCopiesPerTick) addDataSlot(slot);
     }
@@ -138,6 +144,11 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
     public int getSuccessfulDispatchesPerTick() { return parallelism.get(); }
     public boolean isCapped() { return capped.get() != 0; }
     public int getIssue() { return issue.get(); }
+    public int getAlgorithmIndex() { return algorithmIndex.get(); }
+    public String getAlgorithmTranslationKey() {
+        return ExclusiveCraftingPlanning.translationKey(
+                ExclusiveCraftingPlanning.algorithmAtDisplayIndex(getAlgorithmIndex()));
+    }
     public long getStorageBytes() {
         long value = 0L;
         for (int i = 0; i < 4; i++) value |= (long) (storage[i].get() & 0xFFFF) << (i * 16);
