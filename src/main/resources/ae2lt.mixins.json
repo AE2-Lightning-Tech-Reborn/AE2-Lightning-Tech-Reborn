@@ -34,7 +34,6 @@
     "thunderbolt.accessor.ExecutingCraftingJobAccessor",
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
-    "thunderbolt.accessor.ECOCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.CraftingCpuLogicMixin",

@@ -31,7 +31,6 @@ import appeng.crafting.inv.ListCraftingInventory;
 
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.util.MixinReflectionSupport;
-import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ECOCraftingCpuAccessor;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.ae2lt.overload.runtime.cpu.InsertContext;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadClaimResult;
@@ -80,6 +79,13 @@ public abstract class ECOCraftingCpuLogicMixin {
     private static final @Nullable Field AE2LT_ECO_CPU_FIELD =
             MixinReflectionSupport.findDeclaredFieldSafe(AE2LT_ECO_LOGIC_CLASS, "cpu");
 
+    // NeoECO beta4 retains the CPU base class but removes markDirty and the legacy logic.
+    // Keep this lookup with the optional legacy logic instead of injecting into that base class.
+    @Unique
+    private static final @Nullable Method AE2LT_ECO_MARK_DIRTY_METHOD =
+            MixinReflectionSupport.findDeclaredMethodSafe(
+                    AE2LT_ECO_CPU_FIELD != null ? AE2LT_ECO_CPU_FIELD.getType() : null, "markDirty");
+
     @Unique
     private static final @Nullable Method AE2LT_ECO_FINISH_JOB_METHOD =
             MixinReflectionSupport.findDeclaredMethodSafe(AE2LT_ECO_LOGIC_CLASS, "finishJob", boolean.class);
@@ -125,6 +131,7 @@ public abstract class ECOCraftingCpuLogicMixin {
             && AE2LT_ECO_JOB_FIELD != null
             && AE2LT_ECO_INVENTORY_FIELD != null
             && AE2LT_ECO_CPU_FIELD != null
+            && AE2LT_ECO_MARK_DIRTY_METHOD != null
             && AE2LT_ECO_FINISH_JOB_METHOD != null
             && AE2LT_ECO_POST_CHANGE_METHOD != null
             && AE2LT_ECO_JOB_WAITING_FOR_FIELD != null
@@ -220,7 +227,8 @@ public abstract class ECOCraftingCpuLogicMixin {
                     requesterAccepted);
             var cpu = ae2lt$getCpu();
             if (cpu != null) {
-                ((ECOCraftingCpuAccessor) cpu).ae2lt$markDirty();
+                MixinReflectionSupport.invokeMethodSafe(
+                        AE2LT_ECO_MARK_DIRTY_METHOD, cpu, "mark ECO CPU dirty");
             }
             cir.setReturnValue(cir.getReturnValue() + supplementalReturn);
         } else {
