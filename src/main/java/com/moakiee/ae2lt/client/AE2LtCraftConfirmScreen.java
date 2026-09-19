@@ -48,17 +48,21 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         var errorResult = menu.submitError.result();
         CraftingPlanSummary plan = menu.getPlan();
         var exact = ExactPlanReports.get(plan);
-        boolean startable = plan != null && !plan.isSimulation() && exact == null;
+        boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
+        String bigFailure = bigMode ? ((com.moakiee.ae2lt.crafting.big.BigConfirmMenu)menu).ae2lt$failure() : "";
+        boolean startable = plan != null && !plan.isSimulation() && (exact == null || bigMode);
         start.active = !menu.hasNoCPU() && startable;
         selectCpu.active = startable;
         selectCpu.setMessage(getNextCpuButtonLabel());
 
         Component cpuDetails = Component.empty();
-        if (errorResult != null && errorResult.errorCode() != null) {
+        if (!bigFailure.isEmpty()) {
+            cpuDetails = Component.translatable("gui.ae2lt.crafting_report." + bigFailure);
+        } else if (errorResult != null && errorResult.errorCode() != null) {
             cpuDetails = Component.translatable(
                     "gui.ae2lt.crafting_report.submit_error", errorResult.errorCode().name());
         } else if (plan != null) {
-            if (exact != null) {
+            if (exact != null && !bigMode) {
                 cpuDetails = Component.translatable("gui.ae2lt.crafting_report.exact_preview");
             } else if (plan.isSimulation()) {
                 cpuDetails = GuiText.PartialPlan.text();

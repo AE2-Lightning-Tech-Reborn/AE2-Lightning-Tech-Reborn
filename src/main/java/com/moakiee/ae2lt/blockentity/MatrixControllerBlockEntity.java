@@ -598,6 +598,26 @@ public class MatrixControllerBlockEntity extends BlockEntity
         return cluster.isBusy();
     }
 
+    /** Independent exact-quantity capability, available only on a formed multidimensional matrix. */
+    public boolean isBigCraftingAvailable() {
+        return isFormed() && cluster.batchDispatchMode() == BatchDispatchMode.UNBOUNDED;
+    }
+
+    /** Multidimensional dispatch is energy-free, just as on its legacy long path. */
+    public java.math.BigInteger acceptBigCrafting(
+            com.moakiee.ae2lt.crafting.big.BigMatrixRecipe recipe, java.math.BigInteger requested) {
+        if (requested.signum() <= 0 || !validateBigRecipe(recipe)) return java.math.BigInteger.ZERO;
+        var port = getLinkedPort();
+        return port != null && port.isLinkConnected() && cluster.acceptExactProviderCall()
+                ? requested : java.math.BigInteger.ZERO;
+    }
+
+    public boolean validateBigRecipe(com.moakiee.ae2lt.crafting.big.BigMatrixRecipe recipe) {
+        if (!isBigCraftingAvailable() || level == null) return false;
+        for (var pattern : getAvailablePatterns()) if (recipe.matches(pattern, level)) return true;
+        return false;
+    }
+
     public long getBatchCapacity(IPatternDetails details) {
         return cluster.getBatchCapacity(details);
     }
@@ -635,6 +655,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     @Override
     public long affordableOperations(long requestedOperations) {
+        if (isBigCraftingAvailable() && isConnected()) return Math.max(0L, requestedOperations);
         if (requestedOperations <= 0L) {
             return 0L;
         }
@@ -658,6 +679,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     @Override
     public void consumeOperations(long acceptedOperations) {
+        if (isBigCraftingAvailable()) return;
         if (acceptedOperations <= 0L) {
             return;
         }

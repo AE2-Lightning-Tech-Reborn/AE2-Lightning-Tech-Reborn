@@ -7,6 +7,8 @@
     "ServerLevelMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
+    "CraftingCPURecordAccessor",
+    "TimeWheelCraftingCPUCyclerMixin",
     "AEBaseMenuManagedSlotClickMixin",
     "PigmeeRecipeTransferStorageMixin",
     "AnnihilationPlaneFirmamentDustMixin",
@@ -39,7 +41,12 @@
     "thunderbolt.AdvCraftingCpuLogicMixin",
     "thunderbolt.ECOCraftingCpuLogicMixin",
     "ControllerValidatorMixin",
-    "ShulkerBulletMixin"
+    "ShulkerBulletMixin",
+    "big.BigCraftAmountMenuMixin",
+    "big.BigCraftConfirmMenuMixin",
+    "big.BigCraftingPlanSummaryMixin",
+    "big.BigCraftingStatusEntryMixin",
+    "big.BigCpuListEntryMixin"
   ],
   "client": [
     "client.CableBusRenderStateMixin",
@@ -56,7 +63,12 @@
     "client.LocalPlayerShieldHitFeedbackMixin",
     "client.LocalPlayerPhaseMovementMixin",
     "client.LevelRendererPhaseFlightMixin",
-    "client.EntityShieldFireVisualMixin"
+    "client.EntityShieldFireVisualMixin",
+    "client.BigNumberEntryWidgetMixin",
+    "client.BigCraftAmountScreenMixin",
+    "client.BigCraftingStatusTableMixin",
+    "client.BigTerminalAmountMixin",
+    "client.BigCpuListMixin"
   ],
   "injectors": {
     "defaultRequire": 1
