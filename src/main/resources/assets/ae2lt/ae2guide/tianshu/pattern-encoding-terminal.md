@@ -12,13 +12,13 @@ item_ids:
 
 # Tianshu Pattern Encoding Terminal
 
-The <ItemLink id="ae2lt:tianshu_pattern_encoding_terminal" /> provides everything the normal Pattern Encoding Terminal does, plus enhanced processing-pattern encoding, pattern upload, closed-loop pattern authoring, and inventory-maintenance configuration. Attach it to ME cable like any terminal. **It does not require a Tianshu Supercomputing Array on the network**: pattern encoding, processing-mode enhancements, uploading to providers, and even closed-loop pattern authoring all work normally without one.
+The <ItemLink id="ae2lt:tianshu_pattern_encoding_terminal" /> provides everything the normal Pattern Encoding Terminal does, plus enhanced processing-pattern encoding, pattern upload, closed-loop pattern authoring, and inventory-maintenance configuration. Attach it to ME cable like any terminal. **It does not require a Tianshu Supercomputer on the network**: pattern encoding, processing-mode enhancements, uploading to providers, and even closed-loop pattern authoring all work normally without one.
 
 <RecipeFor id="ae2lt:tianshu_pattern_encoding_terminal" />
 
 ## Binding to a Tianshu
 
-Only two features require a formed Tianshu Supercomputing Array: uploading closed-loop patterns into Closed-Loop Pattern Storage, and inventory maintenance. When a Tianshu exists on the network, the opened terminal locks onto the first available formed one; if none is available yet, it locks onto the first Tianshu that comes online.
+Only two features require a formed Tianshu Supercomputer: uploading closed-loop patterns into Closed-Loop Pattern Storage, and inventory maintenance. When a Tianshu exists on the network, the opened terminal locks onto the first available formed one; if none is available yet, it locks onto the first Tianshu that comes online.
 
 The terminal never rebinds to a different Tianshu while it stays open. If the locked Tianshu goes offline or unforms, the related actions simply fail; close and reopen the terminal to pick a target again.
 
@@ -103,7 +103,7 @@ For a Certus Quartz closed loop, this could be a processing pattern such as `16 
 
 ### Prepare Seed Storage
 
-Encoding closed-loop patterns requires at least one Closed-Loop Pattern Storage installed on the Tianshu Supercomputing Array. Running them also requires at least one Closed-Loop Seed Storage with an **ME Storage Cell** compatible with the seed type installed. Its ten slots hold storage cells only; seed items cannot be placed into those slots directly.
+Encoding a closed-loop pattern requires at least one Closed-Loop Pattern Storage in the Tianshu Supercomputer. To run one, install at least one Closed-Loop Seed Storage and place an **ME Storage Cell** compatible with the seed type inside it. The Seed Storage's 10 slots hold storage cells only; seed items cannot be inserted directly.
 
 After installing the cell, select **Refill Seeds** on the closed-loop pattern page. The terminal totals the pre-stock requirement of every enabled closed-loop pattern and transfers missing seeds from the current ME network:
 
@@ -120,7 +120,7 @@ The status line reports the specific reason a draft cannot encode — for exampl
 
 > Lightning Tech's own ME Requester—just for you!
 
-When a formed Tianshu Supercomputing Array is available on the network, the terminal can configure automatic restock rules per item: crafting starts when the stored amount drops **below** the lower bound, stops when it **reaches** the upper bound, and each job requests the configured batch size.
+When a formed Tianshu Supercomputer is available on the network, the terminal can configure automatic restock rules per item: crafting starts when the stored amount drops **below** the lower bound, stops when it **reaches** the upper bound, and each job requests the configured batch size.
 ### Configuration
 > Here, “automatic crafting” means a crafting job dispatched by the maintenance system.
 

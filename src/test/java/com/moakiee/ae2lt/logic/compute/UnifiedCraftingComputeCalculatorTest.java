@@ -12,6 +12,36 @@ class UnifiedCraftingComputeCalculatorTest {
     private static final long GIB = 1024L * MIB;
 
     @Test
+    void finiteCpusRunWithoutFunctionalUnitsWhileMatricesStillRequireThreads() {
+        var empty = new ComputingUnitTotals(0, 0, 0, 0);
+        for (var tier : new ComputeTier[] {ComputeTier.BASELINE, ComputeTier.QUANTUM, ComputeTier.OVERLOAD}) {
+            var cpu = UnifiedCraftingComputeCalculator.cpuEnvelope(tier, empty);
+            assertEquals(tier.internalStorage(), cpu.storageBytes());
+            assertEquals(tier == ComputeTier.BASELINE ? 128 : 256, cpu.successfulDispatchesPerTick());
+            assertEquals(256, cpu.maxCopiesPerTick());
+            assertFalse(cpu.dispatchCapped());
+            assertThrows(IllegalArgumentException.class,
+                    () -> UnifiedCraftingComputeCalculator.matrixEnvelope(tier, empty, 1.0D));
+        }
+    }
+
+    @Test
+    void physicalParallelUnitsExtendTheCpuBaseWithoutChangingMatrixBudgets() {
+        var oneParallel = new ComputingUnitTotals(1, 0, 0, 0);
+        var cpu = UnifiedCraftingComputeCalculator.cpuEnvelope(ComputeTier.BASELINE, oneParallel);
+        var matrix = UnifiedCraftingComputeCalculator.matrixEnvelope(ComputeTier.BASELINE, oneParallel, 1.0D);
+        assertEquals(256, cpu.successfulDispatchesPerTick());
+        assertEquals(512, cpu.maxCopiesPerTick());
+        assertEquals(256, matrix.operationsPerTick());
+
+        var capped = UnifiedCraftingComputeCalculator.cpuEnvelope(
+                ComputeTier.BASELINE, new ComputingUnitTotals(3, 0, 0, 0));
+        assertEquals(512, capped.successfulDispatchesPerTick());
+        assertEquals(1_024, capped.maxCopiesPerTick());
+        assertTrue(capped.dispatchCapped());
+    }
+
+    @Test
     void peripheralUnitsAlwaysContributeOneRawLogicalUnit() {
         var units = new ComputingUnitTotals(2, 3, 4, 5);
 

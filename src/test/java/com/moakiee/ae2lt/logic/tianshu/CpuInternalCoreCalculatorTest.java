@@ -24,9 +24,9 @@ class CpuInternalCoreCalculatorTest {
         var profile = CpuInternalCoreCalculator.calculate(CpuMainCoreTier.BASELINE, 1, 2, 0);
 
         assertEquals(65L * MIB, profile.storageBytes());
-        assertEquals(256, profile.successfulDispatchesPerTick());
-        assertEquals(512, profile.maxCopiesPerTick());
-        assertEquals(255, profile.coProcessors());
+        assertEquals(384, profile.successfulDispatchesPerTick());
+        assertEquals(768, profile.maxCopiesPerTick());
+        assertEquals(383, profile.coProcessors());
         assertFalse(profile.parallelCapped());
     }
 
