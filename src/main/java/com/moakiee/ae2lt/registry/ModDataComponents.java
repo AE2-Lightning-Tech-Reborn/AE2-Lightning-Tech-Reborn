@@ -29,6 +29,12 @@ public final class ModDataComponents {
     public static final DeferredRegister.DataComponents DATA_COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, AE2LightningTech.MODID);
 
+    /** Owned resources on a dismantled interface; deliberately excluded from memory cards. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<CustomData>>
+            INTERFACE_INPUT_BUFFER = DATA_COMPONENTS.registerComponentType(
+                    "interface_input_buffer", builder -> builder
+                            .persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC));
+
     /**
      * A machine-specific configuration blob written by a block entity's
      * {@code exportSettings(MEMORY_CARD, ...)} and read back by

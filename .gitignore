@@ -23,6 +23,9 @@ Source Code/
 
 # Local test/export assets
 else/
+run-passive-input-gametest/
+run-alloy-anvil-gametest/
+run-alloy-anvil-client/
 
 # OS files
 .DS_Store
