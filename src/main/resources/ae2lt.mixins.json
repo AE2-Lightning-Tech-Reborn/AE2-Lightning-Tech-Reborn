@@ -7,6 +7,8 @@
   "refmap": "ae2lt.refmap.json",
   "mixins": [
     "ServerLevelMixin",
+    "CraftingCPURecordAccessor",
+    "TimeWheelCraftingCPUCyclerMixin",
     "AEBaseMenuManagedSlotClickMixin",
     "ItemEntityMixin",
     "PigmeeRecipeTransferStorageMixin",
@@ -33,8 +35,8 @@
     "thunderbolt.accessor.ExecutingCraftingJobAccessor",
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
-    "thunderbolt.accessor.ECOCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
+    "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.CraftingCpuLogicMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
     "thunderbolt.ECOCraftingCpuLogicMixin",
@@ -43,7 +45,12 @@
     "EjectGhostBEMixin",
     "MenuTypeBuilderAccessor",
     "AEBaseMenuAccessor",
-    "ShulkerBulletMixin"
+    "ShulkerBulletMixin",
+    "big.BigCraftAmountMenuMixin",
+    "big.BigCraftConfirmMenuMixin",
+    "big.BigCraftingPlanSummaryMixin",
+    "big.BigCraftingStatusEntryMixin",
+    "big.BigCpuListEntryMixin"
   ],
   "client": [
     "client.CableBusRenderStateMixin",
@@ -58,7 +65,12 @@
     "client.LocalPlayerShieldHitFeedbackMixin",
     "client.LocalPlayerPhaseMovementMixin",
     "client.LevelRendererPhaseFlightMixin",
-    "client.EntityShieldFireVisualMixin"
+    "client.EntityShieldFireVisualMixin",
+    "client.BigNumberEntryWidgetMixin",
+    "client.BigCraftAmountScreenMixin",
+    "client.BigCraftingStatusTableMixin",
+    "client.BigTerminalAmountMixin",
+    "client.BigCpuListMixin"
   ],
   "injectors": {
     "defaultRequire": 1

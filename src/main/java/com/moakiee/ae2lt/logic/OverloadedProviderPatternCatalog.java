@@ -115,6 +115,14 @@ final class OverloadedProviderPatternCatalog {
         return resolved;
     }
 
+    @Nullable
+    IPatternDetails resolve(AEKey definition) {
+        for (var details : canonicalBySlot.values()) {
+            if (details.getDefinition().equals(definition)) return details;
+        }
+        return null;
+    }
+
     void clear() {
         resolvedByIdentity.clear();
         registeredByEquality.clear();

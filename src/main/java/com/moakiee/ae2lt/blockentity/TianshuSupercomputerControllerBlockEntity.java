@@ -133,6 +133,8 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     private int autoBuildPlacementIndex;
     private int autoBuildPlacedBlocks;
     private long nextAutoBuildTick;
+    private final com.moakiee.ae2lt.crafting.big.BigCraftingService bigCrafting = new com.moakiee.ae2lt.crafting.big.BigCraftingService(this);
+    public com.moakiee.ae2lt.crafting.big.BigCraftingService bigCrafting() { return bigCrafting; }
     private boolean runtimeStateDirty;
     private long pendingStorage = -1L;
     private int pendingParallel = -1;
@@ -183,6 +185,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
             controller.maintenance.tick();
             controller.refreshClosedLoopProviderForDependencyChanges(port);
         }
+        controller.bigCrafting.tick();
         controller.syncWorkingState();
     }
 
@@ -736,7 +739,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     private boolean hasActiveCpuTasks() {
-        return !cpuPool.getActiveCpus().isEmpty();
+        return bigCrafting.busy() || !cpuPool.getActiveCpus().isEmpty();
     }
 
     private void prepareRuntime(TianshuSupercomputerPortBlockEntity port) {
@@ -1091,6 +1094,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         var maintenanceTag = new CompoundTag();
         maintenance.writeTo(maintenanceTag, serverLevel.registryAccess());
         state.put(TAG_MAINTENANCE, maintenanceTag);
+        state.put("bigCrafting", bigCrafting.save(serverLevel.registryAccess()));
         if (cpuPool.hasPersistentState()) {
             var poolTag = new CompoundTag();
             cpuPool.writeToNBT(poolTag, serverLevel.registryAccess());
@@ -1135,6 +1139,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
      */
     public void prepareForControllerRemoval() {
         if (!persistentStateOwner || !(level instanceof ServerLevel)) return;
+        bigCrafting.cancel();
         cpuPool.tryReleaseContents();
         persistRuntimeStateIfChanged();
     }
@@ -1146,6 +1151,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         var legacy = port.copyLegacyRuntimeState();
         var state = stored ? data.getState(MachineType.TIANSHU, machineId)
                 : legacy != null ? legacy : new CompoundTag();
+        bigCrafting.load(state.getCompound("bigCrafting"), serverLevel.registryAccess());
         maintenance.readFrom(state.getCompound(TAG_MAINTENANCE), serverLevel.registryAccess());
         cpuPool.readFromNBT(state.getCompound(TAG_CPU_POOL), serverLevel.registryAccess());
         loadedRuntimeId = machineId;
@@ -1157,6 +1163,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         discardPendingRuntimeState();
         loadedRuntimeId = null;
         if (level == null) return;
+        bigCrafting.load(new CompoundTag(), level.registryAccess());
         maintenance.readFrom(new CompoundTag(), level.registryAccess());
         cpuPool.readFromNBT(new CompoundTag(), level.registryAccess());
         closedLoopPatterns.clear();

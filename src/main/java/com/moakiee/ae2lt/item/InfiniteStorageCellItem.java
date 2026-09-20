@@ -69,6 +69,8 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
         return String.format("%.1f TB", bytes / 1_000_000_000_000.0);
     }
 
+    @Override public boolean supportsBigAmounts(ItemStack stack) { return true; }
+
     public long getCapacityLo() { return capacityLo; }
     public long getCapacityHi() { return capacityHi; }
     public int getBytesPerType() { return bytesPerType; }
