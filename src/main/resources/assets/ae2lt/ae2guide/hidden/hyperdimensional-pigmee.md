@@ -46,7 +46,7 @@ boundary-crossing conversion for you, then return to being an ordinary Pigmee.
 | Thunderstorm Condensate | Infinite Extreme High Voltage Lightning Cell |
 | Lightning Collapse Matrix | Infinite Lightning Collapse Matrix Cell |
 | Bulk Lightning Storage Component | Infinite Storage Cell |
-| Tianshu Overload Main Core | Multidimensional Tianshu Core |
+| Tianshu Supercomputer Overload Main Core | Multidimensional Tianshu Core |
 | Tianshu Matter Warping Matrix Overload Main Core | Multidimensional Matrix Core |
 | Overload Execution Module | Multidimensional Execution Module |
 | Phase Shield Module | Multidimensional Protection Module |

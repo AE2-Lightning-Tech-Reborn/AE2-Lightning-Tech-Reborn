@@ -7,9 +7,11 @@ import appeng.api.networking.ticking.TickingRequest;
 
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
 import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public final class TeslaCoilLogic implements IGridTickable {
     private final TeslaCoilBlockEntity host;
+    private final MachineRechargeController rechargeController = new MachineRechargeController();
 
     public TeslaCoilLogic(TeslaCoilBlockEntity host) {
         this.host = host;
@@ -105,11 +107,20 @@ public final class TeslaCoilLogic implements IGridTickable {
             return;
         }
 
+        var energy = host.getEnergyStorage();
+        long demand = host.hasLockedMode()
+                ? host.getRequiredEnergyForNextTick() : host.getRequiredEnergyForSelectedStart();
+        if (!rechargeController.shouldRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong(), demand,
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE))) {
+            return;
+        }
+
         host.getMainNode().ifPresent((grid, node) -> {
             AppFluxHelper.pullPowerFromNetwork(
                     grid.getStorageService().getInventory(),
                     host.getEnergyStorage(),
                     appeng.api.networking.security.IActionSource.ofMachine(host));
+            rechargeController.afterRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong());
         });
     }
 }
