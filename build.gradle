@@ -326,6 +326,7 @@ dependencies {
         transitive = false
     }
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testRuntimeOnly "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))

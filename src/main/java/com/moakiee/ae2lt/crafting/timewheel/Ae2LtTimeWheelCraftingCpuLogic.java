@@ -60,9 +60,14 @@ import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchCpuAccounting;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchTaskHandle;
-import com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapter;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelInputExtractor;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.ExecutionInputAllocator;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelBatchInputAllocation;
+import com.moakiee.ae2lt.crafting.timewheel.allocation.ExecutionTaskInputs;
 import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import com.moakiee.ae2lt.crafting.runtime.api.CraftingTaskPriorities;
+import com.moakiee.ae2lt.compat.OptionalBatchProviders;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.thunderbolt.core.crafting.loop.CraftingTaskPersistenceDefinition;
@@ -79,9 +84,13 @@ import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternD
 import com.moakiee.thunderbolt.core.crafting.loop.PatternFiringExpander;
 import com.moakiee.ae2lt.crafting.runtime.ExecuteLoopPattern;
 import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
+import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
 public final class Ae2LtTimeWheelCraftingCpuLogic {
+    @Nullable
+    private static final BatchProviderAdapter OPTIONAL_BATCH_ADAPTER =
+            OptionalBatchProviders.createAdapter();
     private static final int WHEEL_SIZE = 64;
     private static final int WHEEL_MASK = WHEEL_SIZE - 1;
     private static final int MAX_TASK_PROBES_PER_TICK = 262_144;
@@ -581,7 +590,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return BatchExecutor.BatchRunResult.EMPTY;
         }
 
-        var result = BatchExecutor.runBatchOnly(
+        var result = TimeWheelBatchInputAllocation.withAllocator(
+                details, inventory, activeJob.inputAllocator, () -> BatchExecutor.runBatchOnly(
                 remainingOps,
                 BatchCpuAccounting.Mode.SUCCESSFUL_DISPATCH,
                 craftingService,
@@ -597,7 +607,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 1,
                 remainingCopies,
                 cpu.hasUnboundedBatch(),
-                dispatchSchedule);
+                dispatchSchedule,
+                OPTIONAL_BATCH_ADAPTER));
         if (result.dispatchedCopies() > 0) {
             // T is a per-virtual-CPU tick budget, not a per-call width. Let the time wheel revisit
             // the task while its private T and the physical CPU's shared successful-dispatch
@@ -632,8 +643,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         // entry and need no leading clear. This halves the per-copy KeyCounter clearing that showed
         // up as ~7% of the CPU tick in profiling.
         var extractionInventory = reservedCraftingInventory(details);
-        KeyCounter[] craftingContainer = CraftingCpuHelper.extractPatternInputs(
-                details, extractionInventory, level, expectedOutputs, expectedContainerItems);
+        KeyCounter[] craftingContainer = TimeWheelInputExtractor.extractPatternInputs(
+                details, extractionInventory, level, expectedOutputs, expectedContainerItems,
+                activeJob.inputAllocator.allocate(details, extractionInventory, level, 1));
         if (craftingContainer == null) {
             clearScratchCounter(expectedOutputs);
             clearScratchCounter(expectedContainerItems);
@@ -706,7 +718,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
      * Fast path for non-overload patterns. Instead of paying AE2's full per-copy
      * extraction (template resolution via {@code getValidItemTemplates}, input extraction and
      * pattern-power computation) once per copy, this extracts every copy it intends to push this
-     * visit in a single {@link ParallelBatchCpuHelper#bulkExtract} call. Substitutions are first
+     * visit in a single {@link TimeWheelInputExtractor#bulkExtract} call. Substitutions are first
      * resolved through AE2's native rules, then only that concrete input set is scaled and handed
      * to the (non-batch) providers one {@code pushPattern} at a time.
      *
@@ -743,8 +755,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
 
         int budget = (int) Math.min(task.value, (long) maxCopies);
-        var result = ParallelBatchCpuHelper.bulkExtract(
-                details, inventory, budget, false, reservedSeedStock(details), level);
+        var result = TimeWheelInputExtractor.bulkExtract(
+                details, inventory, budget, false, reservedSeedStock(details), level,
+                (visible, copies) -> activeJob.inputAllocator.allocate(details, visible, level, copies));
         if (result == null) {
             return null;
         }
@@ -752,7 +765,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         // This non-batch path is explicitly bounded by the int maxCopies argument above.
         int actual = (int) result.actualCopies;
         // The first clone doubles as the power probe and the first container handed to a provider.
-        KeyCounter[] pending = ParallelBatchCpuHelper.cloneSingleCopy(result);
+        KeyCounter[] pending = TimeWheelInputExtractor.cloneSingleCopy(result);
         double powerOne = patternPowerFor(details, pending);
 
         // One SIMULATE for the whole visit (instead of one per copy) caps how many copies we can
@@ -767,7 +780,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             }
         }
         if (affordable <= 0) {
-            ParallelBatchCpuHelper.reinject(result, actual, inventory);
+            TimeWheelInputExtractor.reinject(result, actual, inventory);
             return new BulkPush(0, RETRY_DELAY_TICKS);
         }
 
@@ -779,7 +792,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 var provider = resolvedProvider.provider();
                 while (dispatched < affordable && !provider.isBusy()) {
                     if (pending == null) {
-                        pending = ParallelBatchCpuHelper.cloneSingleCopy(result);
+                        pending = TimeWheelInputExtractor.cloneSingleCopy(result);
                     }
                     if (!tryPushPattern(resolvedProvider, pending, dispatchSchedule)) {
                         // A rejecting provider must not consume the container, so the clone stays
@@ -789,7 +802,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     }
                     pending = null; // ownership transferred to the provider
                     energyService.extractAEPower(powerOne, Actionable.MODULATE, PowerMultiplier.CONFIG);
-                    ParallelBatchCpuHelper.markDispatched(result, 1);
+                    TimeWheelInputExtractor.markDispatched(result, 1);
                     dispatched++;
                 }
                 resolvedProvider = nextFreeProvider(providers);
@@ -797,13 +810,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         } finally {
             int leftover = actual - dispatched;
             if (leftover > 0) {
-                ParallelBatchCpuHelper.reinject(result, leftover, inventory);
+                TimeWheelInputExtractor.reinject(result, leftover, inventory);
             }
         }
 
         if (dispatched > 0) {
             var jobView = scratchBatchJobView.bind(activeJob, details);
-            ParallelBatchCpuHelper.registerExpectedOutputs(jobView, details, result, dispatched);
+            TimeWheelInputExtractor.registerExpectedOutputs(jobView, details, result, dispatched);
             recordLoopPatternDispatch(details, dispatched, false);
             consumeTaskCopies(activeJob, details, dispatched);
             cpu.markDirty();
@@ -1398,6 +1411,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     /** Positive ledger entries are hidden unless this loop task declares the key as inputSeed. */
     private Map<AEKey, Long> reservedSeedStock(IPatternDetails details) {
+        if (!loopSeedLedgers.hasReservations() && retainedFinalOutputs.isEmpty() && pendingRequesterOutputs.isEmpty()) {
+            return Map.of();
+        }
         UUID ownConsumer = null;
         java.util.function.Predicate<AEKey> allowedSeedInput = ignored -> false;
         ExecuteLoopPattern ownLoop = null;
@@ -2410,6 +2426,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
         long consumed = Math.min(task.value, copies);
         task.value -= consumed;
+        activeJob.inputAllocator.onTaskChange(details);
         activeJob.removePendingOutputs(details, consumed);
         postPatternOutputsChange(details);
 
@@ -2432,6 +2449,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
 
         task.value = normalized;
+        activeJob.inputAllocator.onTaskChange(details);
         if (normalized <= 0) {
             clearTaskPreference(details);
         }
@@ -2446,6 +2464,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     private void removeTask(TimeWheelJob activeJob, IPatternDetails details) {
         unparkTask(details);
         var removed = activeJob.tasks.remove(details);
+        activeJob.inputAllocator.onTaskChange(details);
         clearTaskPreference(details);
         if (removed != null && removed.value > 0) {
             activeJob.removePendingOutputs(details, removed.value);
@@ -2801,6 +2820,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void postChange(@Nullable AEKey what) {
+        if (job != null) job.inputAllocator.onInventoryChange(what);
         if (what == null) {
             return;
         }
@@ -2977,6 +2997,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         private final Set<AEKey> waitingKeys = new HashSet<>();
         private final KeyCounter pendingOutputs = new KeyCounter();
         private final Map<IPatternDetails, TaskProgress> tasks = new HashMap<>();
+        private final ExecutionInputAllocator inputAllocator = new ExecutionInputAllocator(
+                tasks, task -> task.value, true, true,
+                (pattern, slot) -> pattern instanceof ExecuteLoopPattern loop && loop.isInputSeedSlot(slot));
         private final SharedBatchSeedConsumerState sharedBatchSeedConsumers =
                 new SharedBatchSeedConsumerState();
         private final ElapsedTimeTracker timeTracker;
@@ -3009,17 +3032,20 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 insertWaitingFor(entry.getKey(), entry.getLongValue());
                 addMaxItems(timeTracker, entry.getLongValue(), entry.getKey().getType());
             }
+            // Keep the plan untouched. This CPU derives live allocation from original tasks,
+            // rather than turning optional planner choices into permanent execution bindings.
             for (var entry : plan.patternTimes().entrySet()) {
-                if (entry.getKey() instanceof ReusableSeedPattern) closedLoopJob = true;
-                var expanded = entry.getKey() instanceof PatternFiringExpander expander
+                var source = ExecutionTaskInputs.unbound(entry.getKey());
+                if (source instanceof ReusableSeedPattern) closedLoopJob = true;
+                var expanded = source instanceof PatternFiringExpander expander
                         ? expander.expandPatternFirings(entry.getValue())
-                        : Map.of(entry.getKey(), entry.getValue());
+                        : Map.of(source, entry.getValue());
                 for (var concrete : expanded.entrySet()) {
-                    var task = tasks.computeIfAbsent(
-                            concrete.getKey(), ignored -> new TaskProgress());
+                    var pattern = ExecutionTaskInputs.unbound(concrete.getKey());
+                    var task = tasks.computeIfAbsent(pattern, ignored -> new TaskProgress());
                     task.value = com.moakiee.thunderbolt.core.crafting.planner.Sat.add(
                             task.value, concrete.getValue());
-                    addPendingOutputs(concrete.getKey(), concrete.getValue());
+                    addPendingOutputs(pattern, concrete.getValue());
                     for (var output : concrete.getKey().getOutputs()) {
                     var amount = multiplySaturated(
                             multiplySaturated(output.amount(), concrete.getValue()),
@@ -3121,6 +3147,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                 details, consumerId, initialSeed, inputSeed,
                                 outputCredits, sharedOutputCredits);
                     }
+                    // Validate legacy slot metadata, then merge its remaining copies back into
+                    // the original task. The execution allocator is rebuilt from live quantities.
+                    details = ExecutionTaskInputs.unbound(PlannedInputPattern.readFromTag(details, item, registries));
                     var task = tasks.computeIfAbsent(details, ignored -> new TaskProgress());
                     task.value = com.moakiee.thunderbolt.core.crafting.planner.Sat.add(
                             task.value, remaining);
@@ -3221,6 +3250,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                         : entry.getKey().getDefinition();
                 var item = definition.toTag();
                 item.putLong(NBT_CRAFTING_PROGRESS, entry.getValue().value);
+                if (entry.getKey() instanceof PlannedInputPattern planned) {
+                    planned.writeToTag(item, registries);
+                }
                 if (entry.getKey() instanceof ExecuteLoopPattern loopPattern) {
                     item.putUUID(NBT_SEED_CONSUMER, loopPattern.seedConsumerId());
                     var initialSeed = loopPattern.initialSeed();

@@ -215,6 +215,17 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     /** Exact encoded stack that still represents one blank pattern extracted by this menu. */
     private ItemStack refundableEncodedPattern = ItemStack.EMPTY;
 
+    private final com.moakiee.ae2lt.crafting.big.BigTerminalStock bigStock =
+            new com.moakiee.ae2lt.crafting.big.BigTerminalStock();
+
+    public java.math.BigInteger getBigStock(appeng.api.stacks.AEKey key) {
+        return bigStock.get(key);
+    }
+
+    public void applyBigStock(java.util.Map<appeng.api.stacks.AEKey, java.math.BigInteger> changes) {
+        if (isClientSide()) bigStock.apply(changes);
+    }
+
     public TianshuPatternEncodingTermMenu(
             int id, Inventory inventory, TianshuPatternTerminalHost host) {
         this(TYPE, id, inventory, host);
@@ -344,7 +355,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
             }
         }
         broadcastParentChanges();
-        if (isServerSide()) sendMaintenanceSummaryIfNeeded();
+        if (isServerSide()) {
+            sendMaintenanceSummaryIfNeeded();
+            bigStock.sync(this, tianshuHost);
+        }
     }
 
     private void broadcastParentChanges() {

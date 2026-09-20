@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -12,6 +14,7 @@ import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
 import com.moakiee.ae2lt.logic.craft.MatrixCraftingMath;
 import com.moakiee.ae2lt.logic.craft.MatrixCraftingProfile;
+import com.moakiee.ae2lt.api.tianshu.synthesis.TianshuSynthesizer;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
@@ -44,7 +47,7 @@ import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.me.helpers.MachineSource;
 
 public class MatrixPortBlockEntity extends AENetworkBlockEntity
-        implements IBatchCraftingProvider {
+        implements IBatchCraftingProvider, TianshuSynthesizer {
     private static final String TAG_CONTROLLER_POS = "ControllerPos";
     private static final String TAG_FORMED = "Formed";
     private static final String TAG_CLUSTER = "Cluster";
@@ -63,6 +66,14 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     private List<TerminalPatternSlot> terminalPatternSlots = List.of();
     private boolean terminalPatternSlotsDirty = true;
     private long nextBindingCheckTick;
+    private static final int EXTERNAL_NONCE_HISTORY = 1024;
+    private final Map<UUID, SynthesisSubmission> externalSynthesisSubmissions =
+            new LinkedHashMap<>(64, 0.75F, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<UUID, SynthesisSubmission> eldest) {
+                    return size() > EXTERNAL_NONCE_HISTORY;
+                }
+            };
 
     public MatrixPortBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MATRIX_PORT.get(), pos, state);
@@ -267,6 +278,86 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         var controller = getController();
         return controller != null
                 ? controller.pushBatch(details, oneCopyTemplate, maxCraft) : maxCraft;
+    }
+
+    @Override
+    public SynthesizerCapability inspect(SynthesisRequest request) {
+        var rejection = validateSynthesisRequest(request);
+        if (rejection != RejectionReason.NONE) return rejectedSynthesisCapability(rejection);
+        var pattern = findSynthesisPattern(request);
+        if (pattern == null) return rejectedSynthesisCapability(RejectionReason.UNSUPPORTED_PROCESSING);
+        long capacity = getBatchCapacity(pattern);
+        if (capacity <= 0L) return rejectedSynthesisCapability(RejectionReason.BUSY);
+        return new SynthesizerCapability(API_VERSION, CAPABILITY_ID,
+                Math.min(request.requestedAmount(), capacity), capacity, RejectionReason.NONE);
+    }
+
+    @Override
+    public SynthesisSubmission submit(SynthesisRequest request) {
+        var previous = externalSynthesisSubmissions.get(request.nonce());
+        if (previous != null) return previous;
+        var capability = inspect(request);
+        if (capability.acceptedAmount() <= 0L) {
+            return rememberSynthesis(request.nonce(), rejectedSynthesis(request, capability.rejectionReason()));
+        }
+        var pattern = findSynthesisPattern(request);
+        if (pattern == null) {
+            return rememberSynthesis(request.nonce(), rejectedSynthesis(request,
+                    RejectionReason.UNSUPPORTED_PROCESSING));
+        }
+        try {
+            var inputs = request.inputsPerCraft().stream().map(slot -> {
+                var counter = new KeyCounter();
+                for (var stack : slot) counter.add(stack.what(), stack.amount());
+                return counter;
+            }).toArray(KeyCounter[]::new);
+            long offered = capability.acceptedAmount();
+            long leftover = pushBatch(pattern, inputs, offered);
+            long accepted = offered - Math.max(0L, Math.min(offered, leftover));
+            long unaccepted = request.requestedAmount() - accepted;
+            var status = accepted == 0L ? Status.REJECTED
+                    : unaccepted == 0L ? Status.ACCEPTED : Status.PARTIAL;
+            var results = accepted == 0L ? List.<appeng.api.stacks.GenericStack>of()
+                    : java.util.Arrays.stream(pattern.getOutputs())
+                            .map(stack -> new appeng.api.stacks.GenericStack(stack.what(),
+                                    Math.multiplyExact(stack.amount(), accepted)))
+                            .toList();
+            return rememberSynthesis(request.nonce(), new SynthesisSubmission(status, accepted, results,
+                    unaccepted, accepted == 0L,
+                    accepted == 0L ? RejectionReason.NO_CAPACITY : RejectionReason.NONE));
+        } catch (RuntimeException failure) {
+            return rememberSynthesis(request.nonce(), new SynthesisSubmission(Status.REJECTED, 0L,
+                    List.of(), request.requestedAmount(), false, RejectionReason.SUBMISSION_FAILED));
+        }
+    }
+
+    private RejectionReason validateSynthesisRequest(SynthesisRequest request) {
+        if (request.apiVersion() != API_VERSION) return RejectionReason.VERSION_MISMATCH;
+        if (!CAPABILITY_ID.equals(request.targetCapabilityId())) return RejectionReason.CAPABILITY_MISMATCH;
+        if (!(getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel)
+                || !serverLevel.getServer().isSameThread()) return RejectionReason.NOT_SERVER_THREAD;
+        return RejectionReason.NONE;
+    }
+
+    private IPatternDetails findSynthesisPattern(SynthesisRequest request) {
+        for (var pattern : getAvailablePatterns()) {
+            if (pattern.getDefinition().equals(request.processingId())) return pattern;
+        }
+        return null;
+    }
+
+    private static SynthesizerCapability rejectedSynthesisCapability(RejectionReason reason) {
+        return new SynthesizerCapability(API_VERSION, CAPABILITY_ID, 0L, 0L, reason);
+    }
+
+    private static SynthesisSubmission rejectedSynthesis(SynthesisRequest request, RejectionReason reason) {
+        return new SynthesisSubmission(Status.REJECTED, 0L, List.of(), request.requestedAmount(),
+                reason == RejectionReason.BUSY || reason == RejectionReason.NO_CAPACITY, reason);
+    }
+
+    private SynthesisSubmission rememberSynthesis(UUID nonce, SynthesisSubmission submission) {
+        externalSynthesisSubmissions.put(nonce, submission);
+        return submission;
     }
 
     @Override
