@@ -39,6 +39,7 @@ public final class ClosedLoopPatternDecoder implements IPatternDetailsDecoder {
                 if (executionMember >= payload.memberPatterns().size()) return null;
                 var memberDecoding = decodeMembers(payload, level);
                 if (!memberDecoding.valid()) return null;
+                if (!ClosedLoopPatternValidator.validateDecoded(payload, memberDecoding.members()).valid()) return null;
                 var decodedMembers = memberDecoding.members();
                 var delegate = decodedMembers.get(executionMember);
                 var seedAmounts = new java.util.LinkedHashMap<appeng.api.stacks.AEKey, Long>();

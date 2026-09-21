@@ -36,6 +36,39 @@ import org.junit.jupiter.api.Test;
 
 class ClosedLoopExecutionEdgeCaseTest {
     @Test
+    void ordinaryMacroInputsCannotConsumeTheSeedsOrSubstitutesOfAnotherTask() {
+        var glass = key("glass", "");
+        var quartz = key("quartz_glass", "");
+        var seed = key("tool", "planned");
+        var damaged = key("tool", "damaged");
+        IPatternDetails.IInput[] inputs = {
+                input(false, stack(glass, 1), stack(quartz, 1)),
+                input(true, stack(seed, 1), stack(damaged, 1))
+        };
+        ClosedLoopExpandedPatternDetails.pinOrdinaryInputs(inputs, Map.of(1, seed), Set.of(seed));
+        assertTrue(inputs[0].isValid(glass, null));
+        assertFalse(inputs[0].isValid(quartz, null));
+        assertEquals(1, inputs[0].getPossibleInputs().length);
+        assertTrue(inputs[1].isValid(damaged, null), "seed/tool matching retains its own contract");
+        var source = new IPatternDetails() {
+            public AEItemKey getDefinition() { return null; }
+            public IInput[] getInputs() { return inputs; }
+            public GenericStack[] getOutputs() { return new GenericStack[]{}; }
+        };
+        var stock = new appeng.crafting.inv.ListCraftingInventory(ignored -> {});
+        stock.insert(quartz, 10, appeng.api.config.Actionable.MODULATE);
+        stock.insert(seed, 1, appeng.api.config.Actionable.MODULATE);
+        assertNull(com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper.bulkExtract(
+                source, stock, 1, false, Map.of(), null));
+        assertEquals(10, stock.list.get(quartz));
+        stock.insert(glass, 1, appeng.api.config.Actionable.MODULATE);
+        org.junit.jupiter.api.Assertions.assertNotNull(
+                com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper.bulkExtract(
+                        source, stock, 1, false, Map.of(), null));
+        assertEquals(10, stock.list.get(quartz));
+    }
+
+    @Test
     void fuzzySeedDebitUsesTheVariantActuallyExtractedFromTheCpu() {
         var plannedSeed = key("pickaxe", "planned_damage");
         var actualSeed = key("pickaxe", "actual_damage");

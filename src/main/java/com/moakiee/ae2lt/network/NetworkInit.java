@@ -370,6 +370,16 @@ public final class NetworkInit {
                 OpenResearchNotePacket::decode,
                 OpenResearchNotePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        // Exact-quantity stock/confirm packets stay after the existing GTL discriminators so
+        // a mixed 1.20.1_GTL client does not decode wireless, frequency, or Tianshu packets
+        // as bigint payloads. PROTOCOL_VERSION remains 4 because the prior GTL channel
+        // already used that version; these two ids are additive.
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.BigStockPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.BigStockPacket::read,
+                com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::read,
+                com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static ResourceLocation id(String path) {

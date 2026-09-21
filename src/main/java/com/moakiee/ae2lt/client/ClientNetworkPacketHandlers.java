@@ -19,9 +19,10 @@ import com.moakiee.ae2lt.network.SyncFrequencyDetailPacket;
 import com.moakiee.ae2lt.network.SyncFrequencyListPacket;
 import com.moakiee.ae2lt.network.UpdateFrequencyBasicPacket;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
+import com.moakiee.ae2lt.network.tianshu.BigStockPacket;
+import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.MaintenanceEditorSyncPacket;
 import com.moakiee.ae2lt.network.tianshu.MaintenanceSummarySyncPacket;
-import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
 import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.client.Minecraft;
@@ -205,6 +206,13 @@ public final class ClientNetworkPacketHandlers {
         TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
         if (menu != null) {
             menu.receiveClosedLoopResultPage(packet.page());
+        }
+    }
+
+    public static void handleBigStock(BigStockPacket packet) {
+        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        if (menu != null) {
+            menu.applyBigStock(packet.changed());
         }
     }
 

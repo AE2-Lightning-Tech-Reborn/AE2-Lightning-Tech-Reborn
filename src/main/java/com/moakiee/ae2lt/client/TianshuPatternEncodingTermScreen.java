@@ -497,8 +497,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
         var lines = AEKeyRendering.getTooltip(entry.getWhat());
         if (Tooltips.shouldShowAmountTooltip(entry.getWhat(), summary.storedAmount())) {
-            lines.add(Tooltips.getAmountTooltip(
-                    ButtonToolTips.StoredAmount, entry.getWhat(), summary.storedAmount()));
+            var precise=menu.getBigStock(entry.getWhat());
+            lines.add(precise == null ? Tooltips.getAmountTooltip(
+                    ButtonToolTips.StoredAmount, entry.getWhat(), summary.storedAmount()) :
+                    ButtonToolTips.StoredAmount.text(com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter.full(precise,entry.getWhat().getAmountPerUnit())));
         }
         lines.add(Component.translatable("ae2lt.tianshu.maintenance.tooltip.thresholds",
                 summary.lowerThreshold(), summary.upperThreshold())

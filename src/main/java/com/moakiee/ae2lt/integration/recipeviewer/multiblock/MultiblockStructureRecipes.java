@@ -29,7 +29,6 @@ public final class MultiblockStructureRecipes {
             .filter(pos -> !pos.equals(MatrixMultiblockTemplate.CRAFTING_CENTER_LOCAL))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Matrix template has no peripheral crafting slot"));
-    private static final BlockPos TIANSHU_DEFAULT_PARALLEL = new BlockPos(2, 2, 2);
 
     public static List<MultiblockStructureRecipe> all() {
         return List.of(matrix(), tianshu());
@@ -235,10 +234,9 @@ public final class MultiblockStructureRecipes {
                                         List.of(mainCoreRule),
                                         false));
                             } else {
-                                Block displayed = isDefaultTianshuParallelPosition(pos) ? parallel : blank;
                                 cells.add(cell(
                                         pos,
-                                        displayed,
+                                        blank,
                                         peripheralRole,
                                         peripheralUnits,
                                         List.of(peripheralRule),
@@ -257,8 +255,7 @@ public final class MultiblockStructureRecipes {
                 material(controller),
                 material(port, portRule),
                 material(mainCores.get(0), mainCoreRule),
-                material(blank, peripheralRule),
-                material(parallel, peripheralRule));
+                material(blank, peripheralRule));
 
         return MultiblockStructureRecipe.create(
                 id("tianshu_supercomputer"),
@@ -312,10 +309,6 @@ public final class MultiblockStructureRecipes {
 
     static boolean isDefaultMatrixThreadPosition(BlockPos pos) {
         return MATRIX_DEFAULT_THREAD.equals(pos);
-    }
-
-    static boolean isDefaultTianshuParallelPosition(BlockPos pos) {
-        return TIANSHU_DEFAULT_PARALLEL.equals(pos);
     }
 
     private static Component rule(String path) {

@@ -148,6 +148,14 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
     }
 
     @Override
+    public java.util.Collection<? extends appeng.api.networking.crafting.ICraftingCPU> getVisibleCpus() {
+        var result = new ArrayList<appeng.api.networking.crafting.ICraftingCPU>(getActiveCpus());
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null && service.cpu() != null) result.add(service.cpu());
+        return result;
+    }
+
+    @Override
     public long tickCraftingLogic(IEnergyService energyService, ICraftingService craftingService) {
         if (!(craftingService instanceof CraftingService concreteCraftingService)) {
             throw new IllegalArgumentException(
@@ -265,7 +273,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
 
     @Override
     public boolean consumeCpuListChanged() {
-        boolean changed = cpuListChanged;
+        var bigService = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        boolean changed = cpuListChanged | (bigService != null && bigService.consumeCpuListChanged());
         cpuListChanged = false;
         return changed;
     }
@@ -278,7 +287,23 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         if (!isActive() || !canHandle(plan)) {
             return CraftingSubmitResult.CPU_OFFLINE;
         }
+        // Manual selection retains a menu's CPU reference and bypasses the service's automatic
+        // candidate lookup. A split/merge or port rebind can leave that reference active in a
+        // different grid, or absent from this service's tick/return routing. Reject it before
+        // creating a virtual CPU or extracting materials; both paths must use the owning service.
+        if (host.getGrid() != grid
+                || !(grid.getCraftingService() instanceof CraftingService craftingService)
+                || !craftingService.hasCpu(this)) {
+            return CraftingSubmitResult.CPU_OFFLINE;
+        }
 
+        if (plan instanceof com.moakiee.ae2lt.crafting.big.BigCraftingPlan big) {
+            var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+            if (requester != null || service == null) return CraftingSubmitResult.INCOMPLETE_PLAN;
+            if (service.busy()) return CraftingSubmitResult.CPU_BUSY;
+            if (!service.submit(big.target(),big.amount(),big.exact(),src)) return CraftingSubmitResult.INCOMPLETE_PLAN;
+            return CraftingSubmitResult.successful(service.cpu());
+        }
         boolean infiniteStorage = hasInfiniteStorage();
         long reservedBytes = infiniteStorage ? 0L : Math.max(0L, plan.bytes());
         if (!infiniteStorage && reservedBytes > remainingStorage) {
@@ -312,6 +337,10 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
 
     @Override
     public boolean canHandle(ICraftingPlan plan) {
+        if (plan instanceof com.moakiee.ae2lt.crafting.big.BigCraftingPlan) {
+            var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+            return service != null && service.available() && !service.busy();
+        }
         if (plan instanceof LoopCraftingPlan loopPlan) {
             return loopPlan.canRunOn(host);
         }

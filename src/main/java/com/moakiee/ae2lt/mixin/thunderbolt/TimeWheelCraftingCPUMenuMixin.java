@@ -55,6 +55,8 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
     @Unique
     private boolean thunderbolt$jobPresent;
+    @Unique private com.moakiee.ae2lt.crafting.big.BigCraftingCpu ae2lt$bigCpu;
+    @Unique private int ae2lt$bigStatusTicks;
 
     protected TimeWheelCraftingCPUMenuMixin(MenuType<?> menuType, int id, Inventory playerInventory, Object host) {
         super(menuType, id, playerInventory, host);
@@ -64,6 +66,19 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
     private void thunderbolt$setTimeWheelCpu(ICraftingCPU selected, CallbackInfo ci) {
         thunderbolt$clearTimeWheelSelection();
 
+        ae2lt$bigCpu = null;
+        if (selected instanceof com.moakiee.ae2lt.crafting.big.BigCraftingCpu big) {
+            if (cpu != null) {
+                cpu.craftingLogic.removeListener(cpuChangeListener);
+                cpu = null;
+            }
+            incrementalUpdateHelper.reset();
+            ae2lt$bigCpu = big;
+            ae2lt$bigStatusTicks = 0;
+            GTLCoreCompat.clearTransfiniteSelection((CraftingCPUMenu) (Object) this, cpuChangeListener);
+            ci.cancel();
+            return;
+        }
         if (!(selected instanceof TimeWheelCraftingCPU timeWheelCpu)) {
             return;
         }
@@ -109,8 +124,13 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
 
         // A foreign CPU family that cancels the same setCPU head can have taken the selection while
         // this field is still populated; cancelling would then hit a CPU that is not displayed.
-        if (this.thunderbolt$timeWheelCpu != null && thunderbolt$foreignCpuSelected()) {
+        if (thunderbolt$foreignCpuSelected()) {
+            ae2lt$bigCpu = null;
             thunderbolt$clearTimeWheelSelection();
+            return;
+        }
+        if (ae2lt$bigCpu != null) {
+            ae2lt$bigCpu.cancelJob();
         }
         if (this.thunderbolt$timeWheelCpu != null) {
             this.thunderbolt$timeWheelCpu.cancelJob();
@@ -134,9 +154,19 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
         }
 
         // Whichever hook runs second at the setCPU head is skipped by the other's cancel, so the
-        // TimeWheel selection can be stale while another CPU family drives this menu.
-        if (this.thunderbolt$timeWheelCpu != null && thunderbolt$foreignCpuSelected()) {
+        // TimeWheel or exact-quantity selection can be stale while another CPU family drives this menu.
+        if (thunderbolt$foreignCpuSelected()) {
+            ae2lt$bigCpu = null;
             thunderbolt$clearTimeWheelSelection();
+            return;
+        }
+        if (ae2lt$bigCpu != null) {
+            schedulingMode = ae2lt$bigCpu.getSelectionMode();
+            cantStoreItems = ae2lt$bigCpu.isBusy() && ae2lt$bigCpu.job().returning;
+            if (ae2lt$bigStatusTicks++ % 5 == 0) {
+                sendPacketToClient(new CraftingStatusPacket(
+                        containerId, com.moakiee.ae2lt.crafting.big.BigCraftingStatus.create(ae2lt$bigCpu)));
+            }
         }
         if (this.thunderbolt$timeWheelCpu == null) {
             return;

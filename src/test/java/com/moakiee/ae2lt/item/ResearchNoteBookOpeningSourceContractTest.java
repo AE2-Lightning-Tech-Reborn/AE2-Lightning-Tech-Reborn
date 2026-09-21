@@ -106,6 +106,11 @@ class ResearchNoteBookOpeningSourceContractTest {
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable and the new packet must stay last");
+
+        int stock = network.indexOf("BigStockPacket.class");
+        int confirm = network.indexOf("ConfirmBigAmountPacket.class");
+        assertTrue(stock > openPacket && confirm > stock,
+                "Exact-quantity packets must append after the existing GTL discriminators");
     }
 
     private static String source(String path) throws Exception {

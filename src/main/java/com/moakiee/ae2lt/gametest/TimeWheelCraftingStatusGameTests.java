@@ -197,10 +197,20 @@ public final class TimeWheelCraftingStatusGameTests {
 
     @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty", timeoutTicks = 20)
     public static void removedPoolCpuStillSendsTerminalFullStatus(GameTestHelper helper) {
-        var grid = emptyGrid();
+        var backing = emptyGrid();
+        var serviceRef = new java.util.concurrent.atomic.AtomicReference<appeng.me.service.CraftingService>();
+        var grid = (IGrid) Proxy.newProxyInstance(IGrid.class.getClassLoader(), new Class<?>[]{IGrid.class},
+                (proxy, method, args) -> method.getName().equals("getCraftingService")
+                        ? serviceRef.get() : method.invoke(backing, args));
         var output = AEItemKey.of(Items.STONE);
         var host = new TestPoolHost(helper, grid);
         var pool = host.getTimeWheelCraftingCpuPool();
+        // A selectable pool must belong to the submitting service, including in this fixture.
+        serviceRef.set(new appeng.me.service.CraftingService(grid, grid.getStorageService(), null) {
+            @Override public boolean hasCpu(appeng.api.networking.crafting.ICraftingCPU cpu) {
+                return cpu == pool || pool.getActiveCpus().contains(cpu);
+            }
+        });
         var plan = syntheticPlan(output, 1, new KeyCounter());
         helper.assertTrue(pool.submitJob(grid, plan, IActionSource.empty(), null).successful(),
                 "The pool must accept the synthetic emitted-item job");
@@ -409,7 +419,7 @@ public final class TimeWheelCraftingStatusGameTests {
     }
 
     private static Object defaultValue(Class<?> type) {
-        if (!type.isPrimitive()) return null;
+        if (type == void.class || !type.isPrimitive()) return null;
         if (type == boolean.class) return false;
         if (type == byte.class) return (byte) 0;
         if (type == short.class) return (short) 0;

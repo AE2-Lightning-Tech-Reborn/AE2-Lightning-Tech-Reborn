@@ -208,6 +208,11 @@ public final class FirmamentConversionRecipe implements Recipe<FirmamentConversi
     }
 
     @Override
+    public boolean isSpecial() {
+        return true;
+    }
+
+    @Override
     public boolean isIncomplete() {
         return inputs.isEmpty()
                 || results.isEmpty()

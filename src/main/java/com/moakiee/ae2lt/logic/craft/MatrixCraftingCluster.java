@@ -172,6 +172,15 @@ public final class MatrixCraftingCluster {
         return limiterRemaining;
     }
 
+    /** Shares the existing call quota with the independent exact-quantity executor. */
+    public boolean acceptExactProviderCall() {
+        if (!formed.getAsBoolean() || batchDispatchMode() != BatchDispatchMode.UNBOUNDED) return false;
+        refreshLimiterBudget();
+        if (providerCallsRemaining <= 0) return false;
+        providerCallsRemaining--;
+        return true;
+    }
+
     public int availableProviderCalls() {
         if (!formed.getAsBoolean()) return 0;
         refreshLimiterBudget();
