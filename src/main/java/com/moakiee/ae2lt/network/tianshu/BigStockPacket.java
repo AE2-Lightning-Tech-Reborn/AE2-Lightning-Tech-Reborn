@@ -2,14 +2,17 @@ package com.moakiee.ae2lt.network.tianshu;
 
 import appeng.api.stacks.AEKey;
 
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
-import com.moakiee.ae2lt.network.NetworkInit;
+import com.moakiee.ae2lt.client.ClientNetworkPacketHandlers;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReport;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Supplier;
 
 /** Bounded deltas tied to the existing terminal container; no independent UI session. */
 public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
@@ -34,14 +37,11 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
     }
 
 
-    public static void handle(BigStockPacket p, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> context) {
-        var c = context.get();
-        c.enqueueWork(
-                () -> {
-                    if (net.minecraft.client.Minecraft.getInstance().player == null) return;
-                    if (net.minecraft.client.Minecraft.getInstance().player.containerMenu instanceof TianshuPatternEncodingTermMenu m
-                            && m.containerId == p.containerId) m.applyBigStock(p.changed);
-                });
-        c.setPacketHandled(true);
+    public static void handle(BigStockPacket packet, Supplier<NetworkEvent.Context> context) {
+        var ctx = context.get();
+        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
+                Dist.CLIENT,
+                () -> () -> ClientNetworkPacketHandlers.handleBigStock(packet)));
+        ctx.setPacketHandled(true);
     }
 }

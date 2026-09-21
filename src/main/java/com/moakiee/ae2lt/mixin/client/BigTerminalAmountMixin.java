@@ -25,9 +25,11 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
 
     @WrapOperation(
             method = "renderSlot",
+            remap = true,
             at =
                     @At(
                             value = "INVOKE",
+                            remap = false,
                             target =
                                     "Lappeng/api/stacks/AEKey;formatAmount(JLappeng/api/stacks/AmountFormat;)Ljava/lang/String;"))
     private String ae2lt$amount(
