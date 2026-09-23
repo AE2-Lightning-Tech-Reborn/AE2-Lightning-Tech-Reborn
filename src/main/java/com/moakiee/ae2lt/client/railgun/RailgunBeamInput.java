@@ -42,7 +42,7 @@ public final class RailgunBeamInput {
         if (attackPressed != firing) {
             firing = attackPressed;
             RailgunBeamRenderClient.setLocalRequestedFiring(firing);
-            PacketDistributor.sendToServer(new RailgunBeamTogglePacket(firing, InteractionHand.MAIN_HAND));
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RailgunBeamTogglePacket(firing, InteractionHand.MAIN_HAND));
         }
     }
 

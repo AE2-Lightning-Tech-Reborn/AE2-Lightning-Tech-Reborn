@@ -18,7 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
@@ -182,7 +182,7 @@ class ClosedLoopPatternFlattenerTest {
 
     @Test
     void rejectsNestingBeyondEightMacroBoundaries() {
-        var resolved = new LinkedHashMap<ResourceLocation,
+        var resolved = new LinkedHashMap<Identifier,
                 ClosedLoopPatternFlattener.ResolvedMember>();
         var leaf = snapshot("depth_leaf");
         resolved.put(leaf.itemId(), ClosedLoopPatternFlattener.ResolvedMember.leaf(
@@ -205,7 +205,7 @@ class ClosedLoopPatternFlattenerTest {
     @Test
     void rejectsMoreThanTheRuntimeMemberLimit() {
         var members = new java.util.ArrayList<ClosedLoopMemberPattern>();
-        var resolved = new LinkedHashMap<ResourceLocation,
+        var resolved = new LinkedHashMap<Identifier,
                 ClosedLoopPatternFlattener.ResolvedMember>();
         for (int i = 0; i <= ClosedLoopPatternAnalyzer.MAX_MEMBERS; i++) {
             var leaf = snapshot("limit_leaf_" + i);
@@ -252,7 +252,7 @@ class ClosedLoopPatternFlattenerTest {
     }
 
     private static ClosedLoopPatternFlattener.MemberResolver resolver(
-            Map<ResourceLocation, ClosedLoopPatternFlattener.ResolvedMember> resolved) {
+            Map<Identifier, ClosedLoopPatternFlattener.ResolvedMember> resolved) {
         return snapshot -> resolved.get(snapshot.itemId());
     }
 
@@ -269,7 +269,7 @@ class ClosedLoopPatternFlattenerTest {
 
     private static SourcePatternSnapshot snapshot(String id) {
         return new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_flatten_test", id), null, null);
+                Identifier.fromNamespaceAndPath("ae2lt_flatten_test", id), null, null);
     }
 
     private record FakePattern(String id) implements IPatternDetails {
@@ -308,10 +308,10 @@ class ClosedLoopPatternFlattenerTest {
         }
 
         @Override
-        public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            return tag;
+        public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+
         }
 
         @Override
@@ -320,8 +320,8 @@ class ClosedLoopPatternFlattenerTest {
         }
 
         @Override
-        public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_flatten_test", id);
+        public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_flatten_test", id);
         }
 
         @Override
@@ -355,7 +355,7 @@ class ClosedLoopPatternFlattenerTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_flatten_test", "key"),
+            super(Identifier.fromNamespaceAndPath("ae2lt_flatten_test", "key"),
                     TestKey.class, Component.literal("test key"));
         }
 

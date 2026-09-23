@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.device.DeviceKind;
 import com.moakiee.ae2lt.device.DeviceSlotType;
 import com.moakiee.ae2lt.device.energy.LightningCompensationPolicy;
 
-class OverloadCoreModuleTest {
+class OverloadCoreModuleTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void installsInTheRailgunCoreSlotOrChestplateModuleSlot() {
         assertTrue(RailgunModuleItem.accepts(

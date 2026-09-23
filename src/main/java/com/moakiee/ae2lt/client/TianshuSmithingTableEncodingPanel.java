@@ -8,7 +8,7 @@ package com.moakiee.ae2lt.client;
 
 import appeng.api.config.ActionItems;
 import appeng.client.Point;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.style.Blitter;
 import appeng.client.gui.widgets.ActionButton;
@@ -17,7 +17,7 @@ import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.SimpleContainer;
@@ -76,7 +76,7 @@ final class TianshuSmithingTableEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawBackgroundLayer(GuiGraphicsExtractor graphics, Rect2i bounds, Point mouse) {
         BG.dest(bounds.getX() + 8, bounds.getY() + bounds.getHeight() - 165).blit(graphics);
     }
 
@@ -89,12 +89,11 @@ final class TianshuSmithingTableEncodingPanel extends TianshuEncodingModePanel {
                 menu.getSmithingTableBaseSlot().getItem(),
                 menu.getSmithingTableAdditionSlot().getItem());
         var level = menu.getPlayer().level();
-        var recipe = level.getRecipeManager()
-                .getRecipeFor(RecipeType.SMITHING, recipeInput, level)
-                .orElse(null);
+        var recipe = appeng.crafting.RecipeAccess.getRecipeFor(
+                level, RecipeType.SMITHING, recipeInput);
         resultSlot.set(recipe == null
                 ? ItemStack.EMPTY
-                : recipe.value().assemble(recipeInput, level.registryAccess()));
+                : recipe.value().assemble(recipeInput));
     }
 
     @Override

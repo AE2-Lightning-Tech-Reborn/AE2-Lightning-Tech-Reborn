@@ -5,7 +5,7 @@ import com.moakiee.ae2lt.blockentity.TianshuSupercomputerControllerBlockEntity;
 import com.moakiee.ae2lt.logic.tianshu.CpuMainCoreTier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
@@ -22,7 +22,7 @@ public class TianshuSupercomputerControllerMenu extends AEBaseMenu {
             .withInitialData(
                     TianshuSupercomputerControllerMenu::writeExtraData,
                     (host, menu, buf) -> menu.readExtraData(buf))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "tianshu_supercomputer_controller"));
     private final BlockPos blockPos;
     private final TianshuSupercomputerControllerBlockEntity host;

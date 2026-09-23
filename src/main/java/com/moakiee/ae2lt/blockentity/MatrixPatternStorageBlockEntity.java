@@ -229,7 +229,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
 
     private void setChangedAndUpdate() {
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             notifyPortPatternsChanged();
         }
     }
@@ -248,8 +248,10 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         var items = new ListTag();
         for (int slot = 0; slot < capacity(); slot++) {
             var stack = inventory.getStackInSlot(slot);
@@ -258,30 +260,32 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             }
             var itemTag = new CompoundTag();
             itemTag.putInt(TAG_SLOT, slot);
-            itemTag.put(TAG_STACK, stack.save(registries, new CompoundTag()));
+            itemTag.put(TAG_STACK, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(stack, registries));
             items.add(itemTag);
         }
         tag.put(TAG_ITEMS, items);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadAdditional(input);
         controllerPos = null;
 
         inventory.clear();
         patternsDirty = true;
-        if (!tag.contains(TAG_ITEMS, Tag.TAG_LIST)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_ITEMS, Tag.TAG_LIST)) {
             return;
         }
-        var items = tag.getList(TAG_ITEMS, Tag.TAG_COMPOUND);
+        var items = tag.getListOrEmpty(TAG_ITEMS);
         for (int i = 0; i < items.size(); i++) {
-            var itemTag = items.getCompound(i);
-            int slot = itemTag.getInt(TAG_SLOT);
-            if (slot < 0 || slot >= capacity() || !itemTag.contains(TAG_STACK, Tag.TAG_COMPOUND)) {
+            var itemTag = items.getCompoundOrEmpty(i);
+            int slot = itemTag.getIntOr(TAG_SLOT, 0);
+            if (slot < 0 || slot >= capacity() || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(itemTag, TAG_STACK, Tag.TAG_COMPOUND)) {
                 continue;
             }
-            var stack = ItemStack.parseOptional(registries, itemTag.getCompound(TAG_STACK));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, itemTag.getCompoundOrEmpty(TAG_STACK));
             inventory.setStackInSlotInternal(slot, stack, false);
         }
     }
@@ -464,4 +468,12 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             }
         }
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        if (this.level != null && !(this.level.getBlockState(pos).getBlock() instanceof com.moakiee.ae2lt.block.MatrixPatternStorageBlock)) {
+            dropStoredPatterns(this.level, pos);
+        }
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

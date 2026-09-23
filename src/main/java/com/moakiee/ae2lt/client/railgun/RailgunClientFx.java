@@ -69,9 +69,9 @@ public final class RailgunClientFx {
             // Endpoint sparks for each chain target.
             for (int s = 0; s < 4; s++) {
                 mc.level.addParticle(ParticleTypes.ELECTRIC_SPARK, b.x, b.y, b.z,
-                        (mc.level.random.nextDouble() - 0.5) * 0.4,
-                        (mc.level.random.nextDouble() - 0.5) * 0.4,
-                        (mc.level.random.nextDouble() - 0.5) * 0.4);
+                        (mc.level.getRandom().nextDouble() - 0.5) * 0.4,
+                        (mc.level.getRandom().nextDouble() - 0.5) * 0.4,
+                        (mc.level.getRandom().nextDouble() - 0.5) * 0.4);
             }
         }
 
@@ -86,7 +86,7 @@ public final class RailgunClientFx {
         // 4. Radial mini-bolts crackling outward from the impact (longer-lived now).
         if (radius > 0.0F) {
             int bolts = isMax ? 18 : 8 + tier * 2;
-            var rng = mc.level.random;
+            var rng = mc.level.getRandom();
             for (int i = 0; i < bolts; i++) {
                 double yaw = rng.nextDouble() * Math.PI * 2.0D;
                 double pitch = (rng.nextDouble() - 0.3D) * Math.PI;       // bias upward
@@ -104,15 +104,15 @@ public final class RailgunClientFx {
         // has fixed offsets historically, which now reads small inside the bigger
         // shockwave ring. radiusScale = radius / 7 (the old tier-3 default).
         float radiusScale = Math.max(1.0F, radius / 7.0F);
-        mc.level.addParticle(ParticleTypes.FLASH, hit.x, hit.y, hit.z, 0, 0, 0);
+        mc.level.addParticle(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFFF), hit.x, hit.y, hit.z, 0, 0, 0);
         if (isMax) {
             int flashCount = (int) (4 * radiusScale);
             float flashSpread = 0.7F * radiusScale;
             for (int i = 0; i < flashCount; i++) {
-                double ox = (mc.level.random.nextDouble() - 0.5D) * flashSpread;
-                double oy = (mc.level.random.nextDouble() - 0.5D) * flashSpread;
-                double oz = (mc.level.random.nextDouble() - 0.5D) * flashSpread;
-                mc.level.addParticle(ParticleTypes.FLASH, hit.x + ox, hit.y + oy, hit.z + oz, 0, 0, 0);
+                double ox = (mc.level.getRandom().nextDouble() - 0.5D) * flashSpread;
+                double oy = (mc.level.getRandom().nextDouble() - 0.5D) * flashSpread;
+                double oz = (mc.level.getRandom().nextDouble() - 0.5D) * flashSpread;
+                mc.level.addParticle(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFFF), hit.x + ox, hit.y + oy, hit.z + oz, 0, 0, 0);
             }
             int smokeCount = (int) (48 * radiusScale);
             double smokeMotion = 0.30D * radiusScale;
@@ -120,9 +120,9 @@ public final class RailgunClientFx {
             for (int i = 0; i < smokeCount; i++) {
                 mc.level.addParticle(ParticleTypes.LARGE_SMOKE,
                         hit.x, hit.y, hit.z,
-                        (mc.level.random.nextDouble() - 0.5D) * smokeMotion,
-                        (mc.level.random.nextDouble() - 0.2D) * smokeUp,
-                        (mc.level.random.nextDouble() - 0.5D) * smokeMotion);
+                        (mc.level.getRandom().nextDouble() - 0.5D) * smokeMotion,
+                        (mc.level.getRandom().nextDouble() - 0.2D) * smokeUp,
+                        (mc.level.getRandom().nextDouble() - 0.5D) * smokeMotion);
             }
         }
         int sparkCount = (int) ((14 + tier * 8) * radiusScale);
@@ -130,9 +130,9 @@ public final class RailgunClientFx {
         for (int i = 0; i < sparkCount; i++) {
             mc.level.addParticle(ParticleTypes.ELECTRIC_SPARK,
                     hit.x, hit.y, hit.z,
-                    (mc.level.random.nextDouble() - 0.5D) * sparkVel,
-                    (mc.level.random.nextDouble() - 0.5D) * sparkVel,
-                    (mc.level.random.nextDouble() - 0.5D) * sparkVel);
+                    (mc.level.getRandom().nextDouble() - 0.5D) * sparkVel,
+                    (mc.level.getRandom().nextDouble() - 0.5D) * sparkVel,
+                    (mc.level.getRandom().nextDouble() - 0.5D) * sparkVel);
         }
 
         // 6. Sound: the muzzle report belongs near the shooter, not the impact

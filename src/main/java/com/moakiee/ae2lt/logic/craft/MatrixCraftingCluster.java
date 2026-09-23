@@ -234,14 +234,14 @@ public final class MatrixCraftingCluster {
 
     public void readEngineFrom(CompoundTag tag, HolderLookup.Provider registries) {
         engine.readFrom(tag, registries);
-        heat = tag.contains(NBT_HEAT, Tag.TAG_DOUBLE) ? tag.getDouble(NBT_HEAT) : 0.0D;
-        lastLimiterTick = tag.contains(NBT_LAST_LIMITER_TICK, Tag.TAG_LONG) ? tag.getLong(NBT_LAST_LIMITER_TICK) : Long.MIN_VALUE;
+        heat = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, NBT_HEAT, Tag.TAG_DOUBLE) ? tag.getDoubleOr(NBT_HEAT, 0.0D) : 0.0D;
+        lastLimiterTick = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, NBT_LAST_LIMITER_TICK, Tag.TAG_LONG) ? tag.getLongOr(NBT_LAST_LIMITER_TICK, 0L) : Long.MIN_VALUE;
         limiterRemaining = 0;
         providerCallsRemaining = 0;
-        operationsConsumedThisTick = tag.contains(NBT_CONSUMED_OPERATIONS, Tag.TAG_LONG)
-                ? Math.max(0L, tag.getLong(NBT_CONSUMED_OPERATIONS)) : 0L;
-        lastOperationsPerTick = tag.contains(NBT_LAST_OPERATIONS_PER_TICK, Tag.TAG_LONG)
-                ? Math.max(0L, tag.getLong(NBT_LAST_OPERATIONS_PER_TICK)) : 0L;
+        operationsConsumedThisTick = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, NBT_CONSUMED_OPERATIONS, Tag.TAG_LONG)
+                ? Math.max(0L, tag.getLongOr(NBT_CONSUMED_OPERATIONS, 0L)) : 0L;
+        lastOperationsPerTick = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, NBT_LAST_OPERATIONS_PER_TICK, Tag.TAG_LONG)
+                ? Math.max(0L, tag.getLongOr(NBT_LAST_OPERATIONS_PER_TICK, 0L)) : 0L;
         lastLimiterSnapshot = MatrixCraftingMath.idleSnapshot(heat, 0.0D);
     }
 

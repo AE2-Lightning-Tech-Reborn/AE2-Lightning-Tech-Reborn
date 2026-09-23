@@ -8,27 +8,20 @@ import appeng.api.stacks.AEItemKey;
 import com.moakiee.ae2lt.AE2LightningTech;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.slf4j.LoggerFactory;
 
 /** Keep the accepted cold-polling budget separate from warm recovery throughput. */
-@GameTestHolder(AE2LightningTech.MODID)
-@PrefixGameTestTemplate(false)
 public final class OverloadedInterfaceImportRecoveryGameTests {
     private OverloadedInterfaceImportRecoveryGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_07_import_recovery", timeoutTicks = 470)
     public static void wirelessWarmRecoveryKeepsProduction(GameTestHelper helper) {
         checkRecovery(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_07_import_recovery", timeoutTicks = 470)
     public static void localWarmRecoveryKeepsProduction(GameTestHelper helper) {
         checkRecovery(helper, true);
     }
@@ -147,6 +140,7 @@ public final class OverloadedInterfaceImportRecoveryGameTests {
     }
 
     private static void require(boolean condition, String message) {
-        if (!condition) throw new IllegalStateException(message);
+        if (!condition) throw new net.minecraft.gametest.framework.GameTestAssertException(
+                    net.minecraft.network.chat.Component.literal(message), 0);
     }
 }

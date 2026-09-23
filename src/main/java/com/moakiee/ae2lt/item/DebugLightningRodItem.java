@@ -45,7 +45,7 @@ public class DebugLightningRodItem extends Item {
         }
 
         if (level instanceof ServerLevel serverLevel) {
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (bolt == null) {
                 return InteractionResult.FAIL;
             }
@@ -55,7 +55,7 @@ public class DebugLightningRodItem extends Item {
             // This mirrors what vanilla ServerLevel.findLightningTargetAround does
             // (it returns rodPos.above(1) for natural rod-attracted lightning).
             Vec3 target = Vec3.atBottomCenterOf(pos.above());
-            bolt.moveTo(target.x, target.y, target.z);
+            bolt.setPos(target.x, target.y, target.z);
             Player player = context.getPlayer();
             if (player instanceof ServerPlayer serverPlayer) {
                 bolt.setCause(serverPlayer);
@@ -71,13 +71,13 @@ public class DebugLightningRodItem extends Item {
             context.getItemInHand().shrink(1);
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag tooltipFlag) {
-        tooltip.add(Component.translatable("item.ae2lt.debug_lightning_rod.tooltip")
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag tooltipFlag) {
+        tooltip.accept(Component.translatable("item.ae2lt.debug_lightning_rod.tooltip")
                 .withStyle(ChatFormatting.GRAY));
-        super.appendHoverText(stack, context, tooltip, tooltipFlag);
+        super.appendHoverText(stack, context, display, tooltip, tooltipFlag);
     }
 }

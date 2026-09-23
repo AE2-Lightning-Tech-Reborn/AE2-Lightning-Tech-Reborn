@@ -168,10 +168,10 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
 
     public static boolean isInertiaEnabled(ItemStack armor) {
         var options = INSTANCE.getOptions(armor);
-        if (!options.contains(INERTIA_CONFIG_KEY, Tag.TAG_BYTE)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, INERTIA_CONFIG_KEY, Tag.TAG_BYTE)) {
             return true;
         }
-        return options.getBoolean(INERTIA_CONFIG_KEY);
+        return options.getBooleanOr(INERTIA_CONFIG_KEY, false);
     }
 
     public static boolean isPhaseModeEnabled(ItemStack armor) {
@@ -207,7 +207,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
 
     private static boolean booleanOption(ItemStack armor, String key, boolean defaultValue) {
         var options = INSTANCE.getOptions(armor);
-        return options.contains(key, Tag.TAG_BYTE) ? options.getBoolean(key) : defaultValue;
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, key, Tag.TAG_BYTE) ? options.getBooleanOr(key, false) : defaultValue;
     }
 
     private FlightSpeedOption getSelectedSpeed(ItemStack armor) {
@@ -221,7 +221,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
         PhaseFlightPlayerState.activate(player);
         PhaseFlightPlayerState.setFlightLocked(player, PhaseLockSubmodule.isFlightLockEnabled(player));
         updateMovementGuards(player, armor);
-        if (!data.contains(TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)) {
             data.putFloat(TAG_PREVIOUS_SPEED, abilities.getFlyingSpeed());
             CelestweaveArmorState.setSubmoduleData(armor, INSTANCE, data);
         }
@@ -265,7 +265,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
             applyTransientPhaseState(player);
             return;
         }
-        if (player.getPersistentData().getInt(PLAYER_ESCAPE_TICKS_TAG) > 0) {
+        if (player.getPersistentData().getIntOr(PLAYER_ESCAPE_TICKS_TAG, 0) > 0) {
             tickEscapePhase(player, armor);
             return;
         }
@@ -285,8 +285,8 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
 
     private static void restoreStoredAbilities(Player player, ItemStack armor) {
         var data = CelestweaveArmorState.getSubmoduleData(armor, INSTANCE);
-        float previousSpeed = data.contains(TAG_PREVIOUS_SPEED, CompoundTag.TAG_FLOAT)
-                ? data.getFloat(TAG_PREVIOUS_SPEED)
+        float previousSpeed = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PREVIOUS_SPEED, CompoundTag.TAG_FLOAT)
+                ? data.getFloatOr(TAG_PREVIOUS_SPEED, 0.0F)
                 : DEFAULT_FLYING_SPEED;
         data.remove(TAG_PREVIOUS_SPEED);
         CelestweaveArmorState.setSubmoduleData(armor, INSTANCE, data);
@@ -347,7 +347,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
     }
 
     public static boolean hasTransientPhaseState(Player player) {
-        return player.getPersistentData().getBoolean(PLAYER_PHASE_TAG);
+        return player.getPersistentData().getBooleanOr(PLAYER_PHASE_TAG, false);
     }
 
     public static void applyTransientPhaseState(Player player) {
@@ -368,7 +368,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
     }
 
     public static boolean tickEscapePhase(Player player, @Nullable ItemStack armor) {
-        int ticks = player.getPersistentData().getInt(PLAYER_ESCAPE_TICKS_TAG);
+        int ticks = player.getPersistentData().getIntOr(PLAYER_ESCAPE_TICKS_TAG, 0);
         if (ticks <= 0) {
             return false;
         }

@@ -37,9 +37,9 @@ import com.moakiee.thunderbolt.core.crafting.pattern.FuzzyPatternInputs;
 import com.moakiee.thunderbolt.core.crafting.overload.OverloadedPatternDetails;
 
 /** Uses actual AE2 component-bearing keys and native fuzzy enumeration, not an id-only test key. */
-class ExecutionFuzzyInputAllocatorTest {
+class ExecutionFuzzyInputAllocatorTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     static {
-        LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+        LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }

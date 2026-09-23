@@ -48,7 +48,7 @@ public abstract class AbstractSingleArmorSubmoduleItem extends Item implements C
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
         ModuleTooltip.appendInstallInfo(this, tooltip);
     }
 }

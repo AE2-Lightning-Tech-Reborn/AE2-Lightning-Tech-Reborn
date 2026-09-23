@@ -25,7 +25,7 @@ import com.moakiee.ae2lt.network.PhaseFlightInputPacket;
 @Mixin(LocalPlayer.class)
 public abstract class LocalPlayerPhaseMovementMixin {
     @ModifyExpressionValue(
-            method = "aiStep",
+            method = "modifyInput",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isMovingSlowly()Z"))
     private boolean ae2lt$applySneakInputWithoutKeyDelay(boolean movingSlowly) {
         LocalPlayer player = (LocalPlayer) (Object) this;
@@ -99,7 +99,7 @@ public abstract class LocalPlayerPhaseMovementMixin {
             player.stopFallFlying();
         }
         PhaseFlightPlayerState.applyFlightInput(player, requestedFlying);
-        PacketDistributor.sendToServer(PhaseFlightInputPacket.flight(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(PhaseFlightInputPacket.flight(
                 PhaseFlightPlayerState.isJumpHeld(player),
                 requestedFlying));
     }

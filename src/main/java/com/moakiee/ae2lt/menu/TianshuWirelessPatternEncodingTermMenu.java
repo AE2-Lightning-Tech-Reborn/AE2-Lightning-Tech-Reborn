@@ -7,7 +7,7 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessPatternEncodingTe
 import de.mari_023.ae2wtlib.api.gui.AE2wtlibSlotSemantics;
 import de.mari_023.ae2wtlib.api.terminal.ItemWUT;
 import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 
@@ -19,7 +19,7 @@ public final class TianshuWirelessPatternEncodingTermMenu extends TianshuPattern
 
     public static final MenuType<TianshuWirelessPatternEncodingTermMenu> TYPE = MenuTypeBuilder
             .create(FACTORY, TianshuWirelessPatternEncodingTermMenuHost.class)
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "wireless_tianshu_pattern_encoding_terminal"));
 
     private final TianshuWirelessPatternEncodingTermMenuHost wirelessHost;

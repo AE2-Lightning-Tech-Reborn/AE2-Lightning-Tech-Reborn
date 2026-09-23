@@ -3,18 +3,10 @@ package com.moakiee.ae2lt.integration.jei;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 
 import mezz.jei.api.gui.widgets.IRecipeWidget;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenPosition;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -107,49 +99,23 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
     }
 
     @Override
-    public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         if (blocks.isEmpty() || scale <= 0F) {
             return;
         }
 
-        Minecraft client = Minecraft.getInstance();
-        var bufferSource = client.renderBuffers().bufferSource();
-        var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = guiGraphics.pose();
-
-        float cx = width / 2F;
-        float cy = height / 2F;
-
+        var previewBlocks = new ArrayList<com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockPreviewPip.Block>();
         for (Entry entry : blocks) {
-            pose.pushPose();
-            pose.translate(cx, cy, 400);
-            pose.scale(scale, -scale, scale);
-            pose.mulPose(Axis.XP.rotationDegrees(X_ROTATION_DEG));
-            pose.mulPose(Axis.YP.rotationDegrees(225 + rotation));
-            pose.translate(
-                    -0.5F + entry.offset.getX() - centerX,
-                    -0.5F + entry.offset.getY() - centerY,
-                    -0.5F + entry.offset.getZ() - centerZ);
-
-            RenderSystem.runAsFancy(() -> {
-                if (entry.state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
-                    blockRenderer.renderSingleBlock(
-                            entry.state,
-                            pose,
-                            bufferSource,
-                            LightTexture.FULL_BRIGHT,
-                            OverlayTexture.NO_OVERLAY);
-                }
-            });
-            pose.popPose();
+            if (entry.state.getRenderShape() == RenderShape.MODEL) {
+                previewBlocks.add(new com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockPreviewPip.Block(
+                        entry.state, entry.offset.getX(), entry.offset.getY(), entry.offset.getZ(), 0));
+            }
         }
-
-        // Flush the per-block batches before re-enabling GUI lighting so the
-        // remainder of the recipe layout renders normally.
-        if (bufferSource instanceof MultiBufferSource.BufferSource bs) {
-            bs.endBatch();
-        }
-        Lighting.setupFor3DItems();
+        com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockPreviewPip.submit(
+                guiGraphics, 0, 0, width, height, scale,
+                X_ROTATION_DEG, 225 + rotation, 0.0F, 0.0F,
+                centerX + 0.5F, centerY + 0.5F, centerZ + 0.5F, 1.0F,
+                previewBlocks);
     }
 
     @Override

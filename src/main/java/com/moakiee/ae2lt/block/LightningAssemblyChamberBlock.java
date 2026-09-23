@@ -23,7 +23,7 @@ public class LightningAssemblyChamberBlock extends AEBaseEntityBlock<LightningAs
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
 
     public LightningAssemblyChamberBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(POWERED, false)
@@ -49,10 +49,10 @@ public class LightningAssemblyChamberBlock extends AEBaseEntityBlock<LightningAs
 
     @Override
     public void neighborChanged(BlockState state, Level level, net.minecraft.core.BlockPos pos,
-            Block block, net.minecraft.core.BlockPos fromPos, boolean isMoving) {
+            Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         var be = getBlockEntity(level, pos);
         if (be != null) {
-            be.onNeighborChanged(fromPos);
+            be.onNeighborChanged();
         }
     }
 
@@ -68,6 +68,6 @@ public class LightningAssemblyChamberBlock extends AEBaseEntityBlock<LightningAs
             be.openMenu(player, MenuLocators.forBlockEntity(be));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

@@ -259,7 +259,7 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
         }
 
         WeatherCondensateItem.Type committedType = lockedType;
-        if (!committedType.apply(serverLevel, serverLevel.random)) {
+        if (!committedType.apply(serverLevel, serverLevel.getRandom())) {
             LOG.debug("[ae2lt/ionizer] commit aborted: apply() failed for type={} at {}", committedType, worldPosition);
             inventory.insertItem(AtmosphericIonizerInventory.SLOT_CONDENSATE, extracted, false);
             return false;
@@ -354,14 +354,14 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
      * + {@code ResearchRitualService} 按反应场内的物品判定,这里只负责"触发点"。
      */
     private void summonRitualLightning(ServerLevel serverLevel) {
-        LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
+        LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (bolt == null) {
             LOG.warn("[ae2lt/ionizer] summonRitualLightning: EntityType.LIGHTNING_BOLT.create returned null at {}",
                     worldPosition);
             return;
         }
         BlockPos strikePos = worldPosition.above(RITUAL_STRIKE_HEIGHT_OFFSET);
-        bolt.moveTo(Vec3.atBottomCenterOf(strikePos));
+        bolt.setPos(Vec3.atBottomCenterOf(strikePos));
         bolt.setVisualOnly(false);
         ResearchRitualService.markRitualLightning(bolt, worldPosition);
         serverLevel.addFreshEntity(bolt);
@@ -370,8 +370,10 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(data, TAG_INVENTORY, registries);
         data.putLong(TAG_CONSUMED_ENERGY, consumedEnergy);
         data.putInt(TAG_PROCESSING_TICKS, processingTicksSpent);
@@ -384,14 +386,16 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         inventory.loadFromTag(data, TAG_INVENTORY, registries);
         lockedType = data.contains(TAG_LOCKED_TYPE)
-                ? WeatherCondensateItem.Type.fromName(data.getString(TAG_LOCKED_TYPE))
+                ? WeatherCondensateItem.Type.fromName(data.getStringOr(TAG_LOCKED_TYPE, ""))
                 : null;
-        consumedEnergy = Math.max(0L, data.getLong(TAG_CONSUMED_ENERGY));
-        processingTicksSpent = Math.max(0, data.getInt(TAG_PROCESSING_TICKS));
+        consumedEnergy = Math.max(0L, data.getLongOr(TAG_CONSUMED_ENERGY, 0L));
+        processingTicksSpent = Math.max(0, data.getIntOr(TAG_PROCESSING_TICKS, 0));
         frequencyBinding.load(data);
 
         if (lockedType == null) {
@@ -496,5 +500,11 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
         double extracted = grid.getEnergyService().extractAEPower(amount, mode, PowerMultiplier.CONFIG);
         return extracted >= amount - POWER_EPSILON;
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        cancelProcessingForRemoval();
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }
 

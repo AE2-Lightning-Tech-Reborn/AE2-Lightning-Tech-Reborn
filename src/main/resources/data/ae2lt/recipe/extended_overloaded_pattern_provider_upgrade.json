@@ -2,12 +2,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "ae2lt:extended_overloaded_pattern_provider"
-    },
-    {
-      "tag": "c:ingots"
-    }
+    "ae2lt:extended_overloaded_pattern_provider",
+    "#c:ingots"
   ],
   "result": {
     "count": 1,

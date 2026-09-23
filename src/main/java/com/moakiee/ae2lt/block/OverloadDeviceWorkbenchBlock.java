@@ -17,7 +17,7 @@ public class OverloadDeviceWorkbenchBlock extends AEBaseEntityBlock<OverloadDevi
         // The model has open sections between its base, work surface and top.
         // Treating it as a full occluding cube makes adjacent blocks cull their
         // entire shared face, which leaves visible holes through those sections.
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
     }
 
     @Override
@@ -33,7 +33,7 @@ public class OverloadDeviceWorkbenchBlock extends AEBaseEntityBlock<OverloadDevi
             if (!level.isClientSide()) {
                 blockEntity.openMenu(player, MenuLocators.forBlockEntity(blockEntity));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return InteractionResult.PASS;
     }

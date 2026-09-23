@@ -7,14 +7,14 @@ import java.util.function.Supplier;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
@@ -56,8 +56,8 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
     private static final int MAJOR_TICK_WIDTH = 5;
     private static final int[] MAJOR_TICK_SRC_YS = { 26, 36, 46, 56, 66 };
 
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/crystal_catalyzer.png");
+    private static final Identifier BACKGROUND_TEXTURE =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/crystal_catalyzer.png");
 
     private final Supplier<FluidStack> fluidSupplier;
     private final IntSupplier capacitySupplier;
@@ -74,7 +74,9 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         // AE2 WidgetContainer 只分发 button=0;真正的处理由 Screen 层的
         // mouseClicked 预拦截后调用 {@link #handleClick(int)} 完成。这里给
         // AE2 分发链一个稳妥的 fallback(纯左键语义),不处理 shift / 右键。
@@ -89,7 +91,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
         if (!this.active || !this.visible) {
             return false;
         }
-        if (Screen.hasShiftDown()) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             menu.clientClearFluidTank();
             playClickSound();
             return true;
@@ -113,7 +115,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         FluidStack fluid = fluidSupplier.get();
         if (!fluid.isEmpty()) {
             int capacity = Math.max(1, capacitySupplier.getAsInt());
@@ -148,7 +150,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
         }
     }
 
-    private void drawTick(GuiGraphics guiGraphics, int srcX, int srcY, int tickWidth) {
+    private void drawTick(GuiGraphicsExtractor guiGraphics, int srcX, int srcY, int tickWidth) {
         int offsetX = srcX - TANK_SRC_X;
         int offsetY = srcY - TANK_SRC_Y;
         Blitter.texture(BACKGROUND_TEXTURE)
@@ -198,7 +200,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
     private static String getModDisplayName(FluidStack fluid) {
         var key = fluid.getFluid() == Fluids.EMPTY
                 ? null
-                : fluid.getFluid().builtInRegistryHolder().key().location();
+                : fluid.getFluid().builtInRegistryHolder().key().identifier();
         if (key == null) {
             return "Minecraft";
         }

@@ -3,21 +3,15 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_dust"
-      },
+      "ingredient": "ae2lt:firmament_dust",
       "count": 16
     },
     {
-      "ingredient": {
-        "item": "ae2:sky_dust"
-      },
+      "ingredient": "ae2:sky_dust",
       "count": 64
     },
     {
-      "ingredient": {
-        "tag": "c:dusts/ender_pearl"
-      },
+      "ingredient": "#c:dusts/ender_pearl",
       "count": 64
     }
   ],

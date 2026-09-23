@@ -44,6 +44,9 @@ import com.moakiee.ae2lt.blockentity.ExtendedOverloadedPatternProviderBlockEntit
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import java.util.function.Supplier;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -60,29 +63,49 @@ public final class ModBlocks {
     private static final String EXTENDEDAE_MODID = "extendedae";
 
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(AE2LightningTech.MODID);
+    private static final ThreadLocal<ResourceKey<Block>> CONSTRUCTING_BLOCK = new ThreadLocal<>();
 
-    private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of()
+    /** Supplies the registration key before Minecraft 26 constructs a block. */
+    public static BlockBehaviour.Properties registeredProperties(BlockBehaviour.Properties properties) {
+        var key = CONSTRUCTING_BLOCK.get();
+        if (key == null) throw new IllegalStateException("Block constructed outside AE2LT registration");
+        return properties.setId(key);
+    }
+
+    private static <T extends Block> T construct(String name, Supplier<T> factory) {
+        var key = ResourceKey.create(Registries.BLOCK,
+                Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, name));
+        CONSTRUCTING_BLOCK.set(key);
+        try { return factory.get(); }
+        finally { CONSTRUCTING_BLOCK.remove(); }
+    }
+
+    static <T extends Block> DeferredBlock<T> registerExternalBlock(String name, Supplier<T> factory) {
+        return BLOCKS.register(name, () -> construct(name, factory));
+    }
+
+    private static final Supplier<BlockBehaviour.Properties> BUDDING_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(3.0F, 5.0F)
             .sound(SoundType.AMETHYST)
             .randomTicks()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties CLUSTER_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> CLUSTER_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(1.5F)
             .sound(SoundType.AMETHYST_CLUSTER)
             .forceSolidOn()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties OVERLOAD_CRYSTAL_BLOCK_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> OVERLOAD_CRYSTAL_BLOCK_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(3.0F, 5.0F)
             .sound(SoundType.STONE)
             .forceSolidOn()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties SILICON_BLOCK_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> SILICON_BLOCK_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
@@ -90,14 +113,14 @@ public final class ModBlocks {
             .requiresCorrectToolForDrops()
             .noLootTable();
 
-    private static final BlockBehaviour.Properties OVERLOAD_MACHINE_FRAME_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> OVERLOAD_MACHINE_FRAME_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
             .forceSolidOn()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties FIRMAMENT_CONVERSION_CORE_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> FIRMAMENT_CONVERSION_CORE_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(-1.0F, 3600000.0F)
             .sound(SoundType.METAL)
@@ -105,14 +128,14 @@ public final class ModBlocks {
             .pushReaction(PushReaction.BLOCK)
             .noLootTable();
 
-    private static final BlockBehaviour.Properties MATRIX_MACHINE_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> MATRIX_MACHINE_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
             .forceSolidOn()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties MATRIX_GLASS_PROPERTIES = BlockBehaviour.Properties.of()
+    private static final Supplier<BlockBehaviour.Properties> MATRIX_GLASS_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(3.0F, 6.0F)
             .sound(SoundType.GLASS)
@@ -122,24 +145,24 @@ public final class ModBlocks {
             .requiresCorrectToolForDrops();
 
     public static final DeferredBlock<Block> OVERLOAD_CRYSTAL_BLOCK =
-            registerBlock("overload_crystal_block", () -> new Block(OVERLOAD_CRYSTAL_BLOCK_PROPERTIES));
+            registerBlock("overload_crystal_block", () -> new Block(registeredProperties(OVERLOAD_CRYSTAL_BLOCK_PROPERTIES.get())));
 
     public static final DeferredBlock<Block> SILICON_BLOCK =
             registerBlock(
                     "silicon_block",
-                    () -> new SiliconBlock(SILICON_BLOCK_PROPERTIES),
+                    () -> new SiliconBlock(registeredProperties(SILICON_BLOCK_PROPERTIES.get())),
                     ModBlocks::shouldRegisterSiliconBlock);
 
     public static final DeferredBlock<Block> OVERLOAD_MACHINE_FRAME =
-            registerBlock("overload_machine_frame", () -> new Block(OVERLOAD_MACHINE_FRAME_PROPERTIES));
+            registerBlock("overload_machine_frame", () -> new Block(registeredProperties(OVERLOAD_MACHINE_FRAME_PROPERTIES.get())));
 
     public static final DeferredBlock<FirmamentConversionCoreBlock> FIRMAMENT_CONVERSION_CORE =
             registerBlock(
                     "firmament_conversion_core",
-                    () -> new FirmamentConversionCoreBlock(FIRMAMENT_CONVERSION_CORE_PROPERTIES));
+                    () -> new FirmamentConversionCoreBlock(registeredProperties(FIRMAMENT_CONVERSION_CORE_PROPERTIES.get())));
 
     public static final DeferredBlock<OverloadTntBlock> OVERLOAD_TNT =
-            registerBlock("overload_tnt", () -> new OverloadTntBlock(BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.TNT)));
+            registerBlock("overload_tnt", () -> new OverloadTntBlock(registeredProperties(BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.TNT))));
 
     public static final DeferredBlock<LightningCollectorBlock> LIGHTNING_COLLECTOR =
             registerBlock("lightning_collector", LightningCollectorBlock::new);
@@ -170,35 +193,35 @@ public final class ModBlocks {
 
     public static final DeferredBlock<BuddingOverloadCrystalBlock> FLAWLESS_BUDDING_OVERLOAD_CRYSTAL =
             registerBlock("flawless_budding_overload_crystal", () ->
-                    new BuddingOverloadCrystalBlock(BUDDING_PROPERTIES));
+                    new BuddingOverloadCrystalBlock(registeredProperties(BUDDING_PROPERTIES.get())));
 
     public static final DeferredBlock<BuddingOverloadCrystalBlock> FLAWED_BUDDING_OVERLOAD_CRYSTAL =
             registerBlock("flawed_budding_overload_crystal", () ->
-                    new BuddingOverloadCrystalBlock(BUDDING_PROPERTIES));
+                    new BuddingOverloadCrystalBlock(registeredProperties(BUDDING_PROPERTIES.get())));
 
     public static final DeferredBlock<BuddingOverloadCrystalBlock> CRACKED_BUDDING_OVERLOAD_CRYSTAL =
             registerBlock("cracked_budding_overload_crystal", () ->
-                    new BuddingOverloadCrystalBlock(BUDDING_PROPERTIES));
+                    new BuddingOverloadCrystalBlock(registeredProperties(BUDDING_PROPERTIES.get())));
 
     public static final DeferredBlock<BuddingOverloadCrystalBlock> DAMAGED_BUDDING_OVERLOAD_CRYSTAL =
             registerBlock("damaged_budding_overload_crystal", () ->
-                    new BuddingOverloadCrystalBlock(BUDDING_PROPERTIES));
+                    new BuddingOverloadCrystalBlock(registeredProperties(BUDDING_PROPERTIES.get())));
 
     public static final DeferredBlock<OverloadCrystalClusterBlock> SMALL_OVERLOAD_CRYSTAL_BUD =
             registerBlock("small_overload_crystal_bud", () ->
-                    new OverloadCrystalClusterBlock(3, 4, CLUSTER_PROPERTIES.sound(SoundType.SMALL_AMETHYST_BUD).lightLevel(s -> 1)));
+                    new OverloadCrystalClusterBlock(3, 4, registeredProperties(CLUSTER_PROPERTIES.get()).sound(SoundType.SMALL_AMETHYST_BUD).lightLevel(s -> 1)));
 
     public static final DeferredBlock<OverloadCrystalClusterBlock> MEDIUM_OVERLOAD_CRYSTAL_BUD =
             registerBlock("medium_overload_crystal_bud", () ->
-                    new OverloadCrystalClusterBlock(4, 3, CLUSTER_PROPERTIES.sound(SoundType.MEDIUM_AMETHYST_BUD).lightLevel(s -> 2)));
+                    new OverloadCrystalClusterBlock(4, 3, registeredProperties(CLUSTER_PROPERTIES.get()).sound(SoundType.MEDIUM_AMETHYST_BUD).lightLevel(s -> 2)));
 
     public static final DeferredBlock<OverloadCrystalClusterBlock> LARGE_OVERLOAD_CRYSTAL_BUD =
             registerBlock("large_overload_crystal_bud", () ->
-                    new OverloadCrystalClusterBlock(5, 3, CLUSTER_PROPERTIES.sound(SoundType.LARGE_AMETHYST_BUD).lightLevel(s -> 4)));
+                    new OverloadCrystalClusterBlock(5, 3, registeredProperties(CLUSTER_PROPERTIES.get()).sound(SoundType.LARGE_AMETHYST_BUD).lightLevel(s -> 4)));
 
     public static final DeferredBlock<OverloadCrystalClusterBlock> OVERLOAD_CRYSTAL_CLUSTER =
             registerBlock("overload_crystal_cluster", () ->
-                    new OverloadCrystalClusterBlock(7, 3, CLUSTER_PROPERTIES.sound(SoundType.AMETHYST_CLUSTER).lightLevel(s -> 5)));
+                    new OverloadCrystalClusterBlock(7, 3, registeredProperties(CLUSTER_PROPERTIES.get()).sound(SoundType.AMETHYST_CLUSTER).lightLevel(s -> 5)));
 
     public static final DeferredBlock<OverloadedPatternProviderBlock<OverloadedPatternProviderBlockEntity>>
             OVERLOADED_PATTERN_PROVIDER =
@@ -242,112 +265,112 @@ public final class ModBlocks {
             registerBlock("pigmee_synthesis_station", PigmeeSynthesisStationBlock::new);
 
     public static final DeferredBlock<TianshuSupercomputerStructureBlock> TIANSHU_SUPERCOMPUTER_CASING =
-            registerBlock("tianshu_supercomputer_casing", () -> new TianshuSupercomputerStructureBlock(MATRIX_MACHINE_PROPERTIES));
+            registerBlock("tianshu_supercomputer_casing", () -> new TianshuSupercomputerStructureBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<TianshuSupercomputerStructureBlock> PHASE_CHANGE_COOLING_UNIT =
-            registerBlock("phase_change_cooling_unit", () -> new TianshuSupercomputerStructureBlock(MATRIX_MACHINE_PROPERTIES));
+            registerBlock("phase_change_cooling_unit", () -> new TianshuSupercomputerStructureBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<TianshuSupercomputerGlassBlock> TIANSHU_SUPERCOMPUTER_GLASS =
-            registerBlock("tianshu_supercomputer_glass", () -> new TianshuSupercomputerGlassBlock(MATRIX_GLASS_PROPERTIES));
+            registerBlock("tianshu_supercomputer_glass", () -> new TianshuSupercomputerGlassBlock(registeredProperties(MATRIX_GLASS_PROPERTIES.get())));
 
     public static final DeferredBlock<TianshuSupercomputerControllerBlock> TIANSHU_SUPERCOMPUTER_CONTROLLER =
             registerControllerBlock("tianshu_supercomputer_controller",
-                    () -> new TianshuSupercomputerControllerBlock(MATRIX_MACHINE_PROPERTIES));
+                    () -> new TianshuSupercomputerControllerBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<TianshuSupercomputerPortBlock> TIANSHU_SUPERCOMPUTER_PORT =
-            registerBlock("tianshu_supercomputer_port", () -> new TianshuSupercomputerPortBlock(MATRIX_MACHINE_PROPERTIES));
+            registerBlock("tianshu_supercomputer_port", () -> new TianshuSupercomputerPortBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> BASELINE_SUPERCOMPUTING_UNIT = registerBlock(
             "tianshu_baseline_main_core", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.MAIN_BASELINE));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.MAIN_BASELINE));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> QUANTUM_SUPERCOMPUTING_UNIT = registerBlock(
             "tianshu_quantum_main_core", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.MAIN_QUANTUM));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.MAIN_QUANTUM));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> OVERLOAD_SUPERCOMPUTING_UNIT = registerBlock(
             "tianshu_overload_main_core", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.MAIN_OVERLOAD));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.MAIN_OVERLOAD));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> MULTIDIMENSIONAL_SUPERCOMPUTING_UNIT = registerBlock(
             "tianshu_multidimensional_main_core", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.MAIN_MULTIDIMENSIONAL));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.MAIN_MULTIDIMENSIONAL));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> TIANSHU_BLANK_UNIT = registerBlock(
             "tianshu_blank_unit", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES,
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()),
                     TianshuMultiblockComponent.BLANK_UNIT,
                     MatrixMultiblockComponent.BLANK_UNIT));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> STORAGE_SUPERCOMPUTING_UNIT = registerBlock(
             "storage_supercomputing_unit", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.STORAGE_UNIT));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.STORAGE_UNIT));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> PARALLEL_SUPERCOMPUTING_UNIT = registerBlock(
             "parallel_supercomputing_unit", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES, TianshuMultiblockComponent.PARALLEL_UNIT));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), TianshuMultiblockComponent.PARALLEL_UNIT));
     public static final DeferredBlock<TianshuSupercomputingUnitBlock> TIANSHU_AMPLIFIER_UNIT = registerBlock(
             "tianshu_amplifier_unit", () -> new TianshuSupercomputingUnitBlock(
-                    MATRIX_MACHINE_PROPERTIES,
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()),
                     TianshuMultiblockComponent.AMPLIFIER_UNIT,
                     MatrixMultiblockComponent.AMPLIFIER_UNIT));
     public static final DeferredBlock<TianshuPatternStorageBlock> CLOSED_LOOP_PATTERN_STORAGE = registerBlock(
-            "closed_loop_pattern_storage", () -> new TianshuPatternStorageBlock(MATRIX_MACHINE_PROPERTIES));
+            "closed_loop_pattern_storage", () -> new TianshuPatternStorageBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
     public static final DeferredBlock<TianshuSeedStorageBlock> CLOSED_LOOP_SEED_STORAGE = registerBlock(
-            "closed_loop_seed_storage", () -> new TianshuSeedStorageBlock(MATRIX_MACHINE_PROPERTIES));
+            "closed_loop_seed_storage", () -> new TianshuSeedStorageBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<MatrixCasingBlock> MATTER_WARPING_MATRIX_CASING =
             registerBlock("matter_warping_matrix_casing", () -> new MatrixCasingBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.MATRIX_CASING));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.MATRIX_CASING));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_CONSTRAINT_FRAME =
             registerBlock("matter_warping_matrix_constraint_frame", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.MATRIX_CONSTRAINT_FRAME));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.MATRIX_CONSTRAINT_FRAME));
 
     public static final DeferredBlock<MatrixGlassBlock> MATTER_WARPING_MATRIX_GLASS =
             registerBlock("matter_warping_matrix_glass", () -> new MatrixGlassBlock(
-                    MATRIX_GLASS_PROPERTIES, MatrixMultiblockComponent.MATRIX_GLASS));
+                    registeredProperties(MATRIX_GLASS_PROPERTIES.get()), MatrixMultiblockComponent.MATRIX_GLASS));
 
     public static final DeferredBlock<MatrixControllerBlock> MATTER_WARPING_MATRIX_CONTROLLER =
             registerControllerBlock("matter_warping_matrix_controller",
-                    () -> new MatrixControllerBlock(MATRIX_MACHINE_PROPERTIES));
+                    () -> new MatrixControllerBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<MatrixPortBlock> MATTER_WARPING_MATRIX_PORT =
-            registerBlock("matter_warping_matrix_port", () -> new MatrixPortBlock(MATRIX_MACHINE_PROPERTIES));
+            registerBlock("matter_warping_matrix_port", () -> new MatrixPortBlock(registeredProperties(MATRIX_MACHINE_PROPERTIES.get())));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_STABLE_MAIN_CORE =
             registerBlock("matter_warping_matrix_stable_main_core", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.STABLE_MAIN_CORE));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.STABLE_MAIN_CORE));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_QUANTUM_MAIN_CORE =
             registerBlock("matter_warping_matrix_quantum_main_core", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.QUANTUM_MAIN_CORE));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.QUANTUM_MAIN_CORE));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_OVERLOAD_MAIN_CORE =
             registerBlock("matter_warping_matrix_overload_main_core", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.OVERLOAD_MAIN_CORE));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.OVERLOAD_MAIN_CORE));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_MULTIDIMENSIONAL_MAIN_CORE =
             registerBlock("matter_warping_matrix_multidimensional_main_core", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.MULTIDIMENSIONAL_MAIN_CORE));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.MULTIDIMENSIONAL_MAIN_CORE));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_THREAD_UNIT_T1 =
             registerBlock("matter_warping_matrix_thread_unit_t1", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.THREAD_UNIT_T1));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.THREAD_UNIT_T1));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_THREAD_UNIT_T2 =
             registerBlock("matter_warping_matrix_thread_unit_t2", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.THREAD_UNIT_T2));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.THREAD_UNIT_T2));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_THERMAL_CONTROL_UNIT_T1 =
             registerBlock("matter_warping_matrix_thermal_control_unit_t1", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.THERMAL_CONTROL_UNIT_T1));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.THERMAL_CONTROL_UNIT_T1));
 
     public static final DeferredBlock<MatrixFormedBlock> MATTER_WARPING_MATRIX_THERMAL_CONTROL_UNIT_T2 =
             registerBlock("matter_warping_matrix_thermal_control_unit_t2", () -> new MatrixFormedBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.THERMAL_CONTROL_UNIT_T2));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.THERMAL_CONTROL_UNIT_T2));
 
     public static final DeferredBlock<MatrixPatternStorageBlock> MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1 =
             registerBlock("matter_warping_matrix_pattern_storage_t1", () -> new MatrixPatternStorageBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.PATTERN_STORAGE_T1));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.PATTERN_STORAGE_T1));
 
     public static final DeferredBlock<MatrixPatternStorageBlock> MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2 =
             registerBlock("matter_warping_matrix_pattern_storage_t2", () -> new MatrixPatternStorageBlock(
-                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.PATTERN_STORAGE_T2));
+                    registeredProperties(MATRIX_MACHINE_PROPERTIES.get()), MatrixMultiblockComponent.PATTERN_STORAGE_T2));
 
     private ModBlocks() {
     }
@@ -358,9 +381,9 @@ public final class ModBlocks {
 
     private static <T extends Block> DeferredBlock<T> registerControllerBlock(
             String name, Supplier<T> blockFactory) {
-        var registered = BLOCKS.register(name, blockFactory);
-        ModItems.ITEMS.register(name,
-                () -> new BlockItem(registered.get(), new Item.Properties().stacksTo(1)));
+        var registered = registerExternalBlock(name, blockFactory);
+        ModItems.ITEMS.register(name, id -> new BlockItem(registered.get(),
+                ModItems.registeredProperties(new Item.Properties().stacksTo(1), id)));
         return registered;
     }
 
@@ -380,9 +403,12 @@ public final class ModBlocks {
             return null;
         }
 
-        var registered = BLOCKS.register(name, blockFactory);
+        var registered = registerExternalBlock(name, blockFactory);
         if (shouldRegisterItem.get()) {
-            ModItems.ITEMS.register(name, () -> new BlockItem(registered.get(), new Item.Properties()));
+            ModItems.ITEMS.register(name, id -> registered.get() instanceof TianshuSupercomputingUnitBlock unit
+                    ? new com.moakiee.ae2lt.item.TianshuSupercomputingUnitItem(unit,
+                            ModItems.registeredProperties(new Item.Properties(), id))
+                    : new BlockItem(registered.get(), ModItems.registeredProperties(new Item.Properties(), id)));
         }
         return registered;
     }

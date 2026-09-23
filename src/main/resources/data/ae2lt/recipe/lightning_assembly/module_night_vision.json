@@ -3,21 +3,15 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_module_base"
-      },
+      "ingredient": "ae2lt:overload_module_base",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "minecraft:glowstone_dust"
-      },
+      "ingredient": "minecraft:glowstone_dust",
       "count": 128
     },
     {
-      "ingredient": {
-        "item": "minecraft:golden_carrot"
-      },
+      "ingredient": "minecraft:golden_carrot",
       "count": 32
     }
   ],

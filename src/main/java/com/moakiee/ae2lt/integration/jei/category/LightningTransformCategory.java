@@ -21,7 +21,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -66,8 +66,13 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
     }
 
     @Override
-    public IDrawable getBackground() {
-        return background;
+    public int getWidth() {
+        return WIDTH;
+    }
+
+    @Override
+    public int getHeight() {
+        return HEIGHT;
     }
 
     @Override
@@ -117,18 +122,18 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
     public void draw(
             LightningTransformRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             double mouseX,
             double mouseY) {
         var font = Minecraft.getInstance().font;
         var label = Component.translatable("jei.ae2lt.lightning_transform.label");
         int labelX = (WIDTH - font.width(label)) / 2;
-        guiGraphics.drawString(font, label, labelX, LABEL_Y, TEXT_COLOR, false);
+        guiGraphics.text(font, label, labelX, LABEL_Y, TEXT_COLOR, false);
         lightningDisplay.draw(guiGraphics, CATALYST_X + 1, CATALYST_Y + 1);
     }
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
-        return Arrays.stream(ingredient.getItems())
+        return ingredient.items().map(holder -> new ItemStack(holder.value()))
                 .map(stack -> stack.copyWithCount(count))
                 .toList();
     }

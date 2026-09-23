@@ -11,7 +11,7 @@ import com.moakiee.ae2lt.device.DeviceKind;
 import com.moakiee.ae2lt.device.DeviceSlotType;
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 
-class RailgunRangeModuleTest {
+class RailgunRangeModuleTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
 
     @Test
     void installsAtMostTwoRangeModulesOnTheRailgun() {

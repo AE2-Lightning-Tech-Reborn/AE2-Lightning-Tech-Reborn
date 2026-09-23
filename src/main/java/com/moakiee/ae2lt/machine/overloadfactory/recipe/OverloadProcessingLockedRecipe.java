@@ -9,7 +9,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryInventory;
@@ -23,7 +23,7 @@ public final class OverloadProcessingLockedRecipe {
     private static final String TAG_PARALLEL = "Parallel";
     private static final String TAG_INPUTS = "InputConsumptions";
 
-    private final ResourceLocation recipeId;
+    private final Identifier recipeId;
     private final long totalEnergy;
     private final long totalLightningCost;
     private final LightningKey.Tier lightningTier;
@@ -31,7 +31,7 @@ public final class OverloadProcessingLockedRecipe {
     private final int[] inputConsumptions;
 
     public OverloadProcessingLockedRecipe(
-            ResourceLocation recipeId,
+            Identifier recipeId,
             long totalEnergy,
             long totalLightningCost,
             LightningKey.Tier lightningTier,
@@ -61,7 +61,7 @@ public final class OverloadProcessingLockedRecipe {
     public static OverloadProcessingLockedRecipe fromCandidate(OverloadProcessingRecipeCandidate candidate) {
         RecipeHolder<OverloadProcessingRecipe> holder = candidate.recipe();
         return new OverloadProcessingLockedRecipe(
-                holder.id(),
+                holder.id().identifier(),
                 candidate.totalEnergy(),
                 candidate.totalLightningCost(),
                 holder.value().lightningTier(),
@@ -69,7 +69,7 @@ public final class OverloadProcessingLockedRecipe {
                 candidate.match().inputConsumptions());
     }
 
-    public ResourceLocation recipeId() {
+    public Identifier recipeId() {
         return recipeId;
     }
 
@@ -110,14 +110,14 @@ public final class OverloadProcessingLockedRecipe {
 
     @Nullable
     public static OverloadProcessingLockedRecipe fromTag(CompoundTag tag, HolderLookup.Provider registries) {
-        if (!tag.contains(TAG_RECIPE_ID, Tag.TAG_STRING)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_RECIPE_ID, Tag.TAG_STRING)) {
             return null;
         }
 
-        long totalEnergy = tag.getLong(TAG_TOTAL_ENERGY);
-        long totalLightningCost = tag.getLong(TAG_TOTAL_LIGHTNING_COST);
-        int parallel = tag.getInt(TAG_PARALLEL);
-        int[] inputConsumptions = tag.getIntArray(TAG_INPUTS);
+        long totalEnergy = tag.getLongOr(TAG_TOTAL_ENERGY, 0L);
+        long totalLightningCost = tag.getLongOr(TAG_TOTAL_LIGHTNING_COST, 0L);
+        int parallel = tag.getIntOr(TAG_PARALLEL, 0);
+        int[] inputConsumptions = tag.getIntArray(TAG_INPUTS).orElseGet(() -> new int[0]);
         if (inputConsumptions.length != OverloadProcessingFactoryInventory.INPUT_SLOT_COUNT) {
             return null;
         }
@@ -125,11 +125,11 @@ public final class OverloadProcessingLockedRecipe {
             return null;
         }
 
-        LightningKey.Tier lightningTier = tag.contains(TAG_LIGHTNING_TIER, Tag.TAG_STRING)
-                ? LightningKey.Tier.fromSerializedName(tag.getString(TAG_LIGHTNING_TIER))
+        LightningKey.Tier lightningTier = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LIGHTNING_TIER, Tag.TAG_STRING)
+                ? LightningKey.Tier.fromSerializedName(tag.getStringOr(TAG_LIGHTNING_TIER, ""))
                 : OverloadProcessingRecipe.DEFAULT_LIGHTNING_TIER;
         return new OverloadProcessingLockedRecipe(
-                ResourceLocation.parse(tag.getString(TAG_RECIPE_ID)),
+                Identifier.parse(tag.getStringOr(TAG_RECIPE_ID, "")),
                 totalEnergy,
                 totalLightningCost,
                 lightningTier,

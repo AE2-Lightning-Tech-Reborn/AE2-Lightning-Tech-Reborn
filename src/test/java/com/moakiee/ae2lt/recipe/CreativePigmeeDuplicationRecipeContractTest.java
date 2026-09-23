@@ -70,8 +70,10 @@ class CreativePigmeeDuplicationRecipeContractTest {
                 .getAsJsonObject();
 
         assertTrue(registry.contains("CREATIVE_PIGMEE_DUPLICATION_SERIALIZER"));
-        assertTrue(registry.contains("new SimpleCraftingRecipeSerializer<>("
-                + "CreativePigmeeDuplicationRecipe::new)"));
+        assertTrue(registry.contains("new RecipeSerializer<>("));
+        assertTrue(registry.contains("CraftingBookCategory.CODEC.optionalFieldOf("));
+        assertTrue(registry.contains("StreamCodec.composite(CraftingBookCategory.STREAM_CODEC"));
+        assertTrue(registry.contains("CreativePigmeeDuplicationRecipe::new"));
         assertEquals("ae2lt:creative_pigmee_duplication", recipe.get("type").getAsString());
         assertFalse(Files.exists(Path.of(
                 "src/main/resources/data/ae2lt/recipe/creative_pigmee_fumo.json")));

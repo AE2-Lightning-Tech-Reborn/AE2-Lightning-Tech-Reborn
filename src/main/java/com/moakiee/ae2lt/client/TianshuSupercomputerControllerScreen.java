@@ -6,13 +6,13 @@ import com.moakiee.ae2lt.network.TianshuControllerActionPacket;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.widgets.TabButton;
 import appeng.core.network.serverbound.SwitchGuisPacket;
 import appeng.menu.implementations.PriorityMenu;
@@ -50,7 +50,7 @@ public class TianshuSupercomputerControllerScreen
         var priority = new TabButton(
                 Icon.PRIORITY,
                 cpuPriorityLabel,
-                ignored -> PacketDistributor.sendToServer(
+                ignored -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                         SwitchGuisPacket.openSubMenu(PriorityMenu.TYPE)));
         priority.setTooltip(Tooltip.create(cpuPriorityLabel));
         priority.setSize(20, 20);
@@ -59,12 +59,12 @@ public class TianshuSupercomputerControllerScreen
     }
 
     private void sendAction(TianshuControllerActionPacket.Action action) {
-        PacketDistributor.sendToServer(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                 new TianshuControllerActionPacket(menu.token(), menu.getBlockPos(), action));
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         drawTitle(graphics);
 
         if (!menu.isFormed()) {

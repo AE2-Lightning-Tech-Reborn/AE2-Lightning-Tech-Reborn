@@ -113,10 +113,10 @@ public final class ResistanceSubmodule extends AbstractCelestweaveArmorSubmodule
 
     private boolean isHitFeedbackEnabled(ItemStack armor) {
         var options = getOptions(armor);
-        if (!options.contains(HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)) {
             return true;
         }
-        return options.getBoolean(HIT_FEEDBACK_CONFIG_KEY);
+        return options.getBooleanOr(HIT_FEEDBACK_CONFIG_KEY, false);
     }
 
     private static ResistanceSubmodule submoduleForStage(String stage) {

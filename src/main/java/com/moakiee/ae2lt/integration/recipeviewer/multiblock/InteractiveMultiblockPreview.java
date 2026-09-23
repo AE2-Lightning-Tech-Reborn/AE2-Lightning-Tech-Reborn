@@ -7,18 +7,12 @@ import java.util.Optional;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -26,9 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
-import net.neoforged.neoforge.client.model.data.ModelData;
 
-import appeng.client.render.overlay.OverlayRenderType;
 
 /** Viewer-neutral, interactive orthographic 3D multiblock preview. */
 public final class InteractiveMultiblockPreview {
@@ -122,7 +114,7 @@ public final class InteractiveMultiblockPreview {
         this.baseScale = Math.min(widthScale, heightScale);
     }
 
-    public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void drawWidget(GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
         Minecraft minecraft = Minecraft.getInstance();
         Font font = minecraft.font;
 
@@ -137,13 +129,13 @@ public final class InteractiveMultiblockPreview {
         drawFooter(guiGraphics, font);
     }
 
-    private void drawHeader(GuiGraphics guiGraphics, Font font) {
+    private void drawHeader(GuiGraphicsExtractor guiGraphics, Font font) {
         drawTrimmed(guiGraphics, font, recipe.title(), 2, NAME_Y, width - 70, TEXT_COLOR);
         String dimensions = recipe.sizeX() + "x" + recipe.sizeY() + "x" + recipe.sizeZ();
-        guiGraphics.drawString(font, dimensions, width - font.width(dimensions) - 2, NAME_Y, MUTED_TEXT_COLOR, false);
+        guiGraphics.text(font, dimensions, width - font.width(dimensions) - 2, NAME_Y, MUTED_TEXT_COLOR, false);
     }
 
-    private void drawToolbar(GuiGraphics guiGraphics, Font font, double mouseX, double mouseY) {
+    private void drawToolbar(GuiGraphicsExtractor guiGraphics, Font font, double mouseX, double mouseY) {
         drawControlButton(
                 guiGraphics,
                 resetButton,
@@ -211,7 +203,7 @@ public final class InteractiveMultiblockPreview {
     }
 
     private void drawControlButton(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             UiRect rect,
             MultiblockPreviewControls.PixelIcon icon,
             boolean pressed,
@@ -232,9 +224,9 @@ public final class InteractiveMultiblockPreview {
                 rect.contains(mouseX, mouseY));
     }
 
-    private void drawViewport(GuiGraphics guiGraphics) {
+    private void drawViewport(GuiGraphicsExtractor guiGraphics) {
         guiGraphics.fill(VIEW_X, VIEW_Y, VIEW_X + viewWidth, VIEW_Y + viewHeight, VIEW_BACKGROUND);
-        guiGraphics.renderOutline(VIEW_X, VIEW_Y, viewWidth, viewHeight, BORDER_COLOR);
+        guiGraphics.outline(VIEW_X, VIEW_Y, viewWidth, viewHeight, BORDER_COLOR);
         enableLocalScissor(
                 guiGraphics,
                 VIEW_X + 1,
@@ -242,102 +234,28 @@ public final class InteractiveMultiblockPreview {
                 VIEW_X + viewWidth - 1,
                 VIEW_Y + viewHeight - 1);
 
-        Minecraft client = Minecraft.getInstance();
-        var bufferSource = client.renderBuffers().bufferSource();
-        var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = guiGraphics.pose();
-        float scale = renderScale();
-
-        pose.pushPose();
-        pose.translate(viewCenterX() + panX, viewCenterY() + panY, MODEL_Z);
-        pose.scale(scale, -scale, scale * DEPTH_SCALE_FACTOR);
-        pose.mulPose(Axis.XP.rotationDegrees(pitch));
-        pose.mulPose(Axis.YP.rotationDegrees(yaw));
-        pose.translate(-recipe.sizeX() / 2.0F, -recipe.sizeY() / 2.0F, -recipe.sizeZ() / 2.0F);
-
+        var blocks = new ArrayList<MultiblockPreviewPip.Block>();
         for (var cell : recipe.cells()) {
-            if (!isVisible(cell) || cell.state().getRenderShape() == RenderShape.ENTITYBLOCK_ANIMATED) {
+            if (!isVisible(cell) || cell.state().getRenderShape() != RenderShape.MODEL) {
                 continue;
             }
-            pose.pushPose();
-            pose.translate(cell.localPos().getX(), cell.localPos().getY(), cell.localPos().getZ());
-            blockRenderer.renderSingleBlock(
-                    cell.state(),
-                    pose,
-                    bufferSource,
-                    LightTexture.FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY,
-                    ModelData.EMPTY,
-                    null);
-            pose.popPose();
+            int outline = cell == hoveredCell ? 0xBEFFDC00
+                    : cell == selectedCell ? 0x84FFDC00 : 0;
+            blocks.add(new MultiblockPreviewPip.Block(
+                    cell.state(), cell.localPos().getX(), cell.localPos().getY(),
+                    cell.localPos().getZ(), outline));
         }
-        bufferSource.endBatch();
-
-        if (selectedCell != null && selectedCell != hoveredCell && isVisible(selectedCell)) {
-            renderGlowCube(pose, bufferSource, selectedCell, SELECTED_GLOW_ALPHA);
-        }
-        if (hoveredCell != null && isVisible(hoveredCell)) {
-            renderGlowCube(pose, bufferSource, hoveredCell, HOVERED_GLOW_ALPHA);
-        }
-        pose.popPose();
-        bufferSource.endBatch(OverlayRenderType.getBlockHilightFace());
-        Lighting.setupFor3DItems();
+        MultiblockPreviewPip.submit(guiGraphics,
+                VIEW_X + 1, VIEW_Y + 1, viewWidth - 2, viewHeight - 2,
+                renderScale(), pitch, yaw, panX, panY,
+                recipe.sizeX() / 2.0F, recipe.sizeY() / 2.0F, recipe.sizeZ() / 2.0F,
+                DEPTH_SCALE_FACTOR, blocks);
         guiGraphics.disableScissor();
     }
 
-    private static void renderGlowCube(
-            PoseStack pose,
-            MultiBufferSource bufferSource,
-            MultiblockStructureRecipe.Cell cell,
-            int alpha) {
-        VertexConsumer consumer = bufferSource.getBuffer(OverlayRenderType.getBlockHilightFace());
-        pose.pushPose();
-        pose.translate(
-                cell.localPos().getX(),
-                cell.localPos().getY(),
-                cell.localPos().getZ());
-
-        Matrix4f matrix = pose.last().pose();
-        float low = -0.025F;
-        float high = 1.025F;
-
-        glowQuad(consumer, matrix, alpha,
-                low, low, low, high, low, low, high, low, high, low, low, high, 0.0F, -1.0F, 0.0F);
-        glowQuad(consumer, matrix, alpha,
-                low, high, high, high, high, high, high, high, low, low, high, low, 0.0F, 1.0F, 0.0F);
-        glowQuad(consumer, matrix, alpha,
-                low, low, low, low, high, low, high, high, low, high, low, low, 0.0F, 0.0F, -1.0F);
-        glowQuad(consumer, matrix, alpha,
-                high, low, high, high, high, high, low, high, high, low, low, high, 0.0F, 0.0F, 1.0F);
-        glowQuad(consumer, matrix, alpha,
-                low, low, high, low, high, high, low, high, low, low, low, low, -1.0F, 0.0F, 0.0F);
-        glowQuad(consumer, matrix, alpha,
-                high, low, low, high, high, low, high, high, high, high, low, high, 1.0F, 0.0F, 0.0F);
-        pose.popPose();
-    }
-
-    private static void glowQuad(
-            VertexConsumer consumer,
-            Matrix4f matrix,
-            int alpha,
-            float x1, float y1, float z1,
-            float x2, float y2, float z2,
-            float x3, float y3, float z3,
-            float x4, float y4, float z4,
-            float normalX, float normalY, float normalZ) {
-        consumer.addVertex(matrix, x1, y1, z1).setColor(255, 220, 0, alpha)
-                .setNormal(normalX, normalY, normalZ);
-        consumer.addVertex(matrix, x2, y2, z2).setColor(255, 220, 0, alpha)
-                .setNormal(normalX, normalY, normalZ);
-        consumer.addVertex(matrix, x3, y3, z3).setColor(255, 220, 0, alpha)
-                .setNormal(normalX, normalY, normalZ);
-        consumer.addVertex(matrix, x4, y4, z4).setColor(255, 220, 0, alpha)
-                .setNormal(normalX, normalY, normalZ);
-    }
-
-    private void drawPanel(GuiGraphics guiGraphics, Font font, double mouseX, double mouseY) {
+    private void drawPanel(GuiGraphicsExtractor guiGraphics, Font font, double mouseX, double mouseY) {
         guiGraphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + panelHeight, PANEL_BACKGROUND);
-        guiGraphics.renderOutline(panelX, panelY, PANEL_WIDTH, panelHeight, BORDER_COLOR);
+        guiGraphics.outline(panelX, panelY, PANEL_WIDTH, panelHeight, BORDER_COLOR);
 
         UiRect materialsTab = materialsTabRect();
         UiRect detailsTab = detailsTabRect();
@@ -369,7 +287,7 @@ public final class InteractiveMultiblockPreview {
         }
     }
 
-    private void drawMaterials(GuiGraphics guiGraphics, Font font, double mouseX, double mouseY) {
+    private void drawMaterials(GuiGraphicsExtractor guiGraphics, Font font, double mouseX, double mouseY) {
         int contentTop = panelContentTop();
         int contentBottom = panelContentBottom();
         enableLocalScissor(guiGraphics, panelX + 1, contentTop, panelX + PANEL_WIDTH - 1, contentBottom);
@@ -415,7 +333,7 @@ public final class InteractiveMultiblockPreview {
         drawMaterialScrollbar(guiGraphics);
     }
 
-    private void drawMaterialScrollbar(GuiGraphics guiGraphics) {
+    private void drawMaterialScrollbar(GuiGraphicsExtractor guiGraphics) {
         int maxScroll = maxMaterialScroll();
         if (maxScroll <= 0) {
             return;
@@ -431,7 +349,7 @@ public final class InteractiveMultiblockPreview {
         guiGraphics.fill(trackX, thumbY, trackX + 2, thumbY + thumbHeight, 0xFFB0B0B0);
     }
 
-    private void drawDetails(GuiGraphics guiGraphics, Font font) {
+    private void drawDetails(GuiGraphicsExtractor guiGraphics, Font font) {
         int contentTop = panelContentTop();
         if (selectedCell == null) {
             List<net.minecraft.util.FormattedCharSequence> lines = font.split(
@@ -439,7 +357,7 @@ public final class InteractiveMultiblockPreview {
                     PANEL_WIDTH - 10);
             int y = contentTop + 5;
             for (var line : lines) {
-                guiGraphics.drawString(font, line, panelX + 5, y, MUTED_TEXT_COLOR, false);
+                guiGraphics.text(font, line, panelX + 5, y, MUTED_TEXT_COLOR, false);
                 y += font.lineHeight + 2;
             }
             return;
@@ -459,7 +377,7 @@ public final class InteractiveMultiblockPreview {
                         selectedCell.localPos().getY(),
                         selectedCell.localPos().getZ()),
                 panelX + 4, contentTop + 35, PANEL_WIDTH - 8, MUTED_TEXT_COLOR);
-        guiGraphics.drawString(
+        guiGraphics.text(
                 font,
                 Component.translatable("jei.ae2lt.multiblock.replacements"),
                 panelX + 4,
@@ -470,7 +388,7 @@ public final class InteractiveMultiblockPreview {
         List<Block> alternatives = visibleAlternatives();
         boolean allowsAir = selectedCell.alternatives().contains(Blocks.AIR);
         if (alternatives.size() == 1 && !allowsAir) {
-            guiGraphics.drawString(
+            guiGraphics.text(
                     font,
                     Component.translatable("jei.ae2lt.multiblock.fixed"),
                     panelX + 4,
@@ -486,14 +404,14 @@ public final class InteractiveMultiblockPreview {
             if (allowsAir) {
                 UiRect airRect = airAlternativeRect();
                 guiGraphics.fill(airRect.x(), airRect.y(), airRect.right(), airRect.bottom(), BUTTON_COLOR);
-                guiGraphics.renderOutline(
+                guiGraphics.outline(
                         airRect.x(),
                         airRect.y(),
                         airRect.width(),
                         airRect.height(),
                         BORDER_COLOR);
                 String airMarker = "X";
-                guiGraphics.drawString(
+                guiGraphics.text(
                         font,
                         airMarker,
                         airRect.x() + (airRect.width() - font.width(airMarker)) / 2,
@@ -510,7 +428,7 @@ public final class InteractiveMultiblockPreview {
         }
     }
 
-    private void drawFooter(GuiGraphics guiGraphics, Font font) {
+    private void drawFooter(GuiGraphicsExtractor guiGraphics, Font font) {
         Component controls = Component.translatable("jei.ae2lt.multiblock.controls");
         drawCenteredTrimmed(
                 guiGraphics,
@@ -631,7 +549,7 @@ public final class InteractiveMultiblockPreview {
         if (!inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)) {
             return false;
         }
-        if (button == 2 || (button == 0 && Screen.hasShiftDown())) {
+        if (button == 2 || (button == 0 && net.minecraft.client.Minecraft.getInstance().hasShiftDown())) {
             panX += (float) dragX;
             panY += (float) dragY;
             clampPan();
@@ -918,7 +836,7 @@ public final class InteractiveMultiblockPreview {
     }
 
     private static void drawTrimmed(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             Font font,
             Component text,
             int x,
@@ -930,11 +848,11 @@ public final class InteractiveMultiblockPreview {
             String ellipsis = "...";
             value = font.plainSubstrByWidth(value, Math.max(0, maxWidth - font.width(ellipsis))) + ellipsis;
         }
-        guiGraphics.drawString(font, value, x, y, color, false);
+        guiGraphics.text(font, value, x, y, color, false);
     }
 
     private static void drawCenteredTrimmed(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             Font font,
             Component text,
             UiRect rect,
@@ -946,28 +864,21 @@ public final class InteractiveMultiblockPreview {
         }
         int x = rect.x() + (rect.width() - font.width(value)) / 2;
         int y = rect.y() + (rect.height() - font.lineHeight) / 2 + 1;
-        guiGraphics.drawString(font, value, x, y, color, false);
+        guiGraphics.text(font, value, x, y, color, false);
     }
 
     private static boolean inside(int x, int y, int width, int height, double mouseX, double mouseY) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
-    /** GuiGraphics scissor coordinates are absolute and do not follow PoseStack translations. */
+    /** 26.1 transforms scissor coordinates with the current GUI pose. */
     private static void enableLocalScissor(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int left,
             int top,
             int right,
             int bottom) {
-        Matrix4f pose = guiGraphics.pose().last().pose();
-        Vector3f first = pose.transformPosition(new Vector3f(left, top, 0.0F));
-        Vector3f second = pose.transformPosition(new Vector3f(right, bottom, 0.0F));
-        int screenLeft = (int) Math.floor(Math.min(first.x, second.x));
-        int screenTop = (int) Math.floor(Math.min(first.y, second.y));
-        int screenRight = (int) Math.ceil(Math.max(first.x, second.x));
-        int screenBottom = (int) Math.ceil(Math.max(first.y, second.y));
-        guiGraphics.enableScissor(screenLeft, screenTop, screenRight, screenBottom);
+        guiGraphics.enableScissor(left, top, right, bottom);
     }
 
     private static float wrapDegrees(float degrees) {
@@ -1043,11 +954,11 @@ public final class InteractiveMultiblockPreview {
 
         int alternativeSlotCount();
 
-        void drawMaterialSlot(GuiGraphics guiGraphics, int index, int x, int y);
+        void drawMaterialSlot(GuiGraphicsExtractor guiGraphics, int index, int x, int y);
 
-        void drawSelectedBlockSlot(GuiGraphics guiGraphics, Block block, int x, int y);
+        void drawSelectedBlockSlot(GuiGraphicsExtractor guiGraphics, Block block, int x, int y);
 
-        void drawAlternativeSlot(GuiGraphics guiGraphics, int index, Block block, int x, int y);
+        void drawAlternativeSlot(GuiGraphicsExtractor guiGraphics, int index, Block block, int x, int y);
     }
 
 }

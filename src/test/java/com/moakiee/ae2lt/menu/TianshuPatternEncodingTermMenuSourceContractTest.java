@@ -75,7 +75,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String clientPath = menu.substring(setMode, alignMethod);
         int nativeAction = clientPath.indexOf("super.setMode(mode);");
         int tianshuAction = clientPath.indexOf(
-                "sendClientAction(\"setTianshuMode\", extended)");
+                "sendClientAction(new appeng.menu.guisync.ClientActionKey<>(\"setTianshuMode\"), extended)");
         assertTrue(nativeAction >= 0 && tianshuAction > nativeAction);
 
         int alignEnd = menu.indexOf("private void applyTianshuModeState(", alignMethod);
@@ -218,7 +218,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         assertFalse(menu.contains("setClosedLoopOutputRole"));
         assertFalse(config.contains("cycleOutputRole"));
         assertTrue(config.contains("outputRoles[visible].active = false"));
-        assertTrue(menu.contains("registerClientAction(\"cycleClosedLoopOutput\""));
+        assertTrue(menu.contains("registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>(\"cycleClosedLoopOutput\")"));
         assertTrue(menu.contains("rotated[i] = next.copy()"));
         assertTrue(menu.contains("snapshotClosedLoopOutputKeys()"));
         assertTrue(menu.contains("orderClosedLoopOutputs("));

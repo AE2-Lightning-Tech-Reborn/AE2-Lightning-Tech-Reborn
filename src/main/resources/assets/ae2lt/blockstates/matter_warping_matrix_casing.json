@@ -4,7 +4,14 @@
       "model": "ae2lt:block/matter_warping_matrix_casing"
     },
     "formed=true": {
-      "model": "ae2lt:block/matter_warping_matrix_casing_formed"
+      "type": "ae2lt:connected_texture",
+      "connection": "ae2lt:matrix_formed_same_block",
+      "render_type": "minecraft:solid",
+      "ambientocclusion": true,
+      "gui3d": true,
+      "uses_block_light": true,
+      "base": "ae2lt:block/matter_warping_matrix/matter_warping_matrix_casing_formed",
+      "ctm": "ae2lt:block/matter_warping_matrix/matter_warping_matrix_casing_ctm"
     }
   }
 }

@@ -1,8 +1,8 @@
 package com.moakiee.ae2lt.client.railgun;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -26,9 +26,9 @@ import com.moakiee.ae2lt.registry.ModDataComponents;
 @EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class RailgunHudRenderer {
 
-    private static final ResourceLocation EMPTY_TEX = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier EMPTY_TEX = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/hud/lightning_charging_bar.png");
-    private static final ResourceLocation FULL_TEX = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier FULL_TEX = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/hud/lightning_charging_bar_full.png");
 
     private static final int ICON_W = 13;
@@ -52,14 +52,14 @@ public final class RailgunHudRenderer {
         int t3 = RailgunDefaults.CHARGE_TICKS_TIER3;
         float progress = Math.min(1.0f, (float) ticks / (float) t3);
 
-        GuiGraphics gfx = e.getGuiGraphics();
+        GuiGraphicsExtractor gfx = e.getGuiGraphics();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
         int x = w / 2 + CROSSHAIR_OFFSET_X;
         int y = (h - ICON_H) / 2;
 
         // Empty bolt as the always-visible background.
-        gfx.blit(EMPTY_TEX, x, y, 0, 0, ICON_W, ICON_H, ICON_W, ICON_H);
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, EMPTY_TEX, x, y, 0, 0, ICON_W, ICON_H, ICON_W, ICON_H);
 
         // Reveal the lit bolt from the bottom up by sampling the matching
         // bottom slice of the full texture; this keeps pixel alignment exact
@@ -67,7 +67,7 @@ public final class RailgunHudRenderer {
         int filledH = Math.round(ICON_H * progress);
         if (filledH > 0) {
             int emptyTop = ICON_H - filledH;
-            gfx.blit(FULL_TEX, x, y + emptyTop, 0, emptyTop, ICON_W, filledH, ICON_W, ICON_H);
+            gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, FULL_TEX, x, y + emptyTop, 0, emptyTop, ICON_W, filledH, ICON_W, ICON_H);
         }
 
         ensureUserStillUsing(mc.player, stack);

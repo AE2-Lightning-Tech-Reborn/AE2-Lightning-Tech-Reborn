@@ -21,10 +21,10 @@ public abstract class AbstractCelestweaveArmorSubmodule implements CelestweaveAr
 
     protected CompoundTag getOptions(ItemStack armor) {
         var data = getData(armor);
-        if (!data.contains(OPTIONS_TAG, CompoundTag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, OPTIONS_TAG, CompoundTag.TAG_COMPOUND)) {
             return new CompoundTag();
         }
-        return data.getCompound(OPTIONS_TAG).copy();
+        return data.getCompoundOrEmpty(OPTIONS_TAG).copy();
     }
 
     protected void setOptions(ItemStack armor, CompoundTag options) {
@@ -41,7 +41,7 @@ public abstract class AbstractCelestweaveArmorSubmodule implements CelestweaveAr
     public List<CelestweaveArmorSubmoduleConfig> getConfigs(ItemStack armor) {
         var configs = new ArrayList<CelestweaveArmorSubmoduleConfig>();
         var options = getOptions(armor);
-        options.getAllKeys().stream().sorted().forEach(key -> {
+        options.keySet().stream().sorted().forEach(key -> {
             var tag = options.get(key);
             if (tag != null) {
                 configs.add(defaultConfig(key, tag));
@@ -176,28 +176,28 @@ public abstract class AbstractCelestweaveArmorSubmodule implements CelestweaveAr
 
     protected static boolean isBooleanOption(Tag tag) {
         return tag instanceof ByteTag byteTag
-                && (byteTag.getAsByte() == 0 || byteTag.getAsByte() == 1);
+                && (byteTag.byteValue() == 0 || byteTag.byteValue() == 1);
     }
 
     protected static Component formatOptionValue(Tag tag) {
         if (isBooleanOption(tag)) {
-            return Component.translatable(((ByteTag) tag).getAsByte() != 0
+            return Component.translatable(((ByteTag) tag).byteValue() != 0
                     ? "ae2lt.celestweave.screen.flag.yes"
                     : "ae2lt.celestweave.screen.flag.no");
         }
         if (tag instanceof NumericTag numericTag) {
-            return Component.literal(String.valueOf(numericTag.getAsNumber()));
+            return Component.literal(String.valueOf(numericTag.toString()));
         }
         if (tag instanceof StringTag stringTag) {
-            return Component.literal(stringTag.getAsString());
+            return Component.literal(stringTag.value());
         }
         if (tag instanceof ListTag listTag) {
             return Component.literal("[" + listTag.size() + "]");
         }
         if (tag instanceof CompoundTag compoundTag) {
-            return Component.literal("{" + compoundTag.getAllKeys().size() + "}");
+            return Component.literal("{" + compoundTag.keySet().size() + "}");
         }
-        return Component.literal(tag.getAsString());
+        return Component.literal(tag.asString().orElse(""));
     }
 
     protected static String formatOptionLabel(String key) {
@@ -241,9 +241,9 @@ public abstract class AbstractCelestweaveArmorSubmodule implements CelestweaveAr
         boolean hasFalse = false;
         boolean hasTrue = false;
         for (var choice : choices) {
-            if (choice.value() instanceof ByteTag byteTag && byteTag.getAsByte() == 0) {
+            if (choice.value() instanceof ByteTag byteTag && byteTag.byteValue() == 0) {
                 hasFalse = true;
-            } else if (choice.value() instanceof ByteTag byteTag && byteTag.getAsByte() == 1) {
+            } else if (choice.value() instanceof ByteTag byteTag && byteTag.byteValue() == 1) {
                 hasTrue = true;
             }
         }

@@ -4,12 +4,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HeadedModel;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.VillagerRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.ZombieVillager;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import top.theillusivec4.curios.api.SlotContext;
@@ -38,19 +41,17 @@ final class PigmeeCuriosClientBridge {
 
     private static final class PigmeeHeadRenderer implements ICurioRenderer {
         @Override
-        public <T extends LivingEntity, M extends EntityModel<T>> void render(
+        public <S extends LivingEntityRenderState, M extends EntityModel<? super S>> void render(
                 ItemStack stack,
                 SlotContext slotContext,
                 PoseStack poseStack,
-                RenderLayerParent<T, M> renderLayerParent,
-                MultiBufferSource bufferSource,
+                SubmitNodeCollector collector,
                 int packedLight,
-                float limbSwing,
-                float limbSwingAmount,
-                float partialTick,
-                float ageInTicks,
-                float netHeadYaw,
-                float headPitch) {
+                S renderState,
+                RenderLayerParent<S, M> renderLayerParent,
+                EntityRendererProvider.Context context,
+                float yRot,
+                float xRot) {
             if (!(renderLayerParent.getModel() instanceof HeadedModel headedModel)) {
                 return;
             }
@@ -65,7 +66,8 @@ final class PigmeeCuriosClientBridge {
 
             headedModel.getHead().translateAndRotate(poseStack);
             boolean villagerHead = wearer instanceof Villager || wearer instanceof ZombieVillager;
-            CustomHeadLayer.translateToHead(poseStack, villagerHead);
+            CustomHeadLayer.translateToHead(poseStack, villagerHead
+                    ? VillagerRenderer.CUSTOM_HEAD_TRANSFORMS : CustomHeadLayer.Transforms.DEFAULT);
             Minecraft.getInstance()
                     .getEntityRenderDispatcher()
                     .getItemInHandRenderer()
@@ -73,9 +75,8 @@ final class PigmeeCuriosClientBridge {
                             wearer,
                             stack,
                             ItemDisplayContext.HEAD,
-                            false,
                             poseStack,
-                            bufferSource,
+                            collector,
                             packedLight);
             poseStack.popPose();
         }

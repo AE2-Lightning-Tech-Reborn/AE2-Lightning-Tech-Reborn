@@ -68,10 +68,10 @@ public final class SaturationSubmodule extends AbstractCelestweaveArmorSubmodule
             return 0;
         }
         var data = CelestweaveArmorState.getSubmoduleData(armor, INSTANCE);
-        if (!data.contains(TAG_READY_AT_TICK, CompoundTag.TAG_LONG)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_READY_AT_TICK, CompoundTag.TAG_LONG)) {
             return 0;
         }
-        long remaining = data.getLong(TAG_READY_AT_TICK) - player.level().getGameTime();
+        long remaining = data.getLongOr(TAG_READY_AT_TICK, 0L) - player.level().getGameTime();
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, remaining));
     }
 

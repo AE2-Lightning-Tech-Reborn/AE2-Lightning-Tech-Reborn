@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.integration.recipeviewer.multiblock;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /** Code-drawn controls shared by recipe-viewer multiblock previews. */
@@ -22,7 +22,7 @@ final class MultiblockPreviewControls {
     private static final int INSET_FACE_COLOR = 0xFF303030;
 
     static void drawIconButton(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int x,
             int y,
             int width,
@@ -40,7 +40,7 @@ final class MultiblockPreviewControls {
     }
 
     static void drawTextButton(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             Font font,
             int x,
             int y,
@@ -58,11 +58,11 @@ final class MultiblockPreviewControls {
         int textX = x + (width - font.width(value)) / 2;
         int textY = y + (height - font.lineHeight) / 2 + 1;
         int color = hovered ? HOVER_ICON_COLOR : ICON_COLOR;
-        guiGraphics.drawString(font, value, textX, textY, color, false);
+        guiGraphics.text(font, value, textX, textY, color, false);
     }
 
     static void drawInsetLabel(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             Font font,
             int x,
             int y,
@@ -85,11 +85,11 @@ final class MultiblockPreviewControls {
         }
         int textX = x + (width - font.width(value)) / 2;
         int textY = y + (height - font.lineHeight) / 2 + 1;
-        guiGraphics.drawString(font, value, textX, textY, ICON_COLOR, false);
+        guiGraphics.text(font, value, textX, textY, ICON_COLOR, false);
     }
 
     private static void drawButtonFrame(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int x,
             int y,
             int width,
@@ -117,7 +117,7 @@ final class MultiblockPreviewControls {
     }
 
     private static void drawPixelIcon(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int x,
             int y,
             int width,
@@ -130,8 +130,8 @@ final class MultiblockPreviewControls {
         double startX = x + (width - icon.inkWidth) / 2.0D - icon.minX + pressOffset;
         double startY = y + (height - icon.inkHeight) / 2.0D - icon.minY + pressOffset;
         var pose = guiGraphics.pose();
-        pose.pushPose();
-        pose.translate(startX, startY, 0.0D);
+        pose.pushMatrix();
+        pose.translate((float) startX, (float) startY);
 
         for (int row = 0; row < pixels.length; row++) {
             String line = pixels[row];
@@ -154,7 +154,7 @@ final class MultiblockPreviewControls {
                 column = runEnd;
             }
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 
     enum PixelIcon {

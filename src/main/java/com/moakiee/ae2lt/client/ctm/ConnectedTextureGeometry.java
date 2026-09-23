@@ -1,52 +1,59 @@
 package com.moakiee.ae2lt.client.ctm;
 
-import java.util.function.Function;
-
-import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.client.renderer.block.model.ItemOverrides;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.Material;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.resources.model.ModelBaker;
-import net.minecraft.client.resources.model.ModelState;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.client.ChunkRenderTypeSet;
-import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
-import net.neoforged.neoforge.client.model.geometry.IUnbakedGeometry;
+import net.minecraft.client.resources.model.ResolvableModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.model.block.CustomUnbakedBlockStateModel;
+import org.jspecify.annotations.Nullable;
 
-/**
- * Unbaked geometry for {@code ae2lt:connected_texture}. Resolves the {@code base}
- * and {@code ctm} sprites from the model's {@code textures} block (so they are
- * stitched into the block atlas automatically) and binds the connection predicate.
- */
-public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextureGeometry> {
+/** Unbaked 26.1 blockstate model for the original AE2LT connected textures. */
+public record ConnectedTextureGeometry(
+        Identifier connection,
+        Identifier base,
+        Identifier ctm,
+        @Nullable Identifier overlay,
+        String renderType,
+        boolean ambientOcclusion,
+        boolean gui3d,
+        boolean usesBlockLight) implements CustomUnbakedBlockStateModel {
+    public static final MapCodec<ConnectedTextureGeometry> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Identifier.CODEC.optionalFieldOf("connection", Identifier.fromNamespaceAndPath("ae2lt", "same_block"))
+                    .forGetter(ConnectedTextureGeometry::connection),
+            Identifier.CODEC.fieldOf("base").forGetter(ConnectedTextureGeometry::base),
+            Identifier.CODEC.fieldOf("ctm").forGetter(ConnectedTextureGeometry::ctm),
+            Identifier.CODEC.optionalFieldOf("overlay").forGetter(model -> java.util.Optional.ofNullable(model.overlay())),
+            Codec.STRING.optionalFieldOf("render_type", "minecraft:translucent")
+                    .forGetter(ConnectedTextureGeometry::renderType),
+            Codec.BOOL.optionalFieldOf("ambientocclusion", true)
+                    .forGetter(ConnectedTextureGeometry::ambientOcclusion),
+            Codec.BOOL.optionalFieldOf("gui3d", true).forGetter(ConnectedTextureGeometry::gui3d),
+            Codec.BOOL.optionalFieldOf("uses_block_light", true).forGetter(ConnectedTextureGeometry::usesBlockLight))
+            .apply(instance, (connection, base, ctm, overlay, renderType, ambientOcclusion, gui3d, usesBlockLight) ->
+                    new ConnectedTextureGeometry(connection, base, ctm, overlay.orElse(null), renderType,
+                            ambientOcclusion, gui3d, usesBlockLight)));
 
-    private final ResourceLocation connectionId;
-    private final ChunkRenderTypeSet renderTypes;
-    private final boolean ambientOcclusion;
-    private final boolean gui3d;
-    private final boolean usesBlockLight;
-
-    public ConnectedTextureGeometry(ResourceLocation connectionId, ChunkRenderTypeSet renderTypes,
-            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
-        this.connectionId = connectionId;
-        this.renderTypes = renderTypes;
-        this.ambientOcclusion = ambientOcclusion;
-        this.gui3d = gui3d;
-        this.usesBlockLight = usesBlockLight;
+    @Override
+    public void resolveDependencies(ResolvableModel.Resolver resolver) {
     }
 
     @Override
-    public BakedModel bake(IGeometryBakingContext context, ModelBaker baker,
-            Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState, ItemOverrides overrides) {
-        TextureAtlasSprite base = spriteGetter.apply(context.getMaterial("base"));
-        TextureAtlasSprite ctm = spriteGetter.apply(context.getMaterial("ctm"));
-        @Nullable TextureAtlasSprite overlay = context.hasMaterial("overlay")
-                ? spriteGetter.apply(context.getMaterial("overlay"))
-                : null;
-        ConnectionPredicate predicate = ConnectionPredicates.get(connectionId);
-        return new ConnectedTextureBakedModel(base, ctm, overlay, predicate, renderTypes,
-                ambientOcclusion, gui3d, usesBlockLight);
+    public BlockStateModel bake(ModelBaker baker) {
+        var materials = baker.materials();
+        var baseMaterial = materials.get(new Material(base), () -> "ae2lt CTM base " + base);
+        var ctmMaterial = materials.get(new Material(ctm), () -> "ae2lt CTM sheet " + ctm);
+        var overlayMaterial = overlay == null ? null
+                : materials.get(new Material(overlay), () -> "ae2lt CTM overlay " + overlay);
+        return new ConnectedTextureBakedModel(baseMaterial, ctmMaterial, overlayMaterial,
+                ConnectionPredicates.get(connection), renderType, ambientOcclusion, gui3d, usesBlockLight);
+    }
+
+    @Override
+    public MapCodec<ConnectedTextureGeometry> codec() {
+        return CODEC;
     }
 }

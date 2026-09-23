@@ -60,10 +60,10 @@ public final class WirelessConnectionLists {
             int maxConnections,
             TagReader<T> reader) {
         target.clear();
-        if (!data.contains(tagName, Tag.TAG_LIST)) return;
-        var list = data.getList(tagName, Tag.TAG_COMPOUND);
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, tagName, Tag.TAG_LIST)) return;
+        var list = data.getListOrEmpty(tagName);
         for (int i = 0; i < list.size() && target.size() < maxConnections; i++) {
-            target.add(reader.read(list.getCompound(i)));
+            target.add(reader.read(list.getCompoundOrEmpty(i)));
         }
     }
 

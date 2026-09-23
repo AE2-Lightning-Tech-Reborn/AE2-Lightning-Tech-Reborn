@@ -4,7 +4,14 @@
       "model": "ae2lt:block/phase_change_cooling_unit"
     },
     "formed=true": {
-      "model": "ae2lt:block/phase_change_cooling_unit_formed"
+      "type": "ae2lt:connected_texture",
+      "connection": "ae2lt:tianshu_formed_cooling_compatible",
+      "render_type": "minecraft:solid",
+      "ambientocclusion": true,
+      "gui3d": true,
+      "uses_block_light": true,
+      "base": "ae2lt:block/tianshu/phase_change_cooling_unit_formed",
+      "ctm": "ae2lt:block/tianshu/phase_change_cooling_unit_ctm"
     }
   }
 }

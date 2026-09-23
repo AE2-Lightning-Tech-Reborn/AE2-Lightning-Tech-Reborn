@@ -17,8 +17,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void onLoad(String mixinPackage) {
         var mods = LoadingModList.get();
-        jeiPresent = mods.getModFileById("jei") != null
-                && mods.getModFileById("ae2jeiintegration") != null;
+        jeiPresent = mods.getModFileById("jei") != null;
         emiPresent = mods.getModFileById("emi") != null;
     }
 
@@ -29,6 +28,9 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith("JeiEncodePatternTransferMixin")) {
+            return jeiPresent;
+        }
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;
         return false;

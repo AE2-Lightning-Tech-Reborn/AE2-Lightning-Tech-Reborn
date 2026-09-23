@@ -74,7 +74,7 @@ final class WirelessOverflowPersistence {
             patternTag.putShort(TAG_OVERFLOW_PATTERN_ID, writeId);
             patternTag.put(
                     TAG_OVERFLOW_PATTERN,
-                    pattern.getDefinition().toStack().saveOptional(registries));
+                    com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(pattern.getDefinition().toStack(), registries));
             patternList.add(patternTag);
         }
         overflowTag.put(TAG_OVERFLOW_PATTERNS, patternList);
@@ -110,40 +110,40 @@ final class WirelessOverflowPersistence {
 
     void read(CompoundTag tag, HolderLookup.Provider registries) {
         clear();
-        if (!tag.contains(TAG_WIRELESS_OVERFLOW, Tag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_WIRELESS_OVERFLOW, Tag.TAG_COMPOUND)) {
             readLegacy(tag, registries);
             return;
         }
 
-        var overflowTag = tag.getCompound(TAG_WIRELESS_OVERFLOW);
-        var patterns = overflowTag.getList(
-                TAG_OVERFLOW_PATTERNS, Tag.TAG_COMPOUND);
+        var overflowTag = tag.getCompoundOrEmpty(TAG_WIRELESS_OVERFLOW);
+        var patterns = overflowTag.getListOrEmpty(
+                TAG_OVERFLOW_PATTERNS);
         for (int i = 0; i < patterns.size(); i++) {
-            var patternTag = patterns.getCompound(i);
+            var patternTag = patterns.getCompoundOrEmpty(i);
             int id = Short.toUnsignedInt(
-                    patternTag.getShort(TAG_OVERFLOW_PATTERN_ID));
-            var stack = ItemStack.parseOptional(
-                    registries, patternTag.getCompound(TAG_OVERFLOW_PATTERN));
+                    patternTag.getShortOr(TAG_OVERFLOW_PATTERN_ID, (short) 0));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(
+                    registries, patternTag.getCompoundOrEmpty(TAG_OVERFLOW_PATTERN));
             if (!stack.isEmpty()) {
                 pendingPatternDefinitions.put(id, stack);
             }
         }
 
-        var buckets = overflowTag.getList(
-                TAG_OVERFLOW_BUCKETS, Tag.TAG_COMPOUND);
+        var buckets = overflowTag.getListOrEmpty(
+                TAG_OVERFLOW_BUCKETS);
         for (int i = 0; i < buckets.size(); i++) {
-            var bucketTag = buckets.getCompound(i);
-            if (!bucketTag.contains(TAG_OVERFLOW_CONN, Tag.TAG_COMPOUND)) {
+            var bucketTag = buckets.getCompoundOrEmpty(i);
+            if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(bucketTag, TAG_OVERFLOW_CONN, Tag.TAG_COMPOUND)) {
                 continue;
             }
             var connection = WirelessConnection.fromTag(
-                    bucketTag.getCompound(TAG_OVERFLOW_CONN));
-            if (bucketTag.getBoolean(TAG_OVERFLOW_COMPACT)) {
+                    bucketTag.getCompoundOrEmpty(TAG_OVERFLOW_CONN));
+            if (bucketTag.getBooleanOr(TAG_OVERFLOW_COMPACT, false)) {
                 pendingBuckets.add(new PendingBucketLoad(
                         connection,
-                        bucketTag.getShort(TAG_OVERFLOW_PID),
-                        bucketTag.getShort(TAG_OVERFLOW_IDX),
-                        bucketTag.getLong(TAG_OVERFLOW_REMAINING),
+                        bucketTag.getShortOr(TAG_OVERFLOW_PID, (short) 0),
+                        bucketTag.getShortOr(TAG_OVERFLOW_IDX, (short) 0),
+                        bucketTag.getLongOr(TAG_OVERFLOW_REMAINING, 0L),
                         List.of(),
                         true));
                 continue;
@@ -151,8 +151,8 @@ final class WirelessOverflowPersistence {
 
             var fallback = readRoutedOverflow(
                     registries,
-                    bucketTag.getList(
-                            TAG_OVERFLOW_FALLBACK, Tag.TAG_COMPOUND));
+                    bucketTag.getListOrEmpty(
+                            TAG_OVERFLOW_FALLBACK));
             if (!fallback.isEmpty()) {
                 pendingBuckets.add(new PendingBucketLoad(
                         connection, (short) 0, (short) 0, 0L,
@@ -225,7 +225,7 @@ final class WirelessOverflowPersistence {
             HolderLookup.Provider registries) {
         var list = new ListTag();
         for (var entry : overflow.snapshot()) {
-            var stackTag = GenericStack.writeTag(registries, entry.stack());
+            var stackTag = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, entry.stack());
             if (entry.face() != null) {
                 stackTag.putByte(
                         TAG_OVERFLOW_FACE,
@@ -241,15 +241,15 @@ final class WirelessOverflowPersistence {
             ListTag list) {
         var entries = new ArrayList<RoutedPatternOverflow.Entry>(list.size());
         for (int i = 0; i < list.size(); i++) {
-            var stackTag = list.getCompound(i);
-            var stack = GenericStack.readTag(registries, stackTag);
+            var stackTag = list.getCompoundOrEmpty(i);
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, stackTag);
             if (stack == null || stack.amount() <= 0L) {
                 continue;
             }
 
             Direction face = null;
-            if (stackTag.contains(TAG_OVERFLOW_FACE, Tag.TAG_BYTE)) {
-                int faceId = stackTag.getByte(TAG_OVERFLOW_FACE);
+            if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(stackTag, TAG_OVERFLOW_FACE, Tag.TAG_BYTE)) {
+                int faceId = stackTag.getByteOr(TAG_OVERFLOW_FACE, (byte) 0);
                 if (faceId >= 0 && faceId < Direction.values().length) {
                     face = Direction.from3DDataValue(faceId);
                 }
@@ -261,17 +261,17 @@ final class WirelessOverflowPersistence {
 
     private void readLegacy(
             CompoundTag tag, HolderLookup.Provider registries) {
-        if (!tag.contains(TAG_W_SEND_LIST, Tag.TAG_LIST)
-                || !tag.contains(TAG_W_SEND_CONN, Tag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_W_SEND_LIST, Tag.TAG_LIST)
+                || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_W_SEND_CONN, Tag.TAG_COMPOUND)) {
             return;
         }
         var fallback = readGenericStackList(
                 registries,
-                tag.getList(TAG_W_SEND_LIST, Tag.TAG_COMPOUND));
+                tag.getListOrEmpty(TAG_W_SEND_LIST));
         if (!fallback.isEmpty()) {
             pendingBuckets.add(new PendingBucketLoad(
                     WirelessConnection.fromTag(
-                            tag.getCompound(TAG_W_SEND_CONN)),
+                            tag.getCompoundOrEmpty(TAG_W_SEND_CONN)),
                     (short) 0,
                     (short) 0,
                     0L,
@@ -293,7 +293,7 @@ final class WirelessOverflowPersistence {
             HolderLookup.Provider registries, ListTag list) {
         var stacks = new ArrayList<GenericStack>(list.size());
         for (int i = 0; i < list.size(); i++) {
-            var stack = GenericStack.readTag(registries, list.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, list.getCompoundOrEmpty(i));
             if (stack != null && stack.amount() > 0L) {
                 stacks.add(stack);
             }

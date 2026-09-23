@@ -23,7 +23,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -68,9 +68,10 @@ public final class TianshuJdbHarness {
         if (!server.isSameThread()) return "FAIL: invoke from the suspended server tick thread";
         try {
             var level = server.overworld();
-            var recipeId = ResourceLocation.fromNamespaceAndPath(
+            var recipeId = Identifier.fromNamespaceAndPath(
                     "mysticalagriculture", "prudentium_essence");
-            var rawRecipe = level.getRecipeManager().byKey(recipeId)
+            var rawRecipe = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.byId(
+                    com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level), recipeId)
                     .orElseThrow(() -> new IllegalStateException("prudentium recipe missing"));
             if (!(rawRecipe.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe recipe)) {
                 throw new IllegalStateException("prudentium recipe is not a crafting recipe");
@@ -78,12 +79,12 @@ public final class TianshuJdbHarness {
             var holder = new net.minecraft.world.item.crafting.RecipeHolder<>(rawRecipe.id(), recipe);
 
             var masterItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                    ResourceLocation.fromNamespaceAndPath(
-                            "mysticalagriculture", "master_infusion_crystal"));
+                    Identifier.fromNamespaceAndPath(
+                            "mysticalagriculture", "master_infusion_crystal")).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
             var inferiumItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                    ResourceLocation.fromNamespaceAndPath("mysticalagriculture", "inferium_essence"));
+                    Identifier.fromNamespaceAndPath("mysticalagriculture", "inferium_essence")).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
             var prudentiumItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                    ResourceLocation.fromNamespaceAndPath("mysticalagriculture", "prudentium_essence"));
+                    Identifier.fromNamespaceAndPath("mysticalagriculture", "prudentium_essence")).map(net.minecraft.core.Holder::value).orElse(Items.AIR);
             require(masterItem != Items.AIR && inferiumItem != Items.AIR && prudentiumItem != Items.AIR,
                     "Mystical Agriculture probe items unavailable");
 
@@ -202,9 +203,10 @@ public final class TianshuJdbHarness {
                             java.util.List.of(new com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern(
                                     snapshot, 1L)),
                             appeng.api.stacks.AEItemKey.of(Items.IRON_BLOCK), 1, 1, level);
-            var definitionTag = definition.toTag(level.registryAccess());
+            var definitionTag = new net.minecraft.nbt.CompoundTag();
+            definition.toTag(com.moakiee.ae2lt.api.compat.ValueIO.output(definitionTag, level.registryAccess()));
             definitionTag.putLong("#craftingProgress", 64L);
-            var restoredDefinition = AEItemKey.fromTag(level.registryAccess(), definitionTag);
+            var restoredDefinition = AEItemKey.fromTag(com.moakiee.ae2lt.api.compat.ValueIO.input(definitionTag, level.registryAccess()));
             var decodedRoundTrip = appeng.api.crafting.PatternDetailsHelper.decodePattern(
                     restoredDefinition, level);
             var controlStack = appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
@@ -212,9 +214,10 @@ public final class TianshuJdbHarness {
                     List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_BLOCK), 1)));
             var controlDefinition = AEItemKey.of(controlStack);
             require(controlDefinition != null, "AE2 control definition is null");
-            var controlTag = controlDefinition.toTag(level.registryAccess());
+            var controlTag = new net.minecraft.nbt.CompoundTag();
+            controlDefinition.toTag(com.moakiee.ae2lt.api.compat.ValueIO.output(controlTag, level.registryAccess()));
             controlTag.putLong("#craftingProgress", 64L);
-            var restoredControlDefinition = AEItemKey.fromTag(level.registryAccess(), controlTag);
+            var restoredControlDefinition = AEItemKey.fromTag(com.moakiee.ae2lt.api.compat.ValueIO.input(controlTag, level.registryAccess()));
             var decodedControl = appeng.api.crafting.PatternDetailsHelper.decodePattern(
                     restoredControlDefinition, level);
             var decodersField = appeng.api.crafting.PatternDetailsHelper.class.getDeclaredField("DECODERS");
@@ -277,7 +280,7 @@ public final class TianshuJdbHarness {
             }
         };
         var snapshot = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null);
+                Identifier.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null);
         var parsed = new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternDefinition(
                 snapshot,
                 List.of(new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternInput(0, seedStack)),
@@ -367,7 +370,7 @@ public final class TianshuJdbHarness {
         };
         var parsed = new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternDefinition(
                 new SourcePatternSnapshot(
-                        ResourceLocation.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null),
+                        Identifier.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null),
                 List.of(new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternInput(0, inputStack)),
                 List.of(
                         new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternOutput(0, returnedStack, false),
@@ -453,7 +456,7 @@ public final class TianshuJdbHarness {
                     direction + " reserve insert failed");
             var storedPattern = new ClosedLoopPatternPayload(
                     List.of(new ClosedLoopMemberPattern(new SourcePatternSnapshot(
-                            ResourceLocation.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null), 1)),
+                            Identifier.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null), 1)),
                     List.of(new appeng.api.stacks.GenericStack(seed, 1)), List.of(),
                     List.of(new appeng.api.stacks.GenericStack(seed, 1)), 1, 1, true);
             require(port.getClosedLoopPatternRepository().add(storedPattern)
@@ -461,9 +464,9 @@ public final class TianshuJdbHarness {
                     direction + " loop pattern insert failed");
 
             var savedPort = new net.minecraft.nbt.CompoundTag();
-            port.saveAdditional(savedPort, level.registryAccess());
+            port.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(savedPort, level.registryAccess()));
             var loadedCopy = new TianshuSupercomputerPortBlockEntity(portPos, port.getBlockState());
-            loadedCopy.loadTag(savedPort, level.registryAccess());
+            loadedCopy.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(savedPort, level.registryAccess()));
             require(controllerPos.equals(loadedCopy.getControllerPos()),
                     direction + " port NBT reload lost controller link position");
             require(!loadedCopy.isFormed(), direction + " unbound port copy trusted cached link");
@@ -472,9 +475,9 @@ public final class TianshuJdbHarness {
             require(loadedCopy.getClosedLoopPatternRepository() == null,
                     direction + " port copy owned closed-loop runtime");
             var savedDrive = new net.minecraft.nbt.CompoundTag();
-            seedDrive.saveAdditional(savedDrive, level.registryAccess());
+            seedDrive.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(savedDrive, level.registryAccess()));
             var loadedDrive = new TianshuSeedStorageBlockEntity(seedStoragePos, seedDrive.getBlockState());
-            loadedDrive.loadTag(savedDrive, level.registryAccess());
+            loadedDrive.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(savedDrive, level.registryAccess()));
             require(loadedDrive.amount(seed, port.getActionSource()) == 2,
                     direction + " disk NBT reload lost seed contents");
 

@@ -125,7 +125,7 @@ public final class BigMatrixRecipe {
 
     public CompoundTag save(HolderLookup.Provider registries) {
         var tag = new CompoundTag();
-        tag.put("definition", definition.toTagGeneric(registries));
+        tag.put("definition", com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, definition));
         var slotList = new ListTag();
         for (var slot : slots) {
             var converted = new LinkedHashMap<AEKey, BigInteger>();
@@ -133,7 +133,7 @@ public final class BigMatrixRecipe {
             slotList.add(BigStackCodec.write(converted, registries));
         }
         tag.put("slots", slotList);
-        tag.put("output", pattern.output().toTagGeneric(registries));
+        tag.put("output", com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, pattern.output()));
         tag.putLong("amount", pattern.outputAmount());
         var ordinary = new LinkedHashMap<AEKey, BigInteger>();
         var catalysts = new LinkedHashMap<AEKey, BigInteger>();
@@ -153,27 +153,27 @@ public final class BigMatrixRecipe {
         var definition =
                 (AEItemKey)
                         Objects.requireNonNull(
-                                AEKey.fromTagGeneric(registries, tag.getCompound("definition")));
+                                com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, tag.getCompoundOrEmpty("definition")));
         var slots = new ArrayList<Map<AEKey, Long>>();
-        for (var entry : tag.getList("slots", Tag.TAG_LIST)) {
+        for (var entry : tag.getListOrEmpty("slots")) {
             var slot = new LinkedHashMap<AEKey, Long>();
             BigStackCodec.read((ListTag) entry, registries)
                     .forEach((k, n) -> slot.put(k, n.longValueExact()));
             slots.add(slot);
         }
         var inputs = new ArrayList<CraftInput<AEKey>>();
-        BigStackCodec.read(tag.getList("pre", Tag.TAG_COMPOUND), registries)
+        BigStackCodec.read(tag.getListOrEmpty("pre"), registries)
                 .forEach((k, n) -> inputs.add(CraftInput.of(k, n.longValueExact())));
-        BigStackCodec.read(tag.getList("catalysts", Tag.TAG_COMPOUND), registries)
+        BigStackCodec.read(tag.getListOrEmpty("catalysts"), registries)
                 .forEach((k, n) -> inputs.add(CraftInput.returned(k, n.longValueExact())));
         var outputs = new ArrayList<CraftOutput<AEKey>>();
-        BigStackCodec.read(tag.getList("post", Tag.TAG_COMPOUND), registries)
+        BigStackCodec.read(tag.getListOrEmpty("post"), registries)
                 .forEach((k, n) -> outputs.add(CraftOutput.exact(k, n)));
         return new BigMatrixRecipe(
                 definition,
                 slots,
-                Objects.requireNonNull(AEKey.fromTagGeneric(registries, tag.getCompound("output"))),
-                tag.getLong("amount"),
+                Objects.requireNonNull(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, tag.getCompoundOrEmpty("output"))),
+                tag.getLongOr("amount", 0L),
                 inputs,
                 outputs);
     }

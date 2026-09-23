@@ -95,10 +95,10 @@ public final class ClosedLoopPatternRepository {
 
     public void readFrom(CompoundTag parent, HolderLookup.Provider registries) {
         patterns.clear();
-        var list = parent.getList(TAG_PATTERNS, Tag.TAG_COMPOUND);
+        var list = parent.getListOrEmpty(TAG_PATTERNS);
         for (int i = 0; i < list.size(); i++) {
             try {
-                var payload = ClosedLoopPatternPayloadTagCodec.read(list.getCompound(i), registries);
+                var payload = ClosedLoopPatternPayloadTagCodec.read(list.getCompoundOrEmpty(i), registries);
                 patterns.add(payload);
             } catch (RuntimeException ignored) {
                 // Keep other stored patterns usable when one entry was damaged or came from an old format.

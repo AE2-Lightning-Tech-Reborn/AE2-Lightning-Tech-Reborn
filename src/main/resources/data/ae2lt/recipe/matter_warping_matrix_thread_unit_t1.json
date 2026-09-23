@@ -7,15 +7,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2:molecular_assembler" },
-    "B": { "item": "ae2:speed_card" },
-    "C": { "item": "ae2:molecular_assembler" },
-    "D": { "item": "ae2lt:overload_processor" },
-    "E": { "item": "ae2lt:tianshu_blank_unit" },
-    "F": { "item": "ae2lt:overload_processor" },
-    "G": { "item": "ae2:molecular_assembler" },
-    "H": { "item": "ae2:speed_card" },
-    "I": { "item": "ae2:molecular_assembler" }
+    "A": "ae2:molecular_assembler",
+    "B": "ae2:speed_card",
+    "C": "ae2:molecular_assembler",
+    "D": "ae2lt:overload_processor",
+    "E": "ae2lt:tianshu_blank_unit",
+    "F": "ae2lt:overload_processor",
+    "G": "ae2:molecular_assembler",
+    "H": "ae2:speed_card",
+    "I": "ae2:molecular_assembler"
   },
   "result": {
     "count": 1,

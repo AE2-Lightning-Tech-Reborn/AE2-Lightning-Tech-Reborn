@@ -4,22 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.context.ContextKey;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 
-import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 
@@ -179,59 +175,43 @@ public final class RailgunArcRenderer {
         ACTIVE.clear();
     }
 
+    private static final ContextKey<List<Arc>> RENDER_ARCS = new ContextKey<>(
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "railgun_arcs"));
+
     @SubscribeEvent
-    public static void onRender(RenderLevelStageEvent e) {
-        if (e.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || ACTIVE.isEmpty()) return;
-
-        // Decrement and prune.
-        ACTIVE.removeIf(a -> --a.remaining <= 0);
+    public static void extract(ExtractLevelRenderStateEvent event) {
+        ACTIVE.removeIf(arc -> --arc.remaining <= 0);
         if (ACTIVE.isEmpty()) return;
+        var snapshot = new ArrayList<Arc>(ACTIVE.size());
+        for (Arc arc : ACTIVE) {
+            var copy = new Arc(arc.points, arc.totalLifetime, arc.coreR, arc.coreG, arc.coreB,
+                    arc.glowR, arc.glowG, arc.glowB, arc.coreWidth, arc.glowWidth);
+            copy.remaining = arc.remaining;
+            snapshot.add(copy);
+        }
+        event.getRenderState().setRenderData(RENDER_ARCS, List.copyOf(snapshot));
+    }
 
-        Camera cam = e.getCamera();
-        Vec3 camPos = cam.getPosition();
-        PoseStack stack = e.getPoseStack();
+    @SubscribeEvent
+    public static void submit(SubmitCustomGeometryEvent event) {
+        List<Arc> arcs = event.getLevelRenderState().getRenderData(RENDER_ARCS);
+        if (arcs == null || arcs.isEmpty()) return;
+        Vec3 camPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack stack = event.getPoseStack();
         stack.pushPose();
         stack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        // Depth-test ON so arcs are occluded by blocks/entities (AFTER_TRANSLUCENT_BLOCKS
-        // may leave it disabled). depthMask off so additive billboards don't write depth.
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.enableBlend();
-        // Additive-style blending for that hot plasma feel.
-        RenderSystem.blendFuncSeparate(
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        BufferBuilder bb = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        var matrix = stack.last().pose();
-        for (Arc arc : ACTIVE) {
-            float lifeT = (float) arc.remaining / (float) arc.totalLifetime;
-            // Quick attack, slower decay; fade alpha with sqrt for a punchier feel.
-            float alpha = (float) Math.sqrt(Math.max(0.0F, lifeT));
-            drawArc(bb, matrix, arc, camPos, alpha);
-        }
-        var built = bb.build();
-        if (built != null) {
-            BufferUploader.drawWithShader(built);
-        }
-
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableCull();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
+        event.getSubmitNodeCollector().submitCustomGeometry(stack, RenderTypes.lightning(),
+                (pose, consumer) -> {
+                    for (Arc arc : arcs) {
+                        float lifeT = (float) arc.remaining / (float) arc.totalLifetime;
+                        float alpha = (float) Math.sqrt(Math.max(0.0F, lifeT));
+                        drawArc(consumer, pose.pose(), arc, camPos, alpha);
+                    }
+                });
         stack.popPose();
     }
 
-    private static void drawArc(BufferBuilder bb, org.joml.Matrix4f matrix, Arc arc, Vec3 camPos, float alpha) {
+    private static void drawArc(VertexConsumer bb, org.joml.Matrix4f matrix, Arc arc, Vec3 camPos, float alpha) {
         for (int i = 0; i < arc.points.size() - 1; i++) {
             Vec3 a = arc.points.get(i);
             Vec3 b = arc.points.get(i + 1);
@@ -250,7 +230,7 @@ public final class RailgunArcRenderer {
         }
     }
 
-    private static void addSegmentBillboard(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void addSegmentBillboard(VertexConsumer bb, org.joml.Matrix4f matrix,
                                             Vec3 a, Vec3 b, Vec3 camPos, float width,
                                             float r, float g, float bCol, float alpha) {
         if (!isRenderableSegment(a, b)

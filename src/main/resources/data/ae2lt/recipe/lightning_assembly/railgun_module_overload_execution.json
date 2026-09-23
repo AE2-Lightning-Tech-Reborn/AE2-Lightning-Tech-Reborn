@@ -3,45 +3,31 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_module_base"
-      },
+      "ingredient": "ae2lt:overload_module_base",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "ae2lt:hyperdimensional_topological_lattice"
-      },
+      "ingredient": "ae2lt:hyperdimensional_topological_lattice",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "ae2lt:lightning_collapse_matrix"
-      },
+      "ingredient": "ae2lt:lightning_collapse_matrix",
       "count": 16
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_superconducting_wire"
-      },
+      "ingredient": "ae2lt:firmament_superconducting_wire",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "minecraft:nether_star"
-      },
+      "ingredient": "minecraft:nether_star",
       "count": 64
     },
     {
-      "ingredient": {
-        "item": "minecraft:dragon_egg"
-      },
+      "ingredient": "minecraft:dragon_egg",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "minecraft:trident"
-      },
+      "ingredient": "minecraft:trident",
       "count": 1
     }
   ],

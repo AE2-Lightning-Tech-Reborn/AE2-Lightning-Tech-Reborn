@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -31,8 +31,8 @@ public class LightningAssemblyCategory implements IRecipeCategory<LightningAssem
     public static final RecipeType<LightningAssemblyRecipe> TYPE =
             RecipeType.create(AE2LightningTech.MODID, "lightning_assembly", LightningAssemblyRecipe.class);
 
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/lightning_assembly_chamber.png");
+    private static final Identifier BACKGROUND_TEXTURE =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/lightning_assembly_chamber.png");
 
     // Crop the machine GUI work area for JEI without clipping the bottom input row or output slot.
     private static final int BACKGROUND_U = 19;
@@ -114,7 +114,7 @@ public class LightningAssemblyCategory implements IRecipeCategory<LightningAssem
     public void draw(
             LightningAssemblyRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             double mouseX,
             double mouseY) {
         background.draw(guiGraphics);
@@ -125,7 +125,7 @@ public class LightningAssemblyCategory implements IRecipeCategory<LightningAssem
                 "jei.ae2lt.lightning_assembly.energy",
                 formatCompactEnergy(recipe.totalEnergy()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
+        guiGraphics.text(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
         var lightningText = Component.translatable(
                 "jei.ae2lt.lightning_assembly.lightning",
@@ -134,11 +134,11 @@ public class LightningAssemblyCategory implements IRecipeCategory<LightningAssem
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
                         : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
         int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+        guiGraphics.text(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
     }
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
-        return Arrays.stream(ingredient.getItems())
+        return ingredient.items().map(holder -> new ItemStack(holder.value()))
                 .map(stack -> stack.copyWithCount(count))
                 .toList();
     }

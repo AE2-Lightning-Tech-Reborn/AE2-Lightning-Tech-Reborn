@@ -102,7 +102,7 @@ public final class ClientPhaseFlightHandler {
         }
         lastJumpHeld = jumpHeld;
         lastFlightControlGeneration = controlGeneration;
-        PacketDistributor.sendToServer(PhaseFlightInputPacket.jump(jumpHeld));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(PhaseFlightInputPacket.jump(jumpHeld));
     }
 
     private static void resetJumpInputSync() {

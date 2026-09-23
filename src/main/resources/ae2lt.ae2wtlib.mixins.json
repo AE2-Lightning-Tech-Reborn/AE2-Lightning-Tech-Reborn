@@ -2,7 +2,7 @@
   "required": false,
   "minVersion": "0.8",
   "package": "com.moakiee.ae2lt.mixin.ae2wtlib",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "plugin": "com.moakiee.ae2lt.mixin.ae2wtlib.Ae2wtlibMixinPlugin",
   "mixins": [
     "WTMenuHostMixin"

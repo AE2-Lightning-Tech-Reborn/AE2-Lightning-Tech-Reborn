@@ -21,9 +21,10 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(config.contains("RecipeViewerMixinPlugin"));
         assertTrue(config.contains("JeiEncodePatternTransferMixin"));
         assertTrue(config.contains("JeiRecipeTransferButtonControllerMixin"));
-        assertTrue(config.contains("EmiEncodePatternTransferMixin"));
-        assertTrue(config.contains("EmiRecipeTransferResultAccessor"));
-        assertTrue(plugin.contains("getModFileById(\"ae2jeiintegration\")"));
+        // EMI is explicitly deferred for this port, so its mixins stay out of this release.
+        assertFalse(config.contains("EmiEncodePatternTransferMixin"));
+        assertFalse(config.contains("EmiRecipeTransferResultAccessor"));
+        assertFalse(plugin.contains("getModFileById(\"ae2jeiintegration\")"));
         assertTrue(plugin.contains("getModFileById(\"emi\")"));
         assertTrue(metadata.contains("${mod_id}.recipeviewer.mixins.json"));
         assertTrue(metadata.contains("modId = \"emi\""));
@@ -78,9 +79,9 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
                 "isSupportedCraftingRecipe(holder)) return"));
         assertTrue(context.contains("BuiltInRegistries.RECIPE_TYPE"));
         assertTrue(context.contains("fallbackSourceKey"));
-        assertTrue(context.contains("ResourceLocation.tryParse(sourceKey)"));
+        assertTrue(context.contains("Identifier.tryParse(sourceKey)"));
         assertTrue(context.contains("sourceId.getNamespace()"));
-        assertTrue(context.contains("holder.id().getNamespace()"));
+        assertTrue(context.contains("holder.id().identifier().getNamespace()"));
         assertTrue(emi.contains("emiRecipe.getId().getNamespace()"));
         assertTrue(context.contains("WeakReference<TianshuPatternEncodingTermMenu>"));
         assertTrue(context.contains("String recipeId"));
@@ -153,7 +154,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
 
         assertTrue(jei.contains("at = @At(\"RETURN\")"));
         assertTrue(jei.contains("cir.getReturnValue() != null"));
-        assertTrue(jei.contains("Screen.hasAltDown()"));
+        assertTrue(jei.contains("Minecraft.getInstance().hasAltDown()"));
         assertTrue(jei.contains("encodeAndUploadDirectly()"));
         assertTrue(emi.contains("EmiRecipeTransferResultAccessor result"));
         assertTrue(emi.contains("result.ae2lt$canCraft()"));
@@ -168,7 +169,8 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(coordinator.contains("selection.initialQuery()"));
         assertTrue(transferButton.contains("RecipeTransferButtonController"));
         assertTrue(transferButton.contains("TianshuDirectUploadClient.holdRecipeScreen"));
-        assertTrue(transferButton.contains("recipesGui.onClose()"));
+        assertTrue(transferButton.contains("target = \"Ljava/lang/Runnable;run()V\""));
+        assertTrue(transferButton.contains("onSuccessfulTransfer.run()"));
         assertTrue(coordinator.contains("hasTriggeredUploadAck()"));
         assertTrue(coordinator.contains("isEncodingResultReady(menu, stack)"));
         assertTrue(coordinator.contains("requestDirectUploadTargetsAfterEncoding()"));
@@ -183,7 +185,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(coordinator.contains("\"ae2lt.tianshu.upload.success_target\""));
         assertTrue(coordinator.contains(
                 "Component.translatable(\"ae2lt.tianshu.upload.failed\")"));
-        assertTrue(coordinator.contains("displayClientMessage(result, false)"));
+        assertTrue(coordinator.contains("LegacyPlayerMessages.display(minecraft.player, result, false)"));
 
         int resultReady = coordinator.indexOf("isEncodingResultReady(menu, stack)");
         int targetRefresh = coordinator.indexOf("requestDirectUploadTargetsAfterEncoding()");

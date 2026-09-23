@@ -17,8 +17,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
+import com.moakiee.ae2lt.recipe.compat.LegacyMachineRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -26,7 +27,7 @@ import net.minecraft.world.level.Level;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
-public final class LightningSimulationRecipe implements Recipe<LightningSimulationRecipeInput> {
+public final class LightningSimulationRecipe implements LegacyMachineRecipe<LightningSimulationRecipeInput> {
     public static final long MIN_TOTAL_ENERGY = 5L;
     public static final int DEFAULT_LIGHTNING_COST = 4;
     public static final LightningKey.Tier DEFAULT_LIGHTNING_TIER = LightningKey.Tier.HIGH_VOLTAGE;
@@ -65,7 +66,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
 
     private final int priority;
     private final List<LightningSimulationIngredient> inputs;
-    private final ItemStack result;
+    private final ItemStackTemplate result;
     private final long totalEnergy;
     private final int lightningCost;
     private final LightningKey.Tier lightningTier;
@@ -78,13 +79,23 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
             long totalEnergy,
             int lightningCost,
             LightningKey.Tier lightningTier) {
+        this(priority, inputs, ItemStackTemplate.fromNonEmptyStack(result), totalEnergy, lightningCost, lightningTier);
+    }
+
+    private LightningSimulationRecipe(
+            int priority,
+            List<LightningSimulationIngredient> inputs,
+            ItemStackTemplate result,
+            long totalEnergy,
+            int lightningCost,
+            LightningKey.Tier lightningTier) {
         Objects.requireNonNull(inputs, "inputs");
         Objects.requireNonNull(result, "result");
         Objects.requireNonNull(lightningTier, "lightningTier");
         if (inputs.isEmpty() || inputs.size() > 3) {
             throw new IllegalArgumentException("inputs must contain 1 to 3 entries");
         }
-        if (result.isEmpty()) {
+        if (result.count() <= 0) {
             throw new IllegalArgumentException("result cannot be empty");
         }
         if (totalEnergy < MIN_TOTAL_ENERGY) {
@@ -96,7 +107,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
 
         this.priority = priority;
         this.inputs = List.copyOf(inputs);
-        this.result = result.copy();
+        this.result = result;
         this.totalEnergy = totalEnergy;
         this.lightningCost = lightningCost;
         this.lightningTier = lightningTier;
@@ -112,7 +123,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
     }
 
     public ItemStack getResultStack() {
-        return result.copy();
+        return result.create();
     }
 
     public long totalEnergy() {
@@ -196,7 +207,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
 
     @Override
     public ItemStack assemble(LightningSimulationRecipeInput input, HolderLookup.Provider registries) {
-        return result.copy();
+        return result.create();
     }
 
     @Override
@@ -206,7 +217,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
 
     @Override
     public ItemStack getResultItem(HolderLookup.Provider registries) {
-        return result.copy();
+        return result.create();
     }
 
     @Override
@@ -219,25 +230,25 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<LightningSimulationRecipe> getSerializer() {
         return ModRecipeTypes.LIGHTNING_SIMULATION_SERIALIZER.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
+    public RecipeType<LightningSimulationRecipe> getType() {
         return ModRecipeTypes.LIGHTNING_SIMULATION_TYPE.get();
     }
 
     @Override
     public boolean isIncomplete() {
         return inputs.isEmpty()
-                || result.isEmpty()
+                || result.count() <= 0
                 || totalEnergy < MIN_TOTAL_ENERGY
                 || lightningCost <= 0
-                || inputs.stream().anyMatch(input -> input.ingredient().hasNoItems());
+                || inputs.stream().anyMatch(input -> input.ingredient().isEmpty());
     }
 
-    private ItemStack rawResult() {
+    private ItemStackTemplate rawResult() {
         return result;
     }
 
@@ -339,11 +350,11 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
         }
     }
 
-    public static final class Serializer implements RecipeSerializer<LightningSimulationRecipe> {
+    public static final class Serializer {
         private static final MapCodec<LightningSimulationRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                         Codec.INT.optionalFieldOf("priority", 0).forGetter(LightningSimulationRecipe::priority),
                         INPUTS_CODEC.fieldOf("inputs").forGetter(LightningSimulationRecipe::inputs),
-                        ItemStack.STRICT_CODEC.fieldOf("result").forGetter(LightningSimulationRecipe::rawResult),
+                        ItemStackTemplate.CODEC.fieldOf("result").forGetter(LightningSimulationRecipe::rawResult),
                         POSITIVE_ENERGY_CODEC.fieldOf("totalEnergy").forGetter(LightningSimulationRecipe::totalEnergy),
                         POSITIVE_LIGHTNING_COST_CODEC.optionalFieldOf("lightningCost", DEFAULT_LIGHTNING_COST)
                                 .forGetter(LightningSimulationRecipe::lightningCost),
@@ -357,7 +368,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
                         LightningSimulationRecipe::priority,
                         INPUTS_STREAM_CODEC,
                         LightningSimulationRecipe::inputs,
-                        ItemStack.STREAM_CODEC,
+                        ItemStackTemplate.STREAM_CODEC,
                         LightningSimulationRecipe::rawResult,
                         ByteBufCodecs.VAR_LONG,
                         LightningSimulationRecipe::totalEnergy,
@@ -367,14 +378,6 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
                         LightningSimulationRecipe::lightningTier,
                         LightningSimulationRecipe::new);
 
-        @Override
-        public MapCodec<LightningSimulationRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, LightningSimulationRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        public static final RecipeSerializer<LightningSimulationRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
     }
 }

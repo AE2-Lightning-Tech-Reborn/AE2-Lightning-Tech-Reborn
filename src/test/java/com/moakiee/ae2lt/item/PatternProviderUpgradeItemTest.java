@@ -12,9 +12,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-class PatternProviderUpgradeItemTest {
+class PatternProviderUpgradeItemTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private static final Path RECIPE_ROOT = Path.of("src/main/resources/data/ae2lt/recipe");
 
     @Test
@@ -24,13 +24,13 @@ class PatternProviderUpgradeItemTest {
                 "extendedae:ex_pattern_provider",
                 "advanced_ae:small_adv_pattern_provider",
                 "advanced_ae:adv_pattern_provider")) {
-            assertTrue(OverloadedPatternProviderUpgradeItem.supportsSource(ResourceLocation.parse(id)), id);
+            assertTrue(OverloadedPatternProviderUpgradeItem.supportsSource(Identifier.parse(id)), id);
         }
 
         assertFalse(OverloadedPatternProviderUpgradeItem.supportsSource(
-                ResourceLocation.fromNamespaceAndPath("ae2lt", "overloaded_pattern_provider")));
+                Identifier.fromNamespaceAndPath("ae2lt", "overloaded_pattern_provider")));
         assertFalse(OverloadedPatternProviderUpgradeItem.supportsSource(
-                ResourceLocation.fromNamespaceAndPath("advanced_ae", "adv_pattern_provider_part")));
+                Identifier.fromNamespaceAndPath("advanced_ae", "adv_pattern_provider_part")));
     }
 
     @Test
@@ -40,13 +40,13 @@ class PatternProviderUpgradeItemTest {
 
         assertEquals(
                 "ae2lt:overloaded_pattern_provider",
-                overloaded.getAsJsonArray("ingredients").get(0).getAsJsonObject().get("item").getAsString());
+                overloaded.getAsJsonArray("ingredients").get(0).getAsString());
         assertEquals(
                 "ae2lt:overloaded_pattern_provider_upgrade",
                 overloaded.getAsJsonObject("result").get("id").getAsString());
         assertEquals(
                 "ae2lt:extended_overloaded_pattern_provider",
-                extended.getAsJsonArray("ingredients").get(0).getAsJsonObject().get("item").getAsString());
+                extended.getAsJsonArray("ingredients").get(0).getAsString());
         assertEquals(
                 "ae2lt:extended_overloaded_pattern_provider_upgrade",
                 extended.getAsJsonObject("result").get("id").getAsString());

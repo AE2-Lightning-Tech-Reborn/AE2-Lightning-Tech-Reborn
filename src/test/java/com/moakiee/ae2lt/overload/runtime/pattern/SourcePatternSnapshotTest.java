@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 class SourcePatternSnapshotTest {
@@ -33,7 +33,7 @@ class SourcePatternSnapshotTest {
 
         var changed = reordered.copy();
         changed.putString("output", "test:c");
-        var itemId = ResourceLocation.fromNamespaceAndPath("test", "pattern");
+        var itemId = Identifier.fromNamespaceAndPath("test", "pattern");
 
         assertEquals(
                 new SourcePatternSnapshot(itemId, first, null).fingerprint(),
@@ -55,8 +55,8 @@ class SourcePatternSnapshotTest {
         var sixtyFour = one.copy();
         sixtyFour.putInt("count", 64);
         var changedRecipe = one.copy();
-        changedRecipe.getCompound("components").putInt("ingredient_count", 4);
-        var itemId = ResourceLocation.fromNamespaceAndPath("test", "pattern");
+        changedRecipe.getCompound("components").orElseThrow().putInt("ingredient_count", 4);
+        var itemId = Identifier.fromNamespaceAndPath("test", "pattern");
 
         assertEquals(
                 new SourcePatternSnapshot(itemId, one, null).fingerprint(),

@@ -90,7 +90,7 @@ public final class RailgunTerrainService {
         // would need a java.util.Random). Then move into an ArrayDeque so per-tick
         // consumption is O(1) head-pop instead of ArrayList.remove(0)'s O(n) shift.
         for (int i = candidates.size() - 1; i > 0; i--) {
-            int j = level.random.nextInt(i + 1);
+            int j = level.getRandom().nextInt(i + 1);
             BlockPos tmp = candidates.get(i);
             candidates.set(i, candidates.get(j));
             candidates.set(j, tmp);
@@ -145,7 +145,7 @@ public final class RailgunTerrainService {
                 }
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(),
                         Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
-                if (level.random.nextInt(12) == 0) {
+                if (level.getRandom().nextInt(12) == 0) {
                     level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                             2, 0.3, 0.3, 0.3, 0.05);
@@ -176,7 +176,7 @@ public final class RailgunTerrainService {
         if (cached != null) return cached;
         java.util.Set<Block> set = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         for (var entry : BuiltInRegistries.BLOCK.entrySet()) {
-            String ns = entry.getKey().location().getNamespace();
+            String ns = entry.getKey().identifier().getNamespace();
             if (ns.equals(AE2LightningTech.MODID) || ns.equals("ae2") || ns.equals("appliedenergistics2")) {
                 set.add(entry.getValue());
             }

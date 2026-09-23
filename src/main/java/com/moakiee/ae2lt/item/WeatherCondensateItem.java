@@ -39,15 +39,15 @@ public class WeatherCondensateItem extends Item {
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltipComponents,
+            net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltipComponents,
             TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "item.ae2lt.weather_condensate.target",
                 type.getWeatherName()).withStyle(ChatFormatting.AQUA));
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "item.ae2lt.weather_condensate.energy",
                 type.totalEnergy()).withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "item.ae2lt.weather_condensate.duration",
                 type.minDuration(),
                 type.maxDuration()).withStyle(ChatFormatting.DARK_GRAY));

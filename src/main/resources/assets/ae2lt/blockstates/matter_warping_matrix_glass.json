@@ -4,7 +4,14 @@
       "model": "ae2lt:block/matter_warping_matrix_glass"
     },
     "formed=true": {
-      "model": "ae2lt:block/matter_warping_matrix_glass_formed"
+      "type": "ae2lt:connected_texture",
+      "connection": "ae2lt:matrix_formed_same_block",
+      "render_type": "minecraft:translucent",
+      "ambientocclusion": false,
+      "gui3d": false,
+      "uses_block_light": false,
+      "base": "ae2lt:block/matter_warping_matrix/matter_warping_matrix_glass",
+      "ctm": "ae2lt:block/matter_warping_matrix/matter_warping_matrix_glass_ctm"
     }
   }
 }

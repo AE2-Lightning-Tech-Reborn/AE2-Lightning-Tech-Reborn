@@ -21,11 +21,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.neoforged.fml.loading.LoadingModList;
 
-class NativeStackDropHelperTest {
+class NativeStackDropHelperTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();

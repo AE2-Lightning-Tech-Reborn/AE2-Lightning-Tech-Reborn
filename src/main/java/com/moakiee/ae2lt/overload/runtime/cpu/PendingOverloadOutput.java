@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import appeng.api.stacks.AEKey;
 
@@ -23,7 +23,7 @@ public final class PendingOverloadOutput {
     private final PendingOverloadOutputKey key;
     private final OverloadCpuOwner owner;
     private final OverloadPatternReference patternReference;
-    private final ResourceLocation itemId;
+    private final Identifier itemId;
     private final AEKey exactExpectedKey;
     private final boolean routesToRequester;
     private final long registeredOrder;
@@ -35,7 +35,7 @@ public final class PendingOverloadOutput {
             PendingOverloadOutputKey key,
             OverloadCpuOwner owner,
             OverloadPatternReference patternReference,
-            ResourceLocation itemId,
+            Identifier itemId,
             AEKey exactExpectedKey,
             long remainingAmount,
             boolean routesToRequester,
@@ -49,7 +49,7 @@ public final class PendingOverloadOutput {
             PendingOverloadOutputKey key,
             OverloadCpuOwner owner,
             OverloadPatternReference patternReference,
-            ResourceLocation itemId,
+            Identifier itemId,
             AEKey exactExpectedKey,
             long remainingAmount,
             boolean routesToRequester,
@@ -68,7 +68,7 @@ public final class PendingOverloadOutput {
             PendingOverloadOutputKey key,
             OverloadCpuOwner owner,
             OverloadPatternReference patternReference,
-            ResourceLocation itemId,
+            Identifier itemId,
             AEKey exactExpectedKey,
             long remainingAmount,
             boolean routesToRequester,
@@ -109,7 +109,7 @@ public final class PendingOverloadOutput {
         return patternReference;
     }
 
-    public ResourceLocation itemId() {
+    public Identifier itemId() {
         return itemId;
     }
 

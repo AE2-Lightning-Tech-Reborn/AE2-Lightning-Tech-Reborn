@@ -11,7 +11,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -23,7 +23,7 @@ import appeng.menu.locator.MenuHostLocator;
 
 public record OpenFrequencyMenuPacket(boolean cardMode) implements CustomPacketPayload {
     public static final Type<OpenFrequencyMenuPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "open_frequency_menu"));
+            new Type<>(Identifier.fromNamespaceAndPath("ae2lt", "open_frequency_menu"));
 
     public static final StreamCodec<FriendlyByteBuf, OpenFrequencyMenuPacket> STREAM_CODEC =
             StreamCodec.of(OpenFrequencyMenuPacket::encode, OpenFrequencyMenuPacket::decode);
@@ -87,7 +87,7 @@ public record OpenFrequencyMenuPacket(boolean cardMode) implements CustomPacketP
             if (freq != null
                     && !freq.getPlayerAccess(player).canUse()
                     && freq.getSecurity() != FrequencySecurityLevel.ENCRYPTED) {
-                player.displayClientMessage(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.gui.error.no_access").withStyle(ChatFormatting.RED),
                         true);
                 return;
@@ -109,7 +109,7 @@ public record OpenFrequencyMenuPacket(boolean cardMode) implements CustomPacketP
 
         ItemStack terminal = locator.locateItem(player);
         if (!TerminalCardAccess.hasCard(terminal)) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.terminal_no_card").withStyle(ChatFormatting.RED),
                     true);
             return;
@@ -121,7 +121,7 @@ public record OpenFrequencyMenuPacket(boolean cardMode) implements CustomPacketP
     }
 
     private static void reject(ServerPlayer player) {
-        player.displayClientMessage(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                 Component.translatable("ae2lt.gui.error.rejected").withStyle(ChatFormatting.RED),
                 true);
     }

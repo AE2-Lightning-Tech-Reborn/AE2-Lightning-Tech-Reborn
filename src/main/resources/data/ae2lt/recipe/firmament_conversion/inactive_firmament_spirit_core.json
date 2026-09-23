@@ -2,9 +2,7 @@
   "type": "ae2lt:firmament_conversion",
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:inactive_firmament_spirit_core"
-      },
+      "ingredient": "ae2lt:inactive_firmament_spirit_core",
       "count": 1
     }
   ],

@@ -1,8 +1,8 @@
 package com.moakiee.ae2lt.crafting.timewheel;
 
-import static com.moakiee.ae2lt.crafting.timewheel.TimeWheelDispatchBoundaryTest.field;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.function.Predicate;
@@ -244,6 +244,12 @@ class TimeWheelManualCpuSelectionTest {
         try {
             return (ICraftingCPU) field(CraftingCPURecord.class, "cpu").get(record);
         } catch (Exception e) { throw new AssertionError(e); }
+    }
+
+    private static Field field(Class<?> type, String name) throws Exception {
+        var field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 
     private static <T> T proxy(Class<T> type, java.util.function.BiFunction<String, Object[], Object> call) {

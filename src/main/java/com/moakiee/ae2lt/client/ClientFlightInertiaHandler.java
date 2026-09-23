@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.Input;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -34,13 +34,13 @@ public final class ClientFlightInertiaHandler {
             return;
         }
 
-        Input input = player.input;
+        Input input = player.input.keyPresses;
         Vec3 motion = player.getDeltaMovement();
         double x = motion.x;
         double y = motion.y;
         double z = motion.z;
 
-        boolean anyHorizontalInput = input.forwardImpulse != 0 || input.leftImpulse != 0;
+        boolean anyHorizontalInput = input.forward() || input.backward() || input.left() || input.right();
         if (!anyHorizontalInput) {
             x *= INERTIA_OFF_DECAY;
             z *= INERTIA_OFF_DECAY;

@@ -47,30 +47,30 @@ public final class ClosedLoopPatternPayloadTagCodec {
 
     public static ClosedLoopPatternPayload read(CompoundTag tag, HolderLookup.Provider registries) {
         var members = new ArrayList<ClosedLoopMemberPattern>();
-        var memberTags = tag.getList(TAG_MEMBERS, Tag.TAG_COMPOUND);
+        var memberTags = tag.getListOrEmpty(TAG_MEMBERS);
         if (memberTags.size() > ClosedLoopPatternAnalyzer.MAX_MEMBERS) {
             throw new IllegalArgumentException("closed-loop payload has too many members");
         }
         for (int i = 0; i < memberTags.size(); i++) {
-            members.add(readMember(memberTags.getCompound(i)));
+            members.add(readMember(memberTags.getCompoundOrEmpty(i)));
         }
         var seedMultipliers = readSeedMultipliers(tag);
         return new ClosedLoopPatternPayload(
                 members,
-                readStacks(tag.getList(TAG_SEEDS, Tag.TAG_COMPOUND), registries),
-                readStacks(tag.getList(TAG_INPUTS, Tag.TAG_COMPOUND), registries),
-                readStacks(tag.getList(TAG_OUTPUTS, Tag.TAG_COMPOUND), registries),
+                readStacks(tag.getListOrEmpty(TAG_SEEDS), registries),
+                readStacks(tag.getListOrEmpty(TAG_INPUTS), registries),
+                readStacks(tag.getListOrEmpty(TAG_OUTPUTS), registries),
                 seedMultipliers.executionSeedMultiplier(),
                 seedMultipliers.storedTaskMultiplier(),
-                !tag.contains(TAG_ENABLED, Tag.TAG_BYTE) || tag.getBoolean(TAG_ENABLED));
+                !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_ENABLED, Tag.TAG_BYTE) || tag.getBooleanOr(TAG_ENABLED, false));
     }
 
     static ClosedLoopMemberPattern readMember(CompoundTag memberTag) {
-        var patternTag = memberTag.contains(TAG_MEMBER_PATTERN, Tag.TAG_COMPOUND)
-                ? memberTag.getCompound(TAG_MEMBER_PATTERN) : memberTag;
-        long copies = Math.max(1L, memberTag.getLong(TAG_MEMBER_COPIES));
-        if (memberTag.contains(TAG_MEMBER_SEED_WAVE_COPIES, Tag.TAG_ANY_NUMERIC)
-                && memberTag.getLong(TAG_MEMBER_SEED_WAVE_COPIES) != copies) {
+        var patternTag = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(memberTag, TAG_MEMBER_PATTERN, Tag.TAG_COMPOUND)
+                ? memberTag.getCompoundOrEmpty(TAG_MEMBER_PATTERN) : memberTag;
+        long copies = Math.max(1L, memberTag.getLongOr(TAG_MEMBER_COPIES, 0L));
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(memberTag, TAG_MEMBER_SEED_WAVE_COPIES, 99)
+                && memberTag.getLongOr(TAG_MEMBER_SEED_WAVE_COPIES, 0L) != copies) {
             throw new IllegalArgumentException(
                     "legacy seed-wave copies cannot encode execution repetition");
         }
@@ -81,7 +81,7 @@ public final class ClosedLoopPatternPayloadTagCodec {
 
     static SeedMultipliers readSeedMultipliers(CompoundTag tag) {
         int legacySeedMultiplier = positiveIntOrOne(tag, TAG_SEED_MULTIPLIER);
-        int executionSeedMultiplier = tag.contains(TAG_EXECUTION_SEED_MULTIPLIER, Tag.TAG_ANY_NUMERIC)
+        int executionSeedMultiplier = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_EXECUTION_SEED_MULTIPLIER, 99)
                 ? positiveIntOrOne(tag, TAG_EXECUTION_SEED_MULTIPLIER)
                 : legacySeedMultiplier;
         return new SeedMultipliers(
@@ -93,19 +93,19 @@ public final class ClosedLoopPatternPayloadTagCodec {
     }
 
     private static int positiveIntOrOne(CompoundTag tag, String key) {
-        return tag.contains(key, Tag.TAG_ANY_NUMERIC) ? Math.max(1, tag.getInt(key)) : 1;
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, key, 99) ? Math.max(1, tag.getIntOr(key, 0)) : 1;
     }
 
     private static ListTag writeStacks(Iterable<GenericStack> stacks, HolderLookup.Provider registries) {
         var list = new ListTag();
-        for (var stack : stacks) list.add(GenericStack.writeTag(registries, stack));
+        for (var stack : stacks) list.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, stack));
         return list;
     }
 
     private static java.util.List<GenericStack> readStacks(ListTag tags, HolderLookup.Provider registries) {
         var stacks = new ArrayList<GenericStack>(tags.size());
         for (int i = 0; i < tags.size(); i++) {
-            var stack = GenericStack.readTag(registries, tags.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, tags.getCompoundOrEmpty(i));
             if (stack == null) throw new IllegalArgumentException("invalid generic stack in closed-loop payload");
             stacks.add(stack);
         }

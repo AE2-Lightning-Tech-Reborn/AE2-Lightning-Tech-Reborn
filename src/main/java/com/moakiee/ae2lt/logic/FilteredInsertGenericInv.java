@@ -115,4 +115,9 @@ public class FilteredInsertGenericInv implements GenericInternalInventory {
     public void onChange() {
         delegate.onChange();
     }
+
+    @Override
+    public void updateSnapshots(net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+        delegate.updateSnapshots(transaction);
+    }
 }

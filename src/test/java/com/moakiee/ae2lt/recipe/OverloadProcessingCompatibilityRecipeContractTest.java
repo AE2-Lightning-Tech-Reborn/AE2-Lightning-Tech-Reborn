@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.recipe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,10 +47,9 @@ class OverloadProcessingCompatibilityRecipeContractTest {
         JsonObject input = recipe(filename).getAsJsonArray("inputs")
                 .get(inputIndex)
                 .getAsJsonObject();
-        JsonObject ingredient = input.getAsJsonObject("ingredient");
+        String ingredient = input.get("ingredient").getAsString();
 
-        assertEquals(expectedTag, ingredient.get("tag").getAsString(), filename);
-        assertFalse(ingredient.has("item"), filename);
+        assertEquals("#" + expectedTag, ingredient, filename);
     }
 
     private static JsonObject recipe(String filename) throws Exception {

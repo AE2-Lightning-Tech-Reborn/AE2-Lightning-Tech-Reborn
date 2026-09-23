@@ -80,7 +80,7 @@ public final class RailgunRecoilService {
     }
 
     public static boolean inRecoilGrace(ServerPlayer player) {
-        long t = player.getPersistentData().getLong(RECOIL_GRACE_TAG);
+        long t = player.getPersistentData().getLongOr(RECOIL_GRACE_TAG, 0L);
         if (t == 0L) return false;
         return player.level().getGameTime() <= t;
     }

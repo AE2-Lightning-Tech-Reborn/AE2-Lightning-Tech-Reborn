@@ -25,7 +25,9 @@ public final class TianshuInventoryTweaksCompat {
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
                 && ModList.get().isLoaded("invtweaks")
                 && event.getScreen() instanceof TianshuPatternEncodingTermScreen<?> screen) {
-            if (screen.mouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
+            if (screen.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(
+                    event.getMouseX(), event.getMouseY(),
+                    new net.minecraft.client.input.MouseButtonInfo(event.getButton(), 0)), false)) {
                 event.setCanceled(true);
             }
         }

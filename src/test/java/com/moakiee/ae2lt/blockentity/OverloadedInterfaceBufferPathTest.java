@@ -21,7 +21,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -32,7 +32,7 @@ import appeng.api.stacks.AEKeyType;
 import appeng.api.storage.MEStorage;
 
 /** Regression coverage for the production persistent-buffer and retry paths. */
-class OverloadedInterfaceBufferPathTest {
+class OverloadedInterfaceBufferPathTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private static final TestKeyType ITEMS = new TestKeyType("items");
     private static final TestKeyType FLUIDS = new TestKeyType("fluids");
 
@@ -609,10 +609,10 @@ class OverloadedInterfaceBufferPathTest {
         }
 
         @Override
-        public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            return tag;
+        public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+
         }
 
         @Override
@@ -621,8 +621,8 @@ class OverloadedInterfaceBufferPathTest {
         }
 
         @Override
-        public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
 
         @Override
@@ -659,7 +659,7 @@ class OverloadedInterfaceBufferPathTest {
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType(String id) {
             super(
-                    ResourceLocation.fromNamespaceAndPath("ae2lt_test", id),
+                    Identifier.fromNamespaceAndPath("ae2lt_test", id),
                     TestKey.class,
                     Component.literal(id));
         }

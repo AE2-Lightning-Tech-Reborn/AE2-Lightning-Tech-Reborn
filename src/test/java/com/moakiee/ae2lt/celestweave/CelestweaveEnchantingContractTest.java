@@ -19,11 +19,10 @@ final class CelestweaveEnchantingContractTest {
         String armorItem = Files.readString(JAVA_ROOT.resolve("BaseCelestweaveArmorItem.java"));
         String armorMaterial = Files.readString(JAVA_ROOT.resolve("CelestweaveArmorMaterials.java"));
 
-        assertTrue(armorItem.contains("public boolean isEnchantable(ItemStack stack)"));
-        assertTrue(armorItem.contains("return true;"));
+        assertTrue(armorItem.contains(".enchantable(CelestweaveArmorMaterials.CELESTWEAVE.enchantmentValue())"));
         assertFalse(armorItem.contains(".durability("), "FE-powered armor must remain free of vanilla durability");
-        assertTrue(armorMaterial.contains("ENCHANTMENT_VALUE = 32"));
-        assertTrue(armorMaterial.contains("ENCHANTMENT_VALUE,"));
+        assertTrue(armorMaterial.contains("            32,"));
+        assertTrue(armorMaterial.contains("new ArmorMaterial("));
     }
 
     @Test

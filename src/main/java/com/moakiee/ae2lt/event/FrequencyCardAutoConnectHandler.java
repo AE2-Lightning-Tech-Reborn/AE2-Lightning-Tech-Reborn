@@ -21,6 +21,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 @EventBusSubscriber(modid = AE2LightningTech.MODID)
 public final class FrequencyCardAutoConnectHandler {
@@ -47,7 +48,7 @@ public final class FrequencyCardAutoConnectHandler {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+    public static void onBlockBreak(BreakBlockEvent event) {
         if (event.isCanceled() || !(event.getLevel() instanceof ServerLevelAccessor levelAccessor)) {
             return;
         }

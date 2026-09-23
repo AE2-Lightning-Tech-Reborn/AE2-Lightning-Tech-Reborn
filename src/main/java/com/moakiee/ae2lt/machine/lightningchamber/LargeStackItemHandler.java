@@ -11,6 +11,9 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 import appeng.api.inventories.InternalInventory;
 
@@ -30,6 +33,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     private static final String TAG_STACK = "Stack";
 
     private final NonNullList<ItemStack> stacks;
+    private final ResourceHandler<ItemResource> resourceHandler;
     @Nullable
     private final Runnable changeListener;
 
@@ -39,6 +43,27 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
         }
         this.stacks = NonNullList.withSize(size, ItemStack.EMPTY);
         this.changeListener = changeListener;
+        this.resourceHandler = new ItemStacksResourceHandler(stacks) {
+            @Override
+            public boolean isValid(int index, ItemResource resource) {
+                return resource.isEmpty() || LargeStackItemHandler.this.isItemValid(index, resource.toStack(1));
+            }
+
+            @Override
+            protected int getCapacity(int index, ItemResource resource) {
+                return LargeStackItemHandler.this.getSlotLimit(index);
+            }
+
+            @Override
+            protected void onContentsChanged(int index, ItemStack previousContents) {
+                LargeStackItemHandler.this.onContentsChanged(index);
+            }
+        };
+    }
+
+    @Override
+    public final ResourceHandler<ItemResource> toResourceHandler() {
+        return resourceHandler;
     }
 
     @Override
@@ -231,7 +256,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             CompoundTag itemTag = new CompoundTag();
             itemTag.putInt(TAG_SLOT, slot);
             itemTag.putInt(TAG_COUNT_INT, stack.getCount());
-            Tag stackTag = stack.copyWithCount(1).save(registries, new CompoundTag());
+            Tag stackTag = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(stack.copyWithCount(1), registries);
             itemTag.put(TAG_STACK, stackTag);
             items.add(itemTag);
         }
@@ -243,27 +268,27 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             stacks.set(slot, ItemStack.EMPTY);
         }
 
-        if (!tag.contains(key, Tag.TAG_LIST)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, key, Tag.TAG_LIST)) {
             return;
         }
 
-        ListTag items = tag.getList(key, Tag.TAG_COMPOUND);
+        ListTag items = tag.getListOrEmpty(key);
         for (int i = 0; i < items.size(); i++) {
-            CompoundTag itemTag = items.getCompound(i);
-            int slot = itemTag.getInt(TAG_SLOT);
+            CompoundTag itemTag = items.getCompoundOrEmpty(i);
+            int slot = itemTag.getIntOr(TAG_SLOT, 0);
             if (slot < 0 || slot >= stacks.size()) {
                 continue;
             }
 
-            ItemStack stack = itemTag.contains(TAG_STACK, Tag.TAG_COMPOUND)
-                    ? ItemStack.parseOptional(registries, itemTag.getCompound(TAG_STACK))
-                    : ItemStack.parseOptional(registries, itemTag);
+            ItemStack stack = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(itemTag, TAG_STACK, Tag.TAG_COMPOUND)
+                    ? com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, itemTag.getCompoundOrEmpty(TAG_STACK))
+                    : com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, itemTag);
             if (stack.isEmpty()) {
                 continue;
             }
 
-            int savedCount = itemTag.contains(TAG_COUNT_INT, Tag.TAG_INT)
-                    ? itemTag.getInt(TAG_COUNT_INT)
+            int savedCount = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(itemTag, TAG_COUNT_INT, Tag.TAG_INT)
+                    ? itemTag.getIntOr(TAG_COUNT_INT, 0)
                     : stack.getCount();
             // Preserve the saved count as-is, even if it exceeds the current slot limit.
             // This grandfathers in stacks from older versions whose limit has since been

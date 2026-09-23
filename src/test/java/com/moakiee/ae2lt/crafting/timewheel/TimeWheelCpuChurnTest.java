@@ -44,7 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /** Real pool/dispatch/link lifecycles. Completed calculations are supplied as initialized jobs;
  * no game server or Mixin-transformed CraftingService is started by this test. */
-class TimeWheelCpuChurnTest {
+class TimeWheelCpuChurnTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private static final AEKey INPUT = LightningKey.EXTREME_HIGH_VOLTAGE;
     private static final AEKey OUTPUT = LightningKey.HIGH_VOLTAGE;
 
@@ -52,7 +52,7 @@ class TimeWheelCpuChurnTest {
     @ValueSource(ints = {1, 4, 32})
     void maintenanceChurnRetainsAndTicksExistingPlayerJob(int budget) throws Exception {
         if (net.neoforged.fml.loading.LoadingModList.get() == null) {
-            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
@@ -211,16 +211,11 @@ class TimeWheelCpuChurnTest {
                 case "patternTimes" -> Map.of(pattern, amount);
                 default -> null;
             });
-            var tag = new CompoundTag();
             var id = UUID.randomUUID();
-            tag.putUUID("craftId", id);
-            tag.putBoolean("req", false);
-            tag.putBoolean("standalone", !replenishment);
-            var link = new CraftingLink(tag, cpu);
+            var link = new CraftingLink(id, !replenishment, cpu);
             if (replenishment) {
                 service.addLink(link);
-                tag.putBoolean("req", true);
-                service.addLink(new CraftingLink(tag, maintenance));
+                service.addLink(new CraftingLink(id, false, maintenance));
             }
             var jobType = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TimeWheelJob");
             var ctor = jobType.getDeclaredConstructor(ICraftingPlan.class, Consumer.class,

@@ -14,7 +14,8 @@ import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.RelativeMovement;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.phys.Vec3;
 
 import com.moakiee.ae2lt.celestweave.PhaseFlightMovementGuard;
@@ -39,22 +40,16 @@ public abstract class ServerGamePacketListenerPhaseMovementMixin {
     }
 
     @Inject(
-            method = "teleport(DDDFFLjava/util/Set;)V",
+            method = "teleport(Lnet/minecraft/world/entity/PositionMoveRotation;Ljava/util/Set;)V",
             at = @At("HEAD"),
             cancellable = true)
     private void ae2lt$blockExternalPhaseTeleportPacket(
-            double x,
-            double y,
-            double z,
-            float yRot,
-            float xRot,
-            Set<RelativeMovement> relativeMovements,
+            PositionMoveRotation destination,
+            Set<Relative> relatives,
             CallbackInfo ci) {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
-        Vec3 target = new Vec3(
-                relativeMovements.contains(RelativeMovement.X) ? player.getX() + x : x,
-                relativeMovements.contains(RelativeMovement.Y) ? player.getY() + y : y,
-                relativeMovements.contains(RelativeMovement.Z) ? player.getZ() + z : z);
+        Vec3 target = PositionMoveRotation.calculateAbsolute(
+                PositionMoveRotation.of(player), destination, relatives).position();
         if (PhaseFlightMovementGuard.blocksExternalTeleports(player)
                 && !PhaseFlightMovementGuard.isSelfTeleportAuthorized(player)
                 && !player.position().equals(target)) {
@@ -89,10 +84,10 @@ public abstract class ServerGamePacketListenerPhaseMovementMixin {
 
     /** Vanilla simulates the player once, then restores the packet-owned position every tick. */
     @WrapOperation(
-            method = "tick",
+            method = "tickPlayer",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/server/level/ServerPlayer;absMoveTo(DDDFF)V"))
+                    target = "Lnet/minecraft/server/level/ServerPlayer;absSnapTo(DDDFF)V"))
     private void ae2lt$authorizeVanillaTickPositionRestore(
             ServerPlayer player,
             double x,

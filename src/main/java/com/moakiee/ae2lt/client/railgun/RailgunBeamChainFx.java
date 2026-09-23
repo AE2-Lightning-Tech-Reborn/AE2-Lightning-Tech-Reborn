@@ -49,9 +49,9 @@ public final class RailgunBeamChainFx {
             // clearly even when several enemies are stacked.
             for (int s = 0; s < 3; s++) {
                 mc.level.addParticle(ParticleTypes.ELECTRIC_SPARK, b.x, b.y, b.z,
-                        (mc.level.random.nextDouble() - 0.5D) * 0.35D,
-                        (mc.level.random.nextDouble() - 0.5D) * 0.35D,
-                        (mc.level.random.nextDouble() - 0.5D) * 0.35D);
+                        (mc.level.getRandom().nextDouble() - 0.5D) * 0.35D,
+                        (mc.level.getRandom().nextDouble() - 0.5D) * 0.35D,
+                        (mc.level.getRandom().nextDouble() - 0.5D) * 0.35D);
             }
         }
 
@@ -59,7 +59,7 @@ public final class RailgunBeamChainFx {
         // is obvious. Volume kept low because the beam already loops a humming
         // SFX on its own; we don't want cumulative noise.
         Vec3 first = p.firstHit();
-        mc.level.addParticle(ParticleTypes.FLASH, first.x, first.y, first.z, 0, 0, 0);
+        mc.level.addParticle(net.minecraft.core.particles.ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFFF), first.x, first.y, first.z, 0, 0, 0);
         if (p.soundEnabled()) {
             mc.level.playLocalSound(first.x, first.y, first.z,
                     ModSounds.RAILGUN_BEAM_CHAIN.get(), SoundSource.PLAYERS,

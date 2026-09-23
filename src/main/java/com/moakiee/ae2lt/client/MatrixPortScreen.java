@@ -8,13 +8,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -35,7 +35,7 @@ import com.moakiee.ae2lt.menu.MatrixPortMenu;
  * Matching patterns are highlighted while the other patterns in that retained row are dimmed.</p>
  */
 public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/guis/matrix_pattern_manager.png");
 
     private static final int TEXTURE_SIZE = 256;
@@ -79,9 +79,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     private long lastPatternContentRevision;
 
     public MatrixPortScreen(MatrixPortMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        imageWidth = GUI_WIDTH;
-        imageHeight = GUI_HEIGHT;
+        super(menu, playerInventory, title, GUI_WIDTH, GUI_HEIGHT);
         titleLabelY = 10_000;
         inventoryLabelY = 10_000;
         allMenuSlots = List.copyOf(menu.slots);
@@ -126,8 +124,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(
+    public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 TEXTURE,
                 leftPos,
                 topPos,
@@ -139,11 +137,13 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
                 TEXTURE_SIZE);
         renderSearchHighlights(graphics);
         renderScrollbar(graphics, mouseX, mouseY);
+
+        super.extractContents(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        graphics.text(
                 font,
                 Component.translatable("ae2lt.gui.matrix_port.title"),
                 7,
@@ -153,9 +153,9 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderVisibleBatch(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
+        extractTooltip(graphics, mouseX, mouseY);
     }
 
     /**
@@ -165,11 +165,11 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
      * slot id, so normal container clicks and synchronization keep their existing contract.
      */
     private void renderVisibleBatch(
-            GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         menu.slots.clear();
         menu.slots.addAll(visibleMenuSlots);
         try {
-            super.render(graphics, mouseX, mouseY, partialTick);
+            super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         } finally {
             menu.slots.clear();
             menu.slots.addAll(allMenuSlots);
@@ -177,7 +177,9 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (button == 1 && searchField != null && searchField.isMouseOver(mouseX, mouseY)) {
             searchField.setValue("");
         }
@@ -186,26 +188,26 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
             updateScrollFromMouse(mouseY);
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, handled);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX,
-                                double mouseY,
-                                int button,
-                                double dragX,
-                                double dragY) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (draggingScrollbar) {
             updateScrollFromMouse(mouseY);
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         draggingScrollbar = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -364,7 +366,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         visibleMenuSlots.addAll(playerMenuSlots);
     }
 
-    private void renderSearchHighlights(GuiGraphics graphics) {
+    private void renderSearchHighlights(GuiGraphicsExtractor graphics) {
         if (searchField == null || searchField.getValue().isBlank()) {
             return;
         }
@@ -381,10 +383,10 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         }
     }
 
-    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderScrollbar(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         int handleY = handleY();
         boolean hovered = draggingScrollbar || isMouseOverHandle(mouseX, mouseY, handleY);
-        graphics.blit(
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 TEXTURE,
                 leftPos + SCROLLBAR_X,
                 topPos + handleY,

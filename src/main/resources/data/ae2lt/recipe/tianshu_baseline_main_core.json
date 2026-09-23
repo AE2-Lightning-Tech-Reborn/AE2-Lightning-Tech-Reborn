@@ -3,10 +3,10 @@
   "category": "misc",
   "pattern": ["SPS", "BCB", "SPS"],
   "key": {
-    "S": { "item": "ae2:64k_crafting_storage" },
-    "P": { "item": "ae2lt:overload_processor" },
-    "B": { "item": "ae2lt:overload_crystal_block" },
-    "C": { "item": "ae2lt:tianshu_supercomputer_casing" }
+    "S": "ae2:64k_crafting_storage",
+    "P": "ae2lt:overload_processor",
+    "B": "ae2lt:overload_crystal_block",
+    "C": "ae2lt:tianshu_supercomputer_casing"
   },
   "result": { "id": "ae2lt:tianshu_baseline_main_core", "count": 1 }
 }

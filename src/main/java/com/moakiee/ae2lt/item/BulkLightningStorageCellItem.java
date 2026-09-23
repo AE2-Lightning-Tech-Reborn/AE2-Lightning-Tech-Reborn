@@ -8,7 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -46,8 +46,8 @@ public final class BulkLightningStorageCellItem extends Item {
     public static StoredAmounts readStoredAmounts(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         return new StoredAmounts(
-                sanitize(tag.getLong(TAG_HIGH_VOLTAGE)),
-                sanitize(tag.getLong(TAG_EXTREME_HIGH_VOLTAGE)));
+                sanitize(tag.getLongOr(TAG_HIGH_VOLTAGE, 0L)),
+                sanitize(tag.getLongOr(TAG_EXTREME_HIGH_VOLTAGE, 0L)));
     }
 
     public static void writeStoredAmounts(ItemStack stack, long highVoltage, long extremeHighVoltage) {
@@ -61,31 +61,29 @@ public final class BulkLightningStorageCellItem extends Item {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         disassembleCell(player.getItemInHand(hand), level, player);
-        return new InteractionResultHolder<>(
-                InteractionResult.sidedSuccess(level.isClientSide()),
-                player.getItemInHand(hand));
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         return disassembleCell(stack, context.getLevel(), context.getPlayer())
-                ? InteractionResult.sidedSuccess(context.getLevel().isClientSide())
+                ? (context.getLevel().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER)
                 : InteractionResult.PASS;
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
-                                List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+                                net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         StoredAmounts amounts = readStoredAmounts(stack);
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.bulk_lightning_storage.capacity")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.bulk_lightning_storage.capacity")
                 .withStyle(ChatFormatting.DARK_PURPLE));
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "tooltip.ae2lt.bulk_lightning_storage.high_voltage",
                 String.format("%,d", amounts.highVoltage()))
                 .withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "tooltip.ae2lt.bulk_lightning_storage.extreme_high_voltage",
                 String.format("%,d", amounts.extremeHighVoltage()))
                 .withStyle(ChatFormatting.GRAY));
@@ -96,23 +94,25 @@ public final class BulkLightningStorageCellItem extends Item {
             return false;
         }
 
-        var disassembledStacks = StorageCellDisassemblyRecipe.getDisassemblyResult(level, stack.getItem());
+        var disassembledStacks = level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                ? StorageCellDisassemblyRecipe.getDisassemblyResult(serverLevel, stack.getItem())
+                : java.util.List.<ItemStack>of();
         if (disassembledStacks.isEmpty()) {
             return false;
         }
 
         var playerInventory = player.getInventory();
-        if (playerInventory.getSelected() != stack) {
+        if (playerInventory.getSelectedItem() != stack) {
             return false;
         }
 
         var storedAmounts = readStoredAmounts(stack);
         if (storedAmounts.highVoltage() != 0 || storedAmounts.extremeHighVoltage() != 0) {
-            player.displayClientMessage(PlayerMessages.OnlyEmptyCellsCanBeDisassembled.text(), true);
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, PlayerMessages.OnlyEmptyCellsCanBeDisassembled.text(), true);
             return false;
         }
 
-        playerInventory.setItem(playerInventory.selected, ItemStack.EMPTY);
+        playerInventory.setItem(playerInventory.getSelectedSlot(), ItemStack.EMPTY);
         for (var disassembledStack : disassembledStacks) {
             playerInventory.placeItemBackInInventory(disassembledStack.copy());
         }

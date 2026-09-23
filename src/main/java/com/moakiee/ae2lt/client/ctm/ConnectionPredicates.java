@@ -13,8 +13,8 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class ConnectionPredicates {
 
-    private static final Map<ResourceLocation, ConnectionPredicate> REGISTRY = new HashMap<>();
+    private static final Map<Identifier, ConnectionPredicate> REGISTRY = new HashMap<>();
 
     /** Generic: always active, connects to any adjacent block of the same type. */
     public static final ConnectionPredicate SAME_BLOCK = new ConnectionPredicate() {
@@ -112,16 +112,16 @@ public final class ConnectionPredicates {
     private ConnectionPredicates() {
     }
 
-    public static void register(ResourceLocation id, ConnectionPredicate predicate) {
+    public static void register(Identifier id, ConnectionPredicate predicate) {
         REGISTRY.put(id, predicate);
     }
 
-    public static ConnectionPredicate get(ResourceLocation id) {
+    public static ConnectionPredicate get(Identifier id) {
         return REGISTRY.getOrDefault(id, SAME_BLOCK);
     }
 
-    private static ResourceLocation rl(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, path);
+    private static Identifier rl(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, path);
     }
 
     private static boolean isFormedMatrixComponent(BlockState state) {

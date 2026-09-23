@@ -5,11 +5,11 @@ import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessingRecipe> {
-    private static final ResourceLocation TEXTURE =
+    private static final Identifier TEXTURE =
             EmiRecipeWidgets.texture("guis/overload_processing_factory.png");
     private static final int WIDTH = 168;
     private static final int FLUID_HEIGHT = 54;

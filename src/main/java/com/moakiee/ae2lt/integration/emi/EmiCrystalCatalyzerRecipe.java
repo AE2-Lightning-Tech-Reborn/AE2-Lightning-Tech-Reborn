@@ -8,11 +8,11 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRecipe> {
-    private static final ResourceLocation TEXTURE =
+    private static final Identifier TEXTURE =
             EmiRecipeWidgets.texture("guis/crystal_catalyzer.png");
     private static final int WIDTH = 128;
 
@@ -129,7 +129,7 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
             graphics.pose().pushPose();
             graphics.pose().scale(scale, scale, 1);
             int x = Math.round((WIDTH / 2f) / scale - font.width(text) / 2f);
-            graphics.drawString(font, text, x, 0, EmiRecipeWidgets.TEXT_COLOR, false);
+            graphics.text(font, text, x, 0, EmiRecipeWidgets.TEXT_COLOR, false);
             graphics.pose().popPose();
         });
     }

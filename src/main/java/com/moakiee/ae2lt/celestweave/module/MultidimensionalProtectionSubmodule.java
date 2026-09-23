@@ -74,9 +74,9 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
 
     public static boolean isHitFeedbackEnabled(ItemStack armor) {
         var options = INSTANCE.getOptions(armor);
-        if (!options.contains(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)) {
             return true;
         }
-        return options.getBoolean(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY);
+        return options.getBooleanOr(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, false);
     }
 }

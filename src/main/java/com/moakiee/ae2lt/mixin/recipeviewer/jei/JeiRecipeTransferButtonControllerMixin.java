@@ -7,7 +7,10 @@ import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.gui.recipes.RecipeTransferButtonController;
 import mezz.jei.gui.recipes.RecipesGui;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import java.util.function.Supplier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
@@ -25,8 +28,8 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
     @Accessor("recipeLayout")
     protected abstract IRecipeLayoutDrawable<?> ae2lt$getRecipeLayout();
 
-    @Accessor("recipesGui")
-    protected abstract RecipesGui ae2lt$getRecipesGui();
+    @Accessor("screenSupplier")
+    protected abstract Supplier<AbstractContainerScreen<?>> ae2lt$getScreenSupplier();
 
     @Inject(
             method = "onPress(Lmezz/jei/api/gui/inputs/IJeiUserInput;)Z",
@@ -36,7 +39,8 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
             IJeiUserInput input, CallbackInfoReturnable<Boolean> cir) {
         JeiRecipeTransferMetadata.clear();
         if (input == null || input.isSimulate()) return;
-        var menu = ae2lt$getRecipesGui().getParentContainerMenu();
+        var screen = ae2lt$getScreenSupplier().get();
+        var menu = screen == null ? null : screen.getMenu();
         if (menu instanceof TianshuPatternEncodingTermMenu tianshuMenu) {
             JeiRecipeTransferMetadata.begin(tianshuMenu, ae2lt$getRecipeLayout());
         }
@@ -55,15 +59,18 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
             method = "onPress(Lmezz/jei/api/gui/inputs/IJeiUserInput;)Z",
             at = @At(
                     value = "INVOKE",
-                    target = "Lmezz/jei/gui/recipes/RecipesGui;onClose()V"),
+                    target = "Ljava/lang/Runnable;run()V"),
             require = 0)
-    private void ae2lt$keepRecipePageForDirectUpload(RecipesGui recipesGui) {
-        var menu = recipesGui.getParentContainerMenu();
-        if (Screen.hasAltDown()
+    private void ae2lt$keepRecipePageForDirectUpload(Runnable onSuccessfulTransfer) {
+        Screen recipeScreen = Minecraft.getInstance().screen;
+        var screen = ae2lt$getScreenSupplier().get();
+        var menu = screen == null ? null : screen.getMenu();
+        if (recipeScreen instanceof RecipesGui
+                && Minecraft.getInstance().hasAltDown()
                 && menu instanceof TianshuPatternEncodingTermMenu tianshuMenu
-                && TianshuDirectUploadClient.holdRecipeScreen(tianshuMenu, recipesGui)) {
+                && TianshuDirectUploadClient.holdRecipeScreen(tianshuMenu, recipeScreen)) {
             return;
         }
-        recipesGui.onClose();
+        onSuccessfulTransfer.run();
     }
 }

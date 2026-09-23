@@ -10,7 +10,7 @@ import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.stacks.KeyCounter;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
-class UselessBatchAdapterTest {
+class UselessBatchAdapterTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void persistentEndpointRetriesRecoveredTargetOnTheNextTick() throws Exception {
         var provider = new Provider();

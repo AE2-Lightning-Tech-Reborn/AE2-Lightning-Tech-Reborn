@@ -17,9 +17,9 @@ class PhaseFlightRenderingSourceContractTest {
 
         assertTrue(mixinConfig.contains("client.LevelRendererPhaseFlightMixin"));
         assertTrue(mixin.contains("@ModifyArg("));
-        assertTrue(mixin.contains("method = \"renderLevel\""));
-        assertTrue(mixin.contains("LevelRenderer;setupRender("));
-        assertTrue(mixin.contains("index = 3"));
+        assertTrue(mixin.contains("method = \"update\""));
+        assertTrue(mixin.contains("LevelRenderer;cullTerrain("));
+        assertTrue(mixin.contains("index = 2"));
         assertTrue(mixin.contains("isSpectator || PhaseFlightMovementGuard.isPhaseFlightActive"));
         assertFalse(mixin.contains("isSpectator()"));
         assertFalse(mixin.contains("GameType.SPECTATOR"));

@@ -1,43 +1,29 @@
 package com.moakiee.ae2lt.client;
 
-import net.minecraft.client.model.PlayerModel;
-import net.minecraft.client.model.geom.EntityModelSet;
-import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.entity.layers.ElytraLayer;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.EquipmentSlot;
+import java.util.Optional;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 
-import com.moakiee.ae2lt.item.CelestweaveCoreItem;
-import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
-
-/** Materializes vanilla-shaped wings only while Celestweave phase-wing flight is active. */
-public final class PhaseWingLayer
-        extends ElytraLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
-    private static final ResourceLocation WING_TEXTURE =
-            ResourceLocation.withDefaultNamespace("textures/entity/elytra.png");
-
-    public PhaseWingLayer(PlayerRenderer renderer, EntityModelSet models) {
-        super(renderer, models);
+/** 26.1's vanilla WingsLayer reads the equipment asset from the equipped chest stack. */
+public final class PhaseWingLayer {
+    private PhaseWingLayer() {
     }
 
-    @Override
-    public boolean shouldRender(ItemStack stack, AbstractClientPlayer player) {
-        return player.isFallFlying()
-                && isCelestweaveChest(stack);
-    }
-
-    @Override
-    public ResourceLocation getElytraTexture(ItemStack stack, AbstractClientPlayer player) {
-        return WING_TEXTURE;
-    }
-
-    private static boolean isCelestweaveChest(ItemStack stack) {
-        if (stack.getItem() instanceof CelestweaveCoreItem) {
-            return true;
+    public static void syncVisual(ItemStack chestStack, boolean active) {
+        Equippable equipped = chestStack.get(DataComponents.EQUIPPABLE);
+        if (equipped == null) {
+            return;
         }
-        return stack.getItem() instanceof PhaseLockProjectionItem projection
-                && projection.equipmentSlot() == EquipmentSlot.CHEST;
+        var asset = active ? Optional.of(EquipmentAssets.ELYTRA) : Optional.<net.minecraft.resources.ResourceKey<net.minecraft.world.item.equipment.EquipmentAsset>>empty();
+        if (equipped.assetId().equals(asset)) {
+            return;
+        }
+        chestStack.set(DataComponents.EQUIPPABLE, new Equippable(
+                equipped.slot(), equipped.equipSound(), asset, equipped.cameraOverlay(),
+                equipped.allowedEntities(), equipped.dispensable(), equipped.swappable(),
+                equipped.damageOnHurt(), equipped.equipOnInteract(), equipped.canBeSheared(),
+                equipped.shearingSound()));
     }
 }

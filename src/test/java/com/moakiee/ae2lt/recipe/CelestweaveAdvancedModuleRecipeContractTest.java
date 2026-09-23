@@ -22,7 +22,7 @@ final class CelestweaveAdvancedModuleRecipeContractTest {
         int latticeCount = recipe.getAsJsonArray("inputs").asList().stream()
                 .map(element -> element.getAsJsonObject())
                 .filter(input -> "ae2lt:entangled_topological_lattice".equals(
-                        input.getAsJsonObject("ingredient").get("item").getAsString()))
+                        input.get("ingredient").getAsString()))
                 .mapToInt(input -> input.get("count").getAsInt())
                 .sum();
 

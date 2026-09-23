@@ -1,24 +1,20 @@
 package com.moakiee.ae2lt.client.ctm;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterBlockStateModels;
 
-/** Registers the {@code ae2lt:connected_texture} geometry loader. */
-@EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class CtmGeometryLoaders {
-
     private CtmGeometryLoaders() {
     }
 
     @SubscribeEvent
-    public static void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
-        event.register(
-                ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "connected_texture"),
-                new ConnectedTextureLoader());
+    public static void registerModels(RegisterBlockStateModels event) {
+        event.registerModel(Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "connected_texture"),
+                ConnectedTextureGeometry.CODEC);
     }
 }

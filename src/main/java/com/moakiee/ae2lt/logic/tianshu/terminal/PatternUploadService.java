@@ -28,7 +28,7 @@ public final class PatternUploadService {
                     free, inventory.size()));
         }
         result.sort(Comparator
-                .comparing((PatternUploadTarget target) -> target.dimension().location().toString())
+                .comparing((PatternUploadTarget target) -> target.dimension().identifier().toString())
                 .thenComparingLong(target -> target.pos().asLong()));
         return List.copyOf(result);
     }

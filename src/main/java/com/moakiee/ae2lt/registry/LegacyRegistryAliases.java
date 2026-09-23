@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Registry aliases for IDs used before the Tianshu multiblock naming was finalized.
@@ -54,7 +54,7 @@ public final class LegacyRegistryAliases {
         ModItems.ITEMS.addAlias(id(from), id(to));
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, path);
     }
 }

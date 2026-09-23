@@ -14,7 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -133,14 +133,14 @@ class ExecuteLoopPatternEqualityTest {
 
         @Override public AEKeyType getType() { return TYPE; }
         @Override public AEKey dropSecondary() { return this; }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            return tag;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("thunderbolt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("thunderbolt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() { return Component.literal(id); }
@@ -155,7 +155,7 @@ class ExecuteLoopPatternEqualityTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("thunderbolt_test", "execute_loop_key"),
+            super(Identifier.fromNamespaceAndPath("thunderbolt_test", "execute_loop_key"),
                     TestKey.class, Component.literal("execute loop key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

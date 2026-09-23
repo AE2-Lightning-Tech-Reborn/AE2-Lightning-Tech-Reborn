@@ -21,7 +21,7 @@ public final class TianshuWirelessPatternEncodingTermScreen
             ScreenStyle style) {
         super(menu, inventory, title, style);
         if (menu.isWUT()) {
-            addToLeftToolbar(cycleTerminalButton());
+            addTerminalSelectionPanel(widgets);
         }
         upgradesPanel = addUpgradePanel(widgets, menu);
     }
@@ -33,9 +33,10 @@ public final class TianshuWirelessPatternEncodingTermScreen
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
-        return handled || checkForTerminalKeys(keyCode, scanCode);
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
+        boolean handled = super.keyPressed(event);
+        return handled || checkForTerminalKeys(event);
     }
 
     @Override

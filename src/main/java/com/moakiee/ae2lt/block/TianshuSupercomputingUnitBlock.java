@@ -43,10 +43,7 @@ public class TianshuSupercomputingUnitBlock extends Block implements MatrixMulti
         return component;
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context,
-                                List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+    public void appendItemTooltip(java.util.function.Consumer<Component> tooltip) {
         String description = switch (component) {
             case BLANK_UNIT -> "blank";
             case AMPLIFIER_UNIT -> "amplifier";
@@ -56,12 +53,12 @@ public class TianshuSupercomputingUnitBlock extends Block implements MatrixMulti
             default -> null;
         };
         if (description != null) {
-            tooltip.add(Component.translatable("tooltip.ae2lt.tianshu_unit." + description)
+            tooltip.accept(Component.translatable("tooltip.ae2lt.tianshu_unit." + description)
                     .withStyle(ChatFormatting.GRAY));
         }
         if (component == TianshuMultiblockComponent.BLANK_UNIT
                 || component == TianshuMultiblockComponent.AMPLIFIER_UNIT) {
-            tooltip.add(Component.translatable("tooltip.ae2lt.tianshu_unit.shared")
+            tooltip.accept(Component.translatable("tooltip.ae2lt.tianshu_unit.shared")
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
     }
@@ -77,18 +74,18 @@ public class TianshuSupercomputingUnitBlock extends Block implements MatrixMulti
     }
 
     @Override
-    protected VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesHiddenFormedModel(state) ? Shapes.empty() : super.getOcclusionShape(state, level, pos);
+    protected VoxelShape getOcclusionShape(BlockState state) {
+        return usesHiddenFormedModel(state) ? Shapes.empty() : super.getOcclusionShape(state);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesHiddenFormedModel(state) || super.propagatesSkylightDown(state, level, pos);
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return usesHiddenFormedModel(state) || super.propagatesSkylightDown(state);
     }
 
     @Override
-    protected int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesHiddenFormedModel(state) ? 0 : super.getLightBlock(state, level, pos);
+    protected int getLightDampening(BlockState state) {
+        return usesHiddenFormedModel(state) ? 0 : super.getLightDampening(state);
     }
 
     @Override
@@ -106,26 +103,23 @@ public class TianshuSupercomputingUnitBlock extends Block implements MatrixMulti
     }
 
     @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())) {
-            TianshuMultiblockUpdateScheduler.scheduleNear(level, pos);
-            scheduleMatrixUpdate(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        TianshuMultiblockUpdateScheduler.scheduleNear(level, pos);
+        scheduleMatrixUpdate(level, pos);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override
-    public void neighborChanged(
-            BlockState state,
-            Level level,
-            BlockPos pos,
-            Block block,
-            BlockPos fromPos,
-            boolean movedByPiston) {
-        super.neighborChanged(state, level, pos, block, fromPos, movedByPiston);
-        if (matrixComponent != MatrixMultiblockComponent.OTHER) {
-            MatrixMultiblockUpdateScheduler.scheduleNear(level, fromPos);
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos pos,
+            net.minecraft.core.Direction direction, BlockPos neighborPos, BlockState neighborState,
+            net.minecraft.util.RandomSource random) {
+        if (level instanceof Level world) {
+            if (matrixComponent != MatrixMultiblockComponent.OTHER) {
+                MatrixMultiblockUpdateScheduler.scheduleNear(world, neighborPos);
+            }
         }
+        return super.updateShape(state, level, tickAccess, pos, direction, neighborPos, neighborState, random);
     }
 
     private void scheduleMatrixUpdate(Level level, BlockPos pos) {

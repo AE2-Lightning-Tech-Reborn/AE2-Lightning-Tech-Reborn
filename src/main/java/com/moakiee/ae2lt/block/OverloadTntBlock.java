@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -27,7 +27,7 @@ public class OverloadTntBlock extends TntBlock {
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(
+    protected InteractionResult useItemOn(
             ItemStack stack,
             BlockState state,
             Level level,
@@ -44,14 +44,14 @@ public class OverloadTntBlock extends TntBlock {
 
         if (!player.getAbilities().instabuild) {
             if (stack.is(Items.FLINT_AND_STEEL)) {
-                stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
+                stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
             } else {
                 stack.shrink(1);
             }
         }
 
         player.awardStat(net.minecraft.stats.Stats.ITEM_USED.get(stack.getItem()));
-        return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class OverloadTntBlock extends TntBlock {
             Level level,
             BlockPos pos,
             net.minecraft.world.level.block.Block block,
-            BlockPos fromPos,
+            net.minecraft.world.level.redstone.Orientation orientation,
             boolean movedByPiston) {
         if (level.hasNeighborSignal(pos)) {
             prime(level, pos, null);
@@ -82,7 +82,7 @@ public class OverloadTntBlock extends TntBlock {
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide() && !player.isCreative() && state.getValue(UNSTABLE)) {
+        if (!level.isClientSide() && !player.getAbilities().instabuild && state.getValue(UNSTABLE)) {
             prime(level, pos, player);
         }
 
@@ -90,14 +90,15 @@ public class OverloadTntBlock extends TntBlock {
     }
 
     @Override
-    public void onCaughtFire(BlockState state, Level level, BlockPos pos, @Nullable Direction face, @Nullable LivingEntity igniter) {
+    public boolean onCaughtFire(BlockState state, Level level, BlockPos pos, @Nullable Direction face, @Nullable LivingEntity igniter) {
         prime(level, pos, igniter);
         level.removeBlock(pos, false);
+        return true;
     }
 
     @Override
-    public void wasExploded(Level level, BlockPos pos, Explosion explosion) {
-        if (level.isClientSide) {
+    public void wasExploded(net.minecraft.server.level.ServerLevel level, BlockPos pos, Explosion explosion) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -106,7 +107,7 @@ public class OverloadTntBlock extends TntBlock {
         int fuse = tnt.getFuse();
         // Keep vanilla-style shortened chain-explosion timing. The current fuse values are small,
         // so the historical short cast is harmless for now.
-        tnt.setFuse((short) (level.random.nextInt(fuse / 4) + fuse / 8));
+        tnt.setFuse((short) (level.getRandom().nextInt(fuse / 4) + fuse / 8));
         level.addFreshEntity(tnt);
     }
 
@@ -116,7 +117,7 @@ public class OverloadTntBlock extends TntBlock {
     }
 
     private static void prime(Level level, BlockPos pos, @Nullable LivingEntity igniter) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 

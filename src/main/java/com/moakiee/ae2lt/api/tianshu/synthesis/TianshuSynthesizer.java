@@ -5,19 +5,19 @@ import appeng.api.stacks.GenericStack;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Optional synthesis capability. The caller retains ownership of its plan, retries and task lifecycle. */
 public interface TianshuSynthesizer {
     int API_VERSION = 1;
-    ResourceLocation CAPABILITY_ID = ResourceLocation.fromNamespaceAndPath("ae2lt", "tianshu_synthesizer");
+    Identifier CAPABILITY_ID = Identifier.fromNamespaceAndPath("ae2lt", "tianshu_synthesizer");
 
     SynthesizerCapability inspect(SynthesisRequest request);
 
     SynthesisSubmission submit(SynthesisRequest request);
 
     record SynthesisRequest(AEItemKey processingId, List<List<GenericStack>> inputsPerCraft,
-            long requestedAmount, ResourceLocation targetCapabilityId, int apiVersion, UUID nonce) {
+            long requestedAmount, Identifier targetCapabilityId, int apiVersion, UUID nonce) {
         public SynthesisRequest {
             Objects.requireNonNull(processingId, "processingId");
             Objects.requireNonNull(targetCapabilityId, "targetCapabilityId");
@@ -27,7 +27,7 @@ public interface TianshuSynthesizer {
         }
     }
 
-    record SynthesizerCapability(int capabilityVersion, ResourceLocation capabilityId,
+    record SynthesizerCapability(int capabilityVersion, Identifier capabilityId,
             long acceptedAmount, long maxSafeBatch, RejectionReason rejectionReason) {
         public SynthesizerCapability {
             Objects.requireNonNull(capabilityId, "capabilityId");

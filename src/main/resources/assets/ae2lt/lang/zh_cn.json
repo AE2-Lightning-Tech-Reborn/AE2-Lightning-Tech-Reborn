@@ -166,6 +166,7 @@
   "jei.ae2lt.lightning_strike.natural_only": "需要自然闪电",
   "jei.ae2lt.lightning_strike.any_lightning": "任意闪电均可",
   "jei.ae2lt.lightning_strike.materials": "材料",
+  "jei.ae2lt.lightning_strike.not_consumed": "结构方块不会被仪式消耗",
   "jei.ae2lt.firmament_conversion.title": "苍穹转换",
   "jei.ae2lt.firmament_conversion.time": "处理时间：%s",
   "jei.ae2lt.multiblock.title": "多方块结构",

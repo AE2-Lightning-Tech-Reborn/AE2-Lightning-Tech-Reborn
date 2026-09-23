@@ -1,16 +1,18 @@
 package com.moakiee.ae2lt.celestweave;
 
-import java.util.List;
+import java.util.function.Consumer;
 
+import net.minecraft.world.InteractionResult;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -23,14 +25,13 @@ import com.moakiee.ae2lt.celestweave.service.ArmorTickService;
 import com.moakiee.ae2lt.util.DeviceHubTooltip;
 import com.moakiee.ae2lt.util.EnergyText;
 
-public abstract class BaseCelestweaveArmorItem extends ArmorItem implements DeviceItem {
+public abstract class BaseCelestweaveArmorItem extends Item implements DeviceItem {
     private final ArmorPart armorPart;
 
     protected BaseCelestweaveArmorItem(ArmorPart armorPart, Properties properties) {
-        super(
-                CelestweaveArmorMaterials.CELESTWEAVE,
-                armorType(armorPart),
-                properties.stacksTo(1).fireResistant().setNoRepair());
+        super(properties.stacksTo(1).fireResistant().equippable(equipmentSlot(armorPart))
+                .attributes(CelestweaveArmorMaterials.CELESTWEAVE.createAttributes(armorType(armorPart)))
+                .enchantable(CelestweaveArmorMaterials.CELESTWEAVE.enchantmentValue()));
         this.armorPart = armorPart;
     }
 
@@ -44,28 +45,18 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
     }
 
     @Override
-    public boolean isEnchantable(ItemStack stack) {
-        // Celestweave uses FE instead of vanilla durability, so Item's default
-        // MAX_DAMAGE-based enchantability check does not apply.
-        return true;
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        return super.use(level, player, hand);
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        return swapWithEquipmentSlot(this, level, player, hand);
-    }
-
-    @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        super.inventoryTick(stack, level, entity, slotId, isSelected);
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+        super.inventoryTick(stack, level, entity, slot);
         if (!(entity instanceof Player player)) {
             return;
         }
         CelestweaveArmorState.ensureArmorId(stack);
-        if (level.isClientSide()) {
-            return;
-        }
-        boolean equipped = player.getItemBySlot(equipmentSlot(armorPart)) == stack;
+        boolean equipped = slot == equipmentSlot(armorPart) && player.getItemBySlot(slot) == stack;
         ArmorTickService.tickEquipped(player, stack, equipped, player.level().registryAccess(), resolveDist(level));
     }
 
@@ -73,15 +64,16 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
     public void appendHoverText(
             ItemStack stack,
             Item.TooltipContext context,
-            List<Component> tooltip,
+            TooltipDisplay display,
+            Consumer<Component> tooltip,
             TooltipFlag tooltipFlag) {
-        super.appendHoverText(stack, context, tooltip, tooltipFlag);
+        super.appendHoverText(stack, context, display, tooltip, tooltipFlag);
         var level = context.level();
         long current = ArmorEnergyBuffer.read(stack, level == null ? null : level.registryAccess());
         long capacity = ArmorEnergyBuffer.capacity(stack, level == null ? null : level.registryAccess());
-        tooltip.add(EnergyText.storedFe(current, capacity));
-        tooltip.add(Component.translatable("ae2lt.celestweave.tooltip.workbench"));
-        tooltip.add(DeviceHubTooltip.openConfigHint());
+        tooltip.accept(EnergyText.storedFe(current, capacity));
+        tooltip.accept(Component.translatable("ae2lt.celestweave.tooltip.workbench"));
+        tooltip.accept(DeviceHubTooltip.openConfigHint());
     }
 
     @Override
@@ -117,12 +109,12 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
         };
     }
 
-    private static ArmorItem.Type armorType(ArmorPart part) {
+    private static ArmorType armorType(ArmorPart part) {
         return switch (part) {
-            case HEAD -> ArmorItem.Type.HELMET;
-            case CHEST -> ArmorItem.Type.CHESTPLATE;
-            case LEGS -> ArmorItem.Type.LEGGINGS;
-            case FEET -> ArmorItem.Type.BOOTS;
+            case HEAD -> ArmorType.HELMET;
+            case CHEST -> ArmorType.CHESTPLATE;
+            case LEGS -> ArmorType.LEGGINGS;
+            case FEET -> ArmorType.BOOTS;
         };
     }
 }

@@ -18,7 +18,7 @@ import appeng.api.stacks.KeyCounter;
 import appeng.api.util.AECableType;
 import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 import appeng.blockentity.grid.AENetworkedInvBlockEntity;
-import appeng.client.render.crafting.AssemblerAnimationStatus;
+import appeng.blockentity.crafting.MolecularAssemblerAnimationStatus;
 import appeng.core.AELog;
 import appeng.crafting.CraftingEvent;
 import appeng.menu.AutoCraftingMenu;
@@ -37,15 +37,13 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +55,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlockEntity
         implements IGridTickable, ICraftingMachine, IPowerChannelState {
-    public static final ResourceLocation INV_MAIN = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier INV_MAIN = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "pigmee_molecular_assembler");
 
     private static final String TAG_AUTOMATIC_PATTERN = "automaticPattern";
@@ -88,8 +86,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     private boolean powered;
     private boolean reboot = true;
 
-    @OnlyIn(Dist.CLIENT)
-    private @Nullable AssemblerAnimationStatus animationStatus;
+    private @Nullable MolecularAssemblerAnimationStatus animationStatus;
 
     public PigmeeMolecularAssemblerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PIGMEE_MOLECULAR_ASSEMBLER.get(), pos, state);
@@ -102,7 +99,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     public PatternContainerGroup getCraftingMachineInfo() {
         Component name = hasCustomName()
                 ? getCustomName()
-                : ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get().asItem().getDescription();
+                : ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get().asItem().getName(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get().asItem().getDefaultInstance());
         return new PatternContainerGroup(
                 AEItemKey.of(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get()),
                 name,
@@ -146,7 +143,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     }
 
     @Override
-    public InternalInventory getSubInventory(ResourceLocation id) {
+    public InternalInventory getSubInventory(Identifier id) {
         if (INV_MAIN.equals(id)) {
             return combinedInventory;
         }
@@ -161,6 +158,11 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     @Override
     protected InternalInventory getExposedInventoryForSide(Direction side) {
         return exposedInventory;
+    }
+
+    public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>
+    getAutomationResourceHandler(Direction side) {
+        return getExposedInventoryForSide(side).toResourceHandler();
     }
 
     @Override
@@ -467,14 +469,16 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         if (automaticJob) {
             var patternStack = activePattern != null
                     ? activePattern.getDefinition().toStack()
                     : savedAutomaticPattern;
             if (!patternStack.isEmpty()) {
-                data.put(TAG_AUTOMATIC_PATTERN, patternStack.save(registries));
+                data.put(TAG_AUTOMATIC_PATTERN, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(patternStack, registries));
                 if (pushDirection != null) {
                     data.putInt(TAG_PUSH_DIRECTION, pushDirection.get3DDataValue());
                 }
@@ -483,31 +487,31 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         clearAutomaticJob();
         if (data.contains(TAG_AUTOMATIC_PATTERN)) {
-            var patternStack = ItemStack.parseOptional(
+            var patternStack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(
                     registries,
-                    data.getCompound(TAG_AUTOMATIC_PATTERN));
+                    data.getCompoundOrEmpty(TAG_AUTOMATIC_PATTERN));
             if (!patternStack.isEmpty()) {
                 automaticJob = true;
                 savedAutomaticPattern = patternStack;
                 if (data.contains(TAG_PUSH_DIRECTION)) {
-                    pushDirection = Direction.from3DDataValue(data.getInt(TAG_PUSH_DIRECTION));
+                    pushDirection = Direction.from3DDataValue(data.getIntOr(TAG_PUSH_DIRECTION, 0));
                 }
             }
         }
         recalculatePattern();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public @Nullable AssemblerAnimationStatus getAnimationStatus() {
+    public @Nullable MolecularAssemblerAnimationStatus getAnimationStatus() {
         return animationStatus;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public void setAnimationStatus(@Nullable AssemblerAnimationStatus animationStatus) {
+    public void setAnimationStatus(@Nullable MolecularAssemblerAnimationStatus animationStatus) {
         this.animationStatus = animationStatus;
     }
 

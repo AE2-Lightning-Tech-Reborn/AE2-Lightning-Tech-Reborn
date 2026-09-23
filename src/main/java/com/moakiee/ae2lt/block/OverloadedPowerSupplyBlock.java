@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -41,7 +41,7 @@ public class OverloadedPowerSupplyBlock extends AEBaseEntityBlock<OverloadedPowe
      */
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
     public static final BooleanProperty OVERLOADED = BooleanProperty.create("overloaded");
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.FACING;
 
     /**
      * Tight collision/selection shape that follows the Blockbench model
@@ -61,7 +61,7 @@ public class OverloadedPowerSupplyBlock extends AEBaseEntityBlock<OverloadedPowe
             BlockShapeHelper.createAllFacingShapes(UP_SHAPE);
 
     public OverloadedPowerSupplyBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(POWERED, false)
                 .setValue(OVERLOADED, false)
@@ -90,12 +90,12 @@ public class OverloadedPowerSupplyBlock extends AEBaseEntityBlock<OverloadedPowe
     }
 
     @Override
-    protected VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
+    protected VoxelShape getOcclusionShape(BlockState state) {
         return Shapes.empty();
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(BlockState state) {
         return true;
     }
 
@@ -107,7 +107,7 @@ public class OverloadedPowerSupplyBlock extends AEBaseEntityBlock<OverloadedPowe
             if (!level.isClientSide()) {
                 be.openMenu(player, MenuLocators.forBlockEntity(be));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return InteractionResult.PASS;
     }

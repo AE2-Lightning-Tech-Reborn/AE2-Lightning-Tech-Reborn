@@ -37,6 +37,6 @@ public class LightningCollapseMatrixItem extends Item {
         if (!level.isClientSide()) {
             host.insertMatricesFromHand(player, context.getHand());
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

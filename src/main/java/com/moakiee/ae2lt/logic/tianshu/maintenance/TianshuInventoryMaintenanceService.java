@@ -186,7 +186,7 @@ public final class TianshuInventoryMaintenanceService
     public void tick() {
         var level = host.getLevel();
         var grid = host.getGrid();
-        if (level == null || level.isClientSide || grid == null || !host.isCpuActive()
+        if (level == null || level.isClientSide() || grid == null || !host.isCpuActive()
                 || !host.getFunctionProfile().supportsInventoryMaintenance()) return;
         restoreLinks((CraftingService) grid.getCraftingService());
         long now = level.getGameTime();
@@ -523,7 +523,7 @@ public final class TianshuInventoryMaintenanceService
         for (var entry : ruleReservedStock.entrySet()) {
             if (entry.getValue().size() <= 0) continue;
             var tag = new CompoundTag();
-            tag.putUUID("RuleId", entry.getKey());
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, "RuleId", entry.getKey());
             entry.getValue().writeTo(tag, registries);
             ruleReserves.add(tag);
         }
@@ -531,7 +531,7 @@ public final class TianshuInventoryMaintenanceService
         var linkTags = new ListTag();
         for (var link : links) {
             var tag = new CompoundTag();
-            link.writeToNBT(tag);
+            link.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries));
             linkTags.add(tag);
         }
         parent.put(TAG_LINKS, linkTags);
@@ -551,20 +551,21 @@ public final class TianshuInventoryMaintenanceService
         lastServiceTick = Long.MIN_VALUE;
         linksRestored = false;
         restoredGrid = null;
-        repository.readFrom(parent.getCompound(TAG_REPOSITORY), registries);
-        reservedStock.readFrom(parent.getCompound(TAG_RESERVED_STOCK), registries);
-        var ruleReserves = parent.getList(TAG_RULE_RESERVED_STOCK, Tag.TAG_COMPOUND);
+        repository.readFrom(parent.getCompoundOrEmpty(TAG_REPOSITORY), registries);
+        reservedStock.readFrom(parent.getCompoundOrEmpty(TAG_RESERVED_STOCK), registries);
+        var ruleReserves = parent.getListOrEmpty(TAG_RULE_RESERVED_STOCK);
         for (int i = 0; i < ruleReserves.size(); i++) {
-            var tag = ruleReserves.getCompound(i);
-            if (!tag.hasUUID("RuleId")) continue;
+            var tag = ruleReserves.getCompoundOrEmpty(i);
+            if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, "RuleId")) continue;
             var profile = new ReservedStockRepository(
                     () -> host.getFunctionProfile().maintenanceRuleCapacity());
             profile.readFrom(tag, registries);
-            ruleReservedStock.put(tag.getUUID("RuleId"), profile);
+            ruleReservedStock.put(com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, "RuleId"), profile);
         }
-        var linkTags = parent.getList(TAG_LINKS, Tag.TAG_COMPOUND);
+        var linkTags = parent.getListOrEmpty(TAG_LINKS);
         for (int i = 0; i < linkTags.size(); i++) {
-            try { links.add(new CraftingLink(linkTags.getCompound(i), this)); }
+            try { links.add(new CraftingLink(
+                    com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(linkTags.getCompoundOrEmpty(i), registries), this)); }
             catch (RuntimeException ignored) { }
         }
     }

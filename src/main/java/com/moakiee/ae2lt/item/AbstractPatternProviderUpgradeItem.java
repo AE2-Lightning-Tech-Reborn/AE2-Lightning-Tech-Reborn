@@ -42,7 +42,7 @@ abstract class AbstractPatternProviderUpgradeItem extends Item {
         if (!level.isClientSide()) {
             upgrade(level, pos, stack);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     public final boolean canUpgrade(Level level, BlockPos pos) {
@@ -81,7 +81,8 @@ abstract class AbstractPatternProviderUpgradeItem extends Item {
         level.removeBlock(pos, false);
         level.setBlock(pos, replacementState, Block.UPDATE_ALL);
         level.setBlockEntity(replacementEntity);
-        replacementEntity.loadWithComponents(savedTag, level.registryAccess());
+        replacementEntity.loadWithComponents(
+                com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(savedTag, level.registryAccess()));
         if (replacementEntity instanceof AEBaseBlockEntity aeBlockEntity) {
             aeBlockEntity.markForUpdate();
         } else {
@@ -92,10 +93,10 @@ abstract class AbstractPatternProviderUpgradeItem extends Item {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private static BlockState copySharedProperties(BlockState originalState, BlockState replacementState) {
         var state = replacementState;
-        for (var entry : originalState.getValues().entrySet()) {
-            Property property = entry.getKey();
+        for (var entry : originalState.getValues().toList()) {
+            Property property = entry.property();
             if (state.hasProperty(property)) {
-                state = state.setValue(property, (Comparable) entry.getValue());
+                state = state.setValue(property, (Comparable) entry.value());
             }
         }
         return state;

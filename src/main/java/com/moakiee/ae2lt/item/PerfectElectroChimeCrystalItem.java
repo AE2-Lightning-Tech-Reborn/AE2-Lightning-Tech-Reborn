@@ -22,9 +22,9 @@ public class PerfectElectroChimeCrystalItem extends Item {
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltipComponents,
+            net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltipComponents,
             TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.translatable(
+        tooltipComponents.accept(Component.translatable(
                 "item.ae2lt.perfect_electro_chime_crystal.complete").withStyle(ChatFormatting.AQUA));
     }
 }

@@ -23,14 +23,14 @@ import com.moakiee.ae2lt.menu.FrequencyMenu;
 public class WirelessReceiverBlock extends AEBaseEntityBlock<WirelessReceiverBlockEntity> {
 
     public WirelessReceiverBlock() {
-        super(metalProps());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of())));
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof WirelessReceiverBlockEntity be) {
-            if (!level.isClientSide && player instanceof ServerPlayer sp) {
+            if (!level.isClientSide() && player instanceof ServerPlayer sp) {
                 // Gate menu-open on frequency membership. Non-members
                 // are rejected on PRIVATE frequencies; ENCRYPTED is a
                 // deliberate escape hatch so strangers can still open
@@ -46,11 +46,11 @@ public class WirelessReceiverBlock extends AEBaseEntityBlock<WirelessReceiverBlo
                     if (freq != null
                             && !freq.getPlayerAccess(sp).canUse()
                             && freq.getSecurity() != FrequencySecurityLevel.ENCRYPTED) {
-                        sp.displayClientMessage(
+                        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(sp,
                                 Component.translatable("ae2lt.gui.error.no_access")
                                         .withStyle(ChatFormatting.RED),
                                 true);
-                        return InteractionResult.sidedSuccess(false);
+                        return (false ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
                     }
                 }
                 sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
@@ -58,7 +58,7 @@ public class WirelessReceiverBlock extends AEBaseEntityBlock<WirelessReceiverBlo
                         be.getBlockState().getBlock().getName()
                 ), buf -> FrequencyMenu.writeExtraData(buf, be, false));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return super.useWithoutItem(state, level, pos, player, hitResult);
     }

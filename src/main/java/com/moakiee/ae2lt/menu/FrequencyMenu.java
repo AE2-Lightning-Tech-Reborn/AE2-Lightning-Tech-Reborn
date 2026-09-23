@@ -43,7 +43,7 @@ import com.moakiee.ae2lt.network.SyncFrequencyListPacket;
 public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     public static final MenuType<FrequencyMenu> TYPE = IMenuTypeExtension.create(FrequencyMenu::clientCreate);
-    private static final String ACTION_TOGGLE_AUTO_CONNECT = "toggleAutoConnect";
+    private static final appeng.menu.guisync.ClientActionKey<Void> ACTION_TOGGLE_AUTO_CONNECT = new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoConnect");
 
     static {
         MenuOpener.addOpener(TYPE, FrequencyMenu::openWithAe2MenuOpener);
@@ -641,7 +641,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
             return 0;
         }
         // The card is only active when bound to an advanced transmitter.
-        return manager.resolveAdvancedNode(freqId, cardPlayer.serverLevel().getServer()) != null ? 1 : 0;
+        return manager.resolveAdvancedNode(freqId, cardPlayer.level().getServer()) != null ? 1 : 0;
     }
 
     public int getUsedChannels() {

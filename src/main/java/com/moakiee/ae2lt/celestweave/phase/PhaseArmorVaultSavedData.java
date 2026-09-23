@@ -15,6 +15,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.resources.Identifier;
+import com.moakiee.thunderbolt.core.LegacySavedDataReader;
 
 /**
  * The authoritative server-side slots for phase-locked Celestweave armor.
@@ -30,15 +33,27 @@ public final class PhaseArmorVaultSavedData extends SavedData {
     private static final String TAG_SLOT = "Slot";
     private static final String TAG_ARMOR = "Armor";
 
-    public static final Factory<PhaseArmorVaultSavedData> FACTORY = new Factory<>(
-            PhaseArmorVaultSavedData::new,
-            PhaseArmorVaultSavedData::load,
-            null);
+    private static SavedDataType<PhaseArmorVaultSavedData> type(HolderLookup.Provider registries) {
+        return new SavedDataType<>(
+                Identifier.fromNamespaceAndPath("ae2lt", "phase_armor_vault"),
+                PhaseArmorVaultSavedData::new,
+                CompoundTag.CODEC.xmap(
+                        tag -> load(tag, registries),
+                        data -> data.save(new CompoundTag(), registries)));
+    }
 
     private final Map<UUID, EnumMap<EquipmentSlot, ItemStack>> armorByPlayer = new HashMap<>();
 
     public static PhaseArmorVaultSavedData get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        var storage = server.overworld().getDataStorage();
+        var type = type(server.registryAccess());
+        var data = storage.get(type);
+        if (data == null) {
+            var old = LegacySavedDataReader.read(server, DATA_NAME);
+            data = old == null ? new PhaseArmorVaultSavedData() : load(old, server.registryAccess());
+            storage.set(type, data);
+        }
+        return data;
     }
 
     @Nullable
@@ -102,7 +117,6 @@ public final class PhaseArmorVaultSavedData extends SavedData {
         return armorBySlot != null && !armorBySlot.isEmpty();
     }
 
-    @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         var entries = new ListTag();
         for (var playerEntry : armorByPlayer.entrySet()) {
@@ -112,9 +126,9 @@ public final class PhaseArmorVaultSavedData extends SavedData {
                     continue;
                 }
                 var entryTag = new CompoundTag();
-                entryTag.putUUID(TAG_PLAYER, playerEntry.getKey());
+                entryTag.store(TAG_PLAYER, net.minecraft.core.UUIDUtil.CODEC, playerEntry.getKey());
                 entryTag.putString(TAG_SLOT, armorEntry.getKey().getName());
-                entryTag.put(TAG_ARMOR, armor.save(registries));
+                entryTag.store(TAG_ARMOR, ItemStack.CODEC, registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), armor);
                 entries.add(entryTag);
             }
         }
@@ -124,26 +138,26 @@ public final class PhaseArmorVaultSavedData extends SavedData {
 
     static PhaseArmorVaultSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         var data = new PhaseArmorVaultSavedData();
-        if (!tag.contains(TAG_ENTRIES, Tag.TAG_LIST)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_ENTRIES, Tag.TAG_LIST)) {
             return data;
         }
-        var entries = tag.getList(TAG_ENTRIES, Tag.TAG_COMPOUND);
+        var entries = tag.getListOrEmpty(TAG_ENTRIES);
         for (int i = 0; i < entries.size(); i++) {
-            var entryTag = entries.getCompound(i);
-            if (!entryTag.hasUUID(TAG_PLAYER) || !entryTag.contains(TAG_ARMOR, Tag.TAG_COMPOUND)) {
+            var entryTag = entries.getCompoundOrEmpty(i);
+            if (entryTag.read(TAG_PLAYER, net.minecraft.core.UUIDUtil.CODEC).isEmpty() || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(entryTag, TAG_ARMOR, Tag.TAG_COMPOUND)) {
                 continue;
             }
-            EquipmentSlot slot = entryTag.contains(TAG_SLOT, Tag.TAG_STRING)
-                    ? armorSlot(entryTag.getString(TAG_SLOT))
+            EquipmentSlot slot = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(entryTag, TAG_SLOT, Tag.TAG_STRING)
+                    ? armorSlot(entryTag.getStringOr(TAG_SLOT, ""))
                     : EquipmentSlot.CHEST; // Legacy single-slot vault entries were always chestplates.
             if (slot == null) {
                 continue;
             }
-            ItemStack armor = ItemStack.parseOptional(registries, entryTag.getCompound(TAG_ARMOR));
+            ItemStack armor = entryTag.read(TAG_ARMOR, ItemStack.CODEC, registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE)).orElse(ItemStack.EMPTY);
             if (!armor.isEmpty()) {
                 data.armorByPlayer
                         .computeIfAbsent(
-                                entryTag.getUUID(TAG_PLAYER),
+                                entryTag.read(TAG_PLAYER, net.minecraft.core.UUIDUtil.CODEC).orElseThrow(),
                                 ignored -> new EnumMap<>(EquipmentSlot.class))
                         .putIfAbsent(slot, armor);
             }

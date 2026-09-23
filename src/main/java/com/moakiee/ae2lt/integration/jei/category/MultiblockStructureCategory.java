@@ -20,7 +20,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /** JEI category that hosts interactive construction previews for large multiblocks. */
@@ -97,7 +97,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
             transferStack.setCount(material.count());
             int y = MATERIAL_SLOT_Y + i * MATERIAL_ROW_STEP;
 
-            builder.addSlot(RecipeIngredientRole.CATALYST, MATERIAL_SLOT_X, y)
+            builder.addSlot(RecipeIngredientRole.INPUT, MATERIAL_SLOT_X, y)
                     .setSlotName(InteractiveMultiblockWidget.MATERIAL_SLOT_PREFIX + i)
                     .setStandardSlotBackground()
                     .addItemStack(displayStack)
@@ -114,7 +114,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
                     .addItemStack(transferStack);
         }
 
-        builder.addSlot(RecipeIngredientRole.CATALYST, SELECTED_SLOT_X, SELECTED_SLOT_Y)
+        builder.addSlot(RecipeIngredientRole.INPUT, SELECTED_SLOT_X, SELECTED_SLOT_Y)
                 .setSlotName(InteractiveMultiblockWidget.SELECTED_BLOCK_SLOT)
                 .setStandardSlotBackground()
                 .addItemStacks(recipe.focusStacks());
@@ -122,7 +122,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
         for (int i = 0; i < InteractiveMultiblockWidget.MAX_ALTERNATIVE_SLOTS; i++) {
             int x = ALTERNATIVE_SLOT_X + i % ALTERNATIVE_COLUMNS * ALTERNATIVE_COLUMN_STEP;
             int y = ALTERNATIVE_SLOT_Y + i / ALTERNATIVE_COLUMNS * ALTERNATIVE_ROW_STEP;
-            builder.addSlot(RecipeIngredientRole.CATALYST, x, y)
+            builder.addSlot(RecipeIngredientRole.INPUT, x, y)
                     .setSlotName(InteractiveMultiblockWidget.ALTERNATIVE_SLOT_PREFIX + i)
                     .setStandardSlotBackground()
                     .addItemStacks(recipe.focusStacks());
@@ -179,7 +179,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
     }
 
     @Override
-    public ResourceLocation getRegistryName(MultiblockStructureRecipe recipe) {
+    public Identifier getRegistryName(MultiblockStructureRecipe recipe) {
         return recipe.id();
     }
 }

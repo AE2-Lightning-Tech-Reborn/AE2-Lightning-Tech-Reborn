@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.client.railgun;
 
-import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -76,12 +76,12 @@ public final class RailgunVisuals {
     public static Vec3 computeBarrelDirection(Player player, float partialTick) {
         if (isLocalFirstPerson(player)) {
             Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-            Vec3 look = fromJoml(camera.getLookVector());
+            Vec3 look = fromJoml(camera.forwardVector());
             if (look.lengthSqr() < 1.0E-9D) {
                 return new Vec3(1.0D, 0.0D, 0.0D);
             }
             look = look.normalize();
-            Vec3 right = fromJoml(camera.getLeftVector()).scale(-1.0D).normalize();
+            Vec3 right = fromJoml(camera.leftVector()).scale(-1.0D).normalize();
             Vec3 up = right.cross(look).normalize();
             // Apply the same subtle rotation offset that ItemInHandRenderer
             // adds in renderHandsWithItems — (viewRot - bobSmoothed) * 0.1.
@@ -126,7 +126,7 @@ public final class RailgunVisuals {
 
     /** Current frame's partial tick from Minecraft's delta tracker. */
     public static float currentPartialTick() {
-        return Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
+        return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
     }
 
     // ── First-person hand-rendering offset ────────────────────────────────
@@ -160,9 +160,9 @@ public final class RailgunVisuals {
 
     private static Vec3 computeFirstPersonBarrelOrigin(Player player, float partialTick) {
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-        Vec3 eye = camera.getPosition();
-        Vec3 look = fromJoml(camera.getLookVector()).normalize();
-        Vec3 right = fromJoml(camera.getLeftVector()).scale(-1.0D).normalize();
+        Vec3 eye = camera.position();
+        Vec3 look = fromJoml(camera.forwardVector()).normalize();
+        Vec3 right = fromJoml(camera.leftVector()).scale(-1.0D).normalize();
         Vec3 up = right.cross(look).normalize();
         double sideMul = holdingArm(player) == HumanoidArm.LEFT ? -1.0D : 1.0D;
         Vec3 offset = look.scale(FP_FORWARD_OFFSET)
@@ -213,7 +213,7 @@ public final class RailgunVisuals {
         return v.scale(cos).add(cross.scale(sin)).add(axis.scale(dot * (1.0D - cos)));
     }
 
-    private static Vec3 fromJoml(Vector3f v) {
+    private static Vec3 fromJoml(Vector3fc v) {
         return new Vec3(v.x(), v.y(), v.z());
     }
 

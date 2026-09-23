@@ -6,9 +6,7 @@
     }
   ],
   "type": "ae2lt:crystal_catalyzer",
-  "catalyst": {
-    "item": "oritech:fluxite_block"
-  },
+  "catalyst": "oritech:fluxite_block",
   "catalystCount": 1,
   "output": {
     "id": "oritech:fluxite",

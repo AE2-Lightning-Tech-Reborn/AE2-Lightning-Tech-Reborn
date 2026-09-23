@@ -8,7 +8,7 @@ package com.moakiee.ae2lt.client;
 
 import appeng.client.Point;
 import appeng.client.gui.ICompositeWidget;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.WidgetContainer;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import net.minecraft.client.renderer.Rect2i;

@@ -28,11 +28,11 @@ class ControllerMachineStateSavedDataTest {
         var root = data.save(new CompoundTag(), null);
         var restored = ControllerMachineStateSavedData.load(root, null);
 
-        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight"));
-        assertEquals(0.75D, restored.getState(MachineType.MATRIX, id).getDouble("Heat"));
+        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight").orElseThrow());
+        assertEquals(0.75D, restored.getState(MachineType.MATRIX, id).getDouble("Heat").orElseThrow());
         var externalCopy = restored.getState(MachineType.TIANSHU, id);
         externalCopy.putLong("InFlight", 0L);
-        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight"));
+        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight").orElseThrow());
     }
 
     @Test
@@ -69,7 +69,7 @@ class ControllerMachineStateSavedDataTest {
         var restored = ControllerMachineStateSavedData.load(root, null);
 
         assertEquals(1, snapshots.get());
-        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight"));
+        assertEquals(42L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight").orElseThrow());
     }
 
     @Test
@@ -89,7 +89,7 @@ class ControllerMachineStateSavedDataTest {
         var restored = ControllerMachineStateSavedData.load(root, null);
 
         assertEquals(0, deferredCalls.get());
-        assertEquals(7L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight"));
+        assertEquals(7L, restored.getState(MachineType.TIANSHU, id).getLong("InFlight").orElseThrow());
     }
 
     @Test
@@ -129,7 +129,7 @@ class ControllerMachineStateSavedDataTest {
         data.release(MachineType.TIANSHU, id, "minecraft:overworld", 10L);
 
         assertTrue(data.hasState(MachineType.TIANSHU, id));
-        assertEquals(7L, data.getState(MachineType.TIANSHU, id).getLong("StillInFlight"));
+        assertEquals(7L, data.getState(MachineType.TIANSHU, id).getLong("StillInFlight").orElseThrow());
         assertTrue(data.claim(MachineType.TIANSHU, id, "minecraft:overworld", 11L));
     }
 }

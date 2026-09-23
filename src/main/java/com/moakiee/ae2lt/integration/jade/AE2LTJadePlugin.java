@@ -21,12 +21,12 @@ public class AE2LTJadePlugin implements IWailaPlugin {
 
     @Override
     public void register(IWailaCommonRegistration registration) {
-        registration.registerBlockDataProvider(LIGHTNING_COLLECTOR_PROVIDER, LightningCollectorBlockEntity.class);
-        registration.registerBlockDataProvider(FIRMAMENT_CONVERSION_CORE_PROVIDER, FirmamentConversionCoreBlockEntity.class);
+        registration.registerBlockDataProvider(new LightningCollectorJadeProvider.DataProvider(), LightningCollectorBlockEntity.class);
+        registration.registerBlockDataProvider(new FirmamentConversionCoreJadeProvider.DataProvider(), FirmamentConversionCoreBlockEntity.class);
         // Frequency-card entrances may belong to AE2LT machines, third-party AE
         // devices, centre cables, or sided cable-bus parts. Register at the BE
         // base type and let the provider's exact hit-based resolver filter them.
-        registration.registerBlockDataProvider(FREQUENCY_CARD_WIRELESS_NODE_PROVIDER, BlockEntity.class);
+        registration.registerBlockDataProvider(new FrequencyCardWirelessNodeJadeProvider.DataProvider(), BlockEntity.class);
     }
 
     @Override

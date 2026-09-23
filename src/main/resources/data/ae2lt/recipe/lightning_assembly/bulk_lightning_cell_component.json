@@ -3,15 +3,11 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:lightning_cell_component_v"
-      },
+      "ingredient": "ae2lt:lightning_cell_component_v",
       "count": 16
     },
     {
-      "ingredient": {
-        "item": "ae2lt:lightning_collapse_matrix"
-      },
+      "ingredient": "ae2lt:lightning_collapse_matrix",
       "count": 1
     }
   ],

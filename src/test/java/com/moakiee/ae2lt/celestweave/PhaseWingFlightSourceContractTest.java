@@ -15,13 +15,18 @@ final class PhaseWingFlightSourceContractTest {
         String phaseModuleItem = read("src/main/java/com/moakiee/ae2lt/item/PhaseFlightSubmoduleItem.java");
         String chest = read("src/main/java/com/moakiee/ae2lt/item/CelestweaveCoreItem.java");
         String projection = read("src/main/java/com/moakiee/ae2lt/item/PhaseLockProjectionItem.java");
+        String wing = read("src/main/java/com/moakiee/ae2lt/celestweave/PhaseWingFlight.java");
+        String armorTick = read("src/main/java/com/moakiee/ae2lt/celestweave/service/ArmorTickService.java");
+        String mirror = read("src/main/java/com/moakiee/ae2lt/celestweave/phase/PhaseLockProjectionSynchronizer.java");
 
         assertTrue(flightModuleItem.contains("new DeviceCapability.ElytraFlight()"));
         assertTrue(phaseModuleItem.contains("new DeviceCapability.ElytraFlight()"));
-        assertTrue(chest.contains("canElytraFly"));
-        assertTrue(chest.contains("elytraFlightTick"));
-        assertTrue(projection.contains("equipmentSlot == EquipmentSlot.CHEST"));
-        assertTrue(projection.contains("PhaseWingFlight.elytraFlightTick"));
+        assertTrue(chest.contains("extends BaseCelestweaveArmorItem"));
+        assertTrue(armorTick.contains("PhaseWingFlight.syncGlider(player, armor, true)"));
+        assertTrue(wing.contains("armor.set(DataComponents.GLIDER, Unit.INSTANCE)"));
+        assertTrue(projection.contains(".equippable(equipmentSlot)"));
+        assertTrue(projection.contains("return equipmentSlot;"));
+        assertTrue(mirror.contains("replaceMirroredComponents(armor, projection, false)"));
     }
 
     @Test
@@ -70,7 +75,6 @@ final class PhaseWingFlightSourceContractTest {
         String energy = read("src/main/java/com/moakiee/ae2lt/celestweave/service/ArmorEnergyService.java");
         String playerMixin = read("src/main/java/com/moakiee/ae2lt/mixin/PlayerPhaseFlightMixin.java");
         String layer = read("src/main/java/com/moakiee/ae2lt/client/PhaseWingLayer.java");
-        String renderers = read("src/main/java/com/moakiee/ae2lt/client/ModEntityRenderers.java");
 
         assertTrue(module.contains("PhaseWingFlight.isFlightActive(player)"));
         assertTrue(module.contains("player.setNoGravity(!player.isFallFlying())"));
@@ -78,8 +82,9 @@ final class PhaseWingFlightSourceContractTest {
         assertTrue(energy.contains("!player.isFallFlying()"));
         assertTrue(playerMixin.contains("Pose.FALL_FLYING"));
         assertTrue(playerMixin.contains("Pose.STANDING"));
-        assertTrue(layer.contains("extends ElytraLayer"));
-        assertTrue(renderers.contains("new PhaseWingLayer"));
+        assertTrue(layer.contains("EquipmentAssets.ELYTRA"));
+        assertTrue(layer.contains("chestStack.set(DataComponents.EQUIPPABLE"));
+        assertTrue(wing.contains("PhaseWingLayer.syncVisual(armor, active)"));
     }
 
     @Test
@@ -146,7 +151,7 @@ final class PhaseWingFlightSourceContractTest {
         assertTrue(state.contains("syncArmorId = fallbackArmorId"));
         assertTrue(state.contains("PhaseFlightControlRules.handoffFlying"));
         assertFalse(module.contains("abilities.mayfly"));
-        assertTrue(recipe.contains("\"item\": \"minecraft:elytra\""));
+        assertTrue(recipe.contains("\"ingredient\": \"minecraft:elytra\""));
         assertTrue(recipe.contains("\"count\": 1"));
     }
 

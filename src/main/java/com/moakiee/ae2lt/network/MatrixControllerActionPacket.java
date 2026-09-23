@@ -51,13 +51,13 @@ public record MatrixControllerActionPacket(int token, BlockPos pos, Action actio
                 || menu.token() != token
                 || !menu.getBlockPos().equals(pos)
                 || !menu.stillValid(player)) {
-            player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.gui.error.rejected")
                     .withStyle(ChatFormatting.RED), true);
             return;
         }
 
         if (!(player.level().getBlockEntity(pos) instanceof MatrixControllerBlockEntity controller)) {
-            player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.gui.error.rejected")
                     .withStyle(ChatFormatting.RED), true);
             return;
         }

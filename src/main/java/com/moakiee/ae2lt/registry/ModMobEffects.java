@@ -4,7 +4,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.effect.ElectromagneticParalysisEffect;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -22,7 +22,7 @@ public final class ModMobEffects {
                         var effect = new ElectromagneticParalysisEffect();
                         effect.addAttributeModifier(
                                 Attributes.MOVEMENT_SPEED,
-                                ResourceLocation.fromNamespaceAndPath(
+                                Identifier.fromNamespaceAndPath(
                                         AE2LightningTech.MODID,
                                         "electromagnetic_paralysis_speed"),
                                 -0.75D,

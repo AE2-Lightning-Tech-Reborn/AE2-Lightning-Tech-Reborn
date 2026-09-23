@@ -70,7 +70,7 @@ public abstract class TargetAddress {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[dimension=" + dimension.location()
+        return getClass().getSimpleName() + "[dimension=" + dimension.identifier()
                 + ", pos=" + pos + ", boundFace=" + boundFace + ']';
     }
 }

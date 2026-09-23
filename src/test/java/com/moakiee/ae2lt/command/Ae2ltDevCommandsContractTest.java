@@ -13,7 +13,7 @@ class Ae2ltDevCommandsContractTest {
         String source = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/command/Ae2ltDevCommands.java"));
 
-        assertTrue(source.contains("if (FMLEnvironment.production)"));
+        assertTrue(source.contains("if (FMLEnvironment.isProduction())"));
         assertTrue(source.contains("Commands.literal(\"ae2lt\")"));
         assertTrue(source.contains("Commands.literal(\"giveRitual\")"));
         assertTrue(source.contains("player.getMainHandItem()"));

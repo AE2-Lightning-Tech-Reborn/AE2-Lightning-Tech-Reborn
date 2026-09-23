@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
@@ -21,7 +21,7 @@ public final class CrystalCatalyzerLockedRecipe {
     private static final String TAG_LIGHTNING_COST = "LightningCost";
     private static final String TAG_LIGHTNING_TIER = "LightningTier";
 
-    private final ResourceLocation recipeId;
+    private final Identifier recipeId;
     private final ItemStack output;
     private final int energyPerCycle;
     private final int outputMultiplier;
@@ -29,7 +29,7 @@ public final class CrystalCatalyzerLockedRecipe {
     private final LightningKey.Tier lightningTier;
 
     public CrystalCatalyzerLockedRecipe(
-            ResourceLocation recipeId,
+            Identifier recipeId,
             ItemStack output,
             int energyPerCycle,
             int outputMultiplier,
@@ -61,7 +61,7 @@ public final class CrystalCatalyzerLockedRecipe {
         RecipeHolder<CrystalCatalyzerRecipe> holder = candidate.recipe();
         CrystalCatalyzerRecipe recipe = holder.value();
         return new CrystalCatalyzerLockedRecipe(
-                holder.id(),
+                holder.id().identifier(),
                 recipe.getOutputTemplate(),
                 recipe.energyPerCycle(),
                 outputMultiplier,
@@ -69,7 +69,7 @@ public final class CrystalCatalyzerLockedRecipe {
                 recipe.lightningTier());
     }
 
-    public ResourceLocation recipeId() {
+    public Identifier recipeId() {
         return recipeId;
     }
 
@@ -100,7 +100,7 @@ public final class CrystalCatalyzerLockedRecipe {
     public CompoundTag toTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putString(TAG_RECIPE_ID, recipeId.toString());
-        tag.put(TAG_OUTPUT, output.save(registries, new CompoundTag()));
+        tag.put(TAG_OUTPUT, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(output, registries));
         tag.putInt(TAG_ENERGY, energyPerCycle);
         tag.putInt(TAG_OUTPUT_MULTIPLIER, outputMultiplier);
         tag.putInt(TAG_LIGHTNING_COST, lightningCost);
@@ -118,36 +118,36 @@ public final class CrystalCatalyzerLockedRecipe {
             CompoundTag tag,
             HolderLookup.Provider registries,
             int defaultOutputMultiplier) {
-        if (!tag.contains(TAG_RECIPE_ID) || !tag.contains(TAG_OUTPUT, Tag.TAG_COMPOUND)) {
+        if (!tag.contains(TAG_RECIPE_ID) || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_OUTPUT, Tag.TAG_COMPOUND)) {
             return null;
         }
 
-        ItemStack output = ItemStack.parseOptional(registries, tag.getCompound(TAG_OUTPUT));
+        ItemStack output = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, tag.getCompoundOrEmpty(TAG_OUTPUT));
         if (output.isEmpty()) {
             return null;
         }
 
-        int energy = tag.getInt(TAG_ENERGY);
+        int energy = tag.getIntOr(TAG_ENERGY, 0);
         if (energy < 0) {
             return null;
         }
 
-        int outputMultiplier = tag.contains(TAG_OUTPUT_MULTIPLIER, Tag.TAG_INT)
-                ? tag.getInt(TAG_OUTPUT_MULTIPLIER)
+        int outputMultiplier = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_OUTPUT_MULTIPLIER, Tag.TAG_INT)
+                ? tag.getIntOr(TAG_OUTPUT_MULTIPLIER, 0)
                 : defaultOutputMultiplier;
         if (outputMultiplier <= 0) {
             return null;
         }
 
-        int lightningCost = tag.contains(TAG_LIGHTNING_COST, Tag.TAG_INT)
-                ? tag.getInt(TAG_LIGHTNING_COST) : 1;
+        int lightningCost = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LIGHTNING_COST, Tag.TAG_INT)
+                ? tag.getIntOr(TAG_LIGHTNING_COST, 0) : 1;
         if (lightningCost < 0) {
             lightningCost = 0;
         }
 
         LightningKey.Tier lightningTier = LightningKey.Tier.HIGH_VOLTAGE;
-        if (tag.contains(TAG_LIGHTNING_TIER, Tag.TAG_STRING)) {
-            String tierName = tag.getString(TAG_LIGHTNING_TIER);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LIGHTNING_TIER, Tag.TAG_STRING)) {
+            String tierName = tag.getStringOr(TAG_LIGHTNING_TIER, "");
             for (LightningKey.Tier t : LightningKey.Tier.values()) {
                 if (t.getSerializedName().equals(tierName)) {
                     lightningTier = t;
@@ -157,7 +157,7 @@ public final class CrystalCatalyzerLockedRecipe {
         }
 
         return new CrystalCatalyzerLockedRecipe(
-                ResourceLocation.parse(tag.getString(TAG_RECIPE_ID)),
+                Identifier.parse(tag.getStringOr(TAG_RECIPE_ID, "")),
                 output,
                 energy,
                 outputMultiplier,

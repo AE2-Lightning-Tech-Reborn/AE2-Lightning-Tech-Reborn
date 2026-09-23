@@ -21,7 +21,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class PigmeeSynthesisStationBlock
         extends AEBaseEntityBlock<PigmeeSynthesisStationBlockEntity> {
     public PigmeeSynthesisStationBlock() {
-        super(metalProps().noOcclusion());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion()));
     }
 
     @Override
@@ -42,6 +42,6 @@ public final class PigmeeSynthesisStationBlock
                     player,
                     MenuLocators.forBlockEntity(blockEntity));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

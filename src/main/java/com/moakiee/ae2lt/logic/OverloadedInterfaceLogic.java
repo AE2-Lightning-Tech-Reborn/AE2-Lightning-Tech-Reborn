@@ -677,14 +677,12 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         // ── NBT: no persistent state ────────────────────────────────────
 
         @Override
-        public void writeToChildTag(CompoundTag tag, String name,
-                                    HolderLookup.Provider registries) {
-            tag.remove(name);
+        public void writeToChildTag(net.minecraft.world.level.storage.ValueOutput output, String name) {
+            output.discard(name);
         }
 
         @Override
-        public void readFromChildTag(CompoundTag tag, String name,
-                                     HolderLookup.Provider registries) {
+        public void readFromChildTag(net.minecraft.world.level.storage.ValueInput input, String name) {
         }
     }
 

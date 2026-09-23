@@ -6,7 +6,7 @@ import java.util.List;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -35,7 +35,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
                     host.isPigmeeVariant()
                             ? "block.ae2lt.pigmee_crystal_catalyzer"
                             : "block.ae2lt.crystal_catalyzer"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "crystal_catalyzer"));
 
@@ -91,13 +91,13 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
 
         createPlayerInventorySlots(playerInventory);
 
-        registerClientAction("toggleAutoExport", this::toggleAutoExport);
-        registerClientAction("toggleOutputSide", Integer.class, this::toggleOutputSide);
-        registerClientAction("clearOutputSides", this::clearOutputSides);
-        registerClientAction("insertFluid", this::insertFluidFromCarried);
-        registerClientAction("extractFluid", this::extractFluidToCarried);
-        registerClientAction("clearFluidTank", this::clearFluidTank);
-        registerClientAction("cycleMode", this::cycleMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"), this::toggleAutoExport);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("toggleOutputSide"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::toggleOutputSide);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"), this::clearOutputSides);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("insertFluid"), this::insertFluidFromCarried);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("extractFluid"), this::extractFluidToCarried);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearFluidTank"), this::clearFluidTank);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"), this::cycleMode);
     }
 
     @Override
@@ -248,31 +248,31 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
     }
 
     public void clientCycleMode() {
-        sendClientAction("cycleMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"));
     }
 
     public void clientToggleAutoExport() {
-        sendClientAction("toggleAutoExport");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"));
     }
 
     public void clientToggleOutputSide(RelativeSide side) {
-        sendClientAction("toggleOutputSide", side.ordinal());
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("toggleOutputSide"), side.ordinal());
     }
 
     public void clientClearOutputSides() {
-        sendClientAction("clearOutputSides");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"));
     }
 
     public void clientInsertFluid() {
-        sendClientAction("insertFluid");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("insertFluid"));
     }
 
     public void clientExtractFluid() {
-        sendClientAction("extractFluid");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("extractFluid"));
     }
 
     public void clientClearFluidTank() {
-        sendClientAction("clearFluidTank");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearFluidTank"));
     }
 
     private void insertFluidFromCarried() {

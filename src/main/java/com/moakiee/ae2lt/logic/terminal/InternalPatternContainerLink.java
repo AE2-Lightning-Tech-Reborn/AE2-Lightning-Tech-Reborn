@@ -38,7 +38,7 @@ public final class InternalPatternContainerLink {
     public void bind(IManagedGridNode portNode) {
         var level = owner.getLevel();
         var targetNode = portNode != null && portNode.isReady() ? portNode.getNode() : null;
-        if (level == null || level.isClientSide || targetNode == null) {
+        if (level == null || level.isClientSide() || targetNode == null) {
             return;
         }
         if (connection != null && linkedPortNode == targetNode

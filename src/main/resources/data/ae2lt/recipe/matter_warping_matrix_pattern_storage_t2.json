@@ -7,10 +7,10 @@
     "ATA"
   ],
   "key": {
-    "A": { "item": "ae2:singularity" },
-    "T": { "item": "ae2lt:matter_warping_matrix_pattern_storage_t1" },
-    "P": { "item": "ae2lt:overload_processor" },
-    "N": { "item": "ae2lt:overload_singularity" }
+    "A": "ae2:singularity",
+    "T": "ae2lt:matter_warping_matrix_pattern_storage_t1",
+    "P": "ae2lt:overload_processor",
+    "N": "ae2lt:overload_singularity"
   },
   "result": {
     "count": 1,

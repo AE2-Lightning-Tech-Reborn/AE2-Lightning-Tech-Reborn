@@ -2,17 +2,14 @@ package com.moakiee.ae2lt.client.railgun;
 
 import java.util.ArrayList;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.context.ContextKey;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 
-import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
@@ -21,7 +18,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 
@@ -79,60 +75,49 @@ public final class RailgunShockwaveRenderer {
         ACTIVE.clear();
     }
 
+    private static final ContextKey<java.util.List<Burst>> RENDER_BURSTS = new ContextKey<>(
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "railgun_shockwaves"));
+
     @SubscribeEvent
-    public static void onRender(RenderLevelStageEvent e) {
-        if (e.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || ACTIVE.isEmpty()) return;
-        ACTIVE.removeIf(b -> --b.remaining <= 0);
+    public static void extract(ExtractLevelRenderStateEvent event) {
+        ACTIVE.removeIf(burst -> --burst.remaining <= 0);
         if (ACTIVE.isEmpty()) return;
-
-        Camera cam = e.getCamera();
-        Vec3 camPos = cam.getPosition();
-        long gameTick = mc.level.getGameTime();
-        PoseStack stack = e.getPoseStack();
-        stack.pushPose();
-        stack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        // Depth-test ON so the ring is occluded by blocks (AFTER_TRANSLUCENT_BLOCKS
-        // may leave it disabled). depthMask off so the additive ring doesn't pollute
-        // depth for later passes.
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        BufferBuilder bb = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        var matrix = stack.last().pose();
+        long gameTick = event.getLevel().getGameTime();
+        var snapshot = new ArrayList<Burst>(ACTIVE.size());
         for (Burst burst : ACTIVE) {
             float t = 1.0F - (float) burst.remaining / (float) burst.totalLifetime;
-            // Ease-out expansion: fast initial growth, slower at the end.
             float radius = burst.maxRadius * (1.0F - (1.0F - t) * (1.0F - t));
-            float ringFade = 1.0F - t;
             float ringWidth = burst.maxRadius * 0.18F * (1.0F - t * 0.5F);
             if (gameTick - burst.lastOcclusionTick >= OCCLUSION_REFRESH_TICKS) {
-                refreshOcclusion(mc.level, burst, radius, ringWidth, t, gameTick);
+                refreshOcclusion(event.getLevel(), burst, radius, ringWidth, t, gameTick);
             }
-            addRing(bb, matrix, burst, radius, ringWidth, t,
-                    burst.r, burst.g, burst.b, 0.85F * ringFade);
+            var copy = new Burst(burst.center, burst.maxRadius, burst.totalLifetime,
+                    burst.r, burst.g, burst.b);
+            copy.remaining = burst.remaining;
+            System.arraycopy(burst.occludedSegments, 0, copy.occludedSegments, 0, RING_SEGMENTS);
+            snapshot.add(copy);
         }
-        var built = bb.build();
-        if (built != null) {
-            BufferUploader.drawWithShader(built);
-        }
+        event.getRenderState().setRenderData(RENDER_BURSTS, java.util.List.copyOf(snapshot));
+    }
 
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableCull();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
+    @SubscribeEvent
+    public static void submit(SubmitCustomGeometryEvent event) {
+        java.util.List<Burst> bursts = event.getLevelRenderState().getRenderData(RENDER_BURSTS);
+        if (bursts == null || bursts.isEmpty()) return;
+        Vec3 camPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack stack = event.getPoseStack();
+        stack.pushPose();
+        stack.translate(-camPos.x, -camPos.y, -camPos.z);
+        event.getSubmitNodeCollector().submitCustomGeometry(stack, RenderTypes.lightning(),
+                (pose, consumer) -> {
+                    for (Burst burst : bursts) {
+                        float t = 1.0F - (float) burst.remaining / (float) burst.totalLifetime;
+                        float radius = burst.maxRadius * (1.0F - (1.0F - t) * (1.0F - t));
+                        float ringWidth = burst.maxRadius * 0.18F * (1.0F - t * 0.5F);
+                        addRing(consumer, pose.pose(), burst, radius, ringWidth, t,
+                                burst.r, burst.g, burst.b, 0.85F * (1.0F - t));
+                    }
+                });
         stack.popPose();
     }
 
@@ -165,7 +150,7 @@ public final class RailgunShockwaveRenderer {
         }
     }
 
-    private static void addRing(BufferBuilder bb, org.joml.Matrix4f matrix, Burst burst,
+    private static void addRing(VertexConsumer bb, org.joml.Matrix4f matrix, Burst burst,
                                 float radius, float thickness, float progress,
                                 float r, float g, float b, float alpha) {
         if (radius <= 0.0F || thickness <= 0.0F) return;

@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.device.module;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -13,14 +14,18 @@ public final class ModuleTooltip {
     }
 
     public static void appendInstallInfo(OverloadDeviceModuleItem module, List<Component> tooltip) {
+        appendInstallInfo(module, tooltip::add);
+    }
+
+    public static void appendInstallInfo(OverloadDeviceModuleItem module, Consumer<Component> tooltip) {
         if (module == null) {
             return;
         }
-        tooltip.add(Component.translatable("ae2lt.module.tooltip.installable_on")
+        tooltip.accept(Component.translatable("ae2lt.module.tooltip.installable_on")
                 .withStyle(ChatFormatting.GRAY));
         module.acceptableDevices().stream()
                 .sorted(java.util.Comparator.comparing(DeviceKind::name))
-                .forEach(kind -> tooltip.add(deviceLine(kind).withStyle(ChatFormatting.GRAY)));
+                .forEach(kind -> tooltip.accept(deviceLine(kind).withStyle(ChatFormatting.GRAY)));
     }
 
     private static MutableComponent deviceLine(DeviceKind kind) {

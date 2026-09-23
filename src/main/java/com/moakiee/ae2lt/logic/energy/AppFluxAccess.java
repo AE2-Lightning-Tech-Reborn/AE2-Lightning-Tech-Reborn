@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 
 import appeng.api.config.Actionable;
@@ -25,9 +26,6 @@ import com.glodblock.github.appflux.common.me.energy.EnergyCapCache;
 import com.glodblock.github.appflux.common.me.key.FluxKey;
 import com.glodblock.github.appflux.common.me.key.type.EnergyType;
 import com.glodblock.github.appflux.config.AFConfig;
-import com.glodblock.github.appflux.xmod.fluxnetwork.FluxNetworkCap;
-import com.glodblock.github.appflux.xmod.mek.MekEnergyCap;
-import com.glodblock.github.appflux.xmod.mi.LongEnergyCap;
 
 import dev.technici4n.grandpower.api.ILongEnergyStorage;
 import mekanism.api.Action;
@@ -250,7 +248,9 @@ final class AppFluxAccess {
             return null;
         }
         try {
-            ILongEnergyStorage target = cache.getEnergyCap(LongEnergyCap.CAP, side);
+            Object capability = optionalCapability("com.glodblock.github.appflux.xmod.mi.LongEnergyCap");
+            ILongEnergyStorage target = capability instanceof BlockCapability<?, ?> cap
+                    ? (ILongEnergyStorage) cache.getEnergyCap((BlockCapability<Object, Direction>) cap, side) : null;
             return target != null ? new GrandPowerTarget(target) : null;
         } catch (LinkageError ignored) {
             return null;
@@ -263,7 +263,9 @@ final class AppFluxAccess {
             return null;
         }
         try {
-            IFNEnergyStorage target = cache.getEnergyCap(FluxNetworkCap.CAP, side);
+            Object capability = optionalCapability("com.glodblock.github.appflux.xmod.fluxnetwork.FluxNetworkCap");
+            IFNEnergyStorage target = capability instanceof BlockCapability<?, ?> cap
+                    ? (IFNEnergyStorage) cache.getEnergyCap((BlockCapability<Object, Direction>) cap, side) : null;
             return target != null ? new FluxNetworkTarget(target) : null;
         } catch (LinkageError ignored) {
             return null;
@@ -276,7 +278,9 @@ final class AppFluxAccess {
             return null;
         }
         try {
-            IStrictEnergyHandler target = cache.getEnergyCap(MekEnergyCap.CAP, side);
+            Object capability = optionalCapability("com.glodblock.github.appflux.xmod.mek.MekEnergyCap");
+            IStrictEnergyHandler target = capability instanceof BlockCapability<?, ?> cap
+                    ? (IStrictEnergyHandler) cache.getEnergyCap((BlockCapability<Object, Direction>) cap, side) : null;
             return target != null ? MekanismStrictTarget.create(target) : null;
         } catch (LinkageError ignored) {
             return null;
@@ -424,21 +428,27 @@ final class AppFluxAccess {
         }
     }
 
-    private record ForgeEnergyTarget(IEnergyStorage target) implements TargetAccess {
+    private record ForgeEnergyTarget(net.neoforged.neoforge.transfer.energy.EnergyHandler target) implements TargetAccess {
         @Nullable
         static TargetAccess resolve(EnergyCapCache cache, Direction side) {
-            IEnergyStorage target = cache.getEnergyCap(Capabilities.EnergyStorage.BLOCK, side);
+            var target = cache.getEnergyCap(Capabilities.Energy.BLOCK, side);
             return target != null ? new ForgeEnergyTarget(target) : null;
         }
 
         @Override
         public long simulateReceive(long maxFe) {
-            return Math.max(0, target.receiveEnergy(clampToInt(maxFe), true));
+            try (var transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                return Math.max(0, target.insert(clampToInt(maxFe), transaction));
+            }
         }
 
         @Override
         public long receive(long amountFe) {
-            return Math.max(0, target.receiveEnergy(clampToInt(amountFe), false));
+            try (var transaction = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                int inserted = Math.max(0, target.insert(clampToInt(amountFe), transaction));
+                transaction.commit();
+                return inserted;
+            }
         }
     }
 
@@ -477,6 +487,16 @@ final class AppFluxAccess {
             return 0L;
         }
         return a > Long.MAX_VALUE / b ? Long.MAX_VALUE : a * b;
+    }
+
+    @Nullable
+    private static Object optionalCapability(String owner) {
+        try {
+            return Class.forName(owner, false, AppFluxAccess.class.getClassLoader())
+                    .getField("CAP").get(null);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            return null;
+        }
     }
 
     private static boolean isClassPresent(String className) {

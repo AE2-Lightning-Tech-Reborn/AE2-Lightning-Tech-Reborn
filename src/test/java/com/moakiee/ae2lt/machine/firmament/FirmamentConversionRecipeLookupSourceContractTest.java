@@ -17,7 +17,7 @@ class FirmamentConversionRecipeLookupSourceContractTest {
                 source.indexOf("findRecipeById("),
                 source.indexOf("findLockedRecipeMatch("));
 
-        assertTrue(lookup.contains(".byKey(recipeId)"));
+        assertTrue(lookup.contains(".byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId))"));
         assertTrue(lookup.contains("instanceof FirmamentConversionRecipe"));
         assertTrue(lookup.contains("ModRecipeTypes.FIRMAMENT_CONVERSION_TYPE.get()"));
         assertFalse(lookup.contains("getAllRecipesFor("));

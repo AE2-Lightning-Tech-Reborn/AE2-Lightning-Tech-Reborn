@@ -1,7 +1,8 @@
 package com.moakiee.ae2lt.item;
 
-import appeng.client.render.effects.ParticleTypes;
+import appeng.core.particles.ParticleTypes;
 import com.moakiee.ae2lt.event.ArtificialLightningHandler;
+import com.moakiee.ae2lt.AE2LightningTech;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -12,7 +13,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.minecraft.server.level.ServerLevel;
 
 public class OverloadCrystalItem extends Item {
@@ -29,25 +32,27 @@ public class OverloadCrystalItem extends Item {
         super(properties);
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        super.inventoryTick(stack, level, entity, slotId, isSelected);
-        if (!level.isClientSide || !(entity instanceof Player player)) {
-            return;
-        }
+    @EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
+    public static final class HeldEffects {
+        private HeldEffects() {}
 
-        boolean inMainHand = player.getMainHandItem() == stack;
-        boolean inOffHand = player.getOffhandItem() == stack;
-        if (!inMainHand && !inOffHand) {
-            return;
+        @SubscribeEvent
+        public static void onClientTick(ClientTickEvent.Post event) {
+            var client = Minecraft.getInstance();
+            var player = client.player;
+            if (player == null || client.level == null) return;
+            if (player.getMainHandItem().getItem() instanceof OverloadCrystalItem) {
+                spawnHeldLightning(client.level, player, true);
+            }
+            if (player.getOffhandItem().getItem() instanceof OverloadCrystalItem) {
+                spawnHeldLightning(client.level, player, false);
+            }
         }
-
-        spawnHeldLightning(level, player, inMainHand);
     }
 
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (entity.level().isClientSide) {
+        if (entity.level().isClientSide()) {
             spawnDroppedLightning(entity);
         } else if (entity.level() instanceof ServerLevel serverLevel) {
             // Only advance the timer once per DROPPED_TICK_INTERVAL ticks. tickCount is an
@@ -58,7 +63,7 @@ public class OverloadCrystalItem extends Item {
                 return false;
             }
 
-            int droppedTicks = entity.getPersistentData().getInt(DROPPED_TICKS_TAG) + DROPPED_TICK_INTERVAL;
+            int droppedTicks = entity.getPersistentData().getIntOr(DROPPED_TICKS_TAG, 0) + DROPPED_TICK_INTERVAL;
             if (droppedTicks >= SUMMON_DELAY_TICKS) {
                 entity.getPersistentData().putInt(DROPPED_TICKS_TAG, 0);
                 ArtificialLightningHandler.spawnArtificialLightning(serverLevel, entity.position(), null);
@@ -69,9 +74,8 @@ public class OverloadCrystalItem extends Item {
         return false;
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static void spawnHeldLightning(Level level, Player player, boolean mainHand) {
-        RandomSource random = level.random;
+        RandomSource random = level.getRandom();
         if (random.nextInt(12) != 0) {
             return;
         }
@@ -96,9 +100,8 @@ public class OverloadCrystalItem extends Item {
         spawnParticle(x, y, z);
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static void spawnDroppedLightning(ItemEntity entity) {
-        RandomSource random = entity.level().random;
+        RandomSource random = entity.level().getRandom();
         if (random.nextInt(12) != 0) {
             return;
         }
@@ -110,12 +113,8 @@ public class OverloadCrystalItem extends Item {
         spawnParticle(x, y, z);
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static void spawnParticle(double x, double y, double z) {
         var particle = Minecraft.getInstance().particleEngine.createParticle(
                 ParticleTypes.LIGHTNING, x, y, z, 0.0D, 0.0D, 0.0D);
-        if (particle != null) {
-            particle.setColor(1.0F, 0.95F, 0.45F);
-        }
     }
 }

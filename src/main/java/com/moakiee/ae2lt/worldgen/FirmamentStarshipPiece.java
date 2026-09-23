@@ -5,7 +5,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModStructureTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -24,7 +24,7 @@ public final class FirmamentStarshipPiece extends TemplateStructurePiece {
 
     public FirmamentStarshipPiece(
             StructureTemplateManager structureTemplateManager,
-            ResourceLocation template,
+            Identifier template,
             BlockPos position,
             Rotation rotation) {
         this(structureTemplateManager, template, position, rotation, BlockPos.ZERO);
@@ -32,7 +32,7 @@ public final class FirmamentStarshipPiece extends TemplateStructurePiece {
 
     public FirmamentStarshipPiece(
             StructureTemplateManager structureTemplateManager,
-            ResourceLocation template,
+            Identifier template,
             BlockPos position,
             Rotation rotation,
             BlockPos rotationPivot) {
@@ -73,7 +73,7 @@ public final class FirmamentStarshipPiece extends TemplateStructurePiece {
     }
 
     private static Rotation readRotation(CompoundTag tag) {
-        String serializedName = tag.getString("Rot");
+        String serializedName = tag.getStringOr("Rot", "");
         for (Rotation rotation : Rotation.values()) {
             if (rotation.getSerializedName().equals(serializedName)) {
                 return rotation;
@@ -86,7 +86,7 @@ public final class FirmamentStarshipPiece extends TemplateStructurePiece {
         if (!tag.contains("RPX") || !tag.contains("RPY") || !tag.contains("RPZ")) {
             return BlockPos.ZERO;
         }
-        return new BlockPos(tag.getInt("RPX"), tag.getInt("RPY"), tag.getInt("RPZ"));
+        return new BlockPos(tag.getIntOr("RPX", 0), tag.getIntOr("RPY", 0), tag.getIntOr("RPZ", 0));
     }
 
     @Override

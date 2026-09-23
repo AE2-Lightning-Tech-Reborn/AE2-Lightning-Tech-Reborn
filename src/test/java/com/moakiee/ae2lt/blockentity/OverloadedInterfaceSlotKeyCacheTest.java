@@ -22,11 +22,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.fml.loading.LoadingModList;
 
-class OverloadedInterfaceSlotKeyCacheTest {
+class OverloadedInterfaceSlotKeyCacheTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();

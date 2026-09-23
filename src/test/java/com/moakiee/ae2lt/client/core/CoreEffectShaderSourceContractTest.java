@@ -18,29 +18,35 @@ class CoreEffectShaderSourceContractTest {
                 "src/main/resources/assets/ae2lt/shaders/core/multiblock/core.vsh"));
 
         assertAll(
-                () -> assertTrue(shader.startsWith("#version 150")),
+                () -> assertTrue(shader.startsWith("#version 330")),
                 () -> assertTrue(shader.contains("in vec3 Position;")),
                 () -> assertTrue(shader.contains("in vec4 Color;")),
                 () -> assertTrue(shader.contains("in vec3 Normal;")),
-                () -> assertTrue(shader.contains("uniform float EffectTime;")),
+                () -> assertTrue(shader.contains("#moj_import <minecraft:dynamictransforms.glsl>")),
+                () -> assertTrue(shader.contains("#moj_import <minecraft:projection.glsl>")),
+                () -> assertTrue(shader.contains("#moj_import <minecraft:globals.glsl>")),
+                () -> assertTrue(shader.contains("#define EffectTime (GameTime * 1200.0)")),
                 () -> assertFalse(shader.contains("layout(location")),
                 () -> assertFalse(shader.contains("VeilRenderTime")));
     }
 
     @Test
-    void shaderDefinitionsUseNamespacedNativeResources() throws Exception {
+    void shaderPipelinesUseNamespacedNativeResources() throws Exception {
         Path shaderDirectory = Path.of(
                 "src/main/resources/assets/ae2lt/shaders/core/multiblock");
-        String matrix = Files.readString(shaderDirectory.resolve("matrix_core.json"));
-        String tianshu = Files.readString(shaderDirectory.resolve("tianshu_core.json"));
+        String pipelines = Files.readString(Path.of(
+                "src/main/java/com/moakiee/ae2lt/client/core/CoreEffectShaders.java"));
 
         assertAll(
-                () -> assertTrue(matrix.contains("\"vertex\": \"ae2lt:multiblock/core\"")),
-                () -> assertTrue(matrix.contains("\"fragment\": \"ae2lt:multiblock/matrix_core\"")),
-                () -> assertTrue(matrix.contains("\"name\": \"EffectTime\"")),
-                () -> assertTrue(tianshu.contains("\"vertex\": \"ae2lt:multiblock/core\"")),
-                () -> assertTrue(tianshu.contains("\"fragment\": \"ae2lt:multiblock/tianshu_core\"")),
-                () -> assertTrue(tianshu.contains("\"name\": \"EffectTime\"")));
+                () -> assertTrue(Files.exists(shaderDirectory.resolve("core.vsh"))),
+                () -> assertTrue(Files.exists(shaderDirectory.resolve("matrix_core.fsh"))),
+                () -> assertTrue(Files.exists(shaderDirectory.resolve("tianshu_core.fsh"))),
+                () -> assertTrue(pipelines.contains("id(\"core/multiblock/core\")")),
+                () -> assertTrue(pipelines.contains("id(\"core/multiblock/matrix_core\")")),
+                () -> assertTrue(pipelines.contains("id(\"core/multiblock/tianshu_core\")")),
+                () -> assertTrue(pipelines.contains("RegisterRenderPipelinesEvent")),
+                () -> assertTrue(pipelines.contains("event.registerPipeline(TIANSHU)")),
+                () -> assertTrue(pipelines.contains("event.registerPipeline(MATRIX_CORE)")));
     }
 
     @Test
@@ -50,9 +56,9 @@ class CoreEffectShaderSourceContractTest {
                 "src/main/templates/META-INF/neoforge.mods.toml"));
 
         assertAll(
-                () -> assertTrue(build.contains("compileOnly(\"foundry.veil:veil-neoforge-")),
                 () -> assertTrue(build.contains("ae2ltEnableVeilDevRuntime")),
                 () -> assertFalse(build.contains("implementation(\"foundry.veil")),
+                () -> assertFalse(build.contains("compileOnly(\"foundry.veil")),
                 () -> assertTrue(metadata.contains("modId = \"veil\"")),
                 () -> assertTrue(metadata.contains("type = \"optional\"")),
                 () -> assertTrue(metadata.contains("versionRange = \"*\"")),
@@ -76,15 +82,13 @@ class CoreEffectShaderSourceContractTest {
                 () -> assertTrue(backend.contains("new DefaultArtifactVersion(\"5.0.0\")")),
                 () -> assertTrue(backend.contains("installedVersion.compareTo(MINIMUM_VEIL_VERSION) < 0")),
                 () -> assertTrue(backend.contains("installedVersion.compareTo(MAXIMUM_VEIL_VERSION) >= 0")),
-                () -> assertTrue(renderTypes.contains("RuntimeException | LinkageError")),
-                () -> assertTrue(renderTypes.contains("CoreEffectBackend.disableVeil(exception)")),
+                () -> assertTrue(renderTypes.contains("CoreEffectShaders.tianshu()")),
+                () -> assertTrue(backend.contains("VeilCoreEffectShaders.isApiCompatible()")),
                 () -> assertFalse(nativeShaders.contains(
                         "LOGGER.info(\"Veil detected; using the Veil core-effect shader backend\");\n"
                                 + "            return;")),
-                () -> assertTrue(nativeShaders.contains(
-                        "registerShader(event, TIANSHU_SHADER, TIANSHU);")),
-                () -> assertTrue(nativeShaders.contains(
-                        "registerShader(event, MATRIX_SHADER, MATRIX);")));
+                () -> assertTrue(nativeShaders.contains("event.registerPipeline(TIANSHU)")),
+                () -> assertTrue(nativeShaders.contains("event.registerPipeline(MATRIX_CORE)")));
     }
 
     @Test
@@ -105,10 +109,10 @@ class CoreEffectShaderSourceContractTest {
                     .toList();
         }
 
-        assertEquals(
-                List.of(Path.of(
-                        "com/moakiee/ae2lt/client/core/veil/VeilCoreEffectShaders.java")),
-                veilReferences);
+        String bridge = Files.readString(javaRoot.resolve(
+                "com/moakiee/ae2lt/client/core/veil/VeilCoreEffectShaders.java"));
+        assertEquals(List.of(), veilReferences);
+        assertTrue(bridge.contains("return false;"));
     }
 
     @Test
@@ -127,39 +131,25 @@ class CoreEffectShaderSourceContractTest {
                 () -> assertTrue(backend.contains("net.coderbot.iris.api.v0.IrisApi")),
                 () -> assertTrue(backend.contains("isShaderPackInUse")),
                 () -> assertFalse(backend.contains("import net.irisshaders")),
-                () -> assertTrue(renderTypes.contains("POSITION_COLOR_SHADER")),
-                () -> assertTrue(renderTypes.contains("SHADER_PACK_FALLBACK")),
+                () -> assertTrue(renderTypes.contains("CoreEffectShaders.tianshuFallback()")),
+                () -> assertTrue(renderTypes.contains("CoreEffectShaders.matrixCoreFallback()")),
                 () -> assertTrue(renderTypes.contains("shaderPackActive ?")),
                 () -> assertTrue(geometry.contains("CoreEffectBackend.useShaderPackFallback()")));
     }
 
     @Test
-    void nativeAndVeilShadersKeepTheSameVisualLogic() throws Exception {
+    void nativeShadersRetainCoreAndTianshuVisualLogic() throws Exception {
         Path nativeDirectory = Path.of(
                 "src/main/resources/assets/ae2lt/shaders/core/multiblock");
-        Path veilDirectory = Path.of(
-                "src/main/resources/assets/ae2lt/pinwheel/shaders/program/multiblock");
+        String core = Files.readString(nativeDirectory.resolve("core.vsh"));
+        String matrix = Files.readString(nativeDirectory.resolve("matrix_core.fsh"));
+        String tianshu = Files.readString(nativeDirectory.resolve("tianshu_core.fsh"));
 
         assertAll(
-                () -> assertEquals(
-                        normalizeLineEndings(Files.readString(nativeDirectory.resolve("core.vsh"))),
-                        normalizeVeilShader(veilDirectory.resolve("core.vsh"))),
-                () -> assertEquals(
-                        normalizeLineEndings(Files.readString(nativeDirectory.resolve("matrix_core.fsh"))),
-                        normalizeVeilShader(veilDirectory.resolve("matrix_core.fsh"))),
-                () -> assertEquals(
-                        normalizeLineEndings(Files.readString(nativeDirectory.resolve("tianshu_core.fsh"))),
-                        normalizeVeilShader(veilDirectory.resolve("tianshu_core.fsh"))));
-    }
-
-    private static String normalizeVeilShader(Path path) throws IOException {
-        String shader = normalizeLineEndings(Files.readString(path)
-                .replaceAll("layout\\(location = \\d+\\) in", "in")
-                .replace("VeilRenderTime", "EffectTime"));
-        return "#version 150\n\n" + shader;
-    }
-
-    private static String normalizeLineEndings(String shader) {
-        return shader.replace("\r\n", "\n").replace('\r', '\n').stripTrailing();
+                () -> assertTrue(core.contains("float displacement = sin(phase * 1.7)")),
+                () -> assertTrue(matrix.contains("float trace = smoothstep(")),
+                () -> assertTrue(matrix.contains("float fissure = 1.0 - smoothstep(")),
+                () -> assertTrue(tianshu.contains("float latitude =")),
+                () -> assertTrue(tianshu.contains("float longitude =")));
     }
 }

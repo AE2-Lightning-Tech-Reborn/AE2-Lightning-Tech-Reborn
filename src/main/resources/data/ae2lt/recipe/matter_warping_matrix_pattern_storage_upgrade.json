@@ -2,12 +2,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
   "ingredients": [
-    {
-      "item": "ae2lt:matter_warping_matrix_pattern_storage_t2"
-    },
-    {
-      "tag": "c:ingots"
-    }
+    "ae2lt:matter_warping_matrix_pattern_storage_t2",
+    "#c:ingots"
   ],
   "result": {
     "count": 1,

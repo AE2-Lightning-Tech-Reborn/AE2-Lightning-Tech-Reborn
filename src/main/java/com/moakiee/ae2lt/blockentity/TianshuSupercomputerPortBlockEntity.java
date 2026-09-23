@@ -92,7 +92,7 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
                                   BlockPos pos,
                                   BlockState state,
                                   TianshuSupercomputerPortBlockEntity port) {
-        if (level.isClientSide || level.getGameTime() < port.nextBindingCheckTick) {
+        if (level.isClientSide() || level.getGameTime() < port.nextBindingCheckTick) {
             return;
         }
         port.nextBindingCheckTick = level.getGameTime() + BINDING_CHECK_INTERVAL_TICKS;
@@ -116,12 +116,12 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public net.minecraft.resources.ResourceLocation getProvidedAlgorithm() {
+    public net.minecraft.resources.Identifier getProvidedAlgorithm() {
         return ThunderboltV2PlanningEngine.ID;
     }
 
     @Override
-    public net.minecraft.resources.ResourceLocation getSelectedAlgorithm() {
+    public net.minecraft.resources.Identifier getSelectedAlgorithm() {
         var controller = getController();
         return controller != null
                 ? controller.getCraftingAlgorithmProvider().getSelectedAlgorithm()
@@ -229,7 +229,7 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
 
     private void updateLinkState(boolean bindingChanged) {
         boolean blockStateChanged = false;
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             var state = getBlockState();
             if (state.hasProperty(TianshuSupercomputerPortBlock.FORMED)
                     && state.getValue(TianshuSupercomputerPortBlock.FORMED) != formed) {
@@ -427,18 +427,20 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         if (controllerPos != null) tag.putLong(TAG_CONTROLLER_POS, controllerPos.asLong());
         tag.putBoolean(TAG_FORMED, formed);
-        if (legacyTianshuId != null) tag.putUUID(TAG_TIANSHU_ID, legacyTianshuId);
+        if (legacyTianshuId != null) com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, TAG_TIANSHU_ID, legacyTianshuId);
         if (legacyRuntimeState != null) {
-            if (legacyRuntimeState.contains(TAG_MAINTENANCE, Tag.TAG_COMPOUND)) {
+            if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(legacyRuntimeState, TAG_MAINTENANCE, Tag.TAG_COMPOUND)) {
                 tag.put(TAG_MAINTENANCE,
-                        legacyRuntimeState.getCompound(TAG_MAINTENANCE).copy());
+                        legacyRuntimeState.getCompoundOrEmpty(TAG_MAINTENANCE).copy());
             }
-            if (legacyRuntimeState.contains(TAG_CPU_POOL, Tag.TAG_COMPOUND)) {
-                tag.put(TAG_CPU_POOL, legacyRuntimeState.getCompound(TAG_CPU_POOL).copy());
+            if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(legacyRuntimeState, TAG_CPU_POOL, Tag.TAG_COMPOUND)) {
+                tag.put(TAG_CPU_POOL, legacyRuntimeState.getCompoundOrEmpty(TAG_CPU_POOL).copy());
             }
         }
         if (legacyPatternState != null) {
@@ -447,24 +449,26 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        controllerPos = tag.contains(TAG_CONTROLLER_POS, Tag.TAG_LONG)
-                ? BlockPos.of(tag.getLong(TAG_CONTROLLER_POS)) : null;
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        controllerPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CONTROLLER_POS, Tag.TAG_LONG)
+                ? BlockPos.of(tag.getLongOr(TAG_CONTROLLER_POS, 0L)) : null;
         // A position cache is not authority. Stay disconnected until the loaded controller
         // reclaims its UUID and explicitly rebinds this link.
         formed = false;
         boundMachineId = null;
         linkedCpuPool = null;
-        legacyTianshuId = tag.hasUUID(TAG_TIANSHU_ID) ? tag.getUUID(TAG_TIANSHU_ID) : null;
-        legacyPatternState = tag.contains(TAG_CLOSED_LOOP_PATTERNS, Tag.TAG_COMPOUND)
-                ? tag.getCompound(TAG_CLOSED_LOOP_PATTERNS).copy() : null;
+        legacyTianshuId = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_TIANSHU_ID) ? com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_TIANSHU_ID) : null;
+        legacyPatternState = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CLOSED_LOOP_PATTERNS, Tag.TAG_COMPOUND)
+                ? tag.getCompoundOrEmpty(TAG_CLOSED_LOOP_PATTERNS).copy() : null;
         var runtime = new CompoundTag();
-        if (tag.contains(TAG_MAINTENANCE, Tag.TAG_COMPOUND)) {
-            runtime.put(TAG_MAINTENANCE, tag.getCompound(TAG_MAINTENANCE).copy());
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MAINTENANCE, Tag.TAG_COMPOUND)) {
+            runtime.put(TAG_MAINTENANCE, tag.getCompoundOrEmpty(TAG_MAINTENANCE).copy());
         }
-        if (tag.contains(TAG_CPU_POOL, Tag.TAG_COMPOUND)) {
-            runtime.put(TAG_CPU_POOL, tag.getCompound(TAG_CPU_POOL).copy());
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CPU_POOL, Tag.TAG_COMPOUND)) {
+            runtime.put(TAG_CPU_POOL, tag.getCompoundOrEmpty(TAG_CPU_POOL).copy());
         }
         legacyRuntimeState = runtime.isEmpty() ? null : runtime;
     }
@@ -481,7 +485,7 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkedBlockEntity
     }
 
     private void validateControllerBinding() {
-        if (level == null || level.isClientSide || controllerPos == null) {
+        if (level == null || level.isClientSide() || controllerPos == null) {
             return;
         }
         if (!level.isLoaded(controllerPos)) {

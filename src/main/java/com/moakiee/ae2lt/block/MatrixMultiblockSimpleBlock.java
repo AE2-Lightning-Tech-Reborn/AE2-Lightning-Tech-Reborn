@@ -30,17 +30,19 @@ public class MatrixMultiblockSimpleBlock extends Block implements MatrixMultiblo
     }
 
     @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())) {
-            MatrixMultiblockUpdateScheduler.scheduleNear(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        MatrixMultiblockUpdateScheduler.scheduleNear(level, pos);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
-                                boolean movedByPiston) {
-        super.neighborChanged(state, level, pos, block, fromPos, movedByPiston);
-        MatrixMultiblockUpdateScheduler.scheduleNear(level, fromPos);
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos pos,
+            net.minecraft.core.Direction direction, BlockPos neighborPos, BlockState neighborState,
+            net.minecraft.util.RandomSource random) {
+        if (level instanceof Level world) {
+            MatrixMultiblockUpdateScheduler.scheduleNear(world, neighborPos);
+        }
+        return super.updateShape(state, level, tickAccess, pos, direction, neighborPos, neighborState, random);
     }
 }

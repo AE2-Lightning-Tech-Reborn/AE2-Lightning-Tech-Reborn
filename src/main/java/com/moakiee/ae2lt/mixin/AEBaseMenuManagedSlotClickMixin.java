@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.mixin;
 
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
@@ -30,7 +30,7 @@ public abstract class AEBaseMenuManagedSlotClickMixin {
     private void ae2lt$handleManagedSlotClick(
             int slotId,
             int button,
-            ClickType clickType,
+            ContainerInput clickType,
             Player player,
             CallbackInfo ci) {
         AEBaseMenu menu = (AEBaseMenu) (Object) this;
@@ -51,9 +51,9 @@ public abstract class AEBaseMenuManagedSlotClickMixin {
             AEBaseMenu menu,
             int slotId,
             int button,
-            ClickType clickType) {
+            ContainerInput clickType) {
         if (!(menu instanceof OverloadedPatternProviderMenu)
-                || clickType != ClickType.SWAP
+                || clickType != ContainerInput.SWAP
                 || button != 40
                 || slotId < 0
                 || slotId >= menu.slots.size()) {

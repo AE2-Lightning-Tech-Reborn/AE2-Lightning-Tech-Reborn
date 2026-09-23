@@ -22,7 +22,8 @@ public final class ModEntities {
                             .fireImmune()
                             .clientTrackingRange(10)
                             .updateInterval(10)
-                            .build("overload_tnt"));
+                            .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE,
+                                    net.minecraft.resources.Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "overload_tnt"))));
 
     public static final DeferredHolder<EntityType<?>, EntityType<FloatingMatterEntity>> FLOATING_MATTER =
             ENTITY_TYPES.register(
@@ -31,7 +32,8 @@ public final class ModEntities {
                             .sized(0.25F, 0.25F)
                             .clientTrackingRange(6)
                             .updateInterval(20)
-                            .build("floating_matter"));
+                            .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE,
+                                    net.minecraft.resources.Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "floating_matter"))));
 
     public static final DeferredHolder<EntityType<?>, EntityType<RitualHyperdimensionalPigmeeEntity>>
             RITUAL_HYPERDIMENSIONAL_PIGMEE =
@@ -44,7 +46,8 @@ public final class ModEntities {
                                     .sized(0.25F, 0.25F)
                                     .clientTrackingRange(10)
                                     .updateInterval(10)
-                                    .build("ritual_hyperdimensional_pigmee"));
+                                    .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE,
+                                            net.minecraft.resources.Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "ritual_hyperdimensional_pigmee"))));
 
     private ModEntities() {
     }

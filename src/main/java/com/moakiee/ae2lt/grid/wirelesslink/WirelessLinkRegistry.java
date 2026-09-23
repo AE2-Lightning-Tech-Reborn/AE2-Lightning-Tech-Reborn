@@ -44,7 +44,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -280,9 +280,19 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     public static void onServerStart(MinecraftServer server) {
-        instance = server.overworld().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(WirelessLinkRegistry::new, WirelessLinkRegistry::new),
-                DATA_NAME);
+        var overworld = server.overworld();
+        var registries = overworld.registryAccess();
+        var type = new net.minecraft.world.level.saveddata.SavedDataType<>(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath("ae2lt", "wireless_links"),
+                WirelessLinkRegistry::new,
+                CompoundTag.CODEC.xmap(tag -> new WirelessLinkRegistry(tag, registries),
+                        data -> data.save(new CompoundTag(), registries)));
+        instance = overworld.getDataStorage().get(type);
+        if (instance == null) {
+            var old = com.moakiee.thunderbolt.core.LegacySavedDataReader.read(overworld, DATA_NAME);
+            instance = old == null ? new WirelessLinkRegistry() : new WirelessLinkRegistry(old, registries);
+            overworld.getDataStorage().set(type, instance);
+        }
         var manager = WirelessFrequencyManager.get();
         for (var link : List.copyOf(instance.links.values())) {
             if (manager != null && manager.isFrequencyValid(link.frequencyId())) {
@@ -398,7 +408,7 @@ public final class WirelessLinkRegistry extends SavedData {
         }
         pendingAutoConnect.add(new PendingAutoConnect(
                 player.getUUID(),
-                dimension.location().toString(),
+                dimension.identifier().toString(),
                 pos.asLong(),
                 side == null ? "" : side.getName(),
                 expectedPartId,
@@ -498,7 +508,7 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     private PendingClusterReconcile pendingClusterChange(ResourceKey<Level> dimension, BlockPos changedPos) {
-        var key = new TopologyChangeKey(dimension.location().toString(), changedPos.asLong());
+        var key = new TopologyChangeKey(dimension.identifier().toString(), changedPos.asLong());
         return pendingClusterReconciles.computeIfAbsent(
                 key,
                 ignored -> new PendingClusterReconcile(key.dimensionId(), key.posLong()));
@@ -526,7 +536,7 @@ public final class WirelessLinkRegistry extends SavedData {
     public void onBlockChanged(ServerLevel level, BlockPos changedPos) {
         prepareClusterTopologyChange(level, changedPos);
 
-        var candidates = links.findAllInDimension(level.dimension().location().toString());
+        var candidates = links.findAllInDimension(level.dimension().identifier().toString());
         if (candidates.isEmpty()) {
             return;
         }
@@ -643,7 +653,7 @@ public final class WirelessLinkRegistry extends SavedData {
             }
         }
 
-        String dimensionId = level.dimension().location().toString();
+        String dimensionId = level.dimension().identifier().toString();
         long posLong = pos.asLong();
         for (var link : links.findAllAt(dimensionId, posLong)) {
             if ((runtimeIds == null || !runtimeIds.contains(link.linkId()))
@@ -749,7 +759,7 @@ public final class WirelessLinkRegistry extends SavedData {
             }
             var component = new ClusterComponent(physicalCluster);
             component.anchorCandidates.add(new LocatedTarget(
-                    level.dimension().location().toString(),
+                    level.dimension().identifier().toString(),
                     pos.asLong(),
                     target));
             reconcileClusterComponent(component, level.getServer());
@@ -797,7 +807,7 @@ public final class WirelessLinkRegistry extends SavedData {
         var updated = createAndEstablishLink(
                 frequencyId,
                 owner,
-                new LocatedTarget(level.dimension().location().toString(), pos.asLong(), target),
+                new LocatedTarget(level.dimension().identifier().toString(), pos.asLong(), target),
                 level.getServer());
 
         if (updated.state() == WirelessLinkState.CONNECTED) {
@@ -836,7 +846,7 @@ public final class WirelessLinkRegistry extends SavedData {
         var sourceIds = new LinkedHashSet<UUID>();
 
         for (var pending : pendingChanges) {
-            var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(pending.dimensionId));
+            var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(pending.dimensionId));
             var level = server.getLevel(dim);
             if (level == null) {
                 continue;
@@ -1225,7 +1235,7 @@ public final class WirelessLinkRegistry extends SavedData {
             return;
         }
 
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(pending.dimensionId()));
+        var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(pending.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return;
@@ -1238,7 +1248,7 @@ public final class WirelessLinkRegistry extends SavedData {
         var stack = OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
         if (stack.isEmpty()) {
             if (OverloadedFrequencyCardItem.hasMultipleAutoConnectCandidates(player)) {
-                player.displayClientMessage(Component.translatable("ae2lt.frequency_card.auto_ambiguous")
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.frequency_card.auto_ambiguous")
                         .withStyle(ChatFormatting.RED), true);
             }
             return;
@@ -1260,7 +1270,7 @@ public final class WirelessLinkRegistry extends SavedData {
             var feedback = nativeFeedback.get();
             if (!"ae2lt.frequency_card.auto_silent_skip".equals(feedback.translationKey())
                     && feedback.style() != ChatFormatting.GREEN) {
-                player.displayClientMessage(Component.translatable(feedback.translationKey(), feedback.args())
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(feedback.translationKey(), feedback.args())
                         .withStyle(feedback.style()), true);
             }
             return;
@@ -1281,7 +1291,7 @@ public final class WirelessLinkRegistry extends SavedData {
                 true);
         if (!"ae2lt.frequency_card.auto_silent_skip".equals(feedback.translationKey())
                 && feedback.style() != ChatFormatting.GREEN) {
-            player.displayClientMessage(Component.translatable(feedback.translationKey(), feedback.args())
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(feedback.translationKey(), feedback.args())
                     .withStyle(feedback.style()), true);
         }
     }
@@ -1522,7 +1532,7 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     private PersistedTarget resolvePersistedTarget(WirelessLink link, MinecraftServer server) {
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(link.dimensionId()));
+        var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(link.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return PersistedTarget.state(WirelessLinkState.PENDING_TARGET_CHUNK);
@@ -1740,7 +1750,7 @@ public final class WirelessLinkRegistry extends SavedData {
             try {
                 var level = node.getLevel();
                 if (level != null) {
-                    dimensions.add(level.dimension().location().toString());
+                    dimensions.add(level.dimension().identifier().toString());
                 }
             } catch (RuntimeException ignored) {
             }
@@ -1887,7 +1897,7 @@ public final class WirelessLinkRegistry extends SavedData {
 
         var result = new ArrayList<LocatedTarget>();
         var seen = PhysicalGridCluster.newIdentityNodeSet();
-        String dimensionId = level.dimension().location().toString();
+        String dimensionId = level.dimension().identifier().toString();
 
         if (be instanceof IPartHost partHost) {
             addPartTarget(level, pos, partHost.getPart(null), null, dimensionId, seen, result);
@@ -1956,7 +1966,7 @@ public final class WirelessLinkRegistry extends SavedData {
             var be = part.getBlockEntity();
             if (be != null && be.getLevel() instanceof ServerLevel level) {
                 return new LocatedTarget(
-                        level.dimension().location().toString(),
+                        level.dimension().identifier().toString(),
                         be.getBlockPos().asLong(),
                         linkTargetForPart(level, be.getBlockPos(), part, part.getSide(), node));
             }
@@ -1970,7 +1980,7 @@ public final class WirelessLinkRegistry extends SavedData {
                 }
             }
             return new LocatedTarget(
-                    level.dimension().location().toString(),
+                    level.dimension().identifier().toString(),
                     be.getBlockPos().asLong(),
                     linkTargetForDevice(level, be.getBlockPos(), node));
         }
@@ -1986,7 +1996,7 @@ public final class WirelessLinkRegistry extends SavedData {
         var center = host.getPart(null);
         if (center != null && center.getGridNode() == expectedNode) {
             return new LocatedTarget(
-                    level.dimension().location().toString(),
+                    level.dimension().identifier().toString(),
                     pos.asLong(),
                     linkTargetForPart(level, pos, center, null, expectedNode));
         }
@@ -1994,7 +2004,7 @@ public final class WirelessLinkRegistry extends SavedData {
             var part = host.getPart(side);
             if (part != null && part.getGridNode() == expectedNode) {
                 return new LocatedTarget(
-                        level.dimension().location().toString(),
+                        level.dimension().identifier().toString(),
                         pos.asLong(),
                         linkTargetForPart(level, pos, part, side, expectedNode));
             }
@@ -2004,7 +2014,7 @@ public final class WirelessLinkRegistry extends SavedData {
 
     @Nullable
     private LocatedTarget resolveLocator(TargetLocator locator, MinecraftServer server) {
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(locator.dimensionId()));
+        var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(locator.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return null;
@@ -2106,7 +2116,7 @@ public final class WirelessLinkRegistry extends SavedData {
     private void registerDevice(WirelessLink link) {
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(link.dimensionId()));
+        var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(link.dimensionId()));
         manager.registerDevice(link.frequencyId(), new WirelessFrequencyManager.DeviceEntry(
                 dim,
                 BlockPos.of(link.posLong()),
@@ -2118,7 +2128,7 @@ public final class WirelessLinkRegistry extends SavedData {
     private void unregisterDevice(WirelessLink link) {
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(link.dimensionId()));
+        var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(link.dimensionId()));
         manager.unregisterDevice(link.frequencyId(), dim, BlockPos.of(link.posLong()));
     }
 
@@ -2141,14 +2151,13 @@ public final class WirelessLinkRegistry extends SavedData {
 
     private void read(CompoundTag root) {
         links.clear();
-        var list = root.getList("links", Tag.TAG_COMPOUND);
+        var list = root.getListOrEmpty("links");
         for (int i = 0; i < list.size(); i++) {
-            var loaded = loadLink(list.getCompound(i));
+            var loaded = loadLink(list.getCompoundOrEmpty(i));
             loaded.ifPresent(links::put);
         }
     }
 
-    @Override
     public CompoundTag save(CompoundTag root, HolderLookup.Provider registries) {
         var list = new ListTag();
         for (var link : links.values()) {
@@ -2168,8 +2177,8 @@ public final class WirelessLinkRegistry extends SavedData {
 
     private static Optional<WirelessLink> loadLink(CompoundTag tag) {
         var map = new HashMap<String, String>();
-        for (var key : tag.getAllKeys()) {
-            map.put(key, tag.getString(key));
+        for (var key : tag.keySet()) {
+            map.put(key, tag.getStringOr(key, ""));
         }
         return WirelessLink.fromPersistentSnapshot(map);
     }

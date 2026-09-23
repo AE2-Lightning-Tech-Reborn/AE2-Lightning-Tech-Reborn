@@ -123,7 +123,7 @@ public final class ReservedStockRepository {
     public void writeTo(CompoundTag parent, HolderLookup.Provider registries) {
         var list = new ListTag();
         for (var entry : reserves.values()) {
-            var tag = GenericStack.writeTag(registries, new GenericStack(entry.key(), 1));
+            var tag = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, new GenericStack(entry.key(), 1));
             tag.putLong("Reserve", entry.amount());
             tag.putString("Mode", entry.mode().name());
             list.add(tag);
@@ -133,13 +133,13 @@ public final class ReservedStockRepository {
 
     public void readFrom(CompoundTag parent, HolderLookup.Provider registries) {
         reserves.clear();
-        var list = parent.getList(TAG_ENTRIES, Tag.TAG_COMPOUND);
+        var list = parent.getListOrEmpty(TAG_ENTRIES);
         for (int i = 0; i < list.size(); i++) {
-            var tag = list.getCompound(i);
-            var stack = GenericStack.readTag(registries, tag);
-            long amount = tag.getLong("Reserve");
+            var tag = list.getCompoundOrEmpty(i);
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, tag);
+            long amount = tag.getLongOr("Reserve", 0L);
             ReservedStockMatchMode mode;
-            try { mode = ReservedStockMatchMode.valueOf(tag.getString("Mode")); }
+            try { mode = ReservedStockMatchMode.valueOf(tag.getStringOr("Mode", "")); }
             catch (IllegalArgumentException ignored) { mode = ReservedStockMatchMode.EXACT; }
             if (stack != null && (amount == INFINITE || amount > 0)) {
                 reserves.put(stack.what(), new Entry(stack.what(), amount, mode));

@@ -38,7 +38,7 @@ import net.minecraft.world.level.storage.WritableLevelData;
 import org.junit.jupiter.api.Test;
 
 /** Real pool, CPU scheduler and extraction across the physical CPU's 16384-dispatch boundary. */
-class TimeWheelDispatchBoundaryTest {
+class TimeWheelDispatchBoundaryTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private static final AEKey INPUT = LightningKey.EXTREME_HIGH_VOLTAGE;
     private static final AEKey OUTPUT = LightningKey.HIGH_VOLTAGE;
     private static final int BUDGET = 16_384;
@@ -55,7 +55,7 @@ class TimeWheelDispatchBoundaryTest {
 
     private void runBoundary(boolean rejectSecondTick) throws Exception {
         if (net.neoforged.fml.loading.LoadingModList.get() == null) {
-            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
@@ -94,11 +94,7 @@ class TimeWheelDispatchBoundaryTest {
             var plan = proxy(ICraftingPlan.class, Map.of(
                     "finalOutput", new GenericStack(OUTPUT, amount),
                     "emittedItems", new KeyCounter(), "patternTimes", Map.of(pattern, amount)));
-            var linkData = new CompoundTag();
-            linkData.putUUID("craftId", UUID.randomUUID());
-            linkData.putBoolean("req", false);
-            linkData.putBoolean("standalone", true);
-            var link = new CraftingLink(linkData, cpu);
+            var link = new CraftingLink(UUID.randomUUID(), true, cpu);
             var jobClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TimeWheelJob");
             var ctor = jobClass.getDeclaredConstructor(ICraftingPlan.class, Consumer.class,
                     CraftingLink.class, Integer.class, ElapsedTimeTracker.class);

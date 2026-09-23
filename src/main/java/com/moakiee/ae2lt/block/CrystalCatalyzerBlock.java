@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -30,7 +30,7 @@ public class CrystalCatalyzerBlock extends AEBaseEntityBlock<CrystalCatalyzerBlo
     // Horizontal-only: the model is axially symmetric around the vertical axis,
     // and the block's output side config UI (RelativeSide.TOP) should always map
     // to world UP so players can reason about output faces intuitively.
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape UPRIGHT_SHAPE = BlockShapeHelper.or(
             Block.box(0, 0, 0, 16, 3, 16),
             Block.box(0, 13, 0, 16, 16, 16),
@@ -44,7 +44,7 @@ public class CrystalCatalyzerBlock extends AEBaseEntityBlock<CrystalCatalyzerBlo
             BlockShapeHelper.createHorizontalFacingShapes(UPRIGHT_SHAPE);
 
     public CrystalCatalyzerBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(FACING, Direction.NORTH));
@@ -74,10 +74,10 @@ public class CrystalCatalyzerBlock extends AEBaseEntityBlock<CrystalCatalyzerBlo
 
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos,
-                                Block block, BlockPos fromPos, boolean isMoving) {
+                                Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         var be = getBlockEntity(level, pos);
         if (be != null) {
-            be.onNeighborChanged(fromPos);
+            be.onNeighborChanged();
         }
     }
 
@@ -93,6 +93,6 @@ public class CrystalCatalyzerBlock extends AEBaseEntityBlock<CrystalCatalyzerBlo
             be.openMenu(player, MenuLocators.forBlockEntity(be));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

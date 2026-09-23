@@ -9,10 +9,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -84,7 +84,7 @@ final class EmiLightningStrikePreviewWidget extends Widget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         if (blocks.isEmpty() || scale <= 0F) {
             return;
         }
@@ -113,7 +113,7 @@ final class EmiLightningStrikePreviewWidget extends Widget {
                             entry.state,
                             pose,
                             bufferSource,
-                            LightTexture.FULL_BRIGHT,
+                            LightCoordsUtil.FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY);
                 }
             });

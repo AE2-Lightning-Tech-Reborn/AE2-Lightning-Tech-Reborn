@@ -5,25 +5,25 @@ import appeng.api.implementations.blockentities.PatternContainerGroup;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import java.util.Set;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /** Shared client/server routing policy for terminal pattern uploads. */
 public final class TianshuPatternUploadRouting {
-    private static final ResourceLocation MATTER_WARPING_MATRIX_CONTROLLER_ID =
-            ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier MATTER_WARPING_MATRIX_CONTROLLER_ID =
+            Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "matter_warping_matrix_controller");
-    private static final Set<ResourceLocation> CRAFTING_UPLOAD_GROUP_IDS = Set.of(
-            ResourceLocation.fromNamespaceAndPath("ae2", "molecular_assembler"),
-            ResourceLocation.fromNamespaceAndPath("extendedae", "ex_molecular_assembler"),
-            ResourceLocation.fromNamespaceAndPath("extendedae", "assembler_matrix_pattern"),
-            ResourceLocation.fromNamespaceAndPath(
+    private static final Set<Identifier> CRAFTING_UPLOAD_GROUP_IDS = Set.of(
+            Identifier.fromNamespaceAndPath("ae2", "molecular_assembler"),
+            Identifier.fromNamespaceAndPath("extendedae", "ex_molecular_assembler"),
+            Identifier.fromNamespaceAndPath("extendedae", "assembler_matrix_pattern"),
+            Identifier.fromNamespaceAndPath(
                     "extendedae_plus", "assembler_matrix_pattern_plus"),
-            ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l4"),
-            ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l6"),
-            ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l9"),
-            ResourceLocation.fromNamespaceAndPath("ae2cs", "meteorite_pattern_provider"),
+            Identifier.fromNamespaceAndPath("neoecoae", "crafting_system_l4"),
+            Identifier.fromNamespaceAndPath("neoecoae", "crafting_system_l6"),
+            Identifier.fromNamespaceAndPath("neoecoae", "crafting_system_l9"),
+            Identifier.fromNamespaceAndPath("ae2cs", "meteorite_pattern_provider"),
             MATTER_WARPING_MATRIX_CONTROLLER_ID);
 
     public enum Route {
@@ -66,7 +66,7 @@ public final class TianshuPatternUploadRouting {
                 && isCraftingUploadGroupId(group.icon().getId());
     }
 
-    static boolean isCraftingUploadGroupId(ResourceLocation id) {
+    static boolean isCraftingUploadGroupId(Identifier id) {
         return id != null && CRAFTING_UPLOAD_GROUP_IDS.contains(id);
     }
 
@@ -76,7 +76,7 @@ public final class TianshuPatternUploadRouting {
                 && isMatterWarpingMatrixId(group.icon().getId());
     }
 
-    static boolean isMatterWarpingMatrixId(ResourceLocation id) {
+    static boolean isMatterWarpingMatrixId(Identifier id) {
         return MATTER_WARPING_MATRIX_CONTROLLER_ID.equals(id);
     }
 

@@ -1,24 +1,25 @@
 package com.moakiee.ae2lt.mixin.client;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 
-import appeng.client.render.cablebus.CableBusBakedModel;
-import appeng.client.render.cablebus.CableBusRenderState;
+import appeng.client.render.cablebus.CableBusModel;
+import appeng.block.networking.CableBusRenderState;
 
 import com.moakiee.ae2lt.client.render.OverloadedCableRenderHelper;
 import com.moakiee.ae2lt.client.render.OverloadedCableRenderStateAccess;
 
-@Mixin(CableBusBakedModel.class)
+@Mixin(CableBusModel.class)
 public class CableBusBakedModelMixin {
-    @Inject(method = "addCableQuads", at = @At("HEAD"), cancellable = true)
-    private void ae2lt$renderOverloadedCable(CableBusRenderState renderState, List<BakedQuad> quadsOut,
+    @Inject(method = "getCableQuads", at = @At("HEAD"), cancellable = true)
+    private void ae2lt$renderOverloadedCable(CableBusRenderState renderState, Consumer<BakedQuad> quadsOut,
             CallbackInfo ci) {
         if (renderState == null) {
             return;
@@ -27,7 +28,9 @@ public class CableBusBakedModelMixin {
             return;
         }
 
-        OverloadedCableRenderHelper.addCableQuads(renderState, quadsOut);
+        var quads = new ArrayList<BakedQuad>();
+        OverloadedCableRenderHelper.addCableQuads(renderState, quads);
+        quads.forEach(quadsOut);
         ci.cancel();
     }
 }

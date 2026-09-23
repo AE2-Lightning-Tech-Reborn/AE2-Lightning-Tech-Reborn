@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.blockentity.TianshuSeedStorageBlockEntity;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -21,7 +21,7 @@ public final class TianshuSeedStorageMenu extends AEBaseMenu {
     public static final MenuType<TianshuSeedStorageMenu> TYPE = MenuTypeBuilder
             .create(TianshuSeedStorageMenu::new, TianshuSeedStorageBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.closed_loop_seed_storage"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "closed_loop_seed_storage"));
 
     private final TianshuSeedStorageBlockEntity host;

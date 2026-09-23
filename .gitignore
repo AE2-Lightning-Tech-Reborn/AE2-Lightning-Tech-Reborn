@@ -55,3 +55,9 @@ DevLog/
 .codex-tmp/
 .eclipse/
 CLAUDE.local.md
+
+# Local NeoForge port validation runs
+/.cache/
+/config/
+/run-cpu-selection-gametest/
+/run-big-native-probe/

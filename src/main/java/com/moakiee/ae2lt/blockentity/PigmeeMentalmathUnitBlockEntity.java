@@ -111,8 +111,10 @@ public final class PigmeeMentalmathUnitBlockEntity extends AENetworkedBlockEntit
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         tag.remove(TAG_CPU_POOL);
         if (cpuPool.hasPersistentState()) {
             var poolTag = new CompoundTag();
@@ -122,11 +124,13 @@ public final class PigmeeMentalmathUnitBlockEntity extends AENetworkedBlockEntit
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         cpuPool.readFromNBT(
-                tag.contains(TAG_CPU_POOL, Tag.TAG_COMPOUND)
-                        ? tag.getCompound(TAG_CPU_POOL) : new CompoundTag(),
+                com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CPU_POOL, Tag.TAG_COMPOUND)
+                        ? tag.getCompoundOrEmpty(TAG_CPU_POOL) : new CompoundTag(),
                 registries);
     }
 

@@ -36,14 +36,14 @@ public enum PhaseFlightMode {
 
     public static PhaseFlightMode fromTag(Tag tag) {
         if (tag instanceof ByteTag byteTag) {
-            return switch (byteTag.getAsByte()) {
+            return switch (byteTag.byteValue()) {
                 case 0 -> OFF;
                 case 2 -> CREATIVE_FLIGHT_ONLY;
                 default -> ALL;
             };
         }
         if (tag instanceof StringTag stringTag) {
-            return fromId(stringTag.getAsString());
+            return fromId(stringTag.value());
         }
         return ALL;
     }

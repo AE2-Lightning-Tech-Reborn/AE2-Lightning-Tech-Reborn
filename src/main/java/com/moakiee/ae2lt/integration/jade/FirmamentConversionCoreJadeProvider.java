@@ -6,33 +6,40 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.IServerDataProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
-    private static final ResourceLocation UID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "firmament_conversion_core");
+public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvider {
+    private static final Identifier UID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "firmament_conversion_core");
     private static final String TAG_INSIDE_STARSHIP = "InsideStarship";
     private static final String TAG_INACTIVE_CORE_OUTPUT = "InactiveCoreOutput";
     private static final String TAG_PROGRESS = "Progress";
     private static final String TAG_PROCESS_TIME = "ProcessTime";
 
     @Override
-    public ResourceLocation getUid() {
+    public Identifier getUid() {
         return UID;
     }
 
-    @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        if (accessor.getBlockEntity() instanceof FirmamentConversionCoreBlockEntity core) {
-            data.putBoolean(TAG_INSIDE_STARSHIP, core.isInsideFirmamentStarship());
-            data.putBoolean(TAG_INACTIVE_CORE_OUTPUT, core.hasInactiveSpiritCoreOutput());
-            data.putInt(TAG_PROGRESS, core.getProgress());
-            data.putInt(TAG_PROCESS_TIME, core.getProcessTime());
+    public static final class DataProvider implements IServerDataProvider<BlockAccessor> {
+        @Override
+        public Identifier getUid() {
+            return UID;
+        }
+
+        @Override
+        public void appendServerData(CompoundTag data, BlockAccessor accessor) {
+            if (accessor.getBlockEntity() instanceof FirmamentConversionCoreBlockEntity core) {
+                data.putBoolean(TAG_INSIDE_STARSHIP, core.isInsideFirmamentStarship());
+                data.putBoolean(TAG_INACTIVE_CORE_OUTPUT, core.hasInactiveSpiritCoreOutput());
+                data.putInt(TAG_PROGRESS, core.getProgress());
+                data.putInt(TAG_PROCESS_TIME, core.getProcessTime());
+            }
         }
     }
 
@@ -43,22 +50,22 @@ public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvi
         }
 
         CompoundTag data = accessor.getServerData();
-        if (data.contains(TAG_INSIDE_STARSHIP) && !data.getBoolean(TAG_INSIDE_STARSHIP)) {
+        if (data.contains(TAG_INSIDE_STARSHIP) && !data.getBooleanOr(TAG_INSIDE_STARSHIP, false)) {
             tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.invalid_structure"));
             return;
         }
 
-        if (data.getBoolean(TAG_INACTIVE_CORE_OUTPUT)) {
+        if (data.getBooleanOr(TAG_INACTIVE_CORE_OUTPUT, false)) {
             tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.inactive_core_output"));
         }
 
-        int processTime = data.getInt(TAG_PROCESS_TIME);
+        int processTime = data.getIntOr(TAG_PROCESS_TIME, 0);
         if (processTime <= 0) {
             tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.idle"));
             return;
         }
 
-        int progress = data.getInt(TAG_PROGRESS);
+        int progress = data.getIntOr(TAG_PROGRESS, 0);
         int percent = Math.min(100, progress * 100 / processTime);
         tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.progress", percent));
     }

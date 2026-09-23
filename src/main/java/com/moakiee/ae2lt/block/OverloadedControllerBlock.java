@@ -31,7 +31,7 @@ import appeng.menu.me.networktool.NetworkStatusMenu;
 public class OverloadedControllerBlock extends AEBaseEntityBlock<OverloadedControllerBlockEntity> {
 
     public OverloadedControllerBlock() {
-        super(metalProps().forceSolidOn().strength(6.0F));
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).forceSolidOn().strength(6.0F)));
         registerDefaultState(defaultBlockState()
                 .setValue(ControllerBlock.CONTROLLER_STATE, ControllerBlock.ControllerBlockState.offline)
                 .setValue(ControllerBlock.CONTROLLER_TYPE, ControllerBlock.ControllerRenderType.block));
@@ -50,12 +50,13 @@ public class OverloadedControllerBlock extends AEBaseEntityBlock<OverloadedContr
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction facing, BlockState facingState, LevelAccessor level,
-            BlockPos pos, BlockPos facingPos) {
+    public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos pos,
+            Direction facing, BlockPos facingPos, BlockState facingState, net.minecraft.util.RandomSource random) {
         return updateControllerType(state, level, pos);
     }
 
-    private BlockState updateControllerType(BlockState baseState, LevelAccessor level, BlockPos pos) {
+    private BlockState updateControllerType(BlockState baseState, net.minecraft.world.level.LevelReader level, BlockPos pos) {
         // Only connect render-state to AE2LT's own controller block instances.
         var type = ControllerBlock.ControllerRenderType.block;
 
@@ -82,7 +83,7 @@ public class OverloadedControllerBlock extends AEBaseEntityBlock<OverloadedContr
         return baseState.setValue(ControllerBlock.CONTROLLER_TYPE, type);
     }
 
-    private boolean isOverloadedController(LevelAccessor level, int x, int y, int z) {
+    private boolean isOverloadedController(net.minecraft.world.level.LevelReader level, int x, int y, int z) {
         return level.getBlockState(new BlockPos(x, y, z)).getBlock() instanceof OverloadedControllerBlock;
     }
 
@@ -90,14 +91,14 @@ public class OverloadedControllerBlock extends AEBaseEntityBlock<OverloadedContr
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
             BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof OverloadedControllerBlockEntity be) {
-            if (!level.isClientSide) {
+            if (!level.isClientSide()) {
                 // AE2 1.21.1 uses NetworkStatusMenu.CONTROLLER_TYPE for controller right-click.
                 // If menu/locator names differ in another version, verify this hook first.
                 // This only adds the same network-status entry point to AE2LT's controller
                 // and does not modify vanilla controller interaction.
                 MenuOpener.open(NetworkStatusMenu.CONTROLLER_TYPE, player, MenuLocators.forBlockEntity(be));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
 
         return super.useWithoutItem(state, level, pos, player, hitResult);

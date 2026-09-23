@@ -5,18 +5,18 @@ import appeng.api.stacks.GenericStack;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Optional server-side batch execution capability. It never owns the caller's plan or task. */
 public interface LightningBatchProvider {
     int API_VERSION = 1;
-    ResourceLocation CAPABILITY_ID = ResourceLocation.fromNamespaceAndPath("ae2lt", "lightning_batch");
+    Identifier CAPABILITY_ID = Identifier.fromNamespaceAndPath("ae2lt", "lightning_batch");
 
     default int capabilityVersion() {
         return API_VERSION;
     }
 
-    default ResourceLocation capabilityId() {
+    default Identifier capabilityId() {
         return CAPABILITY_ID;
     }
 
@@ -26,7 +26,7 @@ public interface LightningBatchProvider {
 
     record BatchRequest(
             int apiVersion,
-            ResourceLocation targetCapabilityId,
+            Identifier targetCapabilityId,
             AEItemKey processingId,
             List<List<GenericStack>> inputsPerCraft,
             long requestedAmount,
@@ -44,7 +44,7 @@ public interface LightningBatchProvider {
 
     record BatchCapability(
             int capabilityVersion,
-            ResourceLocation capabilityId,
+            Identifier capabilityId,
             long acceptedAmount,
             long maxSafeBatch,
             int multiplier,

@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.item;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -8,16 +8,15 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorMaterials;
-import com.moakiee.ae2lt.celestweave.PhaseWingFlight;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockProjectionRules;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockService;
 
@@ -26,14 +25,13 @@ import com.moakiee.ae2lt.celestweave.phase.PhaseLockService;
  * expected equipment slot; a versioned data-component mirror exposes non-private armor state to
  * vanilla and third-party equipment systems.
  */
-public final class PhaseLockProjectionItem extends ArmorItem {
+public final class PhaseLockProjectionItem extends Item {
     private final EquipmentSlot equipmentSlot;
 
     public PhaseLockProjectionItem(Properties properties, EquipmentSlot equipmentSlot) {
-        super(
-                CelestweaveArmorMaterials.CELESTWEAVE,
-                armorType(equipmentSlot),
-                properties.stacksTo(1).fireResistant());
+        super(properties.stacksTo(1).fireResistant().equippable(equipmentSlot)
+                .attributes(CelestweaveArmorMaterials.CELESTWEAVE.createAttributes(armorType(equipmentSlot)))
+                .enchantable(CelestweaveArmorMaterials.CELESTWEAVE.enchantmentValue()));
         this.equipmentSlot = equipmentSlot;
     }
 
@@ -47,27 +45,12 @@ public final class PhaseLockProjectionItem extends ArmorItem {
     }
 
     @Override
-    public boolean canElytraFly(ItemStack stack, LivingEntity entity) {
-        return equipmentSlot == EquipmentSlot.CHEST && PhaseWingFlight.canElytraFly(entity);
-    }
-
-    @Override
-    public boolean elytraFlightTick(ItemStack stack, LivingEntity entity, int flightTicks) {
-        return equipmentSlot == EquipmentSlot.CHEST && PhaseWingFlight.elytraFlightTick(entity);
-    }
-
-    @Override
-    public String getDescriptionId() {
-        return "item.ae2lt.phase_lock_projection";
-    }
-
-    @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean selected) {
-        super.inventoryTick(stack, level, entity, slotId, selected);
-        if (level.isClientSide() || !(entity instanceof ServerPlayer player)) {
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+        super.inventoryTick(stack, level, entity, slot);
+        if (!(entity instanceof ServerPlayer player)) {
             return;
         }
-        if (!PhaseLockProjectionRules.isExpectedSlot(equipmentSlot, slotId)) {
+        if (slot != equipmentSlot) {
             stack.setCount(0);
             return;
         }
@@ -102,17 +85,18 @@ public final class PhaseLockProjectionItem extends ArmorItem {
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltip,
+            TooltipDisplay display,
+            Consumer<Component> tooltip,
             TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.ae2lt.phase_lock_projection.desc"));
+        tooltip.accept(Component.translatable("item.ae2lt.phase_lock_projection.desc"));
     }
 
-    private static ArmorItem.Type armorType(EquipmentSlot slot) {
+    private static ArmorType armorType(EquipmentSlot slot) {
         return switch (slot) {
-            case HEAD -> ArmorItem.Type.HELMET;
-            case CHEST -> ArmorItem.Type.CHESTPLATE;
-            case LEGS -> ArmorItem.Type.LEGGINGS;
-            case FEET -> ArmorItem.Type.BOOTS;
+            case HEAD -> ArmorType.HELMET;
+            case CHEST -> ArmorType.CHESTPLATE;
+            case LEGS -> ArmorType.LEGGINGS;
+            case FEET -> ArmorType.BOOTS;
             default -> throw new IllegalArgumentException("Phase-lock projections require an armor slot");
         };
     }

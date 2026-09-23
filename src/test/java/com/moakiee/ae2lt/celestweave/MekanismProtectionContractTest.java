@@ -17,10 +17,10 @@ final class MekanismProtectionContractTest {
     void protectionModulesTargetMekanismsExactDamageTypes() {
         assertEquals(
                 "mekanism:radiation",
-                MekanismProtectionSubmodule.RADIATION.damageType().location().toString());
+                MekanismProtectionSubmodule.RADIATION.damageType().identifier().toString());
         assertEquals(
                 "mekanism:laser",
-                MekanismProtectionSubmodule.LASER.damageType().location().toString());
+                MekanismProtectionSubmodule.LASER.damageType().identifier().toString());
     }
 
     @Test

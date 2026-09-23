@@ -21,9 +21,9 @@ import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 
-@EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class DeviceHubKeyMappings {
-    private static final String CATEGORY = "key.categories.ae2lt";
+    private static final KeyMapping.Category CATEGORY = Ae2ltKeyCategory.INSTANCE;
 
     public static final KeyMapping DASH = new KeyMapping(
             "key.ae2lt.dash",
@@ -44,7 +44,7 @@ public final class DeviceHubKeyMappings {
         event.register(OPEN_CONFIG);
     }
 
-    @EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
     public static final class RuntimeHandler {
         private RuntimeHandler() {
         }
@@ -57,7 +57,7 @@ public final class DeviceHubKeyMappings {
             }
 
             while (DASH.consumeClick()) {
-                PacketDistributor.sendToServer(new DashPacket());
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DashPacket());
             }
 
             while (OPEN_CONFIG.consumeClick()) {
@@ -93,7 +93,7 @@ public final class DeviceHubKeyMappings {
                 }
 
                 if (defaultTab >= 0) {
-                    PacketDistributor.sendToServer(new OpenDeviceHubPacket(defaultTab));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new OpenDeviceHubPacket(defaultTab));
                 }
             }
         }

@@ -1,39 +1,33 @@
 package com.moakiee.ae2lt.celestweave;
 
-import java.util.List;
 import java.util.Map;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.ArmorMaterial;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 
 public final class CelestweaveArmorMaterials {
-    private static final int ENCHANTMENT_VALUE = 32;
-
-    public static final DeferredRegister<ArmorMaterial> ARMOR_MATERIALS =
-            DeferredRegister.create(Registries.ARMOR_MATERIAL, AE2LightningTech.MODID);
-
-    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> CELESTWEAVE =
-            ARMOR_MATERIALS.register(
-                    "celestweave",
-                    () -> new ArmorMaterial(
-                            Map.of(
-                                    ArmorItem.Type.HELMET, 6,
-                                    ArmorItem.Type.CHESTPLATE, 12,
-                                    ArmorItem.Type.LEGGINGS, 8,
-                                    ArmorItem.Type.BOOTS, 5),
-                            ENCHANTMENT_VALUE,
-                            SoundEvents.ARMOR_EQUIP_GENERIC,
-                            () -> Ingredient.EMPTY,
-                            List.of(),
-                            5.0F,
-                            0.2F));
+    public static final ArmorMaterial CELESTWEAVE = new ArmorMaterial(
+            0,
+            Map.of(
+                    ArmorType.HELMET, 6,
+                    ArmorType.CHESTPLATE, 12,
+                    ArmorType.LEGGINGS, 8,
+                    ArmorType.BOOTS, 5),
+            32,
+            SoundEvents.ARMOR_EQUIP_GENERIC,
+            5.0F,
+            0.2F,
+            TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "repairs_celestweave")),
+            ResourceKey.create(EquipmentAssets.ROOT_ID, Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave")));
 
     private CelestweaveArmorMaterials() {
     }

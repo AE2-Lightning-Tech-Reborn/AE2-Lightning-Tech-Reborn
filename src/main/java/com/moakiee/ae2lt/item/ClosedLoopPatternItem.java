@@ -20,17 +20,18 @@ public final class ClosedLoopPatternItem extends EncodedPatternItem<IPatternDeta
     }
 
     public boolean hasPayload(ItemStack stack) {
-        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
-                .copyTag().contains(TAG_PAYLOAD, net.minecraft.nbt.Tag.TAG_COMPOUND);
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(
+                stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag(),
+                TAG_PAYLOAD, net.minecraft.nbt.Tag.TAG_COMPOUND);
     }
 
     public Optional<ClosedLoopPatternPayload> readPayload(ItemStack stack, Level level) {
         if (stack == null || level == null || stack.getItem() != this) return Optional.empty();
         var root = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        if (!root.contains(TAG_PAYLOAD, net.minecraft.nbt.Tag.TAG_COMPOUND)) return Optional.empty();
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(root, TAG_PAYLOAD, net.minecraft.nbt.Tag.TAG_COMPOUND)) return Optional.empty();
         try {
             return Optional.of(ClosedLoopPatternPayloadTagCodec.read(
-                    root.getCompound(TAG_PAYLOAD), level.registryAccess()));
+                    root.getCompoundOrEmpty(TAG_PAYLOAD), level.registryAccess()));
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
@@ -39,8 +40,8 @@ public final class ClosedLoopPatternItem extends EncodedPatternItem<IPatternDeta
     public int readExecutionMember(ItemStack stack) {
         if (stack == null || stack.getItem() != this) return -1;
         var root = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return root.contains(TAG_EXECUTION_MEMBER, net.minecraft.nbt.Tag.TAG_INT)
-                ? root.getInt(TAG_EXECUTION_MEMBER) : -1;
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(root, TAG_EXECUTION_MEMBER, net.minecraft.nbt.Tag.TAG_INT)
+                ? root.getIntOr(TAG_EXECUTION_MEMBER, 0) : -1;
     }
 
     public void writePayload(ItemStack stack, ClosedLoopPatternPayload payload,

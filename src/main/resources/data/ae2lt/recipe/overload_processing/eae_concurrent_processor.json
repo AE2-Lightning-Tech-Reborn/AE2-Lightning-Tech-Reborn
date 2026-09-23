@@ -9,21 +9,15 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:storage_blocks/entro"
-      },
+      "ingredient": "#c:storage_blocks/entro",
       "count": 9
     },
     {
-      "ingredient": {
-        "tag": "c:storage_blocks/redstone"
-      },
+      "ingredient": "#c:storage_blocks/redstone",
       "count": 4
     },
     {
-      "ingredient": {
-        "tag": "c:storage_blocks/silicon"
-      },
+      "ingredient": "#c:storage_blocks/silicon",
       "count": 4
     }
   ],

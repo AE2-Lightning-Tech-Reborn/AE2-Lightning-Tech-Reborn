@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -59,7 +59,7 @@ public final class OverloadCpuState {
 
     private final OverloadCpuOwner owner;
     private final Map<PendingOverloadOutputKey, PendingOverloadOutput> pendingByKey = new LinkedHashMap<>();
-    private final Map<ResourceLocation, LinkedHashSet<PendingOverloadOutputKey>> pendingByItemId = new LinkedHashMap<>();
+    private final Map<Identifier, LinkedHashSet<PendingOverloadOutputKey>> pendingByItemId = new LinkedHashMap<>();
     private long nextSequence = 1L;
 
     public OverloadCpuState(OverloadCpuOwner owner) {
@@ -138,7 +138,7 @@ public final class OverloadCpuState {
     void registerExpectedOutput(
             OverloadPatternReference patternReference,
             int outputSlotIndex,
-            ResourceLocation itemId,
+            Identifier itemId,
             AEKey exactExpectedKey,
             long amount,
             boolean routesToRequester,
@@ -178,12 +178,12 @@ public final class OverloadCpuState {
         pendingByItemId.computeIfAbsent(itemId, ignored -> new LinkedHashSet<>()).add(key);
     }
 
-    public OverloadClaimResult claimByItemId(ResourceLocation itemId, long amount, boolean mutate) {
+    public OverloadClaimResult claimByItemId(Identifier itemId, long amount, boolean mutate) {
         return claimByItemId(itemId, amount, mutate, (consumer, expected) -> true);
     }
 
     public OverloadClaimResult claimByItemId(
-            ResourceLocation itemId,
+            Identifier itemId,
             long amount,
             boolean mutate,
             BiPredicate<UUID, AEKey> acceptsConsumerVariant) {
@@ -280,13 +280,13 @@ public final class OverloadCpuState {
         return total > 0 ? new OverloadClaimResult(total, committed) : OverloadClaimResult.EMPTY;
     }
 
-    public long getRemainingForItem(ResourceLocation itemId) {
+    public long getRemainingForItem(Identifier itemId) {
         var total = getRemainingForItemExact(itemId);
         return total.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) >= 0
                 ? Long.MAX_VALUE : total.longValue();
     }
 
-    BigInteger getRemainingForItemExact(ResourceLocation itemId) {
+    BigInteger getRemainingForItemExact(Identifier itemId) {
         Objects.requireNonNull(itemId, "itemId");
         var keys = pendingByItemId.get(itemId);
         if (keys == null || keys.isEmpty()) {
@@ -336,7 +336,7 @@ public final class OverloadCpuState {
             pendingTag.put(TAG_SOURCE_PATTERN, pending.patternReference().sourcePattern().toTag());
             pendingTag.putInt(TAG_OUTPUT_SLOT, pending.key().outputSlotIndex());
             pendingTag.putString(TAG_ITEM_ID, pending.itemId().toString());
-            pendingTag.put(TAG_EXACT_TEMPLATE, pending.exactExpectedKey().toTagGeneric(registries));
+            pendingTag.put(TAG_EXACT_TEMPLATE, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, pending.exactExpectedKey()));
             pendingTag.putLong(TAG_REMAINING, pending.remainingAmount());
             pendingTag.putBoolean(TAG_ROUTES_TO_REQUESTER, pending.routesToRequester());
             pendingTag.putLong(TAG_REGISTERED_ORDER, pending.registeredOrder());
@@ -346,7 +346,7 @@ public final class OverloadCpuState {
                         TAG_SHARED_REUSABLE_SEED_POOL, pending.sharedReusableSeedPool());
                 // Keep the legacy fields for single-consumer downgrade compatibility.
                 if (pending.reusableSeedGroupId() != null) {
-                    pendingTag.putUUID(TAG_REUSABLE_SEED_GROUP, pending.reusableSeedGroupId());
+                    com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(pendingTag, TAG_REUSABLE_SEED_GROUP, pending.reusableSeedGroupId());
                     pendingTag.putLong(
                             TAG_REMAINING_REUSABLE_SEED, pending.remainingReusableSeedAmount());
                 }
@@ -363,30 +363,30 @@ public final class OverloadCpuState {
         Objects.requireNonNull(registries, "registries");
 
         var state = new OverloadCpuState(owner);
-        state.nextSequence = Math.max(1L, tag.getLong(TAG_NEXT_SEQUENCE));
+        state.nextSequence = Math.max(1L, tag.getLongOr(TAG_NEXT_SEQUENCE, 0L));
 
-        var pendingList = tag.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND);
+        var pendingList = tag.getListOrEmpty(TAG_PENDING);
         for (int i = 0; i < pendingList.size(); i++) {
-            var pendingTag = pendingList.getCompound(i);
+            var pendingTag = pendingList.getCompoundOrEmpty(i);
             var patternReference = new OverloadPatternReference(
-                    pendingTag.getString(TAG_PATTERN_IDENTITY),
+                    pendingTag.getStringOr(TAG_PATTERN_IDENTITY, ""),
                     com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot.fromTag(
-                            pendingTag.getCompound(TAG_SOURCE_PATTERN)));
+                            pendingTag.getCompoundOrEmpty(TAG_SOURCE_PATTERN)));
             var key = new PendingOverloadOutputKey(
                     owner.craftingId(),
-                    pendingTag.getString(TAG_PATTERN_IDENTITY),
-                    pendingTag.getInt(TAG_OUTPUT_SLOT));
+                    pendingTag.getStringOr(TAG_PATTERN_IDENTITY, ""),
+                    pendingTag.getIntOr(TAG_OUTPUT_SLOT, 0));
             var pending = new PendingOverloadOutput(
                     key,
                     owner,
                     patternReference,
-                    ResourceLocation.parse(pendingTag.getString(TAG_ITEM_ID)),
+                    Identifier.parse(pendingTag.getStringOr(TAG_ITEM_ID, "")),
                     loadExactExpectedKey(pendingTag, registries),
-                    pendingTag.getLong(TAG_REMAINING),
-                    pendingTag.getBoolean(TAG_ROUTES_TO_REQUESTER),
-                    pendingTag.getLong(TAG_REGISTERED_ORDER),
+                    pendingTag.getLongOr(TAG_REMAINING, 0L),
+                    pendingTag.getBooleanOr(TAG_ROUTES_TO_REQUESTER, false),
+                    pendingTag.getLongOr(TAG_REGISTERED_ORDER, 0L),
                     readConsumerCredits(pendingTag),
-                    pendingTag.getBoolean(TAG_SHARED_REUSABLE_SEED_POOL));
+                    pendingTag.getBooleanOr(TAG_SHARED_REUSABLE_SEED_POOL, false));
             state.pendingByKey.put(key, pending);
             state.pendingByItemId.computeIfAbsent(pending.itemId(), ignored -> new LinkedHashSet<>()).add(key);
             state.nextSequence = Math.max(state.nextSequence, pending.registeredOrder() + 1);
@@ -401,7 +401,7 @@ public final class OverloadCpuState {
         var creditsTag = new ListTag();
         for (var credit : OverloadConsumerCredit.normalize(consumerCredits)) {
             var creditTag = new CompoundTag();
-            creditTag.putUUID(TAG_CONSUMER_ID, credit.consumerId());
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(creditTag, TAG_CONSUMER_ID, credit.consumerId());
             creditTag.putLong(TAG_CONSUMER_AMOUNT, credit.amount());
             creditsTag.add(creditTag);
         }
@@ -410,37 +410,37 @@ public final class OverloadCpuState {
 
     static List<OverloadConsumerCredit> readConsumerCredits(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
-        if (tag.contains(TAG_CONSUMER_CREDITS, CompoundTag.TAG_LIST)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CONSUMER_CREDITS, CompoundTag.TAG_LIST)) {
             var credits = new ArrayList<OverloadConsumerCredit>();
-            var creditsTag = tag.getList(TAG_CONSUMER_CREDITS, CompoundTag.TAG_COMPOUND);
+            var creditsTag = tag.getListOrEmpty(TAG_CONSUMER_CREDITS);
             for (int i = 0; i < creditsTag.size(); i++) {
-                var creditTag = creditsTag.getCompound(i);
-                if (!creditTag.hasUUID(TAG_CONSUMER_ID)) continue;
-                long amount = creditTag.getLong(TAG_CONSUMER_AMOUNT);
+                var creditTag = creditsTag.getCompoundOrEmpty(i);
+                if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(creditTag, TAG_CONSUMER_ID)) continue;
+                long amount = creditTag.getLongOr(TAG_CONSUMER_AMOUNT, 0L);
                 if (amount <= 0) continue;
                 credits.add(new OverloadConsumerCredit(
-                        creditTag.getUUID(TAG_CONSUMER_ID), amount));
+                        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(creditTag, TAG_CONSUMER_ID), amount));
             }
             return OverloadConsumerCredit.normalize(credits);
         }
 
         // Backward compatibility with the old single-group representation.
-        if (tag.hasUUID(TAG_REUSABLE_SEED_GROUP)) {
-            long amount = tag.getLong(TAG_REMAINING_REUSABLE_SEED);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_REUSABLE_SEED_GROUP)) {
+            long amount = tag.getLongOr(TAG_REMAINING_REUSABLE_SEED, 0L);
             if (amount > 0) {
                 return List.of(new OverloadConsumerCredit(
-                        tag.getUUID(TAG_REUSABLE_SEED_GROUP), amount));
+                        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_REUSABLE_SEED_GROUP), amount));
             }
         }
         return List.of();
     }
 
     private static AEKey loadExactExpectedKey(CompoundTag pendingTag, HolderLookup.Provider registries) {
-        if (!pendingTag.contains(TAG_EXACT_TEMPLATE, CompoundTag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(pendingTag, TAG_EXACT_TEMPLATE, CompoundTag.TAG_COMPOUND)) {
             throw new IllegalArgumentException("pending overload entry is missing an exact expected key");
         }
 
-        var key = AEKey.fromTagGeneric(registries, pendingTag.getCompound(TAG_EXACT_TEMPLATE).copy());
+        var key = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, pendingTag.getCompoundOrEmpty(TAG_EXACT_TEMPLATE).copy());
         if (key == null) {
             throw new IllegalArgumentException("pending overload entry has an invalid exact expected key");
         }
@@ -458,7 +458,7 @@ public final class OverloadCpuState {
         }
     }
 
-    private static ResourceLocation itemIdOf(OverloadPatternDetails.OutputSlot output) {
+    private static Identifier itemIdOf(OverloadPatternDetails.OutputSlot output) {
         var key = AEItemKey.of(output.template());
         if (key == null) {
             throw new IllegalArgumentException("output template must resolve to an item key");

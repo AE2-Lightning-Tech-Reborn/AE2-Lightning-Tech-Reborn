@@ -62,14 +62,14 @@ public final class InventoryMaintenanceRepository {
         var list = new ListTag();
         for (var rule : rules.values()) {
             var tag = new CompoundTag();
-            tag.putUUID("Id", rule.id());
-            tag.put("Key", GenericStack.writeTag(registries, new GenericStack(rule.key(), 1)));
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, "Id", rule.id());
+            tag.put("Key", com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, new GenericStack(rule.key(), 1)));
             tag.putLong("Lower", rule.lowerThreshold());
             tag.putLong("Upper", rule.upperThreshold());
             tag.putLong("PerJob", rule.amountPerJob());
             tag.putBoolean("Enabled", rule.enabled());
             tag.putBoolean("Replenishing", rule.replenishing());
-            if (rule.activeCraftingId() != null) tag.putUUID("CraftingId", rule.activeCraftingId());
+            if (rule.activeCraftingId() != null) com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, "CraftingId", rule.activeCraftingId());
             list.add(tag);
         }
         parent.put(TAG_RULES, list);
@@ -77,16 +77,16 @@ public final class InventoryMaintenanceRepository {
 
     public void readFrom(CompoundTag parent, HolderLookup.Provider registries) {
         rules.clear();
-        var list = parent.getList(TAG_RULES, Tag.TAG_COMPOUND);
+        var list = parent.getListOrEmpty(TAG_RULES);
         for (int i = 0; i < list.size(); i++) {
             try {
-                var tag = list.getCompound(i);
-                var keyStack = GenericStack.readTag(registries, tag.getCompound("Key"));
-                if (keyStack == null || !tag.hasUUID("Id")) continue;
+                var tag = list.getCompoundOrEmpty(i);
+                var keyStack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, tag.getCompoundOrEmpty("Key"));
+                if (keyStack == null || !com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, "Id")) continue;
                 var rule = new InventoryMaintenanceRule(
-                        tag.getUUID("Id"), keyStack.what(), tag.getLong("Lower"), tag.getLong("Upper"),
-                        tag.getLong("PerJob"), tag.getBoolean("Enabled"), tag.getBoolean("Replenishing"),
-                        tag.hasUUID("CraftingId") ? tag.getUUID("CraftingId") : null);
+                        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, "Id"), keyStack.what(), tag.getLongOr("Lower", 0L), tag.getLongOr("Upper", 0L),
+                        tag.getLongOr("PerJob", 0L), tag.getBooleanOr("Enabled", false), tag.getBooleanOr("Replenishing", false),
+                        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, "CraftingId") ? com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, "CraftingId") : null);
                 rules.put(rule.key(), rule);
             } catch (RuntimeException ignored) {
             }

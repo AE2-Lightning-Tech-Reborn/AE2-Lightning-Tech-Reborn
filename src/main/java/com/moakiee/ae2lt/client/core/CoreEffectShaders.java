@@ -1,109 +1,72 @@
 package com.moakiee.ae2lt.client.core;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.CompareOp;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.logging.LogUtils;
-import java.io.IOException;
-import java.util.function.Supplier;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceProvider;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
-import org.joml.Matrix4f;
-import org.slf4j.Logger;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 
-@EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+/** Native 26.1 pipelines for the original Tianshu and Matrix shader programs. */
+@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class CoreEffectShaders {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static final ResourceLocation TIANSHU_SHADER =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "multiblock/tianshu_core");
-    private static final ResourceLocation MATRIX_SHADER =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "multiblock/matrix_core");
+    private static final Identifier VERTEX = id("core/multiblock/core");
+    private static final Identifier TIANSHU_FRAGMENT = id("core/multiblock/tianshu_core");
+    private static final Identifier MATRIX_FRAGMENT = id("core/multiblock/matrix_core");
+    private static final Identifier VANILLA_COLOR = Identifier.withDefaultNamespace("core/position_color");
 
-    private static final ShaderTracker TIANSHU = new ShaderTracker();
-    private static final ShaderTracker MATRIX = new ShaderTracker();
+    private static final RenderPipeline TIANSHU = shader("tianshu", TIANSHU_FRAGMENT, false, true);
+    private static final RenderPipeline MATRIX_CORE = shader("matrix_core", MATRIX_FRAGMENT, false, true);
+    private static final RenderPipeline MATRIX_GLOW = shader("matrix_glow", MATRIX_FRAGMENT, true, false);
+    private static final RenderPipeline TIANSHU_FALLBACK = shader("tianshu_fallback", VANILLA_COLOR, false, true);
+    private static final RenderPipeline MATRIX_CORE_FALLBACK = shader("matrix_core_fallback", VANILLA_COLOR, false, true);
+    private static final RenderPipeline MATRIX_GLOW_FALLBACK = shader("matrix_glow_fallback", VANILLA_COLOR, true, false);
 
     private CoreEffectShaders() {
     }
 
     @SubscribeEvent
-    public static void registerShaders(RegisterShadersEvent event) throws IOException {
-        if (CoreEffectBackend.useVeil()) {
-            LOGGER.info("Compatible Veil detected; preparing native core-effect shaders as fallback");
-        } else {
-            LOGGER.info("Veil not detected or incompatible; using the native core-effect shader backend");
-        }
-
-        registerShader(event, TIANSHU_SHADER, TIANSHU);
-        registerShader(event, MATRIX_SHADER, MATRIX);
+    public static void registerPipelines(RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(TIANSHU);
+        event.registerPipeline(MATRIX_CORE);
+        event.registerPipeline(MATRIX_GLOW);
+        event.registerPipeline(TIANSHU_FALLBACK);
+        event.registerPipeline(MATRIX_CORE_FALLBACK);
+        event.registerPipeline(MATRIX_GLOW_FALLBACK);
     }
 
-    static RenderStateShard.ShaderStateShard tianshu() {
-        return TIANSHU.shard;
+    static RenderPipeline tianshu() { return TIANSHU; }
+    static RenderPipeline matrixCore() { return MATRIX_CORE; }
+    static RenderPipeline matrixGlow() { return MATRIX_GLOW; }
+    static RenderPipeline tianshuFallback() { return TIANSHU_FALLBACK; }
+    static RenderPipeline matrixCoreFallback() { return MATRIX_CORE_FALLBACK; }
+    static RenderPipeline matrixGlowFallback() { return MATRIX_GLOW_FALLBACK; }
+
+    private static RenderPipeline shader(String name, Identifier fragment, boolean additive, boolean writesDepth) {
+        boolean nativeShader = fragment.getNamespace().equals(AE2LightningTech.MODID);
+        return RenderPipeline.builder()
+                .withLocation(id("pipeline/core_effect/" + name))
+                .withVertexShader(nativeShader ? VERTEX : VANILLA_COLOR)
+                .withFragmentShader(fragment)
+                .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+                .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+                .withColorTargetState(new ColorTargetState(additive ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, writesDepth))
+                .withCull(false)
+                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.TRIANGLES)
+                .build();
     }
 
-    static RenderStateShard.ShaderStateShard matrix() {
-        return MATRIX.shard;
-    }
-
-    private static void registerShader(RegisterShadersEvent event,
-                                       ResourceLocation location,
-                                       ShaderTracker tracker) throws IOException {
-        event.registerShader(
-                new TimedShaderInstance(
-                        event.getResourceProvider(),
-                        location,
-                        DefaultVertexFormat.POSITION_COLOR_NORMAL),
-                tracker::setInstance);
-    }
-
-    private static final class ShaderTracker implements Supplier<ShaderInstance> {
-        private final RenderStateShard.ShaderStateShard shard =
-                new RenderStateShard.ShaderStateShard(this);
-        private ShaderInstance instance;
-
-        private void setInstance(ShaderInstance instance) {
-            this.instance = instance;
-        }
-
-        @Override
-        public ShaderInstance get() {
-            return instance;
-        }
-    }
-
-    /**
-     * Keeps the old VeilRenderTime behavior without depending on Veil:
-     * wall-clock seconds, wrapped once per hour to preserve float precision.
-     */
-    private static final class TimedShaderInstance extends ShaderInstance {
-        private static final long TIME_WRAP_MILLIS = 3_600_000L;
-
-        private final Uniform effectTime;
-
-        private TimedShaderInstance(ResourceProvider resources,
-                                    ResourceLocation location,
-                                    VertexFormat vertexFormat) throws IOException {
-            super(resources, location, vertexFormat);
-            this.effectTime = getUniform("EffectTime");
-        }
-
-        @Override
-        public void setDefaultUniforms(VertexFormat.Mode mode,
-                                       Matrix4f modelViewMatrix,
-                                       Matrix4f projectionMatrix,
-                                       Window window) {
-            super.setDefaultUniforms(mode, modelViewMatrix, projectionMatrix, window);
-            if (effectTime != null) {
-                effectTime.set((System.currentTimeMillis() % TIME_WRAP_MILLIS) / 1000.0F);
-            }
-        }
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, path);
     }
 }

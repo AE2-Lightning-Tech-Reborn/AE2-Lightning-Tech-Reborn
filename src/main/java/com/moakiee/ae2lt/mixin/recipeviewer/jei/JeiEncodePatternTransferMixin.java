@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import tamaized.ae2jeiintegration.integration.modules.jei.transfer.EncodePatternTransferHandler;
+import appeng.client.integrations.jei.transfer.EncodePatternTransferHandler;
 
 /** Captures provider metadata normally and starts closed-loop discovery from recipe outputs. */
 @Mixin(value = EncodePatternTransferHandler.class, remap = false)
@@ -82,7 +82,7 @@ public abstract class JeiEncodePatternTransferMixin {
         if (!doTransfer
                 || cir.getReturnValue() != null
                 || ModList.get().isLoaded("emi")
-                || !Screen.hasAltDown()
+                || !net.minecraft.client.Minecraft.getInstance().hasAltDown()
                 || !(menu instanceof TianshuPatternEncodingTermMenu tianshuMenu)
                 || tianshuMenu.tianshuMode == TianshuEncodingMode.CLOSED_LOOP) {
             return;

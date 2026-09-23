@@ -14,7 +14,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.player.Player;
@@ -129,7 +129,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         @Override
         public CompoundTag toTag() {
             var tag = new CompoundTag();
-            tag.putString(TAG_DIM, dimension().location().toString());
+            tag.putString(TAG_DIM, dimension().identifier().toString());
             tag.putLong(TAG_POS, pos().asLong());
             tag.putInt(TAG_FACE, boundFace().get3DDataValue());
             return tag;
@@ -137,9 +137,9 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
 
         public static WirelessConnection fromTag(CompoundTag tag) {
             var dim = ResourceKey.create(Registries.DIMENSION,
-                    ResourceLocation.parse(tag.getString(TAG_DIM)));
-            var pos = BlockPos.of(tag.getLong(TAG_POS));
-            var face = Direction.from3DDataValue(tag.getInt(TAG_FACE));
+                    Identifier.parse(tag.getStringOr(TAG_DIM, "")));
+            var pos = BlockPos.of(tag.getLongOr(TAG_POS, 0L));
+            var face = Direction.from3DDataValue(tag.getIntOr(TAG_FACE, 0));
             return new WirelessConnection(dim, pos, face);
         }
     }
@@ -254,7 +254,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     public void saveChanges() {
         super.saveChanges();
         var level = getLevel();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             var logic = getOverloadedLogic();
             if (logic != null) {
                 logic.onPersistentStateChanged();
@@ -548,7 +548,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         data.writeVarInt(machineParallelism);
         data.writeVarInt(connections.size());
         for (var conn : connections) {
-            data.writeResourceLocation(conn.dimension().location());
+            data.writeIdentifier(conn.dimension().identifier());
             data.writeBlockPos(conn.pos());
             data.writeByte(conn.boundFace().get3DDataValue());
         }
@@ -578,7 +578,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         int count = data.readVarInt();
         var newConns = new ArrayList<WirelessConnection>(Math.min(count, MAX_WIRELESS_CONNECTIONS));
         for (int i = 0; i < count; i++) {
-            var dim = ResourceKey.create(Registries.DIMENSION, data.readResourceLocation());
+            var dim = ResourceKey.create(Registries.DIMENSION, data.readIdentifier());
             var pos = data.readBlockPos();
             var face = Direction.from3DDataValue(data.readByte());
             WirelessConnectionLists.addOrReplace(
@@ -624,8 +624,10 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     private static final String TAG_CONNECTIONS = "WirelessConnections";
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         data.putString(TAG_PROVIDER_MODE, providerMode.name());
         data.putString(TAG_RETURN_MODE, returnMode.name());
         data.putString(TAG_WIRELESS_DISPATCH_MODE, wirelessDispatchMode.name());
@@ -640,48 +642,50 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         if (data.contains(TAG_PROVIDER_MODE)) {
             try {
-                providerMode = ProviderMode.valueOf(data.getString(TAG_PROVIDER_MODE));
+                providerMode = ProviderMode.valueOf(data.getStringOr(TAG_PROVIDER_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 providerMode = ProviderMode.NORMAL;
             }
         }
         if (data.contains(TAG_RETURN_MODE)) {
             try {
-                returnMode = ReturnMode.valueOf(data.getString(TAG_RETURN_MODE));
+                returnMode = ReturnMode.valueOf(data.getStringOr(TAG_RETURN_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 returnMode = ReturnMode.OFF;
             }
         } else if (data.contains(TAG_AUTO_RETURN)) {
-            returnMode = data.getBoolean(TAG_AUTO_RETURN) ? ReturnMode.AUTO : ReturnMode.OFF;
+            returnMode = data.getBooleanOr(TAG_AUTO_RETURN, false) ? ReturnMode.AUTO : ReturnMode.OFF;
         }
         if (data.contains(TAG_WIRELESS_DISPATCH_MODE)) {
             try {
-                wirelessDispatchMode = WirelessDispatchMode.valueOf(data.getString(TAG_WIRELESS_DISPATCH_MODE));
+                wirelessDispatchMode = WirelessDispatchMode.valueOf(data.getStringOr(TAG_WIRELESS_DISPATCH_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 wirelessDispatchMode = WirelessDispatchMode.EVEN_DISTRIBUTION;
             }
         }
         if (data.contains(TAG_WIRELESS_SPEED_MODE)) {
             try {
-                wirelessSpeedMode = WirelessSpeedMode.valueOf(data.getString(TAG_WIRELESS_SPEED_MODE));
+                wirelessSpeedMode = WirelessSpeedMode.valueOf(data.getStringOr(TAG_WIRELESS_SPEED_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 wirelessSpeedMode = WirelessSpeedMode.NORMAL;
             }
         }
         if (data.contains(TAG_BLOCKING_MODE)) {
             try {
-                blockingMode = BlockingMode.valueOf(data.getString(TAG_BLOCKING_MODE));
+                blockingMode = BlockingMode.valueOf(data.getStringOr(TAG_BLOCKING_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 blockingMode = BlockingMode.NORMAL;
             }
         }
-        filteredImport = data.getBoolean(TAG_FILTERED_IMPORT);
-        adaptiveBatchEnabled = data.getBoolean(TAG_ADAPTIVE_BATCH_ENABLED);
-        machineParallelism = Math.max(1, data.getInt(TAG_MACHINE_PARALLELISM));
+        filteredImport = data.getBooleanOr(TAG_FILTERED_IMPORT, false);
+        adaptiveBatchEnabled = data.getBooleanOr(TAG_ADAPTIVE_BATCH_ENABLED, false);
+        machineParallelism = Math.max(1, data.getIntOr(TAG_MACHINE_PARALLELISM, 0));
         WirelessConnectionLists.readTagList(
                 data, TAG_CONNECTIONS, connections, MAX_WIRELESS_CONNECTIONS, WirelessConnection::fromTag);
         invalidConnectionScanCursor = 0;
@@ -731,7 +735,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.ifBoolean(tag, TAG_ADAPTIVE_BATCH_ENABLED,
                     v -> this.adaptiveBatchEnabled = v);
             if (tag.contains(TAG_MACHINE_PARALLELISM)) {
-                machineParallelism = Math.max(1, tag.getInt(TAG_MACHINE_PARALLELISM));
+                machineParallelism = Math.max(1, tag.getIntOr(TAG_MACHINE_PARALLELISM, 0));
             }
             FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
             recomputeIdlePower();

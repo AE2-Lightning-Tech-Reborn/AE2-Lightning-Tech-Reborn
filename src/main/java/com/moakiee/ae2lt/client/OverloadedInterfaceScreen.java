@@ -8,14 +8,14 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.OverloadedInterfaceMenu;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
 import appeng.api.config.FuzzyMode;
 import appeng.api.config.Settings;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
@@ -110,7 +110,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         for (int i = 0; i < configSlots.size(); i++) {
             final int slotIdx = i;
             var button = new SetAmountButton(btn -> {
-                if (hasShiftDown()) {
+                if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
                     menu.toggleUnlimited(configSlots.get(slotIdx).getContainerSlot());
                 } else {
                     menu.openSetAmountMenu(configSlots.get(slotIdx).getContainerSlot());
@@ -185,13 +185,13 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
     }
 
     @Override
-    public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY,
+    public void drawFG(GuiGraphicsExtractor guiGraphics, int offsetX, int offsetY,
                         int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         String pageText = (menu.currentPage + 1) + "/" + menu.totalPages;
         int textWidth = this.font.width(pageText);
-        guiGraphics.drawString(this.font, pageText,
+        guiGraphics.text(this.font, pageText,
                 GuiTextLayout.centeredX(this.imageWidth, textWidth), PAGE_INDICATOR_Y,
                 style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
 
@@ -202,7 +202,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
             if (menu.isSlotUnlimited(i)) {
                 var slot = configSlots.get(i);
                 if (!slot.getItem().isEmpty()) {
-                    guiGraphics.drawString(this.font, "\u221E",
+                    guiGraphics.text(this.font, "\u221E",
                             slot.x + 10, slot.y - 10, 0xFF00FF00, true);
                 }
             }

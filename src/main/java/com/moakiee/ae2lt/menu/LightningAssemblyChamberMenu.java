@@ -5,7 +5,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -27,7 +27,7 @@ public class LightningAssemblyChamberMenu extends AEBaseMenu implements Frequenc
     public static final MenuType<LightningAssemblyChamberMenu> TYPE = MenuTypeBuilder
             .create(LightningAssemblyChamberMenu::new, LightningAssemblyChamberBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.lightning_assembly_chamber"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "lightning_assembly_chamber"));
 
@@ -80,9 +80,9 @@ public class LightningAssemblyChamberMenu extends AEBaseMenu implements Frequenc
         setupUpgrades(host.getUpgrades());
         createPlayerInventorySlots(playerInventory);
 
-        registerClientAction("toggleAutoExport", this::toggleAutoExport);
-        registerClientAction("toggleOutputSide", Integer.class, this::toggleOutputSide);
-        registerClientAction("clearOutputSides", this::clearOutputSides);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"), this::toggleAutoExport);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("toggleOutputSide"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::toggleOutputSide);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"), this::clearOutputSides);
     }
 
     private void addMachineSlots() {
@@ -230,15 +230,15 @@ public class LightningAssemblyChamberMenu extends AEBaseMenu implements Frequenc
     }
 
     public void clientToggleAutoExport() {
-        sendClientAction("toggleAutoExport");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"));
     }
 
     public void clientToggleOutputSide(RelativeSide side) {
-        sendClientAction("toggleOutputSide", side.ordinal());
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("toggleOutputSide"), side.ordinal());
     }
 
     public void clientClearOutputSides() {
-        sendClientAction("clearOutputSides");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"));
     }
 
     public LightningAssemblyChamberBlockEntity getHost() {

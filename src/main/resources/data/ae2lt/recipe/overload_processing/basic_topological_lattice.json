@@ -3,33 +3,23 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "minecraft:glass"
-      },
+      "ingredient": "minecraft:glass",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "minecraft:quartz"
-      },
+      "ingredient": "minecraft:quartz",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "minecraft:lapis_lazuli"
-      },
+      "ingredient": "minecraft:lapis_lazuli",
       "count": 4
     },
     {
-      "ingredient": {
-        "item": "minecraft:glowstone_dust"
-      },
+      "ingredient": "minecraft:glowstone_dust",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "minecraft:redstone"
-      },
+      "ingredient": "minecraft:redstone",
       "count": 8
     }
   ],

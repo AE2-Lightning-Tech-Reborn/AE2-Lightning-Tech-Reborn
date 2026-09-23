@@ -3,17 +3,16 @@ package com.moakiee.ae2lt.celestweave;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.neoforged.neoforge.common.EffectCures;
 
 public final class PurificationEffectRules {
     public static final TagKey<MobEffect> MEKANISM_SPEED_UP_BLACKLIST = TagKey.create(
             Registries.MOB_EFFECT,
-            ResourceLocation.fromNamespaceAndPath("mekanism", "speed_up_blacklist"));
+            Identifier.fromNamespaceAndPath("mekanism", "speed_up_blacklist"));
 
     private PurificationEffectRules() {
     }
@@ -22,8 +21,7 @@ public final class PurificationEffectRules {
         if (effect == null || !isConfiguredCategory(effect.getEffect().value().getCategory())) {
             return false;
         }
-        return effect.getCures().contains(EffectCures.MILK)
-                && !effect.getEffect().is(MEKANISM_SPEED_UP_BLACKLIST);
+        return !effect.getEffect().is(MEKANISM_SPEED_UP_BLACKLIST);
     }
 
     private static boolean isConfiguredCategory(MobEffectCategory category) {

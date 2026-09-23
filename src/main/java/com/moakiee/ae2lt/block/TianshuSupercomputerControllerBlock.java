@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class TianshuSupercomputerControllerBlock extends Block
         implements EntityBlock, WrenchDisassemblableBlock {
-    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+    public static final net.minecraft.world.level.block.state.properties.EnumProperty<net.minecraft.core.Direction> FACING =
             HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty FORMED = BooleanProperty.create("formed");
     public static final BooleanProperty WORKING = BooleanProperty.create("working");
@@ -90,7 +90,7 @@ public class TianshuSupercomputerControllerBlock extends Block
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null : (tickLevel, pos, tickState, be) -> {
+        return level.isClientSide() ? null : (tickLevel, pos, tickState, be) -> {
             if (be instanceof TianshuSupercomputerControllerBlockEntity controller) {
                 TianshuSupercomputerControllerBlockEntity.serverTick(tickLevel, pos, tickState, controller);
             }
@@ -99,7 +99,7 @@ public class TianshuSupercomputerControllerBlock extends Block
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof TianshuSupercomputerControllerBlockEntity controller) {
             controller.scanNow();
             MenuOpener.open(
@@ -107,18 +107,13 @@ public class TianshuSupercomputerControllerBlock extends Block
                     serverPlayer,
                     MenuLocators.forBlockEntity(controller));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())
-                && level.getBlockEntity(pos) instanceof TianshuSupercomputerControllerBlockEntity controller) {
-            controller.prepareForControllerRemoval();
-            controller.clearStructureBindings();
-            TianshuMultiblockUpdateScheduler.scheduleNear(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        TianshuMultiblockUpdateScheduler.scheduleNear(level, pos);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override
@@ -134,7 +129,7 @@ public class TianshuSupercomputerControllerBlock extends Block
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         return new ItemStack(asItem());
     }
 }

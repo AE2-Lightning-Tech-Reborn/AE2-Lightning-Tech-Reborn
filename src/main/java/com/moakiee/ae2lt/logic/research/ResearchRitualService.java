@@ -19,7 +19,7 @@ import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -52,11 +52,11 @@ public final class ResearchRitualService {
 
     public static void handleLightning(ServerLevel level, LightningBolt lightningBolt) {
         var data = lightningBolt.getPersistentData();
-        if (!data.getBoolean(TAG_RITUAL_LIGHTNING) || !data.contains(TAG_RITUAL_IONIZER_POS)) {
+        if (!data.getBooleanOr(TAG_RITUAL_LIGHTNING, false) || !data.contains(TAG_RITUAL_IONIZER_POS)) {
             return;
         }
 
-        BlockPos ionizerPos = BlockPos.of(data.getLong(TAG_RITUAL_IONIZER_POS));
+        BlockPos ionizerPos = BlockPos.of(data.getLongOr(TAG_RITUAL_IONIZER_POS, 0L));
         if (level.getBlockEntity(ionizerPos) instanceof AtmosphericIonizerBlockEntity ionizer
                 && ionizer.isInstalledInWorld()) {
             LOG.debug("[ae2lt/ritual] handleLightning: authenticated ionizer at {}", ionizerPos);
@@ -107,7 +107,7 @@ public final class ResearchRitualService {
             return;
         }
 
-        List<ResourceLocation> thrownSequence = candidates.stream()
+        List<Identifier> thrownSequence = candidates.stream()
                 .map(itemEntity -> BuiltInRegistries.ITEM.getKey(itemEntity.getItem().getItem()))
                 .toList();
         LOG.debug("[ae2lt/ritual] tryHandleIonizer: thrown sequence (oldest->newest) = {}", thrownSequence);
@@ -155,12 +155,12 @@ public final class ResearchRitualService {
         long gameTime = level.getGameTime();
         List<Vec3> positions = consumeParticipants(candidates);
 
-        int fragmentCount = 1 + level.random.nextInt(3);
+        int fragmentCount = 1 + level.getRandom().nextInt(3);
         for (int i = 0; i < fragmentCount; i++) {
             ItemEntity fragment = new ItemEntity(level, anchorNote.getX(), anchorNote.getY() + 0.1D, anchorNote.getZ(),
                     new ItemStack(ModItems.CHARRED_RITUAL_FRAGMENT.get()));
-            fragment.setDeltaMovement((level.random.nextDouble() - 0.5D) * 0.08D, 0.05D,
-                    (level.random.nextDouble() - 0.5D) * 0.08D);
+            fragment.setDeltaMovement((level.getRandom().nextDouble() - 0.5D) * 0.08D, 0.05D,
+                    (level.getRandom().nextDouble() - 0.5D) * 0.08D);
             ProtectedItemEntityHelper.applyOutputProtection(fragment, gameTime);
             level.addFreshEntity(fragment);
         }
@@ -191,16 +191,16 @@ public final class ResearchRitualService {
         return new ItemStack(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get());
     }
 
-    private static boolean sameMultiset(List<ResourceLocation> left, List<ResourceLocation> right) {
+    private static boolean sameMultiset(List<Identifier> left, List<Identifier> right) {
         if (left.size() != right.size()) {
             return false;
         }
 
-        Map<ResourceLocation, Integer> counts = new HashMap<>();
-        for (ResourceLocation id : left) {
+        Map<Identifier, Integer> counts = new HashMap<>();
+        for (Identifier id : left) {
             counts.merge(id, 1, Integer::sum);
         }
-        for (ResourceLocation id : right) {
+        for (Identifier id : right) {
             Integer current = counts.get(id);
             if (current == null) {
                 return false;
@@ -221,7 +221,7 @@ public final class ResearchRitualService {
      */
     private static boolean matchesDropOrder(
             List<ItemEntity> orderedCandidates,
-            List<ResourceLocation> expectedOrder) {
+            List<Identifier> expectedOrder) {
         int start = 0;
         while (start < orderedCandidates.size()) {
             int age = orderedCandidates.get(start).getAge();
@@ -230,7 +230,7 @@ public final class ResearchRitualService {
                 end++;
             }
 
-            List<ResourceLocation> actualTickGroup = orderedCandidates.subList(start, end).stream()
+            List<Identifier> actualTickGroup = orderedCandidates.subList(start, end).stream()
                     .map(itemEntity -> BuiltInRegistries.ITEM.getKey(itemEntity.getItem().getItem()))
                     .toList();
             if (!sameMultiset(actualTickGroup, expectedOrder.subList(start, end))) {

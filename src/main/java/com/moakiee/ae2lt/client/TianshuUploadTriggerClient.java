@@ -9,10 +9,10 @@ public final class TianshuUploadTriggerClient {
 
     public static boolean shouldTrigger() {
         return switch (AE2LTClientConfig.uploadTrigger()) {
-            case NO_SHIFT -> !Screen.hasShiftDown();
-            case SHIFT -> Screen.hasShiftDown();
-            case CTRL -> Screen.hasControlDown();
-            case ALT -> Screen.hasAltDown();
+            case NO_SHIFT -> !net.minecraft.client.Minecraft.getInstance().hasShiftDown();
+            case SHIFT -> net.minecraft.client.Minecraft.getInstance().hasShiftDown();
+            case CTRL -> net.minecraft.client.Minecraft.getInstance().hasControlDown();
+            case ALT -> net.minecraft.client.Minecraft.getInstance().hasAltDown();
             case MANUAL_ONLY -> false;
         };
     }

@@ -363,7 +363,7 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
             entry.cpu().writeToNBT(state, registries);
 
             var entryTag = new CompoundTag();
-            entryTag.putUUID(TAG_ID, entry.id());
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(entryTag, TAG_ID, entry.id());
             entryTag.putLong(TAG_RESERVED_BYTES, entry.reservedBytes());
             entryTag.put(TAG_STATE, state);
             cpuList.add(entryTag);
@@ -378,25 +378,25 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         remainingStorage = totalStorage;
         cpuListChanged = false;
 
-        var cpuList = tag.getList(TAG_CPUS, Tag.TAG_COMPOUND);
+        var cpuList = tag.getListOrEmpty(TAG_CPUS);
         for (int i = 0; i < cpuList.size(); i++) {
-            var entryTag = cpuList.getCompound(i);
-            if (!entryTag.hasUUID(TAG_ID)
-                    || !entryTag.contains(TAG_RESERVED_BYTES, Tag.TAG_LONG)
-                    || !entryTag.contains(TAG_STATE, Tag.TAG_COMPOUND)) {
+            var entryTag = cpuList.getCompoundOrEmpty(i);
+            if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(entryTag, TAG_ID)
+                    || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(entryTag, TAG_RESERVED_BYTES, Tag.TAG_LONG)
+                    || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(entryTag, TAG_STATE, Tag.TAG_COMPOUND)) {
                 continue;
             }
 
-            var id = entryTag.getUUID(TAG_ID);
+            var id = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(entryTag, TAG_ID);
             if (activeCpus.containsKey(id)) {
                 id = UUID.randomUUID();
             }
             boolean infiniteStorage = hasInfiniteStorage();
-            long reservedBytes = infiniteStorage ? 0L : Math.max(0L, entryTag.getLong(TAG_RESERVED_BYTES));
+            long reservedBytes = infiniteStorage ? 0L : Math.max(0L, entryTag.getLongOr(TAG_RESERVED_BYTES, 0L));
             long cpuStorage = infiniteStorage ? Long.MAX_VALUE : reservedBytes;
             var cpu = new TimeWheelCraftingCPU(
                     host, cpuStorage, sharedCoProcessors, maxCopiesPerTick, unboundedBatch);
-            cpu.readFromNBT(entryTag.getCompound(TAG_STATE), registries);
+            cpu.readFromNBT(entryTag.getCompoundOrEmpty(TAG_STATE), registries);
             activeCpus.put(id, new PoolEntry(id, reservedBytes, cpu));
         }
         recalculateRemainingStorage();

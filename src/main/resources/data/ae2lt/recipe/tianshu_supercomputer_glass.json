@@ -6,15 +6,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2:quartz_vibrant_glass" },
-    "B": { "item": "ae2lt:overload_crystal_block" },
-    "C": { "item": "ae2:quartz_vibrant_glass" },
-    "D": { "item": "ae2lt:overload_crystal_block" },
-    "E": { "item": "ae2:singularity" },
-    "F": { "item": "ae2lt:overload_crystal_block" },
-    "G": { "item": "ae2:quartz_vibrant_glass" },
-    "H": { "item": "ae2lt:overload_crystal_block" },
-    "I": { "item": "ae2:quartz_vibrant_glass" }
+    "A": "ae2:quartz_vibrant_glass",
+    "B": "ae2lt:overload_crystal_block",
+    "C": "ae2:quartz_vibrant_glass",
+    "D": "ae2lt:overload_crystal_block",
+    "E": "ae2:singularity",
+    "F": "ae2lt:overload_crystal_block",
+    "G": "ae2:quartz_vibrant_glass",
+    "H": "ae2lt:overload_crystal_block",
+    "I": "ae2:quartz_vibrant_glass"
   },
   "result": {
     "id": "ae2lt:tianshu_supercomputer_glass",

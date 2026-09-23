@@ -22,7 +22,7 @@ import appeng.api.stacks.GenericStack;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessConnection;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 
-class ProviderDispatchTest {
+class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"false,false", "false,true", "true,false", "true,true"})
     void continuouslyBlockedTargetsBackOffAndResumeWithinTheExistingLimit(boolean fast, boolean batch) {

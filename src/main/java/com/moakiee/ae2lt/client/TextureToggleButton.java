@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.style.Blitter;
 import appeng.client.gui.widgets.ITooltip;
 
@@ -34,7 +34,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
  */
 public class TextureToggleButton extends Button implements ITooltip {
 
-    private final List<ResourceLocation> textures;
+    private final List<Identifier> textures;
     private final List<List<Component>> tooltips;
     private final Listener listener;
 
@@ -50,8 +50,8 @@ public class TextureToggleButton extends Button implements ITooltip {
         this.listener = listener;
     }
 
-    private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath(
+    private static Identifier texture(String path) {
+        return Identifier.fromNamespaceAndPath(
                 AE2LightningTech.MODID, "textures/gui/buttons/" + path + ".png");
     }
 
@@ -117,12 +117,12 @@ public class TextureToggleButton extends Button implements ITooltip {
     }
 
     @Override
-    public void onPress() {
+    public void onPress(net.minecraft.client.input.InputWithModifiers input) {
         this.listener.onChange(this.stateIndex);
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    protected void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!this.visible) {
             return;
         }
@@ -131,9 +131,9 @@ public class TextureToggleButton extends Button implements ITooltip {
         var background = isHovered() ? Icon.TOOLBAR_BUTTON_BACKGROUND_HOVER
                 : isFocused() ? Icon.TOOLBAR_BUTTON_BACKGROUND_FOCUS : Icon.TOOLBAR_BUTTON_BACKGROUND;
 
-        background.getBlitter()
+        com.moakiee.ae2lt.client.LegacyAe2IconBlitter.of(background)
                 .dest(getX() - 1, getY() + yOffset, 18, 20)
-                .zOffset(2)
+
                 .blit(guiGraphics);
 
         if (this.textures.isEmpty()) {
@@ -145,7 +145,7 @@ public class TextureToggleButton extends Button implements ITooltip {
         if (!this.active) {
             blitter.opacity(0.5f);
         }
-        blitter.dest(getX(), getY() + 1 + yOffset).zOffset(3).blit(guiGraphics);
+        blitter.dest(getX(), getY() + 1 + yOffset).blit(guiGraphics);
     }
 
     @Override
@@ -194,17 +194,17 @@ public class TextureToggleButton extends Button implements ITooltip {
         PATTERN_STORAGE_UPGRADE(texture("pattern_storage_upgrade")),
         ADAPTIVE_BATCH(texture("adaptive_batch_off"), texture("adaptive_batch_on"));
 
-        private final List<ResourceLocation> textures;
+        private final List<Identifier> textures;
 
-        ButtonType(ResourceLocation texture) {
+        ButtonType(Identifier texture) {
             this.textures = List.of(texture);
         }
 
-        ButtonType(ResourceLocation textureOff, ResourceLocation textureOn) {
+        ButtonType(Identifier textureOff, Identifier textureOn) {
             this.textures = List.of(textureOff, textureOn);
         }
 
-        ButtonType(ResourceLocation textureOff, ResourceLocation textureOn, ResourceLocation textureEject) {
+        ButtonType(Identifier textureOff, Identifier textureOn, Identifier textureEject) {
             this.textures = List.of(textureOff, textureOn, textureEject);
         }
     }

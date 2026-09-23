@@ -57,8 +57,8 @@ public final class ArmorOverloadCombo {
         if (data == null) {
             return State.EMPTY;
         }
-        long comboUntil = data.contains(TAG_COMBO_UNTIL, Tag.TAG_LONG) ? data.getLong(TAG_COMBO_UNTIL) : -1L;
-        int comboCount = data.contains(TAG_COMBO_COUNT, Tag.TAG_INT) ? data.getInt(TAG_COMBO_COUNT) : 0;
+        long comboUntil = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_COMBO_UNTIL, Tag.TAG_LONG) ? data.getLongOr(TAG_COMBO_UNTIL, 0L) : -1L;
+        int comboCount = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_COMBO_COUNT, Tag.TAG_INT) ? data.getIntOr(TAG_COMBO_COUNT, 0) : 0;
         return new State(comboUntil, comboCount);
     }
 

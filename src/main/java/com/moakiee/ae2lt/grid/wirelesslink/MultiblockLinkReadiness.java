@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import java.util.Iterator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
@@ -97,7 +97,7 @@ public final class MultiblockLinkReadiness {
         return KnownFormedStateMultiblocks.matches(ownerClassName, blockNamespace, blockPath);
     }
 
-    private static boolean isKnownFormedStateMultiblock(String ownerClassName, ResourceLocation blockId) {
+    private static boolean isKnownFormedStateMultiblock(String ownerClassName, Identifier blockId) {
         return blockId != null && isKnownFormedStateMultiblock(ownerClassName, blockId.getNamespace(), blockId.getPath());
     }
 

@@ -23,7 +23,7 @@ import appeng.api.stacks.GenericStack;
 
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessConnection;
 
-class ProviderTargetTest {
+class ProviderTargetTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private final ProviderTarget target = new ProviderTarget(
             Level.OVERWORLD, BlockPos.ZERO, Direction.NORTH);
 
@@ -597,7 +597,7 @@ class ProviderTargetTest {
         var snapshot = learnedReservoirSnapshot();
         for (int upper : List.of(-1, 0, 8)) {
             var tag = AdaptiveBatchStatePersistence.writeSnapshot(snapshot);
-            tag.getCompound("step").putInt("reservoir_tail_upper", upper);
+            tag.getCompound("step").orElseThrow().putInt("reservoir_tail_upper", upper);
             assertEquals(null, AdaptiveBatchStatePersistence.readSnapshot(tag));
         }
     }

@@ -20,11 +20,11 @@ import net.neoforged.fml.loading.LoadingModList;
 
 import com.moakiee.ae2lt.machine.firmament.FirmamentConversionInventory;
 
-class FirmamentNaturalLootOutputContractTest {
+class FirmamentNaturalLootOutputContractTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();

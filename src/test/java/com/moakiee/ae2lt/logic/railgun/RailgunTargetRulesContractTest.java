@@ -56,10 +56,10 @@ class RailgunTargetRulesContractTest {
         assertTrue(fire.contains("directTarget != null && !(directTarget instanceof LivingEntity)"));
         assertTrue(fire.contains("applyDirectNonLivingHit("));
         assertTrue(fire.contains("OverloadExecutionService.onDirectNonLivingHit("));
-        assertTrue(cleanup.contains("target.kill()"));
+        assertTrue(cleanup.contains("target.kill(serverLevel)"));
         assertTrue(cleanup.contains("target.discard()"));
         assertTrue(cleanup.contains("target.remove(Entity.RemovalReason.KILLED)"));
-        assertTrue(cleanup.indexOf("target.kill()") < cleanup.indexOf("target.discard()"));
+        assertTrue(cleanup.indexOf("target.kill(serverLevel)") < cleanup.indexOf("target.discard()"));
         assertTrue(cleanup.indexOf("target.discard()")
                 < cleanup.indexOf("target.remove(Entity.RemovalReason.KILLED)"));
         assertFalse(execution.contains("GuardianCrystalEntity"));

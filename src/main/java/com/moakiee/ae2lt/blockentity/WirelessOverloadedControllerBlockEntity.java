@@ -282,15 +282,19 @@ public class WirelessOverloadedControllerBlockEntity extends OverloadedControlle
     // ── Persistence ──
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         tag.putInt("FrequencyId", frequencyId);
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        frequencyId = tag.contains("FrequencyId") ? tag.getInt("FrequencyId") : -1;
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        frequencyId = tag.contains("FrequencyId") ? tag.getIntOr("FrequencyId", 0) : -1;
     }
 
     @Override

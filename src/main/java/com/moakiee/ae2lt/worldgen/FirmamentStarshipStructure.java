@@ -7,7 +7,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Rotation;
@@ -20,7 +20,7 @@ public final class FirmamentStarshipStructure extends Structure {
     public static final MapCodec<FirmamentStarshipStructure> CODEC =
             RecordCodecBuilder.<FirmamentStarshipStructure>mapCodec(instance -> instance.group(
                             settingsCodec(instance),
-                            ResourceLocation.CODEC.fieldOf("template").forGetter(structure -> structure.template),
+                            Identifier.CODEC.fieldOf("template").forGetter(structure -> structure.template),
                             Codec.intRange(16, 256).fieldOf("search_radius").forGetter(structure -> structure.searchRadius),
                             Codec.intRange(4, 64).fieldOf("sample_step").forGetter(structure -> structure.sampleStep),
                             Codec.intRange(1, 256).fieldOf("min_anchor_height").forGetter(structure -> structure.minAnchorHeight),
@@ -30,7 +30,7 @@ public final class FirmamentStarshipStructure extends Structure {
                     .apply(instance, FirmamentStarshipStructure::new))
                     .validate(FirmamentStarshipStructure::validate);
 
-    private final ResourceLocation template;
+    private final Identifier template;
     private final int searchRadius;
     private final int sampleStep;
     private final int minAnchorHeight;
@@ -40,7 +40,7 @@ public final class FirmamentStarshipStructure extends Structure {
 
     public FirmamentStarshipStructure(
             Structure.StructureSettings settings,
-            ResourceLocation template,
+            Identifier template,
             int searchRadius,
             int sampleStep,
             int minAnchorHeight,
@@ -81,8 +81,8 @@ public final class FirmamentStarshipStructure extends Structure {
                 chunkPos.getMiddleBlockX(), anchorHeight, chunkPos.getMiddleBlockZ(), this.horizontalOffset, yOffset);
         int startY = FirmamentStarshipPlacement.clampStartY(
                 desiredCenter.y(),
-                context.heightAccessor().getMinBuildHeight(),
-                context.heightAccessor().getMaxBuildHeight(),
+                context.heightAccessor().getMinY(),
+                context.heightAccessor().getMaxY(),
                 structureTemplate.getSize().getY());
         FirmamentStarshipPlacement.Position center =
                 new FirmamentStarshipPlacement.Position(desiredCenter.x(), startY, desiredCenter.z());

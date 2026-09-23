@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -51,7 +51,9 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         // AE2 WidgetContainer 只分发 button=0;右键/中键由 Screen 层的 mouseClicked
         // 拦截后调用 {@link #handleClick(int)}。
         if (!this.active || !this.visible || !isMouseOver(mouseX, mouseY) || button != 0) {
@@ -65,7 +67,7 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
         if (!this.active || !this.visible) {
             return false;
         }
-        if (Screen.hasShiftDown()) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             menu.clientClearFluidTank(tankIndex);
             playClickSound();
             return true;
@@ -89,7 +91,7 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         FluidStack fluid = fluidSupplier.get();
         if (fluid.isEmpty()) {
             return;
@@ -107,9 +109,12 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
             return;
         }
 
-        var attributes = IClientFluidTypeExtensions.of(fluid.getFluid());
+        var model = Minecraft.getInstance().getModelManager().getFluidStateModelSet()
+                .get(fluid.getFluid().defaultFluidState());
+        int tint = model.tintSource() instanceof net.neoforged.neoforge.client.fluid.FluidTintSource source
+                ? source.colorAsStack(fluid) : -1;
         Blitter blitter = Blitter.sprite(sprite)
-                .colorRgb(attributes.getTintColor(fluid))
+                .colorRgb(tint)
                 .blending(true);
 
         int x = getX();
@@ -126,10 +131,8 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
         Fluid fluid = stack.getFluid();
         if (fluid != cachedFluid) {
             cachedFluid = fluid;
-            var attributes = IClientFluidTypeExtensions.of(fluid);
-            cachedSprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(attributes.getStillTexture(stack));
+            cachedSprite = Minecraft.getInstance().getModelManager().getFluidStateModelSet()
+                    .get(fluid.defaultFluidState()).stillMaterial().sprite();
         }
         return cachedSprite;
     }
@@ -175,7 +178,7 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
     private static String getModDisplayName(FluidStack fluid) {
         var key = fluid.getFluid() == Fluids.EMPTY
                 ? null
-                : fluid.getFluid().builtInRegistryHolder().key().location();
+                : fluid.getFluid().builtInRegistryHolder().key().identifier();
         if (key == null) {
             return "Minecraft";
         }

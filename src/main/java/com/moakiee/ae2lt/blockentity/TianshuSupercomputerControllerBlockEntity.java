@@ -298,7 +298,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     public void scheduleStructureCheck() {
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             long targetTick = level.getGameTime() + 1L;
             if (scheduledScanTick == NO_SCAN || targetTick < scheduledScanTick) {
                 scheduledScanTick = targetTick;
@@ -307,7 +307,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     public void scanNow() {
-        if (level == null || level.isClientSide) return;
+        if (level == null || level.isClientSide()) return;
         if (!persistentStateOwner) {
             deform();
             return;
@@ -325,9 +325,9 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     public void autoBuild(ServerPlayer player) {
-        if (level == null || level.isClientSide) return;
+        if (level == null || level.isClientSide()) return;
         if (isAutoBuilding()) {
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.tianshu.build_in_progress").withStyle(ChatFormatting.YELLOW), true);
             return;
         }
@@ -337,7 +337,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
 
         var plan = createAutoBuildPlan();
         if (!plan.blocked().isEmpty()) {
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.tianshu.build_blocked",
                     plan.blocked().size(),
                     describeBlockedPositions(plan.blocked())).withStyle(ChatFormatting.RED), false);
@@ -348,7 +348,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         if (!player.getAbilities().instabuild) {
             var missing = findMissingRequirements(player, requirements);
             if (!missing.isEmpty()) {
-                player.displayClientMessage(Component.translatable(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                         "ae2lt.tianshu.build_missing",
                         describeMissing(missing)).withStyle(ChatFormatting.RED), false);
                 return;
@@ -368,7 +368,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         nextAutoBuildTick = level.getGameTime() + AUTO_BUILD_INTERVAL_TICKS;
         scheduledScanTick = NO_SCAN;
         setChanged();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.tianshu.build_started",
                 autoBuildPlacements.size()).withStyle(ChatFormatting.GREEN), true);
     }
@@ -408,7 +408,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         Item consumedItem = state.getBlock().asItem();
         if (!player.getAbilities().instabuild
                 && (consumedItem == net.minecraft.world.item.Items.AIR || countItem(player, consumedItem) <= 0)) {
-            abortAutoBuildMissingItem(player, consumedItem.getDescription());
+            abortAutoBuildMissingItem(player, consumedItem.getName(consumedItem.getDefaultInstance()));
             return;
         }
         if (!level.setBlock(pos, state, Block.UPDATE_ALL)) {
@@ -436,7 +436,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     private void playAutoBuildPlaceSound(ServerPlayer player, BlockPos pos, BlockState state) {
         var soundType = state.getSoundType(level, pos, player);
         float volume = (soundType.getVolume() + 1.0F) / 4.0F;
-        float pitch = soundType.getPitch() * (0.82F + level.random.nextFloat() * 0.12F);
+        float pitch = soundType.getPitch() * (0.82F + level.getRandom().nextFloat() * 0.12F);
         level.playSound(null, pos, soundType.getPlaceSound(), SoundSource.BLOCKS, volume, pitch);
     }
 
@@ -455,7 +455,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     private void abortAutoBuildPlacement(ServerPlayer player, BlockPos pos) {
         clearAutoBuildSession();
         scanNow();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.tianshu.build_place_failed",
                 describePosition(pos)).withStyle(ChatFormatting.RED), false);
     }
@@ -463,7 +463,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     private void abortAutoBuildMissingItem(ServerPlayer player, Component itemName) {
         clearAutoBuildSession();
         scanNow();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.tianshu.build_interrupted_missing",
                 itemName).withStyle(ChatFormatting.RED), false);
     }
@@ -493,7 +493,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
                     ? Component.translatable("ae2lt.tianshu.build_nothing_to_place")
                     : Component.translatable("ae2lt.tianshu.build_shell_complete", placedBlocks);
         }
-        player.displayClientMessage(message.copy().withStyle(ChatFormatting.GREEN), true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, message.copy().withStyle(ChatFormatting.GREEN), true);
     }
 
     private TianshuAutoBuildPlan createAutoBuildPlan() {
@@ -570,7 +570,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         int index = 0;
         for (var entry : missing.entrySet()) {
             if (index > 0) result.append(", ");
-            result.append(entry.getKey().getDescription()).append(" x").append(Integer.toString(entry.getValue()));
+            result.append(entry.getKey().getName(entry.getKey().getDefaultInstance())).append(" x").append(Integer.toString(entry.getValue()));
             index++;
         }
         return result;
@@ -1141,9 +1141,9 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         var legacy = port.copyLegacyRuntimeState();
         var state = stored ? data.getState(MachineType.TIANSHU, machineId)
                 : legacy != null ? legacy : new CompoundTag();
-        bigCrafting.load(state.getCompound("bigCrafting"), serverLevel.registryAccess());
-        maintenance.readFrom(state.getCompound(TAG_MAINTENANCE), serverLevel.registryAccess());
-        cpuPool.readFromNBT(state.getCompound(TAG_CPU_POOL), serverLevel.registryAccess());
+        bigCrafting.load(state.getCompoundOrEmpty("bigCrafting"), serverLevel.registryAccess());
+        maintenance.readFrom(state.getCompoundOrEmpty(TAG_MAINTENANCE), serverLevel.registryAccess());
+        cpuPool.readFromNBT(state.getCompoundOrEmpty(TAG_CPU_POOL), serverLevel.registryAccess());
         loadedRuntimeId = machineId;
         if (!stored) markRuntimeStateDirty();
         if (legacy != null) port.consumeLegacyRuntimeState();
@@ -1293,7 +1293,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
                 && level.getBlockEntity(portPos) instanceof TianshuSupercomputerPortBlockEntity port) {
             port.suspendFromController(worldPosition);
         }
-        if (changed && level != null && !level.isClientSide) {
+        if (changed && level != null && !level.isClientSide()) {
             syncControllerState();
         }
     }
@@ -1309,8 +1309,10 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         // SavedData normally materializes the deferred snapshot before its own write.
         // Keep this fallback for standalone chunk saves and unloads between world saves.
         flushRuntimeStateIfDirty();
@@ -1332,44 +1334,46 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         }
         tag.putInt(TAG_CLOSED_LOOP_STORAGES, functionProfile.closedLoopPatternStorageCount());
         tag.putInt(TAG_SEED_STORAGES, functionProfile.closedLoopSeedStorageCount());
-        tag.putUUID(TAG_MACHINE_ID, machineId);
+        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, TAG_MACHINE_ID, machineId);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        formed = tag.getBoolean(TAG_FORMED);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadAdditional(input);
+        formed = tag.getBooleanOr(TAG_FORMED, false);
         structureAvailable = false;
         waitingForChunks = false;
         nextChunkCheckTick = 0L;
-        portPos = tag.contains(TAG_PORT_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_PORT_POS)) : null;
-        minPos = tag.contains(TAG_MIN_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_MIN_POS)) : null;
-        maxPos = tag.contains(TAG_MAX_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_MAX_POS)) : null;
-        memberCount = tag.getInt(TAG_MEMBER_COUNT);
-        fastPlanningEnabled = !tag.contains(TAG_FAST_PLANNING, Tag.TAG_BYTE)
-                || tag.getBoolean(TAG_FAST_PLANNING);
-        cpuPriority = tag.getInt(TAG_CPU_PRIORITY);
+        portPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_PORT_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_PORT_POS, 0L)) : null;
+        minPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MIN_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_MIN_POS, 0L)) : null;
+        maxPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MAX_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_MAX_POS, 0L)) : null;
+        memberCount = tag.getIntOr(TAG_MEMBER_COUNT, 0);
+        fastPlanningEnabled = !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_FAST_PLANNING, Tag.TAG_BYTE)
+                || tag.getBooleanOr(TAG_FAST_PLANNING, false);
+        cpuPriority = tag.getIntOr(TAG_CPU_PRIORITY, 0);
         cpuPool.setFastPlanningEnabled(fastPlanningEnabled);
-        if (tag.contains(TAG_ALGORITHM_PROVIDER, Tag.TAG_COMPOUND)) {
-            algorithmProvider.readFromNBT(tag.getCompound(TAG_ALGORITHM_PROVIDER));
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_ALGORITHM_PROVIDER, Tag.TAG_COMPOUND)) {
+            algorithmProvider.readFromNBT(tag.getCompoundOrEmpty(TAG_ALGORITHM_PROVIDER));
         }
-        if (tag.contains(TAG_MAIN_CORE, Tag.TAG_STRING)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MAIN_CORE, Tag.TAG_STRING)) {
             try {
-                var tier = CpuMainCoreTier.valueOf(tag.getString(TAG_MAIN_CORE));
+                var tier = CpuMainCoreTier.valueOf(tag.getStringOr(TAG_MAIN_CORE, ""));
                 coreProfile = com.moakiee.ae2lt.logic.tianshu.CpuInternalCoreCalculator.calculate(
                         tier,
-                        tag.getInt(TAG_STORAGE_UNITS),
-                        tag.getInt(TAG_PARALLEL_UNITS),
-                        tag.getInt(TAG_AMPLIFIER_UNITS));
+                        tag.getIntOr(TAG_STORAGE_UNITS, 0),
+                        tag.getIntOr(TAG_PARALLEL_UNITS, 0),
+                        tag.getIntOr(TAG_AMPLIFIER_UNITS, 0));
             } catch (IllegalArgumentException ignored) {
                 coreProfile = CpuInternalCoreProfile.empty();
             }
         }
         functionProfile = new TianshuFunctionProfile(
-                Math.max(0, tag.getInt(TAG_CLOSED_LOOP_STORAGES)),
-                Math.max(0, tag.getInt(TAG_SEED_STORAGES)));
-        identityInitialized = tag.hasUUID(TAG_MACHINE_ID);
-        if (identityInitialized) machineId = tag.getUUID(TAG_MACHINE_ID);
+                Math.max(0, tag.getIntOr(TAG_CLOSED_LOOP_STORAGES, 0)),
+                Math.max(0, tag.getIntOr(TAG_SEED_STORAGES, 0)));
+        identityInitialized = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_MACHINE_ID);
+        if (identityInitialized) machineId = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_MACHINE_ID);
     }
 
     @Override
@@ -1419,4 +1423,11 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         }
         persistentStateOwner = false;
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        prepareForControllerRemoval();
+        clearStructureBindings();
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

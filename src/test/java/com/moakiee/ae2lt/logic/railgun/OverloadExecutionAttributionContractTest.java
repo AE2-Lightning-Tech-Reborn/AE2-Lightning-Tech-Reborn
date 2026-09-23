@@ -23,11 +23,11 @@ class OverloadExecutionAttributionContractTest {
                 < fireService.indexOf("OverloadExecutionService.onHit("));
         assertTrue(source.contains("establishKillCredit(target, source)"));
         assertTrue(normalDeath.contains("target.die(source)"));
-        assertFalse(normalDeath.contains("target.kill()"));
+        assertFalse(normalDeath.contains("target.kill(serverLevel)"));
         assertFalse(normalDeath.contains("target.discard()"));
         assertFalse(normalDeath.contains("target.remove("));
         assertFalse(normalDeath.contains("target.setRemoved("));
-        assertTrue(source.contains("srcEntity.killedEntity(sl, victim)"));
+        assertTrue(source.contains("srcEntity.killedEntity(sl, victim, source)"));
         assertTrue(source.contains("victim.dropAllDeathLoot(sl, source)"));
         assertTrue(source.contains("normalDeathCompleted(target, playerDeathsBefore)"));
         assertFalse(source.contains("player.killedEntity(level, target)"));
@@ -42,15 +42,15 @@ class OverloadExecutionAttributionContractTest {
                 source.indexOf("private static void forceRemoveNonLiving("));
 
         assertTrue(forcedRemoval.contains("target.die(source)"));
-        assertTrue(forcedRemoval.contains("target.kill()"));
+        assertTrue(forcedRemoval.contains("target.kill(serverLevel)"));
         assertTrue(forcedRemoval.contains(
                 "needsKillFallback(target.dead, target.isRemoved())"));
         assertFalse(forcedRemoval.contains("target.discard()"));
         assertTrue(forcedRemoval.contains("target.remove(Entity.RemovalReason.KILLED)"));
         assertTrue(forcedRemoval.contains("target.setRemoved(Entity.RemovalReason.KILLED)"));
         assertTrue(forcedRemoval.indexOf("target.die(source)")
-                < forcedRemoval.indexOf("target.kill()"));
-        assertTrue(forcedRemoval.indexOf("target.kill()")
+                < forcedRemoval.indexOf("target.kill(serverLevel)"));
+        assertTrue(forcedRemoval.indexOf("target.kill(serverLevel)")
                 < forcedRemoval.indexOf("target.remove(Entity.RemovalReason.KILLED)"));
         assertFalse(forcedRemoval.contains("dropAllDeathLoot"));
 

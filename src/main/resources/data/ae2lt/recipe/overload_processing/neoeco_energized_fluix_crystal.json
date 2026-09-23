@@ -9,15 +9,11 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:dusts/energized_crystal"
-      },
+      "ingredient": "#c:dusts/energized_crystal",
       "count": 64
     },
     {
-      "ingredient": {
-        "tag": "c:gems/fluix"
-      },
+      "ingredient": "#c:gems/fluix",
       "count": 64
     }
   ],

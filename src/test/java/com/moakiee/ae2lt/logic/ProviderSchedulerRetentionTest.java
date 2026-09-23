@@ -16,7 +16,7 @@ import appeng.api.stacks.GenericStack;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessConnection;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 
-class ProviderSchedulerRetentionTest {
+class ProviderSchedulerRetentionTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void restoredHistoryIsRetiredAndSavedWithoutAnyNewCraft() {
         var original = targets(1);

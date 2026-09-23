@@ -10,14 +10,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -50,32 +50,32 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!RailgunStructuralCore.hasCore(stack)) {
-            if (!level.isClientSide) {
-                player.displayClientMessage(
+            if (!level.isClientSide()) {
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.railgun.structural_core_required"), true);
             }
-            return InteractionResultHolder.fail(stack);
+            return InteractionResult.FAIL;
         }
         if (!hasOverloadCoreModule(stack)) {
-            if (!level.isClientSide) {
-                player.displayClientMessage(
+            if (!level.isClientSide()) {
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.railgun.core_required"), true);
             }
-            return InteractionResultHolder.fail(stack);
+            return InteractionResult.FAIL;
         }
         player.startUsingItem(hand);
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             stack.set(ModDataComponents.RAILGUN_CHARGE_TICKS.get(), 0L);
         }
-        return new InteractionResultHolder<>(InteractionResult.CONSUME, stack);
+        return InteractionResult.CONSUME;
     }
 
     @Override
-    public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.NONE;
+    public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.NONE;
     }
 
     @Override
@@ -89,22 +89,20 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        super.inventoryTick(stack, level, entity, slotId, isSelected);
-        if (level.isClientSide || !(entity instanceof Player player)) {
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, net.minecraft.world.entity.EquipmentSlot slot) {
+        super.inventoryTick(stack, level, entity, slot);
+        if (!(entity instanceof ServerPlayer player)) {
             return;
         }
-        boolean inHand = isSelected || player.getOffhandItem() == stack;
+        boolean inHand = player.getMainHandItem() == stack || player.getOffhandItem() == stack;
         if (inHand) {
-            if (player instanceof ServerPlayer serverPlayer) {
-                refillFromBoundNetwork(stack, serverPlayer);
-            }
+            refillFromBoundNetwork(stack, player);
         }
     }
 
     @Override
     public void onUseTick(Level level, LivingEntity user, ItemStack stack, int remaining) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         if (!(user instanceof ServerPlayer player)) {
@@ -113,7 +111,7 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
         if (!hasOverloadCoreModule(stack)) {
             stack.remove(ModDataComponents.RAILGUN_CHARGE_TICKS.get());
             player.stopUsingItem();
-            player.displayClientMessage(Component.translatable("ae2lt.railgun.core_required"), true);
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.railgun.core_required"), true);
             return;
         }
         long current = stack.getOrDefault(ModDataComponents.RAILGUN_CHARGE_TICKS.get(), 0L);
@@ -123,7 +121,7 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
         if (!RailgunEnergyBuffer.tryConsume(stack, player, chargeCost)) {
             stack.remove(ModDataComponents.RAILGUN_CHARGE_TICKS.get());
             player.stopUsingItem();
-            player.displayClientMessage(Component.translatable("ae2lt.railgun.fail.no_fe"), true);
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.railgun.fail.no_fe"), true);
             return;
         }
         // ACCEL module step-up: each module adds +1 charge-ticks per real tick.
@@ -139,19 +137,20 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
     }
 
     @Override
-    public void releaseUsing(ItemStack stack, Level level, LivingEntity user, int timeLeft) {
-        if (level.isClientSide || !(user instanceof ServerPlayer player) || !(level instanceof ServerLevel sl)) {
+    public boolean releaseUsing(ItemStack stack, Level level, LivingEntity user, int timeLeft) {
+        if (level.isClientSide() || !(user instanceof ServerPlayer player) || !(level instanceof ServerLevel sl)) {
             stack.remove(ModDataComponents.RAILGUN_CHARGE_TICKS.get());
-            return;
+            return false;
         }
         long charged = stack.getOrDefault(ModDataComponents.RAILGUN_CHARGE_TICKS.get(), 0L);
         stack.remove(ModDataComponents.RAILGUN_CHARGE_TICKS.get());
         RailgunModuleEntries mods = stack.getOrDefault(ModDataComponents.RAILGUN_MODULE_ENTRIES.get(), RailgunModuleEntries.EMPTY);
         RailgunChargeTier tier = RailgunFireService.tierForCharge(charged, mods);
         if (tier == RailgunChargeTier.HV) {
-            return;
+            return false;
         }
         RailgunFireService.fireCharged(sl, player, stack, tier, charged);
+        return true;
     }
 
     @Override
@@ -162,12 +161,12 @@ public class ElectromagneticRailgunItem extends Item implements IMenuItem, Devic
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
-                                List<Component> tooltip, TooltipFlag tooltipFlag) {
-        super.appendHoverText(stack, context, tooltip, tooltipFlag);
+                                net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag tooltipFlag) {
+        super.appendHoverText(stack, context, display, tooltip, tooltipFlag);
         long current = RailgunEnergyBuffer.read(stack);
         long capacity = RailgunEnergyBuffer.capacity(stack);
-        tooltip.add(EnergyText.storedFe(current, capacity));
-        tooltip.add(DeviceHubTooltip.openConfigHint());
+        tooltip.accept(EnergyText.storedFe(current, capacity));
+        tooltip.accept(DeviceHubTooltip.openConfigHint());
     }
 
     @Override

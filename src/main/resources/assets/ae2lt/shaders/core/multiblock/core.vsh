@@ -1,12 +1,13 @@
-#version 150
+#version 330
 
 in vec3 Position;
 in vec4 Color;
 in vec3 Normal;
 
-uniform mat4 ModelViewMat;
-uniform mat4 ProjMat;
-uniform float EffectTime;
+#moj_import <minecraft:dynamictransforms.glsl>
+#moj_import <minecraft:projection.glsl>
+#moj_import <minecraft:globals.glsl>
+#define EffectTime (GameTime * 1200.0)
 
 out vec4 vertexColor;
 out vec3 effectNormal;

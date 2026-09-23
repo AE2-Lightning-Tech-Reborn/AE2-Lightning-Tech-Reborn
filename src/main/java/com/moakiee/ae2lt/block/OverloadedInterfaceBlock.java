@@ -15,7 +15,7 @@ import appeng.menu.locator.MenuLocators;
 public class OverloadedInterfaceBlock extends AEBaseEntityBlock<OverloadedInterfaceBlockEntity> {
 
     public OverloadedInterfaceBlock() {
-        super(metalProps().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).forceSolidOn()));
     }
 
     @Override
@@ -26,7 +26,7 @@ public class OverloadedInterfaceBlock extends AEBaseEntityBlock<OverloadedInterf
             if (!level.isClientSide()) {
                 be.openMenu(player, MenuLocators.forBlockEntity(be));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return InteractionResult.PASS;
     }

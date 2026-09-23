@@ -3,45 +3,31 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:matter_warping_matrix_stable_main_core"
-      },
+      "ingredient": "ae2lt:matter_warping_matrix_stable_main_core",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "ae2lt:lightning_collapse_matrix"
-      },
+      "ingredient": "ae2lt:lightning_collapse_matrix",
       "count": 8
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_essence"
-      },
+      "ingredient": "ae2lt:firmament_essence",
       "count": 256
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_alloy_ingot"
-      },
+      "ingredient": "ae2lt:firmament_alloy_ingot",
       "count": 256
     },
     {
-      "ingredient": {
-        "item": "ae2lt:overload_machine_frame"
-      },
+      "ingredient": "ae2lt:overload_machine_frame",
       "count": 256
     },
     {
-      "ingredient": {
-        "item": "ae2:molecular_assembler"
-      },
+      "ingredient": "ae2:molecular_assembler",
       "count": 8192
     },
     {
-      "ingredient": {
-        "item": "ae2lt:entangled_topological_lattice"
-      },
+      "ingredient": "ae2lt:entangled_topological_lattice",
       "count": 16
     }
   ],

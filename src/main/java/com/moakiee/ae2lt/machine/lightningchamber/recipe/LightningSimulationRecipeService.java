@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -35,8 +35,8 @@ public final class LightningSimulationRecipeService {
     }
 
     private static synchronized List<RecipeHolder<LightningSimulationRecipe>> getSortedRecipes(Level level) {
-        RecipeManager recipeManager = level.getRecipeManager();
-        var raw = recipeManager.getAllRecipesFor(ModRecipeTypes.LIGHTNING_SIMULATION_TYPE.get());
+        RecipeManager recipeManager = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level);
+        var raw = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(recipeManager, ModRecipeTypes.LIGHTNING_SIMULATION_TYPE.get());
         int orderFingerprint = computeRecipeOrderFingerprint(raw);
         if (recipeManager != cachedRecipeManager
                 || orderFingerprint != cachedRecipeOrderFingerprint
@@ -102,13 +102,13 @@ public final class LightningSimulationRecipeService {
         return Optional.empty();
     }
 
-    public static Optional<RecipeHolder<LightningSimulationRecipe>> findRecipeById(Level level, ResourceLocation recipeId) {
+    public static Optional<RecipeHolder<LightningSimulationRecipe>> findRecipeById(Level level, Identifier recipeId) {
         if (level == null || recipeId == null) {
             return Optional.empty();
         }
 
-        return level.getRecipeManager()
-                .byKey(recipeId)
+        return com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level)
+                .byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId))
                 .flatMap(holder -> {
                     var recipe = holder.value();
                     if (!(recipe instanceof LightningSimulationRecipe simulationRecipe)

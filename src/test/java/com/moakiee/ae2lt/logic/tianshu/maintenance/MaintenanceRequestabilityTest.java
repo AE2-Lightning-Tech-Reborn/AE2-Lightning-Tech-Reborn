@@ -13,7 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
@@ -57,12 +57,12 @@ class MaintenanceRequestabilityTest {
 
         @Override public AEKeyType getType() { return TYPE; }
         @Override public AEKey dropSecondary() { return this; }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            return new CompoundTag();
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
         }
         @Override public Object getPrimaryKey() { return "emitter_target"; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", "emitter_target");
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", "emitter_target");
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() { return Component.literal("emitter_target"); }
@@ -72,7 +72,7 @@ class MaintenanceRequestabilityTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "requestability_key"),
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "requestability_key"),
                     TestKey.class, Component.literal("test key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

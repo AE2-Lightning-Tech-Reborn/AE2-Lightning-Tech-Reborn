@@ -1,33 +1,33 @@
 package com.moakiee.ae2lt.client;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.celestweave.ArmorEnergyBuffer;
 import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 
-public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
+public final class CelestweaveArmorEnergyLevel implements GuiLayer {
     public static final CelestweaveArmorEnergyLevel INSTANCE = new CelestweaveArmorEnergyLevel();
 
     private static final int BAR_WIDTH = 81;
     private static final int BAR_HEIGHT = 6;
     private static final int INNER_WIDTH = 79;
     private static final int INNER_HEIGHT = 4;
-    private static final ResourceLocation BAR_BASE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BAR_BASE = Identifier.fromNamespaceAndPath(
             "ae2lt", "textures/gui/hud/hud_bar.png");
-    private static final ResourceLocation BAR_OVERLAY = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BAR_OVERLAY = Identifier.fromNamespaceAndPath(
             "ae2lt", "textures/gui/hud/hud_bar_overlay.png");
 
     private CelestweaveArmorEnergyLevel() {
     }
 
     @Override
-    public void render(GuiGraphics graphics, DeltaTracker delta) {
+    public void render(GuiGraphicsExtractor graphics, DeltaTracker delta) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null
                 || minecraft.gameMode == null
@@ -38,7 +38,10 @@ public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
 
         long capacity = 0L;
         long stored = 0L;
-        for (ItemStack stack : minecraft.player.getArmorSlots()) {
+        for (var slot : new net.minecraft.world.entity.EquipmentSlot[] {
+                net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+                net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+            ItemStack stack = minecraft.player.getItemBySlot(slot);
             if (stack.getItem() instanceof BaseCelestweaveArmorItem) {
                 capacity = addClamped(capacity, ArmorEnergyBuffer.capacity(stack));
                 stored = addClamped(stored, ArmorEnergyBuffer.read(stack));
@@ -53,9 +56,9 @@ public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
         int length = Mth.clamp((int) Math.round(((double) Math.min(stored, capacity) / capacity) * INNER_WIDTH),
                 0, INNER_WIDTH);
 
-        graphics.blit(BAR_BASE, x, y, 0, 0, BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, BAR_BASE, x, y, 0, 0, BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
         if (length > 0) {
-            graphics.blit(BAR_OVERLAY, x + 1, y + 1, length, INNER_HEIGHT, 1, 1, length, INNER_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, BAR_OVERLAY, x + 1, y + 1, length, INNER_HEIGHT, 1, 1, length, INNER_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
         }
         minecraft.gui.leftHeight += 8;
     }

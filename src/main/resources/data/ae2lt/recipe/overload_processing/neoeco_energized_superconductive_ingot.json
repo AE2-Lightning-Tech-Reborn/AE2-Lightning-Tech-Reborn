@@ -9,27 +9,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:dusts/energized_fluix_crystal"
-      },
+      "ingredient": "#c:dusts/energized_fluix_crystal",
       "count": 4
     },
     {
-      "ingredient": {
-        "tag": "c:dusts/aluminum"
-      },
+      "ingredient": "#c:dusts/aluminum",
       "count": 4
     },
     {
-      "ingredient": {
-        "tag": "c:silicon"
-      },
+      "ingredient": "#c:silicon",
       "count": 4
     },
     {
-      "ingredient": {
-        "tag": "neoecoae:superconductive_ingot_base"
-      },
+      "ingredient": "#neoecoae:superconductive_ingot_base",
       "count": 4
     }
   ],

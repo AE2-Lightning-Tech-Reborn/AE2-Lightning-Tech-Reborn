@@ -15,7 +15,7 @@ public record FirmamentConversionIngredient(Ingredient ingredient, int count) {
     private static final Codec<Integer> POSITIVE_COUNT_CODEC = Codec.intRange(1, Integer.MAX_VALUE);
 
     public static final MapCodec<FirmamentConversionIngredient> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                    Ingredient.CODEC_NONEMPTY.fieldOf("ingredient").forGetter(FirmamentConversionIngredient::ingredient),
+                    Ingredient.CODEC.fieldOf("ingredient").forGetter(FirmamentConversionIngredient::ingredient),
                     POSITIVE_COUNT_CODEC.fieldOf("count").forGetter(FirmamentConversionIngredient::count))
             .apply(instance, FirmamentConversionIngredient::new));
 

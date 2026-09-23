@@ -197,7 +197,7 @@ public final class PhaseFlightMovementGuard {
 
     private static boolean isPrivilegedCommandExecution() {
         CommandSourceStack commandSource = COMMAND_SOURCE.get();
-        return commandSource != null && commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS);
+        return commandSource != null && net.minecraft.commands.Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(commandSource);
     }
 
     /**
@@ -329,7 +329,7 @@ public final class PhaseFlightMovementGuard {
     }
 
     public static void notifyBlockedTeleport(ServerPlayer player, Vec3 target) {
-        notifyBlockedTeleport(player, player.serverLevel(), target, false);
+        notifyBlockedTeleport(player, player.level(), target, false);
     }
 
     public static void notifyBlockedDimensionTeleport(
@@ -349,7 +349,7 @@ public final class PhaseFlightMovementGuard {
         if (player.connection == null) {
             return;
         }
-        String dimension = targetLevel.dimension().location().toString();
+        String dimension = targetLevel.dimension().identifier().toString();
         String position = formatPosition(target);
         var notice = new BlockedTeleportNotice(dimension, position, includeDimension);
         BlockedTeleportNotice previous = LAST_BLOCKED_TELEPORT_NOTICE.put(player.getUUID(), notice);
@@ -365,7 +365,7 @@ public final class PhaseFlightMovementGuard {
                 : Component.translatable(
                         "ae2lt.celestweave.phase_flight.teleport_blocked",
                         position);
-        player.displayClientMessage(message, true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, message, true);
     }
 
     private static String formatPosition(Vec3 target) {

@@ -1,12 +1,12 @@
 package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 
 /** Shared pixel-atlas layout for the AdvancedAE and overload pattern popups. */
 final class TianshuPatternConfigLayout {
-    static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/tianshu_pattern_config.png");
     static final int TEXTURE_SIZE = 256;
     static final int GUI_WIDTH = 190;
@@ -25,12 +25,12 @@ final class TianshuPatternConfigLayout {
     private TianshuPatternConfigLayout() {
     }
 
-    static void drawBackground(GuiGraphics graphics, int offsetX, int offsetY) {
-        graphics.blit(TEXTURE, offsetX, offsetY,
+    static void drawBackground(GuiGraphicsExtractor graphics, int offsetX, int offsetY) {
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, offsetY,
                 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
         for (int visible = 0; visible < VISIBLE_ROWS; visible++) {
             int top = offsetY + HEADER_HEIGHT + visible * ROW_HEIGHT;
-            graphics.blit(TEXTURE, offsetX + ROW_TEXTURE_X, top,
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX + ROW_TEXTURE_X, top,
                     ROW_TEXTURE_X, ROW_TEXTURE_Y, ROW_TEXTURE_WIDTH, ROW_HEIGHT,
                     TEXTURE_SIZE, TEXTURE_SIZE);
         }

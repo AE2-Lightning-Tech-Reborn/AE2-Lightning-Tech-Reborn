@@ -6,22 +6,17 @@ import com.moakiee.ae2lt.client.core.TianshuCoreEffectRenderer;
 import com.moakiee.ae2lt.registry.ModEntities;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModFumos;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;
 import net.minecraft.client.renderer.entity.TntRenderer;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
-import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.model.standalone.SimpleUnbakedStandaloneModel;
 
-@EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class ModEntityRenderers {
     private ModEntityRenderers() {
     }
@@ -60,37 +55,13 @@ public final class ModEntityRenderers {
     }
 
     @SubscribeEvent
-    public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
-        for (var skin : event.getSkins()) {
-            PlayerRenderer renderer = event.getSkin(skin);
-            if (renderer != null) {
-                renderer.addLayer(new PhaseWingLayer(renderer, event.getEntityModels()));
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void registerAdditionalModels(ModelEvent.RegisterAdditional event) {
-        event.register(PigmeeMolecularAssemblerRenderer.LIGHTS_MODEL);
-        event.register(HyperdimensionalPigmeeTextureLayer.MODEL);
-    }
-
-    @SubscribeEvent
-    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
-        event.registerItem(new IClientItemExtensions() {
-            private BlockEntityWithoutLevelRenderer renderer;
-
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    Minecraft minecraft = Minecraft.getInstance();
-                    renderer = new HyperdimensionalPigmeeItemRenderer(
-                            minecraft.getBlockEntityRenderDispatcher(),
-                            minecraft.getEntityModels());
-                }
-                return renderer;
-            }
-        }, ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM);
+    public static void registerAdditionalModels(ModelEvent.RegisterStandalone event) {
+        event.register(PigmeeMolecularAssemblerRenderer.LIGHTS_MODEL,
+                SimpleUnbakedStandaloneModel.simpleModelWrapper(
+                        PigmeeMolecularAssemblerRenderer.LIGHTS_MODEL_ID));
+        event.register(HyperdimensionalPigmeeTextureLayer.MODEL,
+                SimpleUnbakedStandaloneModel.quadCollection(
+                        HyperdimensionalPigmeeTextureLayer.MODEL_ID));
     }
 
     @SubscribeEvent
@@ -103,9 +74,8 @@ public final class ModEntityRenderers {
     }
 
     private static void wrapFumoItemModel(ModelEvent.ModifyBakingResult event, String itemId) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, itemId);
-        ModelResourceLocation modelId = ModelResourceLocation.inventory(id);
-        event.getModels().computeIfPresent(modelId, (ignored, model) ->
+        Identifier id = Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, itemId);
+        event.getBakingResult().itemStackModels().computeIfPresent(id, (ignored, model) ->
                 itemId.equals("hyperdimensional_pigmee_fumo")
                         ? new HyperdimensionalPigmeeBakedModel(model)
                         : new SpinningFumoBakedModel(model));

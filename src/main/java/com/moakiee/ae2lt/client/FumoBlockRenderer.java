@@ -1,152 +1,75 @@
 package com.moakiee.ae2lt.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
-
-import java.util.List;
-
 import com.moakiee.ae2lt.block.FumoBlock;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
 import com.moakiee.ae2lt.registry.ModFumos;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
-public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
+/** Spins the Fumo model and submits its portal and marking layers when present. */
+public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity, FumoBlockRenderer.State> {
+    public static final class State extends BlockEntityRenderState {
+        final BlockModelRenderState model = new BlockModelRenderState();
+        BlockStateModel portalModel;
+        BlockState blockState;
+        boolean hyperdimensional;
+        float yRotation;
+    }
 
-    private static final RandomSource RAND = RandomSource.create();
+    public FumoBlockRenderer(BlockEntityRendererProvider.Context context) {}
 
-    public FumoBlockRenderer(BlockEntityRendererProvider.Context context) {
+    @Override
+    public State createRenderState() { return new State(); }
+
+    @Override
+    public void extractRenderState(FumoBlockEntity blockEntity, State state, float partialTick,
+                                   Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockState original = blockEntity.getBlockState();
+        boolean spinning = blockEntity.isSpinning();
+        state.blockState = original;
+        state.hyperdimensional = original.is(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
+        state.yRotation = spinning ? blockEntity.getRenderYRot(partialTick) : 0.0F;
+        BlockState rendered = spinning && original.hasProperty(FumoBlock.FACING)
+                ? original.setValue(FumoBlock.FACING, Direction.NORTH) : original;
+        var manager = Minecraft.getInstance().getModelManager();
+        state.portalModel = manager.getBlockStateModelSet().get(rendered);
+        if (!state.hyperdimensional) {
+            state.model.clear();
+            manager.getBlockModelSet().get(rendered).update(
+                    state.model, rendered, BlockDisplayContext.create(), blockEntity.getBlockPos().asLong());
+        }
     }
 
     @Override
-    public void render(FumoBlockEntity blockEntity, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        BlockState state = blockEntity.getBlockState();
-        boolean spinning = blockEntity.isSpinning();
-
-        BlockState renderState = spinning && state.hasProperty(FumoBlock.FACING)
-                ? state.setValue(FumoBlock.FACING, Direction.NORTH)
-                : state;
-
+    public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
         poseStack.pushPose();
-        if (spinning) {
+        if (state.yRotation != 0.0F) {
             poseStack.translate(0.5D, 0.0D, 0.5D);
-            poseStack.mulPose(Axis.YP.rotationDegrees(blockEntity.getRenderYRot(partialTick)));
+            poseStack.mulPose(Axis.YP.rotationDegrees(state.yRotation));
             poseStack.translate(-0.5D, 0.0D, -0.5D);
         }
-
-        BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
-        BakedModel model = dispatcher.getBlockModel(renderState);
-        ModelData modelData = ModelData.EMPTY;
-        Level level = blockEntity.getLevel();
-        BlockPos pos = blockEntity.getBlockPos();
-        boolean hyperdimensional = state.is(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
-
-        if (level != null) {
-            if (!hyperdimensional) {
-                ModelBlockRenderer modelRenderer = dispatcher.getModelRenderer();
-                for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
-                    modelRenderer.tesselateBlock(
-                            level,
-                            model,
-                            renderState,
-                            pos,
-                            poseStack,
-                            buffer.getBuffer(renderType),
-                            false,
-                            RAND,
-                            42L,
-                            packedOverlay,
-                            modelData,
-                            renderType);
-                }
+        if (state.hyperdimensional) {
+            if (state.portalModel != null) {
+                HyperdimensionalPigmeePortalLayer.submit(state.portalModel, poseStack, collector);
             }
-            if (hyperdimensional) {
-                HyperdimensionalPigmeePortalLayer.renderBlock(
-                        model, renderState, modelData, poseStack, buffer);
-                HyperdimensionalPigmeeTextureLayer.renderBlock(
-                        renderState, poseStack, buffer, packedOverlay);
-            }
+            HyperdimensionalPigmeeTextureLayer.submitBlock(state.blockState, poseStack, collector, 0);
         } else {
-            int color = Minecraft.getInstance().getBlockColors().getColor(renderState, null, null, 0);
-            float r = (color >> 16 & 0xFF) / 255.0F;
-            float g = (color >> 8 & 0xFF) / 255.0F;
-            float b = (color & 0xFF) / 255.0F;
-            PoseStack.Pose pose = poseStack.last();
-
-            if (!hyperdimensional) {
-                for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
-                    VertexConsumer consumer = buffer.getBuffer(renderType);
-                    for (Direction dir : Direction.values()) {
-                        RAND.setSeed(42L);
-                        renderQuads(pose, consumer, model.getQuads(renderState, dir, RAND, modelData, renderType),
-                                r, g, b, packedLight, packedOverlay);
-                    }
-                    RAND.setSeed(42L);
-                    renderQuads(pose, consumer, model.getQuads(renderState, null, RAND, modelData, renderType),
-                            r, g, b, packedLight, packedOverlay);
-                }
-            }
-            if (hyperdimensional) {
-                HyperdimensionalPigmeePortalLayer.renderBlock(
-                        model, renderState, modelData, poseStack, buffer);
-                HyperdimensionalPigmeeTextureLayer.renderBlock(
-                        renderState, poseStack, buffer, packedOverlay);
-            }
+            state.model.submit(poseStack, collector, state.lightCoords, 0, 0);
         }
-
         poseStack.popPose();
-    }
-
-    private static void renderQuads(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads,
-                                    float r, float g, float b, int packedLight, int packedOverlay) {
-        for (BakedQuad quad : quads) {
-            float shade = getShade(quad);
-            float qr;
-            float qg;
-            float qb;
-            if (quad.isTinted()) {
-                qr = Mth.clamp(r, 0.0F, 1.0F) * shade;
-                qg = Mth.clamp(g, 0.0F, 1.0F) * shade;
-                qb = Mth.clamp(b, 0.0F, 1.0F) * shade;
-            } else {
-                qr = shade;
-                qg = shade;
-                qb = shade;
-            }
-            consumer.putBulkData(pose, quad, qr, qg, qb, 1.0F, packedLight, packedOverlay);
-        }
-    }
-
-    private static float getShade(BakedQuad quad) {
-        if (!quad.isShade()) {
-            return 1.0F;
-        }
-        Direction dir = quad.getDirection();
-        if (dir == null) {
-            return 1.0F;
-        }
-        return switch (dir) {
-            case DOWN -> 0.5F;
-            case UP -> 1.0F;
-            case NORTH, SOUTH -> 0.8F;
-            case EAST, WEST -> 0.6F;
-        };
     }
 }

@@ -20,7 +20,7 @@ public final class PigmeeMolecularAssemblerBlock
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
 
     public PigmeeMolecularAssemblerBlock() {
-        super(metalProps().noOcclusion());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion()));
         registerDefaultState(defaultBlockState().setValue(POWERED, false));
     }
 
@@ -55,6 +55,6 @@ public final class PigmeeMolecularAssemblerBlock
                     player,
                     MenuLocators.forBlockEntity(blockEntity));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

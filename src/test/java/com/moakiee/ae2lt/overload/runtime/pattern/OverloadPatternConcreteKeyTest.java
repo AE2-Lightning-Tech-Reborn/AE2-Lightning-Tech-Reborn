@@ -9,7 +9,7 @@ import java.util.Map;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -27,12 +27,12 @@ import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-class OverloadPatternConcreteKeyTest {
+class OverloadPatternConcreteKeyTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
 
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
@@ -44,7 +44,7 @@ class OverloadPatternConcreteKeyTest {
         var capturedOutput = namedPickaxe("captured-output");
         var parsed = new ParsedPatternDefinition(
                 new SourcePatternSnapshot(
-                        ResourceLocation.fromNamespaceAndPath("ae2lt", "test_pattern"),
+                        Identifier.fromNamespaceAndPath("ae2lt", "test_pattern"),
                         null,
                         null),
                 List.of(new ParsedPatternInput(0, capturedInput)),
@@ -72,7 +72,7 @@ class OverloadPatternConcreteKeyTest {
         var outputKey = AEItemKey.of(capturedOutput);
         var parsed = new ParsedPatternDefinition(
                 new SourcePatternSnapshot(
-                        ResourceLocation.fromNamespaceAndPath("ae2lt", "test_pattern"),
+                        Identifier.fromNamespaceAndPath("ae2lt", "test_pattern"),
                         null,
                         null),
                 List.of(new ParsedPatternInput(0, capturedInput)),

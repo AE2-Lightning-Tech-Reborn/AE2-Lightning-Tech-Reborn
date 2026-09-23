@@ -215,15 +215,19 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
-        deviceInventory.writeToNBT(data, TAG_DEVICE_INV, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
+        deviceInventory.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries), TAG_DEVICE_INV);
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
-        deviceInventory.readFromNBT(data, TAG_DEVICE_INV, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        deviceInventory.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, registries), TAG_DEVICE_INV);
         bindInsertedDevice();
     }
 

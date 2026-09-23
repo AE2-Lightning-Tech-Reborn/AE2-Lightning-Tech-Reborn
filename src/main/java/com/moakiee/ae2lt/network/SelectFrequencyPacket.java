@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -24,7 +24,7 @@ public record SelectFrequencyPacket(
 ) implements CustomPacketPayload {
 
     public static final Type<SelectFrequencyPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "select_frequency"));
+            new Type<>(Identifier.fromNamespaceAndPath("ae2lt", "select_frequency"));
 
     public static final StreamCodec<FriendlyByteBuf, SelectFrequencyPacket> STREAM_CODEC =
             StreamCodec.of(SelectFrequencyPacket::encode, SelectFrequencyPacket::decode);
@@ -71,7 +71,7 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            var level = player.serverLevel();
+            var level = player.level();
             var be = level.getBlockEntity(pkt.blockPos);
 
             // Resolve the device's CURRENT frequency so the block-op
@@ -159,7 +159,7 @@ public record SelectFrequencyPacket(
             // member list consistent with "who actually uses this freq".
             if (!freq.isMember(player) && freq.enrollAsUser(player)) {
                 manager.markModified();
-                SyncFrequencyDetailPacket.broadcastMembersTo(player.getServer(), pkt.frequencyId);
+                SyncFrequencyDetailPacket.broadcastMembersTo(player.level().getServer(), pkt.frequencyId);
             }
 
             if (be instanceof WirelessOverloadedControllerBlockEntity
@@ -238,13 +238,13 @@ public record SelectFrequencyPacket(
 
         if (!freq.isMember(player) && freq.enrollAsUser(player)) {
             manager.markModified();
-            SyncFrequencyDetailPacket.broadcastMembersTo(player.getServer(), targetFreqId);
+            SyncFrequencyDetailPacket.broadcastMembersTo(player.level().getServer(), targetFreqId);
         }
 
         final int boundId = targetFreqId;
         TerminalCardAccess.updateCard(terminal, data -> data.bindFrequency(
                 boundId,
-                player.level().dimension().location().toString(),
+                player.level().dimension().identifier().toString(),
                 player.blockPosition().asLong(),
                 player.getUUID()));
     }

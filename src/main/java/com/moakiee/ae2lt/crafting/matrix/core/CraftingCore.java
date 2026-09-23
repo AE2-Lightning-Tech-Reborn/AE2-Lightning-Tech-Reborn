@@ -199,10 +199,10 @@ public final class CraftingCore implements Sweepable {
     public void readFrom(CompoundTag tag, HolderLookup.Provider registries) {
         registry.markInactive(this);
         reset();
-        if (!tag.contains(NBT_PENDING, Tag.TAG_COMPOUND)) return;
-        CompoundTag pendingTag = tag.getCompound(NBT_PENDING);
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, NBT_PENDING, Tag.TAG_COMPOUND)) return;
+        CompoundTag pendingTag = tag.getCompoundOrEmpty(NBT_PENDING);
         readBatch(pendingTag, registries);
-        long restoredNextFlush = pendingTag.getLong(NBT_NEXT_FLUSH);
+        long restoredNextFlush = pendingTag.getLongOr(NBT_NEXT_FLUSH, 0L);
 
         if (threadsInFlight > 0) {
             long now = host.getGameTime();
@@ -289,7 +289,7 @@ public final class CraftingCore implements Sweepable {
         for (Object2LongMap.Entry<AEKey> entry : batch.outputs.object2LongEntrySet()) {
             if (entry.getKey() == null || entry.getLongValue() <= 0) continue;
             var outputTag = new CompoundTag();
-            outputTag.put(NBT_KEY, entry.getKey().toTagGeneric(registries));
+            outputTag.put(NBT_KEY, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, entry.getKey()));
             outputTag.putLong(NBT_AMOUNT, entry.getLongValue());
             outputs.add(outputTag);
         }
@@ -297,15 +297,15 @@ public final class CraftingCore implements Sweepable {
     }
 
     private void readBatch(CompoundTag batchTag, HolderLookup.Provider registries) {
-        long copies = batchTag.getLong(NBT_COPIES);
+        long copies = batchTag.getLongOr(NBT_COPIES, 0L);
         if (copies <= 0) return;
         boolean restoredOutput = false;
-        ListTag outputs = batchTag.getList(NBT_OUTPUTS, Tag.TAG_COMPOUND);
+        ListTag outputs = batchTag.getListOrEmpty(NBT_OUTPUTS);
         for (int i = 0; i < outputs.size(); i++) {
-            CompoundTag outputTag = outputs.getCompound(i);
-            long amount = outputTag.getLong(NBT_AMOUNT);
+            CompoundTag outputTag = outputs.getCompoundOrEmpty(i);
+            long amount = outputTag.getLongOr(NBT_AMOUNT, 0L);
             if (amount <= 0) continue;
-            AEKey key = AEKey.fromTagGeneric(registries, outputTag.getCompound(NBT_KEY));
+            AEKey key = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, outputTag.getCompoundOrEmpty(NBT_KEY));
             if (key != null) {
                 accumulate(pending, key, amount);
                 restoredOutput = true;

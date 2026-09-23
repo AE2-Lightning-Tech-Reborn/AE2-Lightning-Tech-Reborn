@@ -78,11 +78,11 @@ public final class PhaseShieldChargeWindow {
             return State.EMPTY;
         }
         CompoundTag data = CelestweaveArmorState.getSubmoduleData(armor, ResistanceSubmodule.T2);
-        long windowUntil = data.contains(TAG_WINDOW_UNTIL, Tag.TAG_LONG)
-                ? data.getLong(TAG_WINDOW_UNTIL)
+        long windowUntil = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_WINDOW_UNTIL, Tag.TAG_LONG)
+                ? data.getLongOr(TAG_WINDOW_UNTIL, 0L)
                 : Long.MIN_VALUE;
-        double coveredDamage = data.contains(TAG_COVERED_DAMAGE, Tag.TAG_DOUBLE)
-                ? data.getDouble(TAG_COVERED_DAMAGE)
+        double coveredDamage = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_COVERED_DAMAGE, Tag.TAG_DOUBLE)
+                ? data.getDoubleOr(TAG_COVERED_DAMAGE, 0.0D)
                 : 0.0D;
         return new State(windowUntil, coveredDamage);
     }

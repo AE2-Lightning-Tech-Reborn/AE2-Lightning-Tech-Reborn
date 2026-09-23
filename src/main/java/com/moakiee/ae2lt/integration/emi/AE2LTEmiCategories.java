@@ -8,7 +8,7 @@ import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.render.EmiRenderable;
 import dev.emi.emi.api.stack.EmiStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /** Native EMI categories mirroring the dedicated JEI category layouts. */
@@ -69,7 +69,7 @@ final class AE2LTEmiCategories {
 
     private static EmiRecipeCategory category(String path, EmiRenderable icon) {
         return new EmiRecipeCategory(
-                ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, path), icon) {
+                Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, path), icon) {
             @Override
             public Component getName() {
                 return Component.translatable("jei.ae2lt." + path + ".title");

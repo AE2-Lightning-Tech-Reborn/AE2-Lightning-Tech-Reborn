@@ -6,7 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -43,7 +43,7 @@ import appeng.util.Platform;
 public class OverloadedPatternProviderBlock<T extends OverloadedPatternProviderBlockEntity> extends AEBaseEntityBlock<T> {
 
     public OverloadedPatternProviderBlock() {
-        super(metalProps().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).forceSolidOn()));
         registerDefaultState(defaultBlockState().setValue(PatternProviderBlock.PUSH_DIRECTION, PushDirection.ALL));
     }
 
@@ -55,7 +55,7 @@ public class OverloadedPatternProviderBlock<T extends OverloadedPatternProviderB
 
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos,
-                                Block block, BlockPos fromPos, boolean isMoving) {
+                                Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         var be = this.getBlockEntity(level, pos);
         if (be != null) {
             be.getLogic().updateRedstoneState();
@@ -64,12 +64,12 @@ public class OverloadedPatternProviderBlock<T extends OverloadedPatternProviderB
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level,
+    protected InteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level,
                                               BlockPos pos, Player player, InteractionHand hand,
                                               BlockHitResult hit) {
         if (InteractionUtil.canWrenchRotate(heldItem)) {
             setSide(level, pos, hit.getDirection());
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return super.useItemOn(heldItem, state, level, pos, player, hand, hit);
     }
@@ -82,7 +82,7 @@ public class OverloadedPatternProviderBlock<T extends OverloadedPatternProviderB
             if (!level.isClientSide()) {
                 be.openMenu(player, MenuLocators.forBlockEntity(be));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return InteractionResult.PASS;
     }

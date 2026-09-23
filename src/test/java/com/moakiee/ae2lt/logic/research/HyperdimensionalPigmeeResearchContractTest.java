@@ -49,8 +49,8 @@ class HyperdimensionalPigmeeResearchContractTest {
         assertTrue(ritual.contains("new RitualHyperdimensionalPigmeeEntity("));
         assertFalse(ritual.contains("FixedInfiniteCellItem"));
         assertTrue(ritual.contains("markRitualLightning(LightningBolt lightningBolt, BlockPos ionizerPos)"));
-        assertTrue(ritual.contains("data.getBoolean(TAG_RITUAL_LIGHTNING)"));
-        assertTrue(ritual.contains("BlockPos.of(data.getLong(TAG_RITUAL_IONIZER_POS))"));
+        assertTrue(ritual.contains("data.getBooleanOr(TAG_RITUAL_LIGHTNING, false)"));
+        assertTrue(ritual.contains("BlockPos.of(data.getLongOr(TAG_RITUAL_IONIZER_POS, 0L))"));
         assertTrue(ionizer.contains("ResearchRitualService.markRitualLightning(bolt, worldPosition)"));
         assertTrue(ritual.contains("matchesDropOrder(candidates, note.recipeItems())"));
         assertTrue(ritual.contains("actualTickGroup"));

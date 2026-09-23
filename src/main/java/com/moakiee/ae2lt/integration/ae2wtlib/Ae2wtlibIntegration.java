@@ -6,7 +6,7 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessPatternEncodingTe
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModItems;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -27,7 +27,7 @@ public final class Ae2wtlibIntegration {
     public static final String TIANSHU_TERMINAL_NAME = "tianshu_pattern_encoding";
     private static final Icon TIANSHU_TERMINAL_ICON = new Icon(
             0, 0, 16, 16,
-            new Icon.Texture(ResourceLocation.fromNamespaceAndPath(
+            new Icon.Texture(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "textures/gui/icons/wireless_tianshu_pattern_encoding_terminal.png"),
                     16, 16));

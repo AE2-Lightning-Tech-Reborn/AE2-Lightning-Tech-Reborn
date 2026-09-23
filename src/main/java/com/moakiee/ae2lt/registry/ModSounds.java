@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.registry;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -48,7 +48,7 @@ public final class ModSounds {
             register("railgun.charge.loop");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
-        var id = ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, name);
+        var id = Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, name);
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(id));
     }
 

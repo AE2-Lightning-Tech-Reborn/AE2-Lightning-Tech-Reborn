@@ -3,27 +3,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_module_base"
-      },
+      "ingredient": "ae2lt:overload_module_base",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "ae2lt:overload_singularity"
-      },
+      "ingredient": "ae2lt:overload_singularity",
       "count": 64
     },
     {
-      "ingredient": {
-        "item": "minecraft:cactus"
-      },
+      "ingredient": "minecraft:cactus",
       "count": 256
     },
     {
-      "ingredient": {
-        "item": "minecraft:magma_cream"
-      },
+      "ingredient": "minecraft:magma_cream",
       "count": 128
     }
   ],

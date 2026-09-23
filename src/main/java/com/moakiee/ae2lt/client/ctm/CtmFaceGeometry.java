@@ -4,8 +4,10 @@ import java.util.EnumMap;
 
 import org.joml.Vector3f;
 
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.sprite.Material;
+import com.mojang.blaze3d.platform.Transparency;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -53,21 +55,22 @@ public final class CtmFaceGeometry {
     }
 
     /** Full-face quad using the whole {@code base} sprite (UV 0..1). */
-    public static BakedQuad fullFace(Direction side, TextureAtlasSprite sprite) {
-        return fullFace(side, sprite, 0.0F);
+    public static BakedQuad fullFace(Direction side, Material.Baked material, Transparency transparency) {
+        return fullFace(side, material, transparency, 0.0F);
     }
 
     /** Full-face quad moved outward along the face normal. */
-    public static BakedQuad fullFace(Direction side, TextureAtlasSprite sprite, float offset) {
+    public static BakedQuad fullFace(Direction side, Material.Baked material, Transparency transparency, float offset) {
         Vector3f[] c = CORNERS.get(side);
-        Vec3i n = side.getNormal();
+        Vec3i n = side.getUnitVec3i();
         return quad(
                 side,
                 offset(c[0], n, offset),
                 offset(c[1], n, offset),
                 offset(c[2], n, offset),
                 offset(c[3], n, offset),
-                sprite,
+                material,
+                transparency,
                 0f,
                 0f,
                 1f,
@@ -76,7 +79,7 @@ public final class CtmFaceGeometry {
 
     /** One quadrant sub-quad. {@code sq,tq} select the face quarter. */
     static BakedQuad quadrant(Direction side, int sq, int tq, CtmTileSelector.Tile tile,
-            TextureAtlasSprite sprite) {
+            Material.Baked material, Transparency transparency) {
         Vector3f[] c = CORNERS.get(side);
         float s0 = sq * 0.5f, s1 = s0 + 0.5f;
         float t0 = tq * 0.5f, t1 = t0 + 0.5f;
@@ -87,7 +90,7 @@ public final class CtmFaceGeometry {
         float step = 1f / tile.source().gridSize();
         float u0 = tile.x() * step, u1 = u0 + step;
         float v0 = tile.y() * step, v1 = v0 + step;
-        return quad(side, tl, bl, br, tr, sprite, u0, v0, u1, v1);
+        return quad(side, tl, bl, br, tr, material, transparency, u0, v0, u1, v1);
     }
 
     // Bilinear point on the face: P = TL + s*(TR-TL) + t*(BL-TL). c = [TL, BL, BR, TR].
@@ -107,12 +110,13 @@ public final class CtmFaceGeometry {
     }
 
     private static BakedQuad quad(Direction side, Vector3f tl, Vector3f bl, Vector3f br, Vector3f tr,
-            TextureAtlasSprite sprite, float u0, float v0, float u1, float v1) {
+            Material.Baked material, Transparency transparency, float u0, float v0, float u1, float v1) {
+        TextureAtlasSprite sprite = material.sprite();
         QuadBakingVertexConsumer builder = new QuadBakingVertexConsumer();
-        builder.setSprite(sprite);
+        builder.setSprite(material, transparency);
         builder.setDirection(side);
         builder.setShade(true);
-        Vec3i n = side.getNormal();
+        Vec3i n = side.getUnitVec3i();
         putVertex(builder, n, tl, sprite, u0, v0);
         putVertex(builder, n, bl, sprite, u0, v1);
         putVertex(builder, n, br, sprite, u1, v1);

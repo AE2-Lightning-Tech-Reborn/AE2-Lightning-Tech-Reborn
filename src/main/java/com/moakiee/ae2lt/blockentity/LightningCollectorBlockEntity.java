@@ -200,7 +200,7 @@ public class LightningCollectorBlockEntity extends AENetworkedBlockEntity
                 ? LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                 : LightningKey.Tier.HIGH_VOLTAGE;
         OutputPreview preview = getPreview(tier);
-        int rolledOutput = preview.roll(serverLevel.random);
+        int rolledOutput = preview.roll(serverLevel.getRandom());
         if (rolledOutput <= 0) {
             return false;
         }
@@ -233,7 +233,7 @@ public class LightningCollectorBlockEntity extends AENetworkedBlockEntity
         }
 
         if (tier == LightningKey.Tier.EXTREME_HIGH_VOLTAGE && canCultivateFromNaturalStrike(serverLevel)) {
-            if (cultivateCrystal(serverLevel.random)) {
+            if (cultivateCrystal(serverLevel.getRandom())) {
                 lastNaturalCultivationGameTime = serverLevel.getGameTime();
             }
         }
@@ -252,8 +252,10 @@ public class LightningCollectorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(data, TAG_INVENTORY, registries);
         data.putInt(TAG_COOLDOWN, cooldownTicks);
         data.putInt(TAG_WORKING_TICKS, workingTicks);
@@ -261,11 +263,13 @@ public class LightningCollectorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         inventory.loadFromTag(data, TAG_INVENTORY, registries);
-        cooldownTicks = Math.max(0, data.getInt(TAG_COOLDOWN));
-        workingTicks = Math.max(0, data.getInt(TAG_WORKING_TICKS));
+        cooldownTicks = Math.max(0, data.getIntOr(TAG_COOLDOWN, 0));
+        workingTicks = Math.max(0, data.getIntOr(TAG_WORKING_TICKS, 0));
         frequencyBinding.load(data);
     }
 

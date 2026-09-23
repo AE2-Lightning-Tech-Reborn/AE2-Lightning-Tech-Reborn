@@ -9,7 +9,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +26,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
     public static final byte TYPE_CONNECTIONS = 10;
 
     public static final Type<SyncFrequencyDetailPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "sync_frequency_detail"));
+            new Type<>(Identifier.fromNamespaceAndPath("ae2lt", "sync_frequency_detail"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncFrequencyDetailPacket> STREAM_CODEC =
             StreamCodec.of(SyncFrequencyDetailPacket::encode, SyncFrequencyDetailPacket::decode);
@@ -95,7 +95,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
                 String deviceName = d.deviceName();
 
                 CompoundTag e = new CompoundTag();
-                e.putString("dim", d.dimension().location().toString());
+                e.putString("dim", d.dimension().identifier().toString());
                 e.putLong("pos", d.pos().asLong());
                 e.putBoolean("controller", d.isController());
                 e.putBoolean("advanced", d.advanced());
@@ -131,7 +131,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
 
     public static void sendInitialConnectionsIfNeeded(ServerPlayer player, int frequencyId) {
         if (frequencyId <= 0) return;
-        PacketDistributor.sendToPlayer(player, forConnections(frequencyId, player.getServer()));
+        PacketDistributor.sendToPlayer(player, forConnections(frequencyId, player.level().getServer()));
     }
 
     // ── Handler ──

@@ -8,7 +8,7 @@ import dev.emi.emi.api.widget.TextWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -18,12 +18,12 @@ final class EmiRecipeWidgets {
     private EmiRecipeWidgets() {
     }
 
-    static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/" + path);
+    static Identifier texture(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/" + path);
     }
 
-    static ResourceLocation syntheticId(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "emi/" + path);
+    static Identifier syntheticId(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "emi/" + path);
     }
 
     static EmiIngredient ingredient(Ingredient ingredient, long count) {

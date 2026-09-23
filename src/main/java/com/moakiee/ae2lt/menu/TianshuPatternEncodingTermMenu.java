@@ -10,7 +10,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.storage.StorageHelper;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.core.definitions.AEItems;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.AppEngSlot;
@@ -51,7 +51,9 @@ import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceSe
 import com.moakiee.ae2lt.network.tianshu.MaintenanceEditorSyncPacket;
 import com.moakiee.ae2lt.network.tianshu.OpenMaintenanceEditorPacket;
 import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
@@ -97,6 +99,43 @@ import org.slf4j.LoggerFactory;
 
 @IPNIgnore
 public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
+    private static final int MAX_ACTION_SLOTS = 64;
+    private static final StreamCodec<RegistryFriendlyByteBuf, TianshuEncodingMode> MODE_ACTION_CODEC =
+            StreamCodec.of((buf, mode) -> buf.writeEnum(mode),
+                    buf -> buf.readEnum(TianshuEncodingMode.class));
+    private static final StreamCodec<RegistryFriendlyByteBuf, ProcessingPatternEncodingType.AdvancedConfig>
+            ADVANCED_ACTION_CODEC = StreamCodec.of(
+                    (buf, config) -> buf.writeVarIntArray(config.directions()),
+                    buf -> new ProcessingPatternEncodingType.AdvancedConfig(buf.readVarIntArray(MAX_ACTION_SLOTS)));
+    private static final StreamCodec<RegistryFriendlyByteBuf, ProcessingPatternEncodingType.OverloadConfig>
+            OVERLOAD_ACTION_CODEC = StreamCodec.of(
+                    (buf, config) -> {
+                        buf.writeVarIntArray(config.inputIdOnly());
+                        buf.writeVarIntArray(config.outputIdOnly());
+                    },
+                    buf -> new ProcessingPatternEncodingType.OverloadConfig(
+                            buf.readVarIntArray(MAX_ACTION_SLOTS), buf.readVarIntArray(MAX_ACTION_SLOTS)));
+    private static final StreamCodec<RegistryFriendlyByteBuf, ClosedLoopMemberEdit> MEMBER_EDIT_CODEC =
+            StreamCodec.of((buf, edit) -> {
+                buf.writeVarInt(edit.slot());
+                buf.writeVarLong(edit.copies());
+            }, buf -> new ClosedLoopMemberEdit(buf.readVarInt(), buf.readVarLong()));
+    private static final StreamCodec<RegistryFriendlyByteBuf, ClosedLoopMemberMove> MEMBER_MOVE_CODEC =
+            StreamCodec.of((buf, move) -> {
+                buf.writeVarInt(move.slot());
+                buf.writeVarInt(move.direction());
+            }, buf -> new ClosedLoopMemberMove(buf.readVarInt(), buf.readVarInt()));
+    private static final StreamCodec<RegistryFriendlyByteBuf, ClosedLoopMultiplierEdit> MULTIPLIER_EDIT_CODEC =
+            StreamCodec.of((buf, edit) -> {
+                buf.writeVarInt(edit.execution());
+                buf.writeVarInt(edit.stored());
+            }, buf -> new ClosedLoopMultiplierEdit(buf.readVarInt(), buf.readVarInt()));
+    private static final StreamCodec<RegistryFriendlyByteBuf, MaintenanceAction> MAINTENANCE_ACTION_CODEC =
+            StreamCodec.of((buf, action) -> {
+                buf.writeVarInt(action.selectionRevision());
+                buf.writeUUID(action.ruleId());
+                buf.writeBoolean(action.cancel());
+            }, buf -> new MaintenanceAction(buf.readVarInt(), buf.readUUID(), buf.readBoolean()));
     private static final Logger DUPLICATE_LOG =
             LoggerFactory.getLogger("ae2lt/TianshuDuplicate");
     public static final int CLOSED_LOOP_MEMBER_SLOTS = ClosedLoopDraftSync.MEMBER_SLOTS;
@@ -108,7 +147,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
             TianshuPatternEncodingTermMenu::new;
     public static final MenuType<TianshuPatternEncodingTermMenu> TYPE = MenuTypeBuilder
             .create(FACTORY, TianshuPatternTerminalHost.class)
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "tianshu_pattern_encoding_terminal"));
 
     @GuiSync(110)
@@ -278,42 +317,39 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
             addSlot(slot, Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK);
             closedLoopOutputSlots.add(slot);
         }
-        this.boundTianshuTarget = inventory.player.level().isClientSide
+        this.boundTianshuTarget = inventory.player.level().isClientSide()
                 ? null : host.selectTianshuTarget();
         if (boundTianshuTarget != null) tianshuSelectionRevision = 1;
         this.tianshuMode = host.getTianshuEncodingMode();
-        if (!inventory.player.level().isClientSide) {
+        if (!inventory.player.level().isClientSide()) {
             restoreProcessingDraft(host.getProcessingPatternTerminalDraft());
             restoreClosedLoopDraft(host.getClosedLoopTerminalDraft());
         }
-        registerClientAction("setTianshuMode", TianshuEncodingMode.class, this::setTianshuModeServer);
-        registerClientAction("multiplyProcessing", Integer.class, this::multiplyProcessingServer);
-        registerClientAction("armAdvancedEncoding",
-                ProcessingPatternEncodingType.AdvancedConfig.class, this::armAdvancedEncodingServer);
-        registerClientAction("armOverloadEncoding",
-                ProcessingPatternEncodingType.OverloadConfig.class, this::armOverloadEncodingServer);
-        registerClientAction("resetProcessingEncoding", this::resetProcessingEncodingServer);
-        registerClientAction("selectClosedLoopCandidate", Integer.class, this::selectClosedLoopCandidateServer);
-        registerClientAction("changeClosedLoopExecutionSeedMultiplier", Integer.class,
-                this::changeClosedLoopExecutionSeedMultiplierServer);
-        registerClientAction("changeClosedLoopSeedMultiplier", Integer.class,
-                this::changeClosedLoopSeedMultiplierServer);
-        registerClientAction("changeClosedLoopStoredTaskMultiplier", Integer.class,
-                this::changeClosedLoopStoredTaskMultiplierServer);
-        registerClientAction("setClosedLoopMemberCopies", ClosedLoopMemberEdit.class,
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<TianshuEncodingMode>("setTianshuMode"), MODE_ACTION_CODEC, this::setTianshuModeServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("multiplyProcessing"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::multiplyProcessingServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<ProcessingPatternEncodingType.AdvancedConfig>("armAdvancedEncoding"),
+                ADVANCED_ACTION_CODEC, this::armAdvancedEncodingServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<ProcessingPatternEncodingType.OverloadConfig>("armOverloadEncoding"),
+                OVERLOAD_ACTION_CODEC, this::armOverloadEncodingServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("resetProcessingEncoding"), this::resetProcessingEncodingServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("selectClosedLoopCandidate"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::selectClosedLoopCandidateServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("changeClosedLoopExecutionSeedMultiplier"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::changeClosedLoopExecutionSeedMultiplierServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("changeClosedLoopSeedMultiplier"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::changeClosedLoopSeedMultiplierServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("changeClosedLoopStoredTaskMultiplier"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::changeClosedLoopStoredTaskMultiplierServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<ClosedLoopMemberEdit>("setClosedLoopMemberCopies"), MEMBER_EDIT_CODEC,
                 this::setClosedLoopMemberCopiesServer);
-        registerClientAction("moveClosedLoopMember", ClosedLoopMemberMove.class,
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<ClosedLoopMemberMove>("moveClosedLoopMember"), MEMBER_MOVE_CODEC,
                 this::moveClosedLoopMemberServer);
-        registerClientAction("setClosedLoopMultipliers", ClosedLoopMultiplierEdit.class,
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<ClosedLoopMultiplierEdit>("setClosedLoopMultipliers"), MULTIPLIER_EDIT_CODEC,
                 this::setClosedLoopMultipliersServer);
-        registerClientAction("autoFillClosedLoop", this::autoFillClosedLoopServer);
-        registerClientAction("cycleClosedLoopOutput", this::cycleClosedLoopOutputServer);
-        registerClientAction("refillClosedLoopSeeds", this::refillClosedLoopSeedsServer);
-        registerClientAction("clearClosedLoopDraft", this::clearClosedLoopDraftServer);
-        registerClientAction("encodeTianshu", Boolean.class, this::encodeServerWithOptions);
-        registerClientAction("uploadEncodedPattern", Integer.class, this::uploadEncodedPatternServer);
-        registerClientAction("setMaintainableView", Boolean.class, this::setMaintainableViewServer);
-        registerClientAction("maintenanceAction", MaintenanceAction.class, this::maintenanceActionServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("autoFillClosedLoop"), this::autoFillClosedLoopServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleClosedLoopOutput"), this::cycleClosedLoopOutputServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("refillClosedLoopSeeds"), this::refillClosedLoopSeedsServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearClosedLoopDraft"), this::clearClosedLoopDraftServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Boolean>("encodeTianshu"), net.minecraft.network.codec.ByteBufCodecs.BOOL, this::encodeServerWithOptions);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("uploadEncodedPattern"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::uploadEncodedPatternServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Boolean>("setMaintainableView"), net.minecraft.network.codec.ByteBufCodecs.BOOL, this::setMaintainableViewServer);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<MaintenanceAction>("maintenanceAction"), MAINTENANCE_ACTION_CODEC, this::maintenanceActionServer);
     }
 
     @Override
@@ -391,7 +427,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
             // updates and may encode in the same input event. Send its authoritative logic-mode
             // action before the Tianshu mirror so the server never observes a stale native mode.
             super.setMode(mode);
-            sendClientAction("setTianshuMode", extended);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setTianshuMode"), extended);
         } else {
             alignNativeModeServer(extended, mode);
         }
@@ -466,7 +502,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         if (mode == null) return;
         if (isClientSide()) {
             tianshuMode = mode;
-            sendClientAction("setTianshuMode", mode);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setTianshuMode"), mode);
         } else {
             setTianshuModeServer(mode);
         }
@@ -496,7 +532,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     public void multiplyProcessing(int factor) {
-        if (isClientSide()) sendClientAction("multiplyProcessing", factor);
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<>("multiplyProcessing"), factor);
         else multiplyProcessingServer(factor);
     }
 
@@ -518,7 +554,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         if (config == null) return;
         if (isClientSide()) {
             updateAdvancedEncodingConfig(config);
-            sendClientAction("armAdvancedEncoding", config);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("armAdvancedEncoding"), config);
         } else {
             armAdvancedEncodingServer(config);
         }
@@ -539,7 +575,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         if (config == null) return;
         if (isClientSide()) {
             updateOverloadEncodingConfig(config);
-            sendClientAction("armOverloadEncoding", config);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("armOverloadEncoding"), config);
         } else {
             armOverloadEncodingServer(config);
         }
@@ -605,7 +641,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     public void resetProcessingEncoding() {
         if (isClientSide()) {
             resetProcessingEncodingType();
-            sendClientAction("resetProcessingEncoding");
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("resetProcessingEncoding"));
         } else {
             resetProcessingEncodingServer();
         }
@@ -721,7 +757,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void requestClosedLoopResultPage(ClosedLoopResultPage.Kind kind, int offset) {
         if (!isClientSide() || kind == null) return;
-        PacketDistributor.sendToServer(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                 new RequestClosedLoopResultPagePacket(containerId, kind, offset));
     }
 
@@ -762,7 +798,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void setClosedLoopMemberCopies(int slot, long copies) {
         if (isClientSide()) {
-            sendClientAction("setClosedLoopMemberCopies", new ClosedLoopMemberEdit(slot, copies));
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setClosedLoopMemberCopies"), new ClosedLoopMemberEdit(slot, copies));
         } else {
             setClosedLoopMemberCopiesServer(new ClosedLoopMemberEdit(slot, copies));
         }
@@ -781,7 +817,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void moveClosedLoopMember(int slot, int direction) {
         if (isClientSide()) {
-            sendClientAction("moveClosedLoopMember", new ClosedLoopMemberMove(slot, direction));
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("moveClosedLoopMember"), new ClosedLoopMemberMove(slot, direction));
         } else {
             moveClosedLoopMemberServer(new ClosedLoopMemberMove(slot, direction));
         }
@@ -813,7 +849,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void setClosedLoopMultipliers(int execution, int stored) {
         if (isClientSide()) {
-            sendClientAction("setClosedLoopMultipliers", new ClosedLoopMultiplierEdit(execution, stored));
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setClosedLoopMultipliers"), new ClosedLoopMultiplierEdit(execution, stored));
         } else {
             setClosedLoopMultipliersServer(new ClosedLoopMultiplierEdit(execution, stored));
         }
@@ -831,19 +867,19 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     public void selectClosedLoopCandidate(int delta) {
-        if (isClientSide()) sendClientAction("selectClosedLoopCandidate", delta);
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<>("selectClosedLoopCandidate"), delta);
         else selectClosedLoopCandidateServer(delta);
     }
 
     /** Discovers members from the marked primary output, or cycles candidates once discovered. */
     public void autoFillClosedLoop() {
-        if (isClientSide()) sendClientAction("autoFillClosedLoop");
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("autoFillClosedLoop"));
         else autoFillClosedLoopServer();
     }
 
     /** Cycles the computed outputs so the next byproduct becomes the primary output. */
     public void cycleClosedLoopOutput() {
-        if (isClientSide()) sendClientAction("cycleClosedLoopOutput");
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleClosedLoopOutput"));
         else cycleClosedLoopOutputServer();
     }
 
@@ -858,7 +894,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     /** Clears the editable members and output marks. */
     public void clearClosedLoopDraft() {
-        if (isClientSide()) sendClientAction("clearClosedLoopDraft");
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearClosedLoopDraft"));
         else clearClosedLoopDraftServer();
     }
 
@@ -923,7 +959,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     /** Tops up stored seeds for all enabled closed-loop patterns of the bound Tianshu. */
     public void refillClosedLoopSeeds() {
-        if (isClientSide()) sendClientAction("refillClosedLoopSeeds");
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("refillClosedLoopSeeds"));
         else refillClosedLoopSeedsServer();
     }
 
@@ -945,7 +981,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     public void changeClosedLoopExecutionSeedMultiplier(int delta) {
-        if (isClientSide()) sendClientAction("changeClosedLoopExecutionSeedMultiplier", delta);
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<>("changeClosedLoopExecutionSeedMultiplier"), delta);
         else changeClosedLoopExecutionSeedMultiplierServer(delta);
     }
 
@@ -962,7 +998,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     /** Legacy action name; changes only the per-job borrowed seed multiplier. */
     @Deprecated
     public void changeClosedLoopSeedMultiplier(int delta) {
-        if (isClientSide()) sendClientAction("changeClosedLoopSeedMultiplier", delta);
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<>("changeClosedLoopSeedMultiplier"), delta);
         else changeClosedLoopSeedMultiplierServer(delta);
     }
 
@@ -971,7 +1007,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     public void changeClosedLoopStoredTaskMultiplier(int delta) {
-        if (isClientSide()) sendClientAction("changeClosedLoopStoredTaskMultiplier", delta);
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<>("changeClosedLoopStoredTaskMultiplier"), delta);
         else changeClosedLoopStoredTaskMultiplierServer(delta);
     }
 
@@ -992,7 +1028,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     public void uploadEncodedPattern() {
         if (isClientSide()) {
             uploadState = 2;
-            sendClientAction("uploadEncodedPattern", tianshuSelectionRevision);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("uploadEncodedPattern"), tianshuSelectionRevision);
         }
         else uploadEncodedPatternServer(tianshuSelectionRevision);
     }
@@ -1064,7 +1100,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void requestUploadTargets() {
         if (isClientSide()) {
-            PacketDistributor.sendToServer(new RequestUploadTargetsPacket(containerId));
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RequestUploadTargetsPacket(containerId));
         }
     }
 
@@ -1092,7 +1128,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     public void uploadTianshuPatternToTarget(PatternContainerGroup group) {
         if (!isClientSide() || group == null) return;
         uploadState = 2;
-        PacketDistributor.sendToServer(new UploadPatternToTargetPacket(containerId, group));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new UploadPatternToTargetPacket(containerId, group));
     }
 
     public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group) {
@@ -1892,7 +1928,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void requestMaintenanceEditor(appeng.api.stacks.AEKey key) {
         if (!isClientSide()) return;
-        PacketDistributor.sendToServer(new OpenMaintenanceEditorPacket(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new OpenMaintenanceEditorPacket(
                 containerId, tianshuSelectionRevision, key));
     }
 
@@ -1908,7 +1944,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         if (maintenance.repository().get(key) == null
                 && (grid == null || !MaintenanceRequestability.isRequestable(
                         grid.getCraftingService(), key))) {
-            serverPlayer.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(serverPlayer, net.minecraft.network.chat.Component.translatable(
                     "ae2lt.tianshu.maintenance.unsupported"), true);
             return;
         }
@@ -1918,7 +1954,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     public void setMaintainableView(boolean enabled) {
         maintainableView = enabled;
         if (isClientSide()) {
-            sendClientAction("setMaintainableView", enabled);
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setMaintainableView"), enabled);
         } else setMaintainableViewServer(enabled);
     }
 
@@ -2045,8 +2081,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void runMaintenanceAction(UUID ruleId, boolean cancel) {
         if (isClientSide() && ruleId != null) {
-            sendClientAction("maintenanceAction",
-                    new MaintenanceAction(tianshuSelectionRevision, ruleId, cancel));
+            sendClientAction(new appeng.menu.guisync.ClientActionKey<>("maintenanceAction"), new MaintenanceAction(tianshuSelectionRevision, ruleId, cancel));
         }
     }
 
@@ -2064,7 +2099,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void sendGlobalReserve(appeng.api.stacks.AEKey key, long amount,
                                   com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode mode) {
-        if (isClientSide() && key != null && mode != null) PacketDistributor.sendToServer(
+        if (isClientSide() && key != null && mode != null) net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                 new SaveGlobalReservePacket(
                         containerId, tianshuSelectionRevision, key, amount, mode));
     }
@@ -2078,7 +2113,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         if (maintenance == null) return;
         if (packet.amount() != 0
                 && maintenance.reservedStock().size() > TianshuPacketLimits.MAX_LIST_ENTRIES) {
-            getPlayer().displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(getPlayer(), net.minecraft.network.chat.Component.translatable(
                     "ae2lt.tianshu.maintenance.too_large",
                     TianshuPacketLimits.MAX_LIST_ENTRIES), true);
             return;
@@ -2237,7 +2272,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     public void sendMaintenanceSave(SaveMaintenanceRulePacket packet) {
         if (isClientSide() && packet != null) {
-            PacketDistributor.sendToServer(packet);
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(packet);
         }
     }
 
@@ -2276,13 +2311,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
             var grid = target.getGrid();
             if (grid == null || !MaintenanceRequestability.isRequestable(
                     grid.getCraftingService(), packet.target())) {
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, net.minecraft.network.chat.Component.translatable(
                         "ae2lt.tianshu.maintenance.unsupported"), true);
                 return;
             }
         }
         if (service.repository().size() > TianshuPacketLimits.MAX_LIST_ENTRIES) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, net.minecraft.network.chat.Component.translatable(
                     "ae2lt.tianshu.maintenance.too_large",
                     TianshuPacketLimits.MAX_LIST_ENTRIES), true);
             sendMaintenanceEditorData(player, packet.target());
@@ -2294,7 +2329,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         }
         if (existing == null
                 && service.repository().size() >= TianshuPacketLimits.MAX_LIST_ENTRIES) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, net.minecraft.network.chat.Component.translatable(
                     "ae2lt.tianshu.maintenance.too_large",
                     TianshuPacketLimits.MAX_LIST_ENTRIES), true);
             sendMaintenanceEditorData(player, packet.target());
@@ -2340,7 +2375,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
      * Called only by the optional client widget when both compatibility mods are loaded.
      */
     public void refreshPolymorphRecipe() {
-        if (isClientSide()) sendClientAction("polyeng$selectRecipe");
+        if (isClientSide()) sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("polyeng$selectRecipe"));
     }
 
     private void beginClientEncoding(boolean triggerUpload, boolean directUpload) {
@@ -2354,7 +2389,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         // Duplicate interception belongs to the upload flow. In the default NO_SHIFT mode,
         // holding Shift therefore bypasses both upload and duplicate interception while still
         // allowing the pattern to be encoded normally.
-        sendClientAction("encodeTianshu", triggerUpload
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("encodeTianshu"), triggerUpload
                 && com.moakiee.ae2lt.config.AE2LTClientConfig.interceptDuplicatePatternEncoding());
     }
 
@@ -2429,7 +2464,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         }
         var candidateDescription = PatternEncodingDuplicateFilter.describeStack(candidate);
         DUPLICATE_LOG.debug("Check start: player={}, route={}, candidate={}",
-                getPlayer().getGameProfile().getName(), route, candidateDescription);
+                getPlayer().getGameProfile().name(), route, candidateDescription);
         uploadTargets = discoverUploadTargets(true);
         var level = getPlayer().level();
         for (int targetIndex = 0; targetIndex < uploadTargets.size(); targetIndex++) {
@@ -2461,7 +2496,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     private void notifyDuplicateEncodingIntercepted() {
         if (getPlayer() instanceof ServerPlayer player) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, net.minecraft.network.chat.Component.translatable(
                     "ae2lt.tianshu.encode.duplicate_blocked"), false);
         }
     }
@@ -2495,7 +2530,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
 
     private void notifyEncodingFailure(String translationKey) {
         if (getPlayer() instanceof ServerPlayer player) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     net.minecraft.network.chat.Component.translatable(translationKey), false);
         }
     }

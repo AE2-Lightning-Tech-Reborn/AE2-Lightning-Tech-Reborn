@@ -3,33 +3,23 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:basic_topological_lattice"
-      },
+      "ingredient": "ae2lt:basic_topological_lattice",
       "count": 64
     },
     {
-      "ingredient": {
-        "item": "minecraft:terracotta"
-      },
+      "ingredient": "minecraft:terracotta",
       "count": 2
     },
     {
-      "ingredient": {
-        "item": "minecraft:obsidian"
-      },
+      "ingredient": "minecraft:obsidian",
       "count": 32
     },
     {
-      "ingredient": {
-        "item": "minecraft:emerald"
-      },
+      "ingredient": "minecraft:emerald",
       "count": 32
     },
     {
-      "ingredient": {
-        "item": "minecraft:diamond"
-      },
+      "ingredient": "minecraft:diamond",
       "count": 32
     }
   ],

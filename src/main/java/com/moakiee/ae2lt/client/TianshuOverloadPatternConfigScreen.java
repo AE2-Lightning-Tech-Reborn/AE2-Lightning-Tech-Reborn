@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.client;
 
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.Scrollbar;
@@ -12,7 +12,7 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -124,7 +124,7 @@ final class TianshuOverloadPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         for (var button : toggleButtons) button.visible = false;
         int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
         int scroll = scrollbar.getCurrentScroll();
@@ -135,18 +135,18 @@ final class TianshuOverloadPatternConfigScreen<M extends TianshuPatternEncodingT
             int rowY = TianshuPatternConfigLayout.HEADER_HEIGHT
                     + visible * TianshuPatternConfigLayout.ROW_HEIGHT;
             if (row.header != null) {
-                graphics.drawString(font, row.header,
+                graphics.text(font, row.header,
                         TianshuPatternConfigLayout.ROW_LEFT + 4
                                 + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET,
                         rowY + ROW_TEXT_Y_OFFSET, textColor, false);
                 continue;
             }
-            graphics.renderItem(row.stack.what().wrapForDisplayOrFilter(),
+            graphics.item(row.stack.what().wrapForDisplayOrFilter(),
                     TianshuPatternConfigLayout.ROW_LEFT + 2
                             + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET,
                     rowY + ROW_ICON_Y_OFFSET);
             var name = row.stack.what().getDisplayName();
-            graphics.drawString(font, Language.getInstance().getVisualOrder(
+            graphics.text(font, Language.getInstance().getVisualOrder(
                     font.substrByWidth(name,
                             TOGGLE_LEFT - TianshuPatternConfigLayout.ROW_LEFT - 24
                                     - TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET)),
@@ -162,7 +162,7 @@ final class TianshuOverloadPatternConfigScreen<M extends TianshuPatternEncodingT
         }
         if (rows.isEmpty()) {
             var text = Component.translatable("ae2lt.tianshu.pattern_config.empty");
-            graphics.drawString(font, text,
+            graphics.text(font, text,
                     (TianshuPatternConfigLayout.GUI_WIDTH - font.width(text)) / 2,
                     TianshuPatternConfigLayout.HEADER_HEIGHT
                             + (TianshuPatternConfigLayout.VISIBLE_ROWS
@@ -172,7 +172,7 @@ final class TianshuOverloadPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(GuiGraphicsExtractor graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         TianshuPatternConfigLayout.drawBackground(graphics, offsetX, offsetY);
     }

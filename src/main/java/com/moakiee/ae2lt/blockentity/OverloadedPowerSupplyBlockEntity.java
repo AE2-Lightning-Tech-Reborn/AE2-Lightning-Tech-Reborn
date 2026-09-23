@@ -13,7 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -79,16 +79,16 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkedBlockEntity
 
         public CompoundTag toTag() {
             var tag = new CompoundTag();
-            tag.putString(TAG_DIM, dimension.location().toString());
+            tag.putString(TAG_DIM, dimension.identifier().toString());
             tag.putLong(TAG_POS, pos.asLong());
             tag.putInt(TAG_FACE, boundFace.get3DDataValue());
             return tag;
         }
 
         public static WirelessConnection fromTag(CompoundTag tag) {
-            var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(tag.getString(TAG_DIM)));
-            var pos = BlockPos.of(tag.getLong(TAG_POS));
-            int rawFace = tag.getInt(TAG_FACE);
+            var dim = ResourceKey.create(Registries.DIMENSION, Identifier.parse(tag.getStringOr(TAG_DIM, "")));
+            var pos = BlockPos.of(tag.getLongOr(TAG_POS, 0L));
+            int rawFace = tag.getIntOr(TAG_FACE, 0);
             var face = (rawFace >= 0 && rawFace < Direction.values().length)
                     ? Direction.from3DDataValue(rawFace) : Direction.DOWN;
             return new WirelessConnection(dim, pos, face);
@@ -578,27 +578,31 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
         // Only copy the cell's in-memory state into its ItemStack before the
         // inventory is serialized. Do not call saveChanges() from this path:
         // the chunk is already being saved, and re-marking it dirty here makes
         // /save-all flush pick it up again in the next dirty pass.
         AppFluxBridge.persistCellStorage(cachedCellView);
-        super.saveAdditional(data, registries);
+        super.saveAdditional(output);
         data.putString(TAG_MODE, mode.name());
-        cellInv.writeToNBT(data, TAG_CELL_INV, registries);
+        cellInv.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries), TAG_CELL_INV);
 
         data.put(TAG_CONNECTIONS, WirelessConnectionLists.writeTagList(connections));
         frequencyBinding.save(data);
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
 
-        if (data.contains(TAG_MODE, Tag.TAG_STRING)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_MODE, Tag.TAG_STRING)) {
             try {
-                mode = PowerMode.valueOf(data.getString(TAG_MODE));
+                mode = PowerMode.valueOf(data.getStringOr(TAG_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 mode = PowerMode.NORMAL;
             }
@@ -606,7 +610,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkedBlockEntity
             mode = PowerMode.NORMAL;
         }
 
-        cellInv.readFromNBT(data, TAG_CELL_INV, registries);
+        cellInv.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, registries), TAG_CELL_INV);
         cellViewDirty = true;
         cellCapacityDirty = true;
         cachedCellView = null;
@@ -625,7 +629,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkedBlockEntity
         data.writeByte(mode.ordinal());
         data.writeVarInt(connections.size());
         for (var connection : connections) {
-            data.writeResourceLocation(connection.dimension().location());
+            data.writeIdentifier(connection.dimension().identifier());
             data.writeBlockPos(connection.pos());
             data.writeByte(connection.boundFace().get3DDataValue());
         }
@@ -643,7 +647,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkedBlockEntity
         int count = data.readVarInt();
         var newConnections = new ArrayList<WirelessConnection>(Math.min(count, MAX_WIRELESS_CONNECTIONS));
         for (int i = 0; i < count; i++) {
-            var dim = ResourceKey.create(Registries.DIMENSION, data.readResourceLocation());
+            var dim = ResourceKey.create(Registries.DIMENSION, data.readIdentifier());
             var pos = data.readBlockPos();
             int rawFace = data.readByte();
             var face = (rawFace >= 0 && rawFace < Direction.values().length)

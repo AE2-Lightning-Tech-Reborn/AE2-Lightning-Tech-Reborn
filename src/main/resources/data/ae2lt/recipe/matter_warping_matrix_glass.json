@@ -7,15 +7,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2:quartz_glass" },
-    "B": { "item": "ae2:fluix_crystal" },
-    "C": { "item": "ae2:quartz_glass" },
-    "D": { "item": "ae2lt:overload_crystal" },
-    "E": { "item": "minecraft:quartz_block" },
-    "F": { "item": "ae2lt:overload_crystal" },
-    "G": { "item": "ae2:quartz_glass" },
-    "H": { "item": "ae2:fluix_crystal" },
-    "I": { "item": "ae2:quartz_glass" }
+    "A": "ae2:quartz_glass",
+    "B": "ae2:fluix_crystal",
+    "C": "ae2:quartz_glass",
+    "D": "ae2lt:overload_crystal",
+    "E": "minecraft:quartz_block",
+    "F": "ae2lt:overload_crystal",
+    "G": "ae2:quartz_glass",
+    "H": "ae2:fluix_crystal",
+    "I": "ae2:quartz_glass"
   },
   "result": {
     "count": 2,

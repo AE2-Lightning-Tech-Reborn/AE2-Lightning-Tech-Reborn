@@ -88,23 +88,23 @@ final class OverloadedReturnPolicy {
             tag.putString(TAG_UNLOCK_MATCH_MODE, unlockMatchMode.name());
         }
         if (unlockTemplate != null && !unlockTemplate.isEmpty()) {
-            tag.put(TAG_UNLOCK_TEMPLATE, unlockTemplate.saveOptional(registries));
+            tag.put(TAG_UNLOCK_TEMPLATE, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(unlockTemplate, registries));
         }
     }
 
     void readFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
         clearUnlockRule();
-        if (tag.contains(TAG_UNLOCK_MATCH_MODE, Tag.TAG_STRING)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_UNLOCK_MATCH_MODE, Tag.TAG_STRING)) {
             try {
                 unlockMatchMode = MatchMode.valueOf(
-                        tag.getString(TAG_UNLOCK_MATCH_MODE));
+                        tag.getStringOr(TAG_UNLOCK_MATCH_MODE, ""));
             } catch (IllegalArgumentException ignored) {
                 unlockMatchMode = null;
             }
         }
-        if (tag.contains(TAG_UNLOCK_TEMPLATE, Tag.TAG_COMPOUND)) {
-            unlockTemplate = ItemStack.parseOptional(
-                    registries, tag.getCompound(TAG_UNLOCK_TEMPLATE));
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_UNLOCK_TEMPLATE, Tag.TAG_COMPOUND)) {
+            unlockTemplate = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(
+                    registries, tag.getCompoundOrEmpty(TAG_UNLOCK_TEMPLATE));
             if (unlockTemplate.isEmpty()) {
                 unlockTemplate = null;
             }

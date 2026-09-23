@@ -14,7 +14,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
@@ -30,7 +30,7 @@ public final class SourcePatternSnapshot {
     private static final String TAG_STACK = "Stack";
     private static final String TAG_CUSTOM_DATA = "CustomData";
 
-    private final ResourceLocation itemId;
+    private final Identifier itemId;
     @Nullable
     private final CompoundTag serializedStackTag;
     @Nullable
@@ -39,7 +39,7 @@ public final class SourcePatternSnapshot {
     @Nullable
     private String cachedFingerprint;
 
-    public SourcePatternSnapshot(ResourceLocation itemId,
+    public SourcePatternSnapshot(Identifier itemId,
                                  @Nullable CompoundTag serializedStackTag,
                                  @Nullable CompoundTag customDataTag) {
         this.itemId = Objects.requireNonNull(itemId, "itemId");
@@ -55,14 +55,14 @@ public final class SourcePatternSnapshot {
         }
 
         var itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        var serializedStack = stack.saveOptional(registries);
+        var serializedStack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(stack, registries);
         if (!(serializedStack instanceof CompoundTag stackTag)) {
             throw new IllegalStateException("serialized source pattern stack was not a compound tag");
         }
         return new SourcePatternSnapshot(itemId, stackTag, null);
     }
 
-    public ResourceLocation itemId() {
+    public Identifier itemId() {
         return itemId;
     }
 
@@ -79,13 +79,13 @@ public final class SourcePatternSnapshot {
 
     private String computeFingerprint() {
         var identity = toTag();
-        if (identity.contains(TAG_STACK, Tag.TAG_COMPOUND)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(identity, TAG_STACK, Tag.TAG_COMPOUND)) {
             // The stack count is transport state, not recipe identity. Pattern providers may hand
             // us an otherwise identical encoded pattern as a stack of 1 or 64; keeping that count
             // would split one recipe into unrelated overload pending queues. Only normalize the
             // serialized stack's top-level count so recipe-internal ingredient counts remain part
             // of the fingerprint.
-            var stack = identity.getCompound(TAG_STACK);
+            var stack = identity.getCompoundOrEmpty(TAG_STACK);
             stack.remove("count");
             stack.remove("Count"); // legacy ItemStack NBT
         }
@@ -110,13 +110,13 @@ public final class SourcePatternSnapshot {
         Objects.requireNonNull(registries, "registries");
 
         if (serializedStackTag != null && !serializedStackTag.isEmpty()) {
-            return ItemStack.parseOptional(registries, serializedStackTag.copy());
+            return com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, serializedStackTag.copy());
         }
 
         // Backward compatibility for older overload patterns that only stored
         // item id + custom data.
         var item = BuiltInRegistries.ITEM.get(itemId);
-        var stack = new ItemStack(item);
+        var stack = new ItemStack(item.map(net.minecraft.core.Holder::value).orElse(net.minecraft.world.item.Items.AIR));
         if (customDataTag != null && !customDataTag.isEmpty()) {
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customDataTag.copy()));
         }
@@ -135,23 +135,23 @@ public final class SourcePatternSnapshot {
     }
 
     public static SourcePatternSnapshot fromTag(CompoundTag tag) {
-        ResourceLocation itemId;
-        if (tag.contains(TAG_ITEM, Tag.TAG_STRING)) {
-            itemId = ResourceLocation.parse(tag.getString(TAG_ITEM));
-        } else if (tag.contains(TAG_STACK, Tag.TAG_COMPOUND)) {
-            itemId = ResourceLocation.parse(tag.getCompound(TAG_STACK).getString("id"));
+        Identifier itemId;
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_ITEM, Tag.TAG_STRING)) {
+            itemId = Identifier.parse(tag.getStringOr(TAG_ITEM, ""));
+        } else if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_STACK, Tag.TAG_COMPOUND)) {
+            itemId = Identifier.parse(tag.getCompoundOrEmpty(TAG_STACK).getStringOr("id", ""));
         } else {
             throw new IllegalArgumentException("source pattern snapshot is missing an item id");
         }
 
         CompoundTag serializedStack = null;
-        if (tag.contains(TAG_STACK, Tag.TAG_COMPOUND)) {
-            serializedStack = tag.getCompound(TAG_STACK).copy();
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_STACK, Tag.TAG_COMPOUND)) {
+            serializedStack = tag.getCompoundOrEmpty(TAG_STACK).copy();
         }
 
         CompoundTag customData = null;
-        if (tag.contains(TAG_CUSTOM_DATA, CompoundTag.TAG_COMPOUND)) {
-            customData = tag.getCompound(TAG_CUSTOM_DATA).copy();
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CUSTOM_DATA, CompoundTag.TAG_COMPOUND)) {
+            customData = tag.getCompoundOrEmpty(TAG_CUSTOM_DATA).copy();
         }
         return new SourcePatternSnapshot(itemId, serializedStack, customData);
     }
@@ -159,7 +159,7 @@ public final class SourcePatternSnapshot {
     private static Tag canonicalCopy(Tag source) {
         if (source instanceof CompoundTag compound) {
             var result = new CompoundTag();
-            compound.getAllKeys().stream().sorted().forEach(key -> {
+            compound.keySet().stream().sorted().forEach(key -> {
                 var value = compound.get(key);
                 if (value != null) result.put(key, canonicalCopy(value));
             });

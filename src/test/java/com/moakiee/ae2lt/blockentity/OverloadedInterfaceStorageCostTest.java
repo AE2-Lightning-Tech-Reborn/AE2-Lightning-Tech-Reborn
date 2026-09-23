@@ -20,13 +20,14 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.me.storage.ExternalStorageFacade;
+import com.moakiee.ae2lt.util.LegacyTransferBridge;
 
 /** Real AE2 facade / NeoForge handler calls; no simulated server MSPT claims. */
-class OverloadedInterfaceStorageCostTest {
+class OverloadedInterfaceStorageCostTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
@@ -81,7 +82,7 @@ class OverloadedInterfaceStorageCostTest {
             var state = new OverloadedInterfaceBlockEntity.ConnectionState();
             state.storageStrategies = Map.of(key.getType(), (extractable, listener) -> {
                 creations.incrementAndGet();
-                return ExternalStorageFacade.of(handler);
+                return ExternalStorageFacade.ofItemHandler(LegacyTransferBridge.items(handler));
             });
             handlers.add(handler);
             states.add(state);
@@ -123,7 +124,7 @@ class OverloadedInterfaceStorageCostTest {
         var available = new java.util.concurrent.atomic.AtomicBoolean();
         state.storageStrategies = Map.of(key.getType(), (extractable, listener) -> {
             attempts.incrementAndGet();
-            return available.get() ? ExternalStorageFacade.of(new ItemStackHandler(1)) : null;
+            return available.get() ? ExternalStorageFacade.ofItemHandler(LegacyTransferBridge.items(new ItemStackHandler(1))) : null;
         });
         assertTrue(state.refreshWrappers(0).isEmpty());
         available.set(true);
@@ -144,7 +145,7 @@ class OverloadedInterfaceStorageCostTest {
             for (int kinds : new int[] {1, Math.min(64, slots)}) {
                 var handler = new CountingHandler(slots);
                 fill(handler, kinds);
-                var wrapper = ExternalStorageFacade.of(handler);
+                var wrapper = ExternalStorageFacade.ofItemHandler(LegacyTransferBridge.items(handler));
                 handler.reads = 0;
                 var available = new KeyCounter();
                 wrapper.getAvailableStacks(available);

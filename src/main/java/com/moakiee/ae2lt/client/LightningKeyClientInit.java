@@ -1,8 +1,15 @@
 package com.moakiee.ae2lt.client;
 
-import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperty;
+import net.minecraft.world.entity.ItemOwner;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
+import net.neoforged.neoforge.client.event.RegisterRangeSelectItemModelPropertyEvent;
+import org.jspecify.annotations.Nullable;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
@@ -13,7 +20,7 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.client.api.AEKeyRendering;
 import appeng.api.util.AEColor;
 import appeng.items.storage.BasicStorageCell;
 
@@ -27,7 +34,7 @@ import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.me.key.LightningKeyType;
 import com.moakiee.ae2lt.registry.ModItems;
 
-@EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class LightningKeyClientInit {
     private LightningKeyClientInit() {
     }
@@ -35,6 +42,7 @@ public final class LightningKeyClientInit {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            ModItems.registerStorageCellModels();
             RailgunClientBootstrap.install();
             ShieldHitFeedbackClientBootstrap.install();
             if (ModList.get().isLoaded("curios")) {
@@ -42,34 +50,28 @@ public final class LightningKeyClientInit {
             }
             AEKeyRendering.register(LightningKeyType.INSTANCE, LightningKey.class, LightningKeyRenderHandler.INSTANCE);
 
-            ItemProperties.register(
-                    ModItems.ELECTRO_CHIME_CRYSTAL.get(),
-                    ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "catalysis_stage"),
-                    (stack, level, entity, seed) -> ElectroChimeCrystalItem.getCatalysisStage(stack) * 0.25F);
-
-            ItemProperties.register(
-                    ModItems.MYSTERIOUS_CELL.get(),
-                    ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "cell_type"),
-                    (stack, level, entity, seed) -> {
-                        if (!FixedInfiniteCellItem.hasType(stack)) {
-                            return 0.0F;
-                        }
-                        return switch (FixedInfiniteCellItem.getType(stack)) {
-                            case 1 -> 1.0F;
-                            case 2 -> 2.0F;
-                            default -> 0.0F;
-                        };
-                    });
-
-            ItemProperties.register(
-                    ModItems.ELECTROMAGNETIC_RAILGUN.get(),
-                    ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "ehv_model"),
-                    (stack, level, entity, seed) -> entity != null
-                            && entity.isUsingItem()
-                            && entity.getUseItem() == stack
-                            && stack.getItem() instanceof ElectromagneticRailgunItem
-                            ? 1.0F : 0.0F);
         });
+    }
+
+    private static final class CellTypeModelProperty implements RangeSelectItemModelProperty {
+        private static final CellTypeModelProperty INSTANCE = new CellTypeModelProperty();
+        private static final MapCodec<CellTypeModelProperty> CODEC = MapCodec.unit(INSTANCE);
+
+        @Override
+        public float get(ItemStack stack, @Nullable ClientLevel level, @Nullable ItemOwner owner, int seed) {
+            return FixedInfiniteCellItem.hasType(stack) ? FixedInfiniteCellItem.getType(stack) : 0.0F;
+        }
+
+        @Override
+        public MapCodec<CellTypeModelProperty> type() {
+            return CODEC;
+        }
+    }
+
+    @SubscribeEvent
+    public static void registerItemModelProperties(RegisterRangeSelectItemModelPropertyEvent event) {
+        event.register(Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "cell_type"),
+                CellTypeModelProperty.CODEC);
     }
 
     @SubscribeEvent
@@ -78,27 +80,16 @@ public final class LightningKeyClientInit {
     }
 
     @SubscribeEvent
-    public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
-        event.register(
-                (stack, tintIndex) -> FastColor.ARGB32.opaque(
-                        AEColor.TRANSPARENT.getVariantByTintIndex(tintIndex)),
-                ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL.get());
-
-        event.register(
-                (stack, tintIndex) -> FastColor.ARGB32.opaque(BasicStorageCell.getColor(stack, tintIndex)),
-                ModItems.LIGHTNING_STORAGE_COMPONENT_I.get(),
-                ModItems.LIGHTNING_STORAGE_COMPONENT_II.get(),
-                ModItems.LIGHTNING_STORAGE_COMPONENT_III.get(),
-                ModItems.LIGHTNING_STORAGE_COMPONENT_IV.get(),
-                ModItems.LIGHTNING_STORAGE_COMPONENT_V.get(),
-                ModItems.PIGMEE_STORAGE_CELL.get());
+    public static void registerItemColors(RegisterColorHandlersEvent.ItemTintSources event) {
+        event.register(Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "legacy_tint"),
+                LegacyItemTintSource.CODEC);
     }
 
     @SubscribeEvent
     public static void registerOverlays(RegisterGuiLayersEvent event) {
         event.registerAbove(
                 VanillaGuiLayers.ARMOR_LEVEL,
-                ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_energy_level"),
+                Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_energy_level"),
                 CelestweaveArmorEnergyLevel.INSTANCE);
     }
 

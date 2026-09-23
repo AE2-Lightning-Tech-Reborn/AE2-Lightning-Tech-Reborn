@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.style.Color;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
@@ -24,7 +24,7 @@ import com.moakiee.ae2lt.menu.FrequencyMenu;
 import com.moakiee.ae2lt.network.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -34,7 +34,7 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -132,13 +132,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      *   <li>{@code wireless_overloaded_form.png} — clean panel for create / settings.</li>
      * </ul>
      */
-    private static final ResourceLocation BG_HOME = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BG_HOME = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_home.png");
-    private static final ResourceLocation BG_SELECTION = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BG_SELECTION = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_selection.png");
-    private static final ResourceLocation BG_LIST = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BG_LIST = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_list.png");
-    private static final ResourceLocation BG_FORM = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier BG_FORM = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_form.png");
     private static final int TEXTURE_SIZE = 256;
 
@@ -203,7 +203,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             // match AE2's own Quartz Knife field and use near-white text.
             palette.put(PaletteColor.TEXTFIELD_TEXT,        new Color(0xFF, 0xFF, 0xFF, 0xFF));
             palette.put(PaletteColor.TEXTFIELD_PLACEHOLDER, new Color(0x60, 0x60, 0x60, 0xFF));
-            palette.put(PaletteColor.TEXTFIELD_SELECTION,   new Color(0x78, 0xAA, 0xFF, 0x78));
+            palette.put(PaletteColor.SELECTION_COLOR,   new Color(0x78, 0xAA, 0xFF, 0x78));
             palette.put(PaletteColor.TEXTFIELD_ERROR,       new Color(0xC8, 0x46, 0x46, 0xFF));
             palette.put(PaletteColor.ERROR,                 new Color(0xC8, 0x46, 0x46, 0xFF));
         } catch (ReflectiveOperationException e) {
@@ -301,9 +301,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private int token() { return getMenu().containerId; }
 
     public FrequencyScreen(FrequencyMenu menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title);
-        this.imageWidth = GUI_WIDTH;
-        this.imageHeight = GUI_HEIGHT;
+        super(menu, playerInv, title, GUI_WIDTH, GUI_HEIGHT);
     }
 
     @Override
@@ -422,21 +420,24 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        public boolean keyPressed(int key, int scan, int mods) {
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int key = event.key(), scan = event.scancode(), mods = event.modifiers();
             if (settingsPasswordPristine) {
                 settingsPasswordPristine = false;
                 setValue("");
             }
-            return super.keyPressed(key, scan, mods);
+            return super.keyPressed(event);
         }
 
         @Override
-        public boolean charTyped(char c, int mods) {
+        public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        char c = (char) event.codepoint();
+        int mods = 0;
             if (settingsPasswordPristine) {
                 settingsPasswordPristine = false;
                 setValue("");
             }
-            return super.charTyped(c, mods);
+            return super.charTyped(event);
         }
     }
 
@@ -468,7 +469,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                             : "ae2lt.gui.button.back");
             HoverableTabButton backButton = new HoverableTabButton(
                     Icon.BACK, null, backTooltip,
-                    btn -> PacketDistributor.sendToServer(SwitchGuisPacket.returnToParentMenu()));
+                    btn -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(SwitchGuisPacket.returnToParentMenu()));
             backButton.setStyle(TabButton.Style.BOX);
             backButton.setX(x0 - TAB_WIDTH + 6);
             backButton.setY(y0 - TAB_HEIGHT);
@@ -540,7 +541,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 btn -> {
                     int freqId = freqMenu().getCurrentFrequencyId();
                     if (freqId > 0) {
-                        PacketDistributor.sendToServer(new DeleteFrequencyPacket(token(), freqId));
+                        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeleteFrequencyPacket(token(), freqId));
                     }
                     deleteConfirmOpen = false;
                     switchTab(FrequencyNavigationTab.TAB_SELECTION);
@@ -625,7 +626,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         String pw = passwordPromptField == null ? "" : passwordPromptField.getValue();
         int freqId = passwordPromptFreqId;
         if (freqId <= 0) return;
-        PacketDistributor.sendToServer(new SelectFrequencyPacket(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new SelectFrequencyPacket(
                 token(), freqMenu().getBlockPos(), freqId, pw));
     }
 
@@ -667,7 +668,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             // (short-circuits on `icon == null`), leaving the surface clean
             // for our PNG overlay. Only TAB_SETTING has customIcon == null
             // and falls back to the AE2 sprite.
-            ResourceLocation customIcon = customIconFor(tab);
+            Identifier customIcon = customIconFor(tab);
             Icon baseIcon = customIcon != null ? null : iconFor(tab);
             Component tooltip = Component.translatable(tab.getTranslationKey());
             Button.OnPress onPress = popup
@@ -707,9 +708,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * same (3, 3) offset used by the AE2 atlas icon.</p>
      */
     private static final class HoverableTabButton extends TabButton {
-        private final ResourceLocation customIcon;
+        private final Identifier customIcon;
 
-        HoverableTabButton(Icon icon, ResourceLocation customIcon,
+        HoverableTabButton(Icon icon, Identifier customIcon,
                 Component tooltip, Button.OnPress onPress) {
             super(icon, tooltip, onPress);
             this.customIcon = customIcon;
@@ -721,14 +722,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        public void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
             // Super paints the BOX background sprite and — only when
             // the super icon field is non-null — the AE2 glyph. Passing
             // {@code null} for tabs that have a custom PNG means super
             // leaves the icon surface untouched, so we can overlay our
             // own 16×16 without the AE2 glyph bleeding through the
             // transparent pixels of the overlay.
-            super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+            super.extractContents(guiGraphics, mouseX, mouseY, partialTick);
             if (customIcon != null) {
                 // Match AE2's own (+2, +1) icon offset used by
                 // TabButton for the BOX style — see its renderWidget
@@ -736,7 +737,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 // where offset=2 for BOX. Using the same position keeps
                 // our custom PNG visually aligned with the AE2 COG that
                 // TAB_SETTING still renders through the base class.
-                guiGraphics.blit(customIcon,
+                guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, customIcon,
                         getX() + 2, getY() + 1,
                         0, 0, 16, 16, 16, 16);
             }
@@ -763,7 +764,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * the AE2 {@link Icon} from {@link #iconFor} should be the visible
      * sprite — currently only TAB_SETTING keeps the AE2 cog.
      */
-    private static ResourceLocation customIconFor(FrequencyNavigationTab tab) {
+    private static Identifier customIconFor(FrequencyNavigationTab tab) {
         return switch (tab) {
             case TAB_HOME       -> TAB_ICON_HOME;
             case TAB_SELECTION  -> TAB_ICON_SELECTION;
@@ -774,15 +775,15 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         };
     }
 
-    private static final ResourceLocation TAB_ICON_HOME = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TAB_ICON_HOME = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/menu.png");
-    private static final ResourceLocation TAB_ICON_SELECTION = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TAB_ICON_SELECTION = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/frequency_select.png");
-    private static final ResourceLocation TAB_ICON_CONNECTION = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TAB_ICON_CONNECTION = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/frequency_connect.png");
-    private static final ResourceLocation TAB_ICON_MEMBER = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TAB_ICON_MEMBER = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/frequency_member.png");
-    private static final ResourceLocation TAB_ICON_CREATE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TAB_ICON_CREATE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/frequency_add.png");
 
     private void switchTab(FrequencyNavigationTab tab) {
@@ -829,14 +830,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             addRenderableWidget(new AE2Button(
                     x0 + 99, y0 + 124, 88, 18,
                     Component.translatable("ae2lt.gui.button.disconnect"),
-                    btn -> PacketDistributor.sendToServer(
+                    btn -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                             new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
             return;
         }
         addRenderableWidget(new AE2Button(
                 x0 + (GUI_WIDTH - 96) / 2, y0 + 124, 96, 18,
                 Component.translatable("ae2lt.gui.button.disconnect"),
-                btn -> PacketDistributor.sendToServer(
+                btn -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                         new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
     }
 
@@ -938,7 +939,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                             passwordPromptLocksScreen = false;
                             scheduleRebuild();
                         } else {
-                            PacketDistributor.sendToServer(
+                            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                                     new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), f.id(), ""));
                         }
                     });
@@ -1018,9 +1019,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (connection != null) {
             java.util.List<StrangerRow> strangers = new java.util.ArrayList<>();
             for (var info : connection.getOnlinePlayers()) {
-                UUID id = info.getProfile().getId();
+                UUID id = info.getProfile().id();
                 if (id != null && !memberIds.contains(id)) {
-                    strangers.add(new StrangerRow(id, info.getProfile().getName()));
+                    strangers.add(new StrangerRow(id, info.getProfile().name()));
                 }
             }
             strangers.sort(java.util.Comparator.comparing(s -> s.name.toLowerCase()));
@@ -1216,7 +1217,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private void sendMember(byte type) {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0 || popupMemberUUID == null) return;
-        PacketDistributor.sendToServer(new ChangeMemberPacket(token(), currentId, popupMemberUUID, type));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new ChangeMemberPacket(token(), currentId, popupMemberUUID, type));
         closePopup();
         scheduleRebuild();
     }
@@ -1265,7 +1266,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 Component.translatable("ae2lt.gui.button.create"),
                 btn -> {
                     if (nameField.getValue().isBlank()) return;
-                    PacketDistributor.sendToServer(new CreateFrequencyPacket(
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new CreateFrequencyPacket(
                             token(),
                             nameField.getValue(), editColor, editSecurity,
                             passwordField.getValue()));
@@ -1353,7 +1354,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     // (see EditFrequencyPacket's "only overwrite when
                     // the payload is non-empty" branch).
                     String pw = settingsPasswordPristine ? "" : passwordField.getValue();
-                    PacketDistributor.sendToServer(new EditFrequencyPacket(
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new EditFrequencyPacket(
                             token(),
                             freq.id(), nameField.getValue(), editColor,
                             editSecurity, pw));
@@ -1383,9 +1384,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     btn -> {
                         var mc = Minecraft.getInstance();
                         if (mc.player == null) return;
-                        PacketDistributor.sendToServer(new SelectFrequencyPacket(
+                        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new SelectFrequencyPacket(
                                 token(), freqMenu().getBlockPos(), -1, ""));
-                        PacketDistributor.sendToServer(new ChangeMemberPacket(
+                        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new ChangeMemberPacket(
                                 token(), freq.id(), mc.player.getUUID(),
                                 WirelessFrequency.MEMBERSHIP_CANCEL));
                         switchTab(FrequencyNavigationTab.TAB_SELECTION);
@@ -1396,13 +1397,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     // Rendering
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    public void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         // Per-tab AE2 chassis. Each tab uses a different 195×157 texture
         // so the recessed wells (list rows / info shelf / blank panel) are
         // baked into the art instead of redrawn with {@code g.fill} on top.
         // The six top tab ears are still rendered by TabButton widgets
         // themselves (AE2's ``TAB_BUTTON_BACKGROUND`` sprite).
-        g.blit(
+        g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 backgroundTextureForTab(currentTab),
                 leftPos,
                 topPos,
@@ -1427,6 +1428,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (passwordPromptFreqId > 0) {
             drawPasswordPromptPanel(g);
         }
+
+        super.extractContents(g, mouseX, mouseY, partialTick);
     }
 
     /**
@@ -1435,7 +1438,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * a search-field strip below, the home tab gets the wide info shelf,
      * and create / settings get the blank form panel.
      */
-    private static ResourceLocation backgroundTextureForTab(FrequencyNavigationTab tab) {
+    private static Identifier backgroundTextureForTab(FrequencyNavigationTab tab) {
         return switch (tab) {
             case TAB_HOME -> BG_HOME;
             case TAB_SELECTION -> BG_SELECTION;
@@ -1450,7 +1453,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * just below, and a Cancel/Submit row. Kept separate so the delete
      * modal and password modal each own their own footprint.
      */
-    private void drawPasswordPromptPanel(GuiGraphics g) {
+    private void drawPasswordPromptPanel(GuiGraphicsExtractor g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
         int pw = 144;
@@ -1468,7 +1471,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * title line, a hint line, and a single row of Confirm/Cancel
      * buttons without crowding the Settings tab chrome above.
      */
-    private void drawDeleteConfirmPanel(GuiGraphics g) {
+    private void drawDeleteConfirmPanel(GuiGraphicsExtractor g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
         int pw = 144;
@@ -1487,7 +1490,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * {@link #rebuildMemberPopupWidgets()} sit on top of this panel
      * instead of being occluded by it.
      */
-    private void drawMemberPopupPanel(GuiGraphics g) {
+    private void drawMemberPopupPanel(GuiGraphicsExtractor g) {
         int px0 = leftPos + 10;
         int py0 = topPos + 26;
         int pw = 156;
@@ -1518,7 +1521,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         fittedTextTooltips.clear();
 
         drawFlatCentered(g,
@@ -1627,46 +1630,46 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     /**
      * AE2 draws panel-surface text flat (no drop-shadow) so the character
      * glyphs read cleanly against the light-lavender chassis. Minecraft's
-     * default {@link GuiGraphics#drawString(net.minecraft.client.gui.Font,
+     * default {@link GuiGraphicsExtractor#drawString(net.minecraft.client.gui.Font,
      * Component, int, int, int)} draws WITH a shadow, which on a light
      * panel produces an unpleasant embossed look. All label rendering in
      * this screen goes through this helper (and
      * {@link #drawFlatCentered}) to match AE2's native visual weight.
      */
-    private void drawFlat(GuiGraphics g, Component text, int x, int y, int color) {
-        g.drawString(font, text, x, y, color, false);
+    private void drawFlat(GuiGraphicsExtractor g, Component text, int x, int y, int color) {
+        g.text(font, text, x, y, color, false);
     }
 
-    private void drawFlat(GuiGraphics g, String text, int x, int y, int color) {
-        g.drawString(font, text, x, y, color, false);
+    private void drawFlat(GuiGraphicsExtractor g, String text, int x, int y, int color) {
+        g.text(font, text, x, y, color, false);
     }
 
-    private void drawFlatCentered(GuiGraphics g, Component text, int centerX, int y, int color) {
+    private void drawFlatCentered(GuiGraphicsExtractor g, Component text, int centerX, int y, int color) {
         int w = font.width(text);
-        g.drawString(font, text, centerX - w / 2, y, color, false);
+        g.text(font, text, centerX - w / 2, y, color, false);
     }
 
-    private void drawFlatFitted(GuiGraphics g, Component text, int x, int y, int maxWidth, int color) {
+    private void drawFlatFitted(GuiGraphicsExtractor g, Component text, int x, int y, int maxWidth, int color) {
         String full = text.getString();
         String fitted = FittingText.fit(full, maxWidth, font::width);
         Component display = full.equals(fitted)
                 ? text
                 : Component.literal(fitted).setStyle(text.getStyle());
-        g.drawString(font, display, x, y, color, false);
+        g.text(font, display, x, y, color, false);
         if (!full.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, font.width(display)), 9, text);
         }
     }
 
-    private void drawFlatFitted(GuiGraphics g, String text, int x, int y, int maxWidth, int color) {
+    private void drawFlatFitted(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color) {
         String fitted = FittingText.fit(text, maxWidth, font::width);
-        g.drawString(font, fitted, x, y, color, false);
+        g.text(font, fitted, x, y, color, false);
         if (!text.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, font.width(fitted)), 9, Component.literal(text));
         }
     }
 
-    private void drawFlatCenteredFitted(GuiGraphics g, Component text, int centerX, int y, int maxWidth, int color) {
+    private void drawFlatCenteredFitted(GuiGraphicsExtractor g, Component text, int centerX, int y, int maxWidth, int color) {
         String full = text.getString();
         String fitted = FittingText.fit(full, maxWidth, font::width);
         Component display = full.equals(fitted)
@@ -1674,7 +1677,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 : Component.literal(fitted).setStyle(text.getStyle());
         int w = font.width(display);
         int x = centerX - w / 2;
-        g.drawString(font, display, x, y, color, false);
+        g.text(font, display, x, y, color, false);
         if (!full.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, w), 9, text);
         }
@@ -1684,7 +1687,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         fittedTextTooltips.add(new FittedTextTooltip(new Rect2i(leftPos + x, topPos + y, width, height), text));
     }
 
-    private void renderHomeLabels(GuiGraphics g) {
+    private void renderHomeLabels(GuiGraphicsExtractor g) {
         // Five info lines sit inside the wide info shelf baked into
         // wireless_overloaded_home.png (shelf y=39..111). 14-px row pitch
         // gives clean spacing between glyphs and avoids touching the
@@ -1747,7 +1750,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderSelectionLabels(GuiGraphics g) {
+    private void renderSelectionLabels(GuiGraphicsExtractor g) {
         // Single subtitle row between title (y=6) and shelf (y=28).
         // Text at y=18 renders glyphs on y=18..26, keeping a 2-px gap
         // above the shelf and well clear of the title descenders — the
@@ -1770,7 +1773,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // shelf's bottom bevel avoids the prior clipping/overlap.
     }
 
-    private void renderConnectionLabels(GuiGraphics g) {
+    private void renderConnectionLabels(GuiGraphicsExtractor g) {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
@@ -1830,7 +1833,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderMemberLabels(GuiGraphics g) {
+    private void renderMemberLabels(GuiGraphicsExtractor g) {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
@@ -1859,7 +1862,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // is already taken by pagination.
     }
 
-    private void renderCreateLabels(GuiGraphics g) {
+    private void renderCreateLabels(GuiGraphicsExtractor g) {
         drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"),
                 16, 22, AE2_TEXT_MUTED);
         drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"),
@@ -1900,7 +1903,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderSettingLabels(GuiGraphics g) {
+    private void renderSettingLabels(GuiGraphicsExtractor g) {
         if (ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) == null) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
                     imageWidth / 2, 40, AE2_TEXT_MUTED);
@@ -1921,21 +1924,20 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-        super.render(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        extractTooltip(g, mouseX, mouseY);
         renderFittedTextTooltip(g, mouseX, mouseY);
     }
 
     // Helpers
 
-    private void renderFittedTextTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderFittedTextTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         for (int i = fittedTextTooltips.size() - 1; i >= 0; i--) {
             var tooltip = fittedTextTooltips.get(i);
             var area = tooltip.area();
             if (isWithinArea(mouseX, mouseY, area)) {
-                g.renderComponentTooltip(font, List.of(tooltip.text()), mouseX, mouseY);
+                g.setComponentTooltipForNextFrame(font, List.of(tooltip.text()), mouseX, mouseY);
                 return;
             }
         }
@@ -2006,14 +2008,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
             boolean hover = active && (isHoveredOrFocused());
             int srcV = hover ? ROW_SPRITE_HOVER_V : ROW_SPRITE_IDLE_V;
             // BG_LIST and BG_SELECTION carry an identical sprite library
             // below the chassis, so sourcing from BG_LIST works for every
             // tab that uses this widget regardless of which chassis is
             // currently bound for the panel itself.
-            g.blit(BG_LIST,
+            g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, BG_LIST,
                     getX(), getY(),
                     0, srcV,
                     ROW_SPRITE_WIDTH, ROW_SPRITE_HEIGHT,
@@ -2032,7 +2034,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     : Component.literal(fitted).setStyle(getMessage().getStyle());
             int textY = getY() + (getHeight() - 8) / 2;
             int textX = getX() + 4 + (getWidth() - 8 - font.width(display)) / 2;
-            g.drawString(font, display, textX, textY, fallback, false);
+            g.text(font, display, textX, textY, fallback, false);
         }
     }
 
@@ -2095,20 +2097,23 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
             boolean enabled = maxOffset() > 0;
-            ResourceLocation sprite = enabled
-                    ? ResourceLocation.fromNamespaceAndPath("ae2", "big_scroller")
-                    : ResourceLocation.fromNamespaceAndPath("ae2", "big_scroller_disabled");
+            Identifier sprite = enabled
+                    ? Identifier.fromNamespaceAndPath("ae2", "big_scroller")
+                    : Identifier.fromNamespaceAndPath("ae2", "big_scroller_disabled");
             int availH = Math.max(0, getHeight() - SCROLLBAR_HANDLE_HEIGHT);
             int handleY = enabled
                     ? getY() + scrollOffset * availH / maxOffset()
                     : getY();
-            g.blitSprite(sprite, getX(), handleY, SCROLLBAR_WIDTH, SCROLLBAR_HANDLE_HEIGHT);
+            g.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                    sprite, getX(), handleY, SCROLLBAR_WIDTH, SCROLLBAR_HANDLE_HEIGHT);
         }
 
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
             if (button != 0 || !visible || !active) return false;
             if (!isMouseOver(mouseX, mouseY)) return false;
             if (maxOffset() == 0) return true;
@@ -2127,13 +2132,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
             if (button == 0) dragging = false;
-            return super.mouseReleased(mouseX, mouseY, button);
+            return super.mouseReleased(event);
         }
 
         @Override
-        protected void onDrag(double mouseX, double mouseY, double dx, double dy) {
+        protected void onDrag(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+            double mouseY = event.y();
             if (!dragging || maxOffset() == 0) return;
             int availH = getHeight() - SCROLLBAR_HANDLE_HEIGHT;
             if (availH <= 0) return;

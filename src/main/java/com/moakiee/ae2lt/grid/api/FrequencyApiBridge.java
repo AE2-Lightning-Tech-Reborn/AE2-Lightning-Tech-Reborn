@@ -75,7 +75,7 @@ public final class FrequencyApiBridge implements FrequencyApiProvider {
 
     @Override
     public void openBindingScreen(AbstractContainerMenu menu) {
-        PacketDistributor.sendToServer(OpenFrequencyMenuPacket.forBlock());
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(OpenFrequencyMenuPacket.forBlock());
     }
 
     private static FrequencySecurity toApiSecurity(FrequencySecurityLevel level) {

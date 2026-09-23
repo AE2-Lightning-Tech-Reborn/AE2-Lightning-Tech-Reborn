@@ -26,18 +26,18 @@ public class MatrixFormedBlock extends MatrixMultiblockSimpleBlock {
     }
 
     @Override
-    protected VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesTransparentFormedModel(state) ? Shapes.empty() : super.getOcclusionShape(state, level, pos);
+    protected VoxelShape getOcclusionShape(BlockState state) {
+        return usesTransparentFormedModel(state) ? Shapes.empty() : super.getOcclusionShape(state);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesTransparentFormedModel(state) || super.propagatesSkylightDown(state, level, pos);
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return usesTransparentFormedModel(state) || super.propagatesSkylightDown(state);
     }
 
     @Override
-    protected int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return usesTransparentFormedModel(state) ? 0 : super.getLightBlock(state, level, pos);
+    protected int getLightDampening(BlockState state) {
+        return usesTransparentFormedModel(state) ? 0 : super.getLightDampening(state);
     }
 
     @Override

@@ -60,7 +60,7 @@ public final class RailgunClientExtensions implements IClientItemExtensions {
         return true;
     }
 
-    public static void poseRailgunArms(HumanoidModel<?> model, LivingEntity entity, HumanoidArm activeArm) {
+    public static void poseRailgunArms(HumanoidModel<?> model, HumanoidArm activeArm) {
         boolean right = activeArm == HumanoidArm.RIGHT;
         ModelPart main = right ? model.rightArm : model.leftArm;
         ModelPart support = right ? model.leftArm : model.rightArm;

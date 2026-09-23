@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.PushReaction;
@@ -31,14 +31,12 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
-import appeng.client.render.effects.ParticleTypes;
+import appeng.core.particles.ParticleTypes;
 
 public class OverloadCrystalClusterBlock extends Block implements SimpleWaterloggedBlock {
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.FACING;
 
     protected final VoxelShape northAabb;
     protected final VoxelShape southAabb;
@@ -90,18 +88,20 @@ public class OverloadCrystalClusterBlock extends Block implements SimpleWaterlog
     @Override
     protected BlockState updateShape(
             BlockState state,
-            Direction direction,
-            BlockState neighborState,
-            LevelAccessor level,
+            net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess,
             BlockPos currentPos,
-            BlockPos neighborPos) {
+            Direction direction,
+            BlockPos neighborPos,
+            BlockState neighborState,
+            net.minecraft.util.RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            tickAccess.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
         return direction == state.getValue(FACING).getOpposite() && !state.canSurvive(level, currentPos)
                 ? Blocks.AIR.defaultBlockState()
-                : super.updateShape(state, direction, neighborState, level, currentPos, neighborPos);
+                : super.updateShape(state, level, tickAccess, currentPos, direction, neighborPos, neighborState, random);
     }
 
     @Nullable
@@ -138,7 +138,6 @@ public class OverloadCrystalClusterBlock extends Block implements SimpleWaterlog
         return PushReaction.DESTROY;
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         if (random.nextInt(12) != 0) {
@@ -157,10 +156,6 @@ public class OverloadCrystalClusterBlock extends Block implements SimpleWaterlog
         y += (random.nextFloat() - 0.5) * 0.4;
         z += (random.nextFloat() - 0.5) * 0.4;
 
-        var particle = Minecraft.getInstance().particleEngine.createParticle(
-                ParticleTypes.LIGHTNING, x, y, z, 0, 0, 0);
-        if (particle != null) {
-            particle.setColor(1.0F, 0.95F, 0.45F);
-        }
+        Minecraft.getInstance().particleEngine.createParticle(ParticleTypes.LIGHTNING, x, y, z, 0, 0, 0);
     }
 }

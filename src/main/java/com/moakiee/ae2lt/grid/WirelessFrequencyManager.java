@@ -18,13 +18,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
+import com.moakiee.thunderbolt.core.LegacySavedDataReader;
 
 import appeng.api.networking.IGridNode;
 import com.moakiee.ae2lt.grid.wirelesslink.WirelessLinkRegistry;
@@ -114,11 +116,17 @@ public final class WirelessFrequencyManager extends SavedData {
 
     public static void onServerStart(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        instance = overworld.getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        WirelessFrequencyManager::new,
-                        WirelessFrequencyManager::new),
-                DATA_NAME);
+        var registries = overworld.registryAccess();
+        var type = new SavedDataType<>(Identifier.fromNamespaceAndPath("ae2lt", "wireless_frequencies"),
+                WirelessFrequencyManager::new,
+                CompoundTag.CODEC.xmap(tag -> new WirelessFrequencyManager(tag, registries),
+                        data -> data.save(new CompoundTag(), registries)));
+        instance = overworld.getDataStorage().get(type);
+        if (instance == null) {
+            var old = LegacySavedDataReader.read(overworld, DATA_NAME);
+            instance = old == null ? new WirelessFrequencyManager() : new WirelessFrequencyManager(old, registries);
+            overworld.getDataStorage().set(type, instance);
+        }
         // Broadcasts are flushed from the server tick, outside chunk post-load callbacks.
         instance.addDeviceListener(freqId ->
                 com.moakiee.ae2lt.network.SyncFrequencyDetailPacket.broadcastConnectionsTo(server, freqId));
@@ -336,7 +344,7 @@ public final class WirelessFrequencyManager extends SavedData {
 
     public void registerDevice(int freqId, DeviceEntry entry) {
         if (freqId <= 0) return;
-        if (devices.put(freqId, entry.dimension().location().toString(), entry.pos().asLong(), entry)) {
+        if (devices.put(freqId, entry.dimension().identifier().toString(), entry.pos().asLong(), entry)) {
             setDirty();
             queueDeviceListeners(freqId);
         }
@@ -344,7 +352,7 @@ public final class WirelessFrequencyManager extends SavedData {
 
     public void unregisterDevice(int freqId, ResourceKey<Level> dim, BlockPos pos) {
         if (freqId <= 0) return;
-        if (devices.remove(freqId, dim.location().toString(), pos.asLong())) {
+        if (devices.remove(freqId, dim.identifier().toString(), pos.asLong())) {
             setDirty();
             queueDeviceListeners(freqId);
         }
@@ -387,46 +395,45 @@ public final class WirelessFrequencyManager extends SavedData {
     // ── Persistence ──
 
     private void read(CompoundTag root) {
-        uniqueId = root.getInt("uniqueId");
+        uniqueId = root.getIntOr("uniqueId", 0);
 
-        ListTag freqList = root.getList("frequencies", Tag.TAG_COMPOUND);
+        ListTag freqList = root.getListOrEmpty("frequencies");
         for (int i = 0; i < freqList.size(); i++) {
             WirelessFrequency freq = new WirelessFrequency();
-            freq.readFromTag(freqList.getCompound(i), WirelessFrequency.NBT_SAVE_ALL);
+            freq.readFromTag(freqList.getCompoundOrEmpty(i), WirelessFrequency.NBT_SAVE_ALL);
             if (freq.getId() > 0) {
                 frequencies.put(freq.getId(), freq);
             }
         }
 
-        ListTag txList = root.getList("transmitters", Tag.TAG_COMPOUND);
+        ListTag txList = root.getListOrEmpty("transmitters");
         for (int i = 0; i < txList.size(); i++) {
-            CompoundTag entry = txList.getCompound(i);
-            int freqId = entry.getInt("freqId");
+            CompoundTag entry = txList.getCompoundOrEmpty(i);
+            int freqId = entry.getIntOr("freqId", 0);
             var dimKey = ResourceKey.create(Registries.DIMENSION,
-                    ResourceLocation.parse(entry.getString("dim")));
-            BlockPos pos = BlockPos.of(entry.getLong("pos"));
-            boolean adv = entry.getBoolean("advanced");
+                    Identifier.parse(entry.getStringOr("dim", "")));
+            BlockPos pos = BlockPos.of(entry.getLongOr("pos", 0L));
+            boolean adv = entry.getBooleanOr("advanced", false);
             transmitters.put(freqId, new TransmitterEntry(dimKey, pos, null, adv));
         }
 
-        ListTag devList = root.getList("devices", Tag.TAG_COMPOUND);
+        ListTag devList = root.getListOrEmpty("devices");
         for (int i = 0; i < devList.size(); i++) {
-            CompoundTag entry = devList.getCompound(i);
-            int freqId = entry.getInt("freqId");
+            CompoundTag entry = devList.getCompoundOrEmpty(i);
+            int freqId = entry.getIntOr("freqId", 0);
             var dimKey = ResourceKey.create(Registries.DIMENSION,
-                    ResourceLocation.parse(entry.getString("dim")));
-            BlockPos pos = BlockPos.of(entry.getLong("pos"));
-            boolean ctrl = entry.getBoolean("controller");
-            boolean adv = entry.getBoolean("advanced");
+                    Identifier.parse(entry.getStringOr("dim", "")));
+            BlockPos pos = BlockPos.of(entry.getLongOr("pos", 0L));
+            boolean ctrl = entry.getBooleanOr("controller", false);
+            boolean adv = entry.getBooleanOr("advanced", false);
             String deviceName = entry.contains("name")
-                    ? entry.getString("name")
+                    ? entry.getStringOr("name", "")
                     : DeviceEntry.defaultDeviceName(ctrl, adv);
-            devices.put(freqId, dimKey.location().toString(), pos.asLong(),
+            devices.put(freqId, dimKey.identifier().toString(), pos.asLong(),
                     new DeviceEntry(dimKey, pos, ctrl, adv, deviceName));
         }
     }
 
-    @Override
     public CompoundTag save(CompoundTag root, HolderLookup.Provider registries) {
         root.putInt("uniqueId", uniqueId);
 
@@ -442,7 +449,7 @@ public final class WirelessFrequencyManager extends SavedData {
         for (var e : transmitters.int2ObjectEntrySet()) {
             CompoundTag tag = new CompoundTag();
             tag.putInt("freqId", e.getIntKey());
-            tag.putString("dim", e.getValue().dimension().location().toString());
+            tag.putString("dim", e.getValue().dimension().identifier().toString());
             tag.putLong("pos", e.getValue().pos().asLong());
             tag.putBoolean("advanced", e.getValue().advanced());
             txList.add(tag);
@@ -453,7 +460,7 @@ public final class WirelessFrequencyManager extends SavedData {
         devices.forEach((freqId, d) -> {
             CompoundTag tag = new CompoundTag();
             tag.putInt("freqId", freqId);
-            tag.putString("dim", d.dimension().location().toString());
+            tag.putString("dim", d.dimension().identifier().toString());
             tag.putLong("pos", d.pos().asLong());
             tag.putBoolean("controller", d.isController());
             tag.putBoolean("advanced", d.advanced());

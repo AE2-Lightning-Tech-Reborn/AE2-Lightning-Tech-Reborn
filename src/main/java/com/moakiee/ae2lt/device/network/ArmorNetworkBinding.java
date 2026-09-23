@@ -40,7 +40,7 @@ public final class ArmorNetworkBinding implements DeviceNetworkBinding {
         if (pos == null) {
             return BindingResolveResult.fail(BindingResolveResult.FailureReason.NOT_BOUND);
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return BindingResolveResult.fail(BindingResolveResult.FailureReason.DIM_NOT_LOADED);
         }

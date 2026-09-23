@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 class ClosedLoopPatternPayloadTagCodecTest {
@@ -95,7 +95,7 @@ class ClosedLoopPatternPayloadTagCodecTest {
     @Test
     void oversizedPayloadIsRejectedBeforeDecodingItsMembers() {
         var tag = new CompoundTag();
-        tag.putUUID("Id", java.util.UUID.randomUUID());
+        tag.putIntArray("Id", net.minecraft.core.UUIDUtil.uuidToIntArray(java.util.UUID.randomUUID()));
         var members = new net.minecraft.nbt.ListTag();
         for (int i = 0; i <= ClosedLoopPatternAnalyzer.MAX_MEMBERS; i++) {
             members.add(new CompoundTag());
@@ -115,7 +115,7 @@ class ClosedLoopPatternPayloadTagCodecTest {
 
     private static SourcePatternSnapshot snapshot() {
         return new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "wave_codec"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "wave_codec"),
                 null, null);
     }
 }

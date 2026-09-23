@@ -15,7 +15,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
+import com.moakiee.ae2lt.recipe.compat.LegacyMachineRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -39,7 +39,7 @@ import com.moakiee.ae2lt.registry.ModRecipeTypes;
  * drains a fixed amount of water per cycle regardless of which recipe runs (see
  * {@code CrystalCatalyzerBlockEntity.FIXED_FLUID_PER_CYCLE}).</p>
  */
-public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerRecipeInput> {
+public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<CrystalCatalyzerRecipeInput> {
     public static final int MIN_ENERGY_PER_CYCLE = 1;
 
     private static final Codec<Integer> POSITIVE_ENERGY_CODEC = Codec.INT.validate(energy -> {
@@ -181,12 +181,12 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<CrystalCatalyzerRecipe> getSerializer() {
         return ModRecipeTypes.CRYSTAL_CATALYZER_SERIALIZER.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
+    public RecipeType<CrystalCatalyzerRecipe> getType() {
         return ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get();
     }
 
@@ -197,9 +197,9 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
                 || (catalyst.isPresent() && catalystCount <= 0);
     }
 
-    public static final class Serializer implements RecipeSerializer<CrystalCatalyzerRecipe> {
+    public static final class Serializer {
         private static final MapCodec<CrystalCatalyzerRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                        Ingredient.CODEC_NONEMPTY.optionalFieldOf("catalyst").forGetter(CrystalCatalyzerRecipe::catalyst),
+                        Ingredient.CODEC.optionalFieldOf("catalyst").forGetter(CrystalCatalyzerRecipe::catalyst),
                         NON_NEGATIVE_COUNT_CODEC.optionalFieldOf("catalystCount", 0).forGetter(CrystalCatalyzerRecipe::catalystCount),
                         CrystalCatalyzerOutput.CODEC.fieldOf("output").forGetter(CrystalCatalyzerRecipe::outputSpec),
                         POSITIVE_ENERGY_CODEC.fieldOf("energyPerCycle").forGetter(CrystalCatalyzerRecipe::energyPerCycle),
@@ -239,14 +239,6 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
                     lightningCost, lightningTier, mode);
         }
 
-        @Override
-        public MapCodec<CrystalCatalyzerRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, CrystalCatalyzerRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        public static final RecipeSerializer<CrystalCatalyzerRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
     }
 }

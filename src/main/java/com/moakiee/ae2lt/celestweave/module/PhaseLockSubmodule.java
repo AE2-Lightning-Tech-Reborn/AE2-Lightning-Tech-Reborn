@@ -189,7 +189,7 @@ public final class PhaseLockSubmodule extends AbstractCelestweaveArmorSubmodule 
 
     private static boolean booleanOption(ItemStack armor, String key) {
         var options = INSTANCE.getOptions(armor);
-        return !options.contains(key, Tag.TAG_BYTE) || options.getBoolean(key);
+        return !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, key, Tag.TAG_BYTE) || options.getBooleanOr(key, false);
     }
 
     private static void updateMovementProtection(Player player, ItemStack armor) {

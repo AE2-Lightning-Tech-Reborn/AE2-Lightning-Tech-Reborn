@@ -278,7 +278,7 @@ public final class BigCraftingService {
     }
 
     public void load(CompoundTag tag, HolderLookup.Provider registries) {
-        job = tag.contains("job") ? BigCraftingJob.load(tag.getCompound("job"), registries) : null;
+        job = tag.contains("job") ? BigCraftingJob.load(tag.getCompoundOrEmpty("job"), registries) : null;
         status = "idle";
         cpuListChanged = true;
         nextReturn = 0;

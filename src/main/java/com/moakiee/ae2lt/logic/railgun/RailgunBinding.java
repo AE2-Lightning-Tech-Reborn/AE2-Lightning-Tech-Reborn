@@ -48,7 +48,7 @@ public final class RailgunBinding {
         if (pos == null) {
             return Result.fail(FailReason.NOT_BOUND);
         }
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         if (server == null) {
             return Result.fail(FailReason.DIM_NOT_LOADED);
         }

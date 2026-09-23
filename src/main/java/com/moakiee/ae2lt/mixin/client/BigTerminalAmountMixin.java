@@ -24,7 +24,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
     }
 
     @WrapOperation(
-            method = "renderSlot",
+            method = "extractSlot",
             at =
                     @At(
                             value = "INVOKE",

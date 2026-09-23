@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -74,10 +74,10 @@ public final class TianshuRecipeTransferContext {
         }
         if (sourceKey.isBlank() && fallbackSourceKey != null) sourceKey = fallbackSourceKey;
         if (recipeBase instanceof RecipeHolder<?> holder) {
-            recipeId = holder.id().toString();
-            addDefaultAlias(defaultAliases, firstPathSegment(holder.id().getPath()));
+            recipeId = holder.id().identifier().toString();
+            addDefaultAlias(defaultAliases, firstPathSegment(holder.id().identifier().getPath()));
             addDefaultAlias(defaultAliases,
-                    TianshuUploadAliasRules.namespaceGlob(holder.id().getNamespace()));
+                    TianshuUploadAliasRules.namespaceGlob(holder.id().identifier().getNamespace()));
         }
         if (additionalAliases != null) {
             additionalAliases.forEach(value -> addDefaultAlias(defaultAliases, value));
@@ -110,7 +110,7 @@ public final class TianshuRecipeTransferContext {
     private static void addSourceAliases(LinkedHashSet<String> aliases, String sourceKey) {
         if (sourceKey == null || sourceKey.isBlank()) return;
         aliases.add(sourceKey);
-        var sourceId = ResourceLocation.tryParse(sourceKey);
+        var sourceId = Identifier.tryParse(sourceKey);
         if (sourceId != null) {
             aliases.add(TianshuUploadAliasRules.namespaceGlob(sourceId.getNamespace()));
         }

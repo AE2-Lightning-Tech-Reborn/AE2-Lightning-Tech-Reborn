@@ -14,7 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
@@ -174,15 +174,15 @@ class ClosedLoopConsumerRoutingTest {
         @Override public AEKey dropSecondary() {
             return secondary.isEmpty() ? this : new TestKey(id, "");
         }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var result = new CompoundTag();
-            result.putString("id", id);
-            result.putString("secondary", secondary);
-            return result;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+            output.putString("secondary", secondary);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() {
@@ -201,7 +201,7 @@ class ClosedLoopConsumerRoutingTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "consumer_routing_key"),
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "consumer_routing_key"),
                     TestKey.class, Component.literal("consumer routing key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

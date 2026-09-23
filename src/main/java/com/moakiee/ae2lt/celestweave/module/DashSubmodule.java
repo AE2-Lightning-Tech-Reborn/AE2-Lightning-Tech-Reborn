@@ -67,7 +67,7 @@ public final class DashSubmodule extends AbstractCelestweaveArmorSubmodule {
         var sub = INSTANCE;
         if (!sub.isActive(armor)) return;
         if (getCooldown(armor, player) > 0) {
-            player.displayClientMessage(Component.translatable("ae2lt.celestweave.feature.dash.cooldown"), true);
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.celestweave.feature.dash.cooldown"), true);
             return;
         }
         long feCost = ArmorOverloadRules.DASH_ACTIVE_COST_FE;
@@ -101,10 +101,10 @@ public final class DashSubmodule extends AbstractCelestweaveArmorSubmodule {
             return 0;
         }
         var data = CelestweaveArmorState.getSubmoduleData(armor, INSTANCE);
-        if (!data.contains(TAG_READY_AT_TICK, CompoundTag.TAG_LONG)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_READY_AT_TICK, CompoundTag.TAG_LONG)) {
             return 0;
         }
-        long remaining = data.getLong(TAG_READY_AT_TICK) - player.level().getGameTime();
+        long remaining = data.getLongOr(TAG_READY_AT_TICK, 0L) - player.level().getGameTime();
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, remaining));
     }
 

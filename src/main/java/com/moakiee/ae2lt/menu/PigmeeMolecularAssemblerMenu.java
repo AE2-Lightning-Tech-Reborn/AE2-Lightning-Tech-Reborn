@@ -14,7 +14,7 @@ import appeng.menu.slot.RestrictedInputSlot;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.PigmeeMolecularAssemblerBlockEntity;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -27,7 +27,7 @@ public final class PigmeeMolecularAssemblerMenu
             .create(PigmeeMolecularAssemblerMenu::new, PigmeeMolecularAssemblerBlockEntity.class)
             .withMenuTitle(host -> Component.translatable(
                     "block.ae2lt.pigmee_molecular_assembler"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "pigmee_molecular_assembler"));
 
     private static final int MAX_CRAFT_PROGRESS = 100;

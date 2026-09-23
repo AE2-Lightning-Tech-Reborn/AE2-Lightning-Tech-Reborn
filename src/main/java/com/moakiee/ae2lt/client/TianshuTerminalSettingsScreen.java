@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.TabButton;
@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.TianshuUploadTrigger;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -66,27 +66,31 @@ public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodin
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
+        graphics.text(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
                 10, 30, 0x404040, false);
-        graphics.drawWordWrap(font,
-                Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"),
-                10, 72, 180, 0x666666);
-        graphics.drawString(font,
+        drawWrapped(graphics, Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"), 10, 72, 180);
+        graphics.text(font,
                 Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
                 10, 118, 0x404040, false);
-        graphics.drawWordWrap(font,
-                Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"),
-                10, 160, 180, 0x666666);
+        drawWrapped(graphics, Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"), 10, 160, 180);
+    }
+
+    private void drawWrapped(GuiGraphicsExtractor graphics, Component component, int x, int y, int width) {
+        for (var line : font.split(component, width)) {
+            graphics.text(font, line, x, y, 0x666666, false);
+            y += font.lineHeight;
+        }
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             returnToParent();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 }

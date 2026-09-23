@@ -17,7 +17,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
@@ -49,6 +52,14 @@ public abstract class AdvCraftingCpuLogicMixin {
     @Unique
     private static final @Nullable Class<?> AE2LT_ADV_LOGIC_CLASS =
             MixinReflectionSupport.findClassSafe("net.pedroksl.advanced_ae.common.logic.AdvCraftingCPULogic");
+
+    @Unique
+    private static final @Nullable Class<?> AE2LT_ADV_CPU_CLASS =
+            MixinReflectionSupport.findClassSafe("net.pedroksl.advanced_ae.common.cluster.AdvCraftingCPU");
+
+    @Unique
+    private static final @Nullable Field AE2LT_ADV_CPU_CLUSTER_FIELD =
+            MixinReflectionSupport.findDeclaredFieldSafe(AE2LT_ADV_CPU_CLASS, "cluster");
 
     @Unique
     private static final @Nullable Class<?> AE2LT_ADV_JOB_CLASS =
@@ -282,31 +293,36 @@ public abstract class AdvCraftingCpuLogicMixin {
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
-    private void ae2lt$writeOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$writeOverloadState(ValueOutput output, CallbackInfo ci) {
         if (!AE2LT_ADV_AVAILABLE) return;
+        var cpu = ae2lt$getCpu();
+        var cluster = MixinReflectionSupport.getFieldValueSafe(AE2LT_ADV_CPU_CLUSTER_FIELD, cpu);
+        HolderLookup.Provider registries = cluster instanceof net.pedroksl.advanced_ae.common.cluster.AdvCraftingCPUCluster advancedCluster
+                && advancedCluster.getBlockEntities().hasNext()
+                ? advancedCluster.getLevel().registryAccess() : RegistryAccess.EMPTY;
         var overloadStateTag = OverloadCpuStateManager.INSTANCE.writeToTag(this, registries);
         if (overloadStateTag != null) {
-            data.put("ae2ltOverloadState", overloadStateTag);
+            output.store("ae2ltOverloadState", CompoundTag.CODEC, overloadStateTag);
         } else {
-            data.remove("ae2ltOverloadState");
+            output.discard("ae2ltOverloadState");
         }
     }
 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
-    private void ae2lt$readOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$readOverloadState(ValueInput input, CallbackInfo ci) {
         if (!AE2LT_ADV_AVAILABLE) return;
         OverloadCpuStateManager.INSTANCE.clear(this);
         var job = ae2lt$getJob();
-        if (job != null && data.contains("ae2ltOverloadState", CompoundTag.TAG_COMPOUND)) {
+        if (job != null) input.read("ae2ltOverloadState", CompoundTag.CODEC).ifPresent(tag -> {
             CraftingLink link = ae2lt$getJobLink(job);
             if (link != null) {
                 OverloadCpuStateManager.INSTANCE.readFromTag(
                         this,
                         link.getCraftingID(),
-                        data.getCompound("ae2ltOverloadState"),
-                        registries);
+                        tag,
+                        input.lookup());
             }
-        }
+        });
     }
 
     @Inject(method = "finishJob", at = @At("HEAD"))

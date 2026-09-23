@@ -112,7 +112,7 @@ final class AdaptiveBatchStatePersistence {
             }
             var patternTag = new CompoundTag();
             patternTag.putInt(TAG_SLOT, slot);
-            patternTag.put(TAG_STACK, stack.save(registries));
+            patternTag.put(TAG_STACK, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(stack, registries));
             patternTags.add(patternTag);
         });
 
@@ -158,28 +158,28 @@ final class AdaptiveBatchStatePersistence {
             int patternCapacity,
             int wirelessCapacity) {
         pending = null;
-        if (!ownerTag.contains(TAG_ROOT, Tag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(ownerTag, TAG_ROOT, Tag.TAG_COMPOUND)) {
             return;
         }
-        var root = ownerTag.getCompound(TAG_ROOT);
-        if (root.getInt(TAG_VERSION) != VERSION) {
+        var root = ownerTag.getCompoundOrEmpty(TAG_ROOT);
+        if (root.getIntOr(TAG_VERSION, 0) != VERSION) {
             return;
         }
 
         int safePatternCapacity = Math.max(0, patternCapacity);
         var patterns = new HashMap<Integer, ItemStack>();
-        var patternTags = root.getList(TAG_PATTERNS, Tag.TAG_COMPOUND);
+        var patternTags = root.getListOrEmpty(TAG_PATTERNS);
         int patternCount = Math.min(patternTags.size(), safePatternCapacity);
         for (int i = 0; i < patternCount; i++) {
-            var patternTag = patternTags.getCompound(i);
-            int slot = patternTag.getInt(TAG_SLOT);
+            var patternTag = patternTags.getCompoundOrEmpty(i);
+            int slot = patternTag.getIntOr(TAG_SLOT, 0);
             if (slot < 0 || slot >= safePatternCapacity
-                    || !patternTag.contains(TAG_STACK, Tag.TAG_COMPOUND)) {
+                    || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(patternTag, TAG_STACK, Tag.TAG_COMPOUND)) {
                 continue;
             }
             try {
-                var stack = ItemStack.parseOptional(
-                        registries, patternTag.getCompound(TAG_STACK));
+                var stack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(
+                        registries, patternTag.getCompoundOrEmpty(TAG_STACK));
                 if (!stack.isEmpty()) {
                     patterns.putIfAbsent(slot, stack);
                 }
@@ -193,31 +193,31 @@ final class AdaptiveBatchStatePersistence {
 
         int safeTargetCapacity = Math.max(0, wirelessCapacity) + 6;
         var targets = new ArrayList<PendingTarget>();
-        var targetTags = root.getList(TAG_TARGETS, Tag.TAG_COMPOUND);
+        var targetTags = root.getListOrEmpty(TAG_TARGETS);
         int targetCount = Math.min(targetTags.size(), safeTargetCapacity);
         for (int i = 0; i < targetCount; i++) {
-            var targetTag = targetTags.getCompound(i);
+            var targetTag = targetTags.getCompoundOrEmpty(i);
             var states = readStates(
-                    targetTag.getList(TAG_STATES, Tag.TAG_COMPOUND),
+                    targetTag.getListOrEmpty(TAG_STATES),
                     safePatternCapacity,
                     patterns);
             if (states.isEmpty()) {
                 continue;
             }
-            byte kind = targetTag.getByte(TAG_KIND);
+            byte kind = targetTag.getByteOr(TAG_KIND, (byte) 0);
             if (kind == KIND_NORMAL) {
-                int directionId = targetTag.getByte(TAG_DIRECTION);
+                int directionId = targetTag.getByteOr(TAG_DIRECTION, (byte) 0);
                 if (directionId >= 0
                         && directionId < Direction.values().length) {
                     targets.add(PendingTarget.normal(
                             Direction.from3DDataValue(directionId), states));
                 }
             } else if (kind == KIND_WIRELESS
-                    && targetTag.contains(TAG_ADDRESS, Tag.TAG_COMPOUND)) {
+                    && com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(targetTag, TAG_ADDRESS, Tag.TAG_COMPOUND)) {
                 try {
                     targets.add(PendingTarget.wireless(
                             WirelessConnection.fromTag(
-                                    targetTag.getCompound(TAG_ADDRESS)),
+                                    targetTag.getCompoundOrEmpty(TAG_ADDRESS)),
                             states));
                 } catch (RuntimeException ignored) {
                     // Invalid dimensions or addresses are not recoverable.
@@ -237,8 +237,8 @@ final class AdaptiveBatchStatePersistence {
                 Integer, ProviderTarget.AdaptiveBatchSnapshot>();
         int stateCount = Math.min(stateTags.size(), patternCapacity);
         for (int i = 0; i < stateCount; i++) {
-            var stateTag = stateTags.getCompound(i);
-            int slot = stateTag.getInt(TAG_SLOT);
+            var stateTag = stateTags.getCompoundOrEmpty(i);
+            int slot = stateTag.getIntOr(TAG_SLOT, 0);
             if (!patterns.containsKey(slot)) {
                 continue;
             }
@@ -359,28 +359,27 @@ final class AdaptiveBatchStatePersistence {
     @Nullable
     static ProviderTarget.AdaptiveBatchSnapshot readSnapshot(
             CompoundTag tag) {
-        int rememberedChunk = tag.contains(
-                TAG_REMEMBERED_CHUNK, Tag.TAG_INT)
-                        ? tag.getInt(TAG_REMEMBERED_CHUNK)
+        int rememberedChunk = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_REMEMBERED_CHUNK, Tag.TAG_INT)
+                        ? tag.getIntOr(TAG_REMEMBERED_CHUNK, 0)
                         : 0;
         ProviderTarget.BatchStepSnapshot step = null;
-        if (tag.contains(TAG_STEP, Tag.TAG_COMPOUND)) {
-            var stepTag = tag.getCompound(TAG_STEP);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_STEP, Tag.TAG_COMPOUND)) {
+            var stepTag = tag.getCompoundOrEmpty(TAG_STEP);
             step = new ProviderTarget.BatchStepSnapshot(
-                    stepTag.getInt(TAG_NEXT_CHUNK),
-                    stepTag.getInt(TAG_PROVEN_CHUNK),
-                    stepTag.getInt(TAG_PROVEN_SUCCESSES),
-                    stepTag.getBoolean(TAG_REPEAT_CURRENT),
-                    stepTag.getBoolean(TAG_GROWTH_CAPPED),
-                    stepTag.getBoolean(TAG_BACKING_OFF),
-                    stepTag.getLong(TAG_LAST_SUCCESSFUL_TICK),
-                    stepTag.getLong(TAG_LAST_ATTEMPT_TICK),
-                    stepTag.getBoolean(TAG_RESERVOIR_MODE),
-                    stepTag.getInt(TAG_RESERVOIR_TAIL_LOWER),
-                    stepTag.getInt(TAG_RESERVOIR_TAIL_UPPER),
-                    stepTag.getBoolean(TAG_RESERVOIR_TAIL_SUPPRESSED),
-                    stepTag.contains(TAG_LAST_TAIL_ATTEMPT, Tag.TAG_LONG)
-                            ? stepTag.getLong(TAG_LAST_TAIL_ATTEMPT) : Long.MIN_VALUE);
+                    stepTag.getIntOr(TAG_NEXT_CHUNK, 0),
+                    stepTag.getIntOr(TAG_PROVEN_CHUNK, 0),
+                    stepTag.getIntOr(TAG_PROVEN_SUCCESSES, 0),
+                    stepTag.getBooleanOr(TAG_REPEAT_CURRENT, false),
+                    stepTag.getBooleanOr(TAG_GROWTH_CAPPED, false),
+                    stepTag.getBooleanOr(TAG_BACKING_OFF, false),
+                    stepTag.getLongOr(TAG_LAST_SUCCESSFUL_TICK, 0L),
+                    stepTag.getLongOr(TAG_LAST_ATTEMPT_TICK, 0L),
+                    stepTag.getBooleanOr(TAG_RESERVOIR_MODE, false),
+                    stepTag.getIntOr(TAG_RESERVOIR_TAIL_LOWER, 0),
+                    stepTag.getIntOr(TAG_RESERVOIR_TAIL_UPPER, 0),
+                    stepTag.getBooleanOr(TAG_RESERVOIR_TAIL_SUPPRESSED, false),
+                    com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(stepTag, TAG_LAST_TAIL_ATTEMPT, Tag.TAG_LONG)
+                            ? stepTag.getLongOr(TAG_LAST_TAIL_ATTEMPT, 0L) : Long.MIN_VALUE);
         }
         var snapshot = new ProviderTarget.AdaptiveBatchSnapshot(
                 rememberedChunk, step);

@@ -1,7 +1,9 @@
 package com.moakiee.ae2lt.item;
 
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 /**
  * Reusable catalyst obtained by dropping an anvil onto an adult pig standing on an Overload
@@ -17,14 +19,13 @@ public final class PigmeeCoreItem extends Item {
     }
 
     @Override
-    public boolean hasCraftingRemainingItem(ItemStack stack) {
-        return true;
-    }
-
-    @Override
-    public ItemStack getCraftingRemainingItem(ItemStack stack) {
-        ItemStack remainder = stack.copy();
-        remainder.setCount(1);
-        return remainder;
+    public ItemStackTemplate getCraftingRemainder(ItemInstance instance) {
+        if (instance instanceof ItemStack stack && !stack.isEmpty()) {
+            return ItemStackTemplate.fromNonEmptyStack(stack.copyWithCount(1));
+        }
+        if (instance instanceof ItemStackTemplate template) {
+            return template.withCount(1);
+        }
+        return new ItemStackTemplate(instance.typeHolder(), 1);
     }
 }

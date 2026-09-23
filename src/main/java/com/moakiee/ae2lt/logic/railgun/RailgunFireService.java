@@ -409,7 +409,7 @@ public final class RailgunFireService {
 
     public static void sendFail(@Nullable ServerPlayer player, String key) {
         if (player == null) return;
-        player.displayClientMessage(Component.translatable(key), true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(key), true);
     }
 
     private static int countAccelerationFactor(RailgunModuleEntries mods) {

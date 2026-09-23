@@ -4,10 +4,10 @@ import com.moakiee.ae2lt.AE2LightningTech;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
@@ -15,7 +15,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu>
         extends AbstractContainerScreen<T> {
 
-    protected static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    protected static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/guis/multiblock_controller.png");
 
     // Texture regions: title 2-14, status recess 18-34, divider 36-46, body recess 50-132, footer 134-162
@@ -39,54 +39,53 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
     protected static final int COL_BLUE = 0x1F4E79;
 
     protected MultiblockControllerScreen(T menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        imageWidth = 209;
-        imageHeight = 167;
+        super(menu, playerInventory, title, 209, 167);
         inventoryLabelY = 10_000;
         titleLabelY = 10_000;
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    public void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+
+        super.extractContents(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        extractTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    protected void drawTitle(GuiGraphics guiGraphics) {
-        guiGraphics.drawString(font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
+    protected void drawTitle(GuiGraphicsExtractor guiGraphics) {
+        guiGraphics.text(font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
     }
 
     /** Status strip line with an indicator dot, inside the upper recess. */
-    protected void drawStatus(GuiGraphics guiGraphics, Component text, int color) {
+    protected void drawStatus(GuiGraphicsExtractor guiGraphics, Component text, int color) {
         guiGraphics.fill(TEXT_X, 24, TEXT_X + 4, 28, 0xFF000000 | color);
-        guiGraphics.drawString(font, text, TEXT_X + 8, STATUS_TEXT_Y, color, false);
+        guiGraphics.text(font, text, TEXT_X + 8, STATUS_TEXT_Y, color, false);
     }
 
     /** Data row: label on the left, value right-aligned. */
-    protected void drawRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
-        guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
+    protected void drawRow(GuiGraphicsExtractor guiGraphics, int y, Component label, String value, int valueColor) {
+        guiGraphics.text(font, label, TEXT_X, y, COL_LABEL, false);
+        guiGraphics.text(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
     }
 
     /** Word-wrapped issue text at the top of the body recess, with a muted hint below. */
-    protected void drawUnformed(GuiGraphics guiGraphics, Component issue, String hintKey) {
+    protected void drawUnformed(GuiGraphicsExtractor guiGraphics, Component issue, String hintKey) {
         int y = ROW_Y;
         for (var line : font.split(issue, VALUE_RIGHT - TEXT_X)) {
-            guiGraphics.drawString(font, line, TEXT_X, y, COL_RED, false);
+            guiGraphics.text(font, line, TEXT_X, y, COL_RED, false);
             y += 11;
         }
-        guiGraphics.drawString(font, Component.translatable(hintKey),
+        guiGraphics.text(font, Component.translatable(hintKey),
                 TEXT_X, y - 11 + HINT_GAP, COL_MUTED, false);
     }
 
     /** Footer gauge: recessed frame, quarter ticks, beveled fill; markLo/markHi < 0 hides the target zone. */
-    protected void drawGauge(GuiGraphics guiGraphics, double fill, int fillColor,
+    protected void drawGauge(GuiGraphicsExtractor guiGraphics, double fill, int fillColor,
             double markLo, double markHi) {
         int x0 = TEXT_X, y0 = 149, w = VALUE_RIGHT - TEXT_X, h = 10;
 

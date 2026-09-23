@@ -15,13 +15,13 @@ import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 
 public class PigmeeMentalmathUnitBlock extends AEBaseEntityBlock<PigmeeMentalmathUnitBlockEntity> {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public PigmeeMentalmathUnitBlock() {
-        super(metalProps().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).forceSolidOn()));
         registerDefaultState(defaultBlockState().setValue(FACING, Direction.NORTH));
     }
 
@@ -34,12 +34,12 @@ public class PigmeeMentalmathUnitBlock extends AEBaseEntityBlock<PigmeeMentalmat
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltipComponents,
+            java.util.function.Consumer<Component> tooltipComponents,
             TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.pigmee_mentalmath_unit.1")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.pigmee_mentalmath_unit.1")
                 .withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.pigmee_mentalmath_unit.2")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.pigmee_mentalmath_unit.2")
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 }

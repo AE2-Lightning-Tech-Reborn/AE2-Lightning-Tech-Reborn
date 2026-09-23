@@ -24,7 +24,7 @@ import com.moakiee.thunderbolt.core.storage.big.*;
 
 import net.minecraft.client.*;
 import net.minecraft.core.*;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.*;
@@ -54,6 +54,13 @@ public final class BigIntegerNativeUiProbe {
     private static int phase, ticks;
     private static boolean wireless, finished, checkedBack;
     private static volatile Throwable failure;
+    private static volatile boolean serverActionPending;
+    private static int serverWaitTicks;
+    private static boolean succeeded;
+
+    public static boolean succeeded() {
+        return succeeded;
+    }
 
     private static void require(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
@@ -62,6 +69,7 @@ public final class BigIntegerNativeUiProbe {
     private static void server(java.util.function.Consumer<ServerPlayer> action) {
         var mc = Minecraft.getInstance();
         var uuid = mc.player.getUUID();
+        serverActionPending = true;
         mc.getSingleplayerServer()
                 .execute(
                         () -> {
@@ -70,6 +78,8 @@ public final class BigIntegerNativeUiProbe {
                                         mc.getSingleplayerServer().getPlayerList().getPlayer(uuid));
                             } catch (Throwable e) {
                                 failure = e;
+                            } finally {
+                                serverActionPending = false;
                             }
                         });
     }
@@ -90,6 +100,16 @@ public final class BigIntegerNativeUiProbe {
         if (!Boolean.getBoolean("ae2lt.bigNativeProbe") || finished) return;
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.getSingleplayerServer() == null) return;
+        // World/fixture creation may take longer than thirty client ticks on a cold load.
+        // Advance only after the preceding server action has actually completed.
+        if (serverActionPending) {
+            if (++serverWaitTicks > 1200) {
+                finished = true;
+                System.out.println("BIGINT_NATIVE_UI_FAILED server action timeout phase=" + phase);
+            }
+            return;
+        }
+        serverWaitTicks = 0;
         if (++ticks % 30 != 0) return;
         try {
             if (failure != null) throw new AssertionError("Server probe failed", failure);
@@ -97,11 +117,11 @@ public final class BigIntegerNativeUiProbe {
                 case 0 ->
                         server(
                                 p -> {
-                                    build(p.serverLevel());
+                                    build((ServerLevel) p.level());
                                     p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
                                     p.getAbilities().flying = true;
                                     p.onUpdateAbilities();
-                                    p.teleportTo(p.serverLevel(), 15, 111, 5, Set.of(), 90, 0);
+                                    p.teleportTo((ServerLevel) p.level(), 15, 111, 5, Set.of(), 90, 0, true);
                                 });
                 case 1 ->
                         server(
@@ -113,11 +133,11 @@ public final class BigIntegerNativeUiProbe {
                                             "fixture formation failed");
                                     var cp =
                                             (TianshuSupercomputerPortBlockEntity)
-                                                    p.serverLevel()
+                                                    ((ServerLevel) p.level())
                                                             .getBlockEntity(cpu.getPortPos());
                                     var mp =
                                             (MatrixPortBlockEntity)
-                                                    p.serverLevel()
+                                                    ((ServerLevel) p.level())
                                                             .getBlockEntity(
                                                                     MatrixMultiblockScanner
                                                                             .worldPos(
@@ -134,14 +154,14 @@ public final class BigIntegerNativeUiProbe {
                                     GridHelper.createConnection(node, mp.getMainNode().getNode());
                                     terminal =
                                             PartHelper.setPart(
-                                                    p.serverLevel(),
+                                                    ((ServerLevel) p.level()),
                                                     BASE.offset(14, 10, 6),
                                                     Direction.NORTH,
                                                     p,
                                                     ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL
                                                             .get());
                                     place(
-                                            p.serverLevel(),
+                                            ((ServerLevel) p.level()),
                                             BASE.offset(14, 10, 7),
                                             AEBlocks.WIRELESS_ACCESS_POINT
                                                     .block()
@@ -149,7 +169,7 @@ public final class BigIntegerNativeUiProbe {
                                     access =
                                             (appeng.blockentity.networking
                                                             .WirelessAccessPointBlockEntity)
-                                                    p.serverLevel()
+                                                    ((ServerLevel) p.level())
                                                             .getBlockEntity(BASE.offset(14, 10, 7));
                                 });
                 case 2 ->
@@ -362,6 +382,7 @@ public final class BigIntegerNativeUiProbe {
                         phase = 2;
                     } else {
                         finished = true;
+                        succeeded = true;
                         System.out.println(
                                 "BIGINT_NATIVE_UI_CONFIRMED wired+wireless"
                                         + " amount+confirm+start+status+cancel+stock");
@@ -383,6 +404,7 @@ public final class BigIntegerNativeUiProbe {
                 mc.gameDirectory,
                 "native-big-" + (wireless ? "wireless-" : "wired-") + name + ".png",
                 mc.getMainRenderTarget(),
+                1,
                 t -> {});
     }
 
@@ -507,8 +529,9 @@ public final class BigIntegerNativeUiProbe {
 
     private static BigMatrixRecipe planks(ServerLevel level) {
         var holder =
-                level.getRecipeManager()
-                        .byKey(ResourceLocation.parse("minecraft:oak_planks"))
+                com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.byId(
+                        com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level),
+                        Identifier.parse("minecraft:oak_planks"))
                         .orElseThrow();
         var recipe = new RecipeHolder<CraftingRecipe>(holder.id(), (CraftingRecipe) holder.value());
         var input = new ItemStack[9];

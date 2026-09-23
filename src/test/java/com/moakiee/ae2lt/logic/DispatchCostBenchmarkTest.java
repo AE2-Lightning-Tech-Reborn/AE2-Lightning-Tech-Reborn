@@ -17,7 +17,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 
 /** Repeatable scheduler-only cost measurement, not a Minecraft MSPT benchmark. */
-class DispatchCostBenchmarkTest {
+class DispatchCostBenchmarkTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void measuresAllocationAndPatternHashCallsWithoutChangingDispatchWork() {
         var platformBean = ManagementFactory.getThreadMXBean();

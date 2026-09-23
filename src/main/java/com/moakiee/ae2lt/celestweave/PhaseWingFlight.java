@@ -1,6 +1,11 @@
 package com.moakiee.ae2lt.celestweave;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.util.Unit;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import com.moakiee.ae2lt.item.CelestweaveCoreItem;
+import com.moakiee.ae2lt.client.PhaseWingLayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,6 +35,20 @@ public final class PhaseWingFlight {
             }
         }
         return false;
+    }
+
+    /** 26.1 uses the GLIDER data component in place of the removed item flight hooks. */
+    public static void syncGlider(Player player, ItemStack armor, boolean powered) {
+        if (!(armor.getItem() instanceof CelestweaveCoreItem)) {
+            return;
+        }
+        boolean active = powered && canElytraFly(player);
+        if (active) {
+            armor.set(DataComponents.GLIDER, Unit.INSTANCE);
+        } else {
+            armor.remove(DataComponents.GLIDER);
+        }
+        PhaseWingLayer.syncVisual(armor, active);
     }
 
     public static boolean canElytraFly(LivingEntity entity) {

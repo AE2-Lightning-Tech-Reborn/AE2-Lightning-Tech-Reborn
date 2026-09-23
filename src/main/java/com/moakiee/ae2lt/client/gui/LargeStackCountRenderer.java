@@ -7,7 +7,7 @@ import org.joml.Matrix4f;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 
@@ -34,7 +34,7 @@ public final class LargeStackCountRenderer {
      * Renders the abbreviated stack count on a slot if it is a
      * {@link LargeStackAppEngSlot} with a count greater than 1.
      */
-    public static void renderSlotCount(GuiGraphics guiGraphics, Font font, Slot slot) {
+    public static void renderSlotCount(GuiGraphicsExtractor guiGraphics, Font font, Slot slot) {
         if (!(slot instanceof LargeStackAppEngSlot)) {
             return;
         }
@@ -56,7 +56,7 @@ public final class LargeStackCountRenderer {
      * instance, but we still want to reuse the exact same large-stack count
      * visuals as the machine GUI.
      */
-    public static void renderCountAt(GuiGraphics guiGraphics, Font font, int slotX, int slotY, long count) {
+    public static void renderCountAt(GuiGraphicsExtractor guiGraphics, Font font, int slotX, int slotY, long count) {
         if (count <= 1) {
             return;
         }
@@ -132,32 +132,19 @@ public final class LargeStackCountRenderer {
         return Math.round(value) + suffix;
     }
 
-    private static void renderLabel(GuiGraphics guiGraphics, Font font, int slotX, int slotY, String text) {
+    private static void renderLabel(GuiGraphicsExtractor guiGraphics, Font font, int slotX, int slotY, String text) {
         float inverseScale = 1.0F / SCALE;
         int drawX = (int) ((slotX + 18.0F - font.width(text) * SCALE) * inverseScale);
         int drawY = (int) ((slotY + 16.0F - 5.0F * SCALE) * inverseScale);
 
         var pose = guiGraphics.pose();
-        pose.pushPose();
-        pose.translate(0, 0, 300);
-        pose.scale(SCALE, SCALE, SCALE);
+        guiGraphics.nextStratum();
+        pose.pushMatrix();
+        pose.scale(SCALE, SCALE);
 
-        drawShadowedText(pose.last().pose(), font, drawX, drawY, text);
+        guiGraphics.text(font, text, drawX + 1, drawY + 1, SHADOW_COLOR, false);
+        guiGraphics.text(font, text, drawX, drawY, TEXT_COLOR, false);
 
-        pose.popPose();
-    }
-
-    private static void drawShadowedText(Matrix4f matrix, Font font, int x, int y, String text) {
-        // Use the vanilla buffered text path; RenderType.text() manages its own
-        // blend / depth state, so we deliberately do NOT toggle RenderSystem
-        // blend here -- doing so would pollute the caller's GL state machine
-        // (a common source of "exit-game-but-DWM-still-laggy" symptoms when
-        // combined with other mods that assume blend remains enabled).
-        var buffer = Minecraft.getInstance().renderBuffers().bufferSource();
-        font.drawInBatch(text, x + 1, y + 1, SHADOW_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
-        font.drawInBatch(text, x, y, TEXT_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
-        buffer.endBatch();
+        pose.popMatrix();
     }
 }

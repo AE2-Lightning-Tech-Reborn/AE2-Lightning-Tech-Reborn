@@ -5,9 +5,9 @@ import com.illusivesoulworks.polymorph.api.client.widgets.PlayerRecipesWidget;
 import com.moakiee.ae2lt.client.TianshuPatternEncodingTermScreen;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.WidgetSprites;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Polymorph recipe selector for the custom Tianshu pattern-terminal screen. */
 final class TianshuPatternTerminalWidget extends PlayerRecipesWidget {
@@ -23,20 +23,22 @@ final class TianshuPatternTerminalWidget extends PlayerRecipesWidget {
     }
 
     @Override
-    public void selectRecipe(ResourceLocation id) {
+    public void selectRecipe(Identifier id) {
         super.selectRecipe(id);
         screen.getMenu().getPlayer().level().getRecipeManager().byKey(id)
                 .ifPresent(recipe -> screen.getMenu().refreshPolymorphRecipe());
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        if (isCraftingMode()) super.render(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        if (isCraftingMode()) super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return isCraftingMode() && super.mouseClicked(mouseX, mouseY, button);
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
+        return isCraftingMode() && super.mouseClicked(event, handled);
     }
 
     @Override
@@ -55,7 +57,7 @@ final class TianshuPatternTerminalWidget extends PlayerRecipesWidget {
 
     private static WidgetSprites sprites(String name) {
         return new WidgetSprites(
-                ResourceLocation.fromNamespaceAndPath("polyeng", name),
-                ResourceLocation.fromNamespaceAndPath("polyeng", name + "_highlighted"));
+                Identifier.fromNamespaceAndPath("polyeng", name),
+                Identifier.fromNamespaceAndPath("polyeng", name + "_highlighted"));
     }
 }

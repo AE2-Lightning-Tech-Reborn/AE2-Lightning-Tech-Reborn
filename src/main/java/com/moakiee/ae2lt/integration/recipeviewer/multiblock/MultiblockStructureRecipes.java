@@ -13,7 +13,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
@@ -323,8 +323,8 @@ public final class MultiblockStructureRecipes {
         return MultiblockStructureRecipe.MaterialSpec.of(block, note);
     }
 
-    private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, path);
+    private static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, path);
     }
 
     private MultiblockStructureRecipes() {

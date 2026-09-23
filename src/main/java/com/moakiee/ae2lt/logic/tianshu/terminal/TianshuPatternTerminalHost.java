@@ -36,7 +36,7 @@ public interface TianshuPatternTerminalHost extends IPatternTerminalMenuHost, IA
                 .filter(TianshuSupercomputerPortBlockEntity::isLinkActive)
                 .sorted(Comparator
                         .comparing((TianshuSupercomputerPortBlockEntity port) ->
-                                port.getLevel().dimension().location().toString())
+                                port.getLevel().dimension().identifier().toString())
                         .thenComparing(port -> port.getTianshuId().toString())
                         .thenComparingLong(port -> port.getControllerPos().asLong())
                         .thenComparingLong(port -> port.getBlockPos().asLong()))

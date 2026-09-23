@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -25,7 +25,7 @@ public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
     public static final MenuType<TeslaCoilMenu> TYPE = MenuTypeBuilder
             .create(TeslaCoilMenu::new, TeslaCoilBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.tesla_coil"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "tesla_coil"));
 
@@ -74,7 +74,7 @@ public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
 
         createPlayerInventorySlots(playerInventory);
 
-        registerClientAction("cycleMode", this::cycleMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"), this::cycleMode);
     }
 
     @Override
@@ -210,7 +210,7 @@ public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
     }
 
     public void clientCycleMode() {
-        sendClientAction("cycleMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"));
     }
 
     public TeslaCoilBlockEntity getHost() {

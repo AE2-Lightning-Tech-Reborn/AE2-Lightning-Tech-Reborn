@@ -310,14 +310,16 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkedBlockEnti
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        patternInventory.writeToNBT(tag, TAG_PATTERNS, registries);
-        returnInventory.writeToChildTag(tag, TAG_RETURN_INVENTORY, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
+        patternInventory.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries), TAG_PATTERNS);
+        returnInventory.writeToChildTag(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries), TAG_RETURN_INVENTORY);
 
         var pendingTag = new ListTag();
         for (var stack : pendingDispatch) {
-            pendingTag.add(GenericStack.writeTag(registries, stack));
+            pendingTag.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, stack));
         }
         if (pendingTag.isEmpty()) {
             tag.remove(TAG_PENDING_DISPATCH);
@@ -333,23 +335,25 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkedBlockEnti
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        patternInventory.readFromNBT(tag, TAG_PATTERNS, registries);
-        returnInventory.readFromTag(tag.getList(TAG_RETURN_INVENTORY, Tag.TAG_COMPOUND), registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        patternInventory.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, registries), TAG_PATTERNS);
+        returnInventory.readFromTag(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, registries).childrenListOrEmpty(TAG_RETURN_INVENTORY));
 
         pendingDispatch.clear();
-        var pendingTag = tag.getList(TAG_PENDING_DISPATCH, Tag.TAG_COMPOUND);
+        var pendingTag = tag.getListOrEmpty(TAG_PENDING_DISPATCH);
         for (int i = 0; i < pendingTag.size(); i++) {
-            var stack = GenericStack.readTag(registries, pendingTag.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, pendingTag.getCompoundOrEmpty(i));
             if (stack != null && stack.amount() > 0) {
                 pendingDispatch.add(stack);
             }
         }
         if (pendingDispatch.isEmpty()) {
             pendingDirection = null;
-        } else if (tag.contains(TAG_PENDING_DIRECTION, Tag.TAG_BYTE)) {
-            pendingDirection = Direction.from3DDataValue(tag.getByte(TAG_PENDING_DIRECTION));
+        } else if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_PENDING_DIRECTION, Tag.TAG_BYTE)) {
+            pendingDirection = Direction.from3DDataValue(tag.getByteOr(TAG_PENDING_DIRECTION, (byte) 0));
         } else {
             pendingDirection = null;
         }

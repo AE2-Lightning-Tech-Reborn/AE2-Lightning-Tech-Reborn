@@ -3,27 +3,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_module_base"
-      },
+      "ingredient": "ae2lt:overload_module_base",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "ae2lt:overload_singularity"
-      },
+      "ingredient": "ae2lt:overload_singularity",
       "count": 64
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_superconducting_wire"
-      },
+      "ingredient": "ae2lt:firmament_superconducting_wire",
       "count": 4
     },
     {
-      "ingredient": {
-        "item": "minecraft:blaze_powder"
-      },
+      "ingredient": "minecraft:blaze_powder",
       "count": 256
     }
   ],

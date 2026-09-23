@@ -17,7 +17,7 @@ class LargeStackInteractionContractTest {
     void sharedPolicyRejectsUnsafeDirectExtractionAndCapsCursorStacks() throws Exception {
         String source = Files.readString(MENU_DIR.resolve("LargeStackAppEngSlot.java"));
 
-        assertTrue(source.contains("return clickType == ClickType.SWAP;"));
+        assertTrue(source.contains("return clickType == ContainerInput.SWAP;"));
         assertTrue(source.contains("int nativeMax = slotStack.getMaxStackSize();"),
                 "Normal pickup must respect the item's native stack size");
         assertTrue(source.contains("slotStack.getCount() > slotStack.getMaxStackSize()"),

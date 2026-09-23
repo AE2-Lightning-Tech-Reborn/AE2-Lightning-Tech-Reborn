@@ -389,8 +389,10 @@ public class TeslaCoilBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(data, TAG_INVENTORY, registries);
         data.putLong(TAG_ENERGY, energyStorage.getStoredEnergyLong());
         data.putLong(TAG_CONSUMED_ENERGY, consumedEnergy);
@@ -407,17 +409,19 @@ public class TeslaCoilBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         inventory.loadFromTag(data, TAG_INVENTORY, registries);
-        energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
-        selectedMode = TeslaCoilMode.fromName(data.getString(TAG_SELECTED_MODE));
+        energyStorage.loadStoredEnergy(data.getLongOr(TAG_ENERGY, 0L));
+        selectedMode = TeslaCoilMode.fromName(data.getStringOr(TAG_SELECTED_MODE, ""));
         lockedMode = data.contains(TAG_LOCKED_MODE)
-                ? TeslaCoilMode.fromName(data.getString(TAG_LOCKED_MODE))
+                ? TeslaCoilMode.fromName(data.getStringOr(TAG_LOCKED_MODE, ""))
                 : null;
-        lockedBatchSize = Math.max(0L, data.getLong(TAG_LOCKED_BATCH_SIZE));
-        consumedEnergy = Math.max(0L, data.getLong(TAG_CONSUMED_ENERGY));
-        processingTicksSpent = Math.max(0, data.getInt(TAG_PROCESSING_TICKS));
+        lockedBatchSize = Math.max(0L, data.getLongOr(TAG_LOCKED_BATCH_SIZE, 0L));
+        consumedEnergy = Math.max(0L, data.getLongOr(TAG_CONSUMED_ENERGY, 0L));
+        processingTicksSpent = Math.max(0, data.getIntOr(TAG_PROCESSING_TICKS, 0));
         frequencyBinding.load(data);
 
         if (lockedMode == null) {

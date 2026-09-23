@@ -12,7 +12,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
@@ -25,9 +25,9 @@ import snownee.jade.api.config.IPluginConfig;
  * precisely targeted part of an AE2 cable bus.
  */
 public final class FrequencyCardWirelessNodeJadeProvider
-        implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
-    private static final ResourceLocation UID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "frequency_card_wireless_node");
+        implements IBlockComponentProvider {
+    private static final Identifier UID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "frequency_card_wireless_node");
     private static final String TAG_LINK = "AE2LTFrequencyCardWirelessNode";
     private static final String TAG_STATE = "State";
     private static final String TAG_FREQUENCY_NAME = "FrequencyName";
@@ -43,34 +43,41 @@ public final class FrequencyCardWirelessNodeJadeProvider
     }
 
     @Override
-    public ResourceLocation getUid() {
+    public Identifier getUid() {
         return UID;
     }
 
-    @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        if (!(accessor.getLevel() instanceof ServerLevel level)) {
-            return;
+    public static final class DataProvider implements IServerDataProvider<BlockAccessor> {
+        @Override
+        public Identifier getUid() {
+            return UID;
         }
 
-        DisplayData displayData = inspectNativeHost(accessor);
-        if (displayData == null) {
-            var hitResult = accessor.getHitResult();
-            var inspection = WirelessLinkRegistry.get(level.getServer()).inspectTarget(
-                    level,
-                    accessor.getPosition(),
-                    accessor.getSide(),
-                    hitResult == null ? null : hitResult.getLocation());
-            displayData = displayData(inspection);
-        }
-        if (displayData == null) {
-            return;
-        }
+        @Override
+        public void appendServerData(CompoundTag data, BlockAccessor accessor) {
+            if (!(accessor.getLevel() instanceof ServerLevel level)) {
+                return;
+            }
 
-        var linkData = new CompoundTag();
-        linkData.putString(TAG_STATE, displayData.state().name());
-        linkData.putString(TAG_FREQUENCY_NAME, resolveFrequencyNames(displayData.frequencyIds()));
-        data.put(TAG_LINK, linkData);
+            DisplayData displayData = inspectNativeHost(accessor);
+            if (displayData == null) {
+                var hitResult = accessor.getHitResult();
+                var inspection = WirelessLinkRegistry.get(level.getServer()).inspectTarget(
+                        level,
+                        accessor.getPosition(),
+                        accessor.getSide(),
+                        hitResult == null ? null : hitResult.getLocation());
+                displayData = displayData(inspection);
+            }
+            if (displayData == null) {
+                return;
+            }
+
+            var linkData = new CompoundTag();
+            linkData.putString(TAG_STATE, displayData.state().name());
+            linkData.putString(TAG_FREQUENCY_NAME, resolveFrequencyNames(displayData.frequencyIds()));
+            data.put(TAG_LINK, linkData);
+        }
     }
 
     private static DisplayData inspectNativeHost(BlockAccessor accessor) {
@@ -126,11 +133,11 @@ public final class FrequencyCardWirelessNodeJadeProvider
     @Override
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         CompoundTag serverData = accessor.getServerData();
-        if (!serverData.contains(TAG_LINK, Tag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(serverData, TAG_LINK, Tag.TAG_COMPOUND)) {
             return;
         }
 
-        String stateName = serverData.getCompound(TAG_LINK).getString(TAG_STATE);
+        String stateName = serverData.getCompoundOrEmpty(TAG_LINK).getStringOr(TAG_STATE, "");
         DisplayState state;
         try {
             state = DisplayState.valueOf(stateName);
@@ -138,7 +145,7 @@ public final class FrequencyCardWirelessNodeJadeProvider
             return;
         }
 
-        String frequencyName = serverData.getCompound(TAG_LINK).getString(TAG_FREQUENCY_NAME);
+        String frequencyName = serverData.getCompoundOrEmpty(TAG_LINK).getStringOr(TAG_FREQUENCY_NAME, "");
 
         Component status = switch (state) {
             case CONNECTED -> Component.translatable("jade.ae2lt.frequency_card_wireless_node.state.connected")

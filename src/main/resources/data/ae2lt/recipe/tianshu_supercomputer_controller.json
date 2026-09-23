@@ -6,15 +6,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "B": { "item": "ae2lt:overload_crystal_block" },
-    "C": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "D": { "item": "ae2lt:overload_processor" },
-    "E": { "item": "ae2:singularity" },
-    "F": { "item": "ae2lt:overload_processor" },
-    "G": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "H": { "item": "ae2lt:overload_crystal_block" },
-    "I": { "item": "ae2lt:tianshu_supercomputer_casing" }
+    "A": "ae2lt:tianshu_supercomputer_casing",
+    "B": "ae2lt:overload_crystal_block",
+    "C": "ae2lt:tianshu_supercomputer_casing",
+    "D": "ae2lt:overload_processor",
+    "E": "ae2:singularity",
+    "F": "ae2lt:overload_processor",
+    "G": "ae2lt:tianshu_supercomputer_casing",
+    "H": "ae2lt:overload_crystal_block",
+    "I": "ae2lt:tianshu_supercomputer_casing"
   },
   "result": {
     "id": "ae2lt:tianshu_supercomputer_controller",

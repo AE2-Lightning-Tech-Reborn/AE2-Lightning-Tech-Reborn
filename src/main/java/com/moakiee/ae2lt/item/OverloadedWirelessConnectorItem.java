@@ -13,10 +13,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -77,32 +77,32 @@ public class OverloadedWirelessConnectorItem extends Item {
         }
 
         if (level.isClientSide()) {
-            PacketDistributor.sendToServer(new WirelessConnectorUsePacket(
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new WirelessConnectorUsePacket(
                     context.getHand(),
                     pos,
                     context.getClickedFace(),
-                    net.minecraft.client.gui.screens.Screen.hasControlDown()));
-            return InteractionResult.SUCCESS_NO_ITEM_USED;
+                    net.minecraft.client.Minecraft.getInstance().hasControlDown()));
+            return InteractionResult.SUCCESS;
         }
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
-            return InteractionResultHolder.pass(stack);
+            return InteractionResult.PASS;
         }
 
         if (hasSelection(stack)) {
             var hostType = getSelectedHostType(stack);
             clearSelection(stack);
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable(getDeselectedTranslationKey(hostType)).withStyle(ChatFormatting.GREEN),
                     true);
-            return InteractionResultHolder.success(stack);
+            return InteractionResult.SUCCESS;
         }
-        return InteractionResultHolder.pass(stack);
+        return InteractionResult.PASS;
     }
 
     // ── Selection management ─────────────────────────────────────────────
@@ -110,7 +110,7 @@ public class OverloadedWirelessConnectorItem extends Item {
     public static void selectHost(ItemStack stack, Level level, BlockPos pos, String hostType) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             var sel = new CompoundTag();
-            sel.putString(TAG_DIM, level.dimension().location().toString());
+            sel.putString(TAG_DIM, level.dimension().identifier().toString());
             sel.putLong(TAG_POS, pos.asLong());
             sel.putString(TAG_HOST_TYPE, hostType);
             tag.put(TAG_SELECTED, sel);
@@ -119,23 +119,23 @@ public class OverloadedWirelessConnectorItem extends Item {
 
     public static boolean hasSelection(ItemStack stack) {
         var tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return tag.contains(TAG_SELECTED, CompoundTag.TAG_COMPOUND);
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_SELECTED, CompoundTag.TAG_COMPOUND);
     }
 
     @Nullable
     public static String getSelectedHostType(ItemStack stack) {
         var tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         if (!tag.contains(TAG_SELECTED)) return null;
-        var sel = tag.getCompound(TAG_SELECTED);
-        return sel.contains(TAG_HOST_TYPE) ? sel.getString(TAG_HOST_TYPE) : HOST_PROVIDER;
+        var sel = tag.getCompoundOrEmpty(TAG_SELECTED);
+        return sel.contains(TAG_HOST_TYPE) ? sel.getStringOr(TAG_HOST_TYPE, "") : HOST_PROVIDER;
     }
 
     public static boolean isSelectionInCurrentDimension(Level level, ItemStack stack) {
         var tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         if (!tag.contains(TAG_SELECTED)) return true;
-        var sel = tag.getCompound(TAG_SELECTED);
+        var sel = tag.getCompoundOrEmpty(TAG_SELECTED);
         if (!sel.contains(TAG_DIM)) return true;
-        return level.dimension().location().equals(ResourceLocation.parse(sel.getString(TAG_DIM)));
+        return level.dimension().identifier().equals(Identifier.parse(sel.getStringOr(TAG_DIM, "")));
     }
 
     public static void clearSelection(ItemStack stack) {
@@ -163,9 +163,9 @@ public class OverloadedWirelessConnectorItem extends Item {
         var tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         if (!tag.contains(TAG_SELECTED)) return null;
 
-        var sel = tag.getCompound(TAG_SELECTED);
-        var dimKey = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(sel.getString(TAG_DIM)));
-        var pos = BlockPos.of(sel.getLong(TAG_POS));
+        var sel = tag.getCompoundOrEmpty(TAG_SELECTED);
+        var dimKey = ResourceKey.create(Registries.DIMENSION, Identifier.parse(sel.getStringOr(TAG_DIM, "")));
+        var pos = BlockPos.of(sel.getLongOr(TAG_POS, 0L));
 
         if (!level.dimension().equals(dimKey) || !level.isLoaded(pos)) return null;
 

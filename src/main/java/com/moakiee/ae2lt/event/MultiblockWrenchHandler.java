@@ -42,7 +42,7 @@ public final class MultiblockWrenchHandler {
             event.setCancellationResult(InteractionResult.FAIL);
             return;
         }
-        event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide()));
+        event.setCancellationResult((level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER));
 
         if (level instanceof ServerLevel serverLevel) {
             var blockEntity = level.getBlockEntity(pos);

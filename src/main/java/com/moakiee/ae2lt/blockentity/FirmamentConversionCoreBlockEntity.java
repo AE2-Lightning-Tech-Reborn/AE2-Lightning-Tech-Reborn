@@ -8,7 +8,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -32,8 +32,8 @@ import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
 public class FirmamentConversionCoreBlockEntity extends BlockEntity {
-    private static final ResourceLocation FIRMAMENT_STARSHIP_ID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "firmament_starship");
+    private static final Identifier FIRMAMENT_STARSHIP_ID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "firmament_starship");
     private static final String TAG_INVENTORY = "Inventory";
     private static final String TAG_LOCKED_RECIPE = "LockedRecipe";
     private static final String TAG_PROGRESS = "Progress";
@@ -232,8 +232,8 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
         }
 
         Structure structure = serverLevel.registryAccess()
-                .registryOrThrow(Registries.STRUCTURE)
-                .get(FIRMAMENT_STARSHIP_ID);
+                .lookupOrThrow(Registries.STRUCTURE)
+                .getValue(FIRMAMENT_STARSHIP_ID);
         if (structure == null) {
             return false;
         }
@@ -307,8 +307,10 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(tag, TAG_INVENTORY, registries);
         tag.putInt(TAG_PROGRESS, progress);
         tag.putBoolean(TAG_INITIAL_LOOT_ROLLED, initialLootRolled);
@@ -320,13 +322,15 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadAdditional(input);
         inventory.loadFromTag(tag, TAG_INVENTORY, registries);
-        progress = Math.max(0, tag.getInt(TAG_PROGRESS));
-        initialLootRolled = tag.getBoolean(TAG_INITIAL_LOOT_ROLLED);
-        if (tag.contains(TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
-            lockedRecipe = FirmamentConversionLockedRecipe.fromTag(tag.getCompound(TAG_LOCKED_RECIPE), registries);
+        progress = Math.max(0, tag.getIntOr(TAG_PROGRESS, 0));
+        initialLootRolled = tag.getBooleanOr(TAG_INITIAL_LOOT_ROLLED, false);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
+            lockedRecipe = FirmamentConversionLockedRecipe.fromTag(tag.getCompoundOrEmpty(TAG_LOCKED_RECIPE), registries);
         } else {
             lockedRecipe = null;
         }
@@ -342,4 +346,10 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
         clearLockedRecipe();
         progress = 0;
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        if (this.level != null) dropContents(this.level, pos);
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

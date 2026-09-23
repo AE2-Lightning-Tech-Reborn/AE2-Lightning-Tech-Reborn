@@ -6,7 +6,6 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -14,8 +13,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
@@ -34,8 +31,6 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.WirelessConn
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 /** Real AE network regressions for the I/O port; excluded from published jars. */
-@GameTestHolder(AE2LightningTech.MODID)
-@PrefixGameTestTemplate(false)
 public final class OverloadedInterfaceIoGameTests {
     private static final BlockPos INTERFACE_POS = new BlockPos(1, 1, 1);
     private static final BlockPos ENERGY_POS = new BlockPos(2, 1, 1);
@@ -45,7 +40,6 @@ public final class OverloadedInterfaceIoGameTests {
 
     private OverloadedInterfaceIoGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_filter", timeoutTicks = 180)
     public static void fastWirelessExactImportRespectsExportExclusion(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -54,7 +48,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkExactImportExclusion(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_filter", timeoutTicks = 180)
     public static void fastLocalExactImportRespectsExportExclusion(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -155,7 +148,6 @@ public final class OverloadedInterfaceIoGameTests {
         return storage.extract(key, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 150)
     public static void fastWirelessExcludedImportStopsAndWakes(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -164,7 +156,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkExcludedImportStopsAndWakes(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 150)
     public static void fastLocalExcludedImportStopsAndWakes(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -259,7 +250,6 @@ public final class OverloadedInterfaceIoGameTests {
         }
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 180)
     public static void exactImportPlanKeepsBufferFlushAndExport(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -311,7 +301,6 @@ public final class OverloadedInterfaceIoGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 140)
     public static void exactImportPlanDoesNotPruneFuzzyOrInvertedFilters(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -361,10 +350,6 @@ public final class OverloadedInterfaceIoGameTests {
     }
 
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 260)
     public static void fastImportBufferSurvivesSaveAndReload(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -392,11 +377,11 @@ public final class OverloadedInterfaceIoGameTests {
                 require(remainingItems(fixture) == 0, "save/reload source was not drained");
                 var tag = new net.minecraft.nbt.CompoundTag();
                 var registries = helper.getLevel().registryAccess();
-                fixture.blockEntity.saveAdditional(tag, registries);
+                fixture.blockEntity.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(tag, registries));
                 fixture.blockEntity.clearImportBuffer();
                 require(bufferedAmount(fixture.blockEntity) == 0,
                         "clearImportBuffer retained ownership");
-                fixture.blockEntity.loadTag(tag, registries);
+                fixture.blockEntity.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(tag, registries));
                 require(bufferedAmount(fixture.blockEntity) == 192,
                         "reload lost or duplicated retained amounts");
                 require(bufferForTest(fixture.blockEntity).size() == 3,
@@ -423,7 +408,6 @@ public final class OverloadedInterfaceIoGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastWirelessImportResumesAfterStorageRecovery(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -432,7 +416,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkImportStorageRecovery(helper, false, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastLocalImportResumesAfterStorageRecovery(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -441,7 +424,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkImportStorageRecovery(helper, true, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastWirelessImportRestartsAfterIdle(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -450,7 +432,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkImportStorageRecovery(helper, false, true);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastLocalImportRestartsAfterIdle(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -538,7 +519,6 @@ public final class OverloadedInterfaceIoGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_07_refill", timeoutTicks = 300)
     public static void wirelessExportFillsOnceAndBatchesRefills(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -547,7 +527,6 @@ public final class OverloadedInterfaceIoGameTests {
         checkFullExport(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_07_refill", timeoutTicks = 300)
     public static void localExportFillsOnceAndBatchesRefills(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -606,7 +585,6 @@ public final class OverloadedInterfaceIoGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_07_refill", timeoutTicks = 140)
     public static void missingExportKeyDoesNotBlockOtherKeys(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -825,7 +803,8 @@ public final class OverloadedInterfaceIoGameTests {
 
     private static void require(boolean condition, String message) {
         if (!condition) {
-            throw new IllegalStateException(message);
+            throw new net.minecraft.gametest.framework.GameTestAssertException(
+                    net.minecraft.network.chat.Component.literal(message), 0);
         }
     }
 

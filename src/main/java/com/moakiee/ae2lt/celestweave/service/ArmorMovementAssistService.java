@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.celestweave.service;
 import java.util.List;
 
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -18,10 +18,10 @@ import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector.ActiveCapa
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 
 public final class ArmorMovementAssistService {
-    private static final ResourceLocation SPEED_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier SPEED_MODIFIER_ID = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID,
             "celestweave_movement_assist_speed");
-    private static final ResourceLocation STEP_HEIGHT_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier STEP_HEIGHT_MODIFIER_ID = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID,
             "celestweave_movement_assist_step_height");
     private static final double EPSILON = 1.0E-6D;
@@ -77,7 +77,7 @@ public final class ArmorMovementAssistService {
     private static void updateModifier(
             ServerPlayer player,
             Holder<Attribute> attribute,
-            ResourceLocation id,
+            Identifier id,
             double amount,
             AttributeModifier.Operation operation) {
         AttributeInstance instance = player.getAttribute(attribute);

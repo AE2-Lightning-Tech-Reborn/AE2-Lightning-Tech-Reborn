@@ -6,15 +6,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "B": { "item": "ae2:fluix_glass_cable" },
-    "C": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "D": { "item": "ae2lt:overload_crystal_block" },
-    "E": { "item": "ae2:wireless_access_point" },
-    "F": { "item": "ae2lt:overload_crystal_block" },
-    "G": { "item": "ae2lt:tianshu_supercomputer_casing" },
-    "H": { "item": "ae2:fluix_glass_cable" },
-    "I": { "item": "ae2lt:tianshu_supercomputer_casing" }
+    "A": "ae2lt:tianshu_supercomputer_casing",
+    "B": "ae2:fluix_glass_cable",
+    "C": "ae2lt:tianshu_supercomputer_casing",
+    "D": "ae2lt:overload_crystal_block",
+    "E": "ae2:wireless_access_point",
+    "F": "ae2lt:overload_crystal_block",
+    "G": "ae2lt:tianshu_supercomputer_casing",
+    "H": "ae2:fluix_glass_cable",
+    "I": "ae2lt:tianshu_supercomputer_casing"
   },
   "result": {
     "id": "ae2lt:tianshu_supercomputer_port",

@@ -9,21 +9,15 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:dusts/entro"
-      },
+      "ingredient": "#c:dusts/entro",
       "count": 32
     },
     {
-      "ingredient": {
-        "tag": "c:ingots/gold"
-      },
+      "ingredient": "#c:ingots/gold",
       "count": 32
     },
     {
-      "ingredient": {
-        "item": "minecraft:lapis_lazuli"
-      },
+      "ingredient": "minecraft:lapis_lazuli",
       "count": 32
     }
   ],

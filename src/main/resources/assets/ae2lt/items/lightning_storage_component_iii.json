@@ -1,0 +1,28 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "ae2lt:item/lightning_storage_component_iii",
+    "tints": [
+      {
+        "type": "ae2lt:legacy_tint",
+        "kind": "cell",
+        "index": 0
+      },
+      {
+        "type": "ae2lt:legacy_tint",
+        "kind": "cell",
+        "index": 1
+      },
+      {
+        "type": "ae2lt:legacy_tint",
+        "kind": "cell",
+        "index": 2
+      },
+      {
+        "type": "ae2lt:legacy_tint",
+        "kind": "cell",
+        "index": 3
+      }
+    ]
+  }
+}

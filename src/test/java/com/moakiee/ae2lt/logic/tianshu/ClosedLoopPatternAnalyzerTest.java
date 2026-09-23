@@ -26,7 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -442,7 +442,7 @@ class ClosedLoopPatternAnalyzerTest {
                 List.of(output(seed, 2), output(product, 1), output(byproduct, 3)),
                 input(seed, 1, null), input(material, 4, null));
         var snapshot = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "marked_pattern"), null, null);
+                Identifier.fromNamespaceAndPath("ae2lt_test", "marked_pattern"), null, null);
 
         var result = ClosedLoopPatternAuthoringService.create(List.of(
                 new ClosedLoopPatternAuthoringService.MarkedMember(member, snapshot, 1)),
@@ -469,7 +469,7 @@ class ClosedLoopPatternAnalyzerTest {
                 List.of(output(seed, 2), output(product, 1)),
                 input(seed, 1, null), input(material, 4, null));
         var snapshot = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "marked_wave_pattern"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "marked_wave_pattern"),
                 null, null);
 
         var nonMinimal = ClosedLoopPatternAuthoringService.create(List.of(
@@ -508,10 +508,10 @@ class ClosedLoopPatternAnalyzerTest {
                 List.of(output(seed, 2), output(product, 1)),
                 input(seed, 1, null));
         var first = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "repeated_leaf_first"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "repeated_leaf_first"),
                 null, null);
         var second = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "repeated_leaf_second"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "repeated_leaf_second"),
                 null, null);
 
         var result = ClosedLoopPatternAuthoringService.create(List.of(
@@ -534,7 +534,7 @@ class ClosedLoopPatternAnalyzerTest {
                 List.of(output(seed, 2), output(product, 1)),
                 input(seed, 1, null));
         var executionMemberSnapshot = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt", "closed_loop_pattern"),
+                Identifier.fromNamespaceAndPath("ae2lt", "closed_loop_pattern"),
                 null, null);
 
         var result = ClosedLoopPatternAuthoringService.create(List.of(
@@ -878,15 +878,15 @@ class ClosedLoopPatternAnalyzerTest {
         @Override public AEKey dropSecondary() {
             return secondary.isEmpty() ? this : new TestKey(id);
         }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            tag.putString("secondary", secondary);
-            return tag;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+            output.putString("secondary", secondary);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() { return Component.literal(id + secondary); }
@@ -900,7 +900,7 @@ class ClosedLoopPatternAnalyzerTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
                     Component.literal("test key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

@@ -7,15 +7,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "ae2:pattern_provider" },
-    "B": { "item": "ae2:capacity_card" },
-    "C": { "item": "ae2:pattern_provider" },
-    "D": { "item": "ae2lt:overload_processor" },
-    "E": { "item": "ae2lt:tianshu_blank_unit" },
-    "F": { "item": "ae2lt:overload_processor" },
-    "G": { "item": "ae2:pattern_provider" },
-    "H": { "item": "ae2:capacity_card" },
-    "I": { "item": "ae2:pattern_provider" }
+    "A": "ae2:pattern_provider",
+    "B": "ae2:capacity_card",
+    "C": "ae2:pattern_provider",
+    "D": "ae2lt:overload_processor",
+    "E": "ae2lt:tianshu_blank_unit",
+    "F": "ae2lt:overload_processor",
+    "G": "ae2:pattern_provider",
+    "H": "ae2:capacity_card",
+    "I": "ae2:pattern_provider"
   },
   "result": {
     "count": 1,

@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.logic.advancement;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.item.FixedInfiniteCellItem;
 import com.moakiee.ae2lt.registry.ModItems;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -12,15 +12,15 @@ import net.minecraft.world.item.ItemStack;
  * by vanilla item predicates.
  */
 public final class ProgressionAdvancementService {
-    private static final ResourceLocation ANNIHILATION =
+    private static final Identifier ANNIHILATION =
             advancement("annihilation");
-    private static final ResourceLocation NEUTRALIZATION =
+    private static final Identifier NEUTRALIZATION =
             advancement("neutralization");
-    private static final ResourceLocation CONSTRUCT_FRAGMENT =
+    private static final Identifier CONSTRUCT_FRAGMENT =
             advancement("construct_fragment");
-    private static final ResourceLocation THUNDERSTORM_GENERATOR =
+    private static final Identifier THUNDERSTORM_GENERATOR =
             advancement("thunderstorm_generator");
-    private static final ResourceLocation OBSERVABLE_BLACK_HOLE =
+    private static final Identifier OBSERVABLE_BLACK_HOLE =
             advancement("observable_black_hole");
 
     private ProgressionAdvancementService() {
@@ -56,12 +56,12 @@ public final class ProgressionAdvancementService {
         }
     }
 
-    private static ResourceLocation advancement(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "main/" + path);
+    private static Identifier advancement(String path) {
+        return Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "main/" + path);
     }
 
-    private static void award(ServerPlayer player, ResourceLocation id, String criterion) {
-        var advancement = player.server.getAdvancements().get(id);
+    private static void award(ServerPlayer player, Identifier id, String criterion) {
+        var advancement = player.level().getServer().getAdvancements().get(id);
         if (advancement != null) {
             player.getAdvancements().award(advancement, criterion);
         }

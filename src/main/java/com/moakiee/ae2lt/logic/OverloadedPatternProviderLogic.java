@@ -2041,8 +2041,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     private static final String TAG_LOCAL_OVERFLOW_ENTRIES = "entries";
 
     @Override
-    public void writeToNBT(CompoundTag tag, HolderLookup.Provider registries) {
-        super.writeToNBT(tag, registries);
+    public void writeToNBT(net.minecraft.world.level.storage.ValueOutput output) {
+        super.writeToNBT(output);
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = overloadedHost.getLevel() != null
+                ? overloadedHost.getLevel().registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
         storage.writeToNBT(tag, registries);
         returnPolicy.writeToNBT(tag, registries);
         var localOverflow = pendingLocalDirectionalOverflowTarget != null
@@ -2078,18 +2081,20 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     }
 
     @Override
-    public void readFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
-        super.readFromNBT(tag, registries);
+    public void readFromNBT(net.minecraft.world.level.storage.ValueInput input) {
+        super.readFromNBT(input);
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
         storage.readFromNBT(tag, registries, returnInventory.full());
         returnPolicy.readFromNBT(tag, registries);
         pendingLocalDirectionalOverflowTarget = null;
         pendingLocalDirectionalOverflowLoad = null;
-        if (tag.contains(TAG_LOCAL_DIRECTIONAL_OVERFLOW, Tag.TAG_COMPOUND)) {
-            var localTag = tag.getCompound(TAG_LOCAL_DIRECTIONAL_OVERFLOW);
-            int directionId = localTag.getByte(TAG_LOCAL_TARGET_DIRECTION);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LOCAL_DIRECTIONAL_OVERFLOW, Tag.TAG_COMPOUND)) {
+            var localTag = tag.getCompoundOrEmpty(TAG_LOCAL_DIRECTIONAL_OVERFLOW);
+            int directionId = localTag.getByteOr(TAG_LOCAL_TARGET_DIRECTION, (byte) 0);
             var entries = WirelessOverflowPersistence.readRoutedOverflow(
                     registries,
-                    localTag.getList(TAG_LOCAL_OVERFLOW_ENTRIES, Tag.TAG_COMPOUND));
+                    localTag.getListOrEmpty(TAG_LOCAL_OVERFLOW_ENTRIES));
             if (directionId >= 0 && directionId < Direction.values().length
                     && !entries.isEmpty()) {
                 pendingLocalDirectionalOverflowLoad =

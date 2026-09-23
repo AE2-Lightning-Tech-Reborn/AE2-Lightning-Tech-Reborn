@@ -9,15 +9,11 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:dusts/entro"
-      },
+      "ingredient": "#c:dusts/entro",
       "count": 32
     },
     {
-      "ingredient": {
-        "item": "ae2:fluix_crystal"
-      },
+      "ingredient": "ae2:fluix_crystal",
       "count": 32
     }
   ],

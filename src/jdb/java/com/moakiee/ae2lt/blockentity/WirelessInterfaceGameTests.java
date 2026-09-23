@@ -7,7 +7,6 @@ import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -16,8 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
@@ -43,11 +40,9 @@ import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
  *
  * <p>The fixture builds its own powered AE network and all target machines;
  * no saved world, player interaction, command block or external modpack
- * machine is required. It deliberately lives in the {@code jdb} source set,
- * which is present in development runs but excluded from published jars.</p>
+ * machine is required. The wireless port test source set is loaded only by
+ * its development GameTest run and excluded from published jars.</p>
  */
-@GameTestHolder(AE2LightningTech.MODID)
-@PrefixGameTestTemplate(false)
 public final class WirelessInterfaceGameTests {
     private static final BlockPos INTERFACE_POS = new BlockPos(1, 1, 1);
     private static final BlockPos ENERGY_POS = new BlockPos(2, 1, 1);
@@ -77,12 +72,10 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 160)
     public static void fastWirelessEmptyExportConfigurationChanges(GameTestHelper helper) {
         checkEmptyExportConfigurationChanges(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 160)
     public static void fastLocalEmptyExportConfigurationChanges(GameTestHelper helper) {
         checkEmptyExportConfigurationChanges(helper, true);
     }
@@ -153,12 +146,10 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 170)
     public static void fastWirelessExportTypeChangesRemainResponsive(GameTestHelper helper) {
         checkExportTypeChangesRemainResponsive(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 170)
     public static void fastLocalExportTypeChangesRemainResponsive(GameTestHelper helper) {
         checkExportTypeChangesRemainResponsive(helper, true);
     }
@@ -223,7 +214,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 140)
     public static void emptyExportKeepsOwnedBufferFlush(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -303,12 +293,10 @@ public final class WirelessInterfaceGameTests {
         }
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_filter", timeoutTicks = 180)
     public static void fastWirelessExactImportRespectsExportExclusion(GameTestHelper helper) {
         checkExactImportExclusion(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_filter", timeoutTicks = 180)
     public static void fastLocalExactImportRespectsExportExclusion(GameTestHelper helper) {
         checkExactImportExclusion(helper, true);
     }
@@ -409,12 +397,10 @@ public final class WirelessInterfaceGameTests {
         return storage.extract(key, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 150)
     public static void fastWirelessExcludedImportStopsAndWakes(GameTestHelper helper) {
         checkExcludedImportStopsAndWakes(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 150)
     public static void fastLocalExcludedImportStopsAndWakes(GameTestHelper helper) {
         checkExcludedImportStopsAndWakes(helper, true);
     }
@@ -515,7 +501,6 @@ public final class WirelessInterfaceGameTests {
         }
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 180)
     public static void exactImportPlanKeepsBufferFlushAndExport(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -567,7 +552,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_exact_plan", timeoutTicks = 140)
     public static void exactImportPlanDoesNotPruneFuzzyOrInvertedFilters(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -616,10 +600,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_01_continuous",
-            timeoutTicks = 1500)
     public static void fastImport1024Continuous(GameTestHelper helper) {
         if (isDedicatedBenchmarkScenario()) {
             helper.succeed();
@@ -689,10 +669,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_03_high_cardinality_reject",
-            timeoutTicks = 1500)
     public static void fastImportHighCardinalityRejectRecovery(GameTestHelper helper) {
         if (!isHighCardinalityScenario()) {
             helper.succeed();
@@ -754,10 +730,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_04_equal_load",
-            timeoutTicks = 1500)
     public static void fastImportEqualLoadRecovery(GameTestHelper helper) {
         if (!isEqualLoadRecoveryScenario()) {
             helper.succeed();
@@ -818,10 +790,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_05_equal_load",
-            timeoutTicks = 1500)
     public static void fastImportEqualLoadSustained(GameTestHelper helper) {
         if (!isEqualLoadSustainedScenario()) {
             helper.succeed();
@@ -865,10 +833,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 260)
     public static void fastImportBufferSurvivesSaveAndReload(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -898,11 +862,11 @@ public final class WirelessInterfaceGameTests {
                 require(remainingItems(fixture) == 0, "save/reload source was not drained");
                 var tag = new net.minecraft.nbt.CompoundTag();
                 var registries = helper.getLevel().registryAccess();
-                fixture.blockEntity.saveAdditional(tag, registries);
+                fixture.blockEntity.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(tag, registries));
                 fixture.blockEntity.clearImportBuffer();
                 require(fixture.blockEntity.benchmarkBufferedImportAmount() == 0,
                         "clearImportBuffer retained ownership");
-                fixture.blockEntity.loadTag(tag, registries);
+                fixture.blockEntity.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(tag, registries));
                 require(fixture.blockEntity.benchmarkBufferedImportAmount() == 192,
                         "reload lost or duplicated retained amounts");
                 require(fixture.blockEntity.benchmarkBufferedImportKeys() == 3,
@@ -929,10 +893,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 260)
     public static void fastImportOutOfOrderTargetAttribution(GameTestHelper helper) {
         // This is a diagnostic-only integration check. It deliberately keeps
         // one early target disconnected while a later target remains usable,
@@ -992,10 +952,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 180)
     public static void fastImportColdOutputAllPhases(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -1056,10 +1012,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 180)
     public static void fastImportContinuousOutputAllPhases(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -1120,10 +1072,6 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(
-            template = "wireless_io_empty",
-            batch = "wireless_io_02_transitions",
-            timeoutTicks = 470)
     public static void fastImport256Transitions(GameTestHelper helper) {
         // The dedicated benchmark run isolates the continuous 1024-target
         // test. The ordinary GameTestServer run still executes this strict
@@ -1215,12 +1163,10 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastWirelessImportResumesAfterStorageRecovery(GameTestHelper helper) {
         checkImportStorageRecovery(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_06_recovery", timeoutTicks = 240)
     public static void fastLocalImportResumesAfterStorageRecovery(GameTestHelper helper) {
         checkImportStorageRecovery(helper, true);
     }
@@ -1641,7 +1587,8 @@ public final class WirelessInterfaceGameTests {
 
     private static void require(boolean condition, String message) {
         if (!condition) {
-            throw new IllegalStateException(message);
+            throw new net.minecraft.gametest.framework.GameTestAssertException(
+                    net.minecraft.network.chat.Component.literal(message), 0);
         }
     }
 

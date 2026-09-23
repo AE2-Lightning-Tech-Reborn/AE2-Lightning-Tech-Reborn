@@ -81,11 +81,12 @@ public final class BigCraftingCpu implements ICraftingCPU, ICraftingLink {
         return true;
     }
 
-    public void writeToNBT(CompoundTag tag) {
-        tag.putUUID("CraftID", job.id);
-        tag.putBoolean("standalone", true);
-        tag.putBoolean("canceled", isCanceled());
-        tag.putBoolean("done", isDone());
+    @Override
+    public void writeToNBT(net.minecraft.world.level.storage.ValueOutput output) {
+        output.putIntArray("CraftID", net.minecraft.core.UUIDUtil.uuidToIntArray(job.id));
+        output.putBoolean("standalone", true);
+        output.putBoolean("canceled", isCanceled());
+        output.putBoolean("done", isDone());
     }
 
     public UUID getCraftingID() {

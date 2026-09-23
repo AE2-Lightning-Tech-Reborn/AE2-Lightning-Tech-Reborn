@@ -185,7 +185,7 @@ public final class FrequencyBindingHelper
     }
 
     public void load(CompoundTag tag) {
-        frequencyId = tag.contains(TAG_FREQUENCY_ID) ? tag.getInt(TAG_FREQUENCY_ID) : -1;
+        frequencyId = tag.contains(TAG_FREQUENCY_ID) ? tag.getIntOr(TAG_FREQUENCY_ID, 0) : -1;
     }
 
     public static void writeMemoryFrequency(CompoundTag tag, int frequencyId) {
@@ -198,7 +198,7 @@ public final class FrequencyBindingHelper
         if (!tag.contains(TAG_MEMORY_FREQUENCY)) {
             return false;
         }
-        setter.accept(tag.getInt(TAG_MEMORY_FREQUENCY));
+        setter.accept(tag.getIntOr(TAG_MEMORY_FREQUENCY, 0));
         return true;
     }
 

@@ -13,17 +13,12 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ExportMode;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ImportMode;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.slf4j.LoggerFactory;
 
 /** Real AUTO-export workloads, isolated from behavioral tests and import benchmarks. */
-@GameTestHolder(AE2LightningTech.MODID)
-@PrefixGameTestTemplate(false)
 public final class WirelessInterfaceExportGameTests {
     private static final int CONFIGURE_TICK = 40;
     private static final int CONSUME_TICK = 80;
@@ -33,7 +28,6 @@ public final class WirelessInterfaceExportGameTests {
 
     private WirelessInterfaceExportGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_01_export_benchmark", timeoutTicks = 1500)
     public static void fastWirelessExportBenchmark(GameTestHelper helper) {
         var scenario = System.getProperty("ae2lt.wirelessIoBenchmark.scenario", "");
         if (!Boolean.getBoolean("ae2lt.wirelessIoBenchmark") || !scenario.contains("-export-")) {
@@ -239,6 +233,7 @@ public final class WirelessInterfaceExportGameTests {
     }
 
     private static void require(boolean condition, String message) {
-        if (!condition) throw new IllegalStateException(message);
+        if (!condition) throw new net.minecraft.gametest.framework.GameTestAssertException(
+                    net.minecraft.network.chat.Component.literal(message), 0);
     }
 }

@@ -3,27 +3,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_crystal_dust"
-      },
+      "ingredient": "ae2lt:overload_crystal_dust",
       "count": 1024
     },
     {
-      "ingredient": {
-        "item": "minecraft:string"
-      },
+      "ingredient": "minecraft:string",
       "count": 128
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_essence"
-      },
+      "ingredient": "ae2lt:firmament_essence",
       "count": 2
     },
     {
-      "ingredient": {
-        "item": "minecraft:phantom_membrane"
-      },
+      "ingredient": "minecraft:phantom_membrane",
       "count": 4
     }
   ],

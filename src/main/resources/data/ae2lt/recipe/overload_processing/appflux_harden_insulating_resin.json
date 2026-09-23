@@ -9,33 +9,23 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "minecraft:cactus"
-      },
+      "ingredient": "minecraft:cactus",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "minecraft:bone_meal"
-      },
+      "ingredient": "minecraft:bone_meal",
       "count": 1
     },
     {
-      "ingredient": {
-        "tag": "c:silicon"
-      },
+      "ingredient": "#c:silicon",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "minecraft:slime_ball"
-      },
+      "ingredient": "minecraft:slime_ball",
       "count": 1
     },
     {
-      "ingredient": {
-        "tag": "c:dusts/glowstone"
-      },
+      "ingredient": "#c:dusts/glowstone",
       "count": 1
     }
   ],

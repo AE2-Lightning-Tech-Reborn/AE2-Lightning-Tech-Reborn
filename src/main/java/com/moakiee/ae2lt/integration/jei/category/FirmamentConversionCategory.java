@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -151,7 +151,7 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
     public void draw(
             FirmamentConversionRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             double mouseX,
             double mouseY) {
         var font = Minecraft.getInstance().font;
@@ -159,11 +159,11 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
         String timeStr = formatProcessTime(recipe.processTime());
         var timeText = Component.translatable("jei.ae2lt.firmament_conversion.time", timeStr);
         int timeX = (WIDTH - font.width(timeText)) / 2;
-        guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, TEXT_COLOR, false);
+        guiGraphics.text(font, timeText, timeX, TIME_TEXT_Y, TEXT_COLOR, false);
     }
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
-        return Arrays.stream(ingredient.getItems())
+        return ingredient.items().map(holder -> new ItemStack(holder.value()))
                 .map(stack -> stack.copyWithCount(count))
                 .toList();
     }

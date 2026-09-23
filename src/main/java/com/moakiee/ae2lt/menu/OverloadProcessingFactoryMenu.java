@@ -6,7 +6,7 @@ import java.util.List;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -38,7 +38,7 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
     public static final MenuType<OverloadProcessingFactoryMenu> TYPE = MenuTypeBuilder
             .create(OverloadProcessingFactoryMenu::new, OverloadProcessingFactoryBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.overload_processing_factory"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "overload_processing_factory"));
 
@@ -116,12 +116,12 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
         setupUpgrades(host.getUpgrades());
         createPlayerInventorySlots(playerInventory);
 
-        registerClientAction("toggleAutoExport", this::toggleAutoExport);
-        registerClientAction("toggleOutputSide", Integer.class, this::toggleOutputSide);
-        registerClientAction("clearOutputSides", this::clearOutputSides);
-        registerClientAction("insertFluid", Integer.class, this::insertFluidFromCarried);
-        registerClientAction("extractFluid", Integer.class, this::extractFluidToCarried);
-        registerClientAction("clearFluidTank", Integer.class, this::clearFluidTank);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"), this::toggleAutoExport);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("toggleOutputSide"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::toggleOutputSide);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"), this::clearOutputSides);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("insertFluid"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::insertFluidFromCarried);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("extractFluid"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::extractFluidToCarried);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("clearFluidTank"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::clearFluidTank);
     }
 
     private void addMachineSlots() {
@@ -331,27 +331,27 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
     }
 
     public void clientToggleAutoExport() {
-        sendClientAction("toggleAutoExport");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoExport"));
     }
 
     public void clientToggleOutputSide(RelativeSide side) {
-        sendClientAction("toggleOutputSide", side.ordinal());
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("toggleOutputSide"), side.ordinal());
     }
 
     public void clientClearOutputSides() {
-        sendClientAction("clearOutputSides");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("clearOutputSides"));
     }
 
     public void clientInsertFluid(int tankIndex) {
-        sendClientAction("insertFluid", tankIndex);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("insertFluid"), tankIndex);
     }
 
     public void clientExtractFluid(int tankIndex) {
-        sendClientAction("extractFluid", tankIndex);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("extractFluid"), tankIndex);
     }
 
     public void clientClearFluidTank(int tankIndex) {
-        sendClientAction("clearFluidTank", tankIndex);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("clearFluidTank"), tankIndex);
     }
 
     private void insertFluidFromCarried(Integer tankIndex) {

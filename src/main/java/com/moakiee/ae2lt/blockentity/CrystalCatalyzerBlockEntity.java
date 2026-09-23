@@ -13,7 +13,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -435,7 +435,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             var holder = candidate.get().recipe();
             var recipe = holder.value();
             // Keep the shared recipe's cost metadata. This machine bypasses energy in its tick driver.
-            lockedRecipe = new CrystalCatalyzerLockedRecipe(holder.id(), getMachineOutput(candidate.get()),
+            lockedRecipe = new CrystalCatalyzerLockedRecipe(holder.id().identifier(), getMachineOutput(candidate.get()),
                     recipe.energyPerCycle(), 1, recipe.lightningCost(), recipe.lightningTier());
         } else {
             lockedRecipe = CrystalCatalyzerLockedRecipe.fromCandidate(
@@ -608,10 +608,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
                 .insert(key, amount, Actionable.MODULATE, IActionSource.ofMachine(this));
     }
 
-    public void onNeighborChanged(BlockPos changedPos) {
-        if (changedPos != null && worldPosition.distManhattan(changedPos) == 1) {
-            exportTargetCache.invalidate();
-        }
+    public void onNeighborChanged() {
+        exportTargetCache.invalidate();
     }
 
     @Override
@@ -728,10 +726,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(data, TAG_INVENTORY, registries);
-        data.put(TAG_TANK, tank.writeToNBT(registries, new CompoundTag()));
+        data.put(TAG_TANK, com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.save(tank, registries));
         data.putLong(TAG_ENERGY, energyStorage.getStoredEnergyLong());
         data.putLong(TAG_CONSUMED_ENERGY, consumedEnergy);
         data.putInt(TAG_PROCESSING_TICKS, processingTicksSpent);
@@ -751,25 +751,27 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         inventory.loadFromTag(data, TAG_INVENTORY, registries);
-        tank.readFromNBT(registries, data.getCompound(TAG_TANK));
-        energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
-        consumedEnergy = Math.max(0L, data.getLong(TAG_CONSUMED_ENERGY));
-        processingTicksSpent = Math.max(0, data.getInt(TAG_PROCESSING_TICKS));
+        com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.load(tank, registries, data.getCompoundOrEmpty(TAG_TANK));
+        energyStorage.loadStoredEnergy(data.getLongOr(TAG_ENERGY, 0L));
+        consumedEnergy = Math.max(0L, data.getLongOr(TAG_CONSUMED_ENERGY, 0L));
+        processingTicksSpent = Math.max(0, data.getIntOr(TAG_PROCESSING_TICKS, 0));
         frequencyBinding.load(data);
-        autoExport = data.getBoolean(TAG_AUTO_EXPORT);
+        autoExport = data.getBooleanOr(TAG_AUTO_EXPORT, false);
         allowedOutputs.clear();
-        ListTag outputTags = data.getList(TAG_ALLOWED_OUTPUTS, Tag.TAG_STRING);
+        ListTag outputTags = data.getListOrEmpty(TAG_ALLOWED_OUTPUTS);
         for (int i = 0; i < outputTags.size(); i++) {
             try {
-                allowedOutputs.add(RelativeSide.valueOf(outputTags.getString(i)));
+                allowedOutputs.add(RelativeSide.valueOf(outputTags.getStringOr(i, "")));
             } catch (IllegalArgumentException ignored) {
             }
         }
-        if (data.contains(TAG_MODE, Tag.TAG_STRING) && !isPigmeeVariant()) {
-            String modeName = data.getString(TAG_MODE);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_MODE, Tag.TAG_STRING) && !isPigmeeVariant()) {
+            String modeName = data.getStringOr(TAG_MODE, "");
             mode = Mode.CRYSTAL;
             for (Mode m : Mode.values()) {
                 if (m.getSerializedName().equals(modeName)) {
@@ -783,9 +785,9 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         if (isPigmeeVariant()) {
             mode = Mode.CRYSTAL;
         }
-        if (data.contains(TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
             lockedRecipe = CrystalCatalyzerLockedRecipe.fromTag(
-                    data.getCompound(TAG_LOCKED_RECIPE),
+                    data.getCompoundOrEmpty(TAG_LOCKED_RECIPE),
                     registries,
                     getCurrentOutputMultiplier());
         } else {
@@ -801,7 +803,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
                 var id = lockedRecipe.recipeId();
                 var oldPrefix = "crystal_catalyzer/pigmee_";
                 if (id.getNamespace().equals("ae2lt") && id.getPath().startsWith(oldPrefix)) {
-                    var sharedId = ResourceLocation.fromNamespaceAndPath("ae2lt",
+                    var sharedId = Identifier.fromNamespaceAndPath("ae2lt",
                             "crystal_catalyzer/" + id.getPath().substring(oldPrefix.length()));
                     lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, lockedRecipe.output(),
                             lockedRecipe.energyPerCycle(), lockedRecipe.outputMultiplier(),

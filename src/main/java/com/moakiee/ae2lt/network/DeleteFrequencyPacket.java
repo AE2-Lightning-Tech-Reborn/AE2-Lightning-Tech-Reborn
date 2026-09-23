@@ -6,7 +6,7 @@ import com.moakiee.ae2lt.menu.FrequencyMenu;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record DeleteFrequencyPacket(int token, int frequencyId) implements CustomPacketPayload {
 
     public static final Type<DeleteFrequencyPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "delete_frequency"));
+            new Type<>(Identifier.fromNamespaceAndPath("ae2lt", "delete_frequency"));
 
     public static final StreamCodec<FriendlyByteBuf, DeleteFrequencyPacket> STREAM_CODEC =
             StreamCodec.of(DeleteFrequencyPacket::encode, DeleteFrequencyPacket::decode);
@@ -60,9 +60,9 @@ public record DeleteFrequencyPacket(int token, int frequencyId) implements Custo
                 return;
             }
 
-            manager.deleteFrequency(pkt.frequencyId, player.getServer());
+            manager.deleteFrequency(pkt.frequencyId, player.level().getServer());
             UpdateFrequencyBasicPacket.broadcastToPlayers(
-                    player.getServer(), UpdateFrequencyBasicPacket.forDeletion(pkt.frequencyId));
+                    player.level().getServer(), UpdateFrequencyBasicPacket.forDeletion(pkt.frequencyId));
         });
     }
 }

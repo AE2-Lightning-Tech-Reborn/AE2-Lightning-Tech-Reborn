@@ -8,7 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
 
-class TianshuTerminalTargetTest {
+class TianshuTerminalTargetTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void identityIncludesMachineDimensionAndControllerPosition() {
         var id = UUID.randomUUID();

@@ -91,8 +91,8 @@ public final class OverloadCpuInsertSupport {
         Objects.requireNonNull(overload, "overload");
         Objects.requireNonNull(nativeWaiting, "nativeWaiting");
 
-        var idOnlyIds = new LinkedHashSet<net.minecraft.resources.ResourceLocation>();
-        var strictIds = new LinkedHashSet<net.minecraft.resources.ResourceLocation>();
+        var idOnlyIds = new LinkedHashSet<net.minecraft.resources.Identifier>();
+        var strictIds = new LinkedHashSet<net.minecraft.resources.Identifier>();
         for (var output : overload.overloadPatternDetailsView().outputs()) {
             var key = AEItemKey.of(output.template());
             if (key == null) return true;

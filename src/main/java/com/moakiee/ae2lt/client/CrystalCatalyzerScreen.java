@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.client;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.ActionItems;
 import appeng.client.gui.AEBaseScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.ToggleButton;
@@ -104,21 +104,23 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(GuiGraphicsExtractor graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
         if (menu.isPigmeeVariant()) {
             // Cover the shared background's FE scale and unused matrix branch with its own blank texture.
-            var background = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+            var background = net.minecraft.resources.Identifier.fromNamespaceAndPath(
                     "ae2lt", "textures/guis/crystal_catalyzer.png");
-            graphics.blit(background, offsetX + 138, offsetY + 28, 150, 28, 10, 22);
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, background, offsetX + 138, offsetY + 28, 150, 28, 10, 22, 256, 256);
             // Matrix connectors begin directly below the horizontal arrow at y=40.
-            graphics.blit(background, offsetX + 80, offsetY + 40, 150, 28, 24, 33);
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, background, offsetX + 80, offsetY + 40, 150, 28, 24, 33, 256, 256);
         }
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         // AE2 的 WidgetContainer 会吞掉非左键事件;在此抢先拦截 tank 区域的右键/中键
         // 用于"右键倒入 / shift+右键清空"等 Adv AE 风格交互。
         if (fluidWidget != null && fluidWidget.isMouseOver(mouseX, mouseY)) {
@@ -126,12 +128,12 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, handled);
     }
 
     @Override
-    public void renderSlot(GuiGraphics guiGraphics, Slot slot) {
-        super.renderSlot(guiGraphics, slot);
+    public void extractSlot(GuiGraphicsExtractor guiGraphics, Slot slot, int mouseX, int mouseY) {
+        super.extractSlot(guiGraphics, slot, mouseX, mouseY);
         LargeStackCountRenderer.renderSlotCount(guiGraphics, font, slot);
     }
 

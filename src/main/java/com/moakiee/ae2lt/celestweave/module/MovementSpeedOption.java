@@ -33,7 +33,7 @@ public enum MovementSpeedOption {
 
     public static MovementSpeedOption fromTag(Tag tag) {
         if (tag instanceof StringTag stringTag) {
-            String id = stringTag.getAsString();
+            String id = stringTag.value();
             for (MovementSpeedOption option : values()) {
                 if (option.name().equalsIgnoreCase(id) || option.label.equalsIgnoreCase(id)) {
                     return option;

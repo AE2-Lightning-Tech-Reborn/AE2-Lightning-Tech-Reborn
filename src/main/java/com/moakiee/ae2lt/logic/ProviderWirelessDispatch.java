@@ -736,7 +736,7 @@ final class ProviderWirelessDispatch {
         boolean historyRemoved = false;
         for (int budget = PATTERN_CLEANUP_BUDGET; budget > 0 && !patternActivity.isEmpty(); budget--) {
             var pattern = patternActivity.firstKey();
-            long lastUsed = patternActivity.getLong(pattern);
+            long lastUsed = patternActivity.getOrDefault(pattern, 0L);
             if (gameTick >= lastUsed && gameTick - lastUsed <= IDLE_PATTERN_TICKS) break;
             if (!fairness.removePattern(pattern)) {
                 // A reentrant world callback must not invalidate an open pass.

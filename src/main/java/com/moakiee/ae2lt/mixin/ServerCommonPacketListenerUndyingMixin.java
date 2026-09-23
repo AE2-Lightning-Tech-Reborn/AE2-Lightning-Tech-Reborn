@@ -5,7 +5,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.network.PacketSendListener;
+import io.netty.channel.ChannelFutureListener;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
@@ -23,12 +23,12 @@ public abstract class ServerCommonPacketListenerUndyingMixin {
      */
     @Inject(
             method = "send(Lnet/minecraft/network/protocol/Packet;"
-                    + "Lnet/minecraft/network/PacketSendListener;)V",
+                    + "Lio/netty/channel/ChannelFutureListener;)V",
             at = @At("HEAD"),
             cancellable = true)
     private void ae2lt$suppressProtectedPlayerDeathPacket(
             Packet<?> packet,
-            PacketSendListener sendListener,
+            ChannelFutureListener sendListener,
             CallbackInfo ci) {
         if (packet instanceof ClientboundPlayerCombatKillPacket
                 && (Object) this instanceof ServerGamePacketListenerImpl gameListener

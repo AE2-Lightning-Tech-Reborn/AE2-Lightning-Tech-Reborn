@@ -3,10 +3,10 @@ package com.moakiee.ae2lt.client;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
@@ -15,7 +15,7 @@ import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 
 public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<OverloadDeviceWorkbenchMenu> {
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/overload_workplace_gui.png");
 
     private static final int TEXTURE_WIDTH = 320;
@@ -78,41 +78,41 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     private int scrollOffset = 0;
 
     public OverloadDeviceWorkbenchScreen(OverloadDeviceWorkbenchMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = GUI_WIDTH;
-        this.imageHeight = GUI_HEIGHT;
+        super(menu, playerInventory, title, GUI_WIDTH, GUI_HEIGHT);
         this.inventoryLabelX = OverloadDeviceWorkbenchMenu.INVENTORY_X;
         this.inventoryLabelY = OverloadDeviceWorkbenchMenu.INVENTORY_Y - 10;
     }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+    public void extractContents(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
         renderStatusArea(gfx);
         renderInstallProgress(gfx);
         renderModuleList(gfx, mouseX, mouseY);
+
+        super.extractContents(gfx, mouseX, mouseY, partialTick);
     }
 
-    private void renderStatusArea(GuiGraphics gfx) {
+    private void renderStatusArea(GuiGraphicsExtractor gfx) {
         int x = leftPos + STATUS_X;
         int y = topPos + STATUS_Y;
 
         if (!menu.hasDeviceInserted()) {
-            gfx.drawString(font, Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
+            gfx.text(font, Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
                     x, y + 7, TEXT_ON_DARK_BG, false);
             return;
         }
 
-        gfx.drawString(font, menu.getStatusText(), x, y, TEXT_ON_DARK_BG, false);
+        gfx.text(font, menu.getStatusText(), x, y, TEXT_ON_DARK_BG, false);
 
         boolean grid = menu.gridConnected != 0;
         Component gridText = grid
                 ? Component.translatable("ae2lt.overload_device_workbench.screen.network.online")
                 : Component.translatable("ae2lt.overload_device_workbench.screen.network.offline");
-        gfx.drawString(font, gridText, x, y + STATUS_SECOND_LINE_Y, TEXT_ON_DARK_BG, false);
+        gfx.text(font, gridText, x, y + STATUS_SECOND_LINE_Y, TEXT_ON_DARK_BG, false);
     }
 
-    private void renderInstallProgress(GuiGraphics gfx) {
+    private void renderInstallProgress(GuiGraphicsExtractor gfx) {
         if (menu.installProgress <= 0) {
             return;
         }
@@ -120,13 +120,13 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         double ratio = (double) menu.installProgress / OverloadDeviceWorkbenchMenu.INSTALL_TICKS;
         int visible = Math.max(1, (int) Math.ceil(ARROW_PROGRESS_VISIBLE_WIDTH * ratio));
         int filled = Math.min(ARROW_PROGRESS_WIDTH, ARROW_PROGRESS_VISIBLE_OFFSET_X + visible);
-        gfx.blit(TEXTURE, leftPos + ARROW_PROGRESS_X, topPos + ARROW_PROGRESS_Y,
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos + ARROW_PROGRESS_X, topPos + ARROW_PROGRESS_Y,
                 ARROW_PROGRESS_SRC_X, ARROW_PROGRESS_SRC_Y,
                 filled, ARROW_PROGRESS_HEIGHT,
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleList(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
         List<ItemStack> modules = menu.getInstalledModuleList();
         int listLeft = leftPos + MODULE_ROW_X;
         int listTop = topPos + MODULE_ROW_Y;
@@ -137,7 +137,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         Component header = Component.translatable(
                 "ae2lt.overload_device_workbench.screen.module_types",
                 modules.size());
-        gfx.drawString(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+        gfx.text(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             int moduleIndex = scrollOffset + row;
@@ -153,19 +153,19 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
             renderModuleRowFrame(gfx, rowY, hovered);
 
             ItemStack stack = modules.get(moduleIndex);
-            gfx.renderItem(stack, leftPos + MODULE_ICON_X, rowY + MODULE_ITEM_Y_OFFSET);
+            gfx.item(stack, leftPos + MODULE_ICON_X, rowY + MODULE_ITEM_Y_OFFSET);
 
             int cap = menu.getModuleMaxInstallAmount(stack);
             String amount = cap > 0 ? "x" + stack.getCount() + "/" + cap : "x" + stack.getCount();
             int amountWidth = font.width(amount);
             int amountX = REMOVE_BUTTON_X - amountWidth - 4;
             int rowTextColor = hovered ? TEXT_ON_LIGHT_BG : TEXT_ON_DARK_BG;
-            gfx.drawString(font, Component.literal(amount),
+            gfx.text(font, Component.literal(amount),
                     leftPos + amountX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
 
             int nameX = leftPos + MODULE_NAME_X;
             int nameMaxWidth = leftPos + amountX - nameX - 3;
-            gfx.drawString(font, Component.literal(truncate(font, stack.getHoverName().getString(), nameMaxWidth)),
+            gfx.text(font, Component.literal(truncate(font, stack.getHoverName().getString(), nameMaxWidth)),
                     nameX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
 
             renderRemoveButton(gfx, leftPos + REMOVE_BUTTON_X, rowY + REMOVE_BUTTON_Y_OFFSET, mouseX, mouseY);
@@ -176,19 +176,19 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         }
     }
 
-    private void renderModuleRowFrame(GuiGraphics gfx, int rowY, boolean selected) {
-        gfx.blit(TEXTURE, leftPos + MODULE_ROW_X, rowY,
+    private void renderModuleRowFrame(GuiGraphicsExtractor gfx, int rowY, boolean selected) {
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos + MODULE_ROW_X, rowY,
                 MODULE_ROW_SRC_X, selected ? MODULE_ROW_SELECTED_SRC_Y : MODULE_ROW_SRC_Y,
                 MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT,
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderRemoveButton(GuiGraphics gfx, int x, int y, int mouseX, int mouseY) {
+    private void renderRemoveButton(GuiGraphicsExtractor gfx, int x, int y, int mouseX, int mouseY) {
         boolean hovered = mouseX >= x
                 && mouseX < x + REMOVE_BUTTON_SIZE
                 && mouseY >= y
                 && mouseY < y + REMOVE_BUTTON_SIZE;
-        gfx.blit(TEXTURE, x, y,
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, x, y,
                 hovered ? REMOVE_BUTTON_HOVER_SRC_X : REMOVE_BUTTON_SRC_X,
                 hovered ? REMOVE_BUTTON_HOVER_SRC_Y : REMOVE_BUTTON_SRC_Y,
                 REMOVE_BUTTON_WIDTH,
@@ -196,7 +196,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
+    private void renderScrollBar(GuiGraphicsExtractor gfx, int moduleCount, int mouseX, int mouseY) {
         int barX = leftPos + SCROLLBAR_X;
         int barTop = topPos + SCROLLBAR_Y;
         int thumbSpace = SCROLLBAR_HEIGHT - SCROLLBAR_THUMB_HEIGHT;
@@ -205,7 +205,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                 && mouseX < barX + SCROLLBAR_WIDTH
                 && mouseY >= thumbY
                 && mouseY < thumbY + SCROLLBAR_THUMB_HEIGHT;
-        gfx.blit(TEXTURE, barX, thumbY,
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, barX, thumbY,
                 SCROLLBAR_THUMB_SRC_X,
                 hovered ? SCROLLBAR_THUMB_HOVER_SRC_Y : SCROLLBAR_THUMB_SRC_Y,
                 SCROLLBAR_WIDTH,
@@ -225,26 +225,27 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     }
 
     @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        renderBackground(gfx, mouseX, mouseY, partialTick);
-        super.render(gfx, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(gfx, mouseX, mouseY, partialTick);
         renderModuleRowTooltip(gfx, mouseX, mouseY);
-        renderTooltip(gfx, mouseX, mouseY);
+        extractTooltip(gfx, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        gfx.drawString(font, Component.translatable("block.ae2lt.overload_device_workbench"),
+    protected void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
+        gfx.text(font, Component.translatable("block.ae2lt.overload_device_workbench"),
                 42, 6, TEXT_ON_LIGHT_BG, false);
-        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT_ON_LIGHT_BG, false);
+        gfx.text(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT_ON_LIGHT_BG, false);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (button == 0 && handleModuleListClick(mouseX, mouseY)) {
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, handled);
     }
 
     private boolean handleModuleListClick(double mouseX, double mouseY) {
@@ -260,7 +261,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                     && mouseX < buttonX + REMOVE_BUTTON_SIZE
                     && mouseY >= rowY
                     && mouseY < rowY + REMOVE_BUTTON_SIZE) {
-                menu.requestUninstall(moduleIndex, hasShiftDown());
+                menu.requestUninstall(moduleIndex, net.minecraft.client.Minecraft.getInstance().hasShiftDown());
                 return true;
             }
         }
@@ -288,7 +289,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    private void renderModuleRowTooltip(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleRowTooltip(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
         List<ItemStack> modules = menu.getInstalledModuleList();
         int listLeft = leftPos + MODULE_ROW_X;
         int listTop = topPos + MODULE_ROW_Y;
@@ -305,7 +306,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                     && mouseX < buttonX + REMOVE_BUTTON_SIZE
                     && mouseY >= buttonY
                     && mouseY < buttonY + REMOVE_BUTTON_SIZE) {
-                gfx.renderComponentTooltip(font, List.of(
+                gfx.setComponentTooltipForNextFrame(font, List.of(
                                 Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_one"),
                                 Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_all")),
                         mouseX, mouseY);
@@ -315,7 +316,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                     && mouseX < listRight
                     && mouseY >= rowY
                     && mouseY < rowY + MODULE_ROW_HEIGHT) {
-                gfx.renderTooltip(font, modules.get(moduleIndex), mouseX, mouseY);
+                gfx.setTooltipForNextFrame(font, modules.get(moduleIndex), mouseX, mouseY);
                 return;
             }
         }

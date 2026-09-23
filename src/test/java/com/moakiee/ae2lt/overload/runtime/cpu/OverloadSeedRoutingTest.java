@@ -17,7 +17,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
@@ -232,14 +232,14 @@ class OverloadSeedRoutingTest {
         var logic = new Object();
         var state = new OverloadCpuState(OverloadCpuOwner.from(craftingId, logic));
         var source = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "overload_pattern"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "overload_pattern"),
                 null,
                 null);
         return new Fixture(
                 logic,
                 state,
                 new OverloadPatternReference("test:overload-seed", source),
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "pickaxe"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "pickaxe"),
                 key("pickaxe", "expected_damage"));
     }
 
@@ -252,7 +252,7 @@ class OverloadSeedRoutingTest {
             Object logic,
             OverloadCpuState state,
             OverloadPatternReference reference,
-            ResourceLocation itemId,
+            Identifier itemId,
             TestKey expectedKey) {
     }
 
@@ -270,15 +270,15 @@ class OverloadSeedRoutingTest {
         @Override public AEKey dropSecondary() {
             return secondary.isEmpty() ? this : new TestKey(id, "");
         }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            tag.putString("secondary", secondary);
-            return tag;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+            output.putString("secondary", secondary);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() {
@@ -296,7 +296,7 @@ class OverloadSeedRoutingTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "overload_key"),
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "overload_key"),
                     TestKey.class, Component.literal("overload key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

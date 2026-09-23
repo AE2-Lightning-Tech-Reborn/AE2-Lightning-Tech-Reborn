@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -43,8 +43,8 @@ public final class OverloadProcessingRecipeService {
     }
 
     private static synchronized List<RecipeHolder<OverloadProcessingRecipe>> getSortedRecipes(Level level) {
-        RecipeManager recipeManager = level.getRecipeManager();
-        var raw = recipeManager.getAllRecipesFor(ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get());
+        RecipeManager recipeManager = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level);
+        var raw = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(recipeManager, ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get());
         int orderFingerprint = computeRecipeOrderFingerprint(raw);
         if (recipeManager != cachedRecipeManager
                 || orderFingerprint != cachedRecipeOrderFingerprint
@@ -142,13 +142,13 @@ public final class OverloadProcessingRecipeService {
                     (long) recipe.value().lightningCost() * match.parallel()));
     }
 
-    public static Optional<RecipeHolder<OverloadProcessingRecipe>> findRecipeById(Level level, ResourceLocation recipeId) {
+    public static Optional<RecipeHolder<OverloadProcessingRecipe>> findRecipeById(Level level, Identifier recipeId) {
         if (level == null || recipeId == null) {
             return Optional.empty();
         }
 
-        return level.getRecipeManager()
-                .byKey(recipeId)
+        return com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level)
+                .byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId))
                 .flatMap(holder -> {
                     var recipe = holder.value();
                     if (!(recipe instanceof OverloadProcessingRecipe overloadRecipe)
@@ -371,13 +371,13 @@ public final class OverloadProcessingRecipeService {
             FluidStack outputFluid) {
         long bound = Long.MAX_VALUE;
 
-        List<ItemStack> itemResults = recipe.rawItemResults();
+        List<ItemStack> itemResults = recipe.itemResults();
         if (itemResults.size() == 1) {
             ItemStack result = itemResults.getFirst();
             bound = inventory.getOutputCapacityFor(result) / result.getCount();
         }
 
-        FluidStack fluidResult = recipe.rawFluidResult();
+        FluidStack fluidResult = recipe.fluidResult();
         if (!fluidResult.isEmpty()) {
             long tankCapacity = com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity.OUTPUT_TANK_CAPACITY;
             long space;
@@ -486,7 +486,7 @@ public final class OverloadProcessingRecipeService {
                 recipe.priority(),
                 recipe.itemInputs().size(),
                 recipe.totalInputCount(),
-                holder.id());
+                holder.id().identifier());
     }
 
     private record SelectionKey(
@@ -494,7 +494,7 @@ public final class OverloadProcessingRecipeService {
             int priority,
             int itemInputKinds,
             int totalInputCount,
-            ResourceLocation recipeId) {
+            Identifier recipeId) {
     }
 
     public record LightningConsumptionPlan(

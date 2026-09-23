@@ -28,18 +28,11 @@ public final class TianshuSeedStorageBlock extends TianshuSupercomputingUnitBloc
             BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         var blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof TianshuSeedStorageBlockEntity drive) {
-            if (!level.isClientSide) drive.openMenu(player);
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            if (!level.isClientSide()) drive.openMenu(player);
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return InteractionResult.PASS;
     }
 
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && !level.isClientSide
-                && level.getBlockEntity(pos) instanceof TianshuSeedStorageBlockEntity drive) {
-            drive.dropCells();
-        }
-        super.onRemove(state, level, pos, newState, moved);
-    }
+
 }

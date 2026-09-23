@@ -132,7 +132,7 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
                             if (y + font.lineHeight > 60) {
                                 return;
                             }
-                            graphics.drawString(font, line, 2, y, EmiRecipeWidgets.TEXT_COLOR, false);
+                            graphics.text(font, line, 2, y, EmiRecipeWidgets.TEXT_COLOR, false);
                             y += font.lineHeight;
                         }
                     }

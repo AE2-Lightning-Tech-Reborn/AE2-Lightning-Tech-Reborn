@@ -55,12 +55,12 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
         // The existing int path remains in charge of ordinary orders. Its exact-overflow
         // preview automatically upgrades in the confirmation menu when necessary.
         if (n.get().compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
-            PacketDistributor.sendToServer(
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                     new ConfirmBigAmountPacket(
                             menu.containerId,
                             n.get(),
                             amountToCraft.startsWithEquals(),
-                            hasShiftDown()));
+                            net.minecraft.client.Minecraft.getInstance().hasShiftDown()));
             ci.cancel();
         }
     }

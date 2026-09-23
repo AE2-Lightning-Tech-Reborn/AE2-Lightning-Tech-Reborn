@@ -3,27 +3,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_spirit_core_conduit"
-      },
+      "ingredient": "ae2lt:firmament_spirit_core_conduit",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_alloy_ingot"
-      },
+      "ingredient": "ae2lt:firmament_alloy_ingot",
       "count": 48
     },
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_superconducting_wire"
-      },
+      "ingredient": "ae2lt:firmament_superconducting_wire",
       "count": 40
     },
     {
-      "ingredient": {
-        "item": "ae2lt:overload_alloy_plate"
-      },
+      "ingredient": "ae2lt:overload_alloy_plate",
       "count": 16
     }
   ],

@@ -9,7 +9,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
@@ -25,7 +25,7 @@ public final class LightningAssemblyLockedRecipe {
     private static final String TAG_LEGACY_DUST_COST = "DustCost";
     private static final String TAG_INPUTS = "InputConsumptions";
 
-    private final ResourceLocation recipeId;
+    private final Identifier recipeId;
     private final ItemStack result;
     private final long totalEnergy;
     private final int lightningCost;
@@ -33,7 +33,7 @@ public final class LightningAssemblyLockedRecipe {
     private final int[] inputConsumptions;
 
     public LightningAssemblyLockedRecipe(
-            ResourceLocation recipeId,
+            Identifier recipeId,
             ItemStack result,
             long totalEnergy,
             int lightningCost,
@@ -62,7 +62,7 @@ public final class LightningAssemblyLockedRecipe {
     public static LightningAssemblyLockedRecipe fromCandidate(LightningAssemblyRecipeCandidate candidate) {
         RecipeHolder<LightningAssemblyRecipe> holder = candidate.recipe();
         return new LightningAssemblyLockedRecipe(
-                holder.id(),
+                holder.id().identifier(),
                 holder.value().getResultStack(),
                 holder.value().totalEnergy(),
                 holder.value().lightningCost(),
@@ -70,7 +70,7 @@ public final class LightningAssemblyLockedRecipe {
                 candidate.match().inputConsumptions());
     }
 
-    public ResourceLocation recipeId() {
+    public Identifier recipeId() {
         return recipeId;
     }
 
@@ -105,7 +105,7 @@ public final class LightningAssemblyLockedRecipe {
     public CompoundTag toTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putString(TAG_RECIPE_ID, recipeId.toString());
-        tag.put(TAG_RESULT, result.save(registries, new CompoundTag()));
+        tag.put(TAG_RESULT, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(result, registries));
         tag.putLong(TAG_TOTAL_ENERGY, totalEnergy);
         tag.putInt(TAG_LIGHTNING_COST, lightningCost);
         tag.putString(TAG_LIGHTNING_TIER, lightningTier.getSerializedName());
@@ -115,33 +115,33 @@ public final class LightningAssemblyLockedRecipe {
 
     @Nullable
     public static LightningAssemblyLockedRecipe fromTag(CompoundTag tag, HolderLookup.Provider registries) {
-        if (!tag.contains(TAG_RECIPE_ID) || !tag.contains(TAG_RESULT, Tag.TAG_COMPOUND)) {
+        if (!tag.contains(TAG_RECIPE_ID) || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_RESULT, Tag.TAG_COMPOUND)) {
             return null;
         }
 
-        ItemStack result = ItemStack.parseOptional(registries, tag.getCompound(TAG_RESULT));
+        ItemStack result = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, tag.getCompoundOrEmpty(TAG_RESULT));
         if (result.isEmpty()) {
             return null;
         }
 
-        int[] inputConsumptions = tag.getIntArray(TAG_INPUTS);
+        int[] inputConsumptions = tag.getIntArray(TAG_INPUTS).orElseGet(() -> new int[0]);
         if (inputConsumptions.length != 9) {
             return null;
         }
 
-        long totalEnergy = tag.getLong(TAG_TOTAL_ENERGY);
-        int lightningCost = tag.contains(TAG_LIGHTNING_COST, Tag.TAG_ANY_NUMERIC)
-                ? tag.getInt(TAG_LIGHTNING_COST)
-                : (tag.getInt(TAG_LEGACY_DUST_COST) > 0 ? LightningAssemblyRecipe.DEFAULT_LIGHTNING_COST : 0);
-        LightningKey.Tier lightningTier = tag.contains(TAG_LIGHTNING_TIER, Tag.TAG_STRING)
-                ? LightningKey.Tier.fromSerializedName(tag.getString(TAG_LIGHTNING_TIER))
+        long totalEnergy = tag.getLongOr(TAG_TOTAL_ENERGY, 0L);
+        int lightningCost = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LIGHTNING_COST, 99)
+                ? tag.getIntOr(TAG_LIGHTNING_COST, 0)
+                : (tag.getIntOr(TAG_LEGACY_DUST_COST, 0) > 0 ? LightningAssemblyRecipe.DEFAULT_LIGHTNING_COST : 0);
+        LightningKey.Tier lightningTier = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_LIGHTNING_TIER, Tag.TAG_STRING)
+                ? LightningKey.Tier.fromSerializedName(tag.getStringOr(TAG_LIGHTNING_TIER, ""))
                 : LightningAssemblyRecipe.DEFAULT_LIGHTNING_TIER;
         if (totalEnergy <= 0 || lightningCost <= 0) {
             return null;
         }
 
         return new LightningAssemblyLockedRecipe(
-                ResourceLocation.parse(tag.getString(TAG_RECIPE_ID)),
+                Identifier.parse(tag.getStringOr(TAG_RECIPE_ID, "")),
                 result,
                 totalEnergy,
                 lightningCost,

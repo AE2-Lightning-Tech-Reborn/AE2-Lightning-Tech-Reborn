@@ -33,10 +33,10 @@ public final class TerminalFrequencyCardFinder {
         List<ItemStack> result = new ArrayList<>();
 
         var inventory = player.getInventory();
-        for (ItemStack stack : inventory.items) {
+        for (ItemStack stack : inventory.getNonEquipmentItems()) {
             collectFromTerminal(stack, result);
         }
-        for (ItemStack stack : inventory.offhand) {
+        for (ItemStack stack : java.util.List.of(inventory.getItem(net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND))) {
             collectFromTerminal(stack, result);
         }
         for (ItemStack stack : CuriosFrequencyCardFinder.findAllEquippedStacks(player)) {

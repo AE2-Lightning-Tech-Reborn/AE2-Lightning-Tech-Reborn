@@ -128,22 +128,22 @@ public record ProcessingPatternTerminalDraft(
     public static ProcessingPatternTerminalDraft read(
             CompoundTag tag, HolderLookup.Provider registries) {
         try {
-            var type = ProcessingPatternEncodingType.valueOf(tag.getString(TAG_TYPE));
+            var type = ProcessingPatternEncodingType.valueOf(tag.getStringOr(TAG_TYPE, ""));
             if (type == ProcessingPatternEncodingType.NORMAL) return null;
             int inputSize = checkedSize(
-                    tag.getInt(TAG_INPUT_SIZE), MAX_INPUT_SLOTS, "input size");
+                    tag.getIntOr(TAG_INPUT_SIZE, 0), MAX_INPUT_SLOTS, "input size");
             int outputSize = checkedSize(
-                    tag.getInt(TAG_OUTPUT_SIZE), MAX_OUTPUT_SLOTS, "output size");
+                    tag.getIntOr(TAG_OUTPUT_SIZE, 0), MAX_OUTPUT_SLOTS, "output size");
             var inputs = readStacks(
-                    tag.getList(TAG_INPUTS, Tag.TAG_COMPOUND), inputSize, registries);
+                    tag.getListOrEmpty(TAG_INPUTS), inputSize, registries);
             var outputs = readStacks(
-                    tag.getList(TAG_OUTPUTS, Tag.TAG_COMPOUND), outputSize, registries);
+                    tag.getListOrEmpty(TAG_OUTPUTS), outputSize, registries);
             var advanced = type.hasAdvanced()
-                    ? new AdvancedConfig(tag.getIntArray(TAG_DIRECTIONS)) : null;
+                    ? new AdvancedConfig(tag.getIntArray(TAG_DIRECTIONS).orElseGet(() -> new int[0])) : null;
             var overload = type.hasOverload()
                     ? new OverloadConfig(
-                            tag.getIntArray(TAG_INPUT_ID_ONLY),
-                            tag.getIntArray(TAG_OUTPUT_ID_ONLY))
+                            tag.getIntArray(TAG_INPUT_ID_ONLY).orElseGet(() -> new int[0]),
+                            tag.getIntArray(TAG_OUTPUT_ID_ONLY).orElseGet(() -> new int[0]))
                     : null;
             return configured(inputs, outputs, advanced, overload);
         } catch (RuntimeException ignored) {
@@ -248,7 +248,7 @@ public record ProcessingPatternTerminalDraft(
         for (int slot = 0; slot < stacks.size(); slot++) {
             var stack = stacks.get(slot);
             if (stack == null) continue;
-            var entry = GenericStack.writeTag(registries, stack);
+            var entry = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, stack);
             entry.putInt(TAG_SLOT, slot);
             result.add(entry);
         }
@@ -259,10 +259,10 @@ public record ProcessingPatternTerminalDraft(
             ListTag entries, int size, HolderLookup.Provider registries) {
         var result = nullableStackList(size);
         for (int i = 0; i < entries.size(); i++) {
-            var entry = entries.getCompound(i);
-            int slot = entry.getInt(TAG_SLOT);
+            var entry = entries.getCompoundOrEmpty(i);
+            int slot = entry.getIntOr(TAG_SLOT, 0);
             if (slot >= 0 && slot < size) {
-                result.set(slot, GenericStack.readTag(registries, entry));
+                result.set(slot, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, entry));
             }
         }
         return result;

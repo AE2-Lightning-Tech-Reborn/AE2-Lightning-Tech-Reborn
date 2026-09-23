@@ -8,7 +8,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.ItemStack;
@@ -37,7 +37,7 @@ public class OverloadProcessingFactoryBlock extends AEBaseEntityBlock<OverloadPr
     public static final BooleanProperty WORKING = BooleanProperty.create("working");
 
     public OverloadProcessingFactoryBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
@@ -56,10 +56,10 @@ public class OverloadProcessingFactoryBlock extends AEBaseEntityBlock<OverloadPr
 
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos,
-                                Block block, BlockPos fromPos, boolean isMoving) {
+                                Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         var be = getBlockEntity(level, pos);
         if (be != null) {
-            be.onNeighborChanged(fromPos);
+            be.onNeighborChanged();
         }
     }
 
@@ -75,11 +75,11 @@ public class OverloadProcessingFactoryBlock extends AEBaseEntityBlock<OverloadPr
             be.openMenu(player, MenuLocators.forBlockEntity(be));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(
+    protected InteractionResult useItemOn(
             ItemStack heldItem,
             BlockState state,
             Level level,
@@ -89,7 +89,7 @@ public class OverloadProcessingFactoryBlock extends AEBaseEntityBlock<OverloadPr
             BlockHitResult hit) {
         if (heldItem.getItem() instanceof BucketItem) {
             if (useBucket(player, level, pos, heldItem, hand)) {
-                return ItemInteractionResult.sidedSuccess(level.isClientSide());
+                return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
             }
         }
 
@@ -97,67 +97,9 @@ public class OverloadProcessingFactoryBlock extends AEBaseEntityBlock<OverloadPr
     }
 
     private boolean useBucket(Player player, Level level, BlockPos pos, ItemStack stack, InteractionHand hand) {
-        var itemFluid = stack.getCapability(Capabilities.FluidHandler.ITEM);
-        var blockFluid = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
-        if (itemFluid == null || blockFluid == null) {
-            return false;
-        }
-
-        if (itemFluid.getFluidInTank(0).isEmpty()) {
-            var extracted = blockFluid.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.SIMULATE);
-            if (extracted.isEmpty() || extracted.getAmount() != FluidType.BUCKET_VOLUME) {
-                return false;
-            }
-
-            blockFluid.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);
-            if (itemFluid.getContainer().getCount() == 1) {
-                itemFluid.fill(extracted, IFluidHandler.FluidAction.EXECUTE);
-                player.setItemInHand(hand, itemFluid.getContainer());
-            } else {
-                var newBucket = new ItemStack(Items.BUCKET, 1);
-                var newBucketFluid = newBucket.getCapability(Capabilities.FluidHandler.ITEM);
-                if (newBucketFluid == null) {
-                    return false;
-                }
-                newBucketFluid.fill(extracted, IFluidHandler.FluidAction.EXECUTE);
-                player.setItemInHand(hand, newBucketFluid.getContainer());
-                player.addItem(new ItemStack(stack.getItem(), stack.getCount() - 1));
-            }
-
-            playBucketSound(player, level, pos, extracted, true);
-            return true;
-        }
-
-        var drained = itemFluid.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.SIMULATE);
-        if (drained.isEmpty()) {
-            return false;
-        }
-        int inserted = blockFluid.fill(drained, IFluidHandler.FluidAction.SIMULATE);
-        if (inserted != FluidType.BUCKET_VOLUME) {
-            return false;
-        }
-
-        drained = itemFluid.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);
-        blockFluid.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-        player.setItemInHand(hand, itemFluid.getContainer());
-        playBucketSound(player, level, pos, drained, false);
-        return true;
+        return net.neoforged.neoforge.transfer.fluid.FluidUtil.interactWithFluidHandler(
+                player, hand, level, pos, null, null);
     }
 
-    private void playBucketSound(Player player, Level level, BlockPos pos, FluidStack fluid, boolean fillBucket) {
-        SoundEvent sound = fluid.getFluidType().getSound(
-                player,
-                level,
-                pos,
-                fillBucket
-                        ? SoundActions.BUCKET_FILL
-                        : SoundActions.BUCKET_EMPTY);
-        if (sound == null) {
-            sound = fillBucket
-                    ? (fluid.is(FluidTags.LAVA) ? SoundEvents.BUCKET_FILL_LAVA : SoundEvents.BUCKET_FILL)
-                    : (fluid.is(FluidTags.LAVA) ? SoundEvents.BUCKET_EMPTY_LAVA : SoundEvents.BUCKET_EMPTY);
-        }
-        level.playSound(player, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
-    }
 }
 

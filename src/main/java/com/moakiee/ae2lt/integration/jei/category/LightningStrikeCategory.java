@@ -22,7 +22,7 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -82,8 +82,13 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
     }
 
     @Override
-    public IDrawable getBackground() {
-        return background;
+    public int getWidth() {
+        return WIDTH;
+    }
+
+    @Override
+    public int getHeight() {
+        return HEIGHT;
     }
 
     @Override
@@ -119,14 +124,13 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
             int row = index / MATERIALS_PER_ROW;
             int slotX = MATERIALS_X + col * MATERIAL_CELL;
             int slotY = MATERIALS_Y + row * MATERIAL_CELL;
-            builder.addSlot(
-                            blockConsumes.getOrDefault(block, false)
-                                    ? RecipeIngredientRole.INPUT
-                                    : RecipeIngredientRole.CATALYST,
-                            slotX,
-                            slotY)
+            var slot = builder.addSlot(RecipeIngredientRole.INPUT, slotX, slotY)
                     .setStandardSlotBackground()
                     .addItemStack(new ItemStack(block, count));
+            if (!blockConsumes.getOrDefault(block, false)) {
+                slot.addRichTooltipCallback((view, tooltip) -> tooltip.add(
+                        Component.translatable("jei.ae2lt.lightning_strike.not_consumed")));
+            }
             index++;
         }
     }
@@ -153,7 +157,7 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
     public void draw(
             LightningStrikeRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             double mouseX,
             double mouseY) {
         var font = Minecraft.getInstance().font;
@@ -163,9 +167,9 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
                         .withStyle(ChatFormatting.DARK_PURPLE)
                 : Component.translatable("jei.ae2lt.lightning_strike.any_lightning")
                         .withStyle(ChatFormatting.DARK_AQUA);
-        guiGraphics.drawString(font, lightningLabel, PREVIEW_X, 2, TEXT_COLOR, false);
+        guiGraphics.text(font, lightningLabel, PREVIEW_X, 2, TEXT_COLOR, false);
 
-        guiGraphics.drawString(
+        guiGraphics.text(
                 font,
                 Component.translatable("jei.ae2lt.lightning_strike.materials"),
                 MATERIALS_X,

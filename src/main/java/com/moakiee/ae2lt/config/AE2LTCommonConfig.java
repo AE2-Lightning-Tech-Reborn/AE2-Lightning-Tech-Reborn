@@ -8,7 +8,7 @@ import java.util.Set;
 import com.moakiee.ae2lt.blockentity.ExtendedPatternProviderCapacity;
 import com.moakiee.thunderbolt.core.util.FastWildcardMatcher;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class AE2LTCommonConfig {
@@ -44,9 +44,9 @@ public final class AE2LTCommonConfig {
             "minecraft:torchflower=8",
             "minecraft:recovery_compass=7",
             "minecraft:slime_ball=4");
-    private static final Set<ResourceLocation> DEFAULT_EASTER_EGG_CANDIDATE_IDS = Set.copyOf(
+    private static final Set<Identifier> DEFAULT_EASTER_EGG_CANDIDATE_IDS = Set.copyOf(
             DEFAULT_EASTER_EGG_WEIGHTS.stream()
-                    .map(entry -> ResourceLocation.parse(entry.substring(0, entry.lastIndexOf('='))))
+                    .map(entry -> Identifier.parse(entry.substring(0, entry.lastIndexOf('='))))
                     .toList());
     private static final List<String> DEFAULT_BATCH_COPY_LIMITED_BLOCKS = List.of(
             "neoecoae:crafting_pattern_bus",
@@ -89,14 +89,14 @@ public final class AE2LTCommonConfig {
         return VALUES.easterEggWeight.get();
     }
 
-    public static Map<ResourceLocation, Integer> easterEggWeights() {
-        Map<ResourceLocation, Integer> parsed = new LinkedHashMap<>();
+    public static Map<Identifier, Integer> easterEggWeights() {
+        Map<Identifier, Integer> parsed = new LinkedHashMap<>();
         for (String entry : VALUES.easterEggWeights.get()) {
             int separator = entry.lastIndexOf('=');
             if (separator <= 0 || separator == entry.length() - 1) {
                 continue;
             }
-            ResourceLocation id = ResourceLocation.tryParse(entry.substring(0, separator).strip());
+            Identifier id = Identifier.tryParse(entry.substring(0, separator).strip());
             if (id == null) {
                 continue;
             }
@@ -109,7 +109,7 @@ public final class AE2LTCommonConfig {
         return Map.copyOf(parsed);
     }
 
-    public static boolean isDefaultEasterEggCandidate(ResourceLocation id) {
+    public static boolean isDefaultEasterEggCandidate(Identifier id) {
         return DEFAULT_EASTER_EGG_CANDIDATE_IDS.contains(id);
     }
 
@@ -504,7 +504,7 @@ public final class AE2LTCommonConfig {
             easterEggItem = builder
                     .comment("Easter egg item id.")
                     .define("eastereggitem", "ae2lt:lightning_collapse_matrix",
-                            value -> value instanceof String text && ResourceLocation.tryParse(text) != null);
+                            value -> value instanceof String text && Identifier.tryParse(text) != null);
             easterEggWeight = builder
                     .comment("Easter egg weight.")
                     .defineInRange("eastereggweight", 50, 0, 10000);
@@ -815,7 +815,7 @@ public final class AE2LTCommonConfig {
         }
         int separator = text.lastIndexOf('=');
         if (separator <= 0 || separator == text.length() - 1
-                || ResourceLocation.tryParse(text.substring(0, separator).strip()) == null) {
+                || Identifier.tryParse(text.substring(0, separator).strip()) == null) {
             return false;
         }
         try {

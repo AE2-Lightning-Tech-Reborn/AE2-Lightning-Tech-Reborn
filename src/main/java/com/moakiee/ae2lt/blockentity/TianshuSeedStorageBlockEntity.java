@@ -144,25 +144,29 @@ public final class TianshuSeedStorageBlockEntity extends AEBaseBlockEntity
         }
     }
 
-    @Override public boolean isClientSide() { return level != null && level.isClientSide; }
+    @Override public boolean isClientSide() { return level != null && level.isClientSide(); }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
         for (int slot = 0; slot < cells.size(); slot++) {
             var cell = cell(slot);
             if (cell != null) cell.persist();
         }
-        super.saveAdditional(tag, registries);
-        cells.writeToNBT(tag, TAG_CELLS, registries);
+        super.saveAdditional(output);
+        cells.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries), TAG_CELLS);
         if (portPos != null) tag.putLong(TAG_PORT_POS, portPos.asLong());
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        cells.readFromNBT(tag, TAG_CELLS, registries);
-        portPos = tag.contains(TAG_PORT_POS, Tag.TAG_LONG)
-                ? BlockPos.of(tag.getLong(TAG_PORT_POS)) : null;
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        cells.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, registries), TAG_CELLS);
+        portPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_PORT_POS, Tag.TAG_LONG)
+                ? BlockPos.of(tag.getLongOr(TAG_PORT_POS, 0L)) : null;
     }
 
     @Override
@@ -175,4 +179,10 @@ public final class TianshuSeedStorageBlockEntity extends AEBaseBlockEntity
     }
 
     @Override public void clearContent() { cells.clear(); }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        dropCells();
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

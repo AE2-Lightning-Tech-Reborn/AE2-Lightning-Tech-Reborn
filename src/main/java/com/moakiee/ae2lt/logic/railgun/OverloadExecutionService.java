@@ -138,7 +138,7 @@ public final class OverloadExecutionService {
         double maxHp = target.getMaxHealth();
 
         CompoundTag root = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        ListTag targets = root.getList(TAG_TARGETS, Tag.TAG_COMPOUND);
+        ListTag targets = root.getListOrEmpty(TAG_TARGETS);
         int existingIdx = indexOf(targets, targetUuid);
         long feCost = RailgunEnergyRules.overloadExecutionCostFe();
         RailgunEnergyBuffer.refillFromNetwork(
@@ -155,9 +155,9 @@ public final class OverloadExecutionService {
         if (existingIdx < 0) {
             basis = currentHp;
         } else {
-            CompoundTag entry = targets.getCompound(existingIdx);
-            double recorded = entry.getDouble(TAG_RECORDED_HP);
-            long lastHit = entry.getLong(TAG_LAST_HIT_TICK);
+            CompoundTag entry = targets.getCompoundOrEmpty(existingIdx);
+            double recorded = entry.getDoubleOr(TAG_RECORDED_HP, 0.0D);
+            long lastHit = entry.getLongOr(TAG_LAST_HIT_TICK, 0L);
             long elapsed = now - lastHit;
             if (elapsed >= decayWindow) {
                 // Window expired — record is stale, drop it and start fresh.
@@ -364,7 +364,7 @@ public final class OverloadExecutionService {
 
         if (needsKillFallback(target.dead, target.isRemoved())) {
             try {
-                target.kill();
+                if (target.level() instanceof ServerLevel serverLevel) target.kill(serverLevel);
             } catch (RuntimeException | LinkageError error) {
                 LOGGER.warn("Target kill callback failed for {}; continuing forced removal",
                         target.getType(), error);
@@ -395,7 +395,7 @@ public final class OverloadExecutionService {
      */
     private static void forceRemoveNonLiving(Entity target) {
         try {
-            target.kill();
+            if (target.level() instanceof ServerLevel serverLevel) target.kill(serverLevel);
         } catch (RuntimeException | LinkageError error) {
             LOGGER.warn("Non-living target kill callback failed for {}; continuing forced removal",
                     target.getType(), error);
@@ -424,7 +424,7 @@ public final class OverloadExecutionService {
             target.setLastHurtByMob(attacker);
         }
         if (source.getEntity() instanceof Player player) {
-            target.setLastHurtByPlayer(player);
+            target.setLastHurtByPlayer(player, 100);
         }
     }
 
@@ -443,7 +443,7 @@ public final class OverloadExecutionService {
 
     /** Establishes a lethal combat state without entering the interceptable damage pipeline. */
     private static void prepareLethalState(LivingEntity victim, DamageSource source, float amount) {
-        if (victim.level().isClientSide) return;
+        if (victim.level().isClientSide()) return;
         if (victim.isSleeping()) victim.stopSleeping();
 
         victim.setNoActionTime(0);
@@ -464,8 +464,8 @@ public final class OverloadExecutionService {
         LivingEntity killer = source.getEntity() instanceof LivingEntity attacker
                 ? attacker
                 : victim.getKillCredit();
-        if (victim.deathScore >= 0 && killer != null) {
-            killer.awardKillScore(victim, victim.deathScore, source);
+        if (killer != null) {
+            killer.awardKillScore(victim, source);
         }
         if (victim.isSleeping()) victim.stopSleeping();
 
@@ -474,7 +474,7 @@ public final class OverloadExecutionService {
 
         if (victim.level() instanceof ServerLevel sl) {
             Entity srcEntity = source.getEntity();
-            if (srcEntity == null || srcEntity.killedEntity(sl, victim)) {
+            if (srcEntity == null || srcEntity.killedEntity(sl, victim, source)) {
                 victim.gameEvent(GameEvent.ENTITY_DIE);
                 victim.dropAllDeathLoot(sl, source);
             }
@@ -488,7 +488,7 @@ public final class OverloadExecutionService {
     private static int indexOf(ListTag targets, UUID uuid) {
         String uuidStr = uuid.toString();
         for (int i = 0; i < targets.size(); i++) {
-            if (uuidStr.equals(targets.getCompound(i).getString(TAG_UUID))) return i;
+            if (uuidStr.equals(targets.getCompoundOrEmpty(i).getStringOr(TAG_UUID, ""))) return i;
         }
         return -1;
     }

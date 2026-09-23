@@ -3,11 +3,11 @@ package com.moakiee.ae2lt.integration.jei.category;
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -37,8 +37,8 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     public static final RecipeType<CrystalCatalyzerRecipe> TYPE =
             RecipeType.create(AE2LightningTech.MODID, "crystal_catalyzer", CrystalCatalyzerRecipe.class);
 
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/crystal_catalyzer.png");
+    private static final Identifier BACKGROUND_TEXTURE =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/crystal_catalyzer.png");
 
     // 机器 GUI 坐标:流体腔 (26,18)+16×53,催化剂槽 (56,30),矩阵槽 (84,54),
     // 进度条 (74,33)+22×16,产物槽 (117,30),能量条 (140,30)+6×18。
@@ -160,7 +160,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     public void draw(
             CrystalCatalyzerRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             double mouseX,
             double mouseY) {
         background.draw(guiGraphics);
@@ -172,13 +172,13 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 "jei.ae2lt.crystal_catalyzer.energy",
                 formatCompactEnergy(recipe.energyPerCycle()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
+        guiGraphics.text(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
         String timeStr = recipe.mode() == Mode.CRYSTAL ? "1s" : "2s";
         var timeText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.time", timeStr);
         int timeX = (WIDTH - font.width(timeText)) / 2;
-        guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
+        guiGraphics.text(font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
 
         var lightningText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.lightning",
@@ -187,20 +187,20 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
                         : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
         int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+        guiGraphics.text(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
 
         var matrixLine1 = Component.translatable("jei.ae2lt.crystal_catalyzer.matrix_note_line1");
         int matrixLine1X = (WIDTH - font.width(matrixLine1)) / 2;
-        guiGraphics.drawString(font, matrixLine1, matrixLine1X, MATRIX_LINE1_Y, 0x404040, false);
+        guiGraphics.text(font, matrixLine1, matrixLine1X, MATRIX_LINE1_Y, 0x404040, false);
 
         var matrixLine2 = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.matrix_note_line2",
                 CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER);
         int matrixLine2X = (WIDTH - font.width(matrixLine2)) / 2;
-        guiGraphics.drawString(font, matrixLine2, matrixLine2X, MATRIX_LINE2_Y, 0x404040, false);
+        guiGraphics.text(font, matrixLine2, matrixLine2X, MATRIX_LINE2_Y, 0x404040, false);
     }
 
-    private void drawProcessOverlay(GuiGraphics guiGraphics, Mode mode) {
+    private void drawProcessOverlay(GuiGraphicsExtractor guiGraphics, Mode mode) {
         long cycleMs = mode == Mode.CRYSTAL ? PROCESS_CYCLE_MS_CRYSTAL : PROCESS_CYCLE_MS_DUST;
         long elapsed = Util.getMillis() % cycleMs;
         double progress = elapsed / (double) cycleMs;
@@ -221,7 +221,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     }
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
-        return Arrays.stream(ingredient.getItems())
+        return ingredient.items().map(holder -> new ItemStack(holder.value()))
                 .map(stack -> stack.copyWithCount(count))
                 .toList();
     }

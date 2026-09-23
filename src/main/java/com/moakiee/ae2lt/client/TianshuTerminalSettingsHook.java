@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import appeng.client.gui.me.common.TerminalSettingsScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.widgets.IconButton;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;

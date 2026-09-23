@@ -49,12 +49,12 @@ public final class CrystalCatalyzerRecipeService {
 
     public static Optional<CrystalCatalyzerRecipeCandidate> findRecipeById(
             @Nullable Level level,
-            net.minecraft.resources.ResourceLocation recipeId) {
+            net.minecraft.resources.Identifier recipeId) {
         if (level == null) {
             return Optional.empty();
         }
-        return level.getRecipeManager()
-                .byKey(recipeId)
+        return com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level)
+                .byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId))
                 .flatMap(CrystalCatalyzerRecipeService::toCrystalCatalyzerCandidate);
     }
 
@@ -83,7 +83,7 @@ public final class CrystalCatalyzerRecipeService {
     }
 
     private static List<RecipeHolder<CrystalCatalyzerRecipe>> getRecipes(Level level) {
-        return level.getRecipeManager().getAllRecipesFor(ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
+        return com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level), ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
     }
 
     private static Optional<CrystalCatalyzerRecipeCandidate> toCrystalCatalyzerCandidate(RecipeHolder<?> holder) {

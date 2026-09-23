@@ -84,7 +84,7 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
                                   BlockPos pos,
                                   BlockState state,
                                   MatrixPortBlockEntity port) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         port.flushPatternUpdate();
@@ -163,7 +163,7 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
 
     private void updateLinkState(boolean bindingChanged) {
         boolean blockStateChanged = false;
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             var state = getBlockState();
             if (state.hasProperty(MatrixPortBlock.FORMED)
                     && state.getValue(MatrixPortBlock.FORMED) != formed) {
@@ -175,7 +175,7 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
         invalidateTerminalPatternSlots();
         // Re-notifying an unchanged binding schedules another multiblock scan through
         // neighborChanged, creating a permanent scan -> bind -> notify feedback loop.
-        if ((bindingChanged || blockStateChanged) && level != null && !level.isClientSide) {
+        if ((bindingChanged || blockStateChanged) && level != null && !level.isClientSide()) {
             level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
         }
         saveChanges();
@@ -388,8 +388,10 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         if (controllerPos != null) {
             tag.putLong(TAG_CONTROLLER_POS, controllerPos.asLong());
         }
@@ -399,24 +401,26 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        controllerPos = tag.contains(TAG_CONTROLLER_POS, Tag.TAG_LONG)
-                ? BlockPos.of(tag.getLong(TAG_CONTROLLER_POS))
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        controllerPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CONTROLLER_POS, Tag.TAG_LONG)
+                ? BlockPos.of(tag.getLongOr(TAG_CONTROLLER_POS, 0L))
                 : null;
         // Reconnect only after the controller has reclaimed the UUID-backed runtime.
         formed = false;
         boundMachineId = null;
         legacyClusterState = null;
-        if (tag.contains(TAG_CLUSTER, Tag.TAG_COMPOUND)) {
-            legacyClusterState = tag.getCompound(TAG_CLUSTER).copy();
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_CLUSTER, Tag.TAG_COMPOUND)) {
+            legacyClusterState = tag.getCompoundOrEmpty(TAG_CLUSTER).copy();
         }
         invalidateExposedPatternStorage();
     }
 
     public void spawnToWorld(AEKey key, long amount) {
         Level level = getLevel();
-        if (level == null || level.isClientSide || key == null || amount <= 0) {
+        if (level == null || level.isClientSide() || key == null || amount <= 0) {
             return;
         }
         var drops = new ArrayList<ItemStack>();
@@ -462,7 +466,7 @@ public class MatrixPortBlockEntity extends AENetworkedBlockEntity
     }
 
     private void validateControllerBinding() {
-        if (level == null || level.isClientSide || controllerPos == null) {
+        if (level == null || level.isClientSide() || controllerPos == null) {
             return;
         }
         if (!level.isLoaded(controllerPos)) {

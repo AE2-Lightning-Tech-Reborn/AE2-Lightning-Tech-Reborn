@@ -25,7 +25,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 
 /** Executable form of docs/adaptive-batch-dispatch-stress-model.md. */
 @Tag("adaptive-batch-stress")
-class AdaptiveBatchDispatchStressTest {
+class AdaptiveBatchDispatchStressTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     private static final int TARGETS = 512;
     private static final int DIAGNOSTIC_WINDOW_TICKS = 20;
     private static final int ACCEPTANCE_WINDOW_TICKS = 100;

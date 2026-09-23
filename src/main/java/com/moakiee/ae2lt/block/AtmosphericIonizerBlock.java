@@ -6,7 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -60,7 +60,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
             Block.box(6, 4, 6, 10, 8, 10));
 
     public AtmosphericIonizerBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(HALF, DoubleBlockHalf.LOWER));
@@ -89,7 +89,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
 
         Level level = context.getLevel();
         BlockPos extensionPos = context.getClickedPos().above();
-        if (extensionPos.getY() >= level.getMaxBuildHeight()
+        if (extensionPos.getY() >= level.getMaxY() + 1
                 || !level.getBlockState(extensionPos).canBeReplaced(context)) {
             return null;
         }
@@ -100,7 +100,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && state.getValue(HALF) == DoubleBlockHalf.LOWER) {
+        if (!level.isClientSide() && state.getValue(HALF) == DoubleBlockHalf.LOWER) {
             BlockState upperState = state.setValue(HALF, DoubleBlockHalf.UPPER);
             level.setBlock(pos.above(), upperState, Block.UPDATE_ALL);
         }
@@ -118,7 +118,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     }
 
     @Override
-    protected VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
+    protected VoxelShape getOcclusionShape(BlockState state) {
         return Shapes.empty();
     }
 
@@ -128,7 +128,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(BlockState state) {
         return true;
     }
 
@@ -142,8 +142,9 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-            LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos pos,
+            Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         DoubleBlockHalf half = state.getValue(HALF);
 
         if (half == DoubleBlockHalf.LOWER && direction == Direction.UP) {
@@ -156,12 +157,12 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
             }
         }
 
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, tickAccess, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+        if (!level.isClientSide() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             BlockPos lowerPos = pos.below();
             BlockState lowerState = level.getBlockState(lowerPos);
             if (isSameIonizerHalf(lowerState, DoubleBlockHalf.LOWER)) {
@@ -172,20 +173,15 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     }
 
     @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!level.isClientSide && !state.is(newState.getBlock())) {
-            boolean lower = state.getValue(HALF) == DoubleBlockHalf.LOWER;
-            if (lower && level.getBlockEntity(pos) instanceof AtmosphericIonizerBlockEntity ionizer) {
-                ionizer.cancelProcessingForRemoval();
-            }
-            BlockPos otherPos = lower ? pos.above() : pos.below();
-            DoubleBlockHalf otherHalf = lower ? DoubleBlockHalf.UPPER : DoubleBlockHalf.LOWER;
-            BlockState otherState = level.getBlockState(otherPos);
-            if (isSameIonizerHalf(otherState, otherHalf)) {
-                level.setBlock(otherPos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
-            }
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, boolean movedByPiston) {
+        boolean lower = state.getValue(HALF) == DoubleBlockHalf.LOWER;
+        BlockPos otherPos = lower ? pos.above() : pos.below();
+        DoubleBlockHalf otherHalf = lower ? DoubleBlockHalf.UPPER : DoubleBlockHalf.LOWER;
+        BlockState otherState = level.getBlockState(otherPos);
+        if (isSameIonizerHalf(otherState, otherHalf)) {
+            level.setBlock(otherPos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
         }
-        super.onRemove(state, level, pos, newState, movedByPiston);
+        super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
 
     @Override
@@ -197,7 +193,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         return new ItemStack(asItem());
     }
 
@@ -226,11 +222,11 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
             blockEntity.openMenu(player, MenuLocators.forBlockEntity(blockEntity));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
         if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             BlockPos lowerPos = pos.below();
@@ -238,7 +234,7 @@ public class AtmosphericIonizerBlock extends AEBaseEntityBlock<AtmosphericIonize
             if (isSameIonizerHalf(lowerState, DoubleBlockHalf.LOWER)) {
                 return super.useItemOn(stack, lowerState, level, lowerPos, player, hand, hit);
             }
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         return super.useItemOn(stack, state, level, pos, player, hand, hit);
     }

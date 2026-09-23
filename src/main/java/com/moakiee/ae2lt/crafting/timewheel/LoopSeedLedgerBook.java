@@ -475,44 +475,44 @@ final class LoopSeedLedgerBook {
 
     void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
         clear();
-        var accountTags = data.getList(TAG_LEDGERS, Tag.TAG_COMPOUND);
+        var accountTags = data.getListOrEmpty(TAG_LEDGERS);
         for (int i = 0; i < accountTags.size(); i++) {
-            var accountTag = accountTags.getCompound(i);
-            if (!accountTag.hasUUID(TAG_CONSUMER_ID)) continue;
-            var consumer = accountTag.getUUID(TAG_CONSUMER_ID);
-            if (accountTag.getBoolean(TAG_SINGLE_SEED_CONSUMER)) {
+            var accountTag = accountTags.getCompoundOrEmpty(i);
+            if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(accountTag, TAG_CONSUMER_ID)) continue;
+            var consumer = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(accountTag, TAG_CONSUMER_ID);
+            if (accountTag.getBooleanOr(TAG_SINGLE_SEED_CONSUMER, false)) {
                 singleSeedConsumers.add(consumer);
             }
-            var groups = accountTag.getList(TAG_GROUP_IDS, Tag.TAG_COMPOUND);
+            var groups = accountTag.getListOrEmpty(TAG_GROUP_IDS);
             for (int groupIndex = 0; groupIndex < groups.size(); groupIndex++) {
-                var groupTag = groups.getCompound(groupIndex);
-                if (groupTag.hasUUID(TAG_GROUP_ID)) {
+                var groupTag = groups.getCompoundOrEmpty(groupIndex);
+                if (com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(groupTag, TAG_GROUP_ID)) {
                     consumerGroups.computeIfAbsent(consumer, ignored -> new LinkedHashSet<>())
-                            .add(groupTag.getUUID(TAG_GROUP_ID));
+                            .add(com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(groupTag, TAG_GROUP_ID));
                 }
             }
-            var entries = accountTag.getList(TAG_ENTRIES, Tag.TAG_COMPOUND);
+            var entries = accountTag.getListOrEmpty(TAG_ENTRIES);
             for (int entryIndex = 0; entryIndex < entries.size(); entryIndex++) {
-                var entryTag = entries.getCompound(entryIndex);
-                var stack = GenericStack.readTag(registries, entryTag);
+                var entryTag = entries.getCompoundOrEmpty(entryIndex);
+                var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, entryTag);
                 if (stack == null || stack.amount() <= 0) continue;
-                adjust(consumer, stack.what(), entryTag.getBoolean(TAG_NEGATIVE)
+                adjust(consumer, stack.what(), entryTag.getBooleanOr(TAG_NEGATIVE, false)
                         ? -stack.amount() : stack.amount());
             }
-            var debts = accountTag.getList(TAG_DEBTS, Tag.TAG_COMPOUND);
+            var debts = accountTag.getListOrEmpty(TAG_DEBTS);
             for (int debtIndex = 0; debtIndex < debts.size(); debtIndex++) {
-                var debtTag = debts.getCompound(debtIndex);
-                var actual = GenericStack.readTag(registries, debtTag);
-                var planned = GenericStack.readTag(
-                        registries, debtTag.getCompound(TAG_PLANNED));
+                var debtTag = debts.getCompoundOrEmpty(debtIndex);
+                var actual = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, debtTag);
+                var planned = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(
+                        registries, debtTag.getCompoundOrEmpty(TAG_PLANNED));
                 if (actual == null || planned == null || actual.amount() <= 0) continue;
                 addVariantDebt(consumer, planned.what(), actual.what(), actual.amount());
             }
-            var rules = accountTag.getList(TAG_VARIANT_RULES, Tag.TAG_COMPOUND);
+            var rules = accountTag.getListOrEmpty(TAG_VARIANT_RULES);
             for (int ruleIndex = 0; ruleIndex < rules.size(); ruleIndex++) {
-                var ruleTag = rules.getCompound(ruleIndex);
-                var planned = GenericStack.readTag(
-                        registries, ruleTag.getCompound(TAG_PLANNED));
+                var ruleTag = rules.getCompoundOrEmpty(ruleIndex);
+                var planned = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(
+                        registries, ruleTag.getCompoundOrEmpty(TAG_PLANNED));
                 if (planned == null) continue;
                 var exact = readRuleKeys(ruleTag, TAG_RULE_EXACT, registries);
                 var fuzzy = readRuleKeys(ruleTag, TAG_RULE_FUZZY, registries);
@@ -521,9 +521,9 @@ final class LoopSeedLedgerBook {
                         .merge(planned.what(),
                                 new ExecuteLoopPattern.SeedVariantRule(exact, fuzzy),
                                 ExecuteLoopPattern.SeedVariantRule::merge);
-                if (ruleTag.contains(TAG_BUNDLE_UNITS, Tag.TAG_LONG)) {
+                if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(ruleTag, TAG_BUNDLE_UNITS, Tag.TAG_LONG)) {
                     registerBundleUnits(
-                            consumer, planned.what(), ruleTag.getLong(TAG_BUNDLE_UNITS));
+                            consumer, planned.what(), ruleTag.getLongOr(TAG_BUNDLE_UNITS, 0L));
                 }
             }
         }
@@ -548,7 +548,7 @@ final class LoopSeedLedgerBook {
         for (var consumer : consumers) {
             var entries = ledgers.getOrDefault(consumer, Map.of());
             var accountTag = new CompoundTag();
-            accountTag.putUUID(TAG_CONSUMER_ID, consumer);
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(accountTag, TAG_CONSUMER_ID, consumer);
             if (singleSeedConsumers.contains(consumer)) {
                 accountTag.putBoolean(TAG_SINGLE_SEED_CONSUMER, true);
             }
@@ -557,7 +557,7 @@ final class LoopSeedLedgerBook {
             groups.sort(UUID::compareTo);
             for (var group : groups) {
                 var groupTag = new CompoundTag();
-                groupTag.putUUID(TAG_GROUP_ID, group);
+                com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(groupTag, TAG_GROUP_ID, group);
                 groupTags.add(groupTag);
             }
             if (!groupTags.isEmpty()) accountTag.put(TAG_GROUP_IDS, groupTags);
@@ -566,7 +566,7 @@ final class LoopSeedLedgerBook {
                 if (entry.getValue() == 0) continue;
                 long magnitude = entry.getValue() == Long.MIN_VALUE
                         ? Long.MAX_VALUE : Math.abs(entry.getValue());
-                var entryTag = GenericStack.writeTag(
+                var entryTag = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(
                         registries, new GenericStack(entry.getKey(), magnitude));
                 if (entry.getValue() < 0) entryTag.putBoolean(TAG_NEGATIVE, true);
                 entryTags.add(entryTag);
@@ -577,9 +577,9 @@ final class LoopSeedLedgerBook {
             for (var planned : byPlanned.entrySet()) {
                 for (var actual : planned.getValue().entrySet()) {
                     if (actual.getValue() <= 0) continue;
-                    var debtTag = GenericStack.writeTag(
+                    var debtTag = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(
                             registries, new GenericStack(actual.getKey(), actual.getValue()));
-                    debtTag.put(TAG_PLANNED, GenericStack.writeTag(
+                    debtTag.put(TAG_PLANNED, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(
                             registries, new GenericStack(planned.getKey(), 1L)));
                     debtTags.add(debtTag);
                 }
@@ -594,7 +594,7 @@ final class LoopSeedLedgerBook {
                         planned, new ExecuteLoopPattern.SeedVariantRule(
                                 Set.of(planned), Set.of()));
                 var ruleTag = new CompoundTag();
-                ruleTag.put(TAG_PLANNED, GenericStack.writeTag(
+                ruleTag.put(TAG_PLANNED, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(
                         registries, new GenericStack(planned, 1L)));
                 writeRuleKeys(ruleTag, TAG_RULE_EXACT, rule.exactVariants(), registries);
                 writeRuleKeys(
@@ -771,9 +771,9 @@ final class LoopSeedLedgerBook {
             String name,
             HolderLookup.Provider registries) {
         var result = new LinkedHashSet<AEKey>();
-        var tags = owner.getList(name, Tag.TAG_COMPOUND);
+        var tags = owner.getListOrEmpty(name);
         for (int i = 0; i < tags.size(); i++) {
-            var stack = GenericStack.readTag(registries, tags.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, tags.getCompoundOrEmpty(i));
             if (stack != null) result.add(stack.what());
         }
         return Set.copyOf(result);
@@ -787,7 +787,7 @@ final class LoopSeedLedgerBook {
         if (keys.isEmpty()) return;
         var tags = new ListTag();
         for (var key : keys) {
-            tags.add(GenericStack.writeTag(registries, new GenericStack(key, 1L)));
+            tags.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, new GenericStack(key, 1L)));
         }
         owner.put(name, tags);
     }

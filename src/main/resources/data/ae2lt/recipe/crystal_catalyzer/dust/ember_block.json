@@ -7,9 +7,7 @@
   ],
   "type": "ae2lt:crystal_catalyzer",
   "mode": "dust",
-  "catalyst": {
-    "item": "appgen:ember_block"
-  },
+  "catalyst": "appgen:ember_block",
   "catalystCount": 1,
   "output": {
     "id": "appgen:ember_dust",

@@ -20,7 +20,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
@@ -32,8 +32,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 
-import appeng.client.render.overlay.OverlayRenderType;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
@@ -92,10 +92,7 @@ public class WirelessConnectorRenderer {
     private static final Set<BlockPos> scratchConnectionSet = new HashSet<>();
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL) {
-            return;
-        }
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterLevel event) {
 
         var mc = Minecraft.getInstance();
         var player = mc.player;
@@ -121,7 +118,7 @@ public class WirelessConnectorRenderer {
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
 
         poseStack.pushPose();
-        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 cam = mc.gameRenderer.getMainCamera().position();
         // Reuse a single Quaternionf instance instead of allocating per frame.
         // mc.gameRenderer.getMainCamera().rotation() returns a reference Quaternionf
         // owned by the camera; copying-and-inverting through scratchRotation keeps
@@ -248,7 +245,7 @@ public class WirelessConnectorRenderer {
                 var previewTargets = WirelessConnectorTargetHelper.collectTargets(
                         mc.level,
                         bhr.getBlockPos(),
-                        net.minecraft.client.gui.screens.Screen.hasControlDown());
+                        net.minecraft.client.Minecraft.getInstance().hasControlDown());
                 Direction lookFace = bhr.getDirection();
                 var existingConnections = collectConnectionsForFace(
                         selectedProvider.getConnections(),
@@ -273,7 +270,7 @@ public class WirelessConnectorRenderer {
                 var previewTargets = WirelessConnectorTargetHelper.collectTargets(
                         mc.level,
                         bhr.getBlockPos(),
-                        net.minecraft.client.gui.screens.Screen.hasControlDown());
+                        net.minecraft.client.Minecraft.getInstance().hasControlDown());
                 Direction lookFace = bhr.getDirection();
                 var existingConnections = collectConnectionsForFace(
                         selectedInterface.getConnections(),
@@ -298,7 +295,7 @@ public class WirelessConnectorRenderer {
                 var previewTargets = WirelessConnectorTargetHelper.collectTargets(
                         mc.level,
                         bhr.getBlockPos(),
-                        net.minecraft.client.gui.screens.Screen.hasControlDown());
+                        net.minecraft.client.Minecraft.getInstance().hasControlDown());
                 Direction lookFace = bhr.getDirection();
                 var existingConnections = collectConnectionsForFace(
                         selectedPowerSupply.getConnections(),
@@ -320,8 +317,13 @@ public class WirelessConnectorRenderer {
 
         // Flush render batches
         buffer.endBatch(Ae2ltRenderTypes.getFaceSeeThrough());
-        buffer.endBatch(OverlayRenderType.getBlockHilightFace());
-        buffer.endBatch(OverlayRenderType.getBlockHilightLine());
+        buffer.endBatch(RenderTypes.debugFilledBox());
+        buffer.endBatch(RenderTypes.linesTranslucent());
+    }
+
+    private static int[] decomposeColor(int color) {
+        return new int[] { (color >>> 24) & 255, (color >>> 16) & 255,
+                (color >>> 8) & 255, color & 255 };
     }
 
     // -- Render helpers --
@@ -333,7 +335,7 @@ public class WirelessConnectorRenderer {
     private static void renderInnerCube(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos pos, int color) {
         VertexConsumer vc = buffer.getBuffer(Ae2ltRenderTypes.getFaceSeeThrough());
-        int[] c = OverlayRenderType.decomposeColor(color);
+        int[] c = decomposeColor(color);
 
         poseStack.pushPose();
         poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
@@ -408,8 +410,8 @@ public class WirelessConnectorRenderer {
      */
     private static void renderFaceOverlay(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos pos, Direction face, int color) {
-        VertexConsumer vc = buffer.getBuffer(OverlayRenderType.getBlockHilightFace());
-        int[] c = OverlayRenderType.decomposeColor(color);
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.debugFilledBox());
+        int[] c = decomposeColor(color);
 
         poseStack.pushPose();
         poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
@@ -469,8 +471,8 @@ public class WirelessConnectorRenderer {
      */
     private static void renderLine(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos from, BlockPos to, Direction face, int color) {
-        VertexConsumer vc = buffer.getBuffer(OverlayRenderType.getBlockHilightLine());
-        int[] c = OverlayRenderType.decomposeColor(color);
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.linesTranslucent());
+        int[] c = decomposeColor(color);
 
         Matrix4f mat = poseStack.last().pose();
 
@@ -550,19 +552,19 @@ public class WirelessConnectorRenderer {
 
     private static SelectedHost getSelectedHost(ItemStack stack) {
         var tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        if (!tag.contains(TAG_SELECTED, CompoundTag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_SELECTED, CompoundTag.TAG_COMPOUND)) {
             return null;
         }
-        var sel = tag.getCompound(TAG_SELECTED);
-        var dimStr = sel.getString(TAG_DIM);
+        var sel = tag.getCompoundOrEmpty(TAG_SELECTED);
+        var dimStr = sel.getStringOr(TAG_DIM, "");
         if (dimStr.isEmpty()) {
             return null;
         }
         return new SelectedHost(
-                BlockPos.of(sel.getLong(TAG_POS)),
-                ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(dimStr)),
-                sel.contains(TAG_HOST_TYPE, CompoundTag.TAG_STRING)
-                        ? sel.getString(TAG_HOST_TYPE)
+                BlockPos.of(sel.getLongOr(TAG_POS, 0L)),
+                ResourceKey.create(Registries.DIMENSION, Identifier.parse(dimStr)),
+                com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(sel, TAG_HOST_TYPE, CompoundTag.TAG_STRING)
+                        ? sel.getStringOr(TAG_HOST_TYPE, "")
                         : OverloadedWirelessConnectorItem.HOST_PROVIDER);
     }
 

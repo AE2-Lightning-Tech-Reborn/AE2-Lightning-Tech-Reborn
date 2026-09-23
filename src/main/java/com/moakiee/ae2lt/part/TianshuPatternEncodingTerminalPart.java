@@ -1,9 +1,6 @@
 package com.moakiee.ae2lt.part;
 
 import appeng.api.parts.IPartItem;
-import appeng.api.parts.IPartModel;
-import appeng.items.parts.PartModels;
-import appeng.parts.PartModel;
 import appeng.parts.encoding.PatternEncodingTerminalPart;
 import appeng.util.inv.AppEngInternalInventory;
 import com.moakiee.ae2lt.AE2LightningTech;
@@ -12,27 +9,15 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternTerminalDraft;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 
 public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTerminalPart
         implements TianshuPatternTerminalHost {
-    @PartModels
-    private static final ResourceLocation MODEL_OFF = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "part/tianshu_pattern_encoding_terminal_off");
-    @PartModels
-    private static final ResourceLocation MODEL_ON = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "part/tianshu_pattern_encoding_terminal_on");
-
-    private static final IPartModel MODELS_OFF = new PartModel(MODEL_BASE, MODEL_OFF, MODEL_STATUS_OFF);
-    private static final IPartModel MODELS_ON = new PartModel(MODEL_BASE, MODEL_ON, MODEL_STATUS_ON);
-    private static final IPartModel MODELS_HAS_CHANNEL = new PartModel(
-            MODEL_BASE, MODEL_ON, MODEL_STATUS_HAS_CHANNEL);
-
     private static final String TAG_MODE = "TianshuEncodingMode";
     private static final String TAG_CLOSED_LOOP_DRAFT = "ClosedLoopDraft";
     private static final String TAG_PROCESSING_DRAFT = "ProcessingDraft";
@@ -56,11 +41,6 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     @Override
     public MenuType<?> getMenuType(Player player) {
         return TianshuPatternEncodingTermMenu.TYPE;
-    }
-
-    @Override
-    public IPartModel getStaticModels() {
-        return selectModel(MODELS_OFF, MODELS_ON, MODELS_HAS_CHANNEL);
     }
 
     @Override
@@ -104,35 +84,35 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     }
 
     @Override
-    public void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
-        super.readFromNBT(data, registries);
+    public void readFromNBT(ValueInput data) {
+        super.readFromNBT(data);
         try {
-            tianshuMode = TianshuEncodingMode.valueOf(data.getString(TAG_MODE));
+            tianshuMode = TianshuEncodingMode.valueOf(data.getStringOr(TAG_MODE, "CRAFTING"));
         } catch (IllegalArgumentException ignored) {
             tianshuMode = TianshuEncodingMode.CRAFTING;
         }
-        closedLoopDraft = data.contains(TAG_CLOSED_LOOP_DRAFT, net.minecraft.nbt.Tag.TAG_COMPOUND)
-                ? ClosedLoopTerminalDraft.read(data.getCompound(TAG_CLOSED_LOOP_DRAFT), registries)
+        closedLoopDraft = data.read(TAG_CLOSED_LOOP_DRAFT, CompoundTag.CODEC).isPresent()
+                ? ClosedLoopTerminalDraft.read(data.read(TAG_CLOSED_LOOP_DRAFT, CompoundTag.CODEC).orElseThrow(), data.lookup())
                 : null;
-        processingDraft = data.contains(TAG_PROCESSING_DRAFT, net.minecraft.nbt.Tag.TAG_COMPOUND)
+        processingDraft = data.read(TAG_PROCESSING_DRAFT, CompoundTag.CODEC).isPresent()
                 ? ProcessingPatternTerminalDraft.read(
-                        data.getCompound(TAG_PROCESSING_DRAFT), registries)
+                        data.read(TAG_PROCESSING_DRAFT, CompoundTag.CODEC).orElseThrow(), data.lookup())
                 : null;
     }
 
     @Override
-    public void writeToNBT(CompoundTag data, HolderLookup.Provider registries) {
-        super.writeToNBT(data, registries);
+    public void writeToNBT(ValueOutput data) {
+        super.writeToNBT(data);
         data.putString(TAG_MODE, tianshuMode.name());
         if (closedLoopDraft != null) {
-            data.put(TAG_CLOSED_LOOP_DRAFT, closedLoopDraft.write(registries));
+            data.store(TAG_CLOSED_LOOP_DRAFT, CompoundTag.CODEC, closedLoopDraft.write(getLevel().registryAccess()));
         } else {
-            data.remove(TAG_CLOSED_LOOP_DRAFT);
+            data.discard(TAG_CLOSED_LOOP_DRAFT);
         }
         if (processingDraft != null) {
-            data.put(TAG_PROCESSING_DRAFT, processingDraft.write(registries));
+            data.store(TAG_PROCESSING_DRAFT, CompoundTag.CODEC, processingDraft.write(getLevel().registryAccess()));
         } else {
-            data.remove(TAG_PROCESSING_DRAFT);
+            data.discard(TAG_PROCESSING_DRAFT);
         }
     }
 }

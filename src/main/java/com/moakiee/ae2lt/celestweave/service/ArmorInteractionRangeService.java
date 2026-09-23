@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.celestweave.service;
 import java.util.List;
 
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -16,10 +16,10 @@ import com.moakiee.ae2lt.celestweave.module.ReachSubmodule;
 import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector.ActiveCapability;
 
 public final class ArmorInteractionRangeService {
-    private static final ResourceLocation BLOCK_RANGE_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_reach_extension_block");
-    private static final ResourceLocation ENTITY_RANGE_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_reach_extension_entity");
+    private static final Identifier BLOCK_RANGE_MODIFIER_ID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_reach_extension_block");
+    private static final Identifier ENTITY_RANGE_MODIFIER_ID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "celestweave_reach_extension_entity");
 
     private ArmorInteractionRangeService() {
     }
@@ -42,7 +42,7 @@ public final class ArmorInteractionRangeService {
     private static void updateModifier(
             ServerPlayer player,
             Holder<Attribute> attribute,
-            ResourceLocation id,
+            Identifier id,
             double amount) {
         AttributeInstance instance = player.getAttribute(attribute);
         if (instance == null) {

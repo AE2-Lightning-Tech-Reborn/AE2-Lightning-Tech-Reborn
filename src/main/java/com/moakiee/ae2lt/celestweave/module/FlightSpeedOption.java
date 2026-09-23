@@ -41,7 +41,7 @@ public enum FlightSpeedOption {
 
     public static FlightSpeedOption fromTag(Tag tag) {
         return tag instanceof StringTag stringTag
-                ? fromId(stringTag.getAsString())
+                ? fromId(stringTag.value())
                 : ONE;
     }
 

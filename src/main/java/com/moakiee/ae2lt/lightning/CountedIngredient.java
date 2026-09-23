@@ -12,7 +12,9 @@ import net.minecraft.world.item.crafting.Ingredient;
 public record CountedIngredient(Ingredient ingredient, int count) {
     private static final Codec<Integer> POSITIVE_COUNT_CODEC = Codec.intRange(1, Integer.MAX_VALUE);
     public static final MapCodec<CountedIngredient> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                    Ingredient.CODEC_NONEMPTY.fieldOf("ingredient").forGetter(CountedIngredient::ingredient),
+                    Ingredient.CODEC.validate(ingredient -> ingredient.isEmpty()
+                            ? com.mojang.serialization.DataResult.error(() -> "ingredient cannot be empty")
+                            : com.mojang.serialization.DataResult.success(ingredient)).fieldOf("ingredient").forGetter(CountedIngredient::ingredient),
                     POSITIVE_COUNT_CODEC.fieldOf("count").forGetter(CountedIngredient::count))
             .apply(instance, CountedIngredient::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, CountedIngredient> STREAM_CODEC = StreamCodec.composite(

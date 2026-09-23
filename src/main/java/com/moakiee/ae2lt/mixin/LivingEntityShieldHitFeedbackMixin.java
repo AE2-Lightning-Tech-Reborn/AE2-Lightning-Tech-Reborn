@@ -13,7 +13,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
 
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorDamageHandler;
 
@@ -23,12 +23,12 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
     protected abstract void playHurtSound(DamageSource source);
 
     @Redirect(
-            method = "hurt",
+            method = "hurtServer",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/level/Level;broadcastDamageEvent(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/damagesource/DamageSource;)V"),
+                    target = "Lnet/minecraft/server/level/ServerLevel;broadcastDamageEvent(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/damagesource/DamageSource;)V"),
             require = 0)
-    private void ae2lt$skipShieldDamageEvent(Level level, Entity entity, DamageSource source) {
+    private void ae2lt$skipShieldDamageEvent(ServerLevel level, Entity entity, DamageSource source) {
         if (entity instanceof LivingEntity living
                 && CelestweaveArmorDamageHandler.shouldSuppressShieldHitFeedback(living)) {
             return;
@@ -37,7 +37,7 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
     }
 
     @WrapOperation(
-            method = "hurt",
+            method = "hurtServer",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;markHurt()V"))
@@ -49,7 +49,7 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
     }
 
     @WrapOperation(
-            method = "hurt",
+            method = "hurtServer",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;indicateDamage(DD)V"))
@@ -65,7 +65,7 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
     }
 
     @Redirect(
-            method = "hurt",
+            method = "hurtServer",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;playHurtSound(Lnet/minecraft/world/damagesource/DamageSource;)V"),
@@ -77,8 +77,9 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
         playHurtSound(source);
     }
 
-    @Inject(method = "hurt", at = @At("RETURN"))
+    @Inject(method = "hurtServer", at = @At("RETURN"))
     private void ae2lt$clearShieldHitFeedbackSuppression(
+            ServerLevel level,
             DamageSource source,
             float amount,
             CallbackInfoReturnable<Boolean> cir) {

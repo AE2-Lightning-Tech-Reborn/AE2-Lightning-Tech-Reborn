@@ -7,10 +7,10 @@ import dev.emi.emi.api.recipe.BasicEmiRecipe;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 final class EmiTeslaCoilRecipe extends BasicEmiRecipe {
-    private static final ResourceLocation ARROW_TEXTURE =
+    private static final Identifier ARROW_TEXTURE =
             EmiRecipeWidgets.texture("guis/crystal_catalyzer.png");
     private static final int WIDTH = 150;
 

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -32,7 +32,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
     public static final MenuType<OverloadDeviceWorkbenchMenu> TYPE = MenuTypeBuilder
             .create(OverloadDeviceWorkbenchMenu::new, OverloadDeviceWorkbenchBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.overload_device_workbench"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "overload_device_workbench"));
 
     public static final int DEVICE_X = 13;
@@ -104,8 +104,8 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
 
         addPlayerInventorySlots(playerInventory);
 
-        registerClientAction("uninstallModuleAtIndex", Integer.class, this::handleUninstallAt);
-        registerClientAction("uninstallAllOfIndex", Integer.class, this::handleUninstallAllAt);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("uninstallModuleAtIndex"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::handleUninstallAt);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("uninstallAllOfIndex"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::handleUninstallAllAt);
 
         updateSnapshot();
     }
@@ -216,7 +216,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
     }
 
     public void requestUninstall(int index, boolean all) {
-        sendClientAction(all ? "uninstallAllOfIndex" : "uninstallModuleAtIndex", index);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Integer>(all ? "uninstallAllOfIndex" : "uninstallModuleAtIndex"), index);
     }
 
     private void handleUninstallAt(int index) {

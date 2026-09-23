@@ -15,13 +15,13 @@ import dev.emi.emi.api.EmiRegistry;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.stack.EmiStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /** Native EMI registration for recipe-viewer features that cannot be bridged from JEI. */
 @EmiEntrypoint
 public final class AE2LTEmiPlugin implements EmiPlugin {
     public static final EmiRecipeCategory MULTIBLOCK_STRUCTURE = new EmiRecipeCategory(
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "multiblock_structure"),
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "multiblock_structure"),
             EmiStack.of(ModBlocks.MATTER_WARPING_MATRIX_CONTROLLER.get())) {
         @Override
         public Component getName() {

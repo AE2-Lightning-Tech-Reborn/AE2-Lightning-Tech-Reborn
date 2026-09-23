@@ -9,7 +9,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.PigmeePatternProviderBlockEntity;
 import com.moakiee.ae2lt.logic.PigmeePatternProviderReturnInventory;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -18,7 +18,7 @@ public final class PigmeePatternProviderMenu extends AEBaseMenu {
     public static final MenuType<PigmeePatternProviderMenu> TYPE = MenuTypeBuilder
             .create(PigmeePatternProviderMenu::new, PigmeePatternProviderBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.pigmee_pattern_provider"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "pigmee_pattern_provider"));
 
     private static final int PATTERN_X = 62;

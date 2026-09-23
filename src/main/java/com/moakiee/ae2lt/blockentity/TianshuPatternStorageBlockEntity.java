@@ -121,8 +121,10 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         var patternTag = new CompoundTag();
         patterns.writeTo(patternTag, registries);
         tag.put(TAG_PATTERNS, patternTag);
@@ -130,11 +132,13 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        patterns.readFrom(tag.getCompound(TAG_PATTERNS), registries);
-        portPos = tag.contains(TAG_PORT_POS, Tag.TAG_LONG)
-                ? BlockPos.of(tag.getLong(TAG_PORT_POS)) : null;
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadAdditional(input);
+        patterns.readFrom(tag.getCompoundOrEmpty(TAG_PATTERNS), registries);
+        portPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_PORT_POS, Tag.TAG_LONG)
+                ? BlockPos.of(tag.getLongOr(TAG_PORT_POS, 0L)) : null;
     }
 
     @Override
@@ -321,4 +325,10 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
             return false;
         }
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        if (this.level != null) dropStoredPatterns(this.level, pos);
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

@@ -12,14 +12,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
 public record ResearchNoteData(
         UUID ritualSeed,
         RitualGoal goal,
-        List<ResourceLocation> recipeItems,
+        List<Identifier> recipeItems,
         List<String> descriptionKeys,
         boolean consumed) {
 
@@ -35,30 +35,30 @@ public record ResearchNoteData(
 
     public static @Nullable ResearchNoteData read(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        if (!tag.contains(TAG_GOAL, Tag.TAG_STRING)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_GOAL, Tag.TAG_STRING)) {
             return null;
         }
 
-        RitualGoal goal = RitualGoal.fromName(tag.getString(TAG_GOAL));
+        RitualGoal goal = RitualGoal.fromName(tag.getStringOr(TAG_GOAL, ""));
         if (goal == null) {
             return null;
         }
 
         UUID ritualSeed;
         try {
-            ritualSeed = UUID.fromString(tag.getString(TAG_RITUAL_SEED));
+            ritualSeed = UUID.fromString(tag.getStringOr(TAG_RITUAL_SEED, ""));
         } catch (IllegalArgumentException ignored) {
             return null;
         }
 
-        List<ResourceLocation> recipeItems = readResourceLocationList(tag, TAG_RECIPE_ITEMS);
+        List<Identifier> recipeItems = readResourceLocationList(tag, TAG_RECIPE_ITEMS);
         List<String> descriptionKeys = readStringList(tag, TAG_DESCRIPTIONS);
         if (recipeItems.size() != 9 || descriptionKeys.size() != recipeItems.size()) {
             return null;
         }
 
         return new ResearchNoteData(ritualSeed, goal, List.copyOf(recipeItems), List.copyOf(descriptionKeys),
-                tag.getBoolean(TAG_CONSUMED));
+                tag.getBooleanOr(TAG_CONSUMED, false));
     }
 
     public void writeTo(ItemStack stack) {
@@ -79,15 +79,15 @@ public record ResearchNoteData(
         return ritualSeed.toString().replace("-", "").substring(0, 4).toUpperCase(Locale.ROOT);
     }
 
-    private static List<ResourceLocation> readResourceLocationList(CompoundTag tag, String key) {
-        List<ResourceLocation> values = new ArrayList<>();
-        ListTag listTag = tag.getList(key, Tag.TAG_STRING);
+    private static List<Identifier> readResourceLocationList(CompoundTag tag, String key) {
+        List<Identifier> values = new ArrayList<>();
+        ListTag listTag = tag.getListOrEmpty(key);
         for (Tag element : listTag) {
             if (!(element instanceof StringTag stringTag)) {
                 continue;
             }
 
-            ResourceLocation id = ResourceLocation.tryParse(stringTag.getAsString());
+            Identifier id = Identifier.tryParse(stringTag.value());
             if (id != null) {
                 values.add(id);
             }
@@ -97,18 +97,18 @@ public record ResearchNoteData(
 
     private static List<String> readStringList(CompoundTag tag, String key) {
         List<String> values = new ArrayList<>();
-        ListTag listTag = tag.getList(key, Tag.TAG_STRING);
+        ListTag listTag = tag.getListOrEmpty(key);
         for (Tag element : listTag) {
             if (element instanceof StringTag stringTag) {
-                values.add(stringTag.getAsString());
+                values.add(stringTag.value());
             }
         }
         return values;
     }
 
-    private static ListTag writeResourceLocationList(List<ResourceLocation> values) {
+    private static ListTag writeResourceLocationList(List<Identifier> values) {
         ListTag listTag = new ListTag();
-        for (ResourceLocation value : values) {
+        for (Identifier value : values) {
             listTag.add(StringTag.valueOf(value.toString()));
         }
         return listTag;

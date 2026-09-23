@@ -127,7 +127,7 @@ public abstract class EmiEncodePatternTransferMixin {
             return;
         }
         if (doTransfer
-                && Screen.hasAltDown()
+                && net.minecraft.client.Minecraft.getInstance().hasAltDown()
                 && menu instanceof TianshuPatternEncodingTermMenu tianshuMenu
                 && tianshuMenu.tianshuMode != TianshuEncodingMode.CLOSED_LOOP
                 && cir.getReturnValue() instanceof EmiRecipeTransferResultAccessor result

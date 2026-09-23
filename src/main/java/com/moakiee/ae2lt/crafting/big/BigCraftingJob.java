@@ -67,8 +67,8 @@ public final class BigCraftingJob {
     public CompoundTag save(HolderLookup.Provider registries) {
         var tag = new CompoundTag();
         tag.putInt("version", 1);
-        tag.putUUID("id", id);
-        tag.put("target", target.toTagGeneric(registries));
+        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, "id", id);
+        tag.put("target", com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, target));
         tag.putByteArray("amount", amount.toByteArray());
         tag.put("escrow", BigStackCodec.write(escrow, registries));
         tag.putInt("block", blockIndex);
@@ -98,36 +98,36 @@ public final class BigCraftingJob {
     }
 
     public static BigCraftingJob load(CompoundTag tag, HolderLookup.Provider registries) {
-        if (tag.getInt("version") != 1)
+        if (tag.getIntOr("version", 0) != 1)
             throw new IllegalArgumentException("Unsupported exact crafting job version");
         var blocks = new ArrayList<BigExecutionProgram.Block<AEKey>>();
-        for (var value : tag.getList("blocks", Tag.TAG_COMPOUND)) {
+        for (var value : tag.getListOrEmpty("blocks")) {
             var b = (CompoundTag) value;
             var steps = new ArrayList<BigExecutionProgram.Step<AEKey>>();
-            for (var entry : b.getList("steps", Tag.TAG_COMPOUND)) {
+            for (var entry : b.getListOrEmpty("steps")) {
                 var s = (CompoundTag) entry;
                 steps.add(
                         new BigExecutionProgram.Step<>(
-                                BigMatrixRecipe.load(s.getCompound("recipe"), registries).pattern(),
+                                BigMatrixRecipe.load(s.getCompoundOrEmpty("recipe"), registries).pattern(),
                                 number(s, "copies")));
             }
             blocks.add(BigExecutionProgram.block(steps, number(b, "repetitions")));
         }
         var job =
                 new BigCraftingJob(
-                        tag.getUUID("id"),
-                        AEKey.fromTagGeneric(registries, tag.getCompound("target")),
+                        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, "id"),
+                        com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, tag.getCompoundOrEmpty("target")),
                         number(tag, "amount"),
                         BigExecutionProgram.of(blocks));
-        job.escrow.putAll(BigStackCodec.read(tag.getList("escrow", Tag.TAG_COMPOUND), registries));
-        job.blockIndex = tag.getInt("block");
-        job.acceptedStep = tag.getInt("acceptedStep");
+        job.escrow.putAll(BigStackCodec.read(tag.getListOrEmpty("escrow"), registries));
+        job.blockIndex = tag.getIntOr("block", 0);
+        job.acceptedStep = tag.getIntOr("acceptedStep", 0);
         job.acceptedCopies = number(tag, "accepted");
-        job.readyAt = tag.getLong("readyAt");
-        job.returning = tag.getBoolean("returning");
-        job.cancelled = tag.getBoolean("cancelled");
-        job.suspended = tag.getBoolean("suspended");
-        job.elapsedTicks = tag.getLong("elapsedTicks");
+        job.readyAt = tag.getLongOr("readyAt", 0L);
+        job.returning = tag.getBooleanOr("returning", false);
+        job.cancelled = tag.getBooleanOr("cancelled", false);
+        job.suspended = tag.getBooleanOr("suspended", false);
+        job.elapsedTicks = tag.getLongOr("elapsedTicks", 0L);
         if (job.blockIndex < 0 || job.blockIndex > blocks.size())
             throw new IllegalArgumentException("Invalid exact job cursor");
         if (!job.returning
@@ -139,6 +139,7 @@ public final class BigCraftingJob {
     }
 
     private static BigInteger number(CompoundTag tag, String name) {
-        return BigAmounts.nonNegative(new BigInteger(tag.getByteArray(name)));
+        return BigAmounts.nonNegative(new BigInteger(tag.getByteArray(name)
+                .orElseThrow(() -> new IllegalArgumentException("Missing amount: " + name))));
     }
 }

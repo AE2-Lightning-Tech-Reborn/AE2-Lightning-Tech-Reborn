@@ -39,7 +39,7 @@ public class FloatingMatterEntity extends ItemEntity {
         super.tick();
 
         if (!this.level().isClientSide()) {
-            double ceiling = this.level().getMaxBuildHeight()
+            double ceiling = this.level().getMaxY()
                     * AE2LTCommonConfig.floatingMatterDespawnHeightMultiplier();
             if (this.getY() > ceiling) {
                 this.discard();

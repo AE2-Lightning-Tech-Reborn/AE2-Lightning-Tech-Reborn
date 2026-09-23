@@ -7,7 +7,7 @@ import appeng.menu.implementations.MenuTypeBuilder;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 
@@ -17,7 +17,7 @@ public final class PigmeeSynthesisStationMenu extends CraftingTermMenu {
             .create(PigmeeSynthesisStationMenu::new, PigmeeSynthesisStationBlockEntity.class)
             .withMenuTitle(host -> Component.translatable(
                     "block.ae2lt.pigmee_synthesis_station"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "pigmee_synthesis_station"));
 
     @Override

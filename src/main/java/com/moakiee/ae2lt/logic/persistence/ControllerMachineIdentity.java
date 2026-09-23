@@ -25,10 +25,10 @@ public final class ControllerMachineIdentity {
     }
 
     static UUID read(CompoundTag tag) {
-        return tag != null && tag.hasUUID(TAG_MACHINE_ID) ? tag.getUUID(TAG_MACHINE_ID) : null;
+        return tag != null && com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_MACHINE_ID) ? com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_MACHINE_ID) : null;
     }
 
     static void write(CompoundTag tag, UUID id) {
-        if (tag != null && id != null) tag.putUUID(TAG_MACHINE_ID, id);
+        if (tag != null && id != null) com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, TAG_MACHINE_ID, id);
     }
 }

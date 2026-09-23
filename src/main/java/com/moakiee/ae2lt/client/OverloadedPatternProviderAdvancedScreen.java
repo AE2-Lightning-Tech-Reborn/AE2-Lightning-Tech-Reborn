@@ -4,13 +4,13 @@ import java.util.List;
 
 import org.lwjgl.glfw.GLFW;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.AETextField;
 import appeng.menu.SlotSemantics;
@@ -145,20 +145,20 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     }
 
     @Override
-    public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(GuiGraphicsExtractor guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
         int wirelessColor = menu.isWirelessMode() ? 0x404040 : 0x909090;
         if (wirelessTuningVisible) {
-            guiGraphics.drawString(
+            guiGraphics.text(
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.distribution"),
                     LABEL_X,
                     STRATEGY_Y,
                     wirelessColor,
                     false);
-            guiGraphics.drawString(
+            guiGraphics.text(
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.probe"),
                     LABEL_X,
@@ -167,7 +167,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     false);
         }
         if (menu.isFilteredImportVisible()) {
-            guiGraphics.drawString(
+            guiGraphics.text(
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
                     LABEL_X,
@@ -176,15 +176,15 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     false);
         }
         if (wirelessTuningVisible) {
-            guiGraphics.drawString(font,
+            guiGraphics.text(font,
                     Component.translatable("ae2lt.gui.provider_advanced.machine_parallelism"),
                     14, 105, wirelessColor, false);
-            guiGraphics.drawString(font,
+            guiGraphics.text(font,
                     Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
                     14, 147, 0x707070, false);
         }
         if (wirelessTuningVisible && !menu.isWirelessMode()) {
-            guiGraphics.drawString(
+            guiGraphics.text(
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
                     14,
@@ -200,7 +200,8 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (machineParallelism.isFocused()
                 && (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER)) {
             if (applyParallelism.active) applyParallelism();
@@ -208,10 +209,10 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE
                 || !machineParallelism.isFocused()
-                        && this.minecraft.options.keyInventory.matches(keyCode, scanCode)) {
+                        && this.minecraft.options.keyInventory.matches(event)) {
             returnToParent();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 }

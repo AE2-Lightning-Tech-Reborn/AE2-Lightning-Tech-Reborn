@@ -50,7 +50,7 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
 
         CompoundTag data = getItemStack().getOrDefault(
                 AE2wtlibComponents.PATTERN_ENCODING_LOGIC, new CompoundTag());
-        logic.readFromNBT(data, player.registryAccess());
+        logic.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, player.registryAccess()));
         readTianshuState(data, player.registryAccess());
 
         // Tianshu pulls blank patterns from ME storage and stages only the pattern being encoded.
@@ -75,7 +75,7 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
         CompoundTag data = getItemStack().getOrDefault(
                 AE2wtlibComponents.PATTERN_ENCODING_LOGIC, new CompoundTag());
         HolderLookup.Provider registries = getPlayer().registryAccess();
-        logic.writeToNBT(data, registries);
+        logic.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries));
         data.putString(TAG_TIANSHU_MODE, tianshuMode.name());
         if (closedLoopDraft != null) {
             data.put(TAG_CLOSED_LOOP_DRAFT, closedLoopDraft.write(registries));
@@ -133,15 +133,15 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
 
     private void readTianshuState(CompoundTag data, HolderLookup.Provider registries) {
         try {
-            tianshuMode = TianshuEncodingMode.valueOf(data.getString(TAG_TIANSHU_MODE));
+            tianshuMode = TianshuEncodingMode.valueOf(data.getStringOr(TAG_TIANSHU_MODE, ""));
         } catch (IllegalArgumentException ignored) {
             tianshuMode = TianshuEncodingMode.CRAFTING;
         }
-        closedLoopDraft = data.contains(TAG_CLOSED_LOOP_DRAFT, Tag.TAG_COMPOUND)
-                ? ClosedLoopTerminalDraft.read(data.getCompound(TAG_CLOSED_LOOP_DRAFT), registries)
+        closedLoopDraft = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_CLOSED_LOOP_DRAFT, Tag.TAG_COMPOUND)
+                ? ClosedLoopTerminalDraft.read(data.getCompoundOrEmpty(TAG_CLOSED_LOOP_DRAFT), registries)
                 : null;
-        processingDraft = data.contains(TAG_PROCESSING_DRAFT, Tag.TAG_COMPOUND)
-                ? ProcessingPatternTerminalDraft.read(data.getCompound(TAG_PROCESSING_DRAFT), registries)
+        processingDraft = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PROCESSING_DRAFT, Tag.TAG_COMPOUND)
+                ? ProcessingPatternTerminalDraft.read(data.getCompoundOrEmpty(TAG_PROCESSING_DRAFT), registries)
                 : null;
     }
 }

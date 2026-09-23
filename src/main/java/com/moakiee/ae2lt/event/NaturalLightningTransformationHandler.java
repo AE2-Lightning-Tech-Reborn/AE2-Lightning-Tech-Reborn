@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import org.joml.Vector3f;
 import org.slf4j.Logger;
 
@@ -37,17 +38,33 @@ public final class NaturalLightningTransformationHandler {
     private static final String MAIN_HANDLED_TAG = "ae2lt.main_lightning_handled";
 
     private static final Logger LOG = LogUtils.getLogger();
+    private static final StackWalker SPAWN_STACK =
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     /** Throttle the takeover warning so it logs at most once per JVM. */
     private static volatile boolean warnedTakeover;
 
     private static final DustParticleOptions PINK_DUST =
-            new DustParticleOptions(new Vector3f(1.0F, 0.45F, 0.78F), 1.6F);
+            new DustParticleOptions(0xFF73C7, 1.6F);
     private static final DustParticleOptions PURPLE_DUST =
-            new DustParticleOptions(new Vector3f(0.78F, 0.34F, 1.0F), 1.4F);
+            new DustParticleOptions(0xC757FF, 1.4F);
     private static final DustParticleOptions CERTUS_DUST =
-            new DustParticleOptions(new Vector3f(0.85F, 0.92F, 1.0F), 1.4F);
+            new DustParticleOptions(0xD9EBFF, 1.4F);
 
     private NaturalLightningTransformationHandler() {
+    }
+
+    @SubscribeEvent
+    public static void markNaturalWeatherLightning(EntityJoinLevelEvent event) {
+        if (!(event.getEntity() instanceof LightningBolt lightningBolt)
+                || !(event.getLevel() instanceof ServerLevel)) return;
+        // 26.1 moved the weather spawn path; recognize the call that originates
+        // in ServerLevel.tickChunk before the bolt's first tick.
+        boolean fromWeather = SPAWN_STACK.walk(frames -> frames.anyMatch(frame ->
+                frame.getDeclaringClass() == ServerLevel.class
+                        && frame.getMethodName().equals("tickChunk")));
+        if (fromWeather) {
+            lightningBolt.getPersistentData().putBoolean(NATURAL_WEATHER_LIGHTNING_TAG, true);
+        }
     }
 
     @SubscribeEvent
@@ -58,14 +75,14 @@ public final class NaturalLightningTransformationHandler {
         }
 
         var data = lightningBolt.getPersistentData();
-        if (data.getBoolean(TRANSFORMATION_CHECKED_TAG)) {
+        if (data.getBooleanOr(TRANSFORMATION_CHECKED_TAG, false)) {
             // The transformation_checked tag is set but our own marker isn't — another
             // mod (e.g. Thunderbolt Core Reborn) intercepted the lightning at higher priority
             // and ran its own pipeline. The collector's captureLightning() will not be
             // called for this strike, which means LightningCollectedEvent will not
             // fire either. Warn once so server operators can correlate missing
             // capture-side effects with a third-party takeover.
-            if (!data.getBoolean(MAIN_HANDLED_TAG) && !warnedTakeover) {
+            if (!data.getBooleanOr(MAIN_HANDLED_TAG, false) && !warnedTakeover) {
                 warnedTakeover = true;
                 LOG.warn(
                         "AE2 Lightning Tech Reborn: a LightningBolt arrived with "
@@ -82,7 +99,7 @@ public final class NaturalLightningTransformationHandler {
 
         data.putBoolean(TRANSFORMATION_CHECKED_TAG, true);
         data.putBoolean(MAIN_HANDLED_TAG, true);
-        boolean naturalWeatherLightning = data.getBoolean(NATURAL_WEATHER_LIGHTNING_TAG);
+        boolean naturalWeatherLightning = data.getBooleanOr(NATURAL_WEATHER_LIGHTNING_TAG, false);
         tryCaptureLightning(serverLevel, lightningBolt.blockPosition(), naturalWeatherLightning);
         tryTransformFromNearbyLightningRod(serverLevel, lightningBolt.blockPosition(), naturalWeatherLightning);
     }
@@ -104,8 +121,9 @@ public final class NaturalLightningTransformationHandler {
 
     private static void tryTransformFromNearbyLightningRod(
             ServerLevel level, BlockPos lightningPos, boolean naturalWeather) {
-        List<RecipeHolder<LightningStrikeRecipe>> allRecipes = level.getRecipeManager()
-                .getAllRecipesFor(ModRecipeTypes.LIGHTNING_STRIKE_TYPE.get());
+        List<RecipeHolder<LightningStrikeRecipe>> allRecipes =
+                com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(
+                        level.recipeAccess(), ModRecipeTypes.LIGHTNING_STRIKE_TYPE.get());
         if (allRecipes.isEmpty()) {
             return;
         }

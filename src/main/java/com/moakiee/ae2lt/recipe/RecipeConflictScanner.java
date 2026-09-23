@@ -15,11 +15,13 @@ import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationReci
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
@@ -44,31 +46,31 @@ public final class RecipeConflictScanner {
     private RecipeConflictScanner() {
     }
 
-    public static List<ResourceLocation> scan(RecipeManager recipeManager) {
-        TreeSet<ResourceLocation> conflicts = new TreeSet<>(Comparator.comparing(ResourceLocation::toString));
+    public static List<Identifier> scan(RecipeManager recipeManager) {
+        TreeSet<Identifier> conflicts = new TreeSet<>(Comparator.comparing(Identifier::toString));
 
         scanPool(
-                recipeManager.getAllRecipesFor(ModRecipeTypes.LIGHTNING_TRANSFORM_TYPE.get()).stream()
+                recipesOfType(recipeManager, ModRecipeTypes.LIGHTNING_TRANSFORM_TYPE.get()).stream()
                         .map(RecipeConflictScanner::fromLightningTransform)
                         .toList(),
                 conflicts);
         scanPool(
-                recipeManager.getAllRecipesFor(ModRecipeTypes.FIRMAMENT_CONVERSION_TYPE.get()).stream()
+                recipesOfType(recipeManager, ModRecipeTypes.FIRMAMENT_CONVERSION_TYPE.get()).stream()
                         .map(RecipeConflictScanner::fromFirmamentConversion)
                         .toList(),
                 conflicts);
         scanPool(
-                recipeManager.getAllRecipesFor(ModRecipeTypes.LIGHTNING_SIMULATION_TYPE.get()).stream()
+                recipesOfType(recipeManager, ModRecipeTypes.LIGHTNING_SIMULATION_TYPE.get()).stream()
                         .map(RecipeConflictScanner::fromLightningSimulation)
                         .toList(),
                 conflicts);
         scanPool(
-                recipeManager.getAllRecipesFor(ModRecipeTypes.LIGHTNING_ASSEMBLY_TYPE.get()).stream()
+                recipesOfType(recipeManager, ModRecipeTypes.LIGHTNING_ASSEMBLY_TYPE.get()).stream()
                         .map(RecipeConflictScanner::fromLightningAssembly)
                         .toList(),
                 conflicts);
         scanPool(
-                recipeManager.getAllRecipesFor(ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get()).stream()
+                recipesOfType(recipeManager, ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get()).stream()
                         .map(RecipeConflictScanner::fromOverloadProcessing)
                         .toList(),
                 conflicts);
@@ -76,7 +78,7 @@ public final class RecipeConflictScanner {
         // Crystal and dust modes are selected before recipe matching and cannot
         // steal work from each other, so they must be scanned as separate pools.
         List<RecipeHolder<CrystalCatalyzerRecipe>> catalyzerRecipes =
-                recipeManager.getAllRecipesFor(ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
+                recipesOfType(recipeManager, ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
         for (Mode mode : Mode.values()) {
             scanPool(
                     catalyzerRecipes.stream()
@@ -92,10 +94,19 @@ public final class RecipeConflictScanner {
         return List.copyOf(conflicts);
     }
 
+    @SuppressWarnings("unchecked")
+    private static <R extends Recipe<?>> List<RecipeHolder<R>> recipesOfType(
+            RecipeManager recipeManager, RecipeType<R> type) {
+        return recipeManager.getRecipes().stream()
+                .filter(holder -> holder.value().getType() == type)
+                .map(holder -> (RecipeHolder<R>) holder)
+                .toList();
+    }
+
     private static RecipeRequirements fromLightningTransform(
             RecipeHolder<LightningTransformRecipe> holder) {
         return new RecipeRequirements(
-                holder.id(),
+                holder.id().identifier(),
                 holder.value().inputs().stream()
                         .map(input -> new ItemRequirement(input.ingredient(), input.count()))
                         .toList(),
@@ -105,7 +116,7 @@ public final class RecipeConflictScanner {
     private static RecipeRequirements fromFirmamentConversion(
             RecipeHolder<FirmamentConversionRecipe> holder) {
         return new RecipeRequirements(
-                holder.id(),
+                holder.id().identifier(),
                 holder.value().inputs().stream()
                         .map(input -> new ItemRequirement(input.ingredient(), input.count()))
                         .toList(),
@@ -115,7 +126,7 @@ public final class RecipeConflictScanner {
     private static RecipeRequirements fromLightningSimulation(
             RecipeHolder<LightningSimulationRecipe> holder) {
         return new RecipeRequirements(
-                holder.id(),
+                holder.id().identifier(),
                 holder.value().inputs().stream()
                         .map(input -> new ItemRequirement(input.ingredient(), input.count()))
                         .toList(),
@@ -125,7 +136,7 @@ public final class RecipeConflictScanner {
     private static RecipeRequirements fromLightningAssembly(
             RecipeHolder<LightningAssemblyRecipe> holder) {
         return new RecipeRequirements(
-                holder.id(),
+                holder.id().identifier(),
                 holder.value().inputs().stream()
                         .map(input -> new ItemRequirement(input.ingredient(), input.count()))
                         .toList(),
@@ -139,7 +150,7 @@ public final class RecipeConflictScanner {
                 ? List.of()
                 : List.of(new FluidRequirement(recipe.fluidInput()));
         return new RecipeRequirements(
-                holder.id(),
+                holder.id().identifier(),
                 recipe.itemInputs().stream()
                         .map(input -> new ItemRequirement(input.ingredient(), input.count()))
                         .toList(),
@@ -152,12 +163,12 @@ public final class RecipeConflictScanner {
         List<ItemRequirement> itemRequirements = recipe.catalyst()
                 .map(ingredient -> List.of(new ItemRequirement(ingredient, recipe.catalystCount())))
                 .orElseGet(List::of);
-        return new RecipeRequirements(holder.id(), itemRequirements, List.of());
+        return new RecipeRequirements(holder.id().identifier(), itemRequirements, List.of());
     }
 
     private static void scanPool(
             List<RecipeRequirements> recipes,
-            TreeSet<ResourceLocation> conflicts) {
+            TreeSet<Identifier> conflicts) {
         for (int targetIndex = 0; targetIndex < recipes.size(); targetIndex++) {
             RecipeRequirements target = recipes.get(targetIndex);
             List<ItemRequirement> itemSupplies = new ArrayList<>();
@@ -245,17 +256,7 @@ public final class RecipeConflictScanner {
     }
 
     private static boolean ingredientsOverlap(Ingredient left, Ingredient right) {
-        for (ItemStack stack : left.getItems()) {
-            if (right.test(stack)) {
-                return true;
-            }
-        }
-        for (ItemStack stack : right.getItems()) {
-            if (left.test(stack)) {
-                return true;
-            }
-        }
-        return false;
+        return left.items().anyMatch(right::acceptsItem);
     }
 
     private static long scale(long amount) {
@@ -291,7 +292,7 @@ public final class RecipeConflictScanner {
     }
 
     private record RecipeRequirements(
-            ResourceLocation id,
+            Identifier id,
             List<ItemRequirement> items,
             List<FluidRequirement> fluids) {
     }

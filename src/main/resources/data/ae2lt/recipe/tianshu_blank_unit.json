@@ -3,10 +3,10 @@
   "category": "misc",
   "pattern": ["ABA", "PCP", "ABA"],
   "key": {
-    "A": { "item": "ae2:crafting_unit" },
-    "B": { "item": "ae2lt:overload_crystal_block" },
-    "P": { "item": "ae2lt:overload_processor" },
-    "C": { "item": "ae2:singularity" }
+    "A": "ae2:crafting_unit",
+    "B": "ae2lt:overload_crystal_block",
+    "P": "ae2lt:overload_processor",
+    "C": "ae2:singularity"
   },
   "result": { "id": "ae2lt:tianshu_blank_unit", "count": 2 }
 }

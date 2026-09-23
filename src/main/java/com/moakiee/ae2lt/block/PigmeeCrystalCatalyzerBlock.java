@@ -24,14 +24,14 @@ public final class PigmeeCrystalCatalyzerBlock extends CrystalCatalyzerBlock {
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltipComponents,
+            java.util.function.Consumer<Component> tooltipComponents,
             TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.1")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.1")
                 .withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.2")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.2")
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
-        tooltipComponents.add(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.3")
+        tooltipComponents.accept(Component.translatable("tooltip.ae2lt.pigmee_crystal_catalyzer.3")
                 .withStyle(ChatFormatting.GRAY));
     }
 }

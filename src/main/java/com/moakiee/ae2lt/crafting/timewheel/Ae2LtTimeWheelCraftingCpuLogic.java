@@ -204,8 +204,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 .map(p -> p instanceof ServerPlayer serverPlayer ? IPlayerRegistry.getPlayerId(serverPlayer) : null)
                 .orElse(null);
         var craftId = UUID.randomUUID();
-        var linkCpu = new CraftingLink(
-                CraftingCpuHelper.generateLinkData(craftId, requester == null, false), cpu);
+        var linkCpu = new CraftingLink(craftId, requester == null, cpu);
         var candidateJob = new TimeWheelJob(plan, this::postChange, linkCpu, playerId);
         loopSeedLedgers.initialize(candidateJob.loopPatterns());
 
@@ -308,7 +307,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         notifyJobOwner(job, CraftingJobStatusPacket.Status.STARTED);
 
         if (requester != null) {
-            var linkReq = new CraftingLink(CraftingCpuHelper.generateLinkData(craftId, false, true), requester);
+            var linkReq = new CraftingLink(craftId, false, requester);
             var craftingService = (CraftingService) grid.getCraftingService();
             craftingService.addLink(linkCpu);
             craftingService.addLink(linkReq);
@@ -1788,7 +1787,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             ListTag tags, HolderLookup.Provider registries) {
         var result = new KeyCounter();
         for (int i = 0; i < tags.size(); i++) {
-            var stack = GenericStack.readTag(registries, tags.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, tags.getCompoundOrEmpty(i));
             if (stack != null && stack.amount() > 0) result.add(stack.what(), stack.amount());
         }
         return result;
@@ -1799,7 +1798,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         var result = new ListTag();
         for (var entry : counter) {
             if (entry.getLongValue() > 0) {
-                result.add(GenericStack.writeTag(
+                result.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(
                         registries, new GenericStack(entry.getKey(), entry.getLongValue())));
             }
         }
@@ -1810,12 +1809,12 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             ListTag tags, HolderLookup.Provider registries) {
         var result = new LinkedHashMap<UUID, KeyCounter>();
         for (int i = 0; i < tags.size(); i++) {
-            var creditTag = tags.getCompound(i);
-            if (!creditTag.hasUUID(NBT_CREDIT_CONSUMER)) continue;
+            var creditTag = tags.getCompoundOrEmpty(i);
+            if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(creditTag, NBT_CREDIT_CONSUMER)) continue;
             var items = readCounter(
-                    creditTag.getList(NBT_CREDIT_ITEMS, Tag.TAG_COMPOUND), registries);
+                    creditTag.getListOrEmpty(NBT_CREDIT_ITEMS), registries);
             if (!items.isEmpty()) {
-                result.put(creditTag.getUUID(NBT_CREDIT_CONSUMER), items);
+                result.put(com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(creditTag, NBT_CREDIT_CONSUMER), items);
             }
         }
         return Map.copyOf(result);
@@ -1830,7 +1829,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             var items = credits.get(consumer);
             if (items == null || items.isEmpty()) continue;
             var creditTag = new CompoundTag();
-            creditTag.putUUID(NBT_CREDIT_CONSUMER, consumer);
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(creditTag, NBT_CREDIT_CONSUMER, consumer);
             creditTag.put(NBT_CREDIT_ITEMS, writeCounter(items, registries));
             result.add(creditTag);
         }
@@ -1858,7 +1857,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     public void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
-        this.inventory.readFromNBT(data.getList(TAG_INVENTORY, Tag.TAG_COMPOUND), registries);
+        this.inventory.deserialize(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, registries)
+                .childrenListOrEmpty(TAG_INVENTORY));
         this.job = null;
         this.pendingJobTag = null;
         this.pendingOverloadTag = null;
@@ -1867,35 +1867,35 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         retainedFinalOutputs.clear();
         pendingRequesterOutputs.clear();
         pendingRequesterOutputWarning.reset();
-        seedReturnQuotaFinalized = data.getBoolean(TAG_SEED_RETURN_QUOTA_FINALIZED);
+        seedReturnQuotaFinalized = data.getBooleanOr(TAG_SEED_RETURN_QUOTA_FINALIZED, false);
         clearLoopSeedState();
-        if (data.contains(TAG_SEED_RETURN_QUOTA, Tag.TAG_LIST)) {
-            var seeds = data.getList(TAG_SEED_RETURN_QUOTA, Tag.TAG_COMPOUND);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_SEED_RETURN_QUOTA, Tag.TAG_LIST)) {
+            var seeds = data.getListOrEmpty(TAG_SEED_RETURN_QUOTA);
             for (int i = 0; i < seeds.size(); i++) {
-                var stack = GenericStack.readTag(registries, seeds.getCompound(i));
+                var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, seeds.getCompoundOrEmpty(i));
                 if (stack != null && stack.amount() > 0) seedReturnQuota.add(stack.what(), stack.amount());
             }
         }
-        if (data.contains(TAG_RETAINED_FINAL_OUTPUTS, Tag.TAG_LIST)) {
-            var retained = data.getList(TAG_RETAINED_FINAL_OUTPUTS, Tag.TAG_COMPOUND);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_RETAINED_FINAL_OUTPUTS, Tag.TAG_LIST)) {
+            var retained = data.getListOrEmpty(TAG_RETAINED_FINAL_OUTPUTS);
             for (int i = 0; i < retained.size(); i++) {
-                var stack = GenericStack.readTag(registries, retained.getCompound(i));
+                var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, retained.getCompoundOrEmpty(i));
                 if (stack != null && stack.amount() > 0) {
                     retainedFinalOutputs.add(stack.what(), stack.amount());
                 }
             }
         }
-        if (data.contains(TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_LIST)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_LIST)) {
             pendingRequesterOutputs.addAll(readCounter(
-                    data.getList(TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_COMPOUND), registries));
+                    data.getListOrEmpty(TAG_PENDING_REQUESTER_OUTPUTS), registries));
         }
         readLoopSeedState(data, registries);
         clearTaskWheel();
 
-        if (data.contains(TAG_JOB, Tag.TAG_COMPOUND)) {
-            var jobTag = data.getCompound(TAG_JOB);
-            var overloadTag = data.contains(TAG_OVERLOAD_STATE, Tag.TAG_COMPOUND)
-                    ? data.getCompound(TAG_OVERLOAD_STATE)
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_JOB, Tag.TAG_COMPOUND)) {
+            var jobTag = data.getCompoundOrEmpty(TAG_JOB);
+            var overloadTag = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_OVERLOAD_STATE, Tag.TAG_COMPOUND)
+                    ? data.getCompoundOrEmpty(TAG_OVERLOAD_STATE)
                     : null;
             if (cpu.getLevel() == null) {
                 this.pendingJobTag = jobTag.copy();
@@ -1911,14 +1911,15 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     public void writeToNBT(CompoundTag data, HolderLookup.Provider registries) {
         if (!this.inventory.list.isEmpty()) {
-            data.put(TAG_INVENTORY, this.inventory.writeToNBT(registries));
+            this.inventory.serialize(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries)
+                    .childrenList(TAG_INVENTORY));
         } else {
             data.remove(TAG_INVENTORY);
         }
         if (!seedReturnQuota.isEmpty()) {
             var seeds = new ListTag();
             for (var entry : seedReturnQuota) {
-                seeds.add(GenericStack.writeTag(registries,
+                seeds.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries,
                         new GenericStack(entry.getKey(), entry.getLongValue())));
             }
             data.put(TAG_SEED_RETURN_QUOTA, seeds);
@@ -2006,13 +2007,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void updatePendingDisplayedOutput(CompoundTag jobTag, HolderLookup.Provider registries) {
-        var finalOutput = GenericStack.readTag(registries, jobTag.getCompound(NBT_FINAL_OUTPUT));
+        var finalOutput = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, jobTag.getCompoundOrEmpty(NBT_FINAL_OUTPUT));
         if (finalOutput == null) {
             cpu.updateOutput(null);
             return;
         }
 
-        var remainingAmount = jobTag.getLong(NBT_REMAINING_AMOUNT);
+        var remainingAmount = jobTag.getLongOr(NBT_REMAINING_AMOUNT, 0L);
         cpu.updateOutput(remainingAmount > 0 ? new GenericStack(finalOutput.what(), remainingAmount) : null);
     }
 
@@ -3062,29 +3063,32 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                                 HolderLookup.Provider registries,
                                                 Consumer<AEKey> postCraftingDifference,
                                                 TimeWheelCraftingCPU cpu) {
-            var finalOutput = GenericStack.readTag(registries, data.getCompound(NBT_FINAL_OUTPUT));
+            var finalOutput = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, data.getCompoundOrEmpty(NBT_FINAL_OUTPUT));
             if (finalOutput == null) {
                 return null;
             }
 
-            var link = new CraftingLink(data.getCompound(NBT_LINK), cpu);
+            var link = new CraftingLink(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.craftingLinkInput(
+                    data.getCompoundOrEmpty(NBT_LINK), registries), cpu);
             var emptyPlan = new TimeWheelPlan(finalOutput);
             var job = new TimeWheelJob(
                     emptyPlan,
                     postCraftingDifference,
                     link,
-                    data.contains(NBT_PLAYER_ID, Tag.TAG_INT) ? data.getInt(NBT_PLAYER_ID) : null,
-                    new ElapsedTimeTracker(data.getCompound(NBT_TIME_TRACKER)));
-            job.remainingAmount = data.getLong(NBT_REMAINING_AMOUNT);
-            job.suspended = data.getBoolean(NBT_SUSPENDED);
-            job.softCancelling = data.getBoolean(NBT_SOFT_CANCELLING);
-            job.closedLoopJob = data.getBoolean(NBT_CLOSED_LOOP_JOB) || job.softCancelling;
+                    com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, NBT_PLAYER_ID, Tag.TAG_INT) ? data.getIntOr(NBT_PLAYER_ID, 0) : null,
+                    new ElapsedTimeTracker(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(
+                            data.getCompoundOrEmpty(NBT_TIME_TRACKER), registries)));
+            job.remainingAmount = data.getLongOr(NBT_REMAINING_AMOUNT, 0L);
+            job.suspended = data.getBooleanOr(NBT_SUSPENDED, false);
+            job.softCancelling = data.getBooleanOr(NBT_SOFT_CANCELLING, false);
+            job.closedLoopJob = data.getBooleanOr(NBT_CLOSED_LOOP_JOB, false) || job.softCancelling;
             job.sharedBatchSeedConsumers.readFromNBT(data);
-            job.waitingFor.readFromNBT(data.getList(NBT_WAITING_FOR, Tag.TAG_COMPOUND), registries);
+            job.waitingFor.deserialize(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, registries)
+                    .childrenListOrEmpty(NBT_WAITING_FOR));
             job.rebuildWaitingKeys();
             job.tasks.clear();
             job.pendingOutputs.clear();
-            job.readTasks(data.getList(NBT_TASKS, Tag.TAG_COMPOUND), registries, cpu.getLevel());
+            job.readTasks(data.getListOrEmpty(NBT_TASKS), registries, cpu.getLevel());
             job.rebuildPendingOutputs();
             if (!job.closedLoopJob) {
                 // Saves from before the closedLoopJob tag lack the flag for running loop jobs;
@@ -3105,31 +3109,30 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             }
 
             for (int i = 0; i < tasksTag.size(); i++) {
-                var item = tasksTag.getCompound(i);
-                var pattern = AEItemKey.fromTag(registries, item);
+                var item = tasksTag.getCompoundOrEmpty(i);
+                var pattern = AEItemKey.fromTag(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(item, registries));
                 if (pattern == null) {
                     continue;
                 }
                 IPatternDetails details = PatternDetailsHelper.decodePattern(pattern, level);
-                var remaining = item.getLong(NBT_CRAFTING_PROGRESS);
+                var remaining = item.getLongOr(NBT_CRAFTING_PROGRESS, 0L);
                 if (details != null && remaining > 0) {
                     var inputSeed = readCounter(
-                            item.getList(NBT_INPUT_SEED, Tag.TAG_COMPOUND), registries);
+                            item.getListOrEmpty(NBT_INPUT_SEED), registries);
                     var initialSeed = readCounter(
-                            item.getList(NBT_INITIAL_SEED, Tag.TAG_COMPOUND), registries);
+                            item.getListOrEmpty(NBT_INITIAL_SEED), registries);
                     var outputSeed = readCounter(
-                            item.getList(NBT_OUTPUT_SEED, Tag.TAG_COMPOUND), registries);
-                    var consumerId = item.hasUUID(NBT_SEED_CONSUMER)
-                            ? item.getUUID(NBT_SEED_CONSUMER) : null;
+                            item.getListOrEmpty(NBT_OUTPUT_SEED), registries);
+                    var consumerId = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(item, NBT_SEED_CONSUMER)
+                            ? com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(item, NBT_SEED_CONSUMER) : null;
                     var outputCredits = readSeedCredits(
-                            item.getList(NBT_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND), registries);
+                            item.getListOrEmpty(NBT_OUTPUT_SEED_CREDITS), registries);
                     var sharedOutputCredits = readSeedCredits(
-                            item.getList(
-                                    NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND),
+                            item.getListOrEmpty(
+                                    NBT_SHARED_OUTPUT_SEED_CREDITS),
                             registries);
-                    boolean hasRoutedCreditTags = item.contains(
-                            NBT_OUTPUT_SEED_CREDITS, Tag.TAG_LIST)
-                            || item.contains(NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_LIST);
+                    boolean hasRoutedCreditTags = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(item, NBT_OUTPUT_SEED_CREDITS, Tag.TAG_LIST)
+                            || com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(item, NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_LIST);
                     if (consumerId == null && details instanceof ISeedPreservingCraftingTask seeded) {
                         consumerId = seeded.reusableSeedGroupId();
                     }
@@ -3235,25 +3238,29 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             var data = new CompoundTag();
 
             var linkData = new CompoundTag();
-            link.writeToNBT(linkData);
+            link.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(linkData, registries));
             data.put(NBT_LINK, linkData);
 
-            data.put(NBT_FINAL_OUTPUT, GenericStack.writeTag(registries, finalOutput));
-            data.put(NBT_WAITING_FOR, waitingFor.writeToNBT(registries));
-            data.put(NBT_TIME_TRACKER, timeTracker.writeToNBT());
+            data.put(NBT_FINAL_OUTPUT, com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, finalOutput));
+            waitingFor.serialize(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries)
+                    .childrenList(NBT_WAITING_FOR));
+            var timeTrackerTag = new CompoundTag();
+            timeTracker.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(timeTrackerTag, registries));
+            data.put(NBT_TIME_TRACKER, timeTrackerTag);
 
             var list = new ListTag();
             for (var entry : tasks.entrySet()) {
                 var definition = entry.getKey() instanceof CraftingTaskPersistenceDefinition persistent
                         ? persistent.craftingTaskPersistenceDefinition()
                         : entry.getKey().getDefinition();
-                var item = definition.toTag(registries);
+                var item = new CompoundTag();
+                definition.toTag(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(item, registries));
                 item.putLong(NBT_CRAFTING_PROGRESS, entry.getValue().value);
                 if (entry.getKey() instanceof PlannedInputPattern planned) {
                     planned.writeToTag(item, registries);
                 }
                 if (entry.getKey() instanceof ExecuteLoopPattern loopPattern) {
-                    item.putUUID(NBT_SEED_CONSUMER, loopPattern.seedConsumerId());
+                    com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(item, NBT_SEED_CONSUMER, loopPattern.seedConsumerId());
                     var initialSeed = loopPattern.initialSeed();
                     var inputSeed = loopPattern.inputSeed();
                     var outputSeed = loopPattern.outputSeed();

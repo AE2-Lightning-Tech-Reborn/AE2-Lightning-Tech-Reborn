@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 class TianshuPatternUploadRoutingTest {
@@ -50,9 +50,9 @@ class TianshuPatternUploadRoutingTest {
         assertMatrixGroup("matter_warping_matrix_controller");
 
         assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(
-                ResourceLocation.fromNamespaceAndPath("ae2", "pattern_provider")));
+                Identifier.fromNamespaceAndPath("ae2", "pattern_provider")));
         assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(
-                ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_pattern_bus")));
+                Identifier.fromNamespaceAndPath("neoecoae", "crafting_pattern_bus")));
         assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(null));
     }
 
@@ -132,9 +132,9 @@ class TianshuPatternUploadRoutingTest {
                 "src/main/java/com/moakiee/ae2lt/client/TianshuTerminalSettingsScreen.java"));
 
         assertTrue(menu.contains(
-                "registerClientAction(\"encodeTianshu\", Boolean.class, "
-                        + "this::encodeServerWithOptions)"));
-        assertTrue(menu.contains("sendClientAction(\"encodeTianshu\","));
+                "registerClientAction(new appeng.menu.guisync.ClientActionKey<Boolean>(\"encodeTianshu\"), "
+                        + "net.minecraft.network.codec.ByteBufCodecs.BOOL, this::encodeServerWithOptions)"));
+        assertTrue(menu.contains("sendClientAction(new appeng.menu.guisync.ClientActionKey<>(\"encodeTianshu\"),"));
         assertFalse(menu.contains("previewAe2EncodingCandidate()"));
         int nativeEncode = menu.indexOf("super.encode();");
         int actualDuplicateCheck = menu.indexOf(
@@ -184,11 +184,11 @@ class TianshuPatternUploadRoutingTest {
 
     private static void assertCraftingGroup(String namespace, String path) {
         assertTrue(TianshuPatternUploadRouting.isCraftingUploadGroupId(
-                ResourceLocation.fromNamespaceAndPath(namespace, path)));
+                Identifier.fromNamespaceAndPath(namespace, path)));
     }
 
     private static void assertMatrixGroup(String path) {
         assertTrue(TianshuPatternUploadRouting.isMatterWarpingMatrixId(
-                ResourceLocation.fromNamespaceAndPath("ae2lt", path)));
+                Identifier.fromNamespaceAndPath("ae2lt", path)));
     }
 }

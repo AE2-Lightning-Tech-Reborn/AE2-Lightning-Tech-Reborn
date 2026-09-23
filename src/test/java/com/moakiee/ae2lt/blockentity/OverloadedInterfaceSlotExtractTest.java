@@ -20,11 +20,11 @@ import net.neoforged.neoforge.items.IItemHandler;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 
-class OverloadedInterfaceSlotExtractTest {
+class OverloadedInterfaceSlotExtractTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @BeforeAll
     static void bootstrapMinecraft() {
         if (LoadingModList.get() == null) {
-            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+            LoadingModList.of(List.of(), List.of(), List.of(), List.of(), List.of(), Map.of());
         }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();

@@ -38,7 +38,7 @@ class PhaseFlightMovementGuardSourceContractTest {
         assertTrue(guard.contains("ThreadLocal<ServerPlayer> MAIN_THREAD_PAYLOAD_PLAYER"));
         assertTrue(guard.contains("CommandSourceStack commandSource = COMMAND_SOURCE.get()"));
         assertTrue(guard.contains("commandSource.getEntity() == player"));
-        assertTrue(guard.contains("commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS)"));
+        assertTrue(guard.contains("Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(commandSource)"));
         assertTrue(guard.contains("AE2LTCommonConfig.overloadArmorPhaseLockTeleportMode()"));
         assertFalse(guard.contains("PhaseFlightSubmodule.hasTransientPhaseState(player)"));
         assertFalse(guard.contains("isSubmoduleInstalled"));
@@ -149,12 +149,12 @@ class PhaseFlightMovementGuardSourceContractTest {
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.blocksExternalForces(player)"));
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.isMovementPositionUpdate()"));
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.isSelfTeleportAuthorized(player)"));
-        assertTrue(packetMixin.contains("relativeMovements.contains(RelativeMovement.X)"));
+        assertTrue(packetMixin.contains("PositionMoveRotation.calculateAbsolute("));
         assertTrue(packetMixin.contains("notifyBlockedTeleport(player, target)"));
         assertTrue(packetMixin.contains("!player.position().equals(target)"));
         assertTrue(dimensionMixin.contains("notifyBlockedDimensionTeleport("));
         assertTrue(dimensionMixin.contains("transition.newLevel()"));
-        assertTrue(dimensionMixin.contains("transition.pos()"));
+        assertTrue(dimensionMixin.contains("transition.position()"));
     }
 
     @Test
@@ -212,8 +212,8 @@ class PhaseFlightMovementGuardSourceContractTest {
         String packetMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/ServerGamePacketListenerPhaseMovementMixin.java"));
 
-        assertTrue(packetMixin.contains("method = \"tick\""));
-        assertTrue(packetMixin.contains("ServerPlayer;absMoveTo(DDDFF)V"));
+        assertTrue(packetMixin.contains("method = \"tickPlayer\""));
+        assertTrue(packetMixin.contains("ServerPlayer;absSnapTo(DDDFF)V"));
         assertTrue(packetMixin.contains("ae2lt$authorizeVanillaTickPositionRestore"));
         assertTrue(packetMixin.contains("PhaseFlightMovementGuard.runAsSelfMovement("));
     }

@@ -413,10 +413,8 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
         return pushedItem || pushedFluid;
     }
 
-    public void onNeighborChanged(BlockPos changedPos) {
-        if (changedPos != null && worldPosition.distManhattan(changedPos) == 1) {
-            invalidateExportTargets();
-        }
+    public void onNeighborChanged() {
+        invalidateExportTargets();
     }
 
     public long getAvailableHighVoltage() {
@@ -631,13 +629,15 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         inventory.saveToTag(data, TAG_INVENTORY, registries);
-        upgrades.writeToNBT(data, TAG_UPGRADES, registries);
+        upgrades.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(data, registries), TAG_UPGRADES);
         data.putLong(TAG_ENERGY, energyStorage.getStoredEnergyLong());
-        data.put(TAG_INPUT_TANK, inputTank.writeToNBT(registries, new CompoundTag()));
-        data.put(TAG_OUTPUT_TANK, outputTank.writeToNBT(registries, new CompoundTag()));
+        data.put(TAG_INPUT_TANK, com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.save(inputTank, registries));
+        data.put(TAG_OUTPUT_TANK, com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.save(outputTank, registries));
         data.putLong(TAG_CONSUMED_ENERGY, consumedEnergy);
         data.putInt(TAG_PROCESSING_TICKS, processingTicksSpent);
         data.putBoolean(TAG_AUTO_EXPORT, autoExport);
@@ -655,27 +655,29 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag data = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
         inventory.loadFromTag(data, TAG_INVENTORY, registries);
-        upgrades.readFromNBT(data, TAG_UPGRADES, registries);
-        energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
-        inputTank.readFromNBT(registries, data.getCompound(TAG_INPUT_TANK));
-        outputTank.readFromNBT(registries, data.getCompound(TAG_OUTPUT_TANK));
-        consumedEnergy = Math.max(0L, data.getLong(TAG_CONSUMED_ENERGY));
-        processingTicksSpent = Math.max(0, data.getInt(TAG_PROCESSING_TICKS));
+        upgrades.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(data, registries), TAG_UPGRADES);
+        energyStorage.loadStoredEnergy(data.getLongOr(TAG_ENERGY, 0L));
+        com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.load(inputTank, registries, data.getCompoundOrEmpty(TAG_INPUT_TANK));
+        com.moakiee.ae2lt.recipe.compat.LegacyFluidTankNbt.load(outputTank, registries, data.getCompoundOrEmpty(TAG_OUTPUT_TANK));
+        consumedEnergy = Math.max(0L, data.getLongOr(TAG_CONSUMED_ENERGY, 0L));
+        processingTicksSpent = Math.max(0, data.getIntOr(TAG_PROCESSING_TICKS, 0));
         frequencyBinding.load(data);
-        autoExport = data.getBoolean(TAG_AUTO_EXPORT);
+        autoExport = data.getBooleanOr(TAG_AUTO_EXPORT, false);
         allowedOutputs.clear();
-        ListTag outputTags = data.getList(TAG_ALLOWED_OUTPUTS, Tag.TAG_STRING);
+        ListTag outputTags = data.getListOrEmpty(TAG_ALLOWED_OUTPUTS);
         for (int i = 0; i < outputTags.size(); i++) {
             try {
-                allowedOutputs.add(RelativeSide.valueOf(outputTags.getString(i)));
+                allowedOutputs.add(RelativeSide.valueOf(outputTags.getStringOr(i, "")));
             } catch (IllegalArgumentException ignored) {
             }
         }
-        if (data.contains(TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
-            lockedRecipe = OverloadProcessingLockedRecipe.fromTag(data.getCompound(TAG_LOCKED_RECIPE), registries);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
+            lockedRecipe = OverloadProcessingLockedRecipe.fromTag(data.getCompoundOrEmpty(TAG_LOCKED_RECIPE), registries);
         } else {
             lockedRecipe = null;
         }

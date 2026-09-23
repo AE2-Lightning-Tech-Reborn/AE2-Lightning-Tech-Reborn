@@ -29,7 +29,7 @@ public class LightningCollectorBlock extends AEBaseEntityBlock<LightningCollecto
             Block.box(12, 12, 6, 16, 16, 10));
 
     public LightningCollectorBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState().setValue(WORKING, false));
     }
 
@@ -66,6 +66,6 @@ public class LightningCollectorBlock extends AEBaseEntityBlock<LightningCollecto
             blockEntity.openMenu(player, MenuLocators.forBlockEntity(blockEntity));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

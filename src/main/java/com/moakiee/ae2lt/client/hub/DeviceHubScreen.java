@@ -3,11 +3,11 @@ package com.moakiee.ae2lt.client.hub;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -25,9 +25,9 @@ import com.moakiee.ae2lt.registry.ModItems;
 
 public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/armor_settings_gui.png");
-    private static final ResourceLocation CHECKBOX_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+    private static final Identifier CHECKBOX_TEXTURE = Identifier.fromNamespaceAndPath(
             "ae2", "textures/guis/checkbox.png");
 
     private static final int TEXTURE_SIZE = 256;
@@ -131,9 +131,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private int lastConfigModule = -1;
 
     public DeviceHubScreen(DeviceHubMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
-        this.imageWidth = GUI_WIDTH;
-        this.imageHeight = GUI_HEIGHT;
+        super(menu, inv, title, GUI_WIDTH, GUI_HEIGHT);
         this.inventoryLabelY = this.imageHeight + 100;
     }
 
@@ -145,15 +143,16 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+    public void extractContents(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
         renderSelectedTabTexture(gfx, menu.getSelectedTab());
+
+        super.extractContents(gfx, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        renderBackground(gfx, mouseX, mouseY, partialTick);
-        super.render(gfx, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(gfx, mouseX, mouseY, partialTick);
 
         int selectedTab = menu.getSelectedTab();
         int tabMask = menu.getTabAvailability();
@@ -166,10 +165,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
         boolean hasDevice = (tabMask & (1 << selectedTab)) != 0;
         if (!hasDevice) {
-            gfx.drawString(font, Component.translatable("ae2lt.device_hub.no_device"),
+            gfx.text(font, Component.translatable("ae2lt.device_hub.no_device"),
                     leftPos + STATUS_X, topPos + STATUS_Y + 9, TEXT_ON_DARK_BG, false);
             renderTabTooltips(gfx, mouseX, mouseY, tabMask);
-            renderTooltip(gfx, mouseX, mouseY);
+            extractTooltip(gfx, mouseX, mouseY);
             return;
         }
 
@@ -183,18 +182,18 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
 
         renderTabTooltips(gfx, mouseX, mouseY, tabMask);
-        renderTooltip(gfx, mouseX, mouseY);
+        extractTooltip(gfx, mouseX, mouseY);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
     }
 
-    private void renderSelectedTabTexture(GuiGraphics gfx, int selectedTab) {
+    private void renderSelectedTabTexture(GuiGraphicsExtractor gfx, int selectedTab) {
         if (selectedTab < 0 || selectedTab >= TAB_COUNT) {
             return;
         }
-        gfx.blit(TEXTURE,
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
                 leftPos + TAB_X[selectedTab],
                 topPos + TAB_Y,
                 TAB_ACTIVE_SRC_X[selectedTab],
@@ -205,32 +204,32 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 TEXTURE_SIZE);
     }
 
-    private void renderTabIcons(GuiGraphics gfx) {
+    private void renderTabIcons(GuiGraphicsExtractor gfx) {
         for (int i = 0; i < TAB_COUNT; i++) {
             int x = leftPos + TAB_X[i];
             ItemStack stack = tabDisplayStack(i);
             if (!stack.isEmpty()) {
                 int iconX = x + (TAB_WIDTH - TAB_ICON_SIZE) / 2;
-                gfx.renderItem(stack, iconX, topPos + 5);
+                gfx.item(stack, iconX, topPos + 5);
             }
         }
     }
 
-    private void renderStatusPanel(GuiGraphics gfx, boolean railgunTab) {
+    private void renderStatusPanel(GuiGraphicsExtractor gfx, boolean railgunTab) {
         int x = leftPos + STATUS_TEXT_X;
         ItemStack stack = selectedDeviceStack();
         if (!stack.isEmpty()) {
-            gfx.renderItem(stack, leftPos + STATUS_ICON_X, topPos + STATUS_ICON_Y);
+            gfx.item(stack, leftPos + STATUS_ICON_X, topPos + STATUS_ICON_Y);
         }
 
         String deviceName = menu.getDeviceName();
         if (!deviceName.isEmpty()) {
-            gfx.drawString(font, Component.literal(truncate(font, deviceName, STATUS_RIGHT - STATUS_TEXT_X)),
+            gfx.text(font, Component.literal(truncate(font, deviceName, STATUS_RIGHT - STATUS_TEXT_X)),
                     x, topPos + STATUS_NAME_Y, TEXT_ON_DARK_BG, false);
         }
 
         Component statusLine = Component.translatable("ae2lt.device_hub.status.line", statusText(railgunTab));
-        gfx.drawString(font, statusLine, x, topPos + STATUS_LINE_Y, TEXT_ON_DARK_BG, false);
+        gfx.text(font, statusLine, x, topPos + STATUS_LINE_Y, TEXT_ON_DARK_BG, false);
     }
 
     private Component statusText(boolean railgunTab) {
@@ -244,12 +243,12 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 : "ae2lt.device_hub.status.unpowered");
     }
 
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY, boolean railgunTab) {
+    private void renderModuleList(GuiGraphicsExtractor gfx, int mouseX, int mouseY, boolean railgunTab) {
         List<String> moduleNameKeys = menu.getModuleNameKeys();
         List<Integer> moduleCounts = menu.getModuleCounts();
         List<Boolean> moduleEnabled = menu.getModuleEnabled();
 
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.modules"),
+        gfx.text(font, Component.translatable("ae2lt.device_hub.modules"),
                 leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
@@ -277,7 +276,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     ? MODULE_LIST_RIGHT - MODULE_LIST_X
                     : MODULE_CHECKBOX_X - MODULE_LIST_X - 6;
             String name = truncate(font, moduleName(moduleNameKeys.get(idx), count).getString(), nameMaxWidth);
-            gfx.drawString(font, Component.literal(name), leftPos + MODULE_LIST_X, rowY + 2, TEXT_ON_DARK_BG, false);
+            gfx.text(font, Component.literal(name), leftPos + MODULE_LIST_X, rowY + 2, TEXT_ON_DARK_BG, false);
 
             if (!railgunTab) {
                 boolean enabled = idx < moduleEnabled.size() && moduleEnabled.get(idx);
@@ -298,7 +297,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
     }
 
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
+    private void renderScrollBar(GuiGraphicsExtractor gfx, int moduleCount, int mouseX, int mouseY) {
         renderScrollBar(
                 gfx,
                 moduleCount,
@@ -311,10 +310,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 mouseY);
     }
 
-    private void renderModuleConfig(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleConfig(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.celestweave.screen.module_options"),
+        gfx.text(font, Component.translatable("ae2lt.celestweave.screen.module_options"),
                 leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
         int count = moduleConfigCount();
         if (count <= 0) {
@@ -331,7 +330,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             }
             String value = menu.getModuleConfigValues().get(configIndex);
             boolean editable = menu.getModuleConfigEditable().get(configIndex);
-            gfx.drawString(font, moduleConfigLabel(configIndex),
+            gfx.text(font, moduleConfigLabel(configIndex),
                     x, rowY + 1, TEXT_ON_DARK_BG, false);
             drawConfigValueButton(gfx, leftPos + CONFIG_BUTTON_X, rowY - 1, value, editable, mouseX, mouseY);
             rowY += CONFIG_ROW_H;
@@ -341,10 +340,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
     }
 
-    private void renderRailgunSettings(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderRailgunSettings(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.settings"),
+        gfx.text(font, Component.translatable("ae2lt.device_hub.settings"),
                 leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
@@ -359,7 +358,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             if (settingIndex <= RAILGUN_SETTING_CHARGED_SPLASH) {
                 drawSettingRow(gfx, x, rowY, label, railgunSettingEnabled(settingIndex));
             } else {
-                gfx.drawString(font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
+                gfx.text(font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
                 drawConfigValueButton(
                         gfx,
                         leftPos + CONFIG_BUTTON_X,
@@ -407,13 +406,13 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return key.isEmpty() ? "" : Component.translatable(key).getString();
     }
 
-    private void drawSettingRow(GuiGraphics gfx, int x, int y, Component label, boolean on) {
-        gfx.drawString(font, label, x, y + 1, TEXT_ON_DARK_BG, false);
+    private void drawSettingRow(GuiGraphicsExtractor gfx, int x, int y, Component label, boolean on) {
+        gfx.text(font, label, x, y + 1, TEXT_ON_DARK_BG, false);
         drawCheckbox(gfx, leftPos + MODULE_CHECKBOX_X, y, on);
     }
 
-    private void drawCheckbox(GuiGraphics gfx, int x, int y, boolean checked) {
-        gfx.blit(CHECKBOX_TEXTURE,
+    private void drawCheckbox(GuiGraphicsExtractor gfx, int x, int y, boolean checked) {
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, CHECKBOX_TEXTURE,
                 x,
                 y,
                 0,
@@ -425,7 +424,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private void drawConfigValueButton(
-            GuiGraphics gfx, int x, int y, String value, boolean editable, int mouseX, int mouseY) {
+            GuiGraphicsExtractor gfx, int x, int y, String value, boolean editable, int mouseX, int mouseY) {
         boolean hovered = editable
                 && mouseX >= x
                 && mouseX <= x + CONFIG_BUTTON_W
@@ -437,7 +436,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         gfx.fill(x, y, x + CONFIG_BUTTON_W, y + CONFIG_BUTTON_H, fillColor);
         String text = truncate(font, value, CONFIG_BUTTON_W - 4);
         int textColor = editable ? BUTTON_TEXT : TEXT_ON_DARK_BG;
-        gfx.drawString(font, Component.literal(text),
+        gfx.text(font, Component.literal(text),
                 x + (CONFIG_BUTTON_W - font.width(text)) / 2, y + 2, textColor, false);
     }
 
@@ -459,7 +458,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     && mouseX <= buttonX + CONFIG_BUTTON_W
                     && mouseY >= rowY - 1
                     && mouseY <= rowY - 1 + CONFIG_BUTTON_H) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(
                         DeviceHubActionPacket.ACTION_CYCLE_MODULE_CONFIG, configIndex));
                 return true;
             }
@@ -492,9 +491,11 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (button != 0) {
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(event, handled);
         }
 
         int tabMask = menu.getTabAvailability();
@@ -505,7 +506,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             int ty = topPos + TAB_Y;
             if (mouseX >= tx && mouseX <= tx + TAB_WIDTH && mouseY >= ty && mouseY <= ty + TAB_HEIGHT) {
                 if ((tabMask & (1 << i)) != 0 && i != selectedTab) {
-                    PacketDistributor.sendToServer(new DeviceHubActionPacket(
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(
                             DeviceHubActionPacket.ACTION_SELECT_TAB, i));
                     playClick();
                 }
@@ -530,7 +531,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             }
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, handled);
     }
 
     private boolean mouseClickedModule(double mouseX, double mouseY, boolean railgunTab) {
@@ -547,7 +548,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     && mouseX <= checkboxX + CHECKBOX_WIDTH
                     && mouseY >= rowY + 1
                     && mouseY <= rowY + 1 + CHECKBOX_HEIGHT) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(
                         DeviceHubActionPacket.ACTION_TOGGLE_MODULE, idx));
                 return true;
             }
@@ -555,7 +556,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     && mouseX <= leftPos + MODULE_LIST_RIGHT
                     && mouseY >= rowY
                     && mouseY <= rowY + MODULE_ROW_H) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(
                         DeviceHubActionPacket.ACTION_SELECT_MODULE, idx));
                 return true;
             }
@@ -592,7 +593,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     default -> -1;
                 };
                 if (action >= 0) {
-                    PacketDistributor.sendToServer(new DeviceHubActionPacket(action, 0));
+                    net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(action, 0));
                     return true;
                 }
             }
@@ -602,7 +603,8 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (keyCode == 258) {
             cycleTab((modifiers & 1) != 0 ? -1 : 1);
             return true;
@@ -615,7 +617,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             cycleTab(1);
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -647,7 +649,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    private void renderConfigScrollBar(GuiGraphics gfx, int configCount, int mouseX, int mouseY) {
+    private void renderConfigScrollBar(GuiGraphicsExtractor gfx, int configCount, int mouseX, int mouseY) {
         renderScrollBar(
                 gfx,
                 configCount,
@@ -661,7 +663,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private void renderScrollBar(
-            GuiGraphics gfx,
+            GuiGraphicsExtractor gfx,
             int itemCount,
             int visibleRows,
             int offset,
@@ -678,7 +680,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 && mouseX < thumbX + SCROLL_SRC_W
                 && mouseY >= thumbY
                 && mouseY < thumbY + SCROLL_SRC_H;
-        gfx.blit(
+        gfx.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 TEXTURE,
                 thumbX,
                 thumbY,
@@ -709,7 +711,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return offset;
     }
 
-    private void renderTabTooltips(GuiGraphics gfx, int mouseX, int mouseY, int tabMask) {
+    private void renderTabTooltips(GuiGraphicsExtractor gfx, int mouseX, int mouseY, int tabMask) {
         for (int i = 0; i < TAB_COUNT; i++) {
             int tx = leftPos + TAB_X[i];
             boolean available = (tabMask & (1 << i)) != 0;
@@ -720,12 +722,12 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 if (available) {
                     ItemStack stack = tabStack(i);
                     if (!stack.isEmpty()) {
-                        gfx.renderTooltip(font, stack, mouseX, mouseY);
+                        gfx.setTooltipForNextFrame(font, stack, mouseX, mouseY);
                     } else {
-                        gfx.renderTooltip(font, Component.translatable(TAB_LABEL_KEYS[i]), mouseX, mouseY);
+                        gfx.setTooltipForNextFrame(font, Component.translatable(TAB_LABEL_KEYS[i]), mouseX, mouseY);
                     }
                 } else {
-                    gfx.renderTooltip(font, Component.translatable(TAB_REQUIRED_KEYS[i]), mouseX, mouseY);
+                    gfx.setTooltipForNextFrame(font, Component.translatable(TAB_REQUIRED_KEYS[i]), mouseX, mouseY);
                 }
                 return;
             }
@@ -738,7 +740,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         for (int attempt = 0; attempt < TAB_COUNT; attempt++) {
             current = (current + dir + TAB_COUNT) % TAB_COUNT;
             if ((tabMask & (1 << current)) != 0) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
+                net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new DeviceHubActionPacket(
                         DeviceHubActionPacket.ACTION_SELECT_TAB, current));
                 playClick();
                 return;

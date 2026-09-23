@@ -11,7 +11,7 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
@@ -36,7 +36,7 @@ abstract class EmiBackedRecipe<T extends Recipe<?>> extends BasicEmiRecipe {
 }
 
 final class EmiLightningAssemblyRecipe extends EmiBackedRecipe<LightningAssemblyRecipe> {
-    private static final ResourceLocation TEXTURE =
+    private static final Identifier TEXTURE =
             EmiRecipeWidgets.texture("guis/lightning_assembly_chamber.png");
     private static final int WIDTH = 156;
     private static final int BACKGROUND_HEIGHT = 78;
@@ -77,7 +77,7 @@ final class EmiLightningAssemblyRecipe extends EmiBackedRecipe<LightningAssembly
 }
 
 final class EmiLightningSimulationRecipe extends EmiBackedRecipe<LightningSimulationRecipe> {
-    private static final ResourceLocation TEXTURE =
+    private static final Identifier TEXTURE =
             EmiRecipeWidgets.texture("guis/lightning_simulation_room.png");
     private static final int WIDTH = 168;
 

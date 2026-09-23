@@ -22,12 +22,12 @@ public class TianshuSupercomputerGlassBlock extends TianshuSupercomputerStructur
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getLightBlock(BlockState state, BlockGetter level, BlockPos pos) {
+    protected int getLightDampening(BlockState state) {
         return 0;
     }
 }

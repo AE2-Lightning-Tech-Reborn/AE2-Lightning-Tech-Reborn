@@ -7,15 +7,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "minecraft:diamond" },
-    "B": { "item": "minecraft:lapis_lazuli" },
-    "C": { "item": "minecraft:diamond" },
-    "D": { "item": "minecraft:lapis_lazuli" },
-    "E": { "item": "ae2lt:matter_warping_matrix_casing" },
-    "F": { "item": "minecraft:lapis_lazuli" },
-    "G": { "item": "minecraft:diamond" },
-    "H": { "item": "minecraft:lapis_lazuli" },
-    "I": { "item": "minecraft:diamond" }
+    "A": "minecraft:diamond",
+    "B": "minecraft:lapis_lazuli",
+    "C": "minecraft:diamond",
+    "D": "minecraft:lapis_lazuli",
+    "E": "ae2lt:matter_warping_matrix_casing",
+    "F": "minecraft:lapis_lazuli",
+    "G": "minecraft:diamond",
+    "H": "minecraft:lapis_lazuli",
+    "I": "minecraft:diamond"
   },
   "result": {
     "count": 1,

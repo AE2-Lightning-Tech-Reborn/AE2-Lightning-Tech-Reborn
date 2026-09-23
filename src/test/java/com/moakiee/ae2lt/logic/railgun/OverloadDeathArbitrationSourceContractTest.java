@@ -78,7 +78,7 @@ class OverloadDeathArbitrationSourceContractTest {
         assertTrue(packetMixin.contains(
                 "CelestweaveArmorUndyingHandler.protectBeforeDeathSideEffect(gameListener.player)"));
         assertTrue(packetMixin.contains(
-                "Lnet/minecraft/network/PacketSendListener;)V"));
+                "Lio/netty/channel/ChannelFutureListener;)V"));
         assertTrue(mixinConfig.contains("\"ServerCommonPacketListenerUndyingMixin\""));
         assertTrue(mixinConfig.contains("\"EntityUndyingMixin\""));
 

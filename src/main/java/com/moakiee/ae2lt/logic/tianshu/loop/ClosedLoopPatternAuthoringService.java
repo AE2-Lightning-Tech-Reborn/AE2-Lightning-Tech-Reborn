@@ -10,13 +10,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
 /** Server-side authoring boundary: players mark only member patterns, quantities and main output. */
 public final class ClosedLoopPatternAuthoringService {
-    private static final ResourceLocation CLOSED_LOOP_PATTERN_ITEM_ID =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "closed_loop_pattern");
+    private static final Identifier CLOSED_LOOP_PATTERN_ITEM_ID =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "closed_loop_pattern");
 
     public enum Status {
         VALID,

@@ -140,10 +140,10 @@ public final class FlightSubmodule extends AbstractCelestweaveArmorSubmodule {
 
     public static boolean isInertiaEnabled(ItemStack armor) {
         var options = INSTANCE.getOptions(armor);
-        if (!options.contains(INERTIA_CONFIG_KEY, Tag.TAG_BYTE)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, INERTIA_CONFIG_KEY, Tag.TAG_BYTE)) {
             return true;
         }
-        return options.getBoolean(INERTIA_CONFIG_KEY);
+        return options.getBooleanOr(INERTIA_CONFIG_KEY, false);
     }
 
     private FlightSpeedOption getSelectedSpeed(ItemStack armor) {
@@ -157,7 +157,7 @@ public final class FlightSubmodule extends AbstractCelestweaveArmorSubmodule {
         PhaseFlightPlayerState.activate(player);
         // This module owns no lock setting; the independent chest phase-lock module may lock it.
         PhaseFlightPlayerState.setFlightLocked(player, PhaseLockSubmodule.isFlightLockEnabled(player));
-        if (!data.contains(TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)) {
             data.putFloat(TAG_PREVIOUS_SPEED, abilities.getFlyingSpeed());
             CelestweaveArmorState.setSubmoduleData(armor, INSTANCE, data);
         }
@@ -184,8 +184,8 @@ public final class FlightSubmodule extends AbstractCelestweaveArmorSubmodule {
 
     private static void restoreStoredAbilities(Player player, ItemStack armor) {
         var data = CelestweaveArmorState.getSubmoduleData(armor, INSTANCE);
-        float previousSpeed = data.contains(TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)
-                ? data.getFloat(TAG_PREVIOUS_SPEED)
+        float previousSpeed = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(data, TAG_PREVIOUS_SPEED, Tag.TAG_FLOAT)
+                ? data.getFloatOr(TAG_PREVIOUS_SPEED, 0.0F)
                 : FlightSpeedOption.VANILLA_FLYING_SPEED;
         data.remove(TAG_PREVIOUS_SPEED);
         CelestweaveArmorState.setSubmoduleData(armor, INSTANCE, data);

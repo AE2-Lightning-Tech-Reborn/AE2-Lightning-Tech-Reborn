@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.moakiee.ae2lt.device.DeviceKind;
 import com.moakiee.ae2lt.device.DeviceSlotType;
 
-final class MultidimensionalExecutionContractTest {
+final class MultidimensionalExecutionContractTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void occupiesTheSingleExecutionSlot() {
         assertEquals(1, RailgunModuleItem.maxInstallAmount(

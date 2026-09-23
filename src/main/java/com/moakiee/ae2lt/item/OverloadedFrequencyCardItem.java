@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -58,75 +58,75 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         var level = context.getLevel();
         if (level.isClientSide()) {
             Vec3 hit = context.getClickLocation();
-            PacketDistributor.sendToServer(new FrequencyCardUsePacket(
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new FrequencyCardUsePacket(
                     context.getHand(),
                     context.getClickedPos(),
                     context.getClickedFace(),
                     hit.x,
                     hit.y,
                     hit.z,
-                    net.minecraft.client.gui.screens.Screen.hasShiftDown()));
-            return InteractionResult.SUCCESS_NO_ITEM_USED;
+                    net.minecraft.client.Minecraft.getInstance().hasShiftDown()));
+            return InteractionResult.SUCCESS;
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (!player.isShiftKeyDown()) {
-            return InteractionResultHolder.pass(stack);
+            return InteractionResult.PASS;
         }
 
         if (!level.isClientSide()) {
             var data = getData(stack);
             if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
-                player.displayClientMessage(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.frequency_card.card_owner_mismatch")
                                 .withStyle(ChatFormatting.RED),
                         true);
-                return InteractionResultHolder.fail(stack);
+                return InteractionResult.FAIL;
             }
             setData(stack, data.clearFrequency());
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.cleared").withStyle(ChatFormatting.GREEN),
                     true);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,
-            List<Component> tooltip,
+            net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip,
             TooltipFlag tooltipFlag) {
         var data = getData(stack);
         if (data.isBound()) {
-            tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.frequency", tooltipFrequencyName(data.frequencyId()))
+            tooltip.accept(Component.translatable("tooltip.ae2lt.frequency_card.frequency", tooltipFrequencyName(data.frequencyId()))
                     .withStyle(ChatFormatting.AQUA));
         } else {
-            tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.unbound")
+            tooltip.accept(Component.translatable("tooltip.ae2lt.frequency_card.unbound")
                     .withStyle(ChatFormatting.GRAY));
         }
 
-        tooltip.add(Component.translatable(
+        tooltip.accept(Component.translatable(
                         data.autoConnect()
                                 ? "tooltip.ae2lt.frequency_card.auto_on"
                                 : "tooltip.ae2lt.frequency_card.auto_off")
                 .withStyle(data.autoConnect() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
 
         if (data.isBound()) {
-            tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.bound_hint")
+            tooltip.accept(Component.translatable("tooltip.ae2lt.frequency_card.bound_hint")
                     .withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.bind_hint")
+            tooltip.accept(Component.translatable("tooltip.ae2lt.frequency_card.bind_hint")
                     .withStyle(ChatFormatting.GRAY));
         }
-        tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.controls")
+        tooltip.accept(Component.translatable("tooltip.ae2lt.frequency_card.controls")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        super.appendHoverText(stack, context, tooltip, tooltipFlag);
+        super.appendHoverText(stack, context, display, tooltip, tooltipFlag);
     }
 
     public static OverloadedFrequencyCardData getData(ItemStack stack) {
@@ -151,7 +151,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
             UUID ownerUuid) {
         setData(stack, getData(stack).bindFrequency(
                 frequencyId,
-                dimension.location().toString(),
+                dimension.identifier().toString(),
                 pos.asLong(),
                 ownerUuid));
     }
@@ -167,7 +167,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
     }
 
     private static String tooltipFrequencyName(int frequencyId) {
-        String frequencyName = FMLEnvironment.dist == Dist.CLIENT
+        String frequencyName = FMLEnvironment.getDist() == Dist.CLIENT
                 ? com.moakiee.ae2lt.client.FrequencyCardClientNames.frequencyName(frequencyId)
                 : null;
         return FrequencyDisplayName.of(frequencyId, frequencyName);
@@ -202,13 +202,13 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         }
 
         var inventory = player.getInventory();
-        for (int slot = 0; slot < 9 && slot < inventory.items.size(); slot++) {
-            var stack = inventory.items.get(slot);
+        for (int slot = 0; slot < 9 && slot < inventory.getNonEquipmentItems().size(); slot++) {
+            var stack = inventory.getNonEquipmentItems().get(slot);
             addCandidate(candidates, FrequencyCardCandidateSelector.Source.HOTBAR, stack, playerUuid, requireAutoConnect);
         }
 
-        for (int slot = 9; slot < inventory.items.size(); slot++) {
-            var stack = inventory.items.get(slot);
+        for (int slot = 9; slot < inventory.getNonEquipmentItems().size(); slot++) {
+            var stack = inventory.getNonEquipmentItems().get(slot);
             addCandidate(candidates, FrequencyCardCandidateSelector.Source.BACKPACK, stack, playerUuid, requireAutoConnect);
         }
 
@@ -256,19 +256,19 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
 
     private static OverloadedFrequencyCardData fromTag(CompoundTag tag) {
         int frequencyId = tag.contains(TAG_FREQUENCY_ID)
-                ? tag.getInt(TAG_FREQUENCY_ID)
+                ? tag.getIntOr(TAG_FREQUENCY_ID, 0)
                 : OverloadedFrequencyCardData.NO_FREQUENCY;
-        boolean autoConnect = tag.getBoolean(TAG_AUTO_CONNECT);
+        boolean autoConnect = tag.getBooleanOr(TAG_AUTO_CONNECT, false);
         Optional<String> dim = tag.contains(TAG_BOUND_CONTROLLER_DIM)
-                ? Optional.of(tag.getString(TAG_BOUND_CONTROLLER_DIM))
+                ? Optional.of(tag.getStringOr(TAG_BOUND_CONTROLLER_DIM, ""))
                 : Optional.empty();
         Optional<Long> pos = tag.contains(TAG_BOUND_CONTROLLER_POS)
-                ? Optional.of(tag.getLong(TAG_BOUND_CONTROLLER_POS))
+                ? Optional.of(tag.getLongOr(TAG_BOUND_CONTROLLER_POS, 0L))
                 : Optional.empty();
         Optional<UUID> owner = Optional.empty();
         if (tag.contains(TAG_OWNER_UUID)) {
             try {
-                owner = Optional.of(UUID.fromString(tag.getString(TAG_OWNER_UUID)));
+                owner = Optional.of(UUID.fromString(tag.getStringOr(TAG_OWNER_UUID, "")));
             } catch (IllegalArgumentException ignored) {
                 owner = Optional.empty();
             }

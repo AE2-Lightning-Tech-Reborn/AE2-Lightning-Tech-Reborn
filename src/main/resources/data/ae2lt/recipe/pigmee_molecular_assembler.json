@@ -7,24 +7,12 @@
     "ITI"
   ],
   "key": {
-    "B": {
-      "item": "minecraft:stone_button"
-    },
-    "L": {
-      "item": "minecraft:lever"
-    },
-    "W": {
-      "item": "minecraft:stone_pressure_plate"
-    },
-    "P": {
-      "item": "ae2lt:pigmee_fumo"
-    },
-    "T": {
-      "item": "minecraft:crafting_table"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "B": "minecraft:stone_button",
+    "L": "minecraft:lever",
+    "W": "minecraft:stone_pressure_plate",
+    "P": "ae2lt:pigmee_fumo",
+    "T": "minecraft:crafting_table",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "count": 1,

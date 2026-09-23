@@ -12,7 +12,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
@@ -51,7 +51,7 @@ public class OverloadTntEntity extends PrimedTnt {
         this.owner = owner;
         this.ownerUuid = owner != null ? owner.getUUID() : null;
 
-        double angle = level.random.nextDouble() * (Math.PI * 2.0D);
+        double angle = level.getRandom().nextDouble() * (Math.PI * 2.0D);
         this.setDeltaMovement(-Math.sin(angle) * 0.02D, 0.2D, -Math.cos(angle) * 0.02D);
         this.xo = x;
         this.yo = y;
@@ -71,18 +71,18 @@ public class OverloadTntEntity extends PrimedTnt {
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    protected void addAdditionalSaveData(net.minecraft.world.level.storage.ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         if (ownerUuid != null) {
-            tag.putUUID(TAG_OWNER, ownerUuid);
+            tag.store(TAG_OWNER, net.minecraft.core.UUIDUtil.CODEC, ownerUuid);
         }
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    protected void readAdditionalSaveData(net.minecraft.world.level.storage.ValueInput tag) {
         super.readAdditionalSaveData(tag);
         owner = null;
-        ownerUuid = tag.hasUUID(TAG_OWNER) ? tag.getUUID(TAG_OWNER) : null;
+        ownerUuid = tag.read(TAG_OWNER, net.minecraft.core.UUIDUtil.CODEC).orElse(null);
     }
 
     @Override
@@ -127,13 +127,13 @@ public class OverloadTntEntity extends PrimedTnt {
         }
 
         for (int i = 0; i < EASTER_EGG_LIGHTNING_COUNT; i++) {
-            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
             if (bolt == null) {
                 continue;
             }
-            double angle = serverLevel.random.nextDouble() * Math.PI * 2.0D;
-            double dist = serverLevel.random.nextDouble() * EASTER_EGG_LIGHTNING_SPREAD;
-            bolt.moveTo(
+            double angle = serverLevel.getRandom().nextDouble() * Math.PI * 2.0D;
+            double dist = serverLevel.getRandom().nextDouble() * EASTER_EGG_LIGHTNING_SPREAD;
+            bolt.setPos(
                     this.getX() + Math.cos(angle) * dist,
                     this.getY(),
                     this.getZ() + Math.sin(angle) * dist);
@@ -157,7 +157,7 @@ public class OverloadTntEntity extends PrimedTnt {
 
     @Nullable
     private static Item configuredEasterEggItem() {
-        ResourceLocation id = ResourceLocation.tryParse(AE2LTCommonConfig.easterEggItem());
+        Identifier id = Identifier.tryParse(AE2LTCommonConfig.easterEggItem());
         return id == null ? null : BuiltInRegistries.ITEM.getOptional(id).orElse(null);
     }
 

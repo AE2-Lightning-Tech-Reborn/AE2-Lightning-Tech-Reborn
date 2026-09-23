@@ -56,7 +56,7 @@ public class MatrixControllerBlock extends MatrixMultiblockDirectionalBlock impl
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level,
                                                                   BlockState state,
                                                                   BlockEntityType<T> blockEntityType) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return null;
         }
         return (tickLevel, pos, tickState, blockEntity) -> {
@@ -75,15 +75,7 @@ public class MatrixControllerBlock extends MatrixMultiblockDirectionalBlock impl
         }
     }
 
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock())
-                && level.getBlockEntity(pos) instanceof MatrixControllerBlockEntity controller) {
-            controller.prepareForControllerRemoval();
-            controller.clearStructureBindings();
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }
+
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state,
@@ -95,13 +87,13 @@ public class MatrixControllerBlock extends MatrixMultiblockDirectionalBlock impl
             return InteractionResult.PASS;
         }
 
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             serverPlayer.openMenu(new SimpleMenuProvider(
                     (id, inv, p) -> new MatrixControllerMenu(id, inv, be),
                     state.getBlock().getName()), buf -> MatrixControllerMenu.writeExtraData(buf, be));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
@@ -117,7 +109,7 @@ public class MatrixControllerBlock extends MatrixMultiblockDirectionalBlock impl
     }
 
     @Override
-    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         return new ItemStack(asItem());
     }
 }

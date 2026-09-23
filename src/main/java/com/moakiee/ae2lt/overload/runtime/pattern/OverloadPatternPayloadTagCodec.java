@@ -40,9 +40,9 @@ public final class OverloadPatternPayloadTagCodec {
     public static OverloadPatternPayload readPayload(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
 
-        var hostKind = PatternExecutionHostKind.valueOf(tag.getString(TAG_HOST_KIND));
-        var sourcePattern = SourcePatternSnapshot.fromTag(tag.getCompound(TAG_SOURCE_PATTERN));
-        var encodedPattern = readEncodedPattern(tag.getCompound(TAG_RULES));
+        var hostKind = PatternExecutionHostKind.valueOf(tag.getStringOr(TAG_HOST_KIND, ""));
+        var sourcePattern = SourcePatternSnapshot.fromTag(tag.getCompoundOrEmpty(TAG_SOURCE_PATTERN));
+        var encodedPattern = readEncodedPattern(tag.getCompoundOrEmpty(TAG_RULES));
         return new OverloadPatternPayload(hostKind, sourcePattern, encodedPattern);
     }
 
@@ -60,19 +60,19 @@ public final class OverloadPatternPayloadTagCodec {
 
         var builder = EncodedOverloadPattern.builder();
 
-        if (tag.contains(TAG_INPUTS, Tag.TAG_LIST)) {
-            var inputs = tag.getList(TAG_INPUTS, Tag.TAG_COMPOUND);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_INPUTS, Tag.TAG_LIST)) {
+            var inputs = tag.getListOrEmpty(TAG_INPUTS);
             for (int i = 0; i < inputs.size(); i++) {
-                var slotTag = inputs.getCompound(i);
-                builder.input(slotTag.getInt(TAG_SLOT), MatchMode.valueOf(slotTag.getString(TAG_MODE)));
+                var slotTag = inputs.getCompoundOrEmpty(i);
+                builder.input(slotTag.getIntOr(TAG_SLOT, 0), MatchMode.valueOf(slotTag.getStringOr(TAG_MODE, "")));
             }
         }
 
-        if (tag.contains(TAG_OUTPUTS, Tag.TAG_LIST)) {
-            var outputs = tag.getList(TAG_OUTPUTS, Tag.TAG_COMPOUND);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_OUTPUTS, Tag.TAG_LIST)) {
+            var outputs = tag.getListOrEmpty(TAG_OUTPUTS);
             for (int i = 0; i < outputs.size(); i++) {
-                var slotTag = outputs.getCompound(i);
-                builder.output(slotTag.getInt(TAG_SLOT), MatchMode.valueOf(slotTag.getString(TAG_MODE)));
+                var slotTag = outputs.getCompoundOrEmpty(i);
+                builder.output(slotTag.getIntOr(TAG_SLOT, 0), MatchMode.valueOf(slotTag.getStringOr(TAG_MODE, "")));
             }
         }
 

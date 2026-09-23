@@ -11,9 +11,9 @@ public final class LightningStorageComponentItem extends BasicStorageCell {
     private final int usableCapacity;
     private final int totalBytes;
 
-    public LightningStorageComponentItem(int usableCapacity, double idleDrain) {
+    public LightningStorageComponentItem(Properties properties, int usableCapacity, double idleDrain) {
         super(
-                new Properties().stacksTo(1),
+                properties.stacksTo(1),
                 idleDrain,
                 1,
                 BYTES_PER_TYPE,

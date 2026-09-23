@@ -8,7 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
@@ -23,8 +23,8 @@ import net.minecraft.world.phys.Vec3;
  * apply after its five-second reveal ceremony.
  */
 public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
-    private static final ResourceLocation PICKUP_ADVANCEMENT =
-            ResourceLocation.fromNamespaceAndPath("ae2lt", "main/hyperdimensional_pigmee");
+    private static final Identifier PICKUP_ADVANCEMENT =
+            Identifier.fromNamespaceAndPath("ae2lt", "main/hyperdimensional_pigmee");
     private static final String PICKUP_CRITERION = "claim_ritual_pigmee";
     private static final String TAG_CEREMONY_END = "CeremonyEndGameTime";
     private static final EntityDataAccessor<Long> DATA_CEREMONY_END =
@@ -108,7 +108,7 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(net.minecraft.world.level.storage.ValueOutput tag) {
         super.addAdditionalSaveData(tag);
         long ceremonyEnd = entityData.get(DATA_CEREMONY_END);
         if (ceremonyEnd != 0L) {
@@ -117,9 +117,9 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(net.minecraft.world.level.storage.ValueInput tag) {
         super.readAdditionalSaveData(tag);
-        entityData.set(DATA_CEREMONY_END, tag.getLong(TAG_CEREMONY_END));
+        entityData.set(DATA_CEREMONY_END, tag.getLongOr(TAG_CEREMONY_END, 0L));
     }
 
     private float getCeremonyTicksRemaining(float partialTick) {
@@ -139,7 +139,7 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
     }
 
     private static void awardPickupAdvancement(ServerPlayer player) {
-        var advancement = player.server.getAdvancements().get(PICKUP_ADVANCEMENT);
+        var advancement = player.level().getServer().getAdvancements().get(PICKUP_ADVANCEMENT);
         if (advancement != null) {
             player.getAdvancements().award(advancement, PICKUP_CRITERION);
         }

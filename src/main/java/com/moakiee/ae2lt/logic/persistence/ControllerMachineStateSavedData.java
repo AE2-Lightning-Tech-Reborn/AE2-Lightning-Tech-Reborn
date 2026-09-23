@@ -12,6 +12,9 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.resources.Identifier;
+import com.moakiee.thunderbolt.core.LegacySavedDataReader;
 
 /**
  * World-global state for controller-owned machines. The UUID survives controller removal, while
@@ -25,10 +28,14 @@ public final class ControllerMachineStateSavedData extends SavedData {
     private static final String TAG_ID = "Id";
     private static final String TAG_STATE = "State";
 
-    public static final Factory<ControllerMachineStateSavedData> FACTORY = new Factory<>(
-            ControllerMachineStateSavedData::new,
-            ControllerMachineStateSavedData::load,
-            null);
+    private static SavedDataType<ControllerMachineStateSavedData> type(HolderLookup.Provider registries) {
+        return new SavedDataType<>(
+                Identifier.fromNamespaceAndPath("ae2lt", "controller_machine_states"),
+                ControllerMachineStateSavedData::new,
+                CompoundTag.CODEC.xmap(
+                        tag -> load(tag, registries),
+                        data -> data.save(new CompoundTag(), registries)));
+    }
 
     private final Map<MachineKey, CompoundTag> states = new HashMap<>();
     private final Map<MachineKey, Supplier<CompoundTag>> deferredStateSnapshots = new HashMap<>();
@@ -50,7 +57,16 @@ public final class ControllerMachineStateSavedData extends SavedData {
     }
 
     public static ControllerMachineStateSavedData get(ServerLevel level) {
-        return level.getServer().overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        var server = level.getServer();
+        var storage = server.overworld().getDataStorage();
+        var type = type(server.registryAccess());
+        var data = storage.get(type);
+        if (data == null) {
+            var old = LegacySavedDataReader.read(server, DATA_NAME);
+            data = old == null ? new ControllerMachineStateSavedData() : load(old, server.registryAccess());
+            storage.set(type, data);
+        }
+        return data;
     }
 
     public boolean hasState(MachineType type, UUID id) {
@@ -112,7 +128,7 @@ public final class ControllerMachineStateSavedData extends SavedData {
 
     public boolean claim(MachineType type, UUID id, ServerLevel level, BlockPos pos) {
         if (level == null || pos == null) return false;
-        return claim(type, id, level.dimension().location().toString(), pos.asLong());
+        return claim(type, id, level.dimension().identifier().toString(), pos.asLong());
     }
 
     public boolean claim(MachineType type, UUID id, String dimension, long position) {
@@ -127,7 +143,7 @@ public final class ControllerMachineStateSavedData extends SavedData {
 
     public void release(MachineType type, UUID id, ServerLevel level, BlockPos pos) {
         if (level != null && pos != null) {
-            release(type, id, level.dimension().location().toString(), pos.asLong());
+            release(type, id, level.dimension().identifier().toString(), pos.asLong());
         }
     }
 
@@ -138,18 +154,17 @@ public final class ControllerMachineStateSavedData extends SavedData {
 
     public boolean isOwner(MachineType type, UUID id, ServerLevel level, BlockPos pos) {
         if (type == null || id == null || level == null || pos == null) return false;
-        return new Owner(level.dimension().location().toString(), pos.asLong())
+        return new Owner(level.dimension().identifier().toString(), pos.asLong())
                 .equals(owners.get(new MachineKey(type, id)));
     }
 
-    @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         materializeDeferredStateSnapshots();
         var entries = new ListTag();
         for (var entry : states.entrySet()) {
             var entryTag = new CompoundTag();
             entryTag.putString(TAG_TYPE, entry.getKey().type().name());
-            entryTag.putUUID(TAG_ID, entry.getKey().id());
+            entryTag.store(TAG_ID, net.minecraft.core.UUIDUtil.CODEC, entry.getKey().id());
             entryTag.put(TAG_STATE, entry.getValue().copy());
             entries.add(entryTag);
         }
@@ -160,14 +175,14 @@ public final class ControllerMachineStateSavedData extends SavedData {
     public static ControllerMachineStateSavedData load(
             CompoundTag tag, HolderLookup.Provider registries) {
         var data = new ControllerMachineStateSavedData();
-        var entries = tag.getList(TAG_ENTRIES, Tag.TAG_COMPOUND);
+        var entries = tag.getListOrEmpty(TAG_ENTRIES);
         for (int i = 0; i < entries.size(); i++) {
-            var entry = entries.getCompound(i);
-            if (!entry.hasUUID(TAG_ID) || !entry.contains(TAG_STATE, Tag.TAG_COMPOUND)) continue;
+            var entry = entries.getCompoundOrEmpty(i);
+            if (entry.read(TAG_ID, net.minecraft.core.UUIDUtil.CODEC).isEmpty() || !com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(entry, TAG_STATE, Tag.TAG_COMPOUND)) continue;
             try {
-                var type = MachineType.valueOf(entry.getString(TAG_TYPE));
-                data.states.put(new MachineKey(type, entry.getUUID(TAG_ID)),
-                        entry.getCompound(TAG_STATE).copy());
+                var type = MachineType.valueOf(entry.getStringOr(TAG_TYPE, ""));
+                data.states.put(new MachineKey(type, entry.read(TAG_ID, net.minecraft.core.UUIDUtil.CODEC).orElseThrow()),
+                        entry.getCompoundOrEmpty(TAG_STATE).copy());
             } catch (IllegalArgumentException ignored) {
                 // A removed machine type must not make the remaining world data unreadable.
             }

@@ -42,7 +42,7 @@ public enum ReachDistanceOption {
 
     public static ReachDistanceOption fromTag(Tag tag) {
         return tag instanceof StringTag stringTag
-                ? fromId(stringTag.getAsString())
+                ? fromId(stringTag.value())
                 : ONE;
     }
 

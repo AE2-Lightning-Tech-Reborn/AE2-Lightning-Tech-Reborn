@@ -30,7 +30,7 @@ public final class Ae2ltDevCommands {
 
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
-        if (FMLEnvironment.production) {
+        if (FMLEnvironment.isProduction()) {
             return;
         }
 

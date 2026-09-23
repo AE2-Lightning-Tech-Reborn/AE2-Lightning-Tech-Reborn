@@ -9,7 +9,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IOSpeedMode;
 import com.moakiee.ae2lt.logic.TransferPollSchedule;
 
 /** Exercise production timing against finite machines; delays themselves are not the oracle. */
-class OverloadedInterfaceTransferCadenceTest {
+class OverloadedInterfaceTransferCadenceTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void fillingFiniteMachinesPreservesProductionWithBoundedVisits() {
         for (var mode : IOSpeedMode.values()) {

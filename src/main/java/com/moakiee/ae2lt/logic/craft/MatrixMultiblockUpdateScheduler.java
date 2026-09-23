@@ -10,7 +10,7 @@ public final class MatrixMultiblockUpdateScheduler {
     }
 
     public static void scheduleNear(Level level, BlockPos changedPos) {
-        if (level == null || level.isClientSide || changedPos == null) {
+        if (level == null || level.isClientSide() || changedPos == null) {
             return;
         }
         for (var controllerPos : MatrixMultiblockScanner.candidateControllerPositions(changedPos)) {

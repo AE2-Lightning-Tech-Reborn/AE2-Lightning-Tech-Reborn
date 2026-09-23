@@ -4,7 +4,15 @@
       "model": "ae2lt:block/closed_loop_pattern_storage"
     },
     "formed=true": {
-      "model": "ae2lt:block/closed_loop_pattern_storage_formed"
+      "type": "ae2lt:connected_texture",
+      "connection": "ae2lt:tianshu_formed_cooling_compatible",
+      "render_type": "minecraft:cutout_mipped",
+      "ambientocclusion": true,
+      "gui3d": true,
+      "uses_block_light": true,
+      "base": "ae2lt:block/tianshu/phase_change_cooling_unit_formed",
+      "ctm": "ae2lt:block/tianshu/phase_change_cooling_unit_ctm",
+      "overlay": "ae2lt:block/tianshu/closed_loop_pattern_storage_layer"
     }
   }
 }

@@ -153,7 +153,7 @@ public abstract class PlayerPhaseFlightMixin implements PhaseFlightPlayerState.A
     private void ae2lt$beginPlayerAuthorizedTravel(Vec3 travelVector, CallbackInfo ci) {
         Player player = (Player) (Object) this;
         PhaseFlightMovementGuard.beginSelfMovement(player);
-        ae2lt$sneakHoverTravel = player.isControlledByLocalInstance() && FlightSneakMovement.isActive(player);
+        ae2lt$sneakHoverTravel = player.isLocalPlayer() && FlightSneakMovement.isActive(player);
         if (ae2lt$sneakHoverTravel) {
             player.setSprinting(false);
             player.setDeltaMovement(Vec3.ZERO);

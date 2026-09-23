@@ -7,17 +7,16 @@ import java.util.Locale;
 import java.util.Map.Entry;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
-import appeng.api.parts.IPartModel;
 import appeng.api.util.AECableType;
 import appeng.api.util.AEColor;
-import appeng.client.render.cablebus.CableBusRenderState;
-import appeng.client.render.cablebus.CubeBuilder;
+import appeng.block.networking.CableBusRenderState;
+import appeng.client.render.CubeBuilder;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 
@@ -38,8 +37,7 @@ public final class OverloadedCableRenderHelper {
         var textureLine = getLineTexture(renderState.getCableColor());
         var connectionTypes = renderState.getConnectionTypes();
 
-        boolean noAttachments = !renderState.getAttachments().values().stream()
-                .anyMatch(IPartModel::requireCableConnection);
+        boolean noAttachments = renderState.getAttachments().isEmpty();
         if (noAttachments && isStraightLine(cableType, connectionTypes)) {
             addStraightDenseConnection(connectionTypes.keySet().iterator().next(), textureLine, quadsOut);
             return;
@@ -63,15 +61,15 @@ public final class OverloadedCableRenderHelper {
     }
 
     private static TextureAtlasSprite getCoreTexture(AEColor color) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
-        return atlas.apply(ResourceLocation.fromNamespaceAndPath(
+        var atlas = Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS);
+        return atlas.getSprite(Identifier.fromNamespaceAndPath(
                 AE2LightningTech.MODID,
                 OVERLOAD_CABLE_CORE_TEXTURE_FOLDER + color.name().toLowerCase(Locale.ROOT)));
     }
 
     private static TextureAtlasSprite getLineTexture(AEColor color) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
-        return atlas.apply(ResourceLocation.fromNamespaceAndPath(
+        var atlas = Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(TextureAtlas.LOCATION_BLOCKS);
+        return atlas.getSprite(Identifier.fromNamespaceAndPath(
                 AE2LightningTech.MODID,
                 OVERLOAD_CABLE_LINE_TEXTURE_FOLDER + color.name().toLowerCase(Locale.ROOT)));
     }
@@ -101,13 +99,13 @@ public final class OverloadedCableRenderHelper {
     }
 
     private static void addDenseCore(TextureAtlasSprite texture, List<BakedQuad> quadsOut) {
-        var cubeBuilder = new CubeBuilder(quadsOut);
+        var cubeBuilder = new CubeBuilder(quadsOut::add);
         cubeBuilder.setTexture(texture);
         cubeBuilder.addCube(3, 3, 3, 13, 13, 13);
     }
 
     private static void addDenseConnection(Direction facing, TextureAtlasSprite texture, List<BakedQuad> quadsOut) {
-        var cubeBuilder = new CubeBuilder(quadsOut);
+        var cubeBuilder = new CubeBuilder(quadsOut::add);
         cubeBuilder.setDrawFaces(EnumSet.complementOf(EnumSet.of(facing)));
         cubeBuilder.setTexture(texture);
         addDenseCableSizedCube(facing, cubeBuilder);
@@ -115,7 +113,7 @@ public final class OverloadedCableRenderHelper {
 
     private static void addCoveredConnection(Direction facing, AECableType connectionType,
             boolean cableBusAdjacent, TextureAtlasSprite texture, List<BakedQuad> quadsOut) {
-        var cubeBuilder = new CubeBuilder(quadsOut);
+        var cubeBuilder = new CubeBuilder(quadsOut::add);
         cubeBuilder.setDrawFaces(EnumSet.complementOf(EnumSet.of(facing)));
         cubeBuilder.setTexture(texture);
 
@@ -128,7 +126,7 @@ public final class OverloadedCableRenderHelper {
 
     private static void addStraightDenseConnection(Direction facing, TextureAtlasSprite texture,
             List<BakedQuad> quadsOut) {
-        var cubeBuilder = new CubeBuilder(quadsOut);
+        var cubeBuilder = new CubeBuilder(quadsOut::add);
         cubeBuilder.setTexture(texture);
         setStraightCableUVs(cubeBuilder, facing, 3 / 16f, 13 / 16f);
         addStraightDenseCableSizedCube(facing, cubeBuilder);

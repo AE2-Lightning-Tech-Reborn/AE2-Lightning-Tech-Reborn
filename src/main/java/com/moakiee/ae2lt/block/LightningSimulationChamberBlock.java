@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -27,7 +27,7 @@ import appeng.menu.locator.MenuLocators;
 
 public class LightningSimulationChamberBlock extends AEBaseEntityBlock<LightningSimulationChamberBlockEntity> {
     public static final BooleanProperty WORKING = BooleanProperty.create("working");
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape NORTH_SHAPE = BlockShapeHelper.or(
             Block.box(0, 0, 0, 16, 4, 16),
             Block.box(0, 12, 0, 16, 16, 14),
@@ -39,7 +39,7 @@ public class LightningSimulationChamberBlock extends AEBaseEntityBlock<Lightning
             NORTH_SHAPE);
 
     public LightningSimulationChamberBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).noOcclusion().forceSolidOn()));
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(FACING, Direction.NORTH));
@@ -69,10 +69,10 @@ public class LightningSimulationChamberBlock extends AEBaseEntityBlock<Lightning
 
     @Override
     public void neighborChanged(BlockState state, Level level, net.minecraft.core.BlockPos pos,
-                                Block block, net.minecraft.core.BlockPos fromPos, boolean isMoving) {
+                                Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         var be = getBlockEntity(level, pos);
         if (be != null) {
-            be.onNeighborChanged(fromPos);
+            be.onNeighborChanged();
         }
     }
 
@@ -88,6 +88,6 @@ public class LightningSimulationChamberBlock extends AEBaseEntityBlock<Lightning
             be.openMenu(player, MenuLocators.forBlockEntity(be));
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 }

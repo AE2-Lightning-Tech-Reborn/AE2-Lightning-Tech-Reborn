@@ -6,7 +6,7 @@ import net.minecraft.world.level.Level;
 
 public final class TianshuMultiblockUpdateScheduler {
     public static void scheduleNear(Level level, BlockPos changedPos) {
-        if (level == null || level.isClientSide || changedPos == null) {
+        if (level == null || level.isClientSide() || changedPos == null) {
             return;
         }
         // The controller sits on the bottom layer, so it can only be at the

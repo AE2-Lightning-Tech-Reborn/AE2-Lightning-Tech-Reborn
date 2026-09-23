@@ -3,12 +3,12 @@ package com.moakiee.ae2lt.client.gui;
 import java.util.List;
 import java.util.function.Supplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import appeng.client.gui.widgets.ITooltip;
 
@@ -24,7 +24,7 @@ import appeng.client.gui.widgets.ITooltip;
  */
 public class LightningStatusIconWidget extends AbstractWidget implements ITooltip {
 
-    public static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
+    public static final Identifier ICON = Identifier.fromNamespaceAndPath(
             "ae2lt", "textures/gui/buttons/lightning.png");
     public static final int SIZE = 16;
 
@@ -36,8 +36,8 @@ public class LightningStatusIconWidget extends AbstractWidget implements IToolti
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        guiGraphics.blit(ICON, getX(), getY(), 0, 0, SIZE, SIZE, SIZE, SIZE);
+    protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICON, getX(), getY(), 0, 0, SIZE, SIZE, SIZE, SIZE);
     }
 
     @Override

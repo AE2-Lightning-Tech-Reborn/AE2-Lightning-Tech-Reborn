@@ -1,6 +1,7 @@
-#version 150
+#version 330
 
-uniform float EffectTime;
+#moj_import <minecraft:globals.glsl>
+#define EffectTime (GameTime * 1200.0)
 
 in vec4 vertexColor;
 in vec3 effectNormal;

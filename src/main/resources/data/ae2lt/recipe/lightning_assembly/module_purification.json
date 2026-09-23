@@ -3,27 +3,19 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:overload_module_base"
-      },
+      "ingredient": "ae2lt:overload_module_base",
       "count": 1
     },
     {
-      "ingredient": {
-        "item": "minecraft:milk_bucket"
-      },
+      "ingredient": "minecraft:milk_bucket",
       "count": 16
     },
     {
-      "ingredient": {
-        "item": "minecraft:golden_apple"
-      },
+      "ingredient": "minecraft:golden_apple",
       "count": 16
     },
     {
-      "ingredient": {
-        "item": "minecraft:fermented_spider_eye"
-      },
+      "ingredient": "minecraft:fermented_spider_eye",
       "count": 64
     }
   ],

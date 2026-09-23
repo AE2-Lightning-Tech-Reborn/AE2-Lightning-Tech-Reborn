@@ -1,38 +1,30 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.registry.ModFumos;
 import com.mojang.blaze3d.vertex.PoseStack;
-
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.model.geom.EntityModelSet;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.special.NoDataSpecialModelRenderer;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3fc;
 
-/**
- * Draws the normal item first and then adds its End Portal silhouette pass.
- */
-final class HyperdimensionalPigmeeItemRenderer extends BlockEntityWithoutLevelRenderer {
-    HyperdimensionalPigmeeItemRenderer(
-            BlockEntityRenderDispatcher dispatcher, EntityModelSet entityModels) {
-        super(dispatcher, entityModels);
+/** Extra pass for the hyperdimensional Fumo item. */
+final class HyperdimensionalPigmeeItemRenderer implements NoDataSpecialModelRenderer {
+    static final HyperdimensionalPigmeeItemRenderer INSTANCE = new HyperdimensionalPigmeeItemRenderer();
+    private HyperdimensionalPigmeeItemRenderer() {}
+
+    @Override
+    public void submit(PoseStack poseStack, SubmitNodeCollector collector,
+                       int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
+        var state = ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get().defaultBlockState();
+        var model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
+        HyperdimensionalPigmeePortalLayer.submit(model, poseStack, collector);
+        HyperdimensionalPigmeeTextureLayer.submitItem(poseStack, collector, packedOverlay);
     }
 
     @Override
-    public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
-            MultiBufferSource buffers, int packedLight, int packedOverlay) {
-        Minecraft minecraft = Minecraft.getInstance();
-        BakedModel wrappedModel =
-                minecraft.getItemRenderer().getModel(stack, null, null, 0);
-        if (!(wrappedModel instanceof HyperdimensionalPigmeeBakedModel hyperModel)) {
-            return;
-        }
-
-        BakedModel model = hyperModel.baseModel();
-        HyperdimensionalPigmeePortalLayer.renderItem(model, poseStack, buffers);
-        HyperdimensionalPigmeeTextureLayer.renderItem(
-                poseStack, buffers, packedOverlay);
+    public void getExtents(java.util.function.Consumer<Vector3fc> output) {
+        output.accept(new org.joml.Vector3f(0, 0, 0));
+        output.accept(new org.joml.Vector3f(1, 1, 1));
     }
 }

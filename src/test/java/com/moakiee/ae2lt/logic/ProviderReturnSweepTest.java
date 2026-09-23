@@ -13,7 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 
-class ProviderReturnSweepTest {
+class ProviderReturnSweepTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void emptyRoundsBackOffProviderTo128Ticks() {
         var sweep = new ProviderReturnSweep();

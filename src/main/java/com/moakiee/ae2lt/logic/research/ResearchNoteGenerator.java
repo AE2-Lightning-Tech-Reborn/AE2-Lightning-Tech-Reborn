@@ -7,7 +7,7 @@ import java.util.UUID;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Items;
@@ -21,7 +21,7 @@ public final class ResearchNoteGenerator {
     private static final int RANDOM_ITEM_COUNT = 6;
     private static final long SALT_RESEARCH_NOTE = 0x52A8D3C1B7E4A19DL;
 
-    public static final List<ResourceLocation> FIXED_RECIPE_ITEMS = List.of(
+    public static final List<Identifier> FIXED_RECIPE_ITEMS = List.of(
             item("pigmee_core"),
             item("module_undying"),
             item("module_phase_lock"));
@@ -38,7 +38,7 @@ public final class ResearchNoteGenerator {
         RandomSource random = RandomSource.create(mixSeed(ritualSeed, level.getServer().overworld().getSeed()));
 
         List<SelectedItem> selected = new ArrayList<>(9);
-        for (ResourceLocation fixed : FIXED_RECIPE_ITEMS) {
+        for (Identifier fixed : FIXED_RECIPE_ITEMS) {
             selected.add(new SelectedItem(fixed, itemTranslationKey(fixed)));
         }
         List<SelectedItem> randomSelected = new ArrayList<>(RANDOM_ITEM_COUNT);
@@ -103,7 +103,7 @@ public final class ResearchNoteGenerator {
         }
     }
 
-    private static String itemTranslationKey(ResourceLocation id) {
+    private static String itemTranslationKey(Identifier id) {
         return "item." + id.getNamespace() + "." + id.getPath().replace('/', '.');
     }
 
@@ -114,14 +114,14 @@ public final class ResearchNoteGenerator {
                 ^ SALT_RESEARCH_NOTE;
     }
 
-    private static ResourceLocation item(String path) {
-        return ResourceLocation.fromNamespaceAndPath("ae2lt", path);
+    private static Identifier item(String path) {
+        return Identifier.fromNamespaceAndPath("ae2lt", path);
     }
 
-    private record SelectedItem(ResourceLocation id, String descriptionKey) {
+    private record SelectedItem(Identifier id, String descriptionKey) {
     }
 
-    private record Candidate(ResourceLocation id, int weight) {
+    private record Candidate(Identifier id, int weight) {
         private String pickDescriptionKey(RandomSource random) {
             if (!AE2LTCommonConfig.isDefaultEasterEggCandidate(id)) {
                 return itemTranslationKey(id);

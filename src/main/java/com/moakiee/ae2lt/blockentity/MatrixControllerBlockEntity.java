@@ -143,7 +143,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
                                   BlockPos pos,
                                   BlockState state,
                                   MatrixControllerBlockEntity be) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         if (!be.persistentStateOwner) {
@@ -256,7 +256,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     }
 
     public void performAction(MatrixControllerActionPacket.Action action, ServerPlayer player) {
-        if (level == null || level.isClientSide || !persistentStateOwner) {
+        if (level == null || level.isClientSide() || !persistentStateOwner) {
             return;
         }
         switch (action) {
@@ -270,7 +270,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     }
 
     private void scheduleStructureCheck(long delayTicks) {
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         // A neighbor update can invalidate a cache that was already checked earlier in this
@@ -298,14 +298,14 @@ public class MatrixControllerBlockEntity extends BlockEntity
         }
         if (!attempt.formed()) {
             deform();
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.matrix.scan_failed",
                     describeIssues(attempt)).withStyle(ChatFormatting.RED), true);
             return;
         }
 
         form(attempt.result());
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.matrix.formed",
                 memberCount,
                 patternStorageCount,
@@ -313,11 +313,11 @@ public class MatrixControllerBlockEntity extends BlockEntity
     }
 
     public void autoBuild(ServerPlayer player) {
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         if (isAutoBuilding()) {
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.matrix.build_in_progress").withStyle(ChatFormatting.YELLOW), true);
             return;
         }
@@ -330,7 +330,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
                 : countPatternStorageItems(player);
         var plan = createAutoBuildPlan(patternStorageBudget);
         if (!plan.blocked().isEmpty()) {
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.matrix.build_blocked",
                     plan.blocked().size(),
                     describeBlockedPositions(plan.blocked())).withStyle(ChatFormatting.RED), false);
@@ -341,7 +341,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         if (!player.getAbilities().instabuild) {
             var missing = findMissingRequirements(player, requirements);
             if (!missing.isEmpty() || plan.missingPatternStorages() > 0) {
-                player.displayClientMessage(Component.translatable(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                         "ae2lt.matrix.build_missing",
                         describeMissing(missing, plan.missingPatternStorages())).withStyle(ChatFormatting.RED), false);
                 return;
@@ -361,7 +361,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         nextAutoBuildTick = level.getGameTime() + AUTO_BUILD_INTERVAL_TICKS;
         scheduledScanTick = NO_SCHEDULED_SCAN;
         setChanged();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.matrix.build_started",
                 autoBuildPlacements.size()).withStyle(ChatFormatting.GREEN), true);
     }
@@ -419,7 +419,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         if (!player.getAbilities().instabuild && consumedItem == null) {
             consumedItem = state.getBlock().asItem();
             if (consumedItem == net.minecraft.world.item.Items.AIR || countItem(player, consumedItem) <= 0) {
-                abortAutoBuildMissingItem(player, consumedItem.getDescription());
+                abortAutoBuildMissingItem(player, consumedItem.getName(consumedItem.getDefaultInstance()));
                 return;
             }
         }
@@ -452,7 +452,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     private void playAutoBuildPlaceSound(ServerPlayer player, BlockPos pos, BlockState state) {
         var soundType = state.getSoundType(level, pos, player);
         float volume = (soundType.getVolume() + 1.0F) / 4.0F;
-        float pitch = soundType.getPitch() * (0.82F + level.random.nextFloat() * 0.12F);
+        float pitch = soundType.getPitch() * (0.82F + level.getRandom().nextFloat() * 0.12F);
         level.playSound(null, pos, soundType.getPlaceSound(), SoundSource.BLOCKS, volume, pitch);
     }
 
@@ -478,7 +478,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     private void abortAutoBuildMissingItem(ServerPlayer player, Component itemName) {
         clearAutoBuildSession();
         refreshStructure();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.matrix.build_interrupted_missing",
                 itemName).withStyle(ChatFormatting.RED), false);
     }
@@ -495,7 +495,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     private void autoBuildPlacementFailed(ServerPlayer player, BlockPos pos) {
         refreshStructure();
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.matrix.build_place_failed",
                 describePosition(pos)).withStyle(ChatFormatting.RED), false);
     }
@@ -511,7 +511,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
             Component message = placedBlocks == 0
                     ? Component.translatable("ae2lt.matrix.build_already_complete")
                     : Component.translatable("ae2lt.matrix.build_complete", placedBlocks);
-            player.displayClientMessage(message.copy().withStyle(ChatFormatting.GREEN), true);
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, message.copy().withStyle(ChatFormatting.GREEN), true);
             return;
         }
 
@@ -519,7 +519,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         Component message = placedBlocks == 0
                 ? Component.translatable("ae2lt.matrix.build_nothing_to_place")
                 : Component.translatable("ae2lt.matrix.build_placed", placedBlocks);
-        player.displayClientMessage(message.copy().withStyle(ChatFormatting.GREEN), true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, message.copy().withStyle(ChatFormatting.GREEN), true);
     }
 
     public void upgradePatternStorage(ServerPlayer player) {
@@ -529,7 +529,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
             return;
         }
         if (!attempt.formed()) {
-            player.displayClientMessage(Component.translatable(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                     "ae2lt.matrix.scan_failed",
                     describeIssues(attempt)).withStyle(ChatFormatting.RED), true);
             return;
@@ -546,14 +546,14 @@ public class MatrixControllerBlockEntity extends BlockEntity
         }
 
         if (t1Storages.isEmpty()) {
-            player.displayClientMessage(Component.translatable("ae2lt.matrix.upgrade_none")
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.matrix.upgrade_none")
                     .withStyle(ChatFormatting.YELLOW), true);
             return;
         }
 
         int available = countUpgradeItems(player);
         if (available <= 0 && !player.getAbilities().instabuild) {
-            player.displayClientMessage(Component.translatable("ae2lt.matrix.upgrade_missing")
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.matrix.upgrade_missing")
                     .withStyle(ChatFormatting.RED), true);
             return;
         }
@@ -566,7 +566,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
             consumeUpgradeItems(player, toUpgrade);
         }
         scanAndForm(player);
-        player.displayClientMessage(Component.translatable(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(
                 "ae2lt.matrix.upgraded",
                 toUpgrade,
                 t1Storages.size()).withStyle(ChatFormatting.GREEN), true);
@@ -701,7 +701,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     @Override
     public void spawnToWorld(AEKey key, long amount) {
-        if (level == null || level.isClientSide || key == null || amount <= 0) return;
+        if (level == null || level.isClientSide() || key == null || amount <= 0) return;
         var drops = new ArrayList<ItemStack>();
         key.addDrops(amount, drops, level, worldPosition);
         for (var drop : drops) {
@@ -938,7 +938,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     }
 
     private void ensureStructureCache() {
-        if (!isFormed() || structureCacheValid || level == null || level.isClientSide) {
+        if (!isFormed() || structureCacheValid || level == null || level.isClientSide()) {
             return;
         }
         refreshStructure();
@@ -1069,7 +1069,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     }
 
     private void syncRenderState() {
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return;
         }
         BlockState state = getBlockState();
@@ -1204,7 +1204,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
                     missingPatternStorages, visibleEntries++);
         }
         for (var entry : missing.entrySet()) {
-            appendMissingEntry(result, entry.getKey().getDescription(), entry.getValue(), visibleEntries++);
+            appendMissingEntry(result, entry.getKey().getName(entry.getKey().getDefaultInstance()), entry.getValue(), visibleEntries++);
             if (visibleEntries >= 4 && totalEntries > visibleEntries) {
                 result.append(", ...");
                 break;
@@ -1302,14 +1302,16 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     private void setChangedAndUpdate() {
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
         tag.putBoolean(TAG_FORMED, formed);
         tag.putInt(TAG_ORIENTATION, orientation.get3DDataValue());
         if (portPos != null) {
@@ -1324,13 +1326,15 @@ public class MatrixControllerBlockEntity extends BlockEntity
         tag.putInt(TAG_MEMBER_COUNT, memberCount);
         tag.putInt(TAG_PATTERN_STORAGE_COUNT, patternStorageCount);
         tag.putInt(TAG_CRAFTING_UNIT_COUNT, craftingUnitCount);
-        tag.putUUID(TAG_MACHINE_ID, machineId);
+        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, TAG_MACHINE_ID, machineId);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        formed = tag.getBoolean(TAG_FORMED);
+    protected void loadAdditional(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadAdditional(input);
+        formed = tag.getBooleanOr(TAG_FORMED, false);
         structureCacheValid = false;
         structureCacheValidationRequired = true;
         lastStructureCacheValidationResult = false;
@@ -1342,17 +1346,17 @@ public class MatrixControllerBlockEntity extends BlockEntity
         cachedPatternStorages = List.of();
         craftingUnitCacheEntries = List.of();
         cachedCraftingUnits = List.of();
-        orientation = Direction.from3DDataValue(tag.getInt(TAG_ORIENTATION));
+        orientation = Direction.from3DDataValue(tag.getIntOr(TAG_ORIENTATION, 0));
         if (orientation.getAxis() == Direction.Axis.Y) {
             orientation = Direction.NORTH;
         }
-        portPos = tag.contains(TAG_PORT_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_PORT_POS)) : null;
-        minPos = tag.contains(TAG_MIN_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_MIN_POS)) : null;
-        maxPos = tag.contains(TAG_MAX_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLong(TAG_MAX_POS)) : null;
-        memberCount = tag.getInt(TAG_MEMBER_COUNT);
-        patternStorageCount = tag.getInt(TAG_PATTERN_STORAGE_COUNT);
-        craftingUnitCount = tag.getInt(TAG_CRAFTING_UNIT_COUNT);
-        if (tag.hasUUID(TAG_MACHINE_ID)) machineId = tag.getUUID(TAG_MACHINE_ID);
+        portPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_PORT_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_PORT_POS, 0L)) : null;
+        minPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MIN_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_MIN_POS, 0L)) : null;
+        maxPos = com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_MAX_POS, Tag.TAG_LONG) ? BlockPos.of(tag.getLongOr(TAG_MAX_POS, 0L)) : null;
+        memberCount = tag.getIntOr(TAG_MEMBER_COUNT, 0);
+        patternStorageCount = tag.getIntOr(TAG_PATTERN_STORAGE_COUNT, 0);
+        craftingUnitCount = tag.getIntOr(TAG_CRAFTING_UNIT_COUNT, 0);
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_MACHINE_ID)) machineId = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_MACHINE_ID);
     }
 
     @Override
@@ -1399,4 +1403,11 @@ public class MatrixControllerBlockEntity extends BlockEntity
             MatrixMultiblockComponent component,
             MatrixCraftingUnit unit) {
     }
+    @Override
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {
+        prepareForControllerRemoval();
+        clearStructureBindings();
+        super.preRemoveSideEffects(pos, oldState);
+    }
+
 }

@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.network;
 
-import appeng.client.render.crafting.AssemblerAnimationStatus;
+import appeng.blockentity.crafting.MolecularAssemblerAnimationStatus;
 import com.moakiee.ae2lt.blockentity.PigmeeMolecularAssemblerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -40,7 +40,7 @@ public record PigmeeAssemblerAnimationPacket(
             var blockEntity = context.player().level().getBlockEntity(packet.pos);
             if (blockEntity instanceof PigmeeMolecularAssemblerBlockEntity assembler) {
                 assembler.setAnimationStatus(
-                        new AssemblerAnimationStatus(packet.speed, packet.output));
+                        new MolecularAssemblerAnimationStatus(packet.speed, packet.output));
             }
         });
     }

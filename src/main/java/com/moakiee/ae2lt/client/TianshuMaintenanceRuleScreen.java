@@ -2,10 +2,10 @@ package com.moakiee.ae2lt.client;
 
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
-import appeng.api.client.AEKeyRendering;
+import appeng.client.api.AEKeyRendering;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AECheckbox;
 import appeng.client.gui.widgets.AETextField;
@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
@@ -112,7 +112,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     @Override
-    public void renderSlot(GuiGraphics graphics, Slot slot) {
+    public void extractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY) {
         // This screen renders its target and topology itself. The shared menu's
         // processing-pattern draft slots must never bleed through this sub-screen,
         // even if another screen or compatibility mod repositions them.
@@ -145,40 +145,40 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable(draft.data.ruleId() == null
+        graphics.text(font, Component.translatable(draft.data.ruleId() == null
                         ? "ae2lt.tianshu.maintenance.create_title"
                         : "ae2lt.tianshu.maintenance.edit_title"),
                 10, 9, 0x30343B, false);
-        graphics.renderItem(draft.data.target().wrapForDisplayOrFilter(), 16, 32);
-        graphics.drawString(font,
+        graphics.item(draft.data.target().wrapForDisplayOrFilter(), 16, 32);
+        graphics.text(font,
                 font.plainSubstrByWidth(draft.data.target().getDisplayName().getString(), 147),
                 39, 29, 0x30343B, false);
         var stockAndStatus = Component.translatable("ae2lt.tianshu.maintenance.stock_and_status",
                 compactAmount(draft.data.target(), draft.data.currentStock()),
                 Component.translatable(statusKey(draft.data.status())));
-        graphics.drawString(font, font.plainSubstrByWidth(stockAndStatus.getString(), 147),
+        graphics.text(font, font.plainSubstrByWidth(stockAndStatus.getString(), 147),
                 39, 41, statusColor(draft.data.status()), false);
 
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.lower"),
+        graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.lower"),
                 10, 57, 0x505760, false);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.upper"),
+        graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.upper"),
                 73, 57, 0x505760, false);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.batch"),
+        graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.batch"),
                 137, 57, 0x505760, false);
 
         Component validationError = validationError();
         if (validationError != null) {
-            graphics.drawString(font,
+            graphics.text(font,
                     font.plainSubstrByWidth(validationError.getString(), 181),
                     10, 116, 0xB22F36, false);
         } else if (draft.data.recoveryPage()) {
-            graphics.drawString(font,
+            graphics.text(font,
                     Component.translatable("ae2lt.tianshu.maintenance.recovery_page"),
                     10, 116, 0xA73535, false);
         } else {
-            graphics.drawString(font,
+            graphics.text(font,
                     Component.translatable("ae2lt.tianshu.maintenance.topology"),
                     10, 116, 0x5D646D, false);
             drawCentered(graphics,
@@ -194,7 +194,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         drawTopology(graphics, mouseX - leftPos, mouseY - topPos);
     }
 
-    private void drawTopology(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void drawTopology(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         int start = scrollbar.getCurrentScroll();
         int end = Math.min(draft.reserves.size(), start + VISIBLE_ROWS);
         for (int index = start; index < end; index++) {
@@ -206,8 +206,8 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
             graphics.fill(LIST_LEFT, y, LIST_RIGHT, y + ROW_HEIGHT - 1,
                     hovered ? 0x553B719F : (row & 1) == 0 ? 0x1EFFFFFF : 0x12000000);
             int indent = Math.min(4, entry.depth) * 4;
-            graphics.renderItem(entry.key.wrapForDisplayOrFilter(), 11 + indent, y + 1);
-            graphics.drawString(font,
+            graphics.item(entry.key.wrapForDisplayOrFilter(), 11 + indent, y + 1);
+            graphics.text(font,
                     font.plainSubstrByWidth(entry.key.getDisplayName().getString(), 69 - indent),
                     31 + indent, y + 4, entry.craftable ? 0x30343B : 0xA73535, false);
             drawRightAligned(graphics, Component.literal(compactAmount(entry.key, entry.storedAmount)),
@@ -220,13 +220,13 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     private void drawRightAligned(
-            GuiGraphics graphics, Component text, int right, int y, int color) {
-        graphics.drawString(font, text, right - font.width(text), y, color, false);
+            GuiGraphicsExtractor graphics, Component text, int right, int y, int color) {
+        graphics.text(font, text, right - font.width(text), y, color, false);
     }
 
     private void drawCentered(
-            GuiGraphics graphics, Component text, int center, int y, int color) {
-        graphics.drawString(font, text, center - font.width(text) / 2, y, color, false);
+            GuiGraphicsExtractor graphics, Component text, int center, int y, int color) {
+        graphics.text(font, text, center - font.width(text) / 2, y, color, false);
     }
 
     private static Component reserveText(long amount, ReservedStockMatchMode mode) {
@@ -235,7 +235,9 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean handled) {
+        double mouseX = event.x(), mouseY = event.y();
+        int button = event.button();
         if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE || button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             int row = (int) ((mouseY - topPos - FIRST_ROW_Y) / ROW_HEIGHT);
             int index = scrollbar.getCurrentScroll() + row;
@@ -249,7 +251,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, handled);
     }
 
     @Override
@@ -264,7 +266,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+    protected void extractTooltip(GuiGraphicsExtractor graphics, int x, int y) {
         int row = (y - topPos - FIRST_ROW_Y) / ROW_HEIGHT;
         int index = scrollbar.getCurrentScroll() + row;
         if (y >= topPos + FIRST_ROW_Y && y < topPos + FIRST_ROW_Y + VISIBLE_ROWS * ROW_HEIGHT
@@ -286,7 +288,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
             drawTooltip(graphics, x, y, lines);
             return;
         }
-        super.renderTooltip(graphics, x, y);
+        super.extractTooltip(graphics, x, y);
     }
 
     private Component validationError() {
@@ -353,12 +355,13 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             returnToParent();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private static String compactAmount(AEKey key, long amount) {
@@ -485,7 +488,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         }
 
         @Override
-        public void renderSlot(GuiGraphics graphics, Slot slot) {
+        public void extractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY) {
             // The reserve editor also uses only manually rendered item previews.
         }
 
@@ -588,24 +591,24 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         }
 
         @Override
-        public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+        public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-            graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.title"),
+            graphics.text(font, Component.translatable("ae2lt.tianshu.reserve.title"),
                     10, 9, 0x30343B, false);
-            graphics.renderItem(reserve.key.wrapForDisplayOrFilter(), 16, 32);
-            graphics.drawString(font,
+            graphics.item(reserve.key.wrapForDisplayOrFilter(), 16, 32);
+            graphics.text(font,
                     font.plainSubstrByWidth(reserve.key.getDisplayName().getString(), 147),
                     39, 35, 0x30343B, false);
-            graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.current_stock",
+            graphics.text(font, Component.translatable("ae2lt.tianshu.reserve.current_stock",
                     compactAmount(reserve.key, reserve.storedAmount)), 10, 83, 0x59616B, false);
             var amountLabel = Component.translatable("ae2lt.tianshu.reserve.amount");
-            graphics.drawString(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
+            graphics.text(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
                     10, 99, 0x40464E, false);
 
             var selectedMode = global ? globalMode : ruleMode;
             if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY) {
                 if (!variants.isEmpty()) {
-                    graphics.drawString(font,
+                    graphics.text(font,
                             Component.translatable("ae2lt.tianshu.reserve.variant_title"),
                             10, 116, 0x555D66, false);
                     int start = scrollbar.getCurrentScroll();
@@ -613,19 +616,19 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                     for (int index = start; index < end; index++) {
                         int y = VARIANT_FIRST_ROW + (index - start) * VARIANT_ROW_HEIGHT;
                         var variant = variants.get(index);
-                        graphics.renderItem(variant.key().wrapForDisplayOrFilter(), 12, y);
-                        graphics.drawString(font,
+                        graphics.item(variant.key().wrapForDisplayOrFilter(), 12, y);
+                        graphics.text(font,
                                 font.plainSubstrByWidth(
                                         variant.key().getDisplayName().getString(), 112),
                                 33, y + 4, 0x3C434B, false);
                         String stock = compactAmount(variant.key(), variant.storedAmount());
-                        graphics.drawString(font, stock, 185 - font.width(stock), y + 4,
+                        graphics.text(font, stock, 185 - font.width(stock), y + 4,
                                 variant.craftable() ? 0x2F6D3C : 0x5C636B, false);
                     }
                 } else {
                     var emptyText = Component.translatable(
                             "ae2lt.tianshu.reserve.variant_empty");
-                    graphics.drawString(font, emptyText,
+                    graphics.text(font, emptyText,
                             98 - font.width(emptyText) / 2, 156, 0x5D646D, false);
                 }
             }
@@ -645,7 +648,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         }
 
         @Override
-        protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        protected void extractTooltip(GuiGraphicsExtractor graphics, int x, int y) {
             int row = (y - topPos - VARIANT_FIRST_ROW) / VARIANT_ROW_HEIGHT;
             int index = scrollbar.getCurrentScroll() + row;
             var selectedMode = global ? globalMode : ruleMode;
@@ -666,16 +669,17 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                 drawTooltip(graphics, x, y, lines);
                 return;
             }
-            super.renderTooltip(graphics, x, y);
+            super.extractTooltip(graphics, x, y);
         }
 
         @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
                 returnToParent();
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
 
         private record EditorState(

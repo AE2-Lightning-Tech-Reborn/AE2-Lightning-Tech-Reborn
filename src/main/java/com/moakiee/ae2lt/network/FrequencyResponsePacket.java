@@ -1,13 +1,10 @@
 package com.moakiee.ae2lt.network;
 
-import com.moakiee.ae2lt.client.gui.FrequencyScreen;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record FrequencyResponsePacket(int responseCode) implements CustomPacketPayload {
@@ -19,7 +16,7 @@ public record FrequencyResponsePacket(int responseCode) implements CustomPacketP
     public static final int FREQUENCY_IN_USE = 5;
 
     public static final Type<FrequencyResponsePacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "frequency_response"));
+            new Type<>(Identifier.fromNamespaceAndPath("ae2lt", "frequency_response"));
 
     public static final StreamCodec<FriendlyByteBuf, FrequencyResponsePacket> STREAM_CODEC =
             StreamCodec.of(FrequencyResponsePacket::encode, FrequencyResponsePacket::decode);
@@ -37,7 +34,7 @@ public record FrequencyResponsePacket(int responseCode) implements CustomPacketP
         return TYPE;
     }
 
-    private Component toMessage() {
+    Component toMessage() {
         return switch (responseCode) {
             case REQUIRE_PASSWORD -> Component.translatable("ae2lt.gui.error.require_password");
             case NO_PERMISSION -> Component.translatable("ae2lt.gui.error.no_permission");
@@ -48,21 +45,6 @@ public record FrequencyResponsePacket(int responseCode) implements CustomPacketP
     }
 
     public static void handle(FrequencyResponsePacket pkt, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
-            if (!(ctx.player() instanceof LocalPlayer player)) return;
-            Component message = pkt.toMessage();
-            // Container screens cover the hotbar / action-bar region, so
-            // a stock {@code displayClientMessage(..., true)} is painted
-            // underneath the GUI and the player never sees it. Route
-            // the toast into the FrequencyScreen's inline banner when
-            // it's open, and fall back to the action-bar only when it
-            // isn't (e.g. an error arrives after the user closed the
-            // GUI). Chat stays untouched either way.
-            if (Minecraft.getInstance().screen instanceof FrequencyScreen fs) {
-                fs.showInlineError(message);
-            } else {
-                player.displayClientMessage(message, true);
-            }
-        });
+        ctx.enqueueWork(() -> FrequencyResponseClientBridge.show(pkt));
     }
 }

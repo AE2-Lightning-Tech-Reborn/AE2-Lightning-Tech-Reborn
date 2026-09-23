@@ -4,24 +4,21 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.context.ContextKey;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
@@ -161,72 +158,45 @@ public final class RailgunBeamRenderClient {
         });
     }
 
+    private record BeamRenderState(java.util.List<BeamGeometry> beams, float pulse, double smoothTime) {}
+    private static final ContextKey<BeamRenderState> RENDER_BEAMS = new ContextKey<>(
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "railgun_beams"));
+
     @SubscribeEvent
-    public static void onRender(RenderLevelStageEvent e) {
-        if (e.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void extract(ExtractLevelRenderStateEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
-        long now = mc.level.getGameTime();
-        // Interpolation factor for the current render frame; without this every
-        // {@code getEyePosition()}/{@code getYRot()} call snaps in 50 ms steps and the
-        // beam visibly stutters during movement.
-        float partialTick = mc.getTimer().getGameTimeDeltaPartialTick(true);
+        long now = event.getLevel().getGameTime();
+        float partialTick = event.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         refreshLocalBeam(mc, now, partialTick);
         ACTIVE.entrySet().removeIf(en -> now - en.getValue().lastUpdateTick > STALE_TICKS);
         if (ACTIVE.isEmpty()) return;
-
-        Camera cam = e.getCamera();
-        Vec3 camPos = cam.getPosition();
-        PoseStack stack = e.getPoseStack();
-        stack.pushPose();
-        stack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        // Depth-test ON so the beam is occluded by blocks/entities (the endpoint is
-        // already clipped server- and client-side; without depth-test the prism would
-        // still paint over every block, producing an X-ray beam). AFTER_TRANSLUCENT_BLOCKS
-        // may leave depth-test disabled, so we enable it explicitly.
-        // depthMask off so the additive prism doesn't pollute depth for later passes.
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.enableBlend();
-        // Additive blending for the bright plasma feel.
-        RenderSystem.blendFuncSeparate(
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-
-        // Slow-breath pulse that affects all layers' alpha. Range ~0.85..1.05.
-        // Use partial-tick-interpolated time for smooth animation between ticks.
         double smoothTime = now + partialTick;
         float pulse = 0.95F + 0.10F * (float) Math.sin(smoothTime * PULSE_RATE);
-
-        var bb = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        var matrix = stack.last().pose();
-        for (BeamState s : ACTIVE.values()) {
-            // Per-frame: rebuild origin AND endpoint so the beam stays parallel to the
-            // rendered barrel during fast camera motion (see RailgunVisuals).
-            BeamGeometry g = resolveBeamGeometry(s, mc, partialTick);
-            addBeam(bb, matrix, g.origin, g.endpoint, pulse, smoothTime);
-            addEndpointGlow(bb, matrix, g.endpoint, camPos, pulse);
-        }
-        var built = bb.build();
-        if (built != null) {
-            BufferUploader.drawWithShader(built);
-        }
-
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableCull();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
-        stack.popPose();
-
-        // Crackle arcs (use the shared bolt renderer; runs in its own pass).
+        var beams = new java.util.ArrayList<BeamGeometry>(ACTIVE.size());
+        for (BeamState beam : ACTIVE.values()) beams.add(resolveBeamGeometry(beam, mc, partialTick));
+        event.getRenderState().setRenderData(RENDER_BEAMS,
+                new BeamRenderState(java.util.List.copyOf(beams), pulse, smoothTime));
         spawnCrackleArcs(mc, now, partialTick);
+    }
+
+    @SubscribeEvent
+    public static void submit(SubmitCustomGeometryEvent event) {
+        BeamRenderState render = event.getLevelRenderState().getRenderData(RENDER_BEAMS);
+        if (render == null || render.beams().isEmpty()) return;
+        Vec3 camPos = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack stack = event.getPoseStack();
+        stack.pushPose();
+        stack.translate(-camPos.x, -camPos.y, -camPos.z);
+        event.getSubmitNodeCollector().submitCustomGeometry(stack, RenderTypes.lightning(),
+                (pose, consumer) -> {
+                    for (BeamGeometry geometry : render.beams()) {
+                        addBeam(consumer, pose.pose(), geometry.origin(), geometry.endpoint(),
+                                render.pulse(), render.smoothTime());
+                        addEndpointGlow(consumer, pose.pose(), geometry.endpoint(), camPos, render.pulse());
+                    }
+                });
+        stack.popPose();
     }
 
     private static void refreshLocalBeam(Minecraft mc, long now, float partialTick) {
@@ -245,7 +215,7 @@ public final class RailgunBeamRenderClient {
      * Build the prism segments along the beam. Hot path: uses primitive doubles
      * to avoid the per-frame Vec3 allocations the original implementation produced.
      */
-    private static void addBeam(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 origin, Vec3 endpoint,
+    private static void addBeam(VertexConsumer bb, org.joml.Matrix4f matrix, Vec3 origin, Vec3 endpoint,
                                 float pulse, double smoothTime) {
         double ax = endpoint.x - origin.x;
         double ay = endpoint.y - origin.y;
@@ -327,7 +297,7 @@ public final class RailgunBeamRenderClient {
      * Draw a hot camera-facing flash quad at the beam's impact point. Sells the
      * "burning into the surface" feel; tracks the breath pulse.
      */
-    private static void addEndpointGlow(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 center,
+    private static void addEndpointGlow(VertexConsumer bb, org.joml.Matrix4f matrix, Vec3 center,
                                         Vec3 cameraPos, float pulse) {
         double tcx = cameraPos.x - center.x;
         double tcy = cameraPos.y - center.y;
@@ -377,7 +347,7 @@ public final class RailgunBeamRenderClient {
                 1.00F, 1.00F, 1.00F, 0.90F * pulse);
     }
 
-    private static void emitGlowQuad(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void emitGlowQuad(VertexConsumer bb, org.joml.Matrix4f matrix,
                                      double p0x, double p0y, double p0z,
                                      double p1x, double p1y, double p1z,
                                      double p2x, double p2y, double p2z,
@@ -395,7 +365,7 @@ public final class RailgunBeamRenderClient {
      * the plane perpendicular to the beam axis. Radii may differ at each end for
      * taper. End caps are hidden by the endpoint glow and the muzzle.
      */
-    private static void addPrismSegment(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void addPrismSegment(VertexConsumer bb, org.joml.Matrix4f matrix,
                                         double fx, double fy, double fz,
                                         double tx, double ty, double tz,
                                         double uX, double uY, double uZ,
@@ -422,7 +392,7 @@ public final class RailgunBeamRenderClient {
         emitFace(bb, matrix, f3x, f3y, f3z, f0x, f0y, f0z, t0x, t0y, t0z, t3x, t3y, t3z, r, g, b, aFrom, aTo);
     }
 
-    private static void emitFace(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void emitFace(VertexConsumer bb, org.joml.Matrix4f matrix,
                                  double p0x, double p0y, double p0z,
                                  double p1x, double p1y, double p1z,
                                  double p2x, double p2y, double p2z,
@@ -449,18 +419,18 @@ public final class RailgunBeamRenderClient {
             double len = axis.length();
             if (len < 1.0D) continue;
             // 1-2 small arcs per pulse
-            int n = 1 + mc.level.random.nextInt(2);
+            int n = 1 + mc.level.getRandom().nextInt(2);
             for (int i = 0; i < n; i++) {
-                double t = 0.10D + mc.level.random.nextDouble() * 0.85D;
+                double t = 0.10D + mc.level.getRandom().nextDouble() * 0.85D;
                 Vec3 fromArc = g.origin.add(axis.scale(t));
                 Vec3 randDir = new Vec3(
-                        mc.level.random.nextDouble() - 0.5D,
-                        mc.level.random.nextDouble() - 0.5D,
-                        mc.level.random.nextDouble() - 0.5D);
+                        mc.level.getRandom().nextDouble() - 0.5D,
+                        mc.level.getRandom().nextDouble() - 0.5D,
+                        mc.level.getRandom().nextDouble() - 0.5D);
                 if (randDir.lengthSqr() < 1.0E-6D) continue;
-                randDir = randDir.normalize().scale(0.4D + mc.level.random.nextDouble() * 0.7D);
+                randDir = randDir.normalize().scale(0.4D + mc.level.getRandom().nextDouble() * 0.7D);
                 Vec3 toArc = fromArc.add(randDir);
-                RailgunArcRenderer.spawnBeamSpark(fromArc, toArc, 14 + mc.level.random.nextInt(8));
+                RailgunArcRenderer.spawnBeamSpark(fromArc, toArc, 14 + mc.level.getRandom().nextInt(8));
             }
         }
     }

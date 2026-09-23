@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -46,7 +46,7 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
         this.id = id;
         this.damageType = ResourceKey.create(
                 Registries.DAMAGE_TYPE,
-                ResourceLocation.fromNamespaceAndPath("mekanism", mekanismDamageType));
+                Identifier.fromNamespaceAndPath("mekanism", mekanismDamageType));
         this.nameKey = nameKey;
         this.descriptionKey = descriptionKey;
     }

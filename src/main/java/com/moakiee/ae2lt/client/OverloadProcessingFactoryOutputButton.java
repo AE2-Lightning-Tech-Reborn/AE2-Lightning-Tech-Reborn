@@ -4,13 +4,13 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.widgets.IconButton;
 
 public class OverloadProcessingFactoryOutputButton extends IconButton {
@@ -51,7 +51,7 @@ public class OverloadProcessingFactoryOutputButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partial) {
+    public void extractContents(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partial) {
         if (!this.visible) {
             return;
         }
@@ -59,13 +59,13 @@ public class OverloadProcessingFactoryOutputButton extends IconButton {
         var yOffset = isHovered() ? 1 : 0;
         Icon bgIcon = isHovered() ? Icon.TOOLBAR_BUTTON_BACKGROUND_HOVER
                 : on ? Icon.TOOLBAR_BUTTON_BACKGROUND_FOCUS : Icon.TOOLBAR_BUTTON_BACKGROUND;
-        bgIcon.getBlitter()
+        com.moakiee.ae2lt.client.LegacyAe2IconBlitter.of(bgIcon)
                 .dest(getX() - 1, getY() + yOffset, 18, 20)
-                .zOffset(2)
+
                 .blit(guiGraphics);
 
         if (!display.isEmpty()) {
-            guiGraphics.renderItem(display, getX(), getY() + 1 + yOffset, 0, 3);
+            guiGraphics.item(display, getX(), getY() + 1 + yOffset);
         }
     }
 }

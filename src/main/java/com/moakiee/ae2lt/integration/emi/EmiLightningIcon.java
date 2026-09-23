@@ -1,10 +1,10 @@
 package com.moakiee.ae2lt.integration.emi;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.client.api.AEKeyRendering;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import dev.emi.emi.api.render.EmiRenderable;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** Animated lightning icon shared by EMI category headers and recipe pages. */
 final class EmiLightningIcon implements EmiRenderable {
@@ -15,7 +15,7 @@ final class EmiLightningIcon implements EmiRenderable {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int x, int y, float delta) {
+    public void render(GuiGraphicsExtractor graphics, int x, int y, float delta) {
         AEKeyRendering.drawInGui(
                 Minecraft.getInstance(),
                 graphics,

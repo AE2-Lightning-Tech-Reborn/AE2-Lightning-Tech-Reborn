@@ -17,7 +17,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
+import com.moakiee.ae2lt.recipe.compat.LegacyMachineRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -35,7 +35,7 @@ import net.minecraft.world.level.block.Block;
  * via the world; the {@link Recipe} interface is only implemented so the recipe
  * participates in the vanilla datapack and JEI infrastructure.</p>
  */
-public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipeInput> {
+public final class LightningStrikeRecipe implements LegacyMachineRecipe<LightningStrikeRecipeInput> {
     private final boolean requiresNaturalLightning;
     private final Block centerInput;
     private final Block centerOutput;
@@ -94,16 +94,16 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<LightningStrikeRecipe> getSerializer() {
         return ModRecipeTypes.LIGHTNING_STRIKE_SERIALIZER.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
+    public RecipeType<LightningStrikeRecipe> getType() {
         return ModRecipeTypes.LIGHTNING_STRIKE_TYPE.get();
     }
 
-    public static final class Serializer implements RecipeSerializer<LightningStrikeRecipe> {
+    public static final class Serializer {
         private static final Codec<Block> BLOCK_CODEC = BuiltInRegistries.BLOCK.byNameCodec();
 
         private static final MapCodec<LightningStrikeRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -135,14 +135,6 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
             return new LightningStrikeRecipe(requiresNatural, centerIn, centerOut, reqs);
         }
 
-        @Override
-        public MapCodec<LightningStrikeRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, LightningStrikeRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
+        public static final RecipeSerializer<LightningStrikeRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);
     }
 }

@@ -2,9 +2,7 @@
   "type": "ae2lt:firmament_conversion",
   "inputs": [
     {
-      "ingredient": {
-        "item": "ae2lt:firmament_dust"
-      },
+      "ingredient": "ae2lt:firmament_dust",
       "count": 16
     }
   ],

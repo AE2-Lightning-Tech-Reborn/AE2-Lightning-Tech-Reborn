@@ -7,15 +7,15 @@
     "GHI"
   ],
   "key": {
-    "A": { "item": "minecraft:snowball" },
-    "B": { "item": "ae2:fluix_crystal" },
-    "C": { "item": "minecraft:snowball" },
-    "D": { "item": "ae2:fluix_crystal" },
-    "E": { "item": "ae2lt:tianshu_blank_unit" },
-    "F": { "item": "ae2:fluix_crystal" },
-    "G": { "item": "minecraft:snowball" },
-    "H": { "item": "ae2:fluix_crystal" },
-    "I": { "item": "minecraft:snowball" }
+    "A": "minecraft:snowball",
+    "B": "ae2:fluix_crystal",
+    "C": "minecraft:snowball",
+    "D": "ae2:fluix_crystal",
+    "E": "ae2lt:tianshu_blank_unit",
+    "F": "ae2:fluix_crystal",
+    "G": "minecraft:snowball",
+    "H": "ae2:fluix_crystal",
+    "I": "minecraft:snowball"
   },
   "result": {
     "count": 1,

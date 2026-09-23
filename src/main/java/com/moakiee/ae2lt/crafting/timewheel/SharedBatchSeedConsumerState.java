@@ -40,11 +40,11 @@ final class SharedBatchSeedConsumerState {
 
     void readFromNBT(CompoundTag data) {
         consumers.clear();
-        var tags = data.getList(TAG_CONSUMERS, Tag.TAG_COMPOUND);
+        var tags = data.getListOrEmpty(TAG_CONSUMERS);
         for (int i = 0; i < tags.size(); i++) {
-            var entry = tags.getCompound(i);
-            if (entry.hasUUID(TAG_CONSUMER)) {
-                consumers.add(entry.getUUID(TAG_CONSUMER));
+            var entry = tags.getCompoundOrEmpty(i);
+            if (com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(entry, TAG_CONSUMER)) {
+                consumers.add(com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(entry, TAG_CONSUMER));
             }
         }
     }
@@ -60,7 +60,7 @@ final class SharedBatchSeedConsumerState {
         orderedConsumers.sort(UUID::compareTo);
         for (var consumerId : orderedConsumers) {
             var entry = new CompoundTag();
-            entry.putUUID(TAG_CONSUMER, consumerId);
+            com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(entry, TAG_CONSUMER, consumerId);
             tags.add(entry);
         }
         data.put(TAG_CONSUMERS, tags);

@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.MapColor;
@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class FumoBlock extends Block implements EntityBlock {
 
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<net.minecraft.core.Direction> FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     private static final VoxelShape SHAPE_NORTH = Block.box(3.9, 0, 4, 12.2, 13.6, 14.7);
@@ -44,11 +44,11 @@ public class FumoBlock extends Block implements EntityBlock {
     private static final VoxelShape SHAPE_EAST = Block.box(1.3, 0, 3.8, 12, 13.6, 12.2);
 
     public FumoBlock() {
-        super(BlockBehaviour.Properties.of()
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.NONE)
                 .sound(SoundType.WOOL)
                 .strength(0.5f)
-                .noOcclusion());
+                .noOcclusion()));
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(WATERLOGGED, false));
@@ -74,7 +74,7 @@ public class FumoBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected int getLightBlock(@NotNull BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos) {
+    protected int getLightDampening(@NotNull BlockState state) {
         return 2;
     }
 
@@ -84,7 +84,7 @@ public class FumoBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected boolean propagatesSkylightDown(@NotNull BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos) {
+    protected boolean propagatesSkylightDown(@NotNull BlockState state) {
         return true;
     }
 
@@ -96,11 +96,13 @@ public class FumoBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected @NotNull BlockState updateShape(BlockState state, @NotNull Direction facing, @NotNull BlockState facingState, @NotNull LevelAccessor level, @NotNull BlockPos currentPos, @NotNull BlockPos facingPos) {
+    protected @NotNull BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level,
+            net.minecraft.world.level.ScheduledTickAccess tickAccess, BlockPos currentPos,
+            Direction facing, BlockPos facingPos, BlockState facingState, net.minecraft.util.RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            tickAccess.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
-        return super.updateShape(state, facing, facingState, level, currentPos, facingPos);
+        return super.updateShape(state, level, tickAccess, currentPos, facing, facingPos, facingState, random);
     }
 
     @Override
@@ -124,7 +126,7 @@ public class FumoBlock extends Block implements EntityBlock {
 
     @Override
     protected @NotNull RenderShape getRenderShape(@NotNull BlockState state) {
-        return RenderShape.ENTITYBLOCK_ANIMATED;
+        return RenderShape.INVISIBLE;
     }
 
     @Override
@@ -134,7 +136,7 @@ public class FumoBlock extends Block implements EntityBlock {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof FumoBlockEntity be) {
             be.toggleSpinning();
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Nullable

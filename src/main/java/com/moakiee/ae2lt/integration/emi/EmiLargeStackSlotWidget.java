@@ -7,7 +7,7 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.widget.SlotWidget;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.network.chat.Component;
 
@@ -18,7 +18,7 @@ final class EmiLargeStackSlotWidget extends SlotWidget {
     }
 
     @Override
-    public void drawStack(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void drawStack(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         var bounds = getBounds();
         int iconX = bounds.x() + (bounds.width() - 16) / 2;
         int iconY = bounds.y() + (bounds.height() - 16) / 2;

@@ -3,7 +3,8 @@
 	"credit": "Made with Blockbench,made by xiabi418",
 	"texture_size": [64, 64],
 	"textures": {
-		"1": "ae2lt:block/overload_workplace"
+		"1": "ae2lt:block/overload_workplace",
+		"particle": "ae2lt:block/overload_workplace"
 	},
 	"elements": [
 		{

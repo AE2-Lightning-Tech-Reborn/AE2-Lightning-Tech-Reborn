@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
@@ -27,7 +27,7 @@ public class OverloadedPowerSupplyMenu extends AEBaseMenu implements FrequencyBi
     public static final MenuType<OverloadedPowerSupplyMenu> TYPE = MenuTypeBuilder
             .create(OverloadedPowerSupplyMenu::new, OverloadedPowerSupplyBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.overloaded_power_supply"))
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "overloaded_power_supply"));
 
     @GuiSync(0)
@@ -57,7 +57,7 @@ public class OverloadedPowerSupplyMenu extends AEBaseMenu implements FrequencyBi
                 Ae2ltSlotSemantics.OVERLOADED_POWER_SUPPLY_CELL);
 
         createPlayerInventorySlots(playerInventory);
-        registerClientAction("cycleMode", this::cycleMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"), this::cycleMode);
     }
 
     @Override
@@ -123,7 +123,7 @@ public class OverloadedPowerSupplyMenu extends AEBaseMenu implements FrequencyBi
     }
 
     public void clientCycleMode() {
-        sendClientAction("cycleMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleMode"));
     }
 
     public Component getModeButtonMessage() {

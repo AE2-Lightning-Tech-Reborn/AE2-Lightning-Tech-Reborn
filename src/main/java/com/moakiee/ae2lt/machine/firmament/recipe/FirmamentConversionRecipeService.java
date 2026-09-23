@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 
@@ -39,7 +39,7 @@ public final class FirmamentConversionRecipeService {
         }
 
         List<RecipeHolder<FirmamentConversionRecipe>> recipes =
-                new ArrayList<>(level.getRecipeManager().getAllRecipesFor(ModRecipeTypes.FIRMAMENT_CONVERSION_TYPE.get()));
+                new ArrayList<>(com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level), ModRecipeTypes.FIRMAMENT_CONVERSION_TYPE.get()));
         recipes.sort(RECIPE_ORDER);
 
         for (RecipeHolder<FirmamentConversionRecipe> recipe : recipes) {
@@ -56,13 +56,13 @@ public final class FirmamentConversionRecipeService {
         return Optional.empty();
     }
 
-    public static Optional<RecipeHolder<FirmamentConversionRecipe>> findRecipeById(Level level, ResourceLocation recipeId) {
+    public static Optional<RecipeHolder<FirmamentConversionRecipe>> findRecipeById(Level level, Identifier recipeId) {
         if (level == null || recipeId == null) {
             return Optional.empty();
         }
 
-        return level.getRecipeManager()
-                .byKey(recipeId)
+        return com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level)
+                .byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, recipeId))
                 .flatMap(holder -> {
                     var recipe = holder.value();
                     if (!(recipe instanceof FirmamentConversionRecipe firmamentRecipe)

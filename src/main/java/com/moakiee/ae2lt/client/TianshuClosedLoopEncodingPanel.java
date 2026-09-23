@@ -10,7 +10,7 @@ import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.config.ActionItems;
 import appeng.client.Point;
 import appeng.client.gui.ICompositeWidget;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.style.Blitter;
 import appeng.client.gui.widgets.AE2Button;
@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -204,7 +204,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawBackgroundLayer(GuiGraphicsExtractor graphics, Rect2i bounds, Point mouse) {
         int panelX = bounds.getX() + x - 1;
         int panelY = bounds.getY() + y + 1;
         BG.dest(panelX, panelY).blit(graphics);
@@ -212,7 +212,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     }
 
     @Override
-    public void drawForegroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawForegroundLayer(GuiGraphicsExtractor graphics, Rect2i bounds, Point mouse) {
         drawScaledLabel(graphics, Component.translatable(
                 "ae2lt.tianshu.closed_loop.execution_multiplier.short"), EXEC_LABEL_Y);
         drawScaledLabel(graphics, Component.translatable(
@@ -220,28 +220,28 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         drawStatus(graphics);
     }
 
-    private void drawScaledLabel(GuiGraphics graphics, Component text, int labelY) {
+    private void drawScaledLabel(GuiGraphicsExtractor graphics, Component text, int labelY) {
         var font = Minecraft.getInstance().font;
         var pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(x + CONTROL_X, y + labelY, 0);
-        pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, font.plainSubstrByWidth(
+        pose.pushMatrix();
+        pose.translate(x + CONTROL_X, y + labelY);
+        pose.scale(LABEL_SCALE, LABEL_SCALE);
+        graphics.text(font, font.plainSubstrByWidth(
                 text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0, 0x404040, false);
-        pose.popPose();
+        pose.popMatrix();
     }
 
-    private void drawStatus(GuiGraphics graphics) {
+    private void drawStatus(GuiGraphicsExtractor graphics) {
         var font = Minecraft.getInstance().font;
         var text = font.plainSubstrByWidth(
                 statusText().getString(), (int) (CONTROL_WIDTH / LABEL_SCALE));
         float textWidth = font.width(text) * LABEL_SCALE;
         var pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(x + CONTROL_X + (CONTROL_WIDTH - textWidth) / 2.0F, y + STATUS_Y, 0);
-        pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, text, 0, 0, statusColor(), false);
-        pose.popPose();
+        pose.pushMatrix();
+        pose.translate(x + CONTROL_X + (CONTROL_WIDTH - textWidth) / 2.0F, y + STATUS_Y);
+        pose.scale(LABEL_SCALE, LABEL_SCALE);
+        graphics.text(font, text, 0, 0, statusColor(), false);
+        pose.popMatrix();
     }
 
     @Override

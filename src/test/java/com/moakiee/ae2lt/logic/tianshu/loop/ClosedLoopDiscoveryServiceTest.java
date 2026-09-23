@@ -17,7 +17,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -111,7 +111,7 @@ class ClosedLoopDiscoveryServiceTest {
         var innerPayload = new ClosedLoopPatternPayload(
                 List.of(new ClosedLoopMemberPattern(
                         new SourcePatternSnapshot(
-                                ResourceLocation.fromNamespaceAndPath(
+                                Identifier.fromNamespaceAndPath(
                                         "ae2lt_test", "nested_discovery_leaf"),
                                 null, null),
                         1L)),
@@ -397,15 +397,15 @@ class ClosedLoopDiscoveryServiceTest {
         @Override public AEKey dropSecondary() {
             return secondary.isEmpty() ? this : new TestKey(id);
         }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            tag.putString("secondary", secondary);
-            return tag;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+            output.putString("secondary", secondary);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() { return Component.literal(id); }
@@ -420,7 +420,7 @@ class ClosedLoopDiscoveryServiceTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
                     Component.literal("test key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

@@ -9,17 +9,17 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class OverloadedPatternProviderUpgradeItem extends AbstractPatternProviderUpgradeItem {
-    private static final Set<ResourceLocation> SUPPORTED_SOURCE_BLOCKS = Set.of(
-            ResourceLocation.fromNamespaceAndPath("ae2", "pattern_provider"),
-            ResourceLocation.fromNamespaceAndPath("extendedae", "ex_pattern_provider"),
-            ResourceLocation.fromNamespaceAndPath("advanced_ae", "small_adv_pattern_provider"),
-            ResourceLocation.fromNamespaceAndPath("advanced_ae", "adv_pattern_provider"));
+    private static final Set<Identifier> SUPPORTED_SOURCE_BLOCKS = Set.of(
+            Identifier.fromNamespaceAndPath("ae2", "pattern_provider"),
+            Identifier.fromNamespaceAndPath("extendedae", "ex_pattern_provider"),
+            Identifier.fromNamespaceAndPath("advanced_ae", "small_adv_pattern_provider"),
+            Identifier.fromNamespaceAndPath("advanced_ae", "adv_pattern_provider"));
 
     public OverloadedPatternProviderUpgradeItem(Properties properties) {
         super(properties);
@@ -31,7 +31,7 @@ public final class OverloadedPatternProviderUpgradeItem extends AbstractPatternP
                 && supportsSource(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
-    static boolean supportsSource(ResourceLocation blockId) {
+    static boolean supportsSource(Identifier blockId) {
         return SUPPORTED_SOURCE_BLOCKS.contains(blockId);
     }
 

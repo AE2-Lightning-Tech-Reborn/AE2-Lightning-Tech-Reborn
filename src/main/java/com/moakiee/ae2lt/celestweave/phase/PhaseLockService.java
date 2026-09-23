@@ -422,7 +422,7 @@ public final class PhaseLockService {
     }
 
     private static PhaseArmorVaultSavedData vault(ServerPlayer player) {
-        return PhaseArmorVaultSavedData.get(player.getServer());
+        return PhaseArmorVaultSavedData.get(player.level().getServer());
     }
 
     private static void playCollapseSound(ServerPlayer player) {

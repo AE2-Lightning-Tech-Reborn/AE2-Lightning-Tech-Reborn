@@ -127,7 +127,7 @@ public final class CelestweaveArmorUndyingHandler {
         }
         var data = player.getPersistentData();
         return data.contains(TAG_PROTECTED_TICK)
-                && data.getLong(TAG_PROTECTED_TICK) == player.level().getGameTime();
+                && data.getLongOr(TAG_PROTECTED_TICK, 0L) == player.level().getGameTime();
     }
 
     /**
@@ -203,7 +203,7 @@ public final class CelestweaveArmorUndyingHandler {
     }
 
     private static boolean hasActiveProtectionWindow(ServerPlayer player, long now) {
-        long protectedUntil = player.getPersistentData().getLong(TAG_PROTECTED_UNTIL);
+        long protectedUntil = player.getPersistentData().getLongOr(TAG_PROTECTED_UNTIL, 0L);
         return protectedUntil > now;
     }
 

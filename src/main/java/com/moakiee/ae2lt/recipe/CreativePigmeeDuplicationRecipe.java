@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.recipe;
 import com.moakiee.ae2lt.registry.ModFumos;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
@@ -20,8 +19,15 @@ import net.minecraft.world.level.Level;
 public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
     private static final int OUTPUT_COUNT = 64;
 
+    private final CraftingBookCategory category;
+
     public CreativePigmeeDuplicationRecipe(CraftingBookCategory category) {
-        super(category);
+        this.category = category;
+    }
+
+    @Override
+    public CraftingBookCategory category() {
+        return category;
     }
 
     @Override
@@ -30,7 +36,7 @@ public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingInput input) {
         ItemStack target = findTarget(input);
         if (target.isEmpty()) {
             return ItemStack.EMPTY;
@@ -57,13 +63,12 @@ public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
         return remaining;
     }
 
-    @Override
     public boolean canCraftInDimensions(int width, int height) {
         return width * height >= 2;
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<CreativePigmeeDuplicationRecipe> getSerializer() {
         return ModRecipeTypes.CREATIVE_PIGMEE_DUPLICATION_SERIALIZER.get();
     }
 

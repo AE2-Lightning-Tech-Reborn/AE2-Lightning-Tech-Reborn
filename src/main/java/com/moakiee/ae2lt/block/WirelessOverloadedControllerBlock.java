@@ -25,7 +25,7 @@ public class WirelessOverloadedControllerBlock extends OverloadedControllerBlock
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof WirelessOverloadedControllerBlockEntity be) {
-            if (!level.isClientSide && player instanceof ServerPlayer sp) {
+            if (!level.isClientSide() && player instanceof ServerPlayer sp) {
                 // Same membership gate as the receiver: a bound
                 // controller rejects non-members on PRIVATE, but
                 // ENCRYPTED still opens so strangers can type the
@@ -39,11 +39,11 @@ public class WirelessOverloadedControllerBlock extends OverloadedControllerBlock
                     if (freq != null
                             && !freq.getPlayerAccess(sp).canUse()
                             && freq.getSecurity() != FrequencySecurityLevel.ENCRYPTED) {
-                        sp.displayClientMessage(
+                        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(sp,
                                 Component.translatable("ae2lt.gui.error.no_access")
                                         .withStyle(ChatFormatting.RED),
                                 true);
-                        return InteractionResult.sidedSuccess(false);
+                        return (false ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
                     }
                 }
                 sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
@@ -51,7 +51,7 @@ public class WirelessOverloadedControllerBlock extends OverloadedControllerBlock
                         be.getBlockState().getBlock().getName()
                 ), buf -> FrequencyMenu.writeExtraData(buf, be, false));
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
 
         return super.useWithoutItem(state, level, pos, player, hitResult);

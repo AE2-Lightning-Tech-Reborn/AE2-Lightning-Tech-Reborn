@@ -22,7 +22,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IoDirection;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IoScheduledEntry;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.WirelessConnection;
 
-class OverloadedInterfaceBackpressureWaitersTest {
+class OverloadedInterfaceBackpressureWaitersTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
     void unlockingOneTypeResumesItOnceAndPreservesOtherSchedulingState() {
         var items = AEKeyType.items();

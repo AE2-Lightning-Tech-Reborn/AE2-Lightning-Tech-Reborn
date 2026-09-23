@@ -40,7 +40,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -57,7 +57,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
         implements ITerminalHost, InternalInventoryHost, IEnergySource {
-    public static final ResourceLocation INV_CRAFTING =
+    public static final Identifier INV_CRAFTING =
             CraftingTerminalPart.INV_CRAFTING;
 
     private static final String TAG_CRAFTING = "CraftingInventory";
@@ -127,7 +127,7 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
     }
 
     @Override
-    public InternalInventory getSubInventory(ResourceLocation id) {
+    public InternalInventory getSubInventory(Identifier id) {
         return INV_CRAFTING.equals(id)
                 ? craftingInventory
                 : InternalInventory.empty();
@@ -175,17 +175,21 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        craftingInventory.writeToNBT(tag, TAG_CRAFTING, registries);
-        configManager.writeToNBT(tag, registries);
+    public void saveAdditional(net.minecraft.world.level.storage.ValueOutput output) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.writableTag(output);
+        HolderLookup.Provider registries = this.level != null ? this.level.registryAccess() : net.minecraft.core.RegistryAccess.EMPTY;
+        super.saveAdditional(output);
+        craftingInventory.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries), TAG_CRAFTING);
+        configManager.writeToNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, registries));
     }
 
     @Override
-    public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadTag(tag, registries);
-        craftingInventory.readFromNBT(tag, TAG_CRAFTING, registries);
-        configManager.readFromNBT(tag, registries);
+    public void loadTag(net.minecraft.world.level.storage.ValueInput input) {
+        CompoundTag tag = com.moakiee.ae2lt.recipe.compat.LegacyValueIo.readableTag(input);
+        HolderLookup.Provider registries = input.lookup();
+        super.loadTag(input);
+        craftingInventory.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, registries), TAG_CRAFTING);
+        configManager.readFromNBT(com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, registries));
     }
 
     @Override

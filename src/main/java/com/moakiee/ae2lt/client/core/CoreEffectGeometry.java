@@ -2,28 +2,30 @@ package com.moakiee.ae2lt.client.core;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 
 final class CoreEffectGeometry {
     private CoreEffectGeometry() {
     }
 
-    static void renderTianshu(PoseStack stack, MultiBufferSource buffers,
+    static void renderTianshu(PoseStack stack, SubmitNodeCollector collector,
                               CoreEffectPalette palette,
                               double stepPhase, double spinDegrees) {
         boolean shaderPackActive = CoreEffectBackend.useShaderPackFallback();
-        var consumer = buffers.getBuffer(CoreEffectRenderTypes.tianshu(shaderPackActive));
         stack.pushPose();
         stack.scale(1.80F, 1.80F, 1.80F);
-        renderCubeCore(stack, consumer, palette, stepPhase, spinDegrees);
+        collector.submitCustomGeometry(stack, CoreEffectRenderTypes.tianshu(shaderPackActive), (pose, consumer) -> {
+            PoseStack meshStack = new PoseStack();
+            meshStack.last().set(pose);
+            renderCubeCore(meshStack, consumer, palette, stepPhase, spinDegrees);
+        });
         stack.popPose();
     }
 
-    static void renderMatrix(PoseStack stack, MultiBufferSource buffers,
+    static void renderMatrix(PoseStack stack, SubmitNodeCollector collector,
                              CoreEffectPalette palette,
                              CoreEffectAnimationState.Sample animation) {
         boolean shaderPackActive = CoreEffectBackend.useShaderPackFallback();
-        var coreConsumer = buffers.getBuffer(CoreEffectRenderTypes.matrixCore(shaderPackActive));
         float activity = (float) animation.activity();
         float ambientTime = (float) animation.ambientTime();
         float corePhase = (float) animation.primaryPhase();
@@ -43,53 +45,60 @@ final class CoreEffectGeometry {
         stack.pushPose();
         stack.scale(1.50F, 1.50F, 1.50F);
 
-        stack.pushPose();
-        stack.mulPose(Axis.YP.rotationDegrees(corePhase * 0.42F));
-        stack.mulPose(Axis.XP.rotationDegrees(corePhase * -0.27F));
-        CoreEffectMesh.sphere(
-                stack,
-                coreConsumer,
-                0.72F * pulse,
-                palette.primaryR() * coreBrightness,
-                palette.primaryG() * coreBrightness,
-                palette.primaryB() * coreBrightness,
-                0.98F);
-        stack.popPose();
+        collector.submitCustomGeometry(stack, CoreEffectRenderTypes.matrixCore(shaderPackActive), (pose, coreConsumer) -> {
+            PoseStack meshStack = new PoseStack();
+            meshStack.last().set(pose);
+            meshStack.pushPose();
+            meshStack.mulPose(Axis.YP.rotationDegrees(corePhase * 0.42F));
+            meshStack.mulPose(Axis.XP.rotationDegrees(corePhase * -0.27F));
+            CoreEffectMesh.sphere(
+                    meshStack,
+                    coreConsumer,
+                    0.72F * pulse,
+                    palette.primaryR() * coreBrightness,
+                    palette.primaryG() * coreBrightness,
+                    palette.primaryB() * coreBrightness,
+                    0.98F);
+            meshStack.popPose();
+        });
 
-        var glowConsumer = buffers.getBuffer(CoreEffectRenderTypes.matrixGlow(shaderPackActive));
         float ringRadius = 1.22F * contraction;
         float constraintRadius = 1.12F * contraction;
         float diskAlpha = lerp(0.22F, 0.34F, activity) * glowPulse;
         float innerYaw = ringPhase * 0.55F;
-        renderMatrixRing(stack, glowConsumer, ringRadius, 0.055F, 0.006F,
+        collector.submitCustomGeometry(stack, CoreEffectRenderTypes.matrixGlow(shaderPackActive), (pose, glowConsumer) -> {
+            PoseStack meshStack = new PoseStack();
+            meshStack.last().set(pose);
+        renderMatrixRing(meshStack, glowConsumer, ringRadius, 0.055F, 0.006F,
                 innerYaw, 10.0F, -6.0F,
                 primaryR, primaryG, primaryB, diskAlpha);
-        renderMatrixRing(stack, glowConsumer, ringRadius, 0.008F, 0.011F,
+        renderMatrixRing(meshStack, glowConsumer, ringRadius, 0.008F, 0.011F,
                 innerYaw, 10.0F, -6.0F,
                 accentR, accentG, accentB, diskAlpha * 1.65F);
 
         float ringAlpha = lerp(0.42F, 0.66F, activity) * glowPulse;
         float middleYaw = -ringPhase * 0.82F;
         float outerYaw = ringPhase * 0.68F;
-        renderMatrixRing(stack, glowConsumer, constraintRadius, 0.018F, 0.014F,
+        renderMatrixRing(meshStack, glowConsumer, constraintRadius, 0.018F, 0.014F,
                 middleYaw, 61.0F, 24.0F,
                 accentR, accentG, accentB, ringAlpha);
-        renderMatrixRing(stack, glowConsumer, constraintRadius, 0.016F, 0.011F,
+        renderMatrixRing(meshStack, glowConsumer, constraintRadius, 0.016F, 0.011F,
                 outerYaw, 118.0F, -20.0F,
                 primaryR, primaryG, primaryB, ringAlpha * 0.82F);
 
         float nodePulse = 1.0F
                 + lerp(0.06F, 0.16F, activity) * (float) Math.sin(ambientTime * 5.5F);
-        renderOrbitNodes(stack, glowConsumer,
+        renderOrbitNodes(meshStack, glowConsumer,
                 constraintRadius, middleYaw, 61.0F, 24.0F,
                 ringPhase * 1.65F,
                 2, 0.074F * nodePulse,
                 1.00F, 0.64F, 0.16F, ringAlpha * 1.18F);
-        renderOrbitNodes(stack, glowConsumer,
+        renderOrbitNodes(meshStack, glowConsumer,
                 constraintRadius, outerYaw, 118.0F, -20.0F,
                 35.0F - ringPhase * 1.25F,
                 3, 0.064F * nodePulse,
                 1.00F, 0.64F, 0.16F, ringAlpha * 1.02F);
+        });
         stack.popPose();
     }
 

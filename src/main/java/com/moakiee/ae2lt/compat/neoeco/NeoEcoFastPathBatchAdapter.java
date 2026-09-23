@@ -101,8 +101,8 @@ public final class NeoEcoFastPathBatchAdapter implements BatchProviderResolver {
             } catch (ECOIndeterminateBatchException uncertain) {
                 // Ownership may already have crossed the API boundary. Account the prepared part
                 // as dispatched so BatchExecutor cannot refund it and duplicate the materials.
-                appeng.core.AELog.error(
-                        "[ae2lt] NeoECO FastPath acceptance is indeterminate; retaining Tianshu output accounting for %d crafts.",
+                org.slf4j.LoggerFactory.getLogger(NeoEcoFastPathBatchAdapter.class).error(
+                        "[ae2lt] NeoECO FastPath acceptance is indeterminate; retaining Tianshu output accounting for {} crafts.",
                         offered,
                         uncertain);
                 return maxCraft - offered;

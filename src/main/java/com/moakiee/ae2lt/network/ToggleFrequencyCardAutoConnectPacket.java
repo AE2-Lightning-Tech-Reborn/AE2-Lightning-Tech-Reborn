@@ -75,7 +75,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
         } else {
             var selection = OverloadedFrequencyCardItem.selectToggleCard(player);
             if (selection.ambiguous()) {
-                player.displayClientMessage(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.frequency_card.auto_ambiguous")
                                 .withStyle(ChatFormatting.RED),
                         true);
@@ -83,7 +83,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             }
             stack = selection.selected().orElse(ItemStack.EMPTY);
             if (stack.isEmpty()) {
-                player.displayClientMessage(
+                com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                         Component.translatable("ae2lt.frequency_card.no_toggle_candidate")
                                 .withStyle(ChatFormatting.RED),
                         true);
@@ -94,7 +94,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
 
         var data = OverloadedFrequencyCardItem.getData(stack);
         if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.card_owner_mismatch")
                             .withStyle(ChatFormatting.RED),
                     true);
@@ -109,7 +109,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
         if (!(player.containerMenu instanceof AEBaseMenu aeMenu)
                 || !(aeMenu.getLocator() instanceof ItemMenuHostLocator locator)
                 || !aeMenu.stillValid(player)) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.gui.error.rejected").withStyle(ChatFormatting.RED),
                     true);
             return;
@@ -117,7 +117,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
 
         ItemStack terminal = locator.locateItem(player);
         if (!TerminalCardAccess.hasCard(terminal)) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.terminal_no_card")
                             .withStyle(ChatFormatting.RED),
                     true);
@@ -126,7 +126,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
 
         var data = TerminalCardAccess.readCardData(terminal);
         if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.card_owner_mismatch")
                             .withStyle(ChatFormatting.RED),
                     true);
@@ -134,7 +134,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
         }
 
         if (!TerminalCardAccess.updateCard(terminal, cardData -> cardData.toggleAutoConnect())) {
-            player.displayClientMessage(
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                     Component.translatable("ae2lt.frequency_card.terminal_no_card")
                             .withStyle(ChatFormatting.RED),
                     true);
@@ -145,7 +145,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
     }
 
     private static void messageAutoConnectState(ServerPlayer player, boolean enabled) {
-        player.displayClientMessage(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                 Component.translatable(enabled
                                 ? "ae2lt.frequency_card.auto_enabled"
                                 : "ae2lt.frequency_card.auto_disabled")

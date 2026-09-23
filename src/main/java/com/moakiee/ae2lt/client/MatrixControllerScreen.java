@@ -7,7 +7,7 @@ import com.moakiee.ae2lt.network.MatrixControllerActionPacket;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -42,12 +42,12 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
     }
 
     private void sendAction(MatrixControllerActionPacket.Action action) {
-        PacketDistributor.sendToServer(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
                 new MatrixControllerActionPacket(menu.token(), menu.getBlockPos(), action));
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void extractLabels(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         drawTitle(guiGraphics);
 
         if (!menu.isFormed()) {
@@ -82,9 +82,9 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         renderFooter(guiGraphics, multidimensional);
     }
 
-    private void renderFooter(GuiGraphics guiGraphics, boolean multidimensional) {
+    private void renderFooter(GuiGraphicsExtractor guiGraphics, boolean multidimensional) {
         if (multidimensional) {
-            guiGraphics.drawString(font, Component.translatable("ae2lt.matrix.gui.heat_ignored"),
+            guiGraphics.text(font, Component.translatable("ae2lt.matrix.gui.heat_ignored"),
                     TEXT_X, FOOTER_MID_Y, COL_MUTED, false);
             return;
         }

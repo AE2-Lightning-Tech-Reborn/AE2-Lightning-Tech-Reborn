@@ -32,7 +32,7 @@ public enum StepHeightOption {
 
     public static StepHeightOption fromTag(Tag tag) {
         if (tag instanceof StringTag stringTag) {
-            String id = stringTag.getAsString();
+            String id = stringTag.value();
             for (StepHeightOption option : values()) {
                 if (option.name().equalsIgnoreCase(id) || option.label.equalsIgnoreCase(id)) {
                     return option;

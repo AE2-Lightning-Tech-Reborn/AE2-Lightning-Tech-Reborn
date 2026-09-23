@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.menu;
 import java.util.ArrayList;
 
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -161,8 +161,8 @@ public class LargeStackAppEngSlot extends AppEngSlot {
         return inserted;
     }
 
-    public static boolean mustRejectDirectExtraction(int button, ClickType clickType) {
-        return clickType == ClickType.SWAP;
+    public static boolean mustRejectDirectExtraction(int button, ContainerInput clickType) {
+        return clickType == ContainerInput.SWAP;
     }
 
     /**
@@ -174,7 +174,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
             AEBaseMenu menu,
             int slotId,
             int button,
-            ClickType clickType,
+            ContainerInput clickType,
             Player player) {
         if (slotId < 0
                 || slotId >= menu.slots.size()

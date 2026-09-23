@@ -2,12 +2,8 @@
   "type": "minecraft:crafting_shapeless",
   "category": "redstone",
   "ingredients": [
-    {
-      "item": "ae2lt:overloaded_pattern_provider"
-    },
-    {
-      "item": "ae2lt:ultimate_overload_core"
-    }
+    "ae2lt:overloaded_pattern_provider",
+    "ae2lt:ultimate_overload_core"
   ],
   "result": {
     "count": 1,

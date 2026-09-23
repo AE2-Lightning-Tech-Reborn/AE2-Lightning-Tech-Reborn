@@ -13,7 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
@@ -198,24 +201,25 @@ public abstract class CraftingCpuLogicMixin {
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
-    private void ae2lt$writeOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$writeOverloadState(ValueOutput output, CallbackInfo ci) {
         var logic = (appeng.crafting.execution.CraftingCpuLogic) (Object) this;
+        HolderLookup.Provider registries = cluster.getBlockEntities().hasNext()
+                ? cluster.getLevel().registryAccess() : RegistryAccess.EMPTY;
         var overloadStateTag = OverloadCpuStateManager.INSTANCE.writeToTag(logic, registries);
         if (overloadStateTag != null) {
-            data.put("ae2ltOverloadState", overloadStateTag);
+            output.store("ae2ltOverloadState", CompoundTag.CODEC, overloadStateTag);
         } else {
-            data.remove("ae2ltOverloadState");
+            output.discard("ae2ltOverloadState");
         }
     }
 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
-    private void ae2lt$readOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$readOverloadState(ValueInput input, CallbackInfo ci) {
         var logic = (appeng.crafting.execution.CraftingCpuLogic) (Object) this;
         OverloadCpuStateManager.INSTANCE.clear(logic);
         var job = ((CraftingCpuLogicAccessor) logic).ae2lt$getJob();
-        if (job != null && data.contains("ae2ltOverloadState", CompoundTag.TAG_COMPOUND)) {
-            OverloadCpuStateManager.INSTANCE.readFromTag(logic, data.getCompound("ae2ltOverloadState"), registries);
-        }
+        if (job != null) input.read("ae2ltOverloadState", CompoundTag.CODEC)
+                .ifPresent(tag -> OverloadCpuStateManager.INSTANCE.readFromTag(logic, tag, input.lookup()));
     }
 
     @Inject(method = "finishJob", at = @At("HEAD"))

@@ -42,11 +42,11 @@ class PhaseLockSourceContractTest {
                 "src/main/java/com/moakiee/ae2lt/item/PhaseLockProjectionItem.java"));
 
         assertFalse(source.contains("CompoundTag"));
-        assertTrue(source.contains("extends ArmorItem"));
+        assertTrue(source.contains("extends Item"));
         assertTrue(source.contains("CelestweaveArmorMaterials.CELESTWEAVE"));
         assertTrue(source.contains("public boolean isFoil(ItemStack stack)"));
         assertTrue(source.contains("return false;"));
-        assertTrue(source.contains("PhaseLockProjectionRules.isExpectedSlot(equipmentSlot, slotId)"));
+        assertTrue(source.contains("if (slot != equipmentSlot)"));
         assertTrue(source.contains("PhaseLockService.hasPrivateArmor(player, equipmentSlot)"));
         assertTrue(source.contains("entity.discard()"));
 
@@ -93,7 +93,7 @@ class PhaseLockSourceContractTest {
         String vault = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/celestweave/phase/PhaseArmorVaultSavedData.java"));
         assertTrue(vault.contains("Map<UUID, EnumMap<EquipmentSlot, ItemStack>>"));
-        assertTrue(vault.contains("entryTag.putUUID(TAG_PLAYER"));
+        assertTrue(vault.contains("entryTag.store(TAG_PLAYER, net.minecraft.core.UUIDUtil.CODEC"));
         assertTrue(vault.contains("entryTag.putString(TAG_SLOT"));
 
         String service = Files.readString(Path.of(

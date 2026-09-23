@@ -4,7 +4,14 @@
       "model": "ae2lt:block/tianshu_supercomputer_casing"
     },
     "formed=true": {
-      "model": "ae2lt:block/tianshu_supercomputer_casing_formed"
+      "type": "ae2lt:connected_texture",
+      "connection": "ae2lt:tianshu_formed_same_block",
+      "render_type": "minecraft:solid",
+      "ambientocclusion": true,
+      "gui3d": true,
+      "uses_block_light": true,
+      "base": "ae2lt:block/tianshu/tianshu_supercomputer_casing_formed",
+      "ctm": "ae2lt:block/tianshu/tianshu_supercomputer_casing_ctm"
     }
   }
 }

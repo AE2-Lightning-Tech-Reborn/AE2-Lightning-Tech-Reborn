@@ -38,11 +38,6 @@ description = '''${mod_description}'''
 [[mixins]]
 config = "${mod_id}.mixins.json"
 
-# Optional JEI/EMI recipe-transfer hooks. A config plugin applies each mixin only
-# when its viewer and integration target are present.
-[[mixins]]
-config = "${mod_id}.recipeviewer.mixins.json"
-
 # Optional ae2wtlib integration mixins. The config's plugin disables every
 # mixin in it when ae2wtlib is absent, so this is safe to always declare.
 [[mixins]]
@@ -51,6 +46,10 @@ config = "${mod_id}.ae2wtlib.mixins.json"
 # Optional Mekanism armor conversion hook. The config plugin disables it when Mekanism is absent.
 [[mixins]]
 config = "${mod_id}.mekanism.mixins.json"
+
+# Optional JEI transfer integration. The plugin gates external targets by loaded mod.
+[[mixins]]
+config = "${mod_id}.recipeviewer.mixins.json"
 
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
@@ -89,7 +88,7 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId = "ae2"
 type = "required"
-versionRange = "[19.2.17,19.3)"
+versionRange = "[26.1.12-beta,26.2)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -119,15 +118,6 @@ modId = "thunderbolt"
 type = "required"
 versionRange = "${thunderbolt_version_range}"
 ordering = "AFTER"
-side = "BOTH"
-
-[[dependencies."${mod_id}"]]
-modId = "neoecoae"
-type = "optional"
-versionRange = "[21.2.0-beta3,)"
-# FastPath is used at runtime; NeoECO already orders itself after AE2LT.
-# Requiring the reverse order here would create a loading cycle.
-ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]

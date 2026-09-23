@@ -7,8 +7,8 @@ import com.moakiee.ae2lt.me.key.LightningKey;
 
 import appeng.api.stacks.GenericStack;
 import mezz.jei.api.ingredients.IIngredientType;
-import tamaized.ae2jeiintegration.api.integrations.jei.IngredientConverter;
-import tamaized.ae2jeiintegration.api.integrations.jei.IngredientConverters;
+import appeng.client.api.integrations.jei.IngredientConverter;
+import appeng.client.api.integrations.jei.IngredientConverters;
 
 public final class AE2JeiIntegrationCompat {
     private static boolean registered;

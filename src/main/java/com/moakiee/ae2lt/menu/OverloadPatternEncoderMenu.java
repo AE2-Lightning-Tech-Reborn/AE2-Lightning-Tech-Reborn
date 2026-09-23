@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.menu;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -39,7 +39,7 @@ public class OverloadPatternEncoderMenu extends AEBaseMenu {
 
     public static final MenuType<OverloadPatternEncoderMenu> TYPE = MenuTypeBuilder
             .create(OverloadPatternEncoderMenu::new, OverloadPatternEncoderHost.class)
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "overload_pattern_encoder"));
 
     public static final int MAX_INPUT_SLOTS = 18;
@@ -104,8 +104,8 @@ public class OverloadPatternEncoderMenu extends AEBaseMenu {
 
         addPlayerInventorySlots(playerInventory);
 
-        registerClientAction("toggleInputMode", Integer.class, this::toggleInputMode);
-        registerClientAction("toggleOutputMode", Integer.class, this::toggleOutputMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("toggleInputMode"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::toggleInputMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("toggleOutputMode"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::toggleOutputMode);
     }
 
     @Override
@@ -134,11 +134,11 @@ public class OverloadPatternEncoderMenu extends AEBaseMenu {
     }
 
     public void clientToggleInputMode(int slotIndex) {
-        sendClientAction("toggleInputMode", slotIndex);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("toggleInputMode"), slotIndex);
     }
 
     public void clientToggleOutputMode(int slotIndex) {
-        sendClientAction("toggleOutputMode", slotIndex);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("toggleOutputMode"), slotIndex);
     }
 
     public ItemStack getInputPreviewStack(int slotIndex) {

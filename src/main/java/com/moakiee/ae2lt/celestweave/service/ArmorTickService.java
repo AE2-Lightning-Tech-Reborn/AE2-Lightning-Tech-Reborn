@@ -7,6 +7,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
+import com.moakiee.ae2lt.celestweave.PhaseWingFlight;
 
 public final class ArmorTickService {
     private ArmorTickService() {
@@ -22,6 +23,7 @@ public final class ArmorTickService {
         var installedSubmodules = CelestweaveArmorState.collectInstalledSubmoduleEntries(armor, registries);
         if (!equipped) {
             CelestweaveArmorState.syncSubmoduleActiveState(player, armor, installedSubmodules, false, dist);
+            PhaseWingFlight.syncGlider(player, armor, false);
             return;
         }
 
@@ -33,6 +35,7 @@ public final class ArmorTickService {
                 CelestweaveArmorState.setModulesPowered(armor, false);
                 CelestweaveArmorState.syncSubmoduleActiveState(player, armor, installedSubmodules, false, dist);
                 CelestweaveArmorState.tickEquipped(player, armor, installedSubmodules, registries);
+                PhaseWingFlight.syncGlider(player, armor, false);
                 return;
             }
             CelestweaveArmorState.setModulesPowered(armor, true);
@@ -41,5 +44,6 @@ public final class ArmorTickService {
         CelestweaveArmorState.syncSubmoduleActiveState(player, armor, installedSubmodules, true, dist);
         CelestweaveArmorState.tickActiveSubmodules(player, armor, installedSubmodules, dist);
         CelestweaveArmorState.tickEquipped(player, armor, installedSubmodules, registries);
+        PhaseWingFlight.syncGlider(player, armor, true);
     }
 }

@@ -13,10 +13,8 @@ class PigmeeCoreItemTest {
         String source = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/item/PigmeeCoreItem.java"));
 
-        assertTrue(source.contains("boolean hasCraftingRemainingItem(ItemStack stack)"));
-        assertTrue(source.contains("ItemStack getCraftingRemainingItem(ItemStack stack)"));
-        assertTrue(source.contains("ItemStack remainder = stack.copy()"));
-        assertTrue(source.contains("remainder.setCount(1)"));
-        assertTrue(source.contains("return remainder"));
+        assertTrue(source.contains("ItemStackTemplate getCraftingRemainder(ItemInstance instance)"));
+        assertTrue(source.contains("ItemStackTemplate.fromNonEmptyStack(stack.copyWithCount(1))"));
+        assertTrue(source.contains("template.withCount(1)"));
     }
 }

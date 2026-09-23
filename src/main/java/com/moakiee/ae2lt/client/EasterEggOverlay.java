@@ -3,15 +3,15 @@ package com.moakiee.ae2lt.client;
 import com.moakiee.ae2lt.AE2LightningTech;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.LayeredDraw;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.neoforged.neoforge.client.gui.GuiLayer;
+import net.minecraft.resources.Identifier;
 
-public final class EasterEggOverlay implements LayeredDraw.Layer {
+public final class EasterEggOverlay implements GuiLayer {
     public static final EasterEggOverlay INSTANCE = new EasterEggOverlay();
 
-    private static final ResourceLocation TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/gui/easter_egg.png");
+    private static final Identifier TEXTURE =
+            Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/gui/easter_egg.png");
 
     private static final int DISPLAY_TICKS = 40;
 
@@ -44,7 +44,7 @@ public final class EasterEggOverlay implements LayeredDraw.Layer {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         if (ticksRemaining <= 0) {
             return;
         }
@@ -78,10 +78,8 @@ public final class EasterEggOverlay implements LayeredDraw.Layer {
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
 
-        guiGraphics.pose().pushPose();
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-        guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        guiGraphics.pose().popPose();
+        int tint = ((int) (Math.max(0.0F, Math.min(1.0F, alpha)) * 255.0F) << 24) | 0xFFFFFF;
+        guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
+                x, y, 0, 0, drawW, drawH, imgWidth, imgHeight, imgWidth, imgHeight, tint);
     }
 }

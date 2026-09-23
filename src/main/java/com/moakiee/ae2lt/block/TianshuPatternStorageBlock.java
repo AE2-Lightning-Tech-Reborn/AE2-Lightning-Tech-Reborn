@@ -21,12 +21,5 @@ public final class TianshuPatternStorageBlock extends TianshuSupercomputingUnitB
         return new TianshuPatternStorageBlockEntity(pos, state);
     }
 
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && !level.isClientSide
-                && level.getBlockEntity(pos) instanceof TianshuPatternStorageBlockEntity storage) {
-            storage.dropStoredPatterns(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, moved);
-    }
+
 }

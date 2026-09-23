@@ -168,6 +168,7 @@
   "jei.ae2lt.lightning_strike.natural_only": "Requires NATURAL lightning",
   "jei.ae2lt.lightning_strike.any_lightning": "Any lightning works",
   "jei.ae2lt.lightning_strike.materials": "Materials",
+  "jei.ae2lt.lightning_strike.not_consumed": "Structure block is not consumed by the ritual",
   "jei.ae2lt.firmament_conversion.title": "Firmament Conversion",
   "jei.ae2lt.firmament_conversion.time": "Processing Time: %s",
   "jei.ae2lt.multiblock.title": "Multiblock Structures",

@@ -38,10 +38,10 @@ public abstract class AnnihilationPlaneFirmamentDustMixin {
 
         var hostPos = host.getBlockPos();
         boolean shouldGenerate = FirmamentDustGenerationRules.shouldGenerate(
-                level.dimension().location().toString(),
+                level.dimension().identifier().toString(),
                 self.getSide().getSerializedName(),
                 hostPos.getY(),
-                level.getMaxBuildHeight());
+                level.getMaxY());
 
         if (!shouldGenerate) {
             ae2lt$firmamentGenerationTicks = 0;

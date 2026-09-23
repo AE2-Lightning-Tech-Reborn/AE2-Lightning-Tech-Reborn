@@ -36,7 +36,7 @@ import com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -540,7 +540,7 @@ class ClosedLoopPatternRepositoryTest {
 
     private static ClosedLoopPatternPayload payload() {
         var member = new SourcePatternSnapshot(
-                ResourceLocation.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null);
+                Identifier.fromNamespaceAndPath("ae2", "encoded_processing_pattern"), null, null);
         return new ClosedLoopPatternPayload(
                 List.of(new ClosedLoopMemberPattern(member, 1)),
                 List.of(new GenericStack(new TestKey("template"), 1)),
@@ -563,15 +563,15 @@ class ClosedLoopPatternRepositoryTest {
         @Override public AEKey dropSecondary() {
             return secondary.isEmpty() ? this : new TestKey(id);
         }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            tag.putString("secondary", secondary);
-            return tag;
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+            output.putString("secondary", secondary);
+
         }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        @Override public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf data) { }
         @Override protected Component computeDisplayName() { return Component.literal(id + secondary); }
@@ -585,7 +585,7 @@ class ClosedLoopPatternRepositoryTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
                     Component.literal("test key"));
         }
         @Override public MapCodec<? extends AEKey> codec() { return null; }

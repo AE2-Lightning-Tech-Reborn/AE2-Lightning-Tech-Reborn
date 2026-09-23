@@ -63,7 +63,7 @@ public record ClosedLoopTerminalDraft(
 
     public CompoundTag write(HolderLookup.Provider registries) {
         var tag = new CompoundTag();
-        tag.put(TAG_SOURCE, source.saveOptional(registries));
+        tag.put(TAG_SOURCE, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(source, registries));
         tag.put(TAG_MEMBERS, writeStacks(members, registries));
         tag.putLongArray(TAG_MEMBER_COPIES, memberCopies.stream().mapToLong(Long::longValue).toArray());
         tag.put(TAG_OUTPUTS, writeStacks(outputs, registries));
@@ -78,9 +78,9 @@ public record ClosedLoopTerminalDraft(
     public static ClosedLoopTerminalDraft read(
             CompoundTag tag, HolderLookup.Provider registries) {
         try {
-            var source = ItemStack.parseOptional(registries, tag.getCompound(TAG_SOURCE));
-            var copiesArray = tag.getLongArray(TAG_MEMBER_COPIES);
-            var rolesArray = tag.getIntArray(TAG_OUTPUT_ROLES);
+            var source = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, tag.getCompoundOrEmpty(TAG_SOURCE));
+            var copiesArray = tag.getLongArray(TAG_MEMBER_COPIES).orElseGet(() -> new long[0]);
+            var rolesArray = tag.getIntArray(TAG_OUTPUT_ROLES).orElseGet(() -> new int[0]);
             if (copiesArray.length != ClosedLoopDraftSync.MEMBER_SLOTS
                     || rolesArray.length != ClosedLoopDraftSync.OUTPUT_SLOTS) {
                 return null;
@@ -91,15 +91,15 @@ public record ClosedLoopTerminalDraft(
             for (int value : rolesArray) roles.add(value);
             return new ClosedLoopTerminalDraft(
                     source,
-                    readStacks(tag.getList(TAG_MEMBERS, Tag.TAG_COMPOUND),
+                    readStacks(tag.getListOrEmpty(TAG_MEMBERS),
                             ClosedLoopDraftSync.MEMBER_SLOTS, registries),
                     copies,
-                    readStacks(tag.getList(TAG_OUTPUTS, Tag.TAG_COMPOUND),
+                    readStacks(tag.getListOrEmpty(TAG_OUTPUTS),
                             ClosedLoopDraftSync.OUTPUT_SLOTS, registries),
                     roles,
-                    Math.max(1, tag.getInt(TAG_EXECUTION_MULTIPLIER)),
-                    Math.max(1, tag.getInt(TAG_STORED_MULTIPLIER)),
-                    tag.getBoolean(TAG_REPRESENTS_ENCODED));
+                    Math.max(1, tag.getIntOr(TAG_EXECUTION_MULTIPLIER, 0)),
+                    Math.max(1, tag.getIntOr(TAG_STORED_MULTIPLIER, 0)),
+                    tag.getBooleanOr(TAG_REPRESENTS_ENCODED, false));
         } catch (RuntimeException ignored) {
             return null;
         }
@@ -140,7 +140,7 @@ public record ClosedLoopTerminalDraft(
             if (stack.isEmpty()) continue;
             var entry = new CompoundTag();
             entry.putInt(TAG_SLOT, slot);
-            result.add(stack.save(registries, entry));
+            result.add(entry.merge(com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(stack, registries)));
         }
         return result;
     }
@@ -150,10 +150,10 @@ public record ClosedLoopTerminalDraft(
         var result = new ArrayList<ItemStack>(size);
         for (int i = 0; i < size; i++) result.add(ItemStack.EMPTY);
         for (int i = 0; i < entries.size(); i++) {
-            var entry = entries.getCompound(i);
-            int slot = entry.getInt(TAG_SLOT);
+            var entry = entries.getCompoundOrEmpty(i);
+            int slot = entry.getIntOr(TAG_SLOT, 0);
             if (slot >= 0 && slot < size) {
-                result.set(slot, ItemStack.parseOptional(registries, entry));
+                result.set(slot, com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, entry));
             }
         }
         return List.copyOf(result);

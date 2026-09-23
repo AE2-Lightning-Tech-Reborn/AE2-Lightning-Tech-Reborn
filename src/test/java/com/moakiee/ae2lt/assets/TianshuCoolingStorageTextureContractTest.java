@@ -15,8 +15,6 @@ final class TianshuCoolingStorageTextureContractTest {
 
     private static final Path BLOCKSTATES =
             Path.of("src/main/resources/assets/ae2lt/blockstates");
-    private static final Path MODELS =
-            Path.of("src/main/resources/assets/ae2lt/models/block");
     private static final Path TEXTURES =
             Path.of("src/main/resources/assets/ae2lt/textures/block");
 
@@ -25,7 +23,7 @@ final class TianshuCoolingStorageTextureContractTest {
         assertFormedStorage("closed_loop_pattern_storage");
         assertFormedStorage("closed_loop_seed_storage");
 
-        String coolingModel = Files.readString(MODELS.resolve("phase_change_cooling_unit_formed.json"));
+        String coolingModel = Files.readString(BLOCKSTATES.resolve("phase_change_cooling_unit.json"));
         assertTrue(coolingModel.contains("\"connection\": \"ae2lt:tianshu_formed_cooling_compatible\""));
 
         String predicates = Files.readString(Path.of(
@@ -35,7 +33,7 @@ final class TianshuCoolingStorageTextureContractTest {
 
         String bakedModel = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/ctm/ConnectedTextureBakedModel.java"));
-        assertTrue(bakedModel.contains("fullFace(side, overlaySprite, OVERLAY_OFFSET)"));
+        assertTrue(bakedModel.contains("CtmFaceGeometry.fullFace(side, overlayMaterial, Transparency.TRANSPARENT, OVERLAY_OFFSET)"));
     }
 
     @Test
@@ -46,13 +44,13 @@ final class TianshuCoolingStorageTextureContractTest {
 
     private static void assertFormedStorage(String name) throws Exception {
         String blockstate = Files.readString(BLOCKSTATES.resolve(name + ".json"));
-        assertTrue(blockstate.contains("\"model\": \"ae2lt:block/" + name + "_formed\""));
+        assertTrue(blockstate.contains("\"formed=true\""));
+        assertTrue(blockstate.contains("\"type\": \"ae2lt:connected_texture\""));
+        assertTrue(blockstate.contains("\"base\": \"ae2lt:block/tianshu/phase_change_cooling_unit_formed\""));
+        assertTrue(blockstate.contains("\"ctm\": \"ae2lt:block/tianshu/phase_change_cooling_unit_ctm\""));
+        assertTrue(blockstate.contains("\"overlay\": \"ae2lt:block/tianshu/" + name + "_layer\""));
 
-        String model = Files.readString(MODELS.resolve(name + "_formed.json"));
-        assertTrue(model.contains("\"base\": \"ae2lt:block/tianshu/phase_change_cooling_unit_formed\""));
-        assertTrue(model.contains("\"ctm\": \"ae2lt:block/tianshu/phase_change_cooling_unit_ctm\""));
-        assertTrue(model.contains("\"connection\": \"ae2lt:tianshu_formed_cooling_compatible\""));
-        assertTrue(model.contains("\"overlay\": \"ae2lt:block/tianshu/" + name + "_layer\""));
+        assertTrue(blockstate.contains("\"connection\": \"ae2lt:tianshu_formed_cooling_compatible\""));
     }
 
     private static void assertTextureDimensions(Path path, int width, int height) throws Exception {

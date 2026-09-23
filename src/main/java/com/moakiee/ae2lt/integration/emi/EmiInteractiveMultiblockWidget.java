@@ -13,9 +13,9 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.Widget;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.network.chat.Component;
@@ -54,7 +54,7 @@ final class EmiInteractiveMultiblockWidget extends Widget
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta) {
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         ownerScreen = Minecraft.getInstance().screen;
@@ -158,7 +158,7 @@ final class EmiInteractiveMultiblockWidget extends Widget
     }
 
     @Override
-    public void drawMaterialSlot(GuiGraphics guiGraphics, int index, int x, int y) {
+    public void drawMaterialSlot(GuiGraphicsExtractor guiGraphics, int index, int x, int y) {
         var material = recipe.materials().get(index);
         SlotWidget slot = new SlotWidget(EmiStack.of(material.block()), x, y)
                 .appendTooltip(Component.translatable("jei.ae2lt.multiblock.count", material.count()));
@@ -170,13 +170,13 @@ final class EmiInteractiveMultiblockWidget extends Widget
     }
 
     @Override
-    public void drawSelectedBlockSlot(GuiGraphics guiGraphics, Block block, int x, int y) {
+    public void drawSelectedBlockSlot(GuiGraphicsExtractor guiGraphics, Block block, int x, int y) {
         selectedBlockSlot = new SlotWidget(EmiStack.of(block), x, y);
         selectedBlockSlot.render(guiGraphics, lastMouseX, lastMouseY, 0.0F);
     }
 
     @Override
-    public void drawAlternativeSlot(GuiGraphics guiGraphics, int index, Block block, int x, int y) {
+    public void drawAlternativeSlot(GuiGraphicsExtractor guiGraphics, int index, Block block, int x, int y) {
         SlotWidget slot = new SlotWidget(EmiStack.of(block), x, y);
         alternativeSlots[index] = slot;
         slot.render(guiGraphics, lastMouseX, lastMouseY, 0.0F);

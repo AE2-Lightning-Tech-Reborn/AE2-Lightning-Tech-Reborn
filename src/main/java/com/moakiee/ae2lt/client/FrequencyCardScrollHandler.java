@@ -19,7 +19,7 @@ public final class FrequencyCardScrollHandler {
 
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (event.getScrollDeltaY() == 0.0D || !Screen.hasShiftDown()) {
+        if (event.getScrollDeltaY() == 0.0D || !net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             return;
         }
 
@@ -39,7 +39,7 @@ public final class FrequencyCardScrollHandler {
             return;
         }
 
-        PacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forHand(hand));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forHand(hand));
         event.setCanceled(true);
     }
 }

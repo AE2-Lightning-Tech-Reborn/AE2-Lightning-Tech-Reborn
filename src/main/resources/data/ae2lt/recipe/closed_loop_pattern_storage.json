@@ -7,11 +7,11 @@
     "ABA"
   ],
   "key": {
-    "A": { "item": "ae2:pattern_provider" },
-    "B": { "item": "ae2:capacity_card" },
-    "C": { "item": "ae2:formation_core" },
-    "D": { "item": "ae2lt:tianshu_blank_unit" },
-    "E": { "item": "ae2:annihilation_core" }
+    "A": "ae2:pattern_provider",
+    "B": "ae2:capacity_card",
+    "C": "ae2:formation_core",
+    "D": "ae2lt:tianshu_blank_unit",
+    "E": "ae2:annihilation_core"
   },
   "result": {
     "id": "ae2lt:closed_loop_pattern_storage",

@@ -28,32 +28,32 @@ public final class ModFumos {
     }
 
     public static void register() {
-        MOAKIEE_FUMO = ModBlocks.BLOCKS.register("moakiee_fumo", FumoBlock::new);
+        MOAKIEE_FUMO = ModBlocks.registerExternalBlock("moakiee_fumo", FumoBlock::new);
         MOAKIEE_FUMO_ITEM = ModItems.ITEMS.register("moakiee_fumo",
-                () -> new FumoBlockItem(MOAKIEE_FUMO.get(), new Item.Properties()));
-        CYSTRYSU_FUMO = ModBlocks.BLOCKS.register("cystrysu_fumo", FumoBlock::new);
+                id -> new FumoBlockItem(MOAKIEE_FUMO.get(), ModItems.registeredProperties(new Item.Properties(), id)));
+        CYSTRYSU_FUMO = ModBlocks.registerExternalBlock("cystrysu_fumo", FumoBlock::new);
         CYSTRYSU_FUMO_ITEM = ModItems.ITEMS.register("cystrysu_fumo",
-                () -> new FumoBlockItem(CYSTRYSU_FUMO.get(), new Item.Properties()));
+                id -> new FumoBlockItem(CYSTRYSU_FUMO.get(), ModItems.registeredProperties(new Item.Properties(), id)));
 
-        PIGMEE_FUMO = ModBlocks.BLOCKS.register("pigmee_fumo", FumoBlock::new);
+        PIGMEE_FUMO = ModBlocks.registerExternalBlock("pigmee_fumo", FumoBlock::new);
         PIGMEE_FUMO_ITEM = ModItems.ITEMS.register("pigmee_fumo",
-                () -> new FumoBlockItem(PIGMEE_FUMO.get(), new Item.Properties(),
+                id -> new FumoBlockItem(PIGMEE_FUMO.get(), ModItems.registeredProperties(new Item.Properties(), id),
                         "tooltip.ae2lt.pigmee_fumo"));
 
-        CREATIVE_PIGMEE_FUMO = ModBlocks.BLOCKS.register("creative_pigmee_fumo", FumoBlock::new);
+        CREATIVE_PIGMEE_FUMO = ModBlocks.registerExternalBlock("creative_pigmee_fumo", FumoBlock::new);
         CREATIVE_PIGMEE_FUMO_ITEM = ModItems.ITEMS.register("creative_pigmee_fumo",
-                () -> new FumoBlockItem(
+                id -> new FumoBlockItem(
                         CREATIVE_PIGMEE_FUMO.get(),
-                        new Item.Properties().rarity(Rarity.EPIC),
+                        ModItems.registeredProperties(new Item.Properties().rarity(Rarity.EPIC), id),
                         "tooltip.ae2lt.creative_pigmee_fumo"));
 
         HYPERDIMENSIONAL_PIGMEE_FUMO =
-                ModBlocks.BLOCKS.register("hyperdimensional_pigmee_fumo", FumoBlock::new);
+                ModBlocks.registerExternalBlock("hyperdimensional_pigmee_fumo", FumoBlock::new);
         HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM =
                 ModItems.ITEMS.register("hyperdimensional_pigmee_fumo",
-                        () -> new FumoBlockItem(
+                        id -> new FumoBlockItem(
                                 HYPERDIMENSIONAL_PIGMEE_FUMO.get(),
-                                new Item.Properties().rarity(Rarity.EPIC),
+                                ModItems.registeredProperties(new Item.Properties().rarity(Rarity.EPIC), id),
                                 "tooltip.ae2lt.hyperdimensional_pigmee_fumo"));
     }
 }

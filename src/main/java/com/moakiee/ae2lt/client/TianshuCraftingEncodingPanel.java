@@ -8,7 +8,7 @@ package com.moakiee.ae2lt.client;
 
 import appeng.api.config.ActionItems;
 import appeng.client.Point;
-import appeng.client.gui.Icon;
+import appeng.util.Icon;
 import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.style.Blitter;
 import appeng.client.gui.widgets.ActionButton;
@@ -17,7 +17,7 @@ import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
@@ -88,7 +88,7 @@ final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawBackgroundLayer(GuiGraphicsExtractor graphics, Rect2i bounds, Point mouse) {
         BG.dest(bounds.getX() + 8, bounds.getY() + bounds.getHeight() - 165).blit(graphics);
 
         var absoluteMouseX = bounds.getX() + mouse.getX();
@@ -101,7 +101,7 @@ final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
         }
     }
 
-    private void drawSlotGreenBackground(Rect2i bounds, GuiGraphics graphics, Slot slot) {
+    private void drawSlotGreenBackground(Rect2i bounds, GuiGraphicsExtractor graphics, Slot slot) {
         int slotX = bounds.getX() + slot.x;
         int slotY = bounds.getY() + slot.y;
         graphics.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF7AC25F);

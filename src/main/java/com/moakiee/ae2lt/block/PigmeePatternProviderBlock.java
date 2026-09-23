@@ -10,7 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -25,7 +25,7 @@ public final class PigmeePatternProviderBlock extends AEBaseEntityBlock<PigmeePa
             EnumProperty.create("push_direction", PushDirection.class);
 
     public PigmeePatternProviderBlock() {
-        super(metalProps().forceSolidOn());
+        super(com.moakiee.ae2lt.registry.ModBlocks.registeredProperties(metalProps(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()).forceSolidOn()));
         registerDefaultState(defaultBlockState().setValue(PUSH_DIRECTION, PushDirection.ALL));
     }
 
@@ -36,7 +36,7 @@ public final class PigmeePatternProviderBlock extends AEBaseEntityBlock<PigmeePa
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(
+    protected InteractionResult useItemOn(
             ItemStack heldItem,
             BlockState state,
             Level level,
@@ -46,7 +46,7 @@ public final class PigmeePatternProviderBlock extends AEBaseEntityBlock<PigmeePa
             BlockHitResult hit) {
         if (InteractionUtil.canWrenchRotate(heldItem)) {
             setOutputSide(level, pos, hit.getDirection());
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
         }
         return super.useItemOn(heldItem, state, level, pos, player, hand, hit);
     }
@@ -65,7 +65,7 @@ public final class PigmeePatternProviderBlock extends AEBaseEntityBlock<PigmeePa
         if (!level.isClientSide()) {
             blockEntity.openMenu(player, MenuLocators.forBlockEntity(blockEntity));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     private void setOutputSide(Level level, BlockPos pos, Direction clickedSide) {

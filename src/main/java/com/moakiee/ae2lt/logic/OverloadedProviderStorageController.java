@@ -49,7 +49,7 @@ final class OverloadedProviderStorageController {
         }
         var list = new ListTag();
         for (var stack : pendingRestore) {
-            list.add(GenericStack.writeTag(registries, stack));
+            list.add(com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeGeneric(registries, stack));
         }
         tag.put(TAG_RESTORE_OVERFLOW, list);
     }
@@ -62,10 +62,10 @@ final class OverloadedProviderStorageController {
                 && !hasPatternInventoryContents();
         pendingRestore.clear();
         salvageTruncatedNbtSlots(tag, registries, returnInventory);
-        if (tag.contains(TAG_RESTORE_OVERFLOW, Tag.TAG_LIST)) {
+        if (com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(tag, TAG_RESTORE_OVERFLOW, Tag.TAG_LIST)) {
             pendingRestore.addAll(readGenericStackList(
                     registries,
-                    tag.getList(TAG_RESTORE_OVERFLOW, Tag.TAG_COMPOUND)));
+                    tag.getListOrEmpty(TAG_RESTORE_OVERFLOW)));
         }
     }
 
@@ -191,15 +191,14 @@ final class OverloadedProviderStorageController {
         int salvaged = 0;
 
         int patternInventorySize = logic.getPatternInventory().size();
-        var patternsTag = tag.getList(
-                PatternProviderLogic.NBT_MEMORY_CARD_PATTERNS,
-                Tag.TAG_COMPOUND);
+        var patternsTag = tag.getListOrEmpty(
+                PatternProviderLogic.NBT_MEMORY_CARD_PATTERNS);
         for (int i = 0; i < patternsTag.size(); i++) {
-            var itemTag = patternsTag.getCompound(i);
-            if (itemTag.getInt("Slot") < patternInventorySize) {
+            var itemTag = patternsTag.getCompoundOrEmpty(i);
+            if (itemTag.getIntOr("Slot", 0) < patternInventorySize) {
                 continue;
             }
-            var stack = ItemStack.parseOptional(registries, itemTag);
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.parseOptional(registries, itemTag);
             var key = AEItemKey.of(stack);
             if (key != null && !stack.isEmpty()) {
                 pendingRestore.add(
@@ -208,11 +207,11 @@ final class OverloadedProviderStorageController {
             }
         }
 
-        var returnTag = tag.getList(
-                PatternProviderLogic.NBT_RETURN_INV, Tag.TAG_COMPOUND);
+        var returnTag = tag.getListOrEmpty(
+                PatternProviderLogic.NBT_RETURN_INV);
         for (int i = returnInventory.size(); i < returnTag.size(); i++) {
-            var stack = GenericStack.readTag(
-                    registries, returnTag.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(
+                    registries, returnTag.getCompoundOrEmpty(i));
             if (stack != null && stack.amount() > 0L) {
                 pendingRestore.add(stack);
                 salvaged++;
@@ -230,7 +229,7 @@ final class OverloadedProviderStorageController {
             HolderLookup.Provider registries, ListTag list) {
         var stacks = new ArrayList<GenericStack>(list.size());
         for (int i = 0; i < list.size(); i++) {
-            var stack = GenericStack.readTag(registries, list.getCompound(i));
+            var stack = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readGeneric(registries, list.getCompoundOrEmpty(i));
             if (stack != null && stack.amount() > 0L) {
                 stacks.add(stack);
             }

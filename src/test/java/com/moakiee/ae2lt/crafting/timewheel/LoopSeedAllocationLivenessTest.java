@@ -45,7 +45,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -132,7 +132,7 @@ class LoopSeedAllocationLivenessTest {
             // Slot metadata has already been resolved by this fixture. Exercise the actual
             // pending-output queue rather than assigning credits to simulated physical units.
             registerOutput = OverloadCpuState.class.getDeclaredMethod("registerExpectedOutput",
-                    OverloadPatternReference.class, int.class, ResourceLocation.class, AEKey.class,
+                    OverloadPatternReference.class, int.class, Identifier.class, AEKey.class,
                     long.class, boolean.class, OverloadReusableSeedMetadata.class);
             registerOutput.setAccessible(true);
             addLoop("a");
@@ -331,7 +331,7 @@ class LoopSeedAllocationLivenessTest {
                         .map(Map.Entry::getKey).findFirst().orElse(null);
                 if (fuzzy) {
                     var reference = new OverloadPatternReference(names.get(pattern), new SourcePatternSnapshot(
-                            ResourceLocation.fromNamespaceAndPath("ae2lt_test", "pattern"), null, null));
+                            Identifier.fromNamespaceAndPath("ae2lt_test", "pattern"), null, null));
                     registerOutput.invoke(overload, reference, 0, actual.getId(), output.what(), output.amount(),
                             false, consumer == null ? null : new OverloadReusableSeedMetadata(consumer, false, 1));
                 }
@@ -429,7 +429,7 @@ class LoopSeedAllocationLivenessTest {
 
     private static final class TestKey extends AEKey {
         private static final AEKeyType TYPE = new AEKeyType(
-                ResourceLocation.fromNamespaceAndPath("ae2lt_test", "liveness"),
+                Identifier.fromNamespaceAndPath("ae2lt_test", "liveness"),
                 TestKey.class, Component.literal("liveness key")) {
             @Override public MapCodec<? extends AEKey> codec() { return null; }
             @Override public AEKey readFromPacket(RegistryFriendlyByteBuf input) { return null; }
@@ -440,11 +440,11 @@ class LoopSeedAllocationLivenessTest {
         @Override public AEKeyType getType() { return TYPE; }
         @Override public AEKey dropSecondary() { return variant.isEmpty() ? this : key(id, ""); }
         @Override public Object getPrimaryKey() { return id; }
-        @Override public ResourceLocation getId() { return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id); }
-        @Override public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id); tag.putString("variant", variant);
-            return tag;
+        @Override public Identifier getId() { return Identifier.fromNamespaceAndPath("ae2lt_test", id); }
+        @Override public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id); output.putString("variant", variant);
+
         }
         @Override public void writeToPacket(RegistryFriendlyByteBuf output) { }
         @Override protected Component computeDisplayName() { return Component.literal(id + ":" + variant); }

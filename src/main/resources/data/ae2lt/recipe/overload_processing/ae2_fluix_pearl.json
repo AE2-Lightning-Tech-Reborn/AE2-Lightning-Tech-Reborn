@@ -3,15 +3,11 @@
   "priority": 0,
   "inputs": [
     {
-      "ingredient": {
-        "tag": "c:ender_pearls"
-      },
+      "ingredient": "#c:ender_pearls",
       "count": 1
     },
     {
-      "ingredient": {
-        "tag": "c:dusts/fluix"
-      },
+      "ingredient": "#c:dusts/fluix",
       "count": 4
     }
   ],

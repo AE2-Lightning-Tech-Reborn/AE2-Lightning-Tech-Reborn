@@ -136,7 +136,7 @@ public final class TianshuDirectUploadClient {
                         : Component.translatable(
                                 "ae2lt.tianshu.upload.success_target", awaitingTargetName)
                 : Component.translatable("ae2lt.tianshu.upload.failed");
-        minecraft.player.displayClientMessage(result, false);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(minecraft.player, result, false);
         clearAwaitingResult();
     }
 

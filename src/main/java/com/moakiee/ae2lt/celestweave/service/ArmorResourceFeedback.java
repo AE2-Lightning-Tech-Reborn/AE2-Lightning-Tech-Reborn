@@ -57,11 +57,11 @@ public final class ArmorResourceFeedback {
         }
         long now = player.level().getGameTime();
         String tag = TAG_PREFIX + resource;
-        if (player.getPersistentData().getLong(tag) > now) {
+        if (player.getPersistentData().getLongOr(tag, 0L) > now) {
             return;
         }
         player.getPersistentData().putLong(tag, saturatingAdd(now, COOLDOWN_TICKS));
-        player.displayClientMessage(Component.translatable(key), true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(key), true);
     }
 
     private static long saturatingAdd(long left, long right) {

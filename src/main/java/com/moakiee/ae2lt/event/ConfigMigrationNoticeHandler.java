@@ -27,7 +27,7 @@ public final class ConfigMigrationNoticeHandler {
             return;
         }
         var data = serverPlayer.getPersistentData();
-        if (data.getBoolean(NOTIFIED_TAG)) {
+        if (data.getBooleanOr(NOTIFIED_TAG, false)) {
             return;
         }
         serverPlayer.sendSystemMessage(Component.translatable("message.ae2lt.config_migrated_v2"));
@@ -37,7 +37,7 @@ public final class ConfigMigrationNoticeHandler {
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
-        if (event.getOriginal().getPersistentData().getBoolean(NOTIFIED_TAG)) {
+        if (event.getOriginal().getPersistentData().getBooleanOr(NOTIFIED_TAG, false)) {
             event.getEntity().getPersistentData().putBoolean(NOTIFIED_TAG, true);
         }
     }

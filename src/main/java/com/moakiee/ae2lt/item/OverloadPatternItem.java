@@ -36,7 +36,7 @@ public class OverloadPatternItem extends EncodedPatternItem<IPatternDetails>
     }
 
     public boolean hasPayload(ItemStack stack) {
-        return readRootTag(stack).contains(TAG_OVERLOAD_PATTERN, CompoundTag.TAG_COMPOUND);
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(readRootTag(stack), TAG_OVERLOAD_PATTERN, CompoundTag.TAG_COMPOUND);
     }
 
     @Override
@@ -47,11 +47,11 @@ public class OverloadPatternItem extends EncodedPatternItem<IPatternDetails>
     public Optional<OverloadPatternPayload> readPayload(ItemStack stack) {
         Objects.requireNonNull(stack, "stack");
         var rootTag = readRootTag(stack);
-        if (!rootTag.contains(TAG_OVERLOAD_PATTERN, CompoundTag.TAG_COMPOUND)) {
+        if (!com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(rootTag, TAG_OVERLOAD_PATTERN, CompoundTag.TAG_COMPOUND)) {
             return Optional.empty();
         }
 
-        var payloadTag = rootTag.getCompound(TAG_OVERLOAD_PATTERN);
+        var payloadTag = rootTag.getCompoundOrEmpty(TAG_OVERLOAD_PATTERN);
         return Optional.of(OverloadPatternPayloadTagCodec.readPayload(payloadTag));
     }
 

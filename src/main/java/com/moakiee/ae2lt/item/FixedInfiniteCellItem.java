@@ -95,12 +95,11 @@ public final class FixedInfiniteCellItem extends Item {
     @Override
     public void inventoryTick(
             ItemStack stack,
-            net.minecraft.world.level.Level level,
+            net.minecraft.server.level.ServerLevel level,
             Entity entity,
-            int slotId,
-            boolean isSelected) {
-        super.inventoryTick(stack, level, entity, slotId, isSelected);
-        if (!level.isClientSide && entity instanceof ServerPlayer player) {
+            net.minecraft.world.entity.EquipmentSlot slot) {
+        super.inventoryTick(stack, level, entity, slot);
+        if (entity instanceof ServerPlayer player) {
             ProgressionAdvancementService.inspectMysteriousCell(player, stack);
         }
     }
@@ -108,7 +107,7 @@ public final class FixedInfiniteCellItem extends Item {
     // ── Seed (outer cell only) ──
 
     public static void setSeed(ItemStack stack, UUID seed) {
-        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putUUID(TAG_SEED, seed));
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, TAG_SEED, seed));
     }
 
     public static void initializeOuterCell(ItemStack stack) {
@@ -129,7 +128,7 @@ public final class FixedInfiniteCellItem extends Item {
     @Nullable
     public static UUID getSeed(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return tag.hasUUID(TAG_SEED) ? tag.getUUID(TAG_SEED) : null;
+        return com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.has(tag, TAG_SEED) ? com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, TAG_SEED) : null;
     }
 
     public static boolean hasSeed(ItemStack stack) {
@@ -147,7 +146,7 @@ public final class FixedInfiniteCellItem extends Item {
 
     private static long getWorldSeed(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return tag.getLong(TAG_WORLD_SEED);
+        return tag.getLongOr(TAG_WORLD_SEED, 0L);
     }
 
     public static boolean isOuterCell(ItemStack stack) {
@@ -159,7 +158,7 @@ public final class FixedInfiniteCellItem extends Item {
             return false;
         }
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return tag.getBoolean(TAG_RESULT_CONSUMED);
+        return tag.getBooleanOr(TAG_RESULT_CONSUMED, false);
     }
 
     public static void setResultConsumed(ItemStack stack, boolean consumed) {
@@ -222,7 +221,7 @@ public final class FixedInfiniteCellItem extends Item {
 
     public static byte getType(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        return tag.getByte(TAG_TYPE);
+        return tag.getByteOr(TAG_TYPE, (byte) 0);
     }
 
     // ── Effective key ──
@@ -268,7 +267,7 @@ public final class FixedInfiniteCellItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
-                                List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
+                                net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltipComponents, TooltipFlag tooltipFlag) {
         if (hasType(stack)) {
             // 内核 cell(扭蛋解析完的成品,或创造栏里直接拿的变体)不再画任何
             // flavor 文案 —— 物品名已经说明它是什么,tooltip 重复一遍既啰嗦
@@ -284,17 +283,17 @@ public final class FixedInfiniteCellItem extends Item {
         }
 
         if (isResultConsumed(stack)) {
-            tooltipComponents.add(Component.translatable(TOOLTIP_KEY + ".consumed")
+            tooltipComponents.accept(Component.translatable(TOOLTIP_KEY + ".consumed")
                     .withStyle(ChatFormatting.DARK_GRAY));
-            tooltipComponents.add(Component.translatable(TOOLTIP_KEY + ".consumed.hint")
+            tooltipComponents.accept(Component.translatable(TOOLTIP_KEY + ".consumed.hint")
                     .withStyle(ChatFormatting.DARK_GRAY));
             return;
         }
 
         String suffix = getOutcomeFromSeed(stack).suffix();
-        tooltipComponents.add(Component.translatable(TOOLTIP_KEY + "." + suffix)
+        tooltipComponents.accept(Component.translatable(TOOLTIP_KEY + "." + suffix)
                 .withStyle(ChatFormatting.GREEN));
-        tooltipComponents.add(Component.translatable(TOOLTIP_KEY + ".hint.once")
+        tooltipComponents.accept(Component.translatable(TOOLTIP_KEY + ".hint.once")
                 .withStyle(ChatFormatting.GRAY));
     }
 

@@ -70,7 +70,7 @@ public record FrequencyCardUsePacket(
     private void handleOnServer(ServerPlayer player) {
         if (!(player.level() instanceof ServerLevel level)) return;
         if (!level.isLoaded(pos)) return;
-        if (!player.canInteractWithBlock(pos, 1.0D)) return;
+        if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > 64.0D) return;
 
         var stack = player.getItemInHand(hand);
         if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) return;
@@ -134,7 +134,7 @@ public record FrequencyCardUsePacket(
                 pos,
                 face,
                 hitVec);
-        player.displayClientMessage(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                 Component.translatable(feedback.translationKey(), feedback.args())
                         .withStyle(feedback.style()),
                 true);
@@ -164,7 +164,7 @@ public record FrequencyCardUsePacket(
                 level.dimension(),
                 controller.getBlockPos(),
                 player.getUUID());
-        player.displayClientMessage(
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player,
                 Component.translatable(
                                 "ae2lt.frequency_card.bound",
                                 FrequencyDisplayName.of(frequencyId, frequency.getName()))
@@ -173,6 +173,6 @@ public record FrequencyCardUsePacket(
     }
 
     private static void message(ServerPlayer player, String key, ChatFormatting style) {
-        player.displayClientMessage(Component.translatable(key).withStyle(style), true);
+        com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable(key).withStyle(style), true);
     }
 }

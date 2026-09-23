@@ -54,7 +54,7 @@ final class AE2CrystalScienceProcessorRecipeContractTest {
             JsonObject input = recipe.getAsJsonArray("inputs").get(index).getAsJsonObject();
             assertEquals(
                     expected.id(),
-                    input.getAsJsonObject("ingredient").get(expected.kind()).getAsString(),
+                    input.get("ingredient").getAsString(),
                     filename);
             assertEquals(expected.count(), input.get("count").getAsInt(), filename);
         }
@@ -64,5 +64,9 @@ final class AE2CrystalScienceProcessorRecipeContractTest {
         assertEquals(36, result.get("count").getAsInt(), filename);
     }
 
-    private record ExpectedInput(String kind, String id, int count) {}
+    private record ExpectedInput(String kind, String id, int count) {
+        private ExpectedInput {
+            if ("tag".equals(kind)) id = "#" + id;
+        }
+    }
 }

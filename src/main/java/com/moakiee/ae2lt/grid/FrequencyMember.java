@@ -18,13 +18,13 @@ public class FrequencyMember {
     }
 
     public FrequencyMember(CompoundTag tag) {
-        this.playerUUID = tag.getUUID("uuid");
-        this.cachedName = tag.getString("name");
-        this.accessLevel = FrequencyAccessLevel.fromId(tag.getByte("access"));
+        this.playerUUID = com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.get(tag, "uuid");
+        this.cachedName = tag.getStringOr("name", "");
+        this.accessLevel = FrequencyAccessLevel.fromId(tag.getByteOr("access", (byte) 0));
     }
 
     public static FrequencyMember create(Player player, FrequencyAccessLevel access) {
-        return new FrequencyMember(player.getUUID(), player.getGameProfile().getName(), access);
+        return new FrequencyMember(player.getUUID(), player.getGameProfile().name(), access);
     }
 
     public UUID getPlayerUUID() {
@@ -48,7 +48,7 @@ public class FrequencyMember {
     }
 
     public void writeNBT(CompoundTag tag) {
-        tag.putUUID("uuid", playerUUID);
+        com.moakiee.ae2lt.recipe.compat.LegacyNbtUuid.put(tag, "uuid", playerUUID);
         tag.putString("name", cachedName);
         tag.putByte("access", accessLevel.getId());
     }

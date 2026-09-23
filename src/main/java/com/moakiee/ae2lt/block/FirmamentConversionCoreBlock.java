@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -44,11 +44,11 @@ public class FirmamentConversionCoreBlock extends Block implements EntityBlock {
         if (!level.isClientSide()) {
             be.extractToPlayer(player);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(
+    protected InteractionResult useItemOn(
             ItemStack stack,
             BlockState state,
             Level level,
@@ -57,13 +57,13 @@ public class FirmamentConversionCoreBlock extends Block implements EntityBlock {
             InteractionHand hand,
             BlockHitResult hit) {
         if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof FirmamentConversionCoreBlockEntity be)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         if (!level.isClientSide() && !be.insertHeldItem(player, hand)) {
-            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
-        return ItemInteractionResult.sidedSuccess(level.isClientSide());
+        return (level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER);
     }
 
     @Nullable
@@ -85,14 +85,7 @@ public class FirmamentConversionCoreBlock extends Block implements EntityBlock {
                 FirmamentConversionCoreBlockEntity.serverTick(l, p, s, (FirmamentConversionCoreBlockEntity) be);
     }
 
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!level.isClientSide() && !state.is(newState.getBlock())
-                && level.getBlockEntity(pos) instanceof FirmamentConversionCoreBlockEntity be) {
-            be.dropContents(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }
+
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {

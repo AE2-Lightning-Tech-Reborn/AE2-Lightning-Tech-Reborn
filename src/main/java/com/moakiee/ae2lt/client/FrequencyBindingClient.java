@@ -15,7 +15,7 @@ public final class FrequencyBindingClient {
     public static TextureToggleButton createToolbarButton(FrequencyBindingMenu menu) {
         var button = new TextureToggleButton(
                 TextureToggleButton.ButtonType.FREQUENCY_BIND,
-                ignored -> PacketDistributor.sendToServer(OpenFrequencyMenuPacket.forBlock()));
+                ignored -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(OpenFrequencyMenuPacket.forBlock()));
         button.setTooltipAt(0, List.of(Component.translatable("ae2lt.gui.frequency.bind")));
         return button;
     }
@@ -23,7 +23,7 @@ public final class FrequencyBindingClient {
     public static TextureToggleButton createCardToolbarButton() {
         var button = new TextureToggleButton(
                 TextureToggleButton.ButtonType.FREQUENCY_BIND,
-                ignored -> PacketDistributor.sendToServer(OpenFrequencyMenuPacket.forCard()));
+                ignored -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(OpenFrequencyMenuPacket.forCard()));
         button.setTooltipAt(0, List.of(Component.translatable("ae2lt.gui.button.open_frequency_card")));
         return button;
     }
@@ -31,7 +31,7 @@ public final class FrequencyBindingClient {
     public static TextureToggleButton createCardAutoConnectToolbarButton() {
         var button = new TextureToggleButton(
                 TextureToggleButton.ButtonType.MODE,
-                ignored -> PacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forTerminalCard()));
+                ignored -> net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forTerminalCard()));
         button.setTooltipOff(List.of(Component.translatable("ae2lt.gui.button.auto_connect_off")));
         button.setTooltipOn(List.of(Component.translatable("ae2lt.gui.button.auto_connect_on")));
         return button;

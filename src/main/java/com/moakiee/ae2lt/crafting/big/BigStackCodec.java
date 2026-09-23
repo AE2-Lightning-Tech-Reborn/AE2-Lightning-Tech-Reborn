@@ -23,7 +23,7 @@ public final class BigStackCodec {
                     BigAmounts.nonNegative(n);
                     if (n.signum() == 0) return;
                     var tag = new CompoundTag();
-                    tag.put("key", key.toTagGeneric(registries));
+                    tag.put("key", com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.writeKey(registries, key));
                     tag.putByteArray("amount", n.toByteArray());
                     list.add(tag);
                 });
@@ -34,9 +34,10 @@ public final class BigStackCodec {
         var values = new LinkedHashMap<AEKey, BigInteger>();
         for (var raw : list) {
             var tag = (CompoundTag) raw;
-            var key = AEKey.fromTagGeneric(registries, tag.getCompound("key"));
+            var key = com.moakiee.ae2lt.recipe.compat.LegacyAeStackTags.readKey(registries, tag.getCompoundOrEmpty("key"));
             if (key == null) throw new IllegalArgumentException("Unknown item in exact inventory");
-            var n = BigAmounts.nonNegative(new BigInteger(tag.getByteArray("amount")));
+            var n = BigAmounts.nonNegative(new BigInteger(tag.getByteArray("amount")
+                    .orElseThrow(() -> new IllegalArgumentException("Missing amount"))));
             if (n.signum() > 0) values.merge(key, n, BigInteger::add);
         }
         return values;

@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.menu;
 
 import java.util.List;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 
@@ -30,7 +30,7 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     public static final MenuType<OverloadedPatternProviderMenu> TYPE = MenuTypeBuilder
             .create((id, playerInventory, host) ->
                     new OverloadedPatternProviderMenu(id, playerInventory, host), PatternProviderLogicHost.class)
-            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+            .buildUnregistered(Identifier.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "overloaded_pattern_provider"));
 
     private static final int SLOTS_PER_PAGE = 36;
@@ -97,16 +97,16 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
         super(menuType, id, playerInventory, host);
         this.host = host;
 
-        registerClientAction("toggleMode", this::toggleMode);
-        registerClientAction("toggleAutoReturn", this::toggleAutoReturn);
-        registerClientAction("toggleWirelessDispatchMode", this::toggleWirelessDispatchMode);
-        registerClientAction("toggleWirelessSpeedMode", this::toggleWirelessSpeedMode);
-        registerClientAction("toggleFilteredImport", this::toggleFilteredImport);
-        registerClientAction("toggleAdaptiveBatch", this::toggleAdaptiveBatch);
-        registerClientAction("setMachineParallelism", Integer.class, this::setMachineParallelism);
-        registerClientAction("cycleBlockingMode", this::cycleBlockingMode);
-        registerClientAction("nextPage", this::nextPage);
-        registerClientAction("prevPage", this::prevPage);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleMode"), this::toggleMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoReturn"), this::toggleAutoReturn);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleWirelessDispatchMode"), this::toggleWirelessDispatchMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleWirelessSpeedMode"), this::toggleWirelessSpeedMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleFilteredImport"), this::toggleFilteredImport);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAdaptiveBatch"), this::toggleAdaptiveBatch);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Integer>("setMachineParallelism"), net.minecraft.network.codec.ByteBufCodecs.VAR_INT, this::setMachineParallelism);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleBlockingMode"), this::cycleBlockingMode);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("nextPage"), this::nextPage);
+        registerClientAction(new appeng.menu.guisync.ClientActionKey<Void>("prevPage"), this::prevPage);
 
         showPage(0);
         lastShownPage = -1;
@@ -203,7 +203,7 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     }
 
     public void clientSetMachineParallelism(int value) {
-        sendClientAction("setMachineParallelism", value);
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<>("setMachineParallelism"), value);
     }
 
     private void toggleAdaptiveBatch() {
@@ -281,31 +281,31 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     // -- Public forwarding methods for Screen button callbacks --
 
     public void clientToggleMode() {
-        sendClientAction("toggleMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleMode"));
     }
 
     public void clientToggleAutoReturn() {
-        sendClientAction("toggleAutoReturn");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAutoReturn"));
     }
 
     public void clientToggleWirelessDispatchMode() {
-        sendClientAction("toggleWirelessDispatchMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleWirelessDispatchMode"));
     }
 
     public void clientToggleWirelessSpeedMode() {
-        sendClientAction("toggleWirelessSpeedMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleWirelessSpeedMode"));
     }
 
     public void clientToggleFilteredImport() {
-        sendClientAction("toggleFilteredImport");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleFilteredImport"));
     }
 
     public void clientToggleAdaptiveBatch() {
-        sendClientAction("toggleAdaptiveBatch");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("toggleAdaptiveBatch"));
     }
 
     public void clientCycleBlockingMode() {
-        sendClientAction("cycleBlockingMode");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("cycleBlockingMode"));
     }
 
     // -- Client helpers --
@@ -367,11 +367,11 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     }
 
     public void clientNextPage() {
-        sendClientAction("nextPage");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("nextPage"));
     }
 
     public void clientPrevPage() {
-        sendClientAction("prevPage");
+        sendClientAction(new appeng.menu.guisync.ClientActionKey<Void>("prevPage"));
     }
 
     public int getCurrentPage() {

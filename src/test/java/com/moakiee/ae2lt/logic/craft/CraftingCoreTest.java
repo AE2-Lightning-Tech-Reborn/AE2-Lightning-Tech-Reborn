@@ -18,7 +18,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.level.Level;
@@ -473,10 +473,10 @@ class CraftingCoreTest {
         }
 
         @Override
-        public CompoundTag toTag(net.minecraft.core.HolderLookup.Provider registries) {
-            var tag = new CompoundTag();
-            tag.putString("id", id);
-            return tag;
+        public void toTag(net.minecraft.world.level.storage.ValueOutput output) {
+
+            output.putString("id", id);
+
         }
 
         @Override
@@ -485,8 +485,8 @@ class CraftingCoreTest {
         }
 
         @Override
-        public ResourceLocation getId() {
-            return ResourceLocation.fromNamespaceAndPath("ae2lt_test", id);
+        public Identifier getId() {
+            return Identifier.fromNamespaceAndPath("ae2lt_test", id);
         }
 
         @Override
@@ -520,7 +520,7 @@ class CraftingCoreTest {
 
     private static final class TestKeyType extends AEKeyType {
         private TestKeyType() {
-            super(ResourceLocation.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
+            super(Identifier.fromNamespaceAndPath("ae2lt_test", "key"), TestKey.class,
                     Component.literal("test key"));
         }
 

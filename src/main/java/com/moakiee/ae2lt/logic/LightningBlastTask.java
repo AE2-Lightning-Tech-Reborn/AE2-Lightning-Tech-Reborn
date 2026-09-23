@@ -229,7 +229,7 @@ public class LightningBlastTask {
         while (this.nextShellRadiusToQueue <= this.radius && queuedShells < QUEUE_LOOKAHEAD_SHELLS) {
             int shellRadius = this.nextShellRadiusToQueue++;
             for (BlockPos pos : buildShell(shellRadius)) {
-                double jitter = (this.level.random.nextDouble() * 2.0D - 1.0D) * SHELL_PRIORITY_JITTER;
+                double jitter = (this.level.getRandom().nextDouble() * 2.0D - 1.0D) * SHELL_PRIORITY_JITTER;
                 this.pendingBlastBlocks.add(new BlastCandidate(pos, shellRadius + jitter));
             }
             queuedShells++;
@@ -267,14 +267,14 @@ public class LightningBlastTask {
 
     private void queueAftershockBurst() {
         this.pendingLightningStrikes += DEFAULT_AFTERSHOCK_MIN_LIGHTNING
-                + this.level.random.nextInt(DEFAULT_AFTERSHOCK_MAX_LIGHTNING - DEFAULT_AFTERSHOCK_MIN_LIGHTNING + 1);
+                + this.level.getRandom().nextInt(DEFAULT_AFTERSHOCK_MAX_LIGHTNING - DEFAULT_AFTERSHOCK_MIN_LIGHTNING + 1);
     }
 
     private BlockPos getRandomStrikePos() {
         int horizontalRadius = Math.min(this.radius, DEFAULT_LIGHTNING_HORIZONTAL_RADIUS);
         while (true) {
-            int dx = this.level.random.nextInt(horizontalRadius * 2 + 1) - horizontalRadius;
-            int dz = this.level.random.nextInt(horizontalRadius * 2 + 1) - horizontalRadius;
+            int dx = this.level.getRandom().nextInt(horizontalRadius * 2 + 1) - horizontalRadius;
+            int dz = this.level.getRandom().nextInt(horizontalRadius * 2 + 1) - horizontalRadius;
             if (dx * dx + dz * dz > horizontalRadius * horizontalRadius) {
                 continue;
             }
@@ -284,8 +284,8 @@ public class LightningBlastTask {
     }
 
     private BlockPos resolveStrikePos(int x, int z, int fallbackY) {
-        int minY = this.level.getMinBuildHeight();
-        int maxY = this.level.getMaxBuildHeight() - 1;
+        int minY = this.level.getMinY();
+        int maxY = this.level.getMaxY();
         int y = this.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
 
         if (y <= minY) {
@@ -316,13 +316,14 @@ public class LightningBlastTask {
     }
 
     private void spawnLightningAt(BlockPos strikePos) {
-        LightningBolt lightningBolt = EntityType.LIGHTNING_BOLT.create(this.level);
+        LightningBolt lightningBolt = EntityType.LIGHTNING_BOLT.create(this.level,
+                net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (lightningBolt == null) {
             return;
         }
 
         Vec3 centerPos = Vec3.atBottomCenterOf(strikePos);
-        lightningBolt.moveTo(centerPos.x, strikePos.getY(), centerPos.z);
+        lightningBolt.setPos(centerPos.x, strikePos.getY(), centerPos.z);
         lightningBolt.setVisualOnly(false);
         this.level.addFreshEntity(lightningBolt);
     }
@@ -363,7 +364,7 @@ public class LightningBlastTask {
         }
 
         double chance = clampDouble((blastScore - blockScore + CHANCE_FLOOR) / CHANCE_DIVISOR, 0.0D, 1.0D);
-        return chance > 0.0D && level.random.nextDouble() < chance;
+        return chance > 0.0D && level.getRandom().nextDouble() < chance;
     }
 
     private static double computeBlastScore(double distanceRatio, int radius) {
@@ -422,14 +423,15 @@ public class LightningBlastTask {
     }
 
     private boolean isBreakProtected(BlockPos pos, BlockState state) {
-        long key = ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4);
+        long key = ChunkPos.pack(pos.getX() >> 4, pos.getZ() >> 4);
         if (this.chunkProtectionCache.containsKey(key)) {
             return this.chunkProtectionCache.get(key);
         }
         Player breaker = getBreakerPlayer();
         boolean cancelled;
         try {
-            BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(this.level, pos, state, breaker);
+            net.neoforged.neoforge.event.level.block.BreakBlockEvent event =
+                    new net.neoforged.neoforge.event.level.block.BreakBlockEvent(this.level, pos, state, breaker);
             NeoForge.EVENT_BUS.post(event);
             cancelled = event.isCanceled();
         } catch (Throwable ignored) {

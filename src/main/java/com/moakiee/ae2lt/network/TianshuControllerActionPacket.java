@@ -50,7 +50,7 @@ public record TianshuControllerActionPacket(int token, BlockPos pos, Action acti
                 || !menu.getBlockPos().equals(pos)
                 || !menu.stillValid(player)
                 || !(player.level().getBlockEntity(pos) instanceof TianshuSupercomputerControllerBlockEntity controller)) {
-            player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
+            com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.gui.error.rejected")
                     .withStyle(ChatFormatting.RED), true);
             return;
         }
@@ -67,7 +67,7 @@ public record TianshuControllerActionPacket(int token, BlockPos pos, Action acti
                             player,
                             MenuLocators.forBlockEntity(port));
                 } else {
-                    player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
+                    com.moakiee.ae2lt.recipe.compat.LegacyPlayerMessages.display(player, Component.translatable("ae2lt.gui.error.rejected")
                             .withStyle(ChatFormatting.RED), true);
                 }
             }

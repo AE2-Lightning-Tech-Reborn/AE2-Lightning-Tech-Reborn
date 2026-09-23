@@ -7,24 +7,12 @@
     "ICI"
   ],
   "key": {
-    "R": {
-      "item": "ae2:crystal_resonance_generator"
-    },
-    "P": {
-      "item": "ae2lt:pigmee_fumo"
-    },
-    "G": {
-      "item": "ae2:growth_accelerator"
-    },
-    "S": {
-      "item": "ae2:cell_component_1k"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "C": {
-      "item": "minecraft:copper_ingot"
-    }
+    "R": "ae2:crystal_resonance_generator",
+    "P": "ae2lt:pigmee_fumo",
+    "G": "ae2:growth_accelerator",
+    "S": "ae2:cell_component_1k",
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:copper_ingot"
   },
   "result": {
     "count": 1,

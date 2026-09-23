@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.recipe;
 import com.moakiee.ae2lt.registry.ModFumos;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
@@ -17,8 +16,15 @@ import net.minecraft.world.level.Level;
  * Unlike the Creative Pigmee recipe, this recipe has no arbitrary-item duplication fallback.
  */
 public final class HyperdimensionalPigmeeConversionRecipe extends CustomRecipe {
+    private final CraftingBookCategory category;
+
     public HyperdimensionalPigmeeConversionRecipe(CraftingBookCategory category) {
-        super(category);
+        this.category = category;
+    }
+
+    @Override
+    public CraftingBookCategory category() {
+        return category;
     }
 
     @Override
@@ -27,17 +33,16 @@ public final class HyperdimensionalPigmeeConversionRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+    public ItemStack assemble(CraftingInput input) {
         return PigmeeConversionLogic.createResult(findTarget(input));
     }
 
-    @Override
     public boolean canCraftInDimensions(int width, int height) {
         return width * height >= 2;
     }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<HyperdimensionalPigmeeConversionRecipe> getSerializer() {
         return ModRecipeTypes.HYPERDIMENSIONAL_PIGMEE_CONVERSION_SERIALIZER.get();
     }
 
