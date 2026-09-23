@@ -10,6 +10,7 @@ import appeng.api.networking.crafting.ICraftingRequester;
 import appeng.api.networking.crafting.ICraftingSimulationRequester;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
+import appeng.api.stacks.KeyCounter;
 import appeng.crafting.CraftingLink;
 import appeng.me.service.CraftingService;
 import com.google.common.collect.ImmutableSet;
@@ -345,6 +346,7 @@ public final class TianshuInventoryMaintenanceService
     }
 
     private void pollCalculations(CraftingService crafting, java.util.Set<UUID> activeRuleIds) {
+        var available = new AvailableStackSnapshot();
         var iterator = calculations.entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
@@ -375,11 +377,14 @@ public final class TianshuInventoryMaintenanceService
                     statuses.put(rule.id(), InventoryMaintenanceStatus.IDLE);
                     continue;
                 }
-                if (!respectsCurrentReservedStock(rule.id(), plan)) {
+                if (!respectsCurrentReservedStock(rule.id(), plan, available)) {
                     statuses.put(rule.id(), InventoryMaintenanceStatus.WAITING_RETRY);
                     scheduleRetry(rule.id());
                     continue;
                 }
+                // submitJob can extract network stock. Drop the copy so the next plan
+                // observes what remains.
+                available.invalidate();
                 var submitted = crafting.submitJob(plan, this, null, false, host.getActionSource());
                 if (!submitted.successful() || submitted.link() == null) {
                     statuses.put(rule.id(), InventoryMaintenanceStatus.WAITING_CPU);
@@ -404,24 +409,31 @@ public final class TianshuInventoryMaintenanceService
         retryAfter.put(ruleId, (level != null ? level.getGameTime() : 0L) + RETRY_INTERVAL);
     }
 
-    private boolean respectsCurrentReservedStock(UUID ruleId, ICraftingPlan plan) {
+    private boolean respectsCurrentReservedStock(
+            UUID ruleId, ICraftingPlan plan, AvailableStackSnapshot availableStacks) {
         var grid = host.getGrid();
         if (grid == null || plan == null) return false;
         var policy = reservedStockPolicy(ruleId);
         if (policy.isEmpty()) return true;
-        var inventory = grid.getStorageService().getInventory();
-        var available = inventory.getAvailableStacks();
+        var available = availableStacks.get(grid);
+        Map<AEKey, Map<AEKey, Long>> groups = null;
         for (var used : plan.usedItems()) {
             if (used.getLongValue() <= 0L) continue;
             var key = used.getKey();
             long current = Math.max(0L, available.get(key));
             long usable;
             if (policy.groupsSecondaryVariants(key)) {
-                var group = new HashMap<AEKey, Long>();
-                for (var entry : available) {
-                    if (entry.getKey().dropSecondary().equals(key.dropSecondary())) {
-                        group.put(entry.getKey(), Math.max(0L, entry.getLongValue()));
+                var primary = key.dropSecondary();
+                if (groups == null) groups = new HashMap<>();
+                var group = groups.get(primary);
+                if (group == null) {
+                    group = new HashMap<>();
+                    for (var entry : available) {
+                        if (entry.getKey().dropSecondary().equals(primary)) {
+                            group.put(entry.getKey(), Math.max(0L, entry.getLongValue()));
+                        }
                     }
+                    groups.put(primary, group);
                 }
                 usable = policy.usablePreexistingStock(key, current, group);
             } else {
@@ -566,6 +578,25 @@ public final class TianshuInventoryMaintenanceService
         for (int i = 0; i < linkTags.size(); i++) {
             try { links.add(new CraftingLink(linkTags.getCompound(i), this)); }
             catch (RuntimeException ignored) { }
+        }
+    }
+
+    /** One network copy shared by reserved-stock checks until a submit can extract. */
+    private static final class AvailableStackSnapshot {
+        private IGrid grid;
+        private KeyCounter stacks;
+
+        KeyCounter get(IGrid current) {
+            if (stacks == null || this.grid != current) {
+                this.grid = current;
+                stacks = current.getStorageService().getInventory().getAvailableStacks();
+            }
+            return stacks;
+        }
+
+        void invalidate() {
+            grid = null;
+            stacks = null;
         }
     }
 
