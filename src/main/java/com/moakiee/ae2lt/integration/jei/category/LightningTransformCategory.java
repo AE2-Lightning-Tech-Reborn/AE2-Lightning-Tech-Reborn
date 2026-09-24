@@ -43,7 +43,7 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
     private static final int ARROW_RIGHT_X = 81;
     private static final int ARROW_Y = 24;
     private static final int LABEL_Y = 4;
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private final IDrawable background;
     private final IDrawable icon;

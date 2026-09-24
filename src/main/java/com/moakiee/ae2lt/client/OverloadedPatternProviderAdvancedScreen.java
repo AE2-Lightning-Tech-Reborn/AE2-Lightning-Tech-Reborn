@@ -149,7 +149,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
-        int wirelessColor = menu.isWirelessMode() ? 0x404040 : 0x909090;
+        int wirelessColor = menu.isWirelessMode() ? 0xFF404040 : 0xFF909090;
         if (wirelessTuningVisible) {
             guiGraphics.text(
                     font,
@@ -172,7 +172,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
                     LABEL_X,
                     FILTER_Y,
-                    0x404040,
+                    0xFF404040,
                     false);
         }
         if (wirelessTuningVisible) {
@@ -181,7 +181,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     14, 105, wirelessColor, false);
             guiGraphics.text(font,
                     Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
-                    14, 147, 0x707070, false);
+                    14, 147, 0xFF707070, false);
         }
         if (wirelessTuningVisible && !menu.isWirelessMode()) {
             guiGraphics.text(
@@ -189,7 +189,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
                     14,
                     161,
-                    0x707070,
+                    0xFF707070,
                     false);
         }
     }

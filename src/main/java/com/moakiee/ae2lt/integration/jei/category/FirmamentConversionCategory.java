@@ -68,7 +68,7 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
     private static final int TIME_TEXT_Y = SLOT_AREA_Y + SLOT_AREA_HEIGHT + 6;     // 64
     private static final int HEIGHT = TIME_TEXT_Y + 12;                             // 76
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private final IDrawable icon;
 

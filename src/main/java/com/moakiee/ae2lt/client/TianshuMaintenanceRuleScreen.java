@@ -150,11 +150,11 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         graphics.text(font, Component.translatable(draft.data.ruleId() == null
                         ? "ae2lt.tianshu.maintenance.create_title"
                         : "ae2lt.tianshu.maintenance.edit_title"),
-                10, 9, 0x30343B, false);
+                10, 9, 0xFF30343B, false);
         graphics.item(draft.data.target().wrapForDisplayOrFilter(), 16, 32);
         graphics.text(font,
                 font.plainSubstrByWidth(draft.data.target().getDisplayName().getString(), 147),
-                39, 29, 0x30343B, false);
+                39, 29, 0xFF30343B, false);
         var stockAndStatus = Component.translatable("ae2lt.tianshu.maintenance.stock_and_status",
                 compactAmount(draft.data.target(), draft.data.currentStock()),
                 Component.translatable(statusKey(draft.data.status())));
@@ -162,34 +162,34 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                 39, 41, statusColor(draft.data.status()), false);
 
         graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.lower"),
-                10, 57, 0x505760, false);
+                10, 57, 0xFF505760, false);
         graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.upper"),
-                73, 57, 0x505760, false);
+                73, 57, 0xFF505760, false);
         graphics.text(font, Component.translatable("ae2lt.tianshu.maintenance.batch"),
-                137, 57, 0x505760, false);
+                137, 57, 0xFF505760, false);
 
         Component validationError = validationError();
         if (validationError != null) {
             graphics.text(font,
                     font.plainSubstrByWidth(validationError.getString(), 181),
-                    10, 116, 0xB22F36, false);
+                    10, 116, 0xFFB22F36, false);
         } else if (draft.data.recoveryPage()) {
             graphics.text(font,
                     Component.translatable("ae2lt.tianshu.maintenance.recovery_page"),
-                    10, 116, 0xA73535, false);
+                    10, 116, 0xFFA73535, false);
         } else {
             graphics.text(font,
                     Component.translatable("ae2lt.tianshu.maintenance.topology"),
-                    10, 116, 0x5D646D, false);
+                    10, 116, 0xFF5D646D, false);
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.stock"),
-                    117, 116, 0x5D646D);
+                    117, 116, 0xFF5D646D);
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.global_short"),
-                    151, 116, 0x5D646D);
+                    151, 116, 0xFF5D646D);
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.rule_short"),
-                    179, 116, 0x5D646D);
+                    179, 116, 0xFF5D646D);
         }
         drawTopology(graphics, mouseX - leftPos, mouseY - topPos);
     }
@@ -209,13 +209,13 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
             graphics.item(entry.key.wrapForDisplayOrFilter(), 11 + indent, y + 1);
             graphics.text(font,
                     font.plainSubstrByWidth(entry.key.getDisplayName().getString(), 69 - indent),
-                    31 + indent, y + 4, entry.craftable ? 0x30343B : 0xA73535, false);
+                    31 + indent, y + 4, entry.craftable ? 0xFF30343B : 0xFFA73535, false);
             drawRightAligned(graphics, Component.literal(compactAmount(entry.key, entry.storedAmount)),
-                    125, y + 4, 0x444B53);
+                    125, y + 4, 0xFF444B53);
             drawRightAligned(graphics, reserveText(entry.globalAmount, entry.globalMode),
-                    158, y + 4, entry.globalAmount == 0L ? 0x7A8087 : 0x245E91);
+                    158, y + 4, entry.globalAmount == 0L ? 0xFF7A8087 : 0xFF245E91);
             drawRightAligned(graphics, reserveText(entry.ruleAmount, entry.ruleMode),
-                    185, y + 4, entry.ruleAmount == 0L ? 0x7A8087 : 0x794D91);
+                    185, y + 4, entry.ruleAmount == 0L ? 0xFF7A8087 : 0xFF794D91);
         }
     }
 
@@ -383,10 +383,10 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
 
     private static int statusColor(InventoryMaintenanceStatus status) {
         return switch (InventoryMaintenanceBadge.from(status)) {
-            case GREEN -> 0x2B8E43;
-            case YELLOW -> 0x9B6A16;
-            case RED -> 0xB2353B;
-            case GRAY -> 0x6E7379;
+            case GREEN -> 0xFF2B8E43;
+            case YELLOW -> 0xFF9B6A16;
+            case RED -> 0xFFB2353B;
+            case GRAY -> 0xFF6E7379;
         };
     }
 
@@ -594,23 +594,23 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
         public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
             graphics.text(font, Component.translatable("ae2lt.tianshu.reserve.title"),
-                    10, 9, 0x30343B, false);
+                    10, 9, 0xFF30343B, false);
             graphics.item(reserve.key.wrapForDisplayOrFilter(), 16, 32);
             graphics.text(font,
                     font.plainSubstrByWidth(reserve.key.getDisplayName().getString(), 147),
-                    39, 35, 0x30343B, false);
+                    39, 35, 0xFF30343B, false);
             graphics.text(font, Component.translatable("ae2lt.tianshu.reserve.current_stock",
-                    compactAmount(reserve.key, reserve.storedAmount)), 10, 83, 0x59616B, false);
+                    compactAmount(reserve.key, reserve.storedAmount)), 10, 83, 0xFF59616B, false);
             var amountLabel = Component.translatable("ae2lt.tianshu.reserve.amount");
             graphics.text(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
-                    10, 99, 0x40464E, false);
+                    10, 99, 0xFF40464E, false);
 
             var selectedMode = global ? globalMode : ruleMode;
             if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY) {
                 if (!variants.isEmpty()) {
                     graphics.text(font,
                             Component.translatable("ae2lt.tianshu.reserve.variant_title"),
-                            10, 116, 0x555D66, false);
+                            10, 116, 0xFF555D66, false);
                     int start = scrollbar.getCurrentScroll();
                     int end = Math.min(variants.size(), start + VISIBLE_VARIANTS);
                     for (int index = start; index < end; index++) {
@@ -620,16 +620,16 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                         graphics.text(font,
                                 font.plainSubstrByWidth(
                                         variant.key().getDisplayName().getString(), 112),
-                                33, y + 4, 0x3C434B, false);
+                                33, y + 4, 0xFF3C434B, false);
                         String stock = compactAmount(variant.key(), variant.storedAmount());
                         graphics.text(font, stock, 185 - font.width(stock), y + 4,
-                                variant.craftable() ? 0x2F6D3C : 0x5C636B, false);
+                                variant.craftable() ? 0xFF2F6D3C : 0xFF5C636B, false);
                     }
                 } else {
                     var emptyText = Component.translatable(
                             "ae2lt.tianshu.reserve.variant_empty");
                     graphics.text(font, emptyText,
-                            98 - font.width(emptyText) / 2, 156, 0x5D646D, false);
+                            98 - font.width(emptyText) / 2, 156, 0xFF5D646D, false);
                 }
             }
         }

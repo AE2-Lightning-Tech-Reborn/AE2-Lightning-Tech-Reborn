@@ -24,8 +24,8 @@ import mezz.jei.api.gui.builder.ITooltipBuilder;
  */
 public final class LargeStackCountRenderer {
     private static final float SCALE = 0.75F;
-    private static final int SHADOW_COLOR = 0x413f54;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int SHADOW_COLOR = 0xFF413f54;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     private LargeStackCountRenderer() {
     }

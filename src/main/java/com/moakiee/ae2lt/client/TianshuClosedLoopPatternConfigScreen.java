@@ -342,7 +342,7 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             graphics.text(font,
                     Component.translatable("ae2lt.tianshu.closed_loop.page_count",
                             rows == 0 ? 0 : scrollbar.getCurrentScroll() + 1, rows),
-                    8, 173, 0x666666, false);
+                    8, 173, 0xFF666666, false);
         }
     }
 
@@ -354,11 +354,11 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             int y = TianshuPatternConfigLayout.HEADER_HEIGHT
                     + visible * TianshuPatternConfigLayout.ROW_HEIGHT + 8;
             var stack = menu.getClosedLoopMemberSlots().get(index).getItem();
-            graphics.text(font, Integer.toString(index + 1), NAME_X, y, 0x777777, false);
+            graphics.text(font, Integer.toString(index + 1), NAME_X, y, 0xFF777777, false);
             if (!stack.isEmpty()) {
                 graphics.text(font,
                         font.plainSubstrByWidth(stack.getHoverName().getString(), MEMBER_NAME_WIDTH),
-                        NAME_X + 13, y, 0x404040, false);
+                        NAME_X + 13, y, 0xFF404040, false);
             }
         }
     }
@@ -376,7 +376,7 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             var name = generic != null && generic.what() != null
                     ? generic.what().getDisplayName().getString() : stack.getHoverName().getString();
             graphics.text(font, font.plainSubstrByWidth(name, width),
-                    NAME_X, y, 0x404040, false);
+                    NAME_X, y, 0xFF404040, false);
         }
     }
 
@@ -390,7 +390,7 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             graphics.item(GenericStack.wrapInItemStack(entry), SLOT_X, rowY + ROW_SLOT_Y_OFFSET);
             graphics.text(font,
                     font.plainSubstrByWidth(entry.what().getDisplayName().getString(), RESULT_NAME_WIDTH),
-                    NAME_X, rowY + 8, 0x404040, false);
+                    NAME_X, rowY + 8, 0xFF404040, false);
             var poseStack = graphics.pose();
             poseStack.pushMatrix();
             poseStack.translate(0, 0);
@@ -424,13 +424,13 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
                 Component.translatable("ae2lt.tianshu.closed_loop.candidate",
                         menu.closedLoopCandidateCount == 0 ? 0 : menu.closedLoopCandidateIndex + 1,
                         menu.closedLoopCandidateCount),
-                12, top + 8, 0x404040, false);
+                12, top + 8, 0xFF404040, false);
         graphics.text(font,
                 Component.translatable("ae2lt.tianshu.closed_loop.execution_multiplier"),
-                12, SETTINGS_EXECUTION_ROW_Y + 2, 0x404040, false);
+                12, SETTINGS_EXECUTION_ROW_Y + 2, 0xFF404040, false);
         graphics.text(font,
                 Component.translatable("ae2lt.tianshu.closed_loop.stored_multiplier"),
-                12, SETTINGS_STORED_ROW_Y + 2, 0x404040, false);
+                12, SETTINGS_STORED_ROW_Y + 2, 0xFF404040, false);
     }
 
     @Override
@@ -581,10 +581,10 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
 
     private static int statusColor(ClosedLoopDraftStatus status) {
         return switch (status) {
-            case VALID, ENCODED -> 0x228822;
-            case EMPTY, NO_CANDIDATE -> 0x666666;
-            case MISSING_PRIMARY_OUTPUT -> 0xAA7700;
-            default -> 0xAA3333;
+            case VALID, ENCODED -> 0xFF228822;
+            case EMPTY, NO_CANDIDATE -> 0xFF666666;
+            case MISSING_PRIMARY_OUTPUT -> 0xFFAA7700;
+            default -> 0xFFAA3333;
         };
     }
 

@@ -103,7 +103,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
                 Component.translatable("ae2lt.gui.matrix_port.search"));
         searchField.setBordered(false);
         searchField.setMaxLength(64);
-        searchField.setTextColor(0xF2F2F2);
+        searchField.setTextColor(0xFFF2F2F2);
         searchField.setHint(GuiText.SearchPlaceholder.text().copy().setStyle(
                 Style.EMPTY.withColor(TextColor.fromRgb(0xDEDFE3))));
         searchField.setResponder(ignored -> refreshList(true));
@@ -148,7 +148,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
                 Component.translatable("ae2lt.gui.matrix_port.title"),
                 7,
                 7,
-                0x404040,
+                0xFF404040,
                 false);
     }
 

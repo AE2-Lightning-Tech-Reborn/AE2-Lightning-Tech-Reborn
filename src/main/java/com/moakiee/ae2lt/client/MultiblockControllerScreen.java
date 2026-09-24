@@ -29,14 +29,14 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
     protected static final int FOOTER_ROW_Y = 138;
     protected static final int FOOTER_MID_Y = 144;
 
-    protected static final int COL_TITLE = 0x2A2E3F;
-    protected static final int COL_LABEL = 0x4E5370;
-    protected static final int COL_VALUE = 0x14161F;
-    protected static final int COL_MUTED = 0x565C78;
-    protected static final int COL_GREEN = 0x1C6B34;
-    protected static final int COL_AMBER = 0x7A5E14;
-    protected static final int COL_RED = 0x8F2B23;
-    protected static final int COL_BLUE = 0x1F4E79;
+    protected static final int COL_TITLE = 0xFF2A2E3F;
+    protected static final int COL_LABEL = 0xFF4E5370;
+    protected static final int COL_VALUE = 0xFF14161F;
+    protected static final int COL_MUTED = 0xFF565C78;
+    protected static final int COL_GREEN = 0xFF1C6B34;
+    protected static final int COL_AMBER = 0xFF7A5E14;
+    protected static final int COL_RED = 0xFF8F2B23;
+    protected static final int COL_BLUE = 0xFF1F4E79;
 
     protected MultiblockControllerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title, 209, 167);

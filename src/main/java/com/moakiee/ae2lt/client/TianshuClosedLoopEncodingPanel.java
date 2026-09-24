@@ -227,7 +227,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         pose.translate(x + CONTROL_X, y + labelY);
         pose.scale(LABEL_SCALE, LABEL_SCALE);
         graphics.text(font, font.plainSubstrByWidth(
-                text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0, 0x404040, false);
+                text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0, 0xFF404040, false);
         pose.popMatrix();
     }
 
@@ -329,17 +329,17 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     }
 
     private int statusColor() {
-        if (menu.uploadState != 0) return menu.uploadState == 1 ? 0x228822 : 0xAA2222;
+        if (menu.uploadState != 0) return menu.uploadState == 1 ? 0xFF228822 : 0xFFAA2222;
         return switch (menu.seedRefillSync.state()) {
-            case SeedRefillSync.STATE_COMPLETE -> 0x228822;
-            case SeedRefillSync.STATE_NETWORK_MISSING -> 0xAA7700;
-            case SeedRefillSync.STATE_STORAGE_BLOCKED, SeedRefillSync.STATE_MIXED -> 0xAA2222;
-            case SeedRefillSync.STATE_UNAVAILABLE -> 0xAA2222;
+            case SeedRefillSync.STATE_COMPLETE -> 0xFF228822;
+            case SeedRefillSync.STATE_NETWORK_MISSING -> 0xFFAA7700;
+            case SeedRefillSync.STATE_STORAGE_BLOCKED, SeedRefillSync.STATE_MIXED -> 0xFFAA2222;
+            case SeedRefillSync.STATE_UNAVAILABLE -> 0xFFAA2222;
             default -> switch (menu.closedLoopDraftStatus) {
-                case VALID, ENCODED -> 0x228822;
-                case EMPTY, NO_CANDIDATE -> 0x666666;
-                case MISSING_PRIMARY_OUTPUT -> 0xAA7700;
-                default -> 0xAA2222;
+                case VALID, ENCODED -> 0xFF228822;
+                case EMPTY, NO_CANDIDATE -> 0xFF666666;
+                case MISSING_PRIMARY_OUTPUT -> 0xFFAA7700;
+                default -> 0xFFAA2222;
             };
         };
     }

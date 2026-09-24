@@ -69,17 +69,17 @@ public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodin
     public void drawFG(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
         graphics.text(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
-                10, 30, 0x404040, false);
+                10, 30, 0xFF404040, false);
         drawWrapped(graphics, Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"), 10, 72, 180);
         graphics.text(font,
                 Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
-                10, 118, 0x404040, false);
+                10, 118, 0xFF404040, false);
         drawWrapped(graphics, Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"), 10, 160, 180);
     }
 
     private void drawWrapped(GuiGraphicsExtractor graphics, Component component, int x, int y, int width) {
         for (var line : font.split(component, width)) {
-            graphics.text(font, line, x, y, 0x666666, false);
+            graphics.text(font, line, x, y, 0xFF666666, false);
             y += font.lineHeight;
         }
     }

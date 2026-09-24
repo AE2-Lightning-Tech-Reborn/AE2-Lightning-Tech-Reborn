@@ -61,7 +61,7 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
     private static final int MATERIAL_CELL = 18;
     private static final int MATERIALS_PER_ROW = 4;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private final IDrawable background;
     private final IDrawable icon;

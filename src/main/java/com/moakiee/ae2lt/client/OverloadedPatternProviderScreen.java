@@ -115,7 +115,7 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
             guiGraphics.text(this.font, pageText,
                     PatternProviderPageIndicator.centeredX(this.imageWidth, textWidth),
                     33,
-                    0x404040,
+                    0xFF404040,
                     false);
         }
     }
