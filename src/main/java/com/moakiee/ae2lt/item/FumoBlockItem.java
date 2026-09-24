@@ -21,7 +21,7 @@ public class FumoBlockItem extends BlockItem  {
     }
 
     public FumoBlockItem(Block block, Item.Properties properties, String tooltipKey) {
-        super(block, properties.equippable(EquipmentSlot.HEAD));
+        super(block, properties.useBlockDescriptionPrefix().equippable(EquipmentSlot.HEAD));
         this.tooltipKey = tooltipKey;
     }
 

@@ -73,6 +73,12 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
         guiGraphics.text(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
     }
 
+    /** A longer summary uses a second line so translated labels never overlap its value. */
+    protected void drawStackedRow(GuiGraphicsExtractor guiGraphics, int y, Component label, String value, int valueColor) {
+        guiGraphics.text(font, label, TEXT_X, y, COL_LABEL, false);
+        guiGraphics.text(font, value, VALUE_RIGHT - font.width(value), y + LINE_H, valueColor, false);
+    }
+
     /** Word-wrapped issue text at the top of the body recess, with a muted hint below. */
     protected void drawUnformed(GuiGraphicsExtractor guiGraphics, Component issue, String hintKey) {
         int y = ROW_Y;

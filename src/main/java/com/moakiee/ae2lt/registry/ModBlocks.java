@@ -387,7 +387,7 @@ public final class ModBlocks {
             String name, Supplier<T> blockFactory) {
         var registered = registerExternalBlock(name, blockFactory);
         ModItems.ITEMS.register(name, id -> new BlockItem(registered.get(),
-                ModItems.registeredProperties(new Item.Properties().stacksTo(1), id)));
+                ModItems.registeredProperties(new Item.Properties().stacksTo(1), id).useBlockDescriptionPrefix()));
         return registered;
     }
 
@@ -411,8 +411,8 @@ public final class ModBlocks {
         if (shouldRegisterItem.get()) {
             ModItems.ITEMS.register(name, id -> registered.get() instanceof TianshuSupercomputingUnitBlock unit
                     ? new com.moakiee.ae2lt.item.TianshuSupercomputingUnitItem(unit,
-                            ModItems.registeredProperties(new Item.Properties(), id))
-                    : new BlockItem(registered.get(), ModItems.registeredProperties(new Item.Properties(), id)));
+                            ModItems.registeredProperties(new Item.Properties(), id).useBlockDescriptionPrefix())
+                    : new BlockItem(registered.get(), ModItems.registeredProperties(new Item.Properties(), id).useBlockDescriptionPrefix()));
         }
         return registered;
     }

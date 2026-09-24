@@ -29,7 +29,8 @@ public final class PhaseLockProjectionItem extends Item {
     private final EquipmentSlot equipmentSlot;
 
     public PhaseLockProjectionItem(Properties properties, EquipmentSlot equipmentSlot) {
-        super(properties.stacksTo(1).fireResistant().equippable(equipmentSlot)
+        super(properties.overrideDescription("item.ae2lt.phase_lock_projection")
+                .stacksTo(1).fireResistant().equippable(equipmentSlot)
                 .attributes(CelestweaveArmorMaterials.CELESTWEAVE.createAttributes(armorType(equipmentSlot)))
                 .enchantable(CelestweaveArmorMaterials.CELESTWEAVE.enchantmentValue()));
         this.equipmentSlot = equipmentSlot;
