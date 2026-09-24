@@ -32,8 +32,13 @@ class RailgunSettingsTest {
     }
 
     @Test
-    void executionModeCyclesThroughAllThreeStates() {
-        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.OFF.next());
+    void executionModeCyclesThroughFourStates() {
+        assertEquals(RailgunExecutionMode.PERCENTAGE, RailgunExecutionMode.OFF.next());
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.PERCENTAGE.next());
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.OFF.next(false));
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.PERCENTAGE.forMultidimensional());
+        assertFalse(RailgunExecutionMode.PERCENTAGE.entersExecutionFlow());
+        assertFalse(RailgunExecutionMode.PERCENTAGE.forcesRemoval());
         assertEquals(RailgunExecutionMode.FORCED, RailgunExecutionMode.NORMAL.next());
         assertEquals(RailgunExecutionMode.OFF, RailgunExecutionMode.FORCED.next());
     }
@@ -87,5 +92,23 @@ class RailgunSettingsTest {
         assertFalse(disabled.chargedSplash());
         assertTrue(disabled.chainDamage());
         assertEquals(RailgunExecutionMode.NORMAL, disabled.executionMode());
+    }
+
+    @Test
+    void oldSavedRailgunsKeepBeamDisabledAndNewModesRoundTripIndependently() {
+        var old = RailgunSettings.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(
+                "{\"terrain\":false,\"pvp\":false,\"execution_mode\":\"forced\"}"))
+                .result().orElseThrow();
+        assertEquals(RailgunExecutionMode.FORCED, old.executionMode());
+        assertFalse(old.ehvBeamEnabled());
+        var original = old.withEhvBeam(true).withExecutionMode(RailgunExecutionMode.PERCENTAGE)
+                .withSound(false).withChainDamage(false).withChargedSplash(false).withTerrain(true).withPvp(true);
+        assertTrue(original.ehvBeamEnabled());
+        var encoded = RailgunSettings.CODEC.encodeStart(JsonOps.INSTANCE, original).result().orElseThrow();
+        assertEquals(original, RailgunSettings.CODEC.parse(JsonOps.INSTANCE, encoded).result().orElseThrow());
+        assertEquals(RailgunExecutionMode.PERCENTAGE, original.withEhvBeam(false).executionMode());
+        assertEquals(0, RailgunExecutionMode.OFF.ordinal());
+        assertEquals(1, RailgunExecutionMode.NORMAL.ordinal());
+        assertEquals(2, RailgunExecutionMode.FORCED.ordinal());
     }
 }

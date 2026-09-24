@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "ae2lt:electromagnetic"
+    "ae2lt:electromagnetic",
+    "ae2lt:electromagnetic_ehv_beam"
   ]
 }

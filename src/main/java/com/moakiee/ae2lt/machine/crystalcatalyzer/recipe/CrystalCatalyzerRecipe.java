@@ -19,6 +19,9 @@ import com.moakiee.ae2lt.recipe.compat.LegacyMachineRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidStackTemplate;
 
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
@@ -35,12 +38,12 @@ import com.moakiee.ae2lt.registry.ModRecipeTypes;
  *     <li>{@code energyPerCycle}: total energy (AE) consumed per cycle.</li>
  * </ul>
  *
- * <p>Fluid cost is <strong>not</strong> part of the recipe anymore — the machine always
- * drains a fixed amount of water per cycle regardless of which recipe runs (see
- * {@code CrystalCatalyzerBlockEntity.FIXED_FLUID_PER_CYCLE}).</p>
+ * <p>{@code inputFluid} is consumed once per cycle, without parallel or matrix scaling.
+ * Omitted fluid data retains the legacy cost of 1000 mB water.</p>
  */
 public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<CrystalCatalyzerRecipeInput> {
     public static final int MIN_ENERGY_PER_CYCLE = 1;
+    public static final int DEFAULT_FLUID_PER_CYCLE_MB = 1_000;
 
     private static final Codec<Integer> POSITIVE_ENERGY_CODEC = Codec.INT.validate(energy -> {
         if (energy < MIN_ENERGY_PER_CYCLE) {
@@ -75,6 +78,11 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
     private final int lightningCost;
     private final LightningKey.Tier lightningTier;
     private final Mode mode;
+    private final FluidStackTemplate fluidInput;
+
+    public static FluidStack defaultFluidInput() {
+        return new FluidStack(Fluids.WATER, DEFAULT_FLUID_PER_CYCLE_MB);
+    }
 
     public CrystalCatalyzerRecipe(
             Optional<Ingredient> catalyst,
@@ -93,6 +101,27 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
             int lightningCost,
             LightningKey.Tier lightningTier,
             Mode mode) {
+        this(catalyst, catalystCount, output, energyPerCycle, lightningCost, lightningTier, mode,
+                new FluidStackTemplate(Fluids.WATER, DEFAULT_FLUID_PER_CYCLE_MB));
+    }
+
+    public CrystalCatalyzerRecipe(
+            Optional<Ingredient> catalyst,
+            int catalystCount,
+            CrystalCatalyzerOutput output,
+            int energyPerCycle,
+            int lightningCost,
+            LightningKey.Tier lightningTier,
+            Mode mode,
+            FluidStack fluidInput) {
+        this(catalyst, catalystCount, output, energyPerCycle, lightningCost, lightningTier, mode,
+                FluidStackTemplate.fromNonEmptyStack(fluidInput));
+    }
+
+    private CrystalCatalyzerRecipe(
+            Optional<Ingredient> catalyst, int catalystCount, CrystalCatalyzerOutput output,
+            int energyPerCycle, int lightningCost, LightningKey.Tier lightningTier, Mode mode,
+            FluidStackTemplate fluidInput) {
         this.catalyst = Objects.requireNonNull(catalyst, "catalyst");
         this.catalystCount = catalystCount;
         this.output = Objects.requireNonNull(output, "output");
@@ -100,6 +129,7 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
         this.lightningCost = lightningCost;
         this.lightningTier = Objects.requireNonNull(lightningTier, "lightningTier");
         this.mode = Objects.requireNonNull(mode, "mode");
+        this.fluidInput = Objects.requireNonNull(fluidInput, "fluidInput");
         if (catalyst.isPresent() && catalystCount <= 0) {
             throw new IllegalArgumentException("catalystCount must be positive when catalyst is present");
         }
@@ -143,6 +173,19 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
         return mode;
     }
 
+    public FluidStack fluidInput() {
+        return fluidInput.create();
+    }
+
+    public boolean isWaterRecipe() {
+        return fluidInput.fluid().value() == Fluids.WATER;
+    }
+
+    public boolean fluidMatches(FluidStack available) {
+        return FluidStack.isSameFluidSameComponents(fluidInput(), available)
+                && available.getAmount() >= fluidInput.amount();
+    }
+
     public boolean catalystMatches(ItemStack stack) {
         if (catalyst.isEmpty()) {
             return stack.isEmpty();
@@ -155,7 +198,7 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
 
     @Override
     public boolean matches(CrystalCatalyzerRecipeInput input, Level level) {
-        return catalystMatches(input.catalyst());
+        return catalystMatches(input.catalyst()) && fluidMatches(input.fluid());
     }
 
     @Override
@@ -205,7 +248,11 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
                         POSITIVE_ENERGY_CODEC.fieldOf("energyPerCycle").forGetter(CrystalCatalyzerRecipe::energyPerCycle),
                         POSITIVE_LIGHTNING_COST_CODEC.fieldOf("lightningCost").forGetter(CrystalCatalyzerRecipe::lightningCost),
                         LightningKey.Tier.CODEC.optionalFieldOf("lightningTier", LightningKey.Tier.HIGH_VOLTAGE).forGetter(CrystalCatalyzerRecipe::lightningTier),
-                        Mode.CODEC.optionalFieldOf("mode", Mode.CRYSTAL).forGetter(CrystalCatalyzerRecipe::mode))
+                        Mode.CODEC.optionalFieldOf("mode", Mode.CRYSTAL).forGetter(CrystalCatalyzerRecipe::mode),
+                        // Recipe decoding precedes component binding in 26.1; keep a template until runtime.
+                        FluidStackTemplate.CODEC.optionalFieldOf("inputFluid",
+                                        new FluidStackTemplate(Fluids.WATER, DEFAULT_FLUID_PER_CYCLE_MB))
+                                .forGetter(recipe -> recipe.fluidInput))
                 .apply(instance, CrystalCatalyzerRecipe::new));
 
         private static final StreamCodec<RegistryFriendlyByteBuf, Optional<Ingredient>> OPTIONAL_INGREDIENT_STREAM_CODEC =
@@ -222,6 +269,7 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
             ByteBufCodecs.VAR_INT.encode(buf, recipe.lightningCost);
             TIER_STREAM_CODEC.encode(buf, recipe.lightningTier);
             ByteBufCodecs.VAR_INT.encode(buf, recipe.mode.ordinal());
+            FluidStackTemplate.STREAM_CODEC.encode(buf, recipe.fluidInput);
         }
 
         private static CrystalCatalyzerRecipe decode(RegistryFriendlyByteBuf buf) {
@@ -235,8 +283,9 @@ public final class CrystalCatalyzerRecipe implements LegacyMachineRecipe<Crystal
             Mode mode = modeOrdinal >= 0 && modeOrdinal < Mode.values().length
                     ? Mode.values()[modeOrdinal]
                     : Mode.CRYSTAL;
+            FluidStackTemplate fluidInput = FluidStackTemplate.STREAM_CODEC.decode(buf);
             return new CrystalCatalyzerRecipe(catalyst, catalystCount, output, energyPerCycle,
-                    lightningCost, lightningTier, mode);
+                    lightningCost, lightningTier, mode, fluidInput);
         }
 
         public static final RecipeSerializer<CrystalCatalyzerRecipe> INSTANCE = new RecipeSerializer<>(CODEC, STREAM_CODEC);

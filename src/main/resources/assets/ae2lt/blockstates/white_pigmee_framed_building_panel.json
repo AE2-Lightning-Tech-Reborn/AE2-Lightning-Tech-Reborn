@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "": {
+      "type": "ae2lt:connected_texture",
+      "base": "ae2lt:block/pigmee_building/white_pigmee_framed_building_panel",
+      "ctm": "ae2lt:block/pigmee_building/white_pigmee_framed_building_panel_ctm",
+      "connection": "ae2lt:same_block",
+      "render_type": "minecraft:solid"
+    }
+  }
+}

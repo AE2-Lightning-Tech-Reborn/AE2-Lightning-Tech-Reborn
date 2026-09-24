@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.registry;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
+import com.moakiee.ae2lt.blockentity.NetworkedCrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
 import com.moakiee.ae2lt.blockentity.GhostOutputBlockEntity;
@@ -109,7 +110,7 @@ public final class ModBlockEntities {
             CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
                     "crystal_catalyzer",
                     () -> com.moakiee.ae2lt.recipe.compat.LegacyBlockEntityTypes.of(
-                            CrystalCatalyzerBlockEntity::new,
+                            NetworkedCrystalCatalyzerBlockEntity::new,
                             ModBlocks.CRYSTAL_CATALYZER.get())
                             );
 

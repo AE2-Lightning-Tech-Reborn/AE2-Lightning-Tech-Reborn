@@ -1,0 +1,18 @@
+// 26.1.2: run with -Pae2ltAlphaPortGameTest=true runAlphaPortGameTestServer.
+// Optional integration JARs can be passed through -Pae2ltAppGenProbeMods.
+allprojects {
+    afterEvaluate {
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei'])
+        }
+        providers.gradleProperty('ae2ltAppGenProbeMods').getOrElse('')
+                .split(java.io.File.pathSeparator).findAll { !it.isBlank() }.each {
+                    dependencies.add('runtimeOnly', files(it))
+                }
+        neoForge.runs.alphaPortGameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('appgen-processor-gametest').get().asFile
+            systemProperty 'ae2lt.alphaPortTestGroup', 'appgen'
+        }
+    }
+}

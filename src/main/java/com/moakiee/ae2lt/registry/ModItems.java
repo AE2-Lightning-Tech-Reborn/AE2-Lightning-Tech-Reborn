@@ -515,6 +515,12 @@ public final class ModItems {
                     registeredProperties(new Item.Properties(), registryId).stacksTo(16).rarity(Rarity.RARE),
                     RailgunModuleType.ACCELERATION));
 
+    public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_EHV_BEAM = ITEMS.register(
+            "railgun_module_ehv_beam",
+            registryId -> new RailgunModuleItem(
+                    registeredProperties(new Item.Properties(), registryId).stacksTo(16).rarity(Rarity.EPIC),
+                    RailgunModuleType.EHV_BEAM));
+
     public static final DeferredItem<RailgunModuleItem> RAILGUN_MODULE_RANGE = ITEMS.register(
             "railgun_module_range",
             registryId -> new RailgunModuleItem(

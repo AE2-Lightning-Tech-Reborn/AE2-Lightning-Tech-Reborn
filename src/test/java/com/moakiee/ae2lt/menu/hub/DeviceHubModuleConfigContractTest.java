@@ -47,7 +47,7 @@ final class DeviceHubModuleConfigContractTest {
 
         assertTrue(status.contains("settings.executionMode()"));
         assertTrue(status.contains("settings.chargedSplash()"));
-        assertTrue(menu.contains("s.withExecutionMode(s.executionMode().next())"));
+        assertTrue(menu.contains("s.withExecutionMode(next)"));
         assertTrue(menu.contains("s.withChargedSplash(!s.chargedSplash())"));
         assertTrue(screen.contains("RAILGUN_SETTING_EXECUTION_MODE"));
         assertTrue(screen.contains("menu.getExecutionMode().translationKey()"));

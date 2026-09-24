@@ -18,6 +18,43 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("pigmee_drops_legacy_wireless_binding", "fluid", 100, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeDropsLegacyWirelessBindingOnLoad);
+        add("building_recipe_loads_is_visible_and_survives_network_sync", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.recipeLoadsIsVisibleAndSurvivesNetworkSync(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_pickup_and_shift_craft_preserve_named_stacked_pigmee", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.pickupAndShiftCraftPreserveNamedStackedPigmee(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_shift_craft_stops_at_full_inventory_without_spending_ingredients", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.shiftCraftStopsAtFullInventoryWithoutSpendingIngredients(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_other_pigmee_recipes_still_consume_pigmee", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.otherPigmeeRecipesStillConsumePigmee(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_basic_block_has_simple_placement_and_self_drop", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.basicBlockHasSimplePlacementAndSelfDrop(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_all_thirty_two_panels_place_and_drop_without_block_entities", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.allThirtyTwoPanelsPlaceAndDropWithoutBlockEntities(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_all_inputs_offer_all_thirty_two_dye_free_stonecutting_outputs", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.allInputsOfferAllThirtyTwoDyeFreeStonecuttingOutputs(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_finished_panels_return_one_basic_block_in_both_crafting_grids", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.finishedPanelsReturnOneBasicBlockInBothCraftingGrids(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("building_conversion_recipes_do_not_accept_unrelated_materials", "building", 100, helper -> { try { com.moakiee.ae2lt.debug.PigmeeBuildingGameTests.conversionRecipesDoNotAcceptUnrelatedMaterials(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("seed_reconcile_through_real_controller_and_me_network", "seed", 200, helper -> { try { com.moakiee.ae2lt.debug.TianshuSeedRefillGameTests.reconcileThroughRealControllerAndMeNetwork(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("quantum_pattern_menu_survives_stale_bridge", "quantum", 100, helper -> { try { com.moakiee.ae2lt.debug.TianshuQuantumBridgeGameTests.patternMenuSurvivesStaleBridge(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("quantum_crafting_menu_survives_stale_bridge", "quantum", 100, helper -> { try { com.moakiee.ae2lt.debug.TianshuQuantumBridgeGameTests.craftingMenuSurvivesStaleBridge(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("quantum_status_and_connection_refresh_discard_stale_bridge", "quantum", 100, helper -> { try { com.moakiee.ae2lt.debug.TianshuQuantumBridgeGameTests.statusAndConnectionRefreshDiscardStaleBridge(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("quantum_real_bridge_rebuild_and_wireless_crafting", "quantum", 240, helper -> { try { com.moakiee.ae2lt.debug.TianshuQuantumBridgeGameTests.realBridgeRebuildAndWirelessCrafting(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("quantum_real_bridge_loss_falls_back_to_local_access_point", "quantum", 140, helper -> { try { com.moakiee.ae2lt.debug.TianshuQuantumBridgeGameTests.realBridgeLossFallsBackToLocalAccessPoint(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("railgun_charged_percentages_are_ordinary_damage_and_never_double_apply", "railgun", 100, helper -> { try { com.moakiee.ae2lt.logic.railgun.RailgunCombatGameTests.chargedPercentagesAreOrdinaryDamageAndNeverDoubleApply(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("railgun_modes_modules_and_settings_stay_independent", "railgun", 100, helper -> { try { com.moakiee.ae2lt.logic.railgun.RailgunCombatGameTests.modesModulesAndSettingsStayIndependent(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("railgun_real_me_beam_pays_ehv_and_honors_continuous_damage", "railgun", 160, helper -> { try { com.moakiee.ae2lt.logic.railgun.RailgunCombatGameTests.realMeBeamPaysEhvAndHonorsContinuousDamage(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_optional_recipe_data_and_codecs", "fluid", 100, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.optionalRecipeDataAndCodecs(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_same_catalyst_different_fluids_select_correct_output", "fluid", 100, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.sameCatalystDifferentFluidsSelectCorrectOutput(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_legacy_water1024", "fluid", 200, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.legacyWater1024(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_fluxite1024", "fluid", 200, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.fluxite1024(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_uranium1024", "fluid", 200, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.uranium1024(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_time_crystal1024", "fluid", 200, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.timeCrystal1024(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_saved_cycle_waits_for_fluid_and_output", "fluid", 300, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.savedCycleWaitsForFluidAndOutput(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_pigmee_rejects_special_fluids_and_legacy_fluxite", "fluid", 200, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.pigmeeRejectsSpecialFluidsAndLegacyFluxite(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_changed_recipe_fluid_does_not_strand_saved_cycle", "fluid", 100, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.changedRecipeFluidDoesNotStrandSavedCycle(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_pigmee_still_needs100_distinct_ticks", "fluid", 350, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.pigmeeStillNeeds100DistinctTicks(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_pigmee_legacy_progress_still_resumes", "fluid", 500, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.pigmeeLegacyProgressStillResumes(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("fluid_normal_still_requires_energy_and_lightning", "fluid", 400, helper -> { try { com.moakiee.ae2lt.blockentity.CrystalCatalyzerFluidGameTests.normalStillRequiresEnergyAndLightning(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("appgen_origination_processor_loads_matches_and_syncs_only_with_app_gen", "appgen", 100, helper -> { try { com.moakiee.ae2lt.debug.AppGenProcessorGameTests.originationProcessorLoadsMatchesAndSyncsOnlyWithAppGen(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("appgen_ember_synthesis_preserves_upstream_reaction", "appgen", 100, helper -> { try { com.moakiee.ae2lt.debug.AppGenProcessorGameTests.emberSynthesisPreservesUpstreamReaction(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("appgen_ember_duplication_preserves_upstream_reaction", "appgen", 100, helper -> { try { com.moakiee.ae2lt.debug.AppGenProcessorGameTests.emberDuplicationPreservesUpstreamReaction(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("appgen_ember_charging_preserves_upstream_reaction", "appgen", 100, helper -> { try { com.moakiee.ae2lt.debug.AppGenProcessorGameTests.emberChargingPreservesUpstreamReaction(helper); } catch (Exception e) { throw new RuntimeException(e); } });
+        add("pigmeecapabilitiesandsharedrecipe", "fluid", 100, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeCapabilitiesAndSharedRecipe);
+        add("pigmeerepeatedticksdonotaccelerate", "fluid", 350, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeRepeatedTicksDoNotAccelerate);
         add("jei_wireless_supply", "jei", 200, com.moakiee.ae2lt.debug.JeiWirelessSupplyGameTests::supplyAndNativeTransfer);
         add("workstation_workstations", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::workstations);
         add("workstation_cell_workbench", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::cellWorkbench);
@@ -73,12 +110,17 @@ public final class AlphaPortTestMod {
         bus.addListener(com.moakiee.ae2lt.debug.PigmeeAdjacentStorageGameTests::registerCapabilities);
     }
     private void registerTests(RegisterGameTestsEvent event) {
-        Map<String, Holder<TestEnvironmentDefinition<?>>> groups = new HashMap<>();
+        // All groups use the same empty environment. A shared holder prevents 26.1's
+        // runner from repeatedly replacing chunk tickets while earlier batches still load.
+        var environment = event.registerEnvironment(id("regression"),
+                new TestEnvironmentDefinition.AllOf(List.of()));
         for (var spec : TESTS) {
             String groupFilter = System.getProperty("ae2lt.alphaPortTestGroup", "");
             if (!groupFilter.isEmpty() && !groupFilter.equals(spec.group)) continue;
-            var environment = groups.computeIfAbsent(spec.group, group -> event.registerEnvironment(id(group), new TestEnvironmentDefinition.AllOf(List.of())));
-            var template = spec.group.equals("workstation") ? Identifier.fromNamespaceAndPath("ae2lt", "workstation_test") : Identifier.fromNamespaceAndPath(switch (spec.group) {
+            var template = java.util.Set.of("workstation", "seed", "quantum").contains(spec.group) ? Identifier.fromNamespaceAndPath("ae2lt", "workstation_test") : Identifier.fromNamespaceAndPath(switch (spec.group) {
+                case "building", "appgen" -> "ae2lt_pigmee_storage";
+                case "fluid" -> "ae2lt_catalyzer";
+                case "railgun" -> "ae2lt_railgun";
                 case "jei" -> "ae2lt_jei_supply";
                 case "block" -> "ae2lt_anvil";
                 case "blockentity" -> "ae2lt_interface_input";

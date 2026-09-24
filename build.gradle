@@ -115,6 +115,9 @@ sourceSets {
         java.srcDir 'src/jdb/java'
         // These probes depend on EMI's pre-26 client API, which is outside this port.
         java.exclude 'com/moakiee/ae2lt/debug/PigmeeStationClientProbe.java'
+        java.exclude 'com/moakiee/ae2lt/debug/OmniversalTerminalClientProbe.java'
+        java.exclude 'com/moakiee/ae2lt/debug/OmniversalTerminalGameTests.java'
+        java.exclude 'com/moakiee/ae2lt/client/OmniversalProcessingClientProbe.java'
         java.exclude 'com/moakiee/ae2lt/debug/PigmeeCatalyzerClientProbe.java'
         // Server regressions use the alphaPortTest source set and its 26.1 registrar.
         java.exclude 'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java'
@@ -147,7 +150,15 @@ sourceSets {
                          'com/moakiee/ae2lt/debug/TianshuCellScrollFixture.java',
                          'com/moakiee/ae2lt/debug/JeiWirelessSupplyGameTests.java',
 
-                         'com/moakiee/ae2ltcpuselection/PigmeeSynthesisStationGameTests.java']
+                         'com/moakiee/ae2ltcpuselection/PigmeeSynthesisStationGameTests.java',
+                         'com/moakiee/ae2lt/debug/PigmeeBuildingGameTests.java',
+                         'com/moakiee/ae2lt/debug/TianshuSeedRefillGameTests.java',
+                         'com/moakiee/ae2lt/debug/TianshuQuantumBridgeGameTests.java',
+                         'com/moakiee/ae2lt/logic/railgun/RailgunCombatGameTests.java',
+                         'com/moakiee/ae2lt/blockentity/CrystalCatalyzerFluidGameTests.java',
+                         'com/moakiee/ae2lt/debug/AppGenProcessorGameTests.java',
+                         'com/moakiee/ae2lt/debug/TianshuJdbHarness.java',
+                         'com/moakiee/ae2ltcpuselection/PigmeeCrystalCatalyzerGameTests.java']
         resources.setSrcDirs(['src/jdb/resources'])
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
@@ -248,6 +259,12 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        crystalCatalyzerGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-crystal-catalyzer-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_catalyzer'
+        }
+
         cpuSelectionGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-cpu-selection-gametest')
@@ -285,6 +302,21 @@ neoForge {
             client()
             gameDirectory = project.file('run-alloy-anvil-client')
             systemProperty 'ae2lt.alloyAnvilClientProbe', 'true'
+        }
+
+        // Opt-in native compatibility suite; uses only its own generated fixtures and world.
+        omniversalGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-omniversal-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_omniversal'
+        }
+
+        omniversalClient {
+            client()
+            gameDirectory = project.file('run-omniversal-client')
+            systemProperty 'ae2lt.omniversalClientProbe', 'true'
+            programArguments.addAll '--username', 'OmniProbe', '--quickPlaySingleplayer', 'OmniProbe'
+            jvmArguments.add '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007'
         }
 
         // Fully generated wireless-I/O fixture: no saved world or manual block setup.
@@ -393,6 +425,10 @@ if (providers.gradleProperty('ae2ltAlloyAnvilTestsOnly').getOrElse('false').toBo
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 // EMI is deferred for this port at the user's request. AE2's previous EMI bridge
 // is absent from the 26.1.12-beta API; preserve the adapter sources for a later update.
+// Preserve unavailable 1.21.1 Useless Mod adapters as source until its 26.1 port exists.
+sourceSets.main.java.exclude 'com/moakiee/ae2lt/integration/useless/UselessModPatternBridge.java'
+sourceSets.main.java.exclude 'com/moakiee/ae2lt/integration/useless/UselessModClientTransfer.java'
+sourceSets.main.java.exclude 'com/moakiee/ae2lt/mixin/recipeviewer/useless/**'
 sourceSets.main.java.exclude 'com/moakiee/ae2lt/integration/emi/**'
 sourceSets.main.java.exclude 'com/moakiee/ae2lt/mixin/recipeviewer/emi/**'
 sourceSets.main.java.exclude 'com/moakiee/ae2lt/client/compat/**'

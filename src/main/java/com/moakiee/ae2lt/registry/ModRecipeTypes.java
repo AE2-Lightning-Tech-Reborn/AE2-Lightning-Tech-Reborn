@@ -10,6 +10,7 @@ import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationReci
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe;
 import com.moakiee.ae2lt.recipe.CreativePigmeeDuplicationRecipe;
 import com.moakiee.ae2lt.recipe.HyperdimensionalPigmeeConversionRecipe;
+import com.moakiee.ae2lt.recipe.PigmeeBuildingRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -120,6 +121,10 @@ public final class ModRecipeTypes {
                                     CraftingBookCategory.CODEC.optionalFieldOf("category", CraftingBookCategory.MISC)
                                             .xmap(HyperdimensionalPigmeeConversionRecipe::new, HyperdimensionalPigmeeConversionRecipe::category),
                                     StreamCodec.composite(CraftingBookCategory.STREAM_CODEC, HyperdimensionalPigmeeConversionRecipe::category, HyperdimensionalPigmeeConversionRecipe::new)));
+
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<net.minecraft.world.item.crafting.ShapedRecipe>>
+            PIGMEE_BUILDING_SERIALIZER =
+                    RECIPE_SERIALIZERS.register("pigmee_building", PigmeeBuildingRecipe::serializer);
 
     private ModRecipeTypes() {
     }

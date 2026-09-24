@@ -22,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -104,10 +103,7 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
         return new PatternContainerGroup(
                 AEItemKey.of(ModBlocks.CLOSED_LOOP_PATTERN_STORAGE.get()),
                 ModBlocks.CLOSED_LOOP_PATTERN_STORAGE.get().getName(),
-                List.of(Component.translatable(
-                        "ae2lt.tianshu.terminal.tooltip",
-                        patterns.size(),
-                        patterns.capacity())));
+                List.of());
     }
 
     public void dropStoredPatterns(Level level, BlockPos pos) {

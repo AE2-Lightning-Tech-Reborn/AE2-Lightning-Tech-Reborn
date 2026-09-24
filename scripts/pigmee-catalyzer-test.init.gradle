@@ -1,21 +1,22 @@
-// Isolated regression/client worlds; never load a development user's normal saves.
+// 26.1.2 native regression: -Pae2ltAlphaPortGameTest=true runAlphaPortGameTestServer.
+// Client Jade/menu probe: -Pae2ltJdbClientProbe=true -PpigmeeQuickPlay runClient.
 allprojects {
     afterEvaluate {
-        sourceSets.jdb.java.setIncludes([
-                '**/PigmeeCrystalCatalyzerGameTests.java',
-                '**/PigmeeCatalyzerClientProbe.java'])
+        sourceSets.jdb.java.setIncludes(['**/PigmeeCatalyzerJadeClientProbe.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
-            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'dev.emi']
-                    || dep.name in ['jei-238222', 'ae2-jei-integration-1074338'])
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei']
+                    || (!project.hasProperty('pigmeeHeadless') && dep.name == 'jade'))
         }
-        neoForge.runs.gameTestServer {
+        neoForge.runs.alphaPortGameTestServer {
             gameDirectory = project.layout.buildDirectory.dir('pigmee-catalyzer-gametest').get().asFile
+            systemProperty 'ae2lt.alphaPortTestGroup', 'fluid'
         }
         neoForge.runs.client {
-            gameDirectory = project.layout.buildDirectory.dir('pigmee-catalyzer-client').get().asFile
-            systemProperty 'ae2lt.pigmeeCatalyzerClientProbe', 'true'
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-catalyzer-jade-client').get().asFile
+            systemProperty 'ae2lt.pigmeeCatalyzerJadeProbe', 'true'
             if (project.hasProperty('pigmeeQuickPlay')) {
-                programArguments.addAll '--quickPlaySingleplayer', 'PigmeeCatalyzerTest'
+                programArguments.addAll '--quickPlaySingleplayer', 'PigmeeJadeTest'
             }
         }
     }

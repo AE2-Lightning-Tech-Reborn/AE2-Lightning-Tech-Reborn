@@ -1,0 +1,19 @@
+// Server: -Pae2ltAlphaPortGameTest=true runAlphaPortGameTestServer; client: -Pae2ltJdbClientProbe=true runClient.
+// Exercise the real crafting menu and building block in an isolated disposable world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PigmeeBuildingClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei'])
+        }
+        neoForge.runs.alphaPortGameTestServer {
+            systemProperty 'ae2lt.alphaPortTestGroup', 'building'
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-building-gametest').get().asFile
+        }
+        neoForge.runs.client {
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-building-client').get().asFile
+            systemProperty 'ae2lt.pigmeeBuildingClientProbe', 'true'
+            programArguments.addAll '--quickPlaySingleplayer', 'PigmeeBuildingReview'
+        }
+    }
+}

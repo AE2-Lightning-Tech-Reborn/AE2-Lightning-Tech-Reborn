@@ -13,9 +13,8 @@ public final class RailgunStructuralCore {
         if (railgun == null || railgun.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        return railgun
-                .getOrDefault(ModDataComponents.RAILGUN_STRUCTURAL_CORE.get(), ItemStack.EMPTY)
-                .copyWithCount(1);
+        var template = railgun.get(ModDataComponents.RAILGUN_STRUCTURAL_CORE.get());
+        return template == null ? ItemStack.EMPTY : template.withCount(1).create();
     }
 
     public static void setCore(ItemStack railgun, ItemStack core) {
@@ -29,7 +28,7 @@ public final class RailgunStructuralCore {
         if (!isValidCore(core)) {
             return;
         }
-        railgun.set(ModDataComponents.RAILGUN_STRUCTURAL_CORE.get(), core.copyWithCount(1));
+        railgun.set(ModDataComponents.RAILGUN_STRUCTURAL_CORE.get(), net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(core.copyWithCount(1)));
     }
 
     public static ItemStack removeCore(ItemStack railgun, int amount) {

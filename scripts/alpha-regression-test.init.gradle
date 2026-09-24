@@ -1,0 +1,9 @@
+// 26.1.2 native alpha regressions. Run with -Pae2ltAlphaPortGameTest=true runAlphaPortGameTestServer.
+allprojects {
+    afterEvaluate {
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei'])
+        }
+    }
+}

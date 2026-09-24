@@ -10,6 +10,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import com.moakiee.ae2lt.me.key.LightningKey;
 
@@ -20,6 +21,7 @@ public final class CrystalCatalyzerLockedRecipe {
     private static final String TAG_OUTPUT_MULTIPLIER = "OutputMultiplier";
     private static final String TAG_LIGHTNING_COST = "LightningCost";
     private static final String TAG_LIGHTNING_TIER = "LightningTier";
+    private static final String TAG_FLUID_INPUT = "InputFluid";
 
     private final Identifier recipeId;
     private final ItemStack output;
@@ -27,6 +29,7 @@ public final class CrystalCatalyzerLockedRecipe {
     private final int outputMultiplier;
     private final int lightningCost;
     private final LightningKey.Tier lightningTier;
+    private final FluidStack fluidInput;
 
     public CrystalCatalyzerLockedRecipe(
             Identifier recipeId,
@@ -35,12 +38,28 @@ public final class CrystalCatalyzerLockedRecipe {
             int outputMultiplier,
             int lightningCost,
             LightningKey.Tier lightningTier) {
+        this(recipeId, output, energyPerCycle, outputMultiplier, lightningCost, lightningTier,
+                CrystalCatalyzerRecipe.defaultFluidInput());
+    }
+
+    public CrystalCatalyzerLockedRecipe(
+            Identifier recipeId,
+            ItemStack output,
+            int energyPerCycle,
+            int outputMultiplier,
+            int lightningCost,
+            LightningKey.Tier lightningTier,
+            FluidStack fluidInput) {
         this.recipeId = Objects.requireNonNull(recipeId, "recipeId");
         this.output = Objects.requireNonNull(output, "output").copy();
         this.energyPerCycle = energyPerCycle;
         this.outputMultiplier = outputMultiplier;
         this.lightningCost = lightningCost;
         this.lightningTier = Objects.requireNonNull(lightningTier, "lightningTier");
+        this.fluidInput = Objects.requireNonNull(fluidInput, "fluidInput").copy();
+        if (fluidInput.isEmpty()) {
+            throw new IllegalArgumentException("inputFluid cannot be empty");
+        }
         if (output.isEmpty()) {
             throw new IllegalArgumentException("output cannot be empty");
         }
@@ -66,7 +85,8 @@ public final class CrystalCatalyzerLockedRecipe {
                 recipe.energyPerCycle(),
                 outputMultiplier,
                 recipe.lightningCost(),
-                recipe.lightningTier());
+                recipe.lightningTier(),
+                recipe.fluidInput());
     }
 
     public Identifier recipeId() {
@@ -97,6 +117,16 @@ public final class CrystalCatalyzerLockedRecipe {
         return energyPerCycle;
     }
 
+    public FluidStack fluidInput() {
+        return fluidInput.copy();
+    }
+
+    public boolean matchesFluidInput(CrystalCatalyzerRecipe recipe) {
+        var required = recipe.fluidInput();
+        return FluidStack.isSameFluidSameComponents(fluidInput, required)
+                && fluidInput.getAmount() == required.getAmount();
+    }
+
     public CompoundTag toTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putString(TAG_RECIPE_ID, recipeId.toString());
@@ -105,6 +135,7 @@ public final class CrystalCatalyzerLockedRecipe {
         tag.putInt(TAG_OUTPUT_MULTIPLIER, outputMultiplier);
         tag.putInt(TAG_LIGHTNING_COST, lightningCost);
         tag.putString(TAG_LIGHTNING_TIER, lightningTier.getSerializedName());
+        tag.put(TAG_FLUID_INPUT, FluidStack.OPTIONAL_CODEC.encodeStart(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), fluidInput).getOrThrow());
         return tag;
     }
 
@@ -156,12 +187,20 @@ public final class CrystalCatalyzerLockedRecipe {
             }
         }
 
+        FluidStack fluidInput = tag.contains(TAG_FLUID_INPUT)
+                ? FluidStack.OPTIONAL_CODEC.parse(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), tag.getCompoundOrEmpty(TAG_FLUID_INPUT)).result().orElse(FluidStack.EMPTY)
+                : CrystalCatalyzerRecipe.defaultFluidInput();
+        if (fluidInput.isEmpty()) {
+            return null;
+        }
+
         return new CrystalCatalyzerLockedRecipe(
                 Identifier.parse(tag.getStringOr(TAG_RECIPE_ID, "")),
                 output,
                 energy,
                 outputMultiplier,
                 lightningCost,
-                lightningTier);
+                lightningTier,
+                fluidInput);
     }
 }

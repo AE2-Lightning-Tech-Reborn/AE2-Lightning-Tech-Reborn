@@ -1,6 +1,9 @@
 package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.logic.EasterEggAudience;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -13,25 +16,32 @@ public final class EasterEggOverlay implements GuiLayer {
     private static final Identifier TEXTURE =
             Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/gui/easter_egg.png");
 
-    private static final int DISPLAY_TICKS = 40;
-
-    private static int ticksRemaining = 0;
+    private static final EasterEggDisplayState STATE = new EasterEggDisplayState();
+    private static GlobalPos source;
 
     private EasterEggOverlay() {
     }
 
-    public static void trigger() {
-        ticksRemaining = DISPLAY_TICKS;
+    public static void trigger(GlobalPos origin) {
+        if (isNearby(origin) && STATE.trigger()) source = origin;
     }
 
     public static boolean isActive() {
-        return ticksRemaining > 0;
+        return STATE.isActive();
     }
 
     public static void tick() {
-        if (ticksRemaining > 0) {
-            ticksRemaining--;
+        STATE.tick();
+        if (source != null && !isNearby(source)) {
+            STATE.dismiss();
+            source = null;
         }
+    }
+
+    private static boolean isNearby(GlobalPos origin) {
+        var mc = Minecraft.getInstance();
+        return origin != null && mc.player != null && mc.level != null
+                && EasterEggAudience.includes(origin, mc.level.dimension(), mc.player.position());
     }
 
     /**
@@ -40,21 +50,14 @@ public final class EasterEggOverlay implements GuiLayer {
      * tick counter does not retain references that survive the logical client).
      */
     public static void reset() {
-        ticksRemaining = 0;
+        STATE.reset();
+        source = null;
     }
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
-        if (ticksRemaining <= 0) {
+        if (!STATE.isVisible() || !isNearby(source)) {
             return;
-        }
-
-        int elapsed = DISPLAY_TICKS - ticksRemaining;
-        float alpha;
-        if (elapsed < 2) {
-            alpha = 0.0f;
-        } else {
-            alpha = 1.0f;
         }
 
         var mc = Minecraft.getInstance();
@@ -78,7 +81,7 @@ public final class EasterEggOverlay implements GuiLayer {
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
 
-        int tint = ((int) (Math.max(0.0F, Math.min(1.0F, alpha)) * 255.0F) << 24) | 0xFFFFFF;
+        int tint = 0xFFFFFFFF;
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
                 x, y, 0, 0, drawW, drawH, imgWidth, imgHeight, imgWidth, imgHeight, tint);
     }

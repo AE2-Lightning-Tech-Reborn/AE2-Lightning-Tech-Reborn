@@ -61,7 +61,8 @@ public final class ArmorPersistentData {
     }
 
     public static ItemStack structuralCore(ItemStack armor) {
-        return armor.getOrDefault(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get(), ItemStack.EMPTY).copyWithCount(1);
+        var template = armor.get(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get());
+        return template == null ? ItemStack.EMPTY : template.withCount(1).create();
     }
 
     public static void setStructuralCore(ItemStack armor, ItemStack stack) {
@@ -71,7 +72,8 @@ public final class ArmorPersistentData {
         if (stack == null || stack.isEmpty()) {
             armor.remove(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get());
         } else {
-            armor.set(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get(), stack.copyWithCount(1));
+            armor.set(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get(),
+                    net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(stack.copyWithCount(1)));
         }
     }
 
