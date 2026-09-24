@@ -81,7 +81,14 @@ public final class PortClientSmokeProbe {
         if (!Boolean.getBoolean("ae2lt.portClientSmokeProbe") || finished
                 || !BigIntegerNativeUiProbe.succeeded()) return;
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.getSingleplayerServer() == null) return;
+        if (mc.player == null || mc.getSingleplayerServer() == null) {
+            if (phase > 0) {
+                System.out.println("PORT_CLIENT_SMOKE_FAILED disconnected during phase=" + phase);
+                finished = true;
+                mc.stop();
+            }
+            return;
+        }
         try {
             if (pending) {
                 require(++waitTicks <= 1200, "server action timed out");
@@ -209,8 +216,34 @@ public final class PortClientSmokeProbe {
                         System.out.println("PORT_IPN_CONFIRMED tianshu-screen+wireless-menu-ignore");
                     }
                     shot("tianshu-jei-transfer");
+                    server(player -> {
+                        player.closeContainer();
+                        var pos = STATION.above(3);
+                        player.level().setBlockAndUpdate(pos, ModBlocks.CLOSED_LOOP_SEED_STORAGE.get().defaultBlockState());
+
+                    });
+                }
+                case 15 -> {
+                    require(mc.level.getBlockEntity(STATION.above(3)) instanceof com.moakiee.ae2lt.blockentity.TianshuSeedStorageBlockEntity,
+                            "seed block update must arrive before opening its menu");
+                    server(player -> MenuOpener.open(com.moakiee.ae2lt.menu.TianshuSeedStorageMenu.TYPE, player,
+                            MenuLocators.forBlockEntity(player.level().getBlockEntity(STATION.above(3)))));
+                }
+                case 16 -> {
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuSeedStorageScreen, "seed storage screen missing");
+                    var menu = ((com.moakiee.ae2lt.client.TianshuSeedStorageScreen) mc.screen).getMenu();
+                    var cells = menu.getSlots(SlotSemantics.STORAGE_CELL);
+                    require(cells.size() == 10, "seed storage cell count changed");
+                    for (var slot : cells) require(slot instanceof appeng.menu.slot.AppEngSlot aeSlot
+                            && aeSlot.getIcon() == appeng.util.Icon.BACKGROUND_STORAGE_CELL, "missing cell background");
+                    shot("seed-storage-slots");
+                    com.moakiee.ae2lt.client.OverloadAlloyAnvilClientProbe.verifyModels();
+                    mc.setScreen(new com.moakiee.ae2lt.client.OverloadAlloyAnvilClientProbe.Preview());
+                }
+                case 17 -> {
+                    shot("alloy-anvil-preview");
                     finished = true;
-                    System.out.println("PORT_CLIENT_SMOKE_CONFIRMED railgun+synced-recipes+jei-previews+pp-menus+return-mode-packets+pigmee-jei-transfer+tianshu-jei-transfer");
+                    System.out.println("PORT_CLIENT_SMOKE_CONFIRMED railgun+synced-recipes+jei-previews+pp-menus+return-mode-packets+pigmee-jei-transfer+tianshu-jei-transfer+seed-slot-icons+alloy-models");
                     mc.stop();
                 }
                 default -> throw new AssertionError("unexpected phase " + phase);
@@ -220,6 +253,7 @@ public final class PortClientSmokeProbe {
             finished = true;
             error.printStackTrace();
             System.out.println("PORT_CLIENT_SMOKE_FAILED phase=" + phase);
+            mc.stop();
         }
     }
 

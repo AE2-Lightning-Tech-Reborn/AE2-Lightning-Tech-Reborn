@@ -1,0 +1,15 @@
+// Optional cutting-board integration on 26.1.2. Run with -Pae2ltAlphaPortGameTest
+// -PpigmeeCuttingBoardJar=/path/to/a/26.1.2-NeoForge.jar runAlphaPortGameTestServer.
+allprojects {
+    afterEvaluate {
+        def cuttingBoardJar = providers.gradleProperty('pigmeeCuttingBoardJar').orNull
+        if (cuttingBoardJar == null || !file(cuttingBoardJar).isFile()) {
+            throw new GradleException("Set -PpigmeeCuttingBoardJar to a Farmer's Delight 26.1.2 NeoForge jar.")
+        }
+        dependencies.add('runtimeOnly', files(cuttingBoardJar))
+        neoForge.runs.alphaPortGameTestServer {
+            systemProperty 'ae2lt.alphaPortTestGroup', 'debug'
+            systemProperty 'ae2lt.pigmeeCuttingBoardTest', 'true'
+        }
+    }
+}

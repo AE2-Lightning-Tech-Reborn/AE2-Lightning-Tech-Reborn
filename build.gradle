@@ -104,6 +104,9 @@ tasks.register('printProjectVersion') {
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+def alphaPortTestsEnabled = providers.gradleProperty('ae2ltAlphaPortGameTest').isPresent()
+        || providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').isPresent()
+        || providers.gradleProperty('ae2ltAlloyAnvilTestsOnly').isPresent()
 
 // JDB-only helpers are available to development runs, but are intentionally
 // excluded from the published mod jar.
@@ -113,6 +116,10 @@ sourceSets {
         // These probes depend on EMI's pre-26 client API, which is outside this port.
         java.exclude 'com/moakiee/ae2lt/debug/PigmeeStationClientProbe.java'
         java.exclude 'com/moakiee/ae2lt/debug/PigmeeCatalyzerClientProbe.java'
+        // Server regressions use the alphaPortTest source set and its 26.1 registrar.
+        java.exclude 'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java'
+        java.exclude 'com/moakiee/ae2lt/block/OverloadAlloyAnvilGameTests.java'
+        java.exclude 'com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -128,6 +135,21 @@ sourceSets {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
+    alphaPortTest {
+        java.setSrcDirs(['src/jdb/java', 'src/cpuSelectionTest/java'])
+        java.includes = [
+                         'com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java',
+                         'com/moakiee/ae2lt/block/OverloadAlloyAnvilGameTests.java',
+                         'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java',
+                         'com/moakiee/ae2ltcpuselection/PigmeeSynthesisStationGameTests.java']
+        resources.setSrcDirs(['src/jdb/resources'])
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + sourceSets.main.runtimeClasspath
+    }
+    alphaPortRegistrar {
+        compileClasspath += sourceSets.main.output + sourceSets.alphaPortTest.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + sourceSets.alphaPortTest.output + sourceSets.main.runtimeClasspath
+    }
     wirelessPortRegistrar {
         java.srcDir 'src/wirelessPortRegistrar/java'
         compileClasspath += sourceSets.main.output + sourceSets.wirelessPortTest.output + sourceSets.main.compileClasspath
@@ -136,6 +158,12 @@ sourceSets {
 }
 
 configurations {
+    alphaPortRegistrarImplementation.extendsFrom implementation
+    alphaPortRegistrarCompileOnly.extendsFrom compileOnly
+    alphaPortRegistrarRuntimeOnly.extendsFrom runtimeOnly
+    alphaPortTestImplementation.extendsFrom implementation
+    alphaPortTestCompileOnly.extendsFrom compileOnly
+    alphaPortTestRuntimeOnly.extendsFrom runtimeOnly
     jdbImplementation.extendsFrom implementation
     jdbCompileOnly.extendsFrom compileOnly
     jdbRuntimeOnly.extendsFrom runtimeOnly
@@ -226,6 +254,33 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_wireless_port_test'
         }
 
+        alphaPortGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-alpha-port-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_alpha_port_test'
+            systemProperty 'ae2lt.pigmeeStorageRegression', 'true'
+        }
+
+        passiveInputGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-passive-input-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_alpha_port_test'
+            systemProperty 'ae2lt.alphaPortTestGroup', 'blockentity'
+        }
+
+        alloyAnvilGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-alloy-anvil-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_alpha_port_test'
+            systemProperty 'ae2lt.alphaPortTestGroup', 'block'
+        }
+
+        alloyAnvilClient {
+            client()
+            gameDirectory = project.file('run-alloy-anvil-client')
+            systemProperty 'ae2lt.alloyAnvilClientProbe', 'true'
+        }
+
         // Fully generated wireless-I/O fixture: no saved world or manual block setup.
         wirelessIoGameTestServer {
             type = "gameTestServer"
@@ -280,12 +335,18 @@ neoForge {
     }
 
     mods {
+        if (alphaPortTestsEnabled) {
+            ae2lt_alpha_port_test { sourceSet(sourceSets.alphaPortRegistrar) }
+        }
         // define mod <-> source bindings
         // these are used to tell the game which sources are for which mod
         // mostly optional in a single mod project
         // but multi mod projects should define one per mod
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            if (alphaPortTestsEnabled) {
+                sourceSet(sourceSets.alphaPortTest)
+            }
             if (providers.gradleProperty('ae2ltWirelessPortGameTest').isPresent()) {
                 sourceSet(sourceSets.wirelessPortTest)
             }
@@ -315,6 +376,14 @@ neoForge {
 }
 
 // Include resources generated by data generators.
+if (providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltAlloyAnvilTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/block/OverloadAlloyAnvilGameTests.java',
+                                   'com/moakiee/ae2lt/client/OverloadAlloyAnvilClientProbe.java'])
+}
+
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 // EMI is deferred for this port at the user's request. AE2's previous EMI bridge
 // is absent from the 26.1.12-beta API; preserve the adapter sources for a later update.

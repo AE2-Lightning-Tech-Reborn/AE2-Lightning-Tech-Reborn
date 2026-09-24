@@ -23,6 +23,9 @@ Source Code/
 
 # Local test/export assets
 else/
+run-passive-input-gametest/
+run-alloy-anvil-gametest/
+run-alloy-anvil-client/
 
 # OS files
 .DS_Store
@@ -61,3 +64,6 @@ CLAUDE.local.md
 /config/
 /run-cpu-selection-gametest/
 /run-big-native-probe/
+
+/run-alpha-port-gametest/
+/run-wireless-port-gametest/

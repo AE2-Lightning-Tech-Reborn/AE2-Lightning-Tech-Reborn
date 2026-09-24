@@ -19,6 +19,19 @@ public class OverloadedInterfaceBlock extends AEBaseEntityBlock<OverloadedInterf
     }
 
     @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack stack,
+                                net.minecraft.world.item.Item.TooltipContext context,
+                                java.util.function.Consumer<net.minecraft.network.chat.Component> tooltip,
+                                net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        if (stack.has(com.moakiee.ae2lt.registry.ModDataComponents.INTERFACE_INPUT_BUFFER.get())) {
+            tooltip.accept(net.minecraft.network.chat.Component.translatable(
+                    "tooltip.ae2lt.overloaded_interface.pending_input")
+                    .withStyle(net.minecraft.ChatFormatting.YELLOW));
+        }
+    }
+
+    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
         var be = this.getBlockEntity(level, pos);

@@ -1,0 +1,13 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GNU LGPL 3.0"
+[[mods]]
+modId = "ae2lt_alpha_port_test"
+version = "1.0.0"
+displayName = "AE2LT Main Synchronization Tests"
+[[dependencies.ae2lt_alpha_port_test]]
+modId = "ae2lt"
+type = "required"
+versionRange = "[2.1.0,)"
+ordering = "AFTER"
+side = "BOTH"

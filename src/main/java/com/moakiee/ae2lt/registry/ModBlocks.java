@@ -84,6 +84,10 @@ public final class ModBlocks {
         return BLOCKS.register(name, () -> construct(name, factory));
     }
 
+    public static final DeferredBlock<com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock> OVERLOAD_ALLOY_ANVIL =
+            registerBlock("overload_alloy_anvil", () -> new com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock(
+                    registeredProperties(BlockBehaviour.Properties.ofFullCopy(net.minecraft.world.level.block.Blocks.ANVIL))));
+
     private static final Supplier<BlockBehaviour.Properties> BUDDING_PROPERTIES = () -> BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
             .strength(3.0F, 5.0F)

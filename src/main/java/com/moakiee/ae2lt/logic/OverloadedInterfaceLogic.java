@@ -590,6 +590,21 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
             }
         }
 
+        /** Keep our network view out of storage-bus recursion while draining owned inputs. */
+        public boolean isNetworkOperationInProgress() {
+            return proxying;
+        }
+
+        public void runWithNetworkGuard(Runnable action) {
+            if (proxying) return;
+            proxying = true;
+            try {
+                action.run();
+            } finally {
+                proxying = false;
+            }
+        }
+
         public void setDisplayStack(int slot, @Nullable GenericStack stack) {
             stacks[slot] = stack;
         }

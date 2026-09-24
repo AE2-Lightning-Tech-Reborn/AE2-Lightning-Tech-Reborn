@@ -1,4 +1,6 @@
 {
+  "tooltip.ae2lt.overloaded_interface.pending_input": "Contains pending inputs. Place on a powered ME network to resume transfer.",
+  "block.ae2lt.overload_alloy_anvil": "Overload Alloy Anvil",
   "itemGroup.ae2lt": "AE2 Lightning Tech Reborn",
   "itemGroup.ae2lt.pigmee": "Lightning Tech? Pigmee Tech!",
   "structure.ae2lt.alien_starship": "Alien Starship",

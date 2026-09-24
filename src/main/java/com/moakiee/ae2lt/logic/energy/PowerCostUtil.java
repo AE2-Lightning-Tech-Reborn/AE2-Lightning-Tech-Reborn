@@ -72,6 +72,11 @@ public final class PowerCostUtil {
      * consuming the power via {@link #consume} after the transfer succeeds.
      */
     public static long maxAffordable(@Nullable IGrid grid, AEKey key, long requested) {
+        return maxAffordable(grid, key, requested, 0);
+    }
+
+    /** Accounts for earlier transfers in the same uncommitted NeoForge transaction. */
+    public static long maxAffordable(@Nullable IGrid grid, AEKey key, long requested, double reservedPower) {
         if (grid == null || key == null || requested <= 0) {
             return 0;
         }
@@ -80,7 +85,7 @@ public final class PowerCostUtil {
             return requested;
         }
         var energyService = grid.getEnergyService();
-        double reserve = idleReserveForIdlePowerUsage(energyService.getIdlePowerUsage());
+        double reserve = idleReserveForIdlePowerUsage(energyService.getIdlePowerUsage()) + reservedPower;
         double available = energyService
                 .extractAEPower(need + reserve, Actionable.SIMULATE, PowerMultiplier.CONFIG);
         double usable = available - reserve;

@@ -283,6 +283,7 @@ public class AE2LightningTech {
 
                         // 苍穹织雷装备、能量模块
                         output.accept(ModBlocks.OVERLOAD_DEVICE_WORKBENCH);
+                        output.accept(ModBlocks.OVERLOAD_ALLOY_ANVIL);
                         output.accept(ModItems.OVERLOAD_MODULE_BASE);
                         output.accept(ModItems.CELESTWEAVE_OCULUS);
                         output.accept(ModItems.CELESTWEAVE_CORE);
@@ -399,6 +400,12 @@ public class AE2LightningTech {
             WORKBENCH_REJECTING_ITEM_HANDLER = EmptyResourceHandler.instance();
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // AE2 26's generic adapter writes display slots; this proxy must commit through insert/extract.
+        event.registerBlockEntity(Capabilities.Item.BLOCK, ModBlockEntities.OVERLOADED_INTERFACE.get(),
+                (blockEntity, side) -> blockEntity.getTransferView().items());
+        event.registerBlockEntity(Capabilities.Fluid.BLOCK, ModBlockEntities.OVERLOADED_INTERFACE.get(),
+                (blockEntity, side) -> blockEntity.getTransferView().fluids());
+
         event.registerBlockEntity(
                 Capabilities.Item.BLOCK,
                 ModBlockEntities.LIGHTNING_COLLECTOR.get(),

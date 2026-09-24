@@ -20,11 +20,23 @@ public class FilteredInsertGenericInv implements GenericInternalInventory {
 
     private final GenericInternalInventory delegate;
     private final Predicate<AEKey> insertAllowed;
+    private final Insertion insertion;
+
+    @FunctionalInterface
+    public interface Insertion {
+        long insert(int slot, AEKey key, long amount, Actionable mode);
+    }
 
     public FilteredInsertGenericInv(GenericInternalInventory delegate,
                                     Predicate<AEKey> insertAllowed) {
+        this(delegate, insertAllowed, delegate::insert);
+    }
+
+    public FilteredInsertGenericInv(GenericInternalInventory delegate,
+                                    Predicate<AEKey> insertAllowed, Insertion insertion) {
         this.delegate = delegate;
         this.insertAllowed = insertAllowed;
+        this.insertion = insertion;
     }
 
     @Override
@@ -88,7 +100,7 @@ public class FilteredInsertGenericInv implements GenericInternalInventory {
     @Override
     public long insert(int slot, AEKey what, long amount, Actionable mode) {
         if (what == null || !insertAllowed.test(what)) return 0;
-        return delegate.insert(slot, what, amount, mode);
+        return insertion.insert(slot, what, amount, mode);
     }
 
     @Override
