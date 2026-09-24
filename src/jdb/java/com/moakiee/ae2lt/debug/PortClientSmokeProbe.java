@@ -49,11 +49,12 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 public final class PortClientSmokeProbe {
     private static final BlockPos PROVIDER = new BlockPos(14, 110, 9);
     private static final BlockPos STATION = new BlockPos(14, 110, 10);
-    private static int ticks, phase, waitTicks, returnMode;
-    private static boolean finished;
+    private static int ticks, phase = Boolean.getBoolean("ae2lt.portWorkstationOnly") ? 17 : 0, waitTicks, returnMode;
+    private static boolean finished, enteredWorld;
     private static volatile boolean pending;
     private static volatile Throwable failure;
     private static IJeiRuntime jei;
+    private static appeng.parts.AEBasePart craftingPart;
 
     private PortClientSmokeProbe() {}
 
@@ -79,16 +80,17 @@ public final class PortClientSmokeProbe {
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.portClientSmokeProbe") || finished
-                || !BigIntegerNativeUiProbe.succeeded()) return;
+                || (!Boolean.getBoolean("ae2lt.portWorkstationOnly") && !BigIntegerNativeUiProbe.succeeded())) return;
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.getSingleplayerServer() == null) {
-            if (phase > 0) {
+            if (enteredWorld) {
                 System.out.println("PORT_CLIENT_SMOKE_FAILED disconnected during phase=" + phase);
                 finished = true;
                 mc.stop();
             }
             return;
         }
+        enteredWorld = true;
         try {
             if (pending) {
                 require(++waitTicks <= 1200, "server action timed out");
@@ -241,9 +243,98 @@ public final class PortClientSmokeProbe {
                     mc.setScreen(new com.moakiee.ae2lt.client.OverloadAlloyAnvilClientProbe.Preview());
                 }
                 case 17 -> {
-                    shot("alloy-anvil-preview");
+                    if (jei == null) {
+                        var active = JEIPlugin.class.getDeclaredField("activePlugin");
+                        active.setAccessible(true);
+                        var runtime = JEIPlugin.class.getDeclaredField("runtime");
+                        runtime.setAccessible(true);
+                        if (active.get(null) == null) return;
+                        jei = (IJeiRuntime) runtime.get(active.get(null));
+                        if (jei == null) return;
+                    }
+                    if (!Boolean.getBoolean("ae2lt.portWorkstationOnly")) shot("alloy-anvil-preview");
+                    server(player -> {
+                        player.closeContainer();
+                        player.teleportTo((ServerLevel) player.level(), 4.5, 110, 2, Set.of(), 0, 0, true);
+                        MenuOpener.open(com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu.TYPE, player,
+                                MenuLocators.forBlockEntity(player.level().getBlockEntity(new BlockPos(4, 110, 4))));
+                    });
+                }
+                case 18 -> {
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuSupercomputerControllerScreen,
+                            "Tianshu controller screen missing");
+                    shot("tianshu-controller-text");
+                    server(player -> {
+                        player.closeContainer();
+                        var stack = new ItemStack(ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get());
+                        var drive = (appeng.blockentity.storage.DriveBlockEntity) player.level().getBlockEntity(new BlockPos(14, 110, 4));
+                        var access = (appeng.blockentity.networking.WirelessAccessPointBlockEntity) player.level().getBlockEntity(new BlockPos(14, 110, 7));
+                        if (drive.getMainNode().getNode().getGrid() != access.getMainNode().getNode().getGrid())
+                            appeng.api.networking.GridHelper.createConnection(drive.getMainNode().getNode(), access.getMainNode().getNode());
+                        stack.set(appeng.api.ids.AEComponents.WIRELESS_LINK_TARGET,
+                                net.minecraft.core.GlobalPos.of(player.level().dimension(), access.getBlockPos()));
+                        stack.set(appeng.api.ids.AEComponents.STORED_ENERGY, 1000000.0);
+                        player.getInventory().setItem(1, stack);
+                        player.getInventory().setItem(2, new ItemStack(Items.OAK_PLANKS, 4));
+                        player.inventoryMenu.broadcastChanges();
+                        MenuOpener.open(com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE,
+                                player, MenuLocators.forInventorySlot(1));
+                    });
+                }
+                case 19 -> {
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuCraftingTermScreen<?>,
+                            "Tianshu crafting screen missing");
+                    require(craftingMenu().getLinkStatus().connected(), "wireless crafting terminal failed to connect");
+                    require(java.math.BigInteger.TEN.pow(100).add(java.math.BigInteger.valueOf(12345))
+                            .equals(craftingMenu().getBigStock(AEItemKey.of(Items.OAK_LOG))),
+                            "wireless crafting terminal lost exact BigInteger stock");
+                    transferCraftingTable(craftingMenu());
+                }
+                case 20 -> {
+                    var menu = craftingMenu();
+                    require(menu.getSlots(SlotSemantics.CRAFTING_RESULT).getFirst().getItem().is(Items.CRAFTING_TABLE),
+                            "Tianshu JEI crafting result missing");
+                    shot("tianshu-crafting-jei");
+                    menu.setWorkPage(com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.SMITHING);
+                }
+                case 21, 22, 23, 24 -> {
+                    var menu = craftingMenu();
+                    var page = switch (phase) {
+                        case 21 -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.SMITHING;
+                        case 22 -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.ANVIL;
+                        case 23 -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.STONECUTTING;
+                        default -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.CELL;
+                    };
+                    require(menu.workPage == page, "workstation page did not synchronize: " + page);
+                    shot("tianshu-workstation-" + page.name().toLowerCase(java.util.Locale.ROOT));
+                    if (phase < 24) menu.setWorkPage(switch (phase) {
+                        case 21 -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.ANVIL;
+                        case 22 -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.STONECUTTING;
+                        default -> com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.CELL;
+                    });
+                    else server(player -> {
+                        player.closeContainer();
+                        var level = (ServerLevel) player.level();
+                        player.teleportTo(level, 14.5, 110, 7, Set.of(), 0, 0, true);
+                        craftingPart = appeng.api.parts.PartHelper.setPart(level, new BlockPos(14, 110, 6),
+                                net.minecraft.core.Direction.EAST, player, ModItems.TIANSHU_CRAFTING_TERMINAL.get());
+                        require(craftingPart != null, "wired crafting terminal could not be placed");
+                    });
+                }
+                case 25 -> server(player -> {
+                    var drive = (appeng.blockentity.storage.DriveBlockEntity) player.level().getBlockEntity(new BlockPos(14, 110, 4));
+                    if (drive.getMainNode().getNode().getGrid() != craftingPart.getMainNode().getNode().getGrid())
+                        appeng.api.networking.GridHelper.createConnection(drive.getMainNode().getNode(), craftingPart.getMainNode().getNode());
+                    MenuOpener.open(com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE, player, MenuLocators.forPart(craftingPart));
+                });
+                case 26 -> {
+                    require(craftingMenu().getClass() == com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class,
+                            "wired terminal did not open");
+                    shot("tianshu-wired-crafting");
                     finished = true;
-                    System.out.println("PORT_CLIENT_SMOKE_CONFIRMED railgun+synced-recipes+jei-previews+pp-menus+return-mode-packets+pigmee-jei-transfer+tianshu-jei-transfer+seed-slot-icons+alloy-models");
+                    System.out.println(Boolean.getBoolean("ae2lt.portWorkstationOnly")
+                            ? "PORT_WORKSTATION_UI_CONFIRMED controller-text+crafting-jei+five-workstation-pages+wired-crafting"
+                            : "PORT_CLIENT_SMOKE_CONFIRMED railgun+synced-recipes+jei-previews+pp-menus+return-mode-packets+pigmee-jei-transfer+tianshu-jei-transfer+seed-slot-icons+alloy-models+controller-text+crafting-jei+five-workstation-pages+wired-crafting");
                     mc.stop();
                 }
                 default -> throw new AssertionError("unexpected phase " + phase);
@@ -255,6 +346,13 @@ public final class PortClientSmokeProbe {
             System.out.println("PORT_CLIENT_SMOKE_FAILED phase=" + phase);
             mc.stop();
         }
+    }
+
+    private static com.moakiee.ae2lt.menu.TianshuCraftingTermMenu craftingMenu() {
+        var mc = Minecraft.getInstance();
+        require(mc.player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuCraftingTermMenu,
+                "crafting menu missing: " + mc.player.containerMenu);
+        return (com.moakiee.ae2lt.menu.TianshuCraftingTermMenu) mc.player.containerMenu;
     }
 
     private static void showStructure(int index) {

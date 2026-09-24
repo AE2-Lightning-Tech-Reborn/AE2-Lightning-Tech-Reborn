@@ -299,6 +299,11 @@ public final class ModItems {
             OverloadPatternEncoderItem::new,
             () -> new Item.Properties());
 
+    public static final DeferredItem<PartItem<com.moakiee.ae2lt.part.TianshuCraftingTerminalPart>> TIANSHU_CRAFTING_TERMINAL =
+            ITEMS.register("tianshu_crafting_terminal", registryId -> new PartItem<>(registeredProperties(new Item.Properties(), registryId),
+                    com.moakiee.ae2lt.part.TianshuCraftingTerminalPart.class,
+                    com.moakiee.ae2lt.part.TianshuCraftingTerminalPart::new));
+
     public static final DeferredItem<PartItem<TianshuPatternEncodingTerminalPart>> TIANSHU_PATTERN_ENCODING_TERMINAL =
             ITEMS.register("tianshu_pattern_encoding_terminal",
                     registryId -> new PartItem<>(registeredProperties(new Item.Properties(), registryId),
@@ -309,6 +314,10 @@ public final class ModItems {
             TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL = ITEMS.register(
                     "wireless_tianshu_pattern_encoding_terminal",
                     Ae2wtlibIntegration::terminal);
+
+    public static final DeferredItem<com.moakiee.ae2lt.item.TianshuWirelessCraftingTerminalItem>
+            TIANSHU_WIRELESS_CRAFTING_TERMINAL = ITEMS.register("wireless_tianshu_crafting_terminal",
+                    Ae2wtlibIntegration::craftingTerminal);
 
     public static final DeferredItem<Item> OVERLOADED_FILTER_COMPONENT = ITEMS.registerItem(
             "overloaded_filter_component",

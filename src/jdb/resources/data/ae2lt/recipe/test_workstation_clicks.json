@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:stone",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "minecraft:stone_slab",
+    "count": 2
+  }
+}

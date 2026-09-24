@@ -6,7 +6,8 @@
   "plugin": "com.moakiee.ae2lt.mixin.recipeviewer.RecipeViewerMixinPlugin",
   "client": [
     "jei.JeiEncodePatternTransferMixin",
-    "jei.JeiRecipeTransferButtonControllerMixin"
+    "jei.JeiRecipeTransferButtonControllerMixin",
+    "jeisupply.JeiWirelessSupplyMixin"
   ],
   "injectors": {
     "defaultRequire": 0

@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.crafting.big;
 import appeng.api.stacks.AEKey;
 import appeng.menu.AEBaseMenu;
 
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalHost;
 import com.moakiee.ae2lt.network.tianshu.BigStockPacket;
 import com.moakiee.thunderbolt.core.storage.big.BigStorageOps;
 
@@ -32,7 +32,7 @@ public final class BigTerminalStock {
                 });
     }
 
-    public void sync(AEBaseMenu menu, TianshuPatternTerminalHost tianshuHost) {
+    public void sync(AEBaseMenu menu, TianshuTerminalHost tianshuHost) {
         if (!(menu.getPlayer() instanceof ServerPlayer player)) return;
         long now = player.level().getGameTime();
         if (now < nextBigStockSync) return;

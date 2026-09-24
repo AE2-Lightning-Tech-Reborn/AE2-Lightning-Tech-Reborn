@@ -47,7 +47,10 @@
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "TianshuStonecutterMenuMixin",
+    "TianshuWorkstationContainerMixin",
+    "TianshuCuriosItemLocatorMixin"
   ],
   "client": [
     "client.CableBusRenderStateMixin",

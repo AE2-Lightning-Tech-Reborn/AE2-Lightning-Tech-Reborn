@@ -18,6 +18,18 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("jei_wireless_supply", "jei", 200, com.moakiee.ae2lt.debug.JeiWirelessSupplyGameTests::supplyAndNativeTransfer);
+        add("workstation_workstations", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::workstations);
+        add("workstation_cell_workbench", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::cellWorkbench);
+        add("workstation_native_anvil_callbacks", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::nativeAnvilCallbacks);
+        add("workstation_wireless", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::wireless);
+        add("workstation_shared_workstations_invalidate_other_viewers", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::sharedWorkstationsInvalidateOtherViewers);
+        add("workstation_wireless_workstations_survive_item_save_and_reload", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::wirelessWorkstationsSurviveItemSaveAndReload);
+        add("workstation_wired_part_saves_and_drops_only_real_inputs", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::wiredPartSavesAndDropsOnlyRealInputs);
+        add("workstation_manual_inputs_persist_across_close", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::manualInputsPersistAcrossClose);
+        add("workstation_ae2_click_parity", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::ae2ClickParity);
+        add("workstation_work_input_and_result_boundaries", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::workInputAndResultBoundaries);
+        add("workstation_smithing_and_anvil_batch_callbacks", "workstation", 100, com.moakiee.ae2lt.debug.TianshuWorkCraftingGameTests::smithingAndAnvilBatchCallbacks);
         add("transaction_network_extraction", "blockentity", 160, com.moakiee.ae2lt.blockentity.OverloadedInterfacePassiveInputGameTests::transactionalExtractionUsesLiveNetworkAcrossConfiguredSlots);
         add("native_recipe_fill_across_faces", "debug", 100, com.moakiee.ae2lt.debug.PigmeeAdjacentStorageGameTests::nativeRecipeFillAcrossFaces);
         if (Boolean.getBoolean("ae2lt.pigmeeCuttingBoardTest")) {
@@ -66,7 +78,8 @@ public final class AlphaPortTestMod {
             String groupFilter = System.getProperty("ae2lt.alphaPortTestGroup", "");
             if (!groupFilter.isEmpty() && !groupFilter.equals(spec.group)) continue;
             var environment = groups.computeIfAbsent(spec.group, group -> event.registerEnvironment(id(group), new TestEnvironmentDefinition.AllOf(List.of())));
-            var template = Identifier.fromNamespaceAndPath(switch (spec.group) {
+            var template = spec.group.equals("workstation") ? Identifier.fromNamespaceAndPath("ae2lt", "workstation_test") : Identifier.fromNamespaceAndPath(switch (spec.group) {
+                case "jei" -> "ae2lt_jei_supply";
                 case "block" -> "ae2lt_anvil";
                 case "blockentity" -> "ae2lt_interface_input";
                 default -> "ae2lt_pigmee_storage";
