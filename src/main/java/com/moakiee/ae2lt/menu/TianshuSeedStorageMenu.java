@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.menu;
 
 import appeng.api.storage.StorageCells;
+import appeng.client.gui.Icon;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
 import appeng.menu.implementations.MenuTypeBuilder;
@@ -32,8 +33,9 @@ public final class TianshuSeedStorageMenu extends AEBaseMenu {
         super(TYPE, id, playerInventory, host);
         this.host = host;
         for (int slot = 0; slot < TianshuSeedStorageBlockEntity.CELL_SLOTS; slot++) {
-            cellSlots.add(addSlot(
-                    new AppEngSlot(host.getCellInventory(), slot), SlotSemantics.STORAGE_CELL));
+            var cellSlot = new AppEngSlot(host.getCellInventory(), slot);
+            cellSlot.setIcon(Icon.BACKGROUND_STORAGE_CELL);
+            cellSlots.add(addSlot(cellSlot, SlotSemantics.STORAGE_CELL));
         }
         createPlayerInventorySlots(playerInventory);
     }
