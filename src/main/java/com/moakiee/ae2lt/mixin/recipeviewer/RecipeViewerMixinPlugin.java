@@ -13,10 +13,12 @@ import net.neoforged.fml.loading.LoadingModList;
 public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean jeiPresent;
     private boolean emiPresent;
+    private boolean jeiSupplyPresent;
 
     @Override
     public void onLoad(String mixinPackage) {
         var mods = LoadingModList.get();
+        jeiSupplyPresent = mods.getModFileById("jei") != null;
         jeiPresent = mods.getModFileById("jei") != null
                 && mods.getModFileById("ae2jeiintegration") != null;
         emiPresent = mods.getModFileById("emi") != null;
@@ -29,6 +31,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;
         return false;

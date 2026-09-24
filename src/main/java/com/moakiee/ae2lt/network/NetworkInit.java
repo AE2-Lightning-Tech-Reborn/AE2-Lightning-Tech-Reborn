@@ -38,6 +38,12 @@ public final class NetworkInit {
         registrar.playToServer(com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.TYPE,
                 com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle);
+        registrar.playToServer(com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.TYPE,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.STREAM_CODEC,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::handle);
+        registrar.playToClient(com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.TYPE,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.STREAM_CODEC,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::handle);
 
         registrar.playToServer(
                 WirelessConnectorUsePacket.TYPE,

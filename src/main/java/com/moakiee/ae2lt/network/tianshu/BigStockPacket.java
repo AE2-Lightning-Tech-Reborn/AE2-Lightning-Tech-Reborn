@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.network.tianshu;
 
 import appeng.api.stacks.AEKey;
 
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import com.moakiee.ae2lt.network.NetworkInit;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReport;
 
@@ -47,8 +47,8 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
     public static void handle(BigStockPacket p, IPayloadContext c) {
         c.enqueueWork(
                 () -> {
-                    if (c.player().containerMenu instanceof TianshuPatternEncodingTermMenu m
-                            && m.containerId == p.containerId) m.applyBigStock(p.changed);
+                    if (c.player().containerMenu instanceof TianshuMaintenanceMenu m
+                            && m.maintenanceMenu().containerId == p.containerId) m.applyBigStock(p.changed);
                 });
     }
 }

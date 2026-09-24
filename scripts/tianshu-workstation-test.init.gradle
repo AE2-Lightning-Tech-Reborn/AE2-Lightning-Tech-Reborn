@@ -1,0 +1,21 @@
+// ./gradlew -I scripts/tianshu-workstation-test.init.gradle runGameTestServer
+// Add -Pae2ltWorkstationFullWt=false for the embedded API profile, or
+// -Pae2ltTianshuTestSuite=jei for the real JEI wireless-supply regression.
+allprojects {
+    afterEvaluate {
+        def suite = providers.gradleProperty('ae2ltTianshuTestSuite').getOrElse('workstation')
+        def fullWt = providers.gradleProperty('ae2ltWorkstationFullWt').getOrElse('true').toBoolean()
+        sourceSets.jdb.java.setIncludes(suite == 'jei' ? ['**/JeiWirelessSupplyGameTests.java'] : [
+                '**/TianshuWorkCraftingGameTests.java', '**/TianshuCraftingGameTests.java',
+                '**/TianshuWirelessGameTestChecks.java', '**/TianshuCellScrollFixture.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'top.theillusivec4.curios']
+                    || (fullWt && dep.group == 'de.mari_023')
+                    || (suite == 'jei' && dep.name in ['jei-238222', 'ae2-jei-integration-1074338']))
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', suite == 'jei' ? 'ae2lt_jei_supply' : 'ae2lt'
+            gameDirectory = project.file("build/tianshu-${suite}-${fullWt ? 'full-wt' : 'api'}")
+        }
+    }
+}

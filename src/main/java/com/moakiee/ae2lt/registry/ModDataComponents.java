@@ -35,6 +35,12 @@ public final class ModDataComponents {
                     "interface_input_buffer", builder -> builder
                             .persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC));
 
+    /** The wireless terminal owns manual inputs just as it owns its ordinary crafting grid. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<CustomData>>
+            TIANSHU_WORKSTATIONS = DATA_COMPONENTS.registerComponentType(
+                    "tianshu_workstations", builder -> builder
+                            .persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC));
+
     /**
      * A machine-specific configuration blob written by a block entity's
      * {@code exportSettings(MEMORY_CARD, ...)} and read back by
