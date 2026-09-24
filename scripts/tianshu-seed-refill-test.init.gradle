@@ -1,0 +1,12 @@
+// Native refill service regression, isolated from saved worlds and optional mod fixtures.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/TianshuSeedRefillGameTests.java', '**/TianshuJdbHarness.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('seed-refill-native').get().asFile
+        }
+    }
+}

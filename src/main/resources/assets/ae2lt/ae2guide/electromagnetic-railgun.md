@@ -9,6 +9,7 @@ item_ids:
   - ae2lt:railgun_module_core
   - ae2lt:railgun_module_compute
   - ae2lt:railgun_module_acceleration
+  - ae2lt:railgun_module_ehv_beam
   - ae2lt:railgun_module_range
   - ae2lt:railgun_module_overload_execution
   - ae2lt:railgun_module_multidimensional_execution
@@ -68,9 +69,10 @@ Wearing the complete Celestweave set (<ItemLink id="ae2lt:celestweave_oculus" />
 |--------|-------|--------|
 | Energy Module T1 / T2 / T3 | 1 | Sets railgun FE capacity to 100,000,000 / 500,000,000 / 2,000,000,000 FE |
 | Overload Compute Module | 2 | Enables and improves chain arcs; at max charge, strengthens the EMP pulse |
-| Overload Acceleration Module | 2 | Each module adds +1 charge unit per tick, reducing charge time; it also shortens the continuous beam's settle interval |
+| Overload Acceleration Module | 2 | Each module adds +1 charge unit per tick, reducing charge time |
 | Overload Range Module | 2 | Multiplies continuous-beam and charged-shot range: one module gives 2x range and two give 4x |
-| Overload Execution Module | 1 | Triggers only on EHV3 charged hits; in an active execution mode it spends an additional 20,000,000 FE to record the target's health, and repeated hits can complete the execution |
+| EHV Beam Module | 1 | Enable in the Device Hub: every 2 ticks, consumes 16 EHV lightning and 4,000 FE for 200 base damage; disable to restore the ordinary HV beam |
+| Overload Execution Module | 1 | Percentage mode supports all three charged tiers; other modes trigger only on EHV3 charged hits; in an active execution mode it spends an additional 20,000,000 FE to record the target's health, and repeated hits can complete the execution |
 | Multidimensional Execution Module | 1 | Replaces Overload Execution: an eligible EHV3 hit ignores the health threshold and the module's additional FE / Lightning cost; its exact result follows the shared Execution Method setting |
 
 Without compute modules, chain arcs are disabled. With two acceleration modules, charge progress accumulates at three times the base rate.
@@ -85,7 +87,8 @@ Open the Overload Device Hub with the default key G while holding the railgun.
 * **PVP** allows the railgun to damage other players when enabled. When disabled, players are not targeted or damaged
 * **Sound** controls the railgun's local sound effects
 * **Chain Damage** enables chain jumps for both charged shots and the continuous beam; the ordinary beam can start a chain at its endpoint even without a direct entity hit
-* **Execution Method** is shared by both execution modules and cycles through Off, Normal Death and Forced Death. Off never enters the explicit death/removal chain: Overload Execution instead adds 600 armor-piercing electromagnetic damage, while Multidimensional Execution adds `Float.MAX_VALUE` armor-piercing electromagnetic damage. These ordinary damage calls preserve the target's own damage, death and loot mechanics. The Off fallback has no execution-module surcharge
+* **Execution Method** is shared by both execution modules and cycles through Off, Percentage, Normal Death and Forced Death for Overload; Multidimensional skips Percentage. Off never enters the explicit death/removal chain: Overload Execution instead adds 600 armor-piercing electromagnetic damage, while Multidimensional Execution adds `Float.MAX_VALUE` armor-piercing electromagnetic damage. These ordinary damage calls preserve the target's own damage, death and loot mechanics. The Off fallback has no execution-module surcharge
+* **EHV Beam** appears after installing the module. It requires EHV lightning and stops when unavailable, without silently downgrading or substituting HV. Server config controls damage and costs; normal beam armor, storm and chain rules still apply
 * **Charged Splash** controls landing-point area damage for every charged tier; disabling it keeps direct hits and chains from directly hit targets
 * **Overload Execution range** always includes the direct target, while local-area execution is limited to half of the active charged-splash radius; chain propagation never carries execution
 * The hub also shows module counts, FE storage and bound network status
@@ -95,3 +98,9 @@ Open the Overload Device Hub with the default key G while holding the railgun.
 Charged shots deal splash damage at the impact point, with tier radii of 5.5 / 8 / 12 blocks; damage falls off toward the edge, and splash damage against players is halved. EHV3 also penetrates up to 5 targets and releases an EMP pulse with a 10-block radius around the first target.
 
 Compute modules increase chain jump count and fork count, and enlarge the pulse radius while raising pulse damage. Thunderstorms increase chain reach and fork count.
+
+## Percentage Damage
+
+Only Overload Execution supplies this mode. Charged tiers add **5% / 10% / 20% of maximum health** to the shot before ordinary armor, mitigation and damage events. It never writes health or forces removal. Each target receives the bonus at most once per shot and pays the usual **20,000,000 FE** Overload surcharge; insufficient FE leaves only the base attack. Entering or leaving Percentage clears remembered HP.
+
+Only the direct target and the existing local execution radius qualify; chain propagation does not carry the bonus. Neither HV nor EHV beams trigger percentage damage or execution, and the EHV module does not increase charged damage or percentages. EHV beam settles bypass ordinary hurt cooldown while preserving entity-specific immunity. The ordinary HV beam retains its original hurt cooldown behavior.

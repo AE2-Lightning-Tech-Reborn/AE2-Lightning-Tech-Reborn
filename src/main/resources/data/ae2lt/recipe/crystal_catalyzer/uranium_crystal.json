@@ -1,0 +1,24 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "item": "oritech:uranium_crystal"
+  },
+  "catalystCount": 1,
+  "inputFluid": {
+    "id": "oritech:still_mineral_slurry",
+    "amount": 1000
+  },
+  "output": {
+    "id": "oritech:uranium_crystal",
+    "count": 1
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

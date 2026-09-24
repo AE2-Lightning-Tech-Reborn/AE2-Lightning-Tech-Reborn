@@ -52,6 +52,17 @@ public class JEIPlugin implements IModPlugin {
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "jei_plugin");
     private static final String AE2_JEI_INTEGRATION_MODID = "ae2jeiintegration";
     private static final String EMI_MODID = "emi";
+    private static mezz.jei.api.recipe.transfer.IUniversalRecipeTransferHandler<TianshuPatternEncodingTermMenu>
+            processingPatternTransfer;
+
+    /** The same cosmetic blue-slot feedback used by this terminal's ordinary processing handler. */
+    public static mezz.jei.api.recipe.transfer.IRecipeTransferError processingPatternFeedback(
+            TianshuPatternEncodingTermMenu menu, Object recipe,
+            mezz.jei.api.gui.ingredient.IRecipeSlotsView slots,
+            net.minecraft.world.entity.player.Player player, boolean maxTransfer) {
+        return processingPatternTransfer == null ? null
+                : processingPatternTransfer.transferRecipe(menu, recipe, slots, player, maxTransfer, false);
+    }
 
     public JEIPlugin() {
         if (ModList.get().isLoaded(AE2_JEI_INTEGRATION_MODID)) {
@@ -183,6 +194,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        processingPatternTransfer = null;
         registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
                 com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE,
                 registration.getTransferHelper()));
@@ -204,11 +216,12 @@ public class JEIPlugin implements IModPlugin {
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
         var visibility = registration.getJeiHelpers().getIngredientVisibility();
-        registration.addUniversalRecipeTransferHandler(new EncodePatternTransferHandler<>(
+        processingPatternTransfer = new EncodePatternTransferHandler<>(
                 TianshuPatternEncodingTermMenu.TYPE,
                 TianshuPatternEncodingTermMenu.class,
                 helper,
-                visibility));
+                visibility);
+        registration.addUniversalRecipeTransferHandler(processingPatternTransfer);
         registration.addUniversalRecipeTransferHandler(new EncodePatternTransferHandler<>(
                 TianshuWirelessPatternEncodingTermMenu.TYPE,
                 TianshuWirelessPatternEncodingTermMenu.class,

@@ -36,7 +36,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
 
     static int maxInstallAmount(RailgunModuleType type) {
         return switch (type) {
-            case CORE, OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION -> 1;
+            case CORE, OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> 1;
             case COMPUTE, ACCELERATION, RANGE -> 2;
         };
     }
@@ -53,6 +53,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
             case COMPUTE -> DeviceSlotType.COMPUTE;
             case ACCELERATION -> DeviceSlotType.ACCELERATION;
             case RANGE -> DeviceSlotType.RANGE;
+            case EHV_BEAM -> DeviceSlotType.EHV_BEAM;
             case OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION -> DeviceSlotType.OVERLOAD_EXECUTION;
         };
     }
@@ -71,6 +72,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
             case COMPUTE -> DeviceSlotType.COMPUTE;
             case ACCELERATION -> DeviceSlotType.ACCELERATION;
             case RANGE -> DeviceSlotType.RANGE;
+            case EHV_BEAM -> DeviceSlotType.EHV_BEAM;
             case OVERLOAD_EXECUTION, MULTIDIMENSIONAL_EXECUTION -> DeviceSlotType.OVERLOAD_EXECUTION;
         };
     }
@@ -97,7 +99,7 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
             case ACCELERATION -> List.of(new DeviceCapability.AccelerationFactor(0.30D));
             case RANGE -> List.of(new DeviceCapability.RangeMultiplier(2.0D));
             case OVERLOAD_EXECUTION -> List.of(new DeviceCapability.OverloadExecutionTuning(0.02D, 200, 8));
-            case MULTIDIMENSIONAL_EXECUTION -> List.of();
+            case MULTIDIMENSIONAL_EXECUTION, EHV_BEAM -> List.of();
         };
     }
 
@@ -105,5 +107,10 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         ModuleTooltip.appendInstallInfo(this, tooltip);
+        if (type == RailgunModuleType.EHV_BEAM) {
+            tooltip.add(Component.translatable("ae2lt.railgun.ehv_beam.tooltip"));
+        } else if (type == RailgunModuleType.OVERLOAD_EXECUTION) {
+            tooltip.add(Component.translatable("ae2lt.railgun.percentage.tooltip"));
+        }
     }
 }

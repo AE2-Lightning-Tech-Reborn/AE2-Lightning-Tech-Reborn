@@ -56,7 +56,9 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
                 Ae2ltSlotSemantics.TIANSHU_ANVIL, Ae2ltSlotSemantics.TIANSHU_STONECUTTING,
                 Ae2ltSlotSemantics.TIANSHU_CELL, Ae2ltSlotSemantics.TIANSHU_CELL_UPGRADE,
                 Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG, Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER,
-                Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK, Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK)) {
+                Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK, Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK,
+                Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_INPUTS, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS,
+                Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_MOLDS)) {
             setSlotsHidden(semantic, true);
         }
     }

@@ -32,7 +32,7 @@ public record DeviceStatusModel(
         int selectedModuleIndex,
         List<ModuleConfigInfo> moduleConfigs,
         boolean terrainDestruction, boolean pvp, boolean soundEnabled,
-        boolean chainDamage, RailgunExecutionMode executionMode, boolean chargedSplash
+        boolean chainDamage, RailgunExecutionMode executionMode, boolean chargedSplash, boolean ehvBeamEnabled
 ) {
     public static final String RAILGUN_OVERLOAD_MODULE_KEY =
             "ae2lt.device_hub.module.railgun.overload_execution";
@@ -47,7 +47,7 @@ public record DeviceStatusModel(
 
     public static final DeviceStatusModel EMPTY = new DeviceStatusModel(
             "", false, false, List.of(), -1, List.of(), false, false, false,
-            false, RailgunExecutionMode.NORMAL, false);
+            false, RailgunExecutionMode.NORMAL, false, false);
 
     /** Build status snapshot from an armor stack worn by the player. */
     public static DeviceStatusModel fromArmorStack(ItemStack armor, ServerPlayer player) {
@@ -88,7 +88,7 @@ public record DeviceStatusModel(
 
         return new DeviceStatusModel(
                 name, snapshot.hasCore(), powered, modules, clampedModuleIndex, moduleConfigs, false, false, false,
-                false, RailgunExecutionMode.NORMAL, false);
+                false, RailgunExecutionMode.NORMAL, false, false);
     }
 
     /** Build status snapshot from a railgun stack held by the player. */
@@ -146,11 +146,16 @@ public record DeviceStatusModel(
         }
 
         RailgunSettings settings = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
+        if (entries.hasEhvBeam()) {
+            modules.add(new ModuleInfo("ae2lt.device_hub.module.railgun.ehv_beam", 1, settings.ehvBeamEnabled()));
+        }
         boolean terrainAllowed = AE2LTCommonConfig.railgunTerrainDestructionEnabled();
         return new DeviceStatusModel(
                 name, hasStructuralCore, powered, modules, -1, List.of(),
                 terrainAllowed && settings.terrainDestruction(), settings.pvp(), settings.soundEnabled(),
-                settings.chainDamage(), settings.executionMode(), settings.chargedSplash());
+                settings.chainDamage(), entries.hasMultidimensionalExecution()
+                        ? settings.executionMode().forMultidimensional() : settings.executionMode(),
+                settings.chargedSplash(), entries.hasEhvBeam() && settings.ehvBeamEnabled());
     }
 
     private static List<ModuleConfigInfo> moduleConfigs(ItemStack armor, ServerPlayer player, int selectedModuleIndex) {

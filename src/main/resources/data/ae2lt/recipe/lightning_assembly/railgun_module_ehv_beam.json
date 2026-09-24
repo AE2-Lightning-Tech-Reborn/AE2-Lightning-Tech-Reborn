@@ -1,0 +1,43 @@
+{
+  "type": "ae2lt:lightning_assembly",
+  "priority": 0,
+  "inputs": [
+    {
+      "ingredient": {
+        "item": "ae2lt:overload_module_base"
+      },
+      "count": 1
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:hyperdimensional_topological_lattice"
+      },
+      "count": 1
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:lightning_collapse_matrix"
+      },
+      "count": 8
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:firmament_superconducting_wire"
+      },
+      "count": 16
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:overload_processor"
+      },
+      "count": 16
+    }
+  ],
+  "result": {
+    "id": "ae2lt:railgun_module_ehv_beam",
+    "count": 1
+  },
+  "totalEnergy": 32000000,
+  "lightningCost": 256,
+  "lightningTier": "extreme_high_voltage"
+}

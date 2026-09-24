@@ -1,0 +1,27 @@
+// Restored alpha features against real Minecraft/AE2 objects in disposable worlds.
+// ./gradlew -I scripts/alpha-regression-test.init.gradle runGameTestServer
+// Add -Pae2ltAlphaOptional=true to exercise the native Useless Mod integration.
+allprojects {
+    afterEvaluate {
+        def optional = providers.gradleProperty('ae2ltAlphaOptional').getOrElse('false').toBoolean()
+        sourceSets.jdb.java.setIncludes([
+                '**/PigmeeBuildingGameTests.java', '**/PigmeeCrystalCatalyzerGameTests.java',
+                '**/TianshuSeedRefillGameTests.java', '**/TianshuJdbHarness.java',
+                '**/TianshuQuantumBridgeGameTests.java', '**/RailgunCombatGameTests.java',
+                '**/CrystalCatalyzerFluidGameTests.java', '**/OmniversalTerminalGameTests.java',
+                '**/TianshuWorkCraftingGameTests.java', '**/TianshuCraftingGameTests.java',
+                '**/TianshuWirelessGameTestChecks.java', '**/TianshuCellScrollFixture.java',
+                '**/OverloadedInterfacePassiveInputGameTests.java', '**/PigmeeAdjacentStorageGameTests.java',
+                '**/PigmeeSynthesisStationGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        if (optional) dependencies.add('runtimeOnly', 'curse.maven:some-useless-things-1401600:8790729')
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces',
+                    'ae2lt,ae2lt_railgun,ae2lt_catalyzer,ae2lt_omniversal,ae2lt_interface_input'
+            gameDirectory = project.layout.buildDirectory.dir("alpha-regression-${optional ? 'optional' : 'base'}").get().asFile
+        }
+    }
+}

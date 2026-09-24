@@ -24,6 +24,7 @@ public record DeviceHubSyncPacket(
         boolean chainDamage,
         RailgunExecutionMode executionMode,
         boolean chargedSplash,
+        boolean ehvBeamEnabled,
         List<String> moduleNameKeys,
         List<Integer> moduleCounts,
         List<Boolean> moduleEnabled,
@@ -56,6 +57,7 @@ public record DeviceHubSyncPacket(
         boolean chainDamage = buf.readBoolean();
         RailgunExecutionMode executionMode = buf.readEnum(RailgunExecutionMode.class);
         boolean chargedSplash = buf.readBoolean();
+        boolean ehvBeamEnabled = buf.readBoolean();
         int count = buf.readVarInt();
         List<String> nameKeys = new ArrayList<>(count);
         List<Integer> counts = new ArrayList<>(count);
@@ -88,6 +90,7 @@ public record DeviceHubSyncPacket(
                 chainDamage,
                 executionMode,
                 chargedSplash,
+                ehvBeamEnabled,
                 nameKeys,
                 counts,
                 enabled,
@@ -109,6 +112,7 @@ public record DeviceHubSyncPacket(
         buf.writeBoolean(chainDamage);
         buf.writeEnum(executionMode);
         buf.writeBoolean(chargedSplash);
+        buf.writeBoolean(ehvBeamEnabled);
         int count = Math.min(Math.min(moduleNameKeys.size(), moduleCounts.size()), moduleEnabled.size());
         buf.writeVarInt(count);
         for (int i = 0; i < count; i++) {
@@ -143,6 +147,7 @@ public record DeviceHubSyncPacket(
                         pkt.chainDamage(),
                         pkt.executionMode(),
                         pkt.chargedSplash(),
+                        pkt.ehvBeamEnabled(),
                         pkt.moduleNameKeys(),
                         pkt.moduleCounts(),
                         pkt.moduleEnabled(),

@@ -1214,7 +1214,8 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         return true;
     }
 
-    private KeyCounter reusableSeedSnapshot() {
+    /** Detached snapshot of physical seed storage, excluding seeds loaned to active CPUs. */
+    public KeyCounter reusableSeedSnapshot() {
         var result = new KeyCounter();
         var drives = seedDrives();
         if (drives != null) {

@@ -1,11 +1,12 @@
 package com.moakiee.ae2lt.network;
 
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record EasterEggPacket() implements CustomPacketPayload {
+public record EasterEggPacket(GlobalPos source) implements CustomPacketPayload {
     public static final Type<EasterEggPacket> TYPE =
             new Type<>(NetworkInit.id("easter_egg"));
 
@@ -18,15 +19,16 @@ public record EasterEggPacket() implements CustomPacketPayload {
     }
 
     public static EasterEggPacket decode(RegistryFriendlyByteBuf buf) {
-        return new EasterEggPacket();
+        return new EasterEggPacket(GlobalPos.STREAM_CODEC.decode(buf));
     }
 
     public void write(RegistryFriendlyByteBuf buf) {
+        GlobalPos.STREAM_CODEC.encode(buf, source);
     }
 
     public static void handle(EasterEggPacket payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            com.moakiee.ae2lt.client.EasterEggOverlay.trigger();
+            com.moakiee.ae2lt.client.EasterEggOverlay.trigger(payload.source());
         });
     }
 }

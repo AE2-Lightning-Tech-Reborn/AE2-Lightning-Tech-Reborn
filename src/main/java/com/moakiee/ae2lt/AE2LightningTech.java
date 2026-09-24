@@ -327,6 +327,7 @@ public class AE2LightningTech {
                         output.accept(ModItems.RAILGUN_MODULE_COMPUTE);
                         output.accept(ModItems.RAILGUN_MODULE_ACCELERATION);
                         output.accept(ModItems.RAILGUN_MODULE_RANGE);
+                        output.accept(ModItems.RAILGUN_MODULE_EHV_BEAM);
                         output.accept(ModItems.RAILGUN_MODULE_OVERLOAD_EXECUTION);
                         output.accept(ModItems.RAILGUN_MODULE_MULTIDIMENSIONAL_EXECUTION);
 
@@ -349,6 +350,11 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.PIGMEE_PATTERN_PROVIDER);
                         output.accept(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         output.accept(ModBlocks.PIGMEE_SYNTHESIS_STATION);
+                        output.accept(ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        for (var color : net.minecraft.world.item.DyeColor.values()) {
+                            output.accept(ModBlocks.PIGMEE_BUILDING_PANELS.get(color));
+                            output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color));
+                        }
                         output.accept(ModItems.PIGMEE_CORE);
                         output.accept(ModItems.PIGMEE_ITEM_CELL_HOUSING);
                         output.accept(ModItems.PIGMEE_STORAGE_COMPONENT);
@@ -607,11 +613,6 @@ public class AE2LightningTech {
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 ModBlockEntities.CRYSTAL_CATALYZER.get(),
-                (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
-
-        event.registerBlockEntity(
-                AECapabilities.IN_WORLD_GRID_NODE_HOST,
-                ModBlockEntities.PIGMEE_CRYSTAL_CATALYZER.get(),
                 (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
 
         event.registerBlockEntity(

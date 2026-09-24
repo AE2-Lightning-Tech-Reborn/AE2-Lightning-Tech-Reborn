@@ -10,6 +10,10 @@
     "item": "oritech:fluxite_block"
   },
   "catalystCount": 1,
+  "inputFluid": {
+    "id": "oritech:still_strange_matter",
+    "amount": 1000
+  },
   "output": {
     "id": "oritech:fluxite",
     "count": 1

@@ -5,7 +5,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 
@@ -17,10 +16,11 @@ public record RailgunSettings(
         boolean soundEnabled,
         RailgunExecutionMode executionMode,
         boolean chargedSplash,
-        boolean chainDamage) {
+        boolean chainDamage,
+        boolean ehvBeamEnabled) {
 
     public static final RailgunSettings DEFAULT = new RailgunSettings(
-            false, false, true, RailgunExecutionMode.NORMAL, true, true);
+            false, false, true, RailgunExecutionMode.NORMAL, true, true, false);
 
     private static final Codec<RailgunSettings> CURRENT_CODEC = RecordCodecBuilder.create(b -> b.group(
             Codec.BOOL.fieldOf("terrain").forGetter(RailgunSettings::terrainDestruction),
@@ -30,7 +30,8 @@ public record RailgunSettings(
                     .forGetter(RailgunSettings::executionMode),
             Codec.BOOL.optionalFieldOf("charged_splash", true)
                     .forGetter(RailgunSettings::chargedSplash),
-            Codec.BOOL.optionalFieldOf("chain_damage", true).forGetter(RailgunSettings::chainDamage))
+            Codec.BOOL.optionalFieldOf("chain_damage", true).forGetter(RailgunSettings::chainDamage),
+            Codec.BOOL.optionalFieldOf("ehv_beam", false).forGetter(RailgunSettings::ehvBeamEnabled))
             .apply(b, RailgunSettings::new));
 
     private static final Codec<LegacySettings> LEGACY_CODEC = RecordCodecBuilder.create(b -> b.group(
@@ -51,14 +52,24 @@ public record RailgunSettings(
     public static final Codec<RailgunSettings> CODEC = Codec.either(CURRENT_CODEC, LEGACY_CODEC)
             .xmap(value -> value.map(settings -> settings, LegacySettings::upgrade), Either::left);
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, RailgunSettings> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.BOOL, RailgunSettings::terrainDestruction,
-            ByteBufCodecs.BOOL, RailgunSettings::pvp,
-            ByteBufCodecs.BOOL, RailgunSettings::soundEnabled,
-            RailgunExecutionMode.STREAM_CODEC, RailgunSettings::executionMode,
-            ByteBufCodecs.BOOL, RailgunSettings::chargedSplash,
-            ByteBufCodecs.BOOL, RailgunSettings::chainDamage,
-            RailgunSettings::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, RailgunSettings> STREAM_CODEC = StreamCodec.of(
+            (buffer, settings) -> {
+                buffer.writeBoolean(settings.terrainDestruction());
+                buffer.writeBoolean(settings.pvp());
+                buffer.writeBoolean(settings.soundEnabled());
+                RailgunExecutionMode.STREAM_CODEC.encode(buffer, settings.executionMode());
+                buffer.writeBoolean(settings.chargedSplash());
+                buffer.writeBoolean(settings.chainDamage());
+                buffer.writeBoolean(settings.ehvBeamEnabled());
+            },
+            buffer -> new RailgunSettings(buffer.readBoolean(), buffer.readBoolean(), buffer.readBoolean(),
+                    RailgunExecutionMode.STREAM_CODEC.decode(buffer), buffer.readBoolean(),
+                    buffer.readBoolean(), buffer.readBoolean()));
+
+    public RailgunSettings(boolean terrain, boolean pvp, boolean sound, RailgunExecutionMode mode,
+                           boolean splash, boolean chain) {
+        this(terrain, pvp, sound, mode, splash, chain, false);
+    }
 
     /** Source-compatible constructor for callers using the former boolean setting. */
     public RailgunSettings(
@@ -86,19 +97,19 @@ public record RailgunSettings(
     public RailgunSettings withTerrain(boolean v) {
         return new RailgunSettings(
                 v, this.pvp, this.soundEnabled, this.executionMode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withPvp(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, v, this.soundEnabled, this.executionMode,
-                this.chargedSplash, this.chainDamage);
+                this.chargedSplash, this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withSound(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, v, this.executionMode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     /** Legacy adapter retained for source compatibility. */
@@ -114,19 +125,24 @@ public record RailgunSettings(
     public RailgunSettings withExecutionMode(RailgunExecutionMode mode) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, mode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withChargedSplash(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, this.executionMode, v,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withChainDamage(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, this.executionMode,
-                this.chargedSplash, v);
+                this.chargedSplash, v, this.ehvBeamEnabled);
+    }
+
+    public RailgunSettings withEhvBeam(boolean enabled) {
+        return new RailgunSettings(terrainDestruction, pvp, soundEnabled, executionMode,
+                chargedSplash, chainDamage, enabled);
     }
 
     /** Player targeting requires both this railgun's opt-in and server permission. */

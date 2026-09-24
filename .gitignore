@@ -26,6 +26,10 @@ else/
 run-passive-input-gametest/
 run-alloy-anvil-gametest/
 run-alloy-anvil-client/
+run-omniversal-gametest/
+run-omniversal-client/
+run-crystal-catalyzer-gametest/
+run-alpha-completion/
 
 # OS files
 .DS_Store

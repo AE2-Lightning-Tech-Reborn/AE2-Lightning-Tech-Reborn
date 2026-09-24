@@ -51,6 +51,7 @@
     "TianshuStonecutterMenuMixin"
   ],
   "client": [
+    "client.EncodingHelperAccessor",
     "client.CableBusRenderStateMixin",
     "client.CraftConfirmReportRoutingMixin",
     "client.CableBusContainerRenderMixin",

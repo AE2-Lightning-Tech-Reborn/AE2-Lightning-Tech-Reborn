@@ -38,9 +38,14 @@ public record DamageContext(
 
     public static DamageContext buildBeam(Player player, RailgunModuleEntries mods, Level level,
                                           boolean pvp) {
+        return buildBeam(player, mods, level, pvp, AE2LTCommonConfig.railgunBeamDamagePerSettle());
+    }
+
+    public static DamageContext buildBeam(Player player, RailgunModuleEntries mods, Level level,
+                                          boolean pvp, double beamDamage) {
         boolean storm = isStorming(level, player);
         int compute = countChainTuning(mods);
-        double base = AE2LTCommonConfig.railgunBeamDamagePerSettle();
+        double base = beamDamage;
         double bypass = AE2LTCommonConfig.railgunBeamBypass();
         if (storm) {
             base *= RailgunDefaults.STORM_DAMAGE_MUL;

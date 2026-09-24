@@ -4,8 +4,10 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.lightning.LightningTransformService;
 import com.moakiee.ae2lt.lightning.ProtectedItemEntityHelper;
 import com.moakiee.ae2lt.logic.research.ResearchRitualService;
+import com.moakiee.ae2lt.logic.EasterEggAudience;
 import com.moakiee.ae2lt.network.EasterEggPacket;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -84,9 +86,10 @@ public final class LightningItemTransformationHandler {
                 center.offset(-EASTER_EGG_SEARCH_RADIUS, -1, -EASTER_EGG_SEARCH_RADIUS),
                 center.offset(EASTER_EGG_SEARCH_RADIUS, 2, EASTER_EGG_SEARCH_RADIUS))) {
             if (level.getBlockState(pos).is(fumoBlock)) {
+                var source = GlobalPos.of(level.dimension(), pos.immutable());
                 for (ServerPlayer player : level.players()) {
-                    if (player.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) < 64 * 64) {
-                        PacketDistributor.sendToPlayer(player, new EasterEggPacket());
+                    if (EasterEggAudience.includes(source, player.level().dimension(), player.position())) {
+                        PacketDistributor.sendToPlayer(player, new EasterEggPacket(source));
                     }
                 }
                 return;

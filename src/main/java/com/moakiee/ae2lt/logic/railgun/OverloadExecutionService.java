@@ -23,6 +23,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.item.railgun.RailgunEnergyRules;
+import com.moakiee.ae2lt.item.railgun.RailgunChargeTier;
 import com.moakiee.ae2lt.item.railgun.RailgunExecutionMode;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
 import com.moakiee.ae2lt.item.railgun.RailgunSettings;
@@ -108,7 +109,9 @@ public final class OverloadExecutionService {
         if (!RailgunTargetRules.canAffect(player, target, allowPlayerTargets)) return;
 
         RailgunModuleEntries mods = stack.getOrDefault(ModDataComponents.RAILGUN_MODULE_ENTRIES.get(), RailgunModuleEntries.EMPTY);
-        RailgunExecutionMode executionMode = settings.executionMode();
+        RailgunExecutionMode executionMode = mods.hasMultidimensionalExecution()
+                ? settings.executionMode().forMultidimensional() : settings.executionMode();
+        if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         DamageSource damageSource =
                 new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
         if (mods.hasMultidimensionalExecution()) {
@@ -253,7 +256,9 @@ public final class OverloadExecutionService {
 
         RailgunSettings settings = stack.getOrDefault(
                 ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
-        RailgunExecutionMode executionMode = settings.executionMode();
+        RailgunExecutionMode executionMode = mods.hasMultidimensionalExecution()
+                ? settings.executionMode().forMultidimensional() : settings.executionMode();
+        if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         if (!executionMode.entersExecutionFlow()) {
             DamageSource source =
                     new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
@@ -277,6 +282,44 @@ public final class OverloadExecutionService {
         }
 
         forceRemoveNonLiving(target);
+    }
+
+    /** Pay the same surcharge as ordinary Overload, then return an ordinary-damage bonus. */
+    public static double percentageBonus(ServerPlayer player, ItemStack stack, LivingEntity target,
+                                         RailgunChargeTier tier) {
+        if (!AE2LTCommonConfig.overloadExecutionEnabled() || !target.isAlive()) return 0;
+        var mods = moduleEntries(stack);
+        var settings = stack.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
+        if (!RailgunPercentageDamage.eligible(tier, settings.executionMode(),
+                mods.hasOverloadExecution(), mods.hasMultidimensionalExecution(), false)) return 0;
+        double fraction = switch (tier) {
+            case EHV1 -> AE2LTCommonConfig.railgunPercentageTier1();
+            case EHV2 -> AE2LTCommonConfig.railgunPercentageTier2();
+            case EHV3 -> AE2LTCommonConfig.railgunPercentageTier3();
+            default -> 0;
+        };
+        double bonus = RailgunPercentageDamage.bonus(target.getMaxHealth(), fraction);
+        if (bonus == 0) return 0;
+        long feCost = RailgunEnergyRules.overloadExecutionCostFe();
+        RailgunEnergyBuffer.refillFromNetwork(stack, player, Math.max(0L, feCost - RailgunEnergyBuffer.read(stack)));
+        if (!RailgunEnergyBuffer.tryConsume(stack, player, feCost)) {
+            RailgunFireService.sendFail(player, "ae2lt.railgun.fail.no_fe");
+            return 0;
+        }
+        return bonus;
+    }
+
+    private static RailgunModuleEntries moduleEntries(ItemStack stack) {
+        return stack.getOrDefault(ModDataComponents.RAILGUN_MODULE_ENTRIES.get(), RailgunModuleEntries.EMPTY);
+    }
+
+    /** A mode change starts a new damage contract; stale remembered HP must not carry across. */
+    public static void clearTrackedTargets(ItemStack stack) {
+        CompoundTag data = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        if (data.contains(TAG_TARGETS)) {
+            data.remove(TAG_TARGETS);
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(data));
+        }
     }
 
     // ── Execution modes ─────────────────────────────────────────────────────
