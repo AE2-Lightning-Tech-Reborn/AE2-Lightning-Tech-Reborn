@@ -283,6 +283,7 @@ public class AE2LightningTech {
 
                         // 苍穹织雷装备、能量模块
                         output.accept(ModBlocks.OVERLOAD_DEVICE_WORKBENCH);
+                        output.accept(ModBlocks.OVERLOAD_ALLOY_ANVIL);
                         output.accept(ModItems.OVERLOAD_MODULE_BASE);
                         output.accept(ModItems.CELESTWEAVE_OCULUS);
                         output.accept(ModItems.CELESTWEAVE_CORE);
