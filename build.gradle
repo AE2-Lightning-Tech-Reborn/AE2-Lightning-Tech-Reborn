@@ -146,6 +146,7 @@ sourceSets {
                          'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuCraftingGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuWorkCraftingGameTests.java',
+                         'com/moakiee/ae2lt/debug/TianshuPatternUploadGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuWirelessGameTestChecks.java',
                          'com/moakiee/ae2lt/debug/TianshuCellScrollFixture.java',
                          'com/moakiee/ae2lt/debug/JeiWirelessSupplyGameTests.java',
