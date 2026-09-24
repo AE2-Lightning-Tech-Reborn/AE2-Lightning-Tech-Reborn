@@ -4,6 +4,7 @@ import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -166,6 +167,7 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
             return;
         }
         guiGraphics.blit(
+                RenderPipelines.GUI_TEXTURED,
                 ARROW_TEXTURE,
                 ARROW_X,
                 ARROW_Y,
@@ -180,6 +182,7 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
     private static void drawLightningIcon(GuiGraphicsExtractor guiGraphics, Identifier texture, int x, int y) {
         int frame = (int) ((Util.getMillis() / ICON_FRAME_MS) % ICON_FRAMES);
         guiGraphics.blit(
+                RenderPipelines.GUI_TEXTURED,
                 texture,
                 x,
                 y,

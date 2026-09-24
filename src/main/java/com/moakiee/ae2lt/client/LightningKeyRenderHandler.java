@@ -39,8 +39,9 @@ public final class LightningKeyRenderHandler implements AEKeyRenderer<LightningK
     private static TextureAtlasSprite spriteFor(LightningKey key) {
         Identifier id = key.tier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                 ? EXTREME_HIGH_VOLTAGE_SPRITE : HIGH_VOLTAGE_SPRITE;
+        // Since 26.1, item/ sprites are stitched into the separate item atlas.
         return Minecraft.getInstance().getAtlasManager()
-                .getAtlasOrThrow(AtlasIds.BLOCKS)
+                .getAtlasOrThrow(AtlasIds.ITEMS)
                 .getSprite(id);
     }
 
@@ -72,7 +73,7 @@ public final class LightningKeyRenderHandler implements AEKeyRenderer<LightningK
         TextureAtlasSprite sprite = spriteFor(state.key);
         collector.submitCustomGeometry(
                 poseStack,
-                RenderTypes.itemCutout(TextureAtlas.LOCATION_BLOCKS),
+                RenderTypes.itemCutout(TextureAtlas.LOCATION_ITEMS),
                 (pose, buffer) -> {
                     float half = 0.45F;
                     var transform = pose.pose();

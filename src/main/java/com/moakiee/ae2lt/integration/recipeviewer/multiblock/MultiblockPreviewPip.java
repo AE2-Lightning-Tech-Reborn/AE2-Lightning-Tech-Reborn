@@ -90,8 +90,10 @@ public final class MultiblockPreviewPip {
         protected void renderToTexture(State state, PoseStack pose) {
             Minecraft client = Minecraft.getInstance();
             client.gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
-            pose.translate(state.panX() / state.scale(), -state.panY() / state.scale(), 0.0F);
-            pose.scale(1.0F, 1.0F, state.depthScale());
+            pose.translate(state.panX() / state.scale(), state.panY() / state.scale(), 0.0F);
+            // The PIP base pose scales (+s, +s, -s). Restore the preview's
+            // (+s, -s, +s) convention, also used by its screen-space picking.
+            pose.scale(1.0F, -1.0F, -state.depthScale());
             pose.mulPose(Axis.XP.rotationDegrees(state.pitch()));
             pose.mulPose(Axis.YP.rotationDegrees(state.yaw()));
             pose.translate(-state.centerX(), -state.centerY(), -state.centerZ());

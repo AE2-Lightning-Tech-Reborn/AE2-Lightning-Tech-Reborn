@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -210,6 +211,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
             return;
         }
         guiGraphics.blit(
+                RenderPipelines.GUI_TEXTURED,
                 BACKGROUND_TEXTURE,
                 PROCESS_X,
                 PROCESS_Y,
