@@ -1063,6 +1063,9 @@ public class AE2LightningTech {
             GridLinkables.register(
                     ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
                     WirelessTerminalItem.LINKABLE_HANDLER);
+            GridLinkables.register(
+                    ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get(),
+                    WirelessTerminalItem.LINKABLE_HANDLER);
 
             // Full AE2WTLib integration: make the overloaded frequency card installable
             // in wireless terminal upgrade slots when the implementation mod is present.

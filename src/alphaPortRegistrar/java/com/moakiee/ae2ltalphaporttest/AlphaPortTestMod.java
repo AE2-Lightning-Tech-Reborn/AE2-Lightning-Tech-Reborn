@@ -18,6 +18,7 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("wireless_access_point_binding", "wireless_binding", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::wirelessAccessPointBinding);
         add("upload_wired_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wiredFullTargetRetainsEncodedPattern);
         add("upload_wireless_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wirelessFullTargetRetainsEncodedPattern);
         add("pigmee_drops_legacy_wireless_binding", "fluid", 100, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeDropsLegacyWirelessBindingOnLoad);
@@ -119,7 +120,7 @@ public final class AlphaPortTestMod {
         for (var spec : TESTS) {
             String groupFilter = System.getProperty("ae2lt.alphaPortTestGroup", "");
             if (!groupFilter.isEmpty() && !groupFilter.equals(spec.group)) continue;
-            var template = java.util.Set.of("workstation", "seed", "quantum", "upload").contains(spec.group) ? Identifier.fromNamespaceAndPath("ae2lt", "workstation_test") : Identifier.fromNamespaceAndPath(switch (spec.group) {
+            var template = java.util.Set.of("workstation", "seed", "quantum", "upload", "wireless_binding").contains(spec.group) ? Identifier.fromNamespaceAndPath("ae2lt", "workstation_test") : Identifier.fromNamespaceAndPath(switch (spec.group) {
                 case "building", "appgen" -> "ae2lt_pigmee_storage";
                 case "fluid" -> "ae2lt_catalyzer";
                 case "railgun" -> "ae2lt_railgun";

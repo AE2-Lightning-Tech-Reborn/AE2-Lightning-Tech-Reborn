@@ -78,6 +78,55 @@ public final class TianshuCraftingGameTests {
         return menu;
     }
 
+    public static void wirelessAccessPointBinding(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var player = player(level, "TianshuBinding");
+        for (var item : List.of(ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get(),
+                ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get())) {
+            var terminal = new ItemStack(item);
+            terminal.set(appeng.api.ids.AEComponents.STORED_ENERGY, 12345.0);
+            terminal.set(DataComponents.CUSTOM_NAME, Component.literal("Binding preserves components"));
+            // Bind and then rebind through AE2's actual GUI slots, without prewriting the target.
+            for (int x = 1; x <= 2; x++) {
+                var pos = helper.absolutePos(new BlockPos(x, 1, 1));
+                level.setBlockAndUpdate(pos, appeng.core.definitions.AEBlocks.WIRELESS_ACCESS_POINT
+                        .block().defaultBlockState());
+                var accessPoint = (appeng.blockentity.networking.WirelessAccessPointBlockEntity)
+                        level.getBlockEntity(pos);
+                var menu = new appeng.menu.implementations.WirelessAccessPointMenu(
+                        7, player.getInventory(), accessPoint);
+                player.containerMenu = menu;
+                try {
+                    var input = menu.getSlots(appeng.menu.SlotSemantics.MACHINE_INPUT).getFirst();
+                    var output = menu.getSlots(appeng.menu.SlotSemantics.MACHINE_OUTPUT).getFirst();
+                    require(!input.mayPlace(new ItemStack(Items.STONE)), "binding slot rejects unrelated items");
+                    require(input.mayPlace(terminal), "wireless access point rejects " + item);
+                    var expected = terminal.copy();
+                    expected.set(appeng.api.ids.AEComponents.WIRELESS_LINK_TARGET,
+                            net.minecraft.core.GlobalPos.of(level.dimension(), pos));
+                    menu.setCarried(terminal);
+                    menu.clicked(input.index, 0, ContainerInput.PICKUP, player);
+                    require(menu.getCarried().isEmpty() && !input.hasItem(),
+                            "binding consumes exactly the carried terminal");
+                    require(output.getItem().getCount() == 1
+                                    && ItemStack.isSameItemSameComponents(expected, output.getItem()),
+                            "binding writes this access point and preserves all other terminal components");
+                    menu.clicked(output.index, 0, ContainerInput.PICKUP, player);
+                    require(!output.hasItem() && menu.getCarried().getCount() == 1
+                                    && ItemStack.isSameItemSameComponents(expected, menu.getCarried()),
+                            "bound terminal can be taken out exactly once");
+                    terminal = menu.getCarried();
+                    menu.setCarried(ItemStack.EMPTY);
+                } finally {
+                    menu.removed(player);
+                    player.containerMenu = player.inventoryMenu;
+                }
+            }
+        }
+        passed("native access point binds and rebinds both wireless terminals without losing components");
+        helper.succeed();
+    }
+
         public static void workstations(GameTestHelper helper) {
         var level = helper.getLevel();
         var player = player(level, "TianshuWork");
