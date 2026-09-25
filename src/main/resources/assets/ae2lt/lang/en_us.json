@@ -1523,5 +1523,17 @@
   "block.ae2lt.red_pigmee_building_slab": "Red Pigmee Plain Slab",
   "block.ae2lt.red_pigmee_framed_building_slab": "Red Pigmee Framed Slab",
   "block.ae2lt.black_pigmee_building_slab": "Black Pigmee Plain Slab",
-  "block.ae2lt.black_pigmee_framed_building_slab": "Black Pigmee Framed Slab"
+  "block.ae2lt.black_pigmee_framed_building_slab": "Black Pigmee Framed Slab",
+  "block.ae2lt.overloaded_io_port": "Overloaded IO Port",
+  "tooltip.ae2lt.overloaded_io_port.batch": "Bulk transfer: one type per 5 ticks; 4 acceleration cards reach one per tick, shared by six cells",
+  "tooltip.ae2lt.overloaded_io_port.power": "32 AE per batch; amount per type depends on storage capacity",
+  "tooltip.ae2lt.overloaded_io_port.pending": "Contains pending resources: connect to an ME network with free space",
+  "ae2lt.gui.overloaded_io_port.rate": "1 / %s t",
+  "ae2lt.gui.overloaded_io_port.status.idle": "Idle",
+  "ae2lt.gui.overloaded_io_port.status.active": "Moving",
+  "ae2lt.gui.overloaded_io_port.status.no_network": "Offline",
+  "ae2lt.gui.overloaded_io_port.status.redstone": "Paused",
+  "ae2lt.gui.overloaded_io_port.status.no_power": "Low power",
+  "ae2lt.gui.overloaded_io_port.status.blocked": "Waiting",
+  "ae2lt.gui.overloaded_io_port.status.recovering": "Returning"
 }

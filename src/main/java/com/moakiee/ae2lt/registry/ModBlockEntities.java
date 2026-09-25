@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
@@ -82,6 +83,10 @@ public final class ModBlockEntities {
                             LightningAssemblyChamberBlockEntity::new,
                             ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get())
                             .build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<OverloadedIOPortBlockEntity>>
+            OVERLOADED_IO_PORT = BLOCK_ENTITY_TYPES.register("overloaded_io_port",
+                    () -> BlockEntityType.Builder.of(OverloadedIOPortBlockEntity::new, ModBlocks.OVERLOADED_IO_PORT.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MiningFactoryBlockEntity>>
             MINING_FACTORY = BLOCK_ENTITY_TYPES.register("mining_factory",

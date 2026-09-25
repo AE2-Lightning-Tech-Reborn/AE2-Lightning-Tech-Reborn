@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.block.OverloadedIOPortBlock;
 import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.block.AtmosphericIonizerBlock;
@@ -194,6 +195,9 @@ public final class ModBlocks {
 
     public static final DeferredBlock<LightningAssemblyChamberBlock> LIGHTNING_ASSEMBLY_CHAMBER =
             registerBlock("lightning_assembly_chamber", LightningAssemblyChamberBlock::new);
+
+    public static final DeferredBlock<OverloadedIOPortBlock> OVERLOADED_IO_PORT =
+            registerBlock("overloaded_io_port", OverloadedIOPortBlock::new);
 
     public static final DeferredBlock<MiningFactoryBlock> MINING_FACTORY =
             registerBlock("mining_factory", MiningFactoryBlock::new);

@@ -1,0 +1,22 @@
+// ./gradlew -I scripts/overloaded-io-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OverloadedIOPortGameTests.java', '**/OverloadedIOPortClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei'] || dep.name == 'jei-238222')
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+            gameDirectory = project.layout.buildDirectory.dir('overloaded-io-gametest').get().asFile
+        }
+        if (project.hasProperty('ioClientProbe')) {
+            neoForge.runs.client {
+                systemProperty 'ae2lt.ioClientProbe', 'true'
+                jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+                gameDirectory = project.layout.buildDirectory.dir('overloaded-io-client').get().asFile
+                programArguments.addAll '--quickPlaySingleplayer', 'IOPortTest'
+            }
+        }
+    }
+}

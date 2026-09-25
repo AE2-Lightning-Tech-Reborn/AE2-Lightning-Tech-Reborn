@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt;
 
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
@@ -152,6 +153,7 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         output.accept(ModBlocks.OVERLOAD_PROCESSING_FACTORY);
                         output.accept(ModBlocks.MINING_FACTORY);
+                        output.accept(ModBlocks.OVERLOADED_IO_PORT);
 
                         // 过载 ME 网络设备
                         output.accept(ModBlocks.OVERLOADED_CONTROLLER);
@@ -451,6 +453,10 @@ public class AE2LightningTech {
                 ModBlockEntities.TESLA_COIL.get(),
                 (blockEntity, side) -> blockEntity.getAutomationInventory());
 
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.OVERLOADED_IO_PORT.get(),
+                (be, side) -> be.getExposedItemHandler(side));
+        event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST, ModBlockEntities.OVERLOADED_IO_PORT.get(),
+                (be, context) -> be);
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
                 (blockEntity, side) -> blockEntity.getAutomationInventory());
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
@@ -841,6 +847,12 @@ public class AE2LightningTech {
                     assemblyBeType,
                     null,
                     LightningAssemblyChamberBlockEntity::serverTick);
+
+            ModBlocks.OVERLOADED_IO_PORT.get().setBlockEntity(OverloadedIOPortBlockEntity.class,
+                    ModBlockEntities.OVERLOADED_IO_PORT.get(), null, null);
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.OVERLOADED_IO_PORT.get(), ModBlocks.OVERLOADED_IO_PORT.get().asItem());
+            Upgrades.add(AEItems.SPEED_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), OverloadedIOPortBlockEntity.SPEED_CARD_SLOTS);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), 1);
 
             ModBlocks.MINING_FACTORY.get().setBlockEntity(MiningFactoryBlockEntity.class,
                     ModBlockEntities.MINING_FACTORY.get(), null, MiningFactoryBlockEntity::serverTick);
