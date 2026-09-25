@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +26,7 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
     public static final class State extends BlockEntityRenderState {
         final BlockModelRenderState model = new BlockModelRenderState();
         BlockStateModel portalModel;
-        BlockState blockState;
+        BlockState renderedBlockState;
         boolean hyperdimensional;
         float yRotation;
     }
@@ -38,13 +39,14 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
     @Override
     public void extractRenderState(FumoBlockEntity blockEntity, State state, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, breakProgress);
         BlockState original = blockEntity.getBlockState();
         boolean spinning = blockEntity.isSpinning();
-        state.blockState = original;
         state.hyperdimensional = original.is(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
         state.yRotation = spinning ? blockEntity.getRenderYRot(partialTick) : 0.0F;
         BlockState rendered = spinning && original.hasProperty(FumoBlock.FACING)
                 ? original.setValue(FumoBlock.FACING, Direction.NORTH) : original;
+        state.renderedBlockState = rendered;
         var manager = Minecraft.getInstance().getModelManager();
         state.portalModel = manager.getBlockStateModelSet().get(rendered);
         if (!state.hyperdimensional) {
@@ -66,9 +68,10 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
             if (state.portalModel != null) {
                 HyperdimensionalPigmeePortalLayer.submit(state.portalModel, poseStack, collector);
             }
-            HyperdimensionalPigmeeTextureLayer.submitBlock(state.blockState, poseStack, collector, 0);
+            HyperdimensionalPigmeeTextureLayer.submitBlock(
+                    state.renderedBlockState, poseStack, collector, OverlayTexture.NO_OVERLAY);
         } else {
-            state.model.submit(poseStack, collector, state.lightCoords, 0, 0);
+            state.model.submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
         }
         poseStack.popPose();
     }

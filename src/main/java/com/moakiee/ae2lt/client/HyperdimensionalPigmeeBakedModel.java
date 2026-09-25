@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.client;
 
-import com.moakiee.ae2lt.mixin.client.ItemLayerRenderStateAccessor;
 import com.moakiee.ae2lt.mixin.client.ItemStackRenderStateAccessor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.ItemModel;
@@ -11,7 +10,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
-/** Adds portal and full-bright markings after the normal item model. */
+/** Replaces the normal item shell with the portal and full-bright markings. */
 final class HyperdimensionalPigmeeBakedModel extends SpinningFumoBakedModel {
     HyperdimensionalPigmeeBakedModel(ItemModel originalModel) { super(originalModel); }
 
@@ -19,15 +18,12 @@ final class HyperdimensionalPigmeeBakedModel extends SpinningFumoBakedModel {
     public void update(ItemStackRenderState state, ItemStack stack, ItemModelResolver resolver,
                        ItemDisplayContext displayContext, @Nullable ClientLevel level,
                        @Nullable ItemOwner owner, int seed) {
-        super.update(state, stack, resolver, displayContext, level, owner, seed);
         var access = (ItemStackRenderStateAccessor) state;
-        int count = access.ae2lt$activeLayerCount();
-        var special = state.newLayer();
-        if (count > 0) {
-            var first = (ItemLayerRenderStateAccessor) access.ae2lt$layers()[0];
-            special.setItemTransform(first.ae2lt$itemTransform());
-            special.setLocalTransform(first.ae2lt$localTransform());
-        }
-        special.setupSpecialModel(HyperdimensionalPigmeeItemRenderer.INSTANCE, null);
+        int firstLayer = access.ae2lt$activeLayerCount();
+        super.update(state, stack, resolver, displayContext, level, owner, seed);
+        if (firstLayer == access.ae2lt$activeLayerCount()) return;
+        // Keep the baked extents and transforms, but do not draw the ordinary
+        // opaque Pigmee body underneath the portal shell (as in 1.21.1's BEWLR).
+        access.ae2lt$layers()[firstLayer].setupSpecialModel(HyperdimensionalPigmeeItemRenderer.INSTANCE, null);
     }
 }

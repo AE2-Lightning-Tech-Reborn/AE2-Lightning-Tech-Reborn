@@ -26,6 +26,7 @@ else/
 run-passive-input-gametest/
 run-alloy-anvil-gametest/
 run-alloy-anvil-client/
+run-fumo-render-client/
 run-omniversal-gametest/
 run-omniversal-client/
 run-crystal-catalyzer-gametest/
