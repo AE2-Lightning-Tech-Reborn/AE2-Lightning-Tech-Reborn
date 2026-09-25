@@ -38,6 +38,7 @@ public class LightningAssemblyChamberRenderer
     @Override
     public void extractRenderState(LightningAssemblyChamberBlockEntity blockEntity, State state, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, breakProgress);
         var stack = blockEntity.getClientRecipeResult();
         state.blockItem = stack.getItem() instanceof BlockItem;
         itemModelResolver.updateForTopItem(state.item, stack, ItemDisplayContext.GROUND,

@@ -147,6 +147,8 @@ sourceSets {
                          'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuCraftingGameTests.java',
                          'com/moakiee/ae2lt/debug/OverloadProcessingRecipeSyncGameTests.java',
+                         'com/moakiee/ae2lt/debug/PhaseLockCreativeRecoveryGameTests.java',
+                         'com/moakiee/ae2lt/debug/TianshuWirelessChargingGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuWorkCraftingGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuPatternUploadGameTests.java',
                          'com/moakiee/ae2lt/debug/TianshuWirelessGameTestChecks.java',
@@ -315,6 +317,12 @@ neoForge {
             systemProperty 'ae2lt.alloyAnvilClientProbe', 'true'
         }
 
+        tianshuImeClient {
+            client()
+            gameDirectory = project.file('run-tianshu-ime-client')
+            systemProperty 'ae2lt.tianshuImeClientProbe', 'true'
+        }
+
         fumoRenderClient {
             client()
             gameDirectory = project.file('run-fumo-render-client')
@@ -406,7 +414,8 @@ neoForge {
                 sourceSet(sourceSets.wirelessPortTest)
             }
             if (providers.gradleProperty('ae2ltJdbClientProbe').isPresent()
-                    || providers.gradleProperty('ae2ltFumoRenderClientProbe').isPresent()) {
+                    || providers.gradleProperty('ae2ltFumoRenderClientProbe').isPresent()
+                    || providers.gradleProperty('ae2ltTianshuImeClientProbe').isPresent()) {
                 sourceSet(sourceSets.jdb)
             }
         }
@@ -437,6 +446,26 @@ def prepareRecipeSyncFixture = tasks.register('prepareRecipeSyncFixture', Copy) 
 }
 tasks.matching { it.name == 'runRecipeSyncGameTestServer' }.configureEach {
     dependsOn prepareRecipeSyncFixture
+}
+
+def tianshuImeProbeResult = layout.projectDirectory.file('run-tianshu-ime-client/tianshu-ime-result.txt').asFile
+tasks.matching { it.name == 'runTianshuImeClient' }.configureEach {
+    doFirst {
+        if (!providers.gradleProperty('ae2ltTianshuImeClientProbe').isPresent()) {
+            throw new GradleException('Use -Pae2ltTianshuImeClientProbe to include the native IME checks.')
+        }
+        tianshuImeProbeResult.delete()
+    }
+    doLast {
+        if (!tianshuImeProbeResult.isFile() || !tianshuImeProbeResult.text.startsWith('PASS:')) {
+            throw new GradleException('Tianshu IME checks failed: '
+                    + (tianshuImeProbeResult.isFile() ? tianshuImeProbeResult.text : 'no client result'))
+        }
+    }
+}
+if (providers.gradleProperty('ae2ltTianshuImeClientProbe').isPresent()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/client/TianshuImeClientProbe.java',
+                                   'com/moakiee/ae2lt/client/core/CoreEffectClientChecks.java'])
 }
 
 def fumoRenderProbeEnabled = providers.gradleProperty('ae2ltFumoRenderClientProbe').isPresent()

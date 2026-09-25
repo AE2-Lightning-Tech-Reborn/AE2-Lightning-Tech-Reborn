@@ -142,6 +142,14 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         button.setDisableBackground(true);
         return button;
     }
+    static void updateAnvilEditorAvailability(AETextField field, boolean visible, boolean hasInput) {
+        field.visible = visible;
+        field.active = visible && hasInput;
+        // 26.1 EditBox reports every setFocused(false) to the global IME manager,
+        // even if this editor is already unfocused. Never stop another field's text input.
+        if (!field.active && field.isFocused()) field.setFocused(false);
+    }
+
     private int stoneColumns() { return menu.hasCompactWorkArea() ? 3 : 4; }
 
     @Override protected void slotClicked(Slot slot, int index, int mouseButton, ContainerInput type) {
@@ -179,7 +187,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             setSlotsHidden(semantic, page != TianshuWorkPage.CELL);
         }
         if (page == TianshuWorkPage.SMITHING) positionRow(Ae2ltSlotSemantics.TIANSHU_SMITHING,
-                compact ? new int[]{96, 114, 132, 165} : new int[]{15, 33, 51, 109}, imageHeight - (compact ? 142 : 140));
+                compact ? new int[]{92, 111, 130, 170} : new int[]{15, 33, 51, 109}, imageHeight - (compact ? 142 : 140));
         if (page == TianshuWorkPage.ANVIL) positionRow(Ae2ltSlotSemantics.TIANSHU_ANVIL,
                 compact ? new int[]{96, 124, 165} : new int[]{27, 76, 134}, imageHeight - (compact ? 141 : 133));
         if (page == TianshuWorkPage.STONECUTTING) {
@@ -212,7 +220,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             clearGrid.setPosition(clearPosition.getX(), clearPosition.getY());
             clearToPlayer.setPosition(playerPosition.getX(), playerPosition.getY());
         } else {
-            int clearX = leftPos + (compact ? (page == TianshuWorkPage.STONECUTTING ? 145 : 164)
+            int clearX = leftPos + (compact ? (page == TianshuWorkPage.STONECUTTING ? 166 : 164)
                     : (page == TianshuWorkPage.STONECUTTING ? 105 : 137));
             int clearY = topPos + imageHeight - (page == TianshuWorkPage.ANVIL ? (compact ? 150 : 142)
                     : page == TianshuWorkPage.STONECUTTING ? (compact ? 169 : 164) : 162);
@@ -230,10 +238,8 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         fuzzy.set(menu.cellFuzzyMode);
         keepCellConfig.setVisibility(page == TianshuWorkPage.CELL);
         keepCellConfig.setState(menu.cellCopyMode == CopyMode.CLEAR_ON_REMOVE);
-        anvilName.visible = page == TianshuWorkPage.ANVIL;
-        anvilName.active = !menu.getAnvilInput().isEmpty();
-        // Keep the same native text-field palette as search; active still gates an empty anvil's editor.
-        if (!anvilName.active) anvilName.setFocused(false);
+        updateAnvilEditorAvailability(anvilName, page == TianshuWorkPage.ANVIL,
+                !menu.getAnvilInput().isEmpty());
         boolean inputChanged = !ItemStack.matches(observedAnvilInput, menu.getAnvilInput());
         if (inputChanged) observedAnvilInput = menu.getAnvilInput().copy();
         if ((inputChanged || !anvilName.isFocused()) && !anvilName.getValue().equals(menu.anvilItemName)) {
@@ -345,9 +351,13 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         }
         if (compact && menu.workPage == TianshuWorkPage.SMITHING) {
             // Keep the native template/base/addition empty-slot hints at full icon size.
-            Blitter.texture("guis/pattern_modes.png").src(134, 94, 54, 18)
-                    .dest(offsetX + 95, offsetY + imageHeight - 143).blit(graphics);
-            WORK_ARROW.dest(offsetX + 149, offsetY + imageHeight - 142).blit(graphics);
+            var smithingSlots = menu.getSlots(Ae2ltSlotSemantics.TIANSHU_SMITHING);
+            for (int i = 0; i < 3; i++) {
+                var slot = smithingSlots.get(i);
+                Blitter.texture("guis/pattern_modes.png").src(134 + i * 18, 94, 18, 18)
+                        .dest(offsetX + slot.x - 1, offsetY + slot.y - 1).blit(graphics);
+            }
+            WORK_ARROW.dest(offsetX + 150, offsetY + imageHeight - 142).blit(graphics);
         } else if (menu.workPage == TianshuWorkPage.ANVIL) {
             WORK_ARROW.dest(offsetX + (compact ? 146 : 106), offsetY + imageHeight - (compact ? 141 : 133)).blit(graphics);
         }

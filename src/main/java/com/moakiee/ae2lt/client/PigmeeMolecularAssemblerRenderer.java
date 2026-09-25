@@ -52,6 +52,7 @@ public final class PigmeeMolecularAssemblerRenderer implements
     @Override
     public void extractRenderState(PigmeeMolecularAssemblerBlockEntity blockEntity, State state, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, breakProgress);
         state.powered = blockEntity.isPowered();
         MolecularAssemblerAnimationStatus status = blockEntity.getAnimationStatus();
         state.item.clear();

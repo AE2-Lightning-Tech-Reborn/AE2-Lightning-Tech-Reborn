@@ -48,6 +48,7 @@ public final class TianshuCoreEffectRenderer
     @Override
     public void extractRenderState(TianshuSupercomputerControllerBlockEntity controller, State output, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(controller, output, partialTick, cameraPosition, breakProgress);
         var blockState = controller.getBlockState();
         output.visible = AE2LTClientConfig.useCoreShaderRendering()
                 && AE2LTClientConfig.renderMultiblockCoreEffects()

@@ -41,6 +41,7 @@ public class CrystalCatalyzerRenderer implements BlockEntityRenderer<CrystalCata
     @Override
     public void extractRenderState(CrystalCatalyzerBlockEntity blockEntity, State state, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, breakProgress);
         itemModelResolver.updateForTopItem(state.item,
                 blockEntity.getInventory().getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST),
                 ItemDisplayContext.FIXED, blockEntity.getLevel(), null, (int) blockEntity.getBlockPos().asLong());

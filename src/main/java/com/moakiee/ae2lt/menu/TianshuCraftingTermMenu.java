@@ -111,8 +111,19 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
             persistWorkstations();
         }
     };
-    private final AppEngInternalInventory cellInventory =
-            (AppEngInternalInventory) cellWorkbench.getSubInventory(ISegmentedInventory.CELLS);
+    // Client slot packets are independent snapshots. Running them through the native workbench
+    // callbacks rewrites the cell's components and invalidates vanilla click prediction.
+    private final AppEngInternalInventory cellInventory = isClientSide()
+            ? new AppEngInternalInventory(null, 1)
+            : (AppEngInternalInventory) cellWorkbench.getSubInventory(ISegmentedInventory.CELLS);
+    private final InternalInventory clientCellConfig = new AppEngInternalInventory(null, CELL_CONFIG_SLOTS);
+    private final InternalInventory clientCellUpgrades = new AppEngInternalInventory(null, 8) {
+        @Override public boolean isItemValid(int slot, ItemStack stack) {
+            return getCell().getItem() instanceof ICellWorkbenchItem cell
+                    && slot < cell.getUpgrades(getCell()).size()
+                    && cell.getUpgrades(getCell()).isItemValid(slot, stack);
+        }
+    };
     private ItemStack configuredCell = ItemStack.EMPTY;
     private final List<Slot> extraInputs = new ArrayList<>();
     private TianshuWorkstationStorage workstationStorage;
@@ -154,6 +165,11 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
             final int inventoryIndex = i;
             addSlot(new AppEngSlot(cellProxy(true), i) {
                 @Override public ItemStack getItem() { return getInventory().getStackInSlot(inventoryIndex); }
+                @Override public void set(ItemStack stack) {
+                    // A delta for a hidden row must still reach the client mirror.
+                    if (TianshuCraftingTermMenu.this.isClientSide()) initialize(stack);
+                    else super.set(stack);
+                }
                 @Override public boolean isSlotEnabled() { return isCellUpgradeVisible(inventoryIndex); }
                 @Override public boolean mayPlace(ItemStack stack) { return isSlotEnabled() && super.mayPlace(stack); }
                 @Override public boolean mayPickup(Player player) { return isSlotEnabled() && super.mayPickup(player); }
@@ -164,6 +180,11 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
             final int inventoryIndex = i;
             addSlot(new FakeSlot(cellProxy(false), i) {
                 @Override public ItemStack getItem() { return getInventory().getStackInSlot(inventoryIndex); }
+                @Override public void set(ItemStack stack) {
+                    // A delta for a hidden row must still reach the client mirror.
+                    if (TianshuCraftingTermMenu.this.isClientSide()) initialize(stack);
+                    else super.set(stack);
+                }
                 @Override public boolean isSlotEnabled() { return isCellMarkVisible(inventoryIndex); }
                 @Override public boolean canSetFilterTo(ItemStack stack) { return isSlotEnabled() && super.canSetFilterTo(stack); }
             }, Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG);
@@ -204,6 +225,7 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
     }
 
     private InternalInventory cellProxy(boolean upgrades) {
+        if (isClientSide()) return upgrades ? clientCellUpgrades : clientCellConfig;
         return new InternalInventory() {
             @Override public net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> toResourceHandler() {
                 return delegate().toResourceHandler();

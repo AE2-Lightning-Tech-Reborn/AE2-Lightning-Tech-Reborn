@@ -18,11 +18,18 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("phase_lock_allows_swimming_input", "phase_lock", 100,
+                com.moakiee.ae2lt.debug.PhaseLockCreativeRecoveryGameTests::phaseLockAllowsSwimmingInput);
+        add("phase_lock_empty_armor_survives_creative_projection_echo", "phase_lock", 100,
+                com.moakiee.ae2lt.debug.PhaseLockCreativeRecoveryGameTests::emptyArmorSurvivesCreativeProjectionEcho);
+        add("phase_lock_creative_echo_protection_preserves_real_edits", "phase_lock", 100,
+                com.moakiee.ae2lt.debug.PhaseLockCreativeRecoveryGameTests::creativeEchoProtectionPreservesRealEdits);
         add("overload_parallel_recipe_large_counts", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::parallelMachineResultsKeepLargeCounts);
         add("overload_programmatic_recipe_login_sync", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::programmaticRecipesSurviveLoginSync);
         add("overload_datapack_recipe_large_counts", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::datapackRecipesKeepLargeResults);
         add("overload_invalid_recipe_results_rejected", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::invalidDatapackResultsAreRejected);
         add("overload_kubejs_recipe_login_sync", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::kubeJsRecipesSurviveLoginSync);
+        add("wireless_terminals_accept_fe", "wireless_binding", 100, com.moakiee.ae2lt.debug.TianshuWirelessChargingGameTests::wirelessTerminalsAcceptFe);
         add("wireless_access_point_binding", "wireless_binding", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::wirelessAccessPointBinding);
         add("upload_wired_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wiredFullTargetRetainsEncodedPattern);
         add("upload_wireless_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wirelessFullTargetRetainsEncodedPattern);
@@ -65,6 +72,7 @@ public final class AlphaPortTestMod {
         add("pigmeerepeatedticksdonotaccelerate", "fluid", 350, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeRepeatedTicksDoNotAccelerate);
         add("jei_wireless_supply", "jei", 200, com.moakiee.ae2lt.debug.JeiWirelessSupplyGameTests::supplyAndNativeTransfer);
         add("workstation_workstations", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::workstations);
+        add("cell_workbench_client_sync", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::cellWorkbenchClientSync);
         add("workstation_cell_workbench", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::cellWorkbench);
         add("workstation_native_anvil_callbacks", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::nativeAnvilCallbacks);
         add("workstation_wireless", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::wireless);

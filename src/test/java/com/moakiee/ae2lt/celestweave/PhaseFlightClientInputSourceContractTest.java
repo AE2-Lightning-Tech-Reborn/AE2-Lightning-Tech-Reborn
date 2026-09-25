@@ -47,14 +47,17 @@ class PhaseFlightClientInputSourceContractTest {
     }
 
     @Test
-    void groundJumpAuthorizesOnlyTheTwoVanillaJumpImpulses() throws Exception {
+    void movementInputsAuthorizeOnlyTheirNativeImpulses() throws Exception {
         String mixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/LivingEntityPhaseJumpMixin.java"));
         assertTrue(mixin.contains("method = \"jumpFromGround\""));
         assertTrue(mixin.contains("LivingEntity;setDeltaMovement(DDD)V"));
         assertTrue(mixin.contains("LivingEntity;addDeltaMovement"));
         assertTrue(mixin.contains("PhaseFlightMovementGuard.runAsSelfMovement("));
-        assertFalse(mixin.contains("method = \"aiStep\""));
+        assertTrue(mixin.contains("LivingEntity;jumpInFluid(Lnet/neoforged/neoforge/fluids/FluidType;)V"));
+        assertTrue(mixin.contains("LivingEntity;sinkInFluid(Lnet/neoforged/neoforge/fluids/FluidType;)V"));
+        assertFalse(mixin.contains("@Inject"));
+        assertFalse(mixin.contains("@WrapMethod"));
 
         String mixinConfig = Files.readString(Path.of("src/main/resources/ae2lt.mixins.json"));
         assertTrue(mixinConfig.contains("LivingEntityPhaseJumpMixin"));

@@ -315,25 +315,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     @Override
     public void drawBG(GuiGraphicsExtractor graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
-        int rowAreaHeight = visibleRows * ROW_HEIGHT;
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, offsetY,
-                0, 0, GUI_WIDTH, BACKGROUND_TOP_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
-
-        int stretchHeight = Math.max(0, rowAreaHeight - 3);
-        if (stretchHeight > 0) {
-            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
-                    GUI_WIDTH, stretchHeight,
-                    0, BACKGROUND_STRETCH_TEXTURE_Y, GUI_WIDTH, 1,
-                    TEXTURE_SIZE, TEXTURE_SIZE);
-        }
-
-        int bottomBorderY = offsetY + BACKGROUND_TOP_HEIGHT + stretchHeight;
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, bottomBorderY,
-                0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1,
-                TEXTURE_SIZE, TEXTURE_SIZE);
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, bottomBorderY + 1,
-                0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT,
-                TEXTURE_SIZE, TEXTURE_SIZE);
+        drawFrame(graphics, offsetX, offsetY, visibleRows);
 
         int start = scrollbar.getCurrentScroll();
         for (int row = 0; row < visibleRows; row++) {
@@ -345,6 +327,29 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
                     ROW_TEXTURE_WIDTH, ROW_HEIGHT,
                     TEXTURE_SIZE, TEXTURE_SIZE);
         }
+    }
+
+    static void drawFrame(GuiGraphicsExtractor graphics, int offsetX, int offsetY, int rows) {
+        int rowAreaHeight = rows * ROW_HEIGHT;
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, offsetY,
+                0, 0, GUI_WIDTH, BACKGROUND_TOP_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+
+        int stretchHeight = Math.max(0, rowAreaHeight - 3);
+        if (stretchHeight > 0) {
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
+                    0, BACKGROUND_STRETCH_TEXTURE_Y,
+                    GUI_WIDTH, stretchHeight, GUI_WIDTH, 1,
+                    TEXTURE_SIZE, TEXTURE_SIZE);
+        }
+
+        int bottomBorderY = offsetY + BACKGROUND_TOP_HEIGHT + stretchHeight;
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, bottomBorderY,
+                0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1,
+                TEXTURE_SIZE, TEXTURE_SIZE);
+        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE, offsetX, bottomBorderY + 1,
+                0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT,
+                TEXTURE_SIZE, TEXTURE_SIZE);
+
     }
 
     @Override

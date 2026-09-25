@@ -503,6 +503,13 @@ public class AE2LightningTech {
         event.registerItem(
                 Capabilities.Energy.ITEM,
                 (stack, context) -> new PoweredItemCapabilities(
+                        context, ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get(),
+                        ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get()),
+                ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get());
+
+        event.registerItem(
+                Capabilities.Energy.ITEM,
+                (stack, context) -> new PoweredItemCapabilities(
                         context, ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
                         ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get()),
                 ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());

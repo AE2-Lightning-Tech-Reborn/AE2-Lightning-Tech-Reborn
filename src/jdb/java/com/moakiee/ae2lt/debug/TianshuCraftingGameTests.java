@@ -371,6 +371,81 @@ public final class TianshuCraftingGameTests {
         helper.succeed();
     }
 
+    public static void cellWorkbenchClientSync(GameTestHelper helper) {
+        var player = player(helper.getLevel(), "CellSyncServer");
+        var host = new TestHost(helper.getLevel(), helper.absolutePos(BlockPos.ZERO));
+        var server = menu(player, host);
+        var clientPlayer = player(helper.getLevel(), "CellSyncClient");
+        // Drive the client-side menu branch in the native server runtime. Inventory synchronization
+        // and click prediction are common code; no GUI, rendering or network is mocked here.
+        var client = new TianshuCraftingTermMenu(7, clientPlayer.getInventory(), host) {
+            @Override public boolean isClientSide() { return true; }
+        };
+        try {
+            server.setWorkPage(TianshuWorkPage.CELL);
+            var cell = AEItems.ITEM_CELL_1K.stack();
+            slot(server, Ae2ltSlotSemantics.TIANSHU_CELL, 0).set(cell);
+            for (int row = 0; row <= 18; row++) {
+                server.setCellConfigRow(row);
+                int index = row * 3;
+                server.setFilter(slot(server, Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG, index).index,
+                        new ItemStack(Items.DIAMOND));
+            }
+            server.setCellConfigRow(0);
+            client.initializeContents(1, server.slots.stream().map(slot -> slot.getItem().copy()).toList(), ItemStack.EMPTY);
+            client.workPage = server.workPage;
+            client.cellConfigSize = server.cellConfigSize;
+            client.cellUpgradeSize = server.cellUpgradeSize;
+            require(ItemStack.matches(server.getCell(), client.getCell()), "full slot sync changed the client cell components");
+            // Hidden slot deltas arrive independently of scrolling and must not be thrown away.
+            server.setCellConfigRow(3);
+            var serverMark = slot(server, Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG, 9);
+            server.setFilter(serverMark.index, new ItemStack(Items.GOLD_INGOT));
+            client.setItem(serverMark.index, 2, serverMark.getItem().copy());
+            client.cellConfigRow = 3;
+            require(slot(client, Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG, 9).getItem().is(Items.GOLD_INGOT),
+                    "fourth-row delta was discarded while its slot was hidden");
+            for (int row = 0; row <= 18; row++) {
+                client.cellConfigRow = row;
+                for (int i = 0; i < 9; i++) require(
+                        slot(client, Ae2ltSlotSemantics.TIANSHU_CELL_CONFIG, row * 3 + i).isActive(),
+                        "missing visible slot on cell row " + row);
+            }
+            for (int i = 0; i < 12; i++) {
+                var real = slot(server, Ae2ltSlotSemantics.TIANSHU_CELL, 0);
+                server.setCarried(ItemStack.EMPTY);
+                client.initializeContents(3 + i, server.slots.stream().map(slot -> slot.getItem().copy()).toList(), ItemStack.EMPTY);
+                client.cellConfigRow = server.cellConfigRow;
+                client.cellConfigSize = server.cellConfigSize;
+                client.cellUpgradeSize = server.cellUpgradeSize;
+                client.clicked(real.index, 0, ContainerInput.PICKUP, clientPlayer);
+                server.clicked(real.index, 0, ContainerInput.PICKUP, player);
+                require(ItemStack.matches(client.getCarried(), server.getCarried()) && client.getCell().isEmpty(),
+                        "first-click cell prediction differs from server " + i);
+                require(server.getCell().isEmpty() && server.getCarried().is(AEItems.ITEM_CELL_1K.asItem()),
+                        "cell did not come out on first click " + i);
+                client.clicked(real.index, 0, ContainerInput.PICKUP, clientPlayer);
+                server.clicked(real.index, 0, ContainerInput.PICKUP, player);
+                require(ItemStack.matches(client.getCell(), server.getCell()) && client.getCarried().isEmpty(),
+                        "first-click insertion prediction differs from server " + i);
+                require(server.getCarried().isEmpty() && server.getCell().is(AEItems.ITEM_CELL_1K.asItem()),
+                        "cell did not return on first click " + i);
+                var upgrade = slot(server, Ae2ltSlotSemantics.TIANSHU_CELL_UPGRADE, 0);
+                upgrade.set(AEItems.FUZZY_CARD.stack());
+                server.clicked(upgrade.index, 0, ContainerInput.PICKUP, player);
+                require(server.getCarried().is(AEItems.FUZZY_CARD.asItem()) && upgrade.getItem().isEmpty(),
+                        "upgrade did not come out on first click " + i);
+                server.setCarried(ItemStack.EMPTY);
+            }
+        } finally {
+            server.removed(player);
+            player.containerMenu = player.inventoryMenu;
+            helper.getLevel().removeBlockEntity(helper.absolutePos(BlockPos.ZERO));
+        }
+        passed("cell client synchronization, all 21 rows and repeated first-click removals");
+        helper.succeed();
+    }
+
     private static final class TestHost extends BlockEntity implements TianshuCraftingTerminalHost, IEnergySource {
         private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkstationStorage workstations =
                 new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkstationStorage(data -> {});

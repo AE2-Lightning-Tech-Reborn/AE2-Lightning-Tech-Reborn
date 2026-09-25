@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
+import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
 
 /**
  * Keeps server-owned Celestweave state authoritative when the creative inventory is opened.
@@ -29,9 +30,11 @@ import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
  *
  * <p>This wrapper is deliberately placed at the narrow server-side mutation point instead of
  * suppressing the client listener. The server can compare the authoritative stack with the
- * uploaded stack and reject only a state echo of the same UUID-bound armor. Empty stacks, another
- * item, and another armor UUID still reach vanilla, so real creative-mode moves, equips and
- * removals retain their normal behavior.</p>
+ * uploaded stack and reject state echoes of the same UUID-bound armor. It also rejects an old
+ * phase projection over real armor: after an unpowered projection collapses, the server has
+ * already restored the real stack, and accepting that projection would overwrite the only copy.
+ * Only the four armor equipment slots are guarded. Normal inventory edits, empty stacks,
+ * ordinary items and another real armor UUID still reach vanilla.</p>
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
@@ -45,7 +48,10 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             ItemStack uploaded,
             Operation<Void> original) {
         ItemStack authoritative = slot.getItem();
-        if (!ae2lt$isSameCelestweaveArmor(authoritative, uploaded)) {
+        // InventoryMenu assigns slots 5 through 8 to equipped armor. Creative inventory
+        // uploads to storage/hotbar/offhand slots are real edits and must remain writable.
+        if (slot.index < 5 || slot.index > 8
+                || !ae2lt$isStaleCelestweaveCreativeEcho(authoritative, uploaded)) {
             original.call(slot, uploaded);
             return;
         }
@@ -60,11 +66,18 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
     }
 
     @Unique
-    private static boolean ae2lt$isSameCelestweaveArmor(ItemStack authoritative, ItemStack uploaded) {
+    private static boolean ae2lt$isStaleCelestweaveCreativeEcho(ItemStack authoritative, ItemStack uploaded) {
         if (authoritative.isEmpty()
                 || uploaded.isEmpty()
-                || authoritative.getItem() != uploaded.getItem()
                 || !(authoritative.getItem() instanceof BaseCelestweaveArmorItem)) {
+            return false;
+        }
+
+        if (uploaded.getItem() instanceof PhaseLockProjectionItem) {
+            // A delayed projection must not overwrite the real armor restored in this equipment slot.
+            return true;
+        }
+        if (authoritative.getItem() != uploaded.getItem()) {
             return false;
         }
 

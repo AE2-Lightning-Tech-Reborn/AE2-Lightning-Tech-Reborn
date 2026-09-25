@@ -46,6 +46,7 @@ public class LightningSimulationChamberRenderer
     @Override
     public void extractRenderState(LightningSimulationChamberBlockEntity blockEntity, State state, float partialTick,
                                    Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, breakProgress);
         var blockState = blockEntity.getBlockState();
         state.facing = blockState.hasProperty(LightningSimulationChamberBlock.FACING)
                 ? blockState.getValue(LightningSimulationChamberBlock.FACING) : Direction.NORTH;
