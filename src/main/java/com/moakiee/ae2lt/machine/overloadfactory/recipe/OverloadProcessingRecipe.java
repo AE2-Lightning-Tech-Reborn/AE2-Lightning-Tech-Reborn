@@ -13,6 +13,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -40,7 +41,17 @@ public final class OverloadProcessingRecipe implements Recipe<OverloadProcessing
                             ? DataResult.error(() -> "overload processing supports at most 9 item inputs")
                             : DataResult.success(List.copyOf(inputs)));
 
-    private static final Codec<List<ItemStack>> OUTPUTS_CODEC = ItemStack.STRICT_CODEC.listOf().validate(outputs -> {
+    // Machine quantities may exceed an item's normal stack size. Vanilla's codec
+    // also replaces counts outside 1..99 with 1, so keep the quantity as a positive int.
+    private static final Codec<ItemStack> RESULT_STACK_CODEC = RecordCodecBuilder.<ItemStack>create(instance -> instance.group(
+                    ItemStack.ITEM_NON_AIR_CODEC.fieldOf("id").forGetter(ItemStack::getItemHolder),
+                    Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("count", 1).forGetter(ItemStack::getCount),
+                    DataComponentPatch.CODEC.optionalFieldOf("components", DataComponentPatch.EMPTY)
+                            .forGetter(ItemStack::getComponentsPatch))
+            .apply(instance, ItemStack::new))
+            .validate(stack -> ItemStack.validateComponents(stack.getComponents()).map(ignored -> stack));
+
+    private static final Codec<List<ItemStack>> OUTPUTS_CODEC = RESULT_STACK_CODEC.listOf().validate(outputs -> {
         if (outputs.size() > OverloadProcessingFactoryInventory.OUTPUT_SLOT_COUNT) {
             return DataResult.error(() -> "overload processing supports at most 1 item output");
         }

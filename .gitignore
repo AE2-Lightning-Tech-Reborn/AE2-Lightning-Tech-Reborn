@@ -46,6 +46,7 @@ logs/
 # Runtime / temporary files
 run/
 /run-gametest/
+/run-recipe-sync-gametest/
 /run-wireless-io-gametest/
 /benchmark-results/
 out/
