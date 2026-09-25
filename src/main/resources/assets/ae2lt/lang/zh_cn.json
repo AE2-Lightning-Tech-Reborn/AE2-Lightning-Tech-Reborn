@@ -1465,5 +1465,22 @@
   "ae2lt.railgun.percentage.tooltip": "百分比模式仅用于蓄力：按档位附加目标最大生命值的一部分；每个目标收取处决附加 FE。光束和链式传播不触发。",
   "ae2lt.railgun.ehv_beam.tooltip": "安装上限 1；在设备中枢启用极高压光束，消耗极高压闪电并提升固定伤害。关闭时恢复高压光束。",
   "ae2lt.railgun.config.ehv_beam": "极高压光束",
-  "ae2lt.railgun.config.overload_execution_mode.percentage": "百分比伤害"
+  "ae2lt.railgun.config.overload_execution_mode.percentage": "百分比伤害",
+  "block.ae2lt.mining_factory": "挖掘工厂",
+  "gui.ae2lt.mining_factory.input": "方块",
+  "gui.ae2lt.mining_factory.tool": "工具",
+  "gui.ae2lt.mining_factory.status.idle": "等待输入方块",
+  "gui.ae2lt.mining_factory.status.working": "正在处理",
+  "gui.ae2lt.mining_factory.status.tool": "请放入工具或破坏面板",
+  "gui.ae2lt.mining_factory.status.harvest": "工具挖掘等级不足",
+  "gui.ae2lt.mining_factory.status.energy": "等待供电",
+  "gui.ae2lt.mining_factory.status.lightning": "等待网络供给闪电",
+  "gui.ae2lt.mining_factory.lightning": "高压闪电：%s（每批消耗 1）",
+  "gui.ae2lt.mining_factory.status.output": "输出已堵塞",
+  "gui.ae2lt.mining_factory.status.unsupported": "不支持此方块",
+  "gui.ae2lt.mining_factory.status.error": "战利品异常，请重放输入",
+  "jei.ae2lt.mining_factory.info": "放入方块物品和耐久工具，按战利品表批量处理。时运、精准采集生效，按实际处理数量消耗耐久和 FE。可安装附魔破坏面板替代工具，额外消耗 FE。每批处理 5 tick，完成时从 ME 网络消耗 1 单位高压闪电（不随并行数增加），限量重新抽样并按样本代表数量放大产出。支持神化石材转化、大地恩惠和血魔法时运涂油；涂油按实际方块数消耗，耗尽时结束本批。不会触发范围挖掘。不支持纯电动工具、带方块实体的方块及其他真实挖掘事件效果，详细规则见指南。 闪电坍缩矩阵按过载处理工厂规则增加并行（无矩阵为 1 并行，最多 32 枚矩阵）。工具栏可设置自动弹出及相对输出面，内存卡可复制设置并使用背包中的实际矩阵补齐数量。",
+  "gui.ae2lt.mining_factory.matrix": "矩阵",
+  "gui.ae2lt.mining_factory.duration": "处理时间：%s tick / 批",
+  "gui.ae2lt.mining_factory.parallel": "并行上限：%s"
 }

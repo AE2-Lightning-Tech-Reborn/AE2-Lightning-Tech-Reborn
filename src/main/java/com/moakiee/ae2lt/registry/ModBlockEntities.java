@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
@@ -81,6 +82,10 @@ public final class ModBlockEntities {
                             LightningAssemblyChamberBlockEntity::new,
                             ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get())
                             .build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MiningFactoryBlockEntity>>
+            MINING_FACTORY = BLOCK_ENTITY_TYPES.register("mining_factory",
+                    () -> BlockEntityType.Builder.of(MiningFactoryBlockEntity::new, ModBlocks.MINING_FACTORY.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<OverloadProcessingFactoryBlockEntity>>
             OVERLOAD_PROCESSING_FACTORY = BLOCK_ENTITY_TYPES.register(

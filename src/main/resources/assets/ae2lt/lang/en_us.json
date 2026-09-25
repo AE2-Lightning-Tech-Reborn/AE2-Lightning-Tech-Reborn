@@ -1465,5 +1465,22 @@
   "ae2lt.railgun.percentage.tooltip": "Percentage mode only affects charged hits: adds tier-based max-health damage and pays the execution FE surcharge per target. Never applies to beams or chain propagation.",
   "ae2lt.railgun.ehv_beam.tooltip": "Install limit: 1. Enable EHV Beam in the Device Hub to consume EHV lightning for higher fixed damage. Disable to restore HV beam.",
   "ae2lt.railgun.config.ehv_beam": "EHV Beam",
-  "ae2lt.railgun.config.overload_execution_mode.percentage": "Percentage"
+  "ae2lt.railgun.config.overload_execution_mode.percentage": "Percentage",
+  "block.ae2lt.mining_factory": "Mining Factory",
+  "gui.ae2lt.mining_factory.input": "Block",
+  "gui.ae2lt.mining_factory.tool": "Tool",
+  "gui.ae2lt.mining_factory.status.idle": "Insert blocks",
+  "gui.ae2lt.mining_factory.status.working": "Processing",
+  "gui.ae2lt.mining_factory.status.tool": "Insert tool / plane",
+  "gui.ae2lt.mining_factory.status.harvest": "Tool tier too low",
+  "gui.ae2lt.mining_factory.status.energy": "Waiting for power",
+  "gui.ae2lt.mining_factory.status.lightning": "Waiting for network lightning",
+  "gui.ae2lt.mining_factory.lightning": "HV Lightning: %s (1 per batch)",
+  "gui.ae2lt.mining_factory.status.output": "Output blocked",
+  "gui.ae2lt.mining_factory.status.unsupported": "Unsupported block",
+  "gui.ae2lt.mining_factory.status.error": "Loot failed; reinsert input",
+  "jei.ae2lt.mining_factory.info": "Processes block items using their loot tables and an installed durability tool. Fortune and Silk Touch apply; durability and FE are charged per processed block. An enchanted Annihilation Plane can replace the tool at extra FE cost. Each batch takes 5 ticks, consumes one HV Lightning from the ME network regardless of parallel count, and uses fresh bounded loot samples with weighted output on completion. Apotheosis stoneforming, Boon of the Earth and Blood Magic Fortune anointments apply. Anointments cost one use per processed block; expiry ends the batch. Area mining does not trigger. Energy-only tools, block entities and other real mining event effects are not supported. See the guide for details. Lightning Collapse Matrices increase parallel capacity using the Overload Processing Factory rules (1 without a matrix; up to 32 matrices). The toolbar configures automatic export and relative output faces; memory cards copy these settings and restore matrices using real inventory items.",
+  "gui.ae2lt.mining_factory.matrix": "Matrix",
+  "gui.ae2lt.mining_factory.duration": "Processing time: %s ticks / batch",
+  "gui.ae2lt.mining_factory.parallel": "Parallel capacity: %s"
 }

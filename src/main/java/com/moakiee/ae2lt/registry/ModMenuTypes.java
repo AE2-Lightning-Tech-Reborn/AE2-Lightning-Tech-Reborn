@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.AtmosphericIonizerMenu;
 import com.moakiee.ae2lt.menu.CrystalCatalyzerMenu;
@@ -88,6 +89,9 @@ public final class ModMenuTypes {
             LIGHTNING_COLLECTOR = MENU_TYPES.register(
                     "lightning_collector",
                     () -> LightningCollectorMenu.TYPE);
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MiningFactoryMenu>>
+            MINING_FACTORY = MENU_TYPES.register("mining_factory", () -> MiningFactoryMenu.TYPE);
 
     public static final DeferredHolder<MenuType<?>, MenuType<OverloadProcessingFactoryMenu>>
             OVERLOAD_PROCESSING_FACTORY = MENU_TYPES.register(

@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt;
 
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModDataComponents;
@@ -150,6 +151,7 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.LIGHTNING_SIMULATION_CHAMBER);
                         output.accept(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         output.accept(ModBlocks.OVERLOAD_PROCESSING_FACTORY);
+                        output.accept(ModBlocks.MINING_FACTORY);
 
                         // 过载 ME 网络设备
                         output.accept(ModBlocks.OVERLOADED_CONTROLLER);
@@ -444,6 +446,11 @@ public class AE2LightningTech {
                 ModBlockEntities.TESLA_COIL.get(),
                 (blockEntity, side) -> blockEntity.getAutomationInventory());
 
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, side) -> blockEntity.getAutomationInventory());
+        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage());
+
         // TeslaCoil 是双格高方块,UPPER 半部分没有 BlockEntity;
         // 把 UPPER 的 ItemHandler 查询代理到下方 LOWER 的 BE,
         // 让漏斗/导管从顶面和上半身四面也能输入物品。
@@ -602,6 +609,11 @@ public class AE2LightningTech {
 
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
+                ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
+
+        event.registerBlockEntity(
+                AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 ModBlockEntities.OVERLOAD_DEVICE_WORKBENCH.get(),
                 (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
 
@@ -706,6 +718,11 @@ public class AE2LightningTech {
         event.registerBlockEntity(
                 AE2LTCapabilities.LIGHTNING_ENERGY_BLOCK,
                 ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get(),
+                (blockEntity, side) -> new GridLightningEnergyHandler(blockEntity));
+
+        event.registerBlockEntity(
+                AE2LTCapabilities.LIGHTNING_ENERGY_BLOCK,
+                ModBlockEntities.MINING_FACTORY.get(),
                 (blockEntity, side) -> new GridLightningEnergyHandler(blockEntity));
 
         // TeslaCoil 是双高方块：UPPER 半部分 newBlockEntity 返回 null，
@@ -819,6 +836,9 @@ public class AE2LightningTech {
                     assemblyBeType,
                     null,
                     LightningAssemblyChamberBlockEntity::serverTick);
+
+            ModBlocks.MINING_FACTORY.get().setBlockEntity(MiningFactoryBlockEntity.class,
+                    ModBlockEntities.MINING_FACTORY.get(), null, MiningFactoryBlockEntity::serverTick);
 
             var overloadProcessingFactoryBlock = ModBlocks.OVERLOAD_PROCESSING_FACTORY.get();
             var overloadProcessingFactoryBeType = ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get();

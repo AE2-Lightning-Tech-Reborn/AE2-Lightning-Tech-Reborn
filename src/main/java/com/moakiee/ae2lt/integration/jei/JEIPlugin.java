@@ -116,6 +116,9 @@ public class JEIPlugin implements IModPlugin {
                 ModItems.PIGMEE_CORE.get(),
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
 
+        registration.addIngredientInfo(ModBlocks.MINING_FACTORY.get().asItem(),
+                Component.translatable("jei.ae2lt.mining_factory.info"));
+
         var level = Minecraft.getInstance().level;
         if (level == null) {
             return;
