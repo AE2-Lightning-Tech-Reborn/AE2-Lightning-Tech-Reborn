@@ -1162,6 +1162,9 @@ public class AE2LightningTech {
                 GridLinkables.register(
                         ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
                         WirelessTerminalItem.LINKABLE_HANDLER);
+                GridLinkables.register(
+                        ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get(),
+                        WirelessTerminalItem.LINKABLE_HANDLER);
                 Ae2wtlibIntegration.verifyTerminalRegistration();
                 Ae2wtlibIntegration.register();
             }
