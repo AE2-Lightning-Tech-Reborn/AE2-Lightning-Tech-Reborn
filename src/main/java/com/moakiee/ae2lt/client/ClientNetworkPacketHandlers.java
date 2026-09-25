@@ -37,8 +37,8 @@ public final class ClientNetworkPacketHandlers {
     private ClientNetworkPacketHandlers() {
     }
 
-    public static void handleEasterEgg() {
-        EasterEggOverlay.trigger();
+    public static void handleEasterEgg(net.minecraft.core.GlobalPos source) {
+        EasterEggOverlay.trigger(source);
     }
 
     public static void handleFrequencyResponse(Component message) {
