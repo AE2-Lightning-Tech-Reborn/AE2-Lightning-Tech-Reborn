@@ -77,5 +77,8 @@ public class RailgunModuleItem extends Item implements OverloadDeviceModuleItem 
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         ModuleTooltip.appendInstallInfo(this, tooltip);
+        if (type == RailgunModuleType.OVERLOAD_EXECUTION) {
+            tooltip.add(Component.translatable("ae2lt.railgun.percentage.tooltip"));
+        }
     }
 }

@@ -32,10 +32,13 @@ class RailgunSettingsTest {
     }
 
     @Test
-    void executionModeCyclesThroughAllThreeStates() {
-        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.OFF.next());
+    void executionModeCyclesThroughSupportedStates() {
+        assertEquals(RailgunExecutionMode.PERCENTAGE, RailgunExecutionMode.OFF.next());
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.PERCENTAGE.next());
         assertEquals(RailgunExecutionMode.FORCED, RailgunExecutionMode.NORMAL.next());
         assertEquals(RailgunExecutionMode.OFF, RailgunExecutionMode.FORCED.next());
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.OFF.next(false));
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.PERCENTAGE.forMultidimensional());
     }
 
     @Test
@@ -89,4 +92,3 @@ class RailgunSettingsTest {
         assertEquals(RailgunExecutionMode.NORMAL, disabled.executionMode());
     }
 }
-

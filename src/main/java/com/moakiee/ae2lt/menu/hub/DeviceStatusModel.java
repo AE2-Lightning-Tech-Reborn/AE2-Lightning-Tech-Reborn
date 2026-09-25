@@ -150,7 +150,9 @@ public record DeviceStatusModel(
         return new DeviceStatusModel(
                 name, hasStructuralCore, powered, modules, -1, List.of(),
                 terrainAllowed && settings.terrainDestruction(), settings.pvp(), settings.soundEnabled(),
-                settings.chainDamage(), settings.executionMode(), settings.chargedSplash());
+                settings.chainDamage(), entries.hasMultidimensionalExecution()
+                        ? settings.executionMode().forMultidimensional() : settings.executionMode(),
+                settings.chargedSplash());
     }
 
     private static List<ModuleConfigInfo> moduleConfigs(ItemStack armor, ServerPlayer player, int selectedModuleIndex) {

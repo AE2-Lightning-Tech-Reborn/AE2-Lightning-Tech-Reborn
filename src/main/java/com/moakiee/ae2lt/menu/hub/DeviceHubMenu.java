@@ -400,9 +400,14 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
         if (railgun.isEmpty()) return;
         RailgunSettings s = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(railgun, RailgunSettings.DEFAULT);
-        ModDataComponents.RAILGUN_SETTINGS.set(
-                railgun,
-                s.withExecutionMode(s.executionMode().next()));
+        var modules = com.moakiee.ae2lt.item.railgun.RailgunModuleStorage.entryData(railgun);
+        RailgunExecutionMode mode = modules.hasMultidimensionalExecution()
+                ? s.executionMode().forMultidimensional() : s.executionMode();
+        RailgunExecutionMode next = mode.next(modules.hasOverloadExecution() && !modules.hasMultidimensionalExecution());
+        ModDataComponents.RAILGUN_SETTINGS.set(railgun, s.withExecutionMode(next));
+        if (s.executionMode() == RailgunExecutionMode.PERCENTAGE || next == RailgunExecutionMode.PERCENTAGE) {
+            com.moakiee.ae2lt.logic.railgun.OverloadExecutionService.clearTrackedTargets(railgun);
+        }
     }
 
     public void toggleRailgunChargedSplash() {
