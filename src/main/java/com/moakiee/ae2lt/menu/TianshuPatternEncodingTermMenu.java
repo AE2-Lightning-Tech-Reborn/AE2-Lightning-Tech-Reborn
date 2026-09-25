@@ -1072,7 +1072,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     private void finishUpload(boolean success) {
-        settleNetworkBlankCharge(success);
+        settleNetworkBlankCharge();
         uploadState = success ? 1 : 3;
         broadcastChanges();
     }
@@ -1205,7 +1205,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     private void finishProviderUpload(ServerPlayer player, boolean success) {
-        settleNetworkBlankCharge(success);
+        settleNetworkBlankCharge();
         uploadState = success ? 1 : 3;
         refreshUploadTargetsNow();
         PacketSender.sendToPlayer(player,
@@ -2540,8 +2540,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
     }
 
     /**
-     * Compensates a failed encode/upload by replacing exactly this menu's generated pattern with
-     * one blank pattern in network storage. If the network cannot accept the refund, the encoded
+     * Compensates a rejected duplicate encoding by replacing exactly this menu's generated pattern
+     * with one blank pattern in network storage. If the network cannot accept the refund, the encoded
      * pattern is restored to the terminal so no item is lost.
      */
     private boolean rollbackRefundableEncodedPattern() {
@@ -2574,12 +2574,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu {
         return false;
     }
 
-    private void settleNetworkBlankCharge(boolean uploadSucceeded) {
-        if (uploadSucceeded) {
-            refundableEncodedPattern = ItemStack.EMPTY;
-        } else {
-            rollbackRefundableEncodedPattern();
-        }
+    private void settleNetworkBlankCharge() {
+        // Encoding already consumed the blank. A failed upload leaves the paid encoded item
+        // in its slot for the player to retry, edit or remove; it must not dismantle the item.
+        refundableEncodedPattern = ItemStack.EMPTY;
     }
 
     /** Clears a blank left by an older menu version that staged it in the hidden input inventory. */

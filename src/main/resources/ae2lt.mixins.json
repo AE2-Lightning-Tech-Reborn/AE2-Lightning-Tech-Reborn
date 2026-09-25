@@ -6,6 +6,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ae2lt.refmap.json",
   "mixins": [
+    "OverloadAlloyAnvilFallingMixin",
+    "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",

@@ -1,4 +1,6 @@
 {
+  "tooltip.ae2lt.overloaded_interface.pending_input": "内含待入网资源，放回有电的 ME 网络后继续传输。",
+  "block.ae2lt.overload_alloy_anvil": "过载合金砧",
   "structure.ae2lt.alien_starship": "外星飞船",
   "message.ae2lt.config_migrated_v2": "[AE2 闪电科技：重生] 本次更新涉及平衡调整，ae2lt-common.toml 已被重置为默认值。如果你之前改过其中的配置项，请到新文件里重新设定。",
   "message.ae2lt.config_migrated_v2.matrix": "[AE2 闪电科技：重生] 过载处理工厂的矩阵槽上限已调整为 32 枚。原有超过 32 枚的堆叠会被保留，但仅 32 枚参与并行计算，请打开 GUI 直接取出多余的矩阵。",

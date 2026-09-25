@@ -15,7 +15,7 @@ item_ids:
   <BlockImage id="ae2lt:lightning_collector" scale="4" />
 </Row>
 
-The **Lightning Collector** is the starting point of the Lightning system. When lightning strikes the **Lightning Rod directly above the collector**, the collector injects Lightning energy directly into the ME network.
+The **Lightning Collector** is the starting point of the Lightning system. When lightning strikes within its collection area, the collector injects Lightning energy directly into the ME network.
 
 *`"Borrowing from others, seeking oneself."`*
 
@@ -23,7 +23,9 @@ The **Lightning Collector** is the starting point of the Lightning system. When 
 
 ## Basic Usage
 
-Place the Lightning Collector **out in the open**, put a vanilla **Lightning Rod directly on top of it**, and connect the collector to an ME network. A strike is only collected when it hits that top Lightning Rod, so keep the rod exposed to the sky for natural thunderstorms.
+Put a vanilla **Lightning Rod directly on top of the collector** and connect the collector to an ME network. Both natural and artificial lightning are checked using the block containing the strike position. The collection area is a **3×3×3 cube centered on the top rod's block**, extending one block in every direction. Keep the rod exposed to the sky for natural thunderstorms.
+
+When collection areas overlap, collectors are tried in order of their top rods' distance from the strike block. A collector that cannot store any energy allows the next one to try. **Each bolt can be collected successfully by at most one collector, once.** Even a partial insertion consumes the bolt; later flashes or a save/reload cannot produce more energy from it.
 
 Three conditions must be met for a strike to be productive:
 
@@ -31,12 +33,12 @@ Three conditions must be met for a strike to be productive:
 * The network must be online
 * The network must have enough storage capacity to accept the Lightning about to be produced (otherwise the strike is wasted)
 
-The tier of Lightning produced depends on what hits the top Lightning Rod:
+The tier of Lightning produced depends on the collected bolt:
 
-* **Artificial lightning** (summoned by a player carrying an Overload Crystal, or discharged by a Tesla Coil) → **High Voltage Lightning**
+* **Artificial lightning** (for example, summoned by a carried or dropped Overload Crystal) → **High Voltage Lightning**
 * **Natural lightning** (a real thunderstorm bolt) → **Extreme High Voltage Lightning**
 
-After each successful collection the collector enters a short cooldown (default 0 ticks, configurable).
+After each successful collection the collector enters a short cooldown (default 0 ticks, configurable). Each collector can successfully collect at most one bolt per tick.
 
 ## Electro-Chime Crystal and Yield
 

@@ -19,6 +19,23 @@ public class OverloadedInterfaceBlock extends AE2LTBaseEntityBlock<OverloadedInt
     }
 
     @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack stack,
+                                net.minecraft.world.level.BlockGetter context,
+                                java.util.List<net.minecraft.network.chat.Component> tooltip,
+                                net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        var tag = stack.getTag();
+        var blockEntityTag = stack.getTagElement("BlockEntityTag");
+        if ((tag != null && tag.contains("ae2ltPassiveInput", net.minecraft.nbt.Tag.TAG_LIST))
+                || (blockEntityTag != null && blockEntityTag.contains(
+                        "ae2ltPassiveInput", net.minecraft.nbt.Tag.TAG_LIST))) {
+            tooltip.add(net.minecraft.network.chat.Component.translatable(
+                    "tooltip.ae2lt.overloaded_interface.pending_input")
+                    .withStyle(net.minecraft.ChatFormatting.YELLOW));
+        }
+    }
+
+    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
                                                Player player, BlockHitResult hitResult) {
         if (InteractionUtil.isInAlternateUseMode(player)) {
@@ -35,4 +52,3 @@ public class OverloadedInterfaceBlock extends AE2LTBaseEntityBlock<OverloadedInt
         return InteractionResult.PASS;
     }
 }
-

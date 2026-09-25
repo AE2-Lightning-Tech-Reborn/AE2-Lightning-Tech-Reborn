@@ -24,6 +24,7 @@ import com.moakiee.ae2lt.logic.ConnectionEndpoints;
 import com.moakiee.ae2lt.logic.EjectModeRegistry;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
 import com.moakiee.ae2lt.logic.FilteredInsertGenericInv;
+import com.moakiee.ae2lt.logic.BufferedInterfaceInput;
 import com.moakiee.ae2lt.logic.OverloadedInterfaceLogic;
 import com.moakiee.ae2lt.logic.OverloadedInterfaceTickDecider;
 import com.moakiee.ae2lt.logic.WirelessConnectionLists;
@@ -143,6 +144,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private final ImportScanBuffer scanBuffer = new ImportScanBuffer();
     /** Persistent ownership buffer for imported stacks and export overflow. */
     private final Map<AEKey, Long> importBuffer = new LinkedHashMap<>();
+    private static final String TAG_PASSIVE_INPUT = "ae2ltPassiveInput";
+    private final BufferedInterfaceInput passiveInput = new BufferedInterfaceInput();
     private final ImportBufferFlushState importBufferFlushState = new ImportBufferFlushState();
     private final Map<AEKeyType, Long> keyTypeLockUntil = new IdentityHashMap<>();
     private final Map<AEKeyType, List<ExportConfigEntry>> exportConfigCache = new IdentityHashMap<>();
@@ -928,9 +931,41 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (exposedGenericInv == null
                 && getInterfaceLogic() instanceof OverloadedInterfaceLogic ol) {
             exposedGenericInv = new FilteredInsertGenericInv(
-                    ol.getProxiedStorage(), this::isInsertAllowedByFilter);
+                    ol.getProxiedStorage(), this::isInsertAllowedByFilter, this::insertPassiveInput);
         }
         return exposedGenericInv;
+    }
+
+    private long insertPassiveInput(int slot, AEKey key, long amount, Actionable mode) {
+        if (slot < 0 || slot >= SLOT_COUNT || !(level instanceof ServerLevel)
+                || !getMainNode().isActive() || key == null || amount <= 0
+                || getInterfaceLogic().getStorage().getCapacity(key.getType()) <= 0) return 0;
+        if (!(getInterfaceLogic() instanceof OverloadedInterfaceLogic logic)
+                || logic.getProxiedStorage().isNetworkOperationInProgress()) return 0;
+        long space = passiveInput.insert(key, amount, Actionable.SIMULATE);
+        if (space <= 0) return 0;
+        var grid = getMainNode().getGrid();
+        long accepted = PowerCostUtil.maxAffordable(grid, key, space);
+        if (accepted <= 0 || mode == Actionable.SIMULATE) return accepted;
+        boolean wasEmpty = passiveInput.isEmpty();
+        accepted = passiveInput.insert(key, accepted, Actionable.MODULATE);
+        if (accepted > 0) {
+            // Like active imports, pay once when ownership transfers to the buffer.
+            PowerCostUtil.consume(grid, key, accepted);
+            saveImportBufferChanges(level.getGameTime());
+            if (wasEmpty) alertGridTicker();
+        }
+        return accepted;
+    }
+
+    private void flushPassiveInput(long now) {
+        int phase = Math.floorMod(getBlockPos().hashCode(), BufferedInterfaceInput.FLUSH_INTERVAL);
+        if (!passiveInput.isFlushDue(now, phase)) return;
+        var grid = getMainNode().getGrid();
+        if (grid == null || !(getInterfaceLogic() instanceof OverloadedInterfaceLogic logic)) return;
+        logic.getProxiedStorage().runWithNetworkGuard(() -> passiveInput.flush(
+                grid.getStorageService().getInventory(), machineSource, now, phase,
+                () -> saveImportBufferChanges(now)));
     }
 
     public AppEngInternalInventory getFilterInv() {
@@ -1296,7 +1331,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     public boolean hasGridItemIoWork() {
         return OverloadedInterfaceTickDecider.hasGridItemIoWork(
                 interfaceMode == InterfaceMode.WIRELESS,
-                !importBuffer.isEmpty(),
+                !importBuffer.isEmpty() || !passiveInput.isEmpty(),
                 !connections.isEmpty(),
                 hasAutoImportWork(),
                 exportMode == ExportMode.AUTO);
@@ -1306,6 +1341,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!(level instanceof ServerLevel sl) || !getMainNode().isActive()) {
             return;
         }
+        flushPassiveInput(sl.getGameTime());
         if (interfaceMode == InterfaceMode.WIRELESS) {
             if (WirelessIoPerformanceProbe.shouldMeasureIoBody()) {
                 long started = System.nanoTime();
@@ -2148,6 +2184,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     public void addImportBufferDrops(List<ItemStack> drops) {
+        // Passive inputs travel with the dismantled block item. AEKey.addDrops
+        // truncates large item counts and does not preserve fluids.
         if (importBuffer.isEmpty()) {
             importBufferFlushState.clear();
             return;
@@ -2162,6 +2200,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     public void clearImportBuffer() {
+        passiveInput.clear();
         importBuffer.clear();
         importBufferFlushState.clear();
         keyTypeLockUntil.clear();
@@ -2451,6 +2490,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         d.putLong(TAG_UNLIMITED_SLOTS, bits);
         d.put(TAG_CONNECTIONS, WirelessConnectionLists.writeTagList(connections));
         filterInv.writeToNBT(d, TAG_FILTER_INV);
+        d.put(TAG_PASSIVE_INPUT, passiveInput.write());
         if (!importBuffer.isEmpty()) {
             var buffered = new ListTag();
             for (var entry : importBuffer.entrySet()) {
@@ -2492,6 +2532,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         rebuildFilter();
         importBuffer.clear();
         importBufferLastSaveTick = Long.MIN_VALUE;
+        passiveInput.read(d.getList(TAG_PASSIVE_INPUT, Tag.TAG_COMPOUND));
         importBufferFlushLimited = false;
         importBufferRemainingKeys = 0;
         if (d.contains(TAG_IMPORT_BUFFER, Tag.TAG_LIST)) {
@@ -2525,6 +2566,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                                net.minecraft.nbt.CompoundTag output,
                                @Nullable Player player) {
         super.exportSettings(mode, output, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM && !passiveInput.isEmpty()) {
+            output.put(TAG_PASSIVE_INPUT, passiveInput.write());
+        }
         com.moakiee.ae2lt.logic.MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> {
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_INTERFACE_MODE, interfaceMode);
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_IO_SPEED_MODE, ioSpeedMode);
@@ -2545,6 +2589,12 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                                net.minecraft.nbt.CompoundTag input,
                                @Nullable Player player) {
         super.importSettings(mode, input, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM
+                && input.contains(TAG_PASSIVE_INPUT, Tag.TAG_LIST)) {
+            passiveInput.read(input.getList(TAG_PASSIVE_INPUT, Tag.TAG_COMPOUND));
+            saveChanges();
+            alertGridTicker();
+        }
         com.moakiee.ae2lt.logic.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
             this.interfaceMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
                     tag, TAG_INTERFACE_MODE, InterfaceMode.class, this.interfaceMode);

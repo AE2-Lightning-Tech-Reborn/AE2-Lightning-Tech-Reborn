@@ -1,0 +1,14 @@
+// ./gradlew -I scripts/lightning-collector-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/LightningCollectorGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_collector'
+            gameDirectory = project.layout.buildDirectory.dir('lightning-collector-gametest').get().asFile
+        }
+    }
+}
