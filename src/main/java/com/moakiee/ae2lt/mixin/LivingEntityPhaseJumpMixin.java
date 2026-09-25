@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 import com.moakiee.ae2lt.celestweave.PhaseFlightMovementGuard;
 
-/** Authorizes only vanilla's two ground-jump impulses, without opening the rest of aiStep. */
+/** Authorizes native ground/fluid input impulses without opening the rest of aiStep. */
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityPhaseJumpMixin {
     @WrapOperation(
@@ -52,4 +52,37 @@ public abstract class LivingEntityPhaseJumpMixin {
         }
         original.call(entity, movement);
     }
+
+    @WrapOperation(
+            method = "aiStep",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;jumpInFluid(Lnet/neoforged/neoforge/fluids/FluidType;)V"))
+    private void ae2lt$authorizeFluidJumpInput(
+            LivingEntity entity,
+            net.neoforged.neoforge.fluids.FluidType fluidType,
+            Operation<Void> original) {
+        if (entity instanceof Player player) {
+            PhaseFlightMovementGuard.runAsSelfMovement(player, () -> original.call(entity, fluidType));
+            return;
+        }
+        original.call(entity, fluidType);
+    }
+
+    @WrapOperation(
+            method = "goDownInWater",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;sinkInFluid(Lnet/neoforged/neoforge/fluids/FluidType;)V"))
+    private void ae2lt$authorizeWaterDescendInput(
+            LivingEntity entity,
+            net.neoforged.neoforge.fluids.FluidType fluidType,
+            Operation<Void> original) {
+        if (entity instanceof Player player) {
+            PhaseFlightMovementGuard.runAsSelfMovement(player, () -> original.call(entity, fluidType));
+            return;
+        }
+        original.call(entity, fluidType);
+    }
+
 }

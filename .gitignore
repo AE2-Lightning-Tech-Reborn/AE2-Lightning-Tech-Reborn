@@ -45,6 +45,7 @@ logs/
 
 # Runtime / temporary files
 run/
+run-phase-lock-gametest/
 /run-gametest/
 /run-recipe-sync-gametest/
 /run-wireless-io-gametest/
@@ -63,3 +64,6 @@ DevLog/
 .codex-tmp/
 .eclipse/
 CLAUDE.local.md
+
+run-wireless-gametest/
+run-cell-workbench-gametest/
