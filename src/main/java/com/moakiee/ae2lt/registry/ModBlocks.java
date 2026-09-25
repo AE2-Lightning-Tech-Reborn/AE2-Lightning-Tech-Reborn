@@ -32,6 +32,8 @@ import com.moakiee.ae2lt.block.PigmeeMentalmathUnitBlock;
 import com.moakiee.ae2lt.block.PigmeeMolecularAssemblerBlock;
 import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
 import com.moakiee.ae2lt.block.PigmeeCrystalCatalyzerBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingPanelBlock;
 import com.moakiee.ae2lt.block.SiliconBlock;
 import com.moakiee.ae2lt.block.PigmeeSynthesisStationBlock;
 import com.moakiee.ae2lt.block.TianshuPatternStorageBlock;
@@ -44,7 +46,11 @@ import com.moakiee.ae2lt.block.TianshuSupercomputingUnitBlock;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import java.util.function.Supplier;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -60,6 +66,23 @@ public final class ModBlocks {
     private static final String EXTENDEDAE_MODID = "expatternprovider";
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, AE2LightningTech.MODID);
+
+    public static final RegistryObject<PigmeeBuildingBlock> PIGMEE_BUILDING_BLOCK =
+            registerBlock("pigmee_building_block", PigmeeBuildingBlock::new);
+
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_BUILDING_PANELS =
+            registerPigmeePanels(false);
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =
+            registerPigmeePanels(true);
+
+    private static Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> registerPigmeePanels(boolean framed) {
+        var panels = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_panel" : "_pigmee_building_panel");
+            panels.put(color, registerBlock(name, () -> new PigmeeBuildingPanelBlock(color, framed)));
+        }
+        return Collections.unmodifiableMap(panels);
+    }
 
     public static final RegistryObject<com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock> OVERLOAD_ALLOY_ANVIL =
             registerBlock("overload_alloy_anvil", () -> new com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock(

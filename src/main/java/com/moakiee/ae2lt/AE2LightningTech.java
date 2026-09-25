@@ -368,6 +368,9 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.PIGMEE_PATTERN_PROVIDER);
                         acceptCreative(output, ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         acceptCreative(output, ModBlocks.PIGMEE_SYNTHESIS_STATION);
+                        acceptCreative(output, ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        ModBlocks.PIGMEE_BUILDING_PANELS.values().forEach(panel -> acceptCreative(output, panel));
+                        ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.values().forEach(panel -> acceptCreative(output, panel));
                         acceptCreative(output, ModItems.PIGMEE_CORE);
                         acceptCreative(output, ModItems.PIGMEE_ITEM_CELL_HOUSING);
                         acceptCreative(output, ModItems.PIGMEE_STORAGE_COMPONENT);

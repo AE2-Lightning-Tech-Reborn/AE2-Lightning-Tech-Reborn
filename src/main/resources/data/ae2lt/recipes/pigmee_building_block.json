@@ -1,0 +1,21 @@
+{
+  "type": "ae2lt:pigmee_building",
+  "category": "building",
+  "pattern": [
+    "CCC",
+    "CPC",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "P": {
+      "item": "ae2lt:pigmee_fumo"
+    }
+  },
+  "result": {
+    "count": 64,
+    "item": "ae2lt:pigmee_building_block"
+  }
+}
