@@ -346,6 +346,8 @@ public class AE2LightningTech {
                     .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModItems.DYE_BASE);
                         output.accept(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get());
                         output.accept(ModBlocks.PIGMEE_CRYSTAL_CATALYZER);
                         output.accept(ModBlocks.PIGMEE_MENTALMATH_UNIT);
@@ -353,9 +355,12 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         output.accept(ModBlocks.PIGMEE_SYNTHESIS_STATION);
                         output.accept(ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        output.accept(ModBlocks.PIGMEE_BUILDING_SLAB);
                         for (var color : net.minecraft.world.item.DyeColor.values()) {
                             output.accept(ModBlocks.PIGMEE_BUILDING_PANELS.get(color));
                             output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color));
+                            output.accept(ModBlocks.PIGMEE_BUILDING_SLABS.get(color));
+                            output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.get(color));
                         }
                         output.accept(ModItems.PIGMEE_CORE);
                         output.accept(ModItems.PIGMEE_ITEM_CELL_HOUSING);

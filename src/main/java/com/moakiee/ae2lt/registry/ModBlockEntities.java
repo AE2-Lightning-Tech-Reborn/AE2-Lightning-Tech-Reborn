@@ -287,6 +287,7 @@ public final class ModBlockEntities {
                             ModFumos.MOAKIEE_FUMO.get(),
                             ModFumos.CYSTRYSU_FUMO.get(),
                             ModFumos.PIGMEE_FUMO.get(),
+                            ModFumos.RAINBOW_PIGMEE_FUMO.get(),
                             ModFumos.CREATIVE_PIGMEE_FUMO.get(),
                             ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get())
                             .build(null));

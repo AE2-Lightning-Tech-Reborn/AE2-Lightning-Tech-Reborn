@@ -98,6 +98,7 @@ public final class ModEntityRenderers {
         wrapFumoItemModel(event, "moakiee_fumo");
         wrapFumoItemModel(event, "cystrysu_fumo");
         wrapFumoItemModel(event, "pigmee_fumo");
+        wrapFumoItemModel(event, "rainbow_pigmee_fumo");
         wrapFumoItemModel(event, "creative_pigmee_fumo");
         wrapFumoItemModel(event, "hyperdimensional_pigmee_fumo");
     }

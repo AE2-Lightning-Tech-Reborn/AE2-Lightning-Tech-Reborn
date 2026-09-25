@@ -77,6 +77,8 @@ public final class ModItems {
             OverloadCrystalItem::new,
             new Item.Properties());
 
+    public static final DeferredItem<Item> DYE_BASE = ITEMS.registerSimpleItem("dye_base");
+
     public static final DeferredItem<Item> OVERLOAD_CRYSTAL_DUST =
             ITEMS.registerSimpleItem("overload_crystal_dust", new Item.Properties());
 

@@ -6,6 +6,7 @@ import com.moakiee.ae2lt.block.AtmosphericIonizerBlock;
 import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
 import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
 import com.moakiee.ae2lt.block.PigmeeBuildingPanelBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingSlabBlock;
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.block.FirmamentConversionCoreBlock;
 import com.moakiee.ae2lt.block.LightningAssemblyChamberBlock;
@@ -75,6 +76,22 @@ public final class ModBlocks {
             registerPigmeePanels(false);
     public static final Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =
             registerPigmeePanels(true);
+
+    public static final DeferredBlock<PigmeeBuildingSlabBlock> PIGMEE_BUILDING_SLAB =
+            registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MapColor.COLOR_PINK));
+    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> PIGMEE_BUILDING_SLABS =
+            registerPigmeeSlabs(false);
+    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> PIGMEE_FRAMED_BUILDING_SLABS =
+            registerPigmeeSlabs(true);
+
+    private static Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> registerPigmeeSlabs(boolean framed) {
+        var slabs = new EnumMap<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_slab" : "_pigmee_building_slab");
+            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMapColor())));
+        }
+        return Collections.unmodifiableMap(slabs);
+    }
 
     private static Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> registerPigmeePanels(boolean framed) {
         var panels = new EnumMap<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>>(DyeColor.class);
