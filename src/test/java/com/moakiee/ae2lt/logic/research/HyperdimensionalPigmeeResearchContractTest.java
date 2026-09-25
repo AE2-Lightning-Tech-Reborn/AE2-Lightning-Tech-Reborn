@@ -121,7 +121,7 @@ class HyperdimensionalPigmeeResearchContractTest {
         assertFalse(chinese.contains("<ItemLink"));
         assertFalse(english.contains("item entities"));
         assertFalse(english.contains("game tick"));
-        assertFalse(chinese.contains("掉落物"));
+        assertFalse(chinese.contains("物品实体"));
         assertFalse(chinese.contains("游戏刻"));
         assertTrue(chinese.contains("完成一次跨越界限的转换"));
         assertTrue(chinese.contains("变回普通猪咪"));
