@@ -34,6 +34,13 @@ public final class Ae2wtlibIntegration {
                     "textures/gui/icons/wireless_tianshu_pattern_encoding_terminal.png"),
                     16, 16));
 
+    private static final Icon TIANSHU_CRAFTING_ICON = new Icon(
+            0, 0, 16, 16,
+            new Icon.Texture(Identifier.fromNamespaceAndPath(
+                    AE2LightningTech.MODID,
+                    "textures/gui/icons/wireless_tianshu_crafting_terminal.png"),
+                    16, 16));
+
     /**
      * Shared by the DeferredRegister and AE2WTLib's terminal definition. It cannot be created
      * during mod construction because ItemWT needs the intrusive item registry to be writable.
@@ -87,7 +94,7 @@ public final class Ae2wtlibIntegration {
         AddTerminalEvent.register(event -> event.builder(TIANSHU_CRAFTING_NAME,
                         com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessCraftingTermMenuHost::new,
                         com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE,
-                        craftingTerminal(), de.mari_023.ae2wtlib.api.gui.Icon.CRAFTING)
+                        craftingTerminal(), TIANSHU_CRAFTING_ICON)
                 .addTerminal());
         terminalRegistrationRequested = true;
     }
