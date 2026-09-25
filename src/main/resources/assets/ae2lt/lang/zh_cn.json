@@ -1382,5 +1382,8 @@
   "block.ae2lt.magenta_pigmee_building_panel": "品红色猪咪素板",
   "block.ae2lt.purple_pigmee_framed_building_panel": "紫色猪咪框板",
   "tooltip.ae2lt.pigmee_building_block": "8 个圆石围住猪咪可合成 64 个猪咪建材方块；此配方不消耗猪咪。",
-  "block.ae2lt.light_blue_pigmee_building_panel": "淡蓝色猪咪素板"
+  "block.ae2lt.light_blue_pigmee_building_panel": "淡蓝色猪咪素板",
+  "ae2lt.tianshu.closed_loop.refill.status.return_blocked": "多余种子无法退回",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_entry": "未能退回 ME 网络：%s ×%s",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_hint": "ME 网络空间不足或拒绝接收，多余种子仍保留在种子仓。"
 }

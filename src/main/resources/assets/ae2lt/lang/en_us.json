@@ -1382,5 +1382,8 @@
   "block.ae2lt.magenta_pigmee_building_panel": "Magenta Pigmee Plain Panel",
   "block.ae2lt.purple_pigmee_framed_building_panel": "Purple Pigmee Framed Panel",
   "tooltip.ae2lt.pigmee_building_block": "Surround Pigmee with 8 cobblestone to craft 64 Pigmee Building Blocks; this recipe keeps Pigmee.",
-  "block.ae2lt.light_blue_pigmee_building_panel": "Light Blue Pigmee Plain Panel"
+  "block.ae2lt.light_blue_pigmee_building_panel": "Light Blue Pigmee Plain Panel",
+  "ae2lt.tianshu.closed_loop.refill.status.return_blocked": "Excess seeds could not be returned",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_entry": "Could not return to ME network: %s ×%s",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_hint": "The ME network is full or rejects these seeds. They remain in seed storage."
 }
