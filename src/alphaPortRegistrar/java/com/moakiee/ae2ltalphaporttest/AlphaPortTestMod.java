@@ -18,6 +18,11 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("overload_parallel_recipe_large_counts", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::parallelMachineResultsKeepLargeCounts);
+        add("overload_programmatic_recipe_login_sync", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::programmaticRecipesSurviveLoginSync);
+        add("overload_datapack_recipe_large_counts", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::datapackRecipesKeepLargeResults);
+        add("overload_invalid_recipe_results_rejected", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::invalidDatapackResultsAreRejected);
+        add("overload_kubejs_recipe_login_sync", "recipe_sync", 100, com.moakiee.ae2lt.debug.OverloadProcessingRecipeSyncGameTests::kubeJsRecipesSurviveLoginSync);
         add("wireless_access_point_binding", "wireless_binding", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::wirelessAccessPointBinding);
         add("upload_wired_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wiredFullTargetRetainsEncodedPattern);
         add("upload_wireless_full_target_retains_encoded_pattern", "upload", 150, com.moakiee.ae2lt.debug.TianshuPatternUploadGameTests::wirelessFullTargetRetainsEncodedPattern);

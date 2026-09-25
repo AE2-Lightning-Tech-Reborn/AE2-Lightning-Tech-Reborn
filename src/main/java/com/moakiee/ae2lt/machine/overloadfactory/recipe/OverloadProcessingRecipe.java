@@ -13,9 +13,11 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -42,7 +44,19 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
                             ? DataResult.error(() -> "overload processing supports at most 9 item inputs")
                             : DataResult.success(List.copyOf(inputs)));
 
-    private static final Codec<List<ItemStackTemplate>> OUTPUTS_CODEC = ItemStackTemplate.CODEC.listOf().validate(outputs -> {
+    // A machine result is a quantity, so it is not limited to a normal item stack
+    // or ItemStackTemplate's JSON count range of 1..99. Keep the shorthand item form.
+    private static final Codec<ItemStackTemplate> RESULT_STACK_CODEC = Codec.withAlternative(
+            RecordCodecBuilder.<ItemStackTemplate>create(instance -> instance.group(
+                            Item.CODEC.fieldOf("id").forGetter(ItemStackTemplate::item),
+                            Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("count", 1)
+                                    .forGetter(ItemStackTemplate::count),
+                            DataComponentPatch.CODEC.optionalFieldOf("components", DataComponentPatch.EMPTY)
+                                    .forGetter(ItemStackTemplate::components))
+                    .apply(instance, ItemStackTemplate::new)),
+            Item.CODEC, item -> new ItemStackTemplate(item.value()));
+
+    private static final Codec<List<ItemStackTemplate>> OUTPUTS_CODEC = RESULT_STACK_CODEC.listOf().validate(outputs -> {
         if (outputs.size() > OverloadProcessingFactoryInventory.OUTPUT_SLOT_COUNT) {
             return DataResult.error(() -> "overload processing supports at most 1 item output");
         }
@@ -159,7 +173,15 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
     }
 
     public List<ItemStack> itemResults() {
-        return itemResults.stream().map(ItemStackTemplate::create).toList();
+        return itemResults.stream().map(OverloadProcessingRecipe::createMachineResult).toList();
+    }
+
+    private static ItemStack createMachineResult(ItemStackTemplate result) {
+        // Template.create() replaces oversized quantities with EMPTY, including parallel outputs.
+        // Resolve and validate components here: their defaults may not be bound during recipe loading.
+        var stack = ItemStack.validateStrict(new ItemStack(result.item(), 1, result.components())).getOrThrow();
+        stack.setCount(result.count());
+        return stack;
     }
 
     public FluidStack fluidResult() {
@@ -274,7 +296,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
 
     public List<ItemStack> getScaledItemResults(int operations) {
         return itemResults.stream()
-                .map(stack -> stack.withCount(multiplyExactToInt(stack.count(), operations)).create())
+                .map(stack -> createMachineResult(stack.withCount(multiplyExactToInt(stack.count(), operations))))
                 .toList();
     }
 
@@ -287,7 +309,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
 
     @Override
     public ItemStack assemble(OverloadProcessingRecipeInput input, HolderLookup.Provider registries) {
-        return itemResults.isEmpty() ? ItemStack.EMPTY : itemResults.getFirst().create();
+        return itemResults.isEmpty() ? ItemStack.EMPTY : createMachineResult(itemResults.getFirst());
     }
 
     @Override
@@ -297,7 +319,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
 
     @Override
     public ItemStack getResultItem(HolderLookup.Provider registries) {
-        return itemResults.isEmpty() ? ItemStack.EMPTY : itemResults.getFirst().create();
+        return itemResults.isEmpty() ? ItemStack.EMPTY : createMachineResult(itemResults.getFirst());
     }
 
     @Override
