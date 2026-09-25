@@ -14,6 +14,8 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
@@ -31,14 +33,14 @@ import com.moakiee.ae2lt.util.RecipeSerializationHelper;
  *     <li>{@code energyPerCycle}: total energy (AE) consumed per cycle.</li>
  * </ul>
  *
- * <p>Fluid cost is <strong>not</strong> part of the recipe anymore — the machine always
- * drains a fixed amount of water per cycle regardless of which recipe runs (see
- * {@code CrystalCatalyzerBlockEntity.FIXED_FLUID_PER_CYCLE}).</p>
+ * <p>{@code inputFluid} is consumed once per cycle, without parallel or matrix scaling.
+ * Omitted fluid data retains the legacy cost of 1000 mB water.</p>
  */
 public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerRecipeInput> {
     public static final int MIN_ENERGY_PER_CYCLE = 1;
     public static final int DEFAULT_LIGHTNING_COST = 1;
     public static final LightningKey.Tier DEFAULT_LIGHTNING_TIER = LightningKey.Tier.HIGH_VOLTAGE;
+    public static final int DEFAULT_FLUID_PER_CYCLE_MB = 1_000;
 
     private final ResourceLocation id;
     private final Optional<Ingredient> catalyst;
@@ -48,6 +50,11 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
     private final int lightningCost;
     private final LightningKey.Tier lightningTier;
     private final Mode mode;
+    private final FluidStack fluidInput;
+
+    public static FluidStack defaultFluidInput() {
+        return new FluidStack(Fluids.WATER, DEFAULT_FLUID_PER_CYCLE_MB);
+    }
 
     public CrystalCatalyzerRecipe(
             ResourceLocation id,
@@ -68,6 +75,20 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
             int lightningCost,
             LightningKey.Tier lightningTier,
             Mode mode) {
+        this(id, catalyst, catalystCount, output, energyPerCycle, lightningCost, lightningTier, mode,
+                defaultFluidInput());
+    }
+
+    public CrystalCatalyzerRecipe(
+            ResourceLocation id,
+            Optional<Ingredient> catalyst,
+            int catalystCount,
+            CrystalCatalyzerOutput output,
+            int energyPerCycle,
+            int lightningCost,
+            LightningKey.Tier lightningTier,
+            Mode mode,
+            FluidStack fluidInput) {
         this.id = Objects.requireNonNull(id, "id");
         this.catalyst = Objects.requireNonNull(catalyst, "catalyst");
         this.catalystCount = catalystCount;
@@ -76,6 +97,10 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
         this.lightningCost = lightningCost;
         this.lightningTier = Objects.requireNonNull(lightningTier, "lightningTier");
         this.mode = Objects.requireNonNull(mode, "mode");
+        this.fluidInput = Objects.requireNonNull(fluidInput, "fluidInput").copy();
+        if (fluidInput.isEmpty()) {
+            throw new IllegalArgumentException("inputFluid must not be empty");
+        }
         if (catalyst.isPresent() && catalystCount <= 0) {
             throw new IllegalArgumentException("catalystCount must be positive when catalyst is present");
         }
@@ -124,6 +149,19 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
         return id;
     }
 
+    public FluidStack fluidInput() {
+        return fluidInput.copy();
+    }
+
+    public boolean isWaterRecipe() {
+        return fluidInput.getFluid() == Fluids.WATER;
+    }
+
+    public boolean fluidMatches(FluidStack available) {
+        return fluidInput.isFluidEqual(available)
+                && available.getAmount() >= fluidInput.getAmount();
+    }
+
     public boolean catalystMatches(ItemStack stack) {
         if (catalyst.isEmpty()) {
             return stack.isEmpty();
@@ -136,7 +174,7 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
 
     @Override
     public boolean matches(CrystalCatalyzerRecipeInput input, Level level) {
-        return catalystMatches(input.catalyst());
+        return catalystMatches(input.catalyst()) && fluidMatches(input.fluid());
     }
 
     @Override
@@ -184,6 +222,24 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
                 || (catalyst.isPresent() && catalystCount <= 0);
     }
 
+    private static FluidStack parseFluid(JsonObject json) {
+        var id = new ResourceLocation(GsonHelper.getAsString(json, "id"));
+        var fluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(id);
+        int amount = GsonHelper.getAsInt(json, "amount");
+        if (fluid == null || fluid == Fluids.EMPTY || amount <= 0)
+            throw new com.google.gson.JsonSyntaxException("Invalid catalyst inputFluid " + id);
+        if (json.has("components"))
+            throw new com.google.gson.JsonSyntaxException("1.20.1 catalyst fluid uses nbt instead of components");
+        var result = new FluidStack(fluid, amount);
+        if (json.has("nbt")) {
+            try { result.setTag(net.minecraft.nbt.TagParser.parseTag(GsonHelper.getAsString(json, "nbt"))); }
+            catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                throw new com.google.gson.JsonSyntaxException("Invalid fluid nbt", e);
+            }
+        }
+        return result;
+    }
+
     public static final class Serializer implements RecipeSerializer<CrystalCatalyzerRecipe> {
         @Override
         public CrystalCatalyzerRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
@@ -212,7 +268,8 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
                     energyPerCycle,
                     lightningCost,
                     lightningTier,
-                    mode);
+                    mode, json.has("inputFluid")
+                            ? parseFluid(GsonHelper.getAsJsonObject(json, "inputFluid")) : defaultFluidInput());
         }
 
         @Override
@@ -228,7 +285,7 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
                     buffer.readInt(),
                     buffer.readInt(),
                     buffer.readEnum(LightningKey.Tier.class),
-                    buffer.readEnum(Mode.class));
+                    buffer.readEnum(Mode.class), buffer.readFluidStack());
         }
 
         @Override
@@ -241,6 +298,7 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
             buffer.writeInt(recipe.lightningCost());
             buffer.writeEnum(recipe.lightningTier());
             buffer.writeEnum(recipe.mode());
+            buffer.writeFluidStack(recipe.fluidInput());
         }
     }
 }

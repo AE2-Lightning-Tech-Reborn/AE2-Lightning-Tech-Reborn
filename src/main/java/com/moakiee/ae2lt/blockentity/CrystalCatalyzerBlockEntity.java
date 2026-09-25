@@ -35,6 +35,7 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IStackWatcher;
+import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageWatcherNode;
@@ -49,10 +50,13 @@ import appeng.api.util.AECableType;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
+import appeng.me.ManagedGridNode;
+import appeng.me.helpers.BlockEntityNodeListener;
 
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
+import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
 import com.moakiee.ae2lt.logic.FluidStackHelper;
 import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
@@ -63,6 +67,7 @@ import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerFluidHandler;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerLogic;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerLockedRecipe;
+import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeCandidate;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeService;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
@@ -76,7 +81,7 @@ import com.moakiee.ae2lt.util.LargeStackStreamCodecs;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
 public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
-        implements IActionHost, IUpgradeableObject, FrequencyBindingHost,
+        implements IActionHost, IUpgradeableObject,
         LightningCollapseMatrixHost,
         GridRecipeMachineHost<CrystalCatalyzerLockedRecipe, CrystalCatalyzerRecipeCandidate> {
 
@@ -93,11 +98,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     public static final int ENERGY_CAPACITY = 1_000_000;
     public static final int FLUID_TANK_CAPACITY_MB = 16_000;
     public static final int MATRIX_OUTPUT_MULTIPLIER = 4;
-    /** 每轮固定消耗 1B (1000 mB) 水 —— 配方里已经不再带 fluid 字段,所有配方共用此常量。 */
-    public static final int FIXED_FLUID_PER_CYCLE_MB = 1_000;
+    /** Legacy default; explicit recipe fluids are also consumed once per cycle. */
+    public static final int FIXED_FLUID_PER_CYCLE_MB = CrystalCatalyzerRecipe.DEFAULT_FLUID_PER_CYCLE_MB;
 
     public static FluidStack getFixedFluidPerCycle() {
-        return new FluidStack(Fluids.WATER, FIXED_FLUID_PER_CYCLE_MB);
+        return CrystalCatalyzerRecipe.defaultFluidInput();
     }
 
     private Mode mode = Mode.CRYSTAL;
@@ -107,7 +112,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     private final CrystalCatalyzerAutomationInventory automationInventory =
             new CrystalCatalyzerAutomationInventory(inventory);
     private final NotifyingFluidTank tank =
-            new NotifyingFluidTank(FLUID_TANK_CAPACITY_MB, this::onTankChanged);
+            new NotifyingFluidTank(FLUID_TANK_CAPACITY_MB,
+                    fluid -> !isPigmeeVariant() || fluid.getFluid() == Fluids.WATER, this::onTankChanged);
     private final CrystalCatalyzerFluidHandler fluidHandler =
             new CrystalCatalyzerFluidHandler(tank);
     private final OverloadProcessingFactoryEnergyStorage energyStorage =
@@ -115,7 +121,10 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     private final IUpgradeInventory upgrades =
             UpgradeInventories.forMachine(ModBlocks.CRYSTAL_CATALYZER.get(), 0, this::onUpgradesChanged);
     private final CrystalCatalyzerLogic logic;
-    private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
+    // Only the normal registered subtype implements FrequencyBindingHost.
+    protected final FrequencyBindingHelper frequencyBinding = this instanceof FrequencyBindingHost host
+            ? new FrequencyBindingHelper(host) : null;
+    private int legacyPigmeeFrequencyId = -1;
 
     private CrystalCatalyzerLockedRecipe lockedRecipe;
     private long consumedEnergy;
@@ -128,6 +137,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     public CrystalCatalyzerBlockEntity(BlockPos pos, BlockState blockState) {
         super(blockEntityTypeFor(blockState), pos, blockState);
         this.logic = new CrystalCatalyzerLogic(this);
+        if (!isPigmeeVariant()) {
         getMainNode()
                 .setIdlePowerUsage(0)
                 .addService(IGridTickable.class, logic)
@@ -142,6 +152,25 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                         onLightningStackChanged(what);
                     }
                 });
+        }
+    }
+
+    @Override
+    protected IManagedGridNode createMainNode() {
+        if (!isPigmeeVariant()) {
+            return super.createMainNode();
+        }
+        // Retain the shared AE block/menu lifecycle, but never create a Pigmee grid node.
+        return new ManagedGridNode(this, BlockEntityNodeListener.INSTANCE) {
+            @Override
+            public void create(Level level, BlockPos pos) {
+            }
+
+            @Override
+            public void loadFromNBT(CompoundTag tag) {
+                // Old Pigmee proxy data no longer represents a network node.
+            }
+        };
     }
 
     private static net.minecraft.world.level.block.entity.BlockEntityType<CrystalCatalyzerBlockEntity>
@@ -158,34 +187,18 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CrystalCatalyzerBlockEntity be) {
         if (!level.isClientSide()) {
-            be.frequencyBinding.serverTick();
+            if (be.isPigmeeVariant()) {
+                be.logic.tickStandalone();
+            } else if (be.frequencyBinding != null) {
+                be.frequencyBinding.serverTick();
+            }
         }
-    }
-
-    @Override
-    public FrequencyBindingHelper getFrequencyBinding() {
-        return frequencyBinding;
-    }
-
-    @Override
-    public AENetworkBlockEntity getFrequencyBindingBlockEntity() {
-        return this;
-    }
-
-    @Override
-    public void saveFrequencyBindingChanges() {
-        saveChanges();
-    }
-
-    @Override
-    public void markFrequencyBindingForUpdate() {
-        markForUpdate();
     }
 
     @Override
     public void onMainNodeStateChanged(IGridNodeListener.State reason) {
         super.onMainNodeStateChanged(reason);
-        frequencyBinding.onMainNodeStateChanged(reason);
+        if (frequencyBinding != null) frequencyBinding.onMainNodeStateChanged(reason);
     }
 
     public CrystalCatalyzerInventory getInventory() {
@@ -269,7 +282,14 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     @Override
     public void onReady() {
         super.onReady();
-        frequencyBinding.onReady();
+        if (frequencyBinding != null) frequencyBinding.onReady();
+        if (isPigmeeVariant() && legacyPigmeeFrequencyId > 0 && level instanceof ServerLevel) {
+            var manager = WirelessFrequencyManager.get();
+            if (manager != null) {
+                manager.unregisterDevice(legacyPigmeeFrequencyId, level.dimension(), worldPosition);
+            }
+            legacyPigmeeFrequencyId = -1;
+        }
         inventory.setLevel(level);
         setWorking(lockedRecipe != null);
     }
@@ -278,26 +298,23 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     public void clearRemoved() {
         super.clearRemoved();
         inventory.setLevel(level);
-        frequencyBinding.clearRemoved();
+        if (frequencyBinding != null) frequencyBinding.clearRemoved();
     }
 
     @Override
     public void setRemoved() {
-        frequencyBinding.setRemoved();
+        if (frequencyBinding != null) frequencyBinding.setRemoved();
         super.setRemoved();
         inventory.setLevel(null);
     }
 
     @Override
     public void onChunkUnloaded() {
-        frequencyBinding.onChunkUnloaded();
+        if (frequencyBinding != null) frequencyBinding.onChunkUnloaded();
         super.onChunkUnloaded();
     }
 
     public Optional<CrystalCatalyzerRecipeCandidate> findProcessableRecipe() {
-        if (!hasEnoughFixedFluid()) {
-            return Optional.empty();
-        }
         if (isPigmeeVariant()
                 && inventory.getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount()
                         < CrystalCatalyzerInventory.PIGMEE_CATALYST_SLOT_LIMIT) {
@@ -305,7 +322,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         }
 
         Optional<CrystalCatalyzerRecipeCandidate> candidate = CrystalCatalyzerRecipeService.findRecipe(
-                level, inventory, getMode());
+                level, inventory, getMode(), tank.getFluid(), isPigmeeVariant());
         if (candidate.isEmpty()) {
             return Optional.empty();
         }
@@ -332,8 +349,10 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         logic.onStateChanged();
     }
 
-    private boolean hasEnoughFixedFluid() {
-        FluidStack required = getFixedFluidPerCycle();
+    private boolean hasEnoughFluid(FluidStack required) {
+        if (isPigmeeVariant() && required.getFluid() != Fluids.WATER) {
+            return false;
+        }
         FluidStack current = tank.getFluid();
         if (current.isEmpty()) {
             return false;
@@ -359,11 +378,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     public boolean canAdvanceLockedRecipe(CrystalCatalyzerLockedRecipe lockedRecipe) {
         if (isPigmeeVariant() || lockedRecipe.lightningCost() <= 0) {
-            return hasEnoughFixedFluid();
+            return hasEnoughFluid(lockedRecipe.fluidInput());
         }
         LightningKey lightningKey = LightningKey.of(lockedRecipe.lightningTier());
         long lightningCost = lockedRecipe.lightningCost();
-        return hasEnoughFixedFluid()
+        return hasEnoughFluid(lockedRecipe.fluidInput())
                 && simulateLightningExtract(lightningKey, lightningCost) >= lightningCost;
     }
 
@@ -454,7 +473,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             var recipe = candidate.get().recipe();
             // Keep the shared recipe's cost metadata. This machine bypasses energy in its tick driver.
             lockedRecipe = new CrystalCatalyzerLockedRecipe(recipe.getId(), getMachineOutput(candidate.get()),
-                    recipe.energyPerCycle(), 1, recipe.lightningCost(), recipe.lightningTier());
+                    recipe.energyPerCycle(), 1, recipe.lightningCost(), recipe.lightningTier(), recipe.fluidInput());
         } else {
             lockedRecipe = CrystalCatalyzerLockedRecipe.fromCandidate(
                     candidate.get(), getCurrentOutputMultiplier(candidate.get()));
@@ -635,7 +654,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             return false;
         }
 
-        FluidStack requiredFluid = getFixedFluidPerCycle();
+        if (!lockedRecipe.matchesFluidInput(candidate.recipe())
+                || (isPigmeeVariant() && !candidate.recipe().isWaterRecipe())) {
+            return false;
+        }
+        FluidStack requiredFluid = lockedRecipe.fluidInput();
         FluidStack currentFluid = tank.getFluid();
         if (currentFluid.isEmpty()
                 || !FluidStackHelper.sameFluidAndTag(currentFluid, requiredFluid)
@@ -753,7 +776,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         } else {
             data.remove(TAG_LOCKED_RECIPE);
         }
-        frequencyBinding.save(data);
+        if (frequencyBinding != null) {
+            frequencyBinding.save(data);
+        } else {
+            data.remove(FrequencyBindingHelper.TAG_FREQUENCY_ID);
+            data.remove("proxy");
+        }
     }
 
     @Override
@@ -764,7 +792,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
         consumedEnergy = Math.max(0L, data.getLong(TAG_CONSUMED_ENERGY));
         processingTicksSpent = Math.max(0, data.getInt(TAG_PROCESSING_TICKS));
-        frequencyBinding.load(data);
+        if (frequencyBinding != null) {
+            frequencyBinding.load(data);
+        } else {
+            legacyPigmeeFrequencyId = data.getInt(FrequencyBindingHelper.TAG_FREQUENCY_ID);
+        }
         autoExport = data.getBoolean(TAG_AUTO_EXPORT);
         allowedOutputs.clear();
         ListTag outputTags = data.getList(TAG_ALLOWED_OUTPUTS, Tag.TAG_STRING);
@@ -810,7 +842,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                             "crystal_catalyzer/" + id.getPath().substring(oldPrefix.length()));
                     lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, lockedRecipe.output(),
                             lockedRecipe.energyPerCycle(), lockedRecipe.outputMultiplier(),
-                            lockedRecipe.lightningCost(), lockedRecipe.lightningTier());
+                            lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
                 }
                 consumedEnergy = 0L;
             }
@@ -878,7 +910,9 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         super.exportSettings(mode, output, player);
         MemoryCardConfigSupport.exportAutoExportSettings(mode, output, autoExport, allowedOutputs, tag -> {
             MemoryCardConfigSupport.writeEnum(tag, TAG_MODE, this.mode);
-            FrequencyBindingHelper.writeMemoryFrequency(tag, getFrequencyId());
+            if (frequencyBinding != null) {
+                FrequencyBindingHelper.writeMemoryFrequency(tag, frequencyBinding.getFrequencyId());
+            }
             MemoryCardConfigSupport.writeMatrixCount(tag, this);
         });
     }
@@ -901,7 +935,9 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                         this.mode = importedMode;
                         abortProcessing();
                     }
-                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+                    if (frequencyBinding != null) {
+                        FrequencyBindingHelper.importMemoryFrequency(tag, frequencyBinding::setFrequency);
+                    }
                     MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
                 },
                 () -> {
@@ -924,7 +960,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     @Override
     public Set<Direction> getGridConnectableSides(BlockOrientation orientation) {
-        return EnumSet.allOf(Direction.class);
+        return isPigmeeVariant() ? Set.of() : EnumSet.allOf(Direction.class);
+    }
+
+    @Override
+    public AECableType getCableConnectionType(Direction dir) {
+        return isPigmeeVariant() ? AECableType.NONE : AECableType.SMART;
     }
 
     private void onInventoryChanged() {
@@ -1000,8 +1041,4 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         return super.getCapability(cap, side);
     }
 
-    @Override
-    public AECableType getCableConnectionType(Direction dir) {
-        return AECableType.SMART;
-    }
 }

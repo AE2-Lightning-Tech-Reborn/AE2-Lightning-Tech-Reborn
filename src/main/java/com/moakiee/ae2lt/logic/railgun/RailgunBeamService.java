@@ -149,13 +149,13 @@ public final class RailgunBeamService {
         RailgunSettings settings = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(stack, RailgunSettings.DEFAULT);
         boolean allowPlayerTargets = settings.allowsPlayerTargets(AE2LTCommonConfig.railgunDamagePlayers());
 
-        long feCost = AmmoCost.beamFeCost(mods);
+        RailgunBeamProfile profile = RailgunBeamProfile.resolve(mods, settings);
+        long feCost = profile.feCost();
         IActionSource src = IActionSource.ofPlayer(player);
 
-        LightningKey primaryKey = LightningKey.HIGH_VOLTAGE;
-        int interval = AmmoCost.beamHvCostInterval(mods);
-        long primaryNeeded = (s.settleCount % interval == 0) ? 1L : 0L;
-        String failKey = "ae2lt.railgun.fail.no_hv";
+        LightningKey primaryKey = profile.lightningKey();
+        long primaryNeeded = profile.lightningForSettle(s.settleCount);
+        String failKey = profile.failureKey();
 
         // SIMULATE phase: prove we can afford the shot, without committing anything,
         // so a later failure cannot leave FE deducted but ammo missing.
@@ -187,6 +187,9 @@ public final class RailgunBeamService {
                     ? grid.getStorageService().getInventory().extract(primaryKey, takePrimary, Actionable.MODULATE, src)
                     : 0L;
             if (gotPrimary < takePrimary) {
+                if (gotPrimary > 0L) {
+                    grid.getStorageService().getInventory().insert(primaryKey, gotPrimary, Actionable.MODULATE, src);
+                }
                 RailgunEnergyBuffer.refund(stack, feCost);
                 RailgunFireService.sendFail(player, failKey);
                 return false;
@@ -196,12 +199,12 @@ public final class RailgunBeamService {
         // Raycast & damage
         BeamTrace trace = traceBeam(level, player, allowPlayerTargets, mods);
         EntityHitResult ehr = trace.entityHit();
-        DamageContext ctx = DamageContext.buildBeam(player, mods, level, allowPlayerTargets);
+        DamageContext ctx = DamageContext.buildBeam(player, mods, level, allowPlayerTargets, profile.damage());
         LivingEntity chainAnchor = null;
 
         if (ehr != null) {
             Entity target = ehr.getEntity();
-            DamageSource ds = beamDamageSource(level, player);
+            DamageSource ds = beamDamageSource(level, player, profile.ehv());
             if (target instanceof LivingEntity primary) {
                 chainAnchor = primary;
                 double armorReduction = DamageContext.effectiveArmorReduction(primary);
@@ -306,8 +309,10 @@ public final class RailgunBeamService {
         NetworkHandler.sendToTrackingChunk(level, player.chunkPosition(), pkt);
     }
 
-    private static DamageSource beamDamageSource(ServerLevel level, ServerPlayer player) {
-        Holder<net.minecraft.world.damagesource.DamageType> h = ModDamageTypes.electromagneticHolder(level);
+    private static DamageSource beamDamageSource(ServerLevel level, ServerPlayer player, boolean ehv) {
+        Holder<net.minecraft.world.damagesource.DamageType> h = ehv
+                ? ModDamageTypes.electromagneticEhvBeamHolder(level)
+                : ModDamageTypes.electromagneticHolder(level);
         return new DamageSource(h, player, player);
     }
 

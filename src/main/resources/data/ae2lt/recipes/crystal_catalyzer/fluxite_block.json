@@ -1,0 +1,24 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "oritech"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "item": "oritech:fluxite_block"
+  },
+  "catalystCount": 1,
+  "inputFluid": {
+    "id": "oritech:still_strange_matter",
+    "amount": 1000
+  },
+  "output": {
+    "count": 1,
+    "id": "oritech:fluxite"
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

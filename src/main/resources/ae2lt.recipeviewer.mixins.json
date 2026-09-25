@@ -9,7 +9,8 @@
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
     "emi.EmiEncodePatternTransferMixin",
-    "emi.EmiRecipeTransferResultAccessor"
+    "emi.EmiRecipeTransferResultAccessor",
+    "jeisupply.JeiWirelessSupplyMixin"
   ],
   "injectors": {
     "defaultRequire": 0

@@ -13,7 +13,7 @@ import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
  * <p>
  * Action codes: 0=SELECT_TAB, 1=TOGGLE_MODULE, 2=TOGGLE_TERRAIN, 3=TOGGLE_PVP,
  * 4=SELECT_MODULE, 5=CYCLE_MODULE_CONFIG, 6=TOGGLE_SOUND, 7=TOGGLE_CHAIN_DAMAGE,
- * 8=CYCLE_EXECUTION_MODE, 9=TOGGLE_CHARGED_SPLASH.
+ * 8=CYCLE_EXECUTION_MODE, 9=TOGGLE_CHARGED_SPLASH, 10=TOGGLE_EHV_BEAM.
  */
 public record DeviceHubActionPacket(int action, int value) {
 
@@ -27,6 +27,7 @@ public record DeviceHubActionPacket(int action, int value) {
     public static final int ACTION_TOGGLE_CHAIN_DAMAGE = 7;
     public static final int ACTION_CYCLE_EXECUTION_MODE = 8;
     public static final int ACTION_TOGGLE_CHARGED_SPLASH = 9;
+    public static final int ACTION_TOGGLE_EHV_BEAM = 10;
 
     public static DeviceHubActionPacket decode(FriendlyByteBuf buf) {
         return new DeviceHubActionPacket(buf.readVarInt(), buf.readVarInt());
@@ -55,6 +56,7 @@ public record DeviceHubActionPacket(int action, int value) {
                 case ACTION_TOGGLE_CHAIN_DAMAGE -> menu.toggleRailgunChainDamage();
                 case ACTION_CYCLE_EXECUTION_MODE -> menu.cycleRailgunExecutionMode();
                 case ACTION_TOGGLE_CHARGED_SPLASH -> menu.toggleRailgunChargedSplash();
+                case ACTION_TOGGLE_EHV_BEAM -> menu.toggleRailgunEhvBeam();
             }
         });
         ctx.setPacketHandled(true);

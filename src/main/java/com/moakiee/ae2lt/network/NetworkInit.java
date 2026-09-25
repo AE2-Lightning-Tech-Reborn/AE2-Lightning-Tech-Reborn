@@ -50,6 +50,12 @@ public final class NetworkInit {
             return;
         }
         registered = true;
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.BigStockPacket.class,
                 (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.BigStockPacket::read,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));

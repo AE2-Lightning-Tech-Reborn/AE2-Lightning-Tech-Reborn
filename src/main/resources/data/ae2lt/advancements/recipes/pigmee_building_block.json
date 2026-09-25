@@ -6,10 +6,14 @@
       "conditions": {
         "items": [
           {
-            "items": "ae2lt:pigmee_fumo"
+            "items": [
+              "ae2lt:pigmee_fumo"
+            ]
           },
           {
-            "items": "minecraft:cobblestone"
+            "items": [
+              "minecraft:cobblestone"
+            ]
           }
         ]
       }

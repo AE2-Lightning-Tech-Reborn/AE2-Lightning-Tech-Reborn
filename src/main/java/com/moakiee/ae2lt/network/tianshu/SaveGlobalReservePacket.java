@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.network.tianshu;
 import java.util.function.Supplier;
 import appeng.api.stacks.AEKey;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,8 +27,8 @@ public static void handle(SaveGlobalReservePacket packet, Supplier<NetworkEvent.
         var ctx = context.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-        if (player != null && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
-                    && menu.containerId == packet.containerId()) menu.saveGlobalReserve(packet);
+        if (player != null && player.containerMenu instanceof TianshuMaintenanceMenu menu
+                    && menu.maintenanceMenu().containerId == packet.containerId()) menu.saveGlobalReserve(packet);
         });
         ctx.setPacketHandled(true);
     }

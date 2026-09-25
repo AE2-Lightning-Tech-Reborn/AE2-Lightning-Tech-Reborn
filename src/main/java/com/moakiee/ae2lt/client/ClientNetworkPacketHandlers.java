@@ -169,6 +169,7 @@ public final class ClientNetworkPacketHandlers {
                 packet.chainDamage(),
                 packet.executionMode(),
                 packet.chargedSplash(),
+                packet.ehvBeamEnabled(),
                 packet.moduleNameKeys(),
                 packet.moduleCounts(),
                 packet.moduleEnabled(),
@@ -180,14 +181,18 @@ public final class ClientNetworkPacketHandlers {
     }
 
     public static void handleMaintenanceEditorSync(MaintenanceEditorSyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceEditorData(packet.selectionRevision(), packet.data());
         }
     }
 
     public static void handleMaintenanceSummarySync(MaintenanceSummarySyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceSummary(
                     packet.selectionRevision(), packet.revision(), packet.overflow(), packet.entries());

@@ -603,6 +603,9 @@ public final class WirelessLinkRegistry extends SavedData {
      */
     public boolean isPotentialLinkTarget(ServerLevel level, BlockPos pos) {
         var be = level.getBlockEntity(pos);
+        // Forge discovers node hosts through interfaces, including this standalone subtype.
+        if (be instanceof com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity catalyzer
+                && catalyzer.isPigmeeVariant()) return false;
         if (be instanceof OverloadedControllerBlockEntity
                 || be instanceof WirelessOverloadedControllerBlockEntity
                 || be instanceof ControllerBlockEntity) {

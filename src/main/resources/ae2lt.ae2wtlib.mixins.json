@@ -6,10 +6,20 @@
   "refmap": "ae2lt.refmap.json",
   "plugin": "com.moakiee.ae2lt.mixin.ae2wtlib.Ae2wtlibMixinPlugin",
   "mixins": [
-    "WTMenuHostMixin"
+    "WTMenuHostMixin",
+    "CraftingTerminalHandlerMixin",
+    "CraftingTerminalHandlerAccessor",
+    "TianshuMagnetMenuMixin",
+    "WutCraftingPredicateMixin",
+    "TianshuMagnetHandlerMixin",
+    "TianshuTerminalMergeMixin",
+    "TianshuTerminalRecipeMixin",
+    "WTMenuHostQuantumBridgeMixin",
+    "WirelessTerminalGridAccessor"
   ],
   "client": [
-    "client.AEBaseScreenFrequencyTerminalButtonMixin"
+    "client.AEBaseScreenFrequencyTerminalButtonMixin",
+    "client.TianshuMagnetScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

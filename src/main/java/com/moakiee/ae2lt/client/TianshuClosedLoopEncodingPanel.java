@@ -309,6 +309,11 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
                         .withStyle(ChatFormatting.GRAY));
             }
         }
+        if (menu.uploadState == 0
+                && menu.seedRefillSync.problems().stream().anyMatch(entry -> entry.returnBlocked() > 0)) {
+            lines.add(Component.translatable("ae2lt.tianshu.closed_loop.refill.return_blocked_hint")
+                    .withStyle(ChatFormatting.GRAY));
+        }
         lines.add(Component.translatable("ae2lt.tianshu.terminal.closed_loop.candidate",
                 menu.closedLoopCandidateCount == 0 ? 0 : menu.closedLoopCandidateIndex + 1,
                 menu.closedLoopCandidateCount).withStyle(ChatFormatting.GRAY));

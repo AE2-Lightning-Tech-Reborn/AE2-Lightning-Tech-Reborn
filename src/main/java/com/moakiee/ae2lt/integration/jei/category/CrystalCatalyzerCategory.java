@@ -115,16 +115,17 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, CrystalCatalyzerRecipe recipe, IFocusGroup focuses) {
-        // 水现在是机器级固定开销,所有配方共用一份 1000 mB 的 water。
-        var fluid = CrystalCatalyzerBlockEntity.getFixedFluidPerCycle();
+        var fluid = recipe.fluidInput();
         int fluidDisplayCapacity = Math.max(1, fluid.getAmount());
         builder.addSlot(RecipeIngredientRole.INPUT, FLUID_X, FLUID_Y)
                 .setFluidRenderer(fluidDisplayCapacity, false, FLUID_WIDTH, FLUID_HEIGHT)
                 .addIngredient(ForgeTypes.FLUID_STACK, fluid)
-                .addRichTooltipCallback((slotView, tooltip) -> tooltip.add(
-                        Component.translatable(
-                                "jei.ae2lt.crystal_catalyzer.fluid_fixed",
-                                fluid.getAmount())));
+                .addRichTooltipCallback((slotView, tooltip) -> {
+                    tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.fluid_fixed", fluid.getAmount()));
+                    if (!recipe.isWaterRecipe()) {
+                        tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.normal_only"));
+                    }
+                });
 
         recipe.catalyst().ifPresent(catalyst -> {
             int perInstance = Math.max(1, recipe.catalystCount());

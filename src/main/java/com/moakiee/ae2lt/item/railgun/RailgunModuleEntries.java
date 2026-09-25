@@ -60,6 +60,10 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
         return getCount(RailgunModuleType.MULTIDIMENSIONAL_EXECUTION) > 0;
     }
 
+    public boolean hasEhvBeam() {
+        return getCount(RailgunModuleType.EHV_BEAM) > 0;
+    }
+
     public boolean hasAnyExecution() {
         return hasOverloadExecution() || hasMultidimensionalExecution();
     }

@@ -20,9 +20,9 @@ class TianshuMaintainableViewPersistenceContractTest {
                 "client/TianshuGlobalReserveScreen.java"));
 
         assertTrue(menu.contains("this.maintainableView = host.isMaintainableView()"));
-        assertTrue(menu.contains("tianshuHost.setMaintainableView(enabled)"));
-        assertTrue(menu.contains("applyMaintainableViewServer(enabled, true)"));
-        assertTrue(menu.contains("applyMaintainableViewServer(enabled, false)"));
+        assertTrue(menu.contains("if (persist) tianshuHost.setMaintainableView(maintainableView)"));
+        assertTrue(menu.contains("applyTerminalViewMode(mode, true)"));
+        assertTrue(menu.contains("mode -> applyTerminalViewMode(mode, false)"));
         assertTrue(overview.contains("menu.setMaintainableViewTemporarily(false)"));
         assertTrue(overview.contains("menu.setMaintainableViewTemporarily(true)"));
     }

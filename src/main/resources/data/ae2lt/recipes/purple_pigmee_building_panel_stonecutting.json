@@ -3,8 +3,6 @@
   "ingredient": {
     "tag": "ae2lt:pigmee_building_materials"
   },
-  "result": {
-    "item": "ae2lt:purple_pigmee_building_panel",
-    "count": 1
-  }
+  "result": "ae2lt:purple_pigmee_building_panel",
+  "count": 1
 }

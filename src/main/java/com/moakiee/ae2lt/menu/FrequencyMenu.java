@@ -41,7 +41,7 @@ import com.moakiee.ae2lt.network.SyncFrequencyListPacket;
  * currently bound frequency id is auto-synced via a {@link DataSlot}.
  *
  * <p>Forge 1.20.1 form of the 2.0.4 menu: 15.x AE2 has no dedicated
- * {@code ItemMenuHostLocator}; card mode keeps a generic {@link MenuLocator}
+ * {@code MenuLocator}; card mode keeps a generic {@link MenuLocator}
  * and resolves the terminal via {@code locate(player, ItemMenuHost.class)}.</p>
  */
 public class FrequencyMenu extends AEBaseMenu implements ISubMenu {

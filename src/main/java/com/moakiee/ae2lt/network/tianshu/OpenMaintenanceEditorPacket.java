@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.network.tianshu;
 import java.util.function.Supplier;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,8 +22,8 @@ public static void handle(OpenMaintenanceEditorPacket packet, Supplier<NetworkEv
         var ctx = context.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-        if (player != null && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
-                    && menu.containerId == packet.containerId()) {
+        if (player != null && player.containerMenu instanceof TianshuMaintenanceMenu menu
+                    && menu.maintenanceMenu().containerId == packet.containerId()) {
                 menu.openMaintenanceEditor(packet.selectionRevision(), packet.key());
             }
         });

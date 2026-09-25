@@ -10,7 +10,8 @@ public enum RailgunModuleType implements StringRepresentable {
     ACCELERATION("acceleration"),
     OVERLOAD_EXECUTION("overload_execution"),
     RANGE("range"),
-    MULTIDIMENSIONAL_EXECUTION("multidimensional_execution");
+    MULTIDIMENSIONAL_EXECUTION("multidimensional_execution"),
+    EHV_BEAM("ehv_beam");
 
     public static final Codec<RailgunModuleType> CODEC = StringRepresentable.fromEnum(RailgunModuleType::values);
     // 1.20.1 has no StreamCodec/ByteBufCodecs (1.21 API); module data crosses the network

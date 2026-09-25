@@ -20,6 +20,8 @@ import net.minecraftforge.common.extensions.IForgeMenuType;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.item.railgun.RailgunExecutionMode;
+import com.moakiee.ae2lt.item.railgun.RailgunModuleStorage;
+import com.moakiee.ae2lt.logic.railgun.OverloadExecutionService;
 import com.moakiee.ae2lt.item.railgun.RailgunSettings;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
@@ -64,6 +66,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     private boolean chainDamage;
     private RailgunExecutionMode executionMode = RailgunExecutionMode.NORMAL;
     private boolean chargedSplash;
+    private boolean ehvBeamEnabled;
     private List<String> moduleNameKeys = List.of();
     private List<Integer> moduleCounts = List.of();
     private List<Boolean> moduleEnabled = List.of();
@@ -178,6 +181,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
                 status.chainDamage(),
                 status.executionMode(),
                 status.chargedSplash(),
+                status.ehvBeamEnabled(),
                 nameKeys,
                 counts,
                 enabled,
@@ -219,6 +223,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
             boolean chainDamage,
             RailgunExecutionMode executionMode,
             boolean chargedSplash,
+            boolean ehvBeamEnabled,
             List<String> nameKeys,
             List<Integer> counts,
             List<Boolean> enabled,
@@ -236,6 +241,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         this.chainDamage = chainDamage;
         this.executionMode = executionMode;
         this.chargedSplash = chargedSplash;
+        this.ehvBeamEnabled = ehvBeamEnabled;
         this.moduleNameKeys = List.copyOf(nameKeys);
         this.moduleCounts = List.copyOf(counts);
         this.moduleEnabled = List.copyOf(enabled);
@@ -297,6 +303,14 @@ public class DeviceHubMenu extends AbstractContainerMenu {
 
     public RailgunExecutionMode getExecutionMode() {
         return executionMode;
+    }
+
+    public boolean isEhvBeamEnabled() {
+        return ehvBeamEnabled;
+    }
+
+    public boolean hasEhvBeamModule() {
+        return moduleNameKeys.contains("ae2lt.device_hub.module.railgun.ehv_beam");
     }
 
     public boolean isChargedSplash() {
@@ -400,14 +414,22 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
         if (railgun.isEmpty()) return;
         RailgunSettings s = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(railgun, RailgunSettings.DEFAULT);
-        var modules = com.moakiee.ae2lt.item.railgun.RailgunModuleStorage.entryData(railgun);
+        var modules = RailgunModuleStorage.entryData(railgun);
         RailgunExecutionMode mode = modules.hasMultidimensionalExecution()
                 ? s.executionMode().forMultidimensional() : s.executionMode();
         RailgunExecutionMode next = mode.next(modules.hasOverloadExecution() && !modules.hasMultidimensionalExecution());
         ModDataComponents.RAILGUN_SETTINGS.set(railgun, s.withExecutionMode(next));
         if (s.executionMode() == RailgunExecutionMode.PERCENTAGE || next == RailgunExecutionMode.PERCENTAGE) {
-            com.moakiee.ae2lt.logic.railgun.OverloadExecutionService.clearTrackedTargets(railgun);
+            OverloadExecutionService.clearTrackedTargets(railgun);
         }
+    }
+
+    public void toggleRailgunEhvBeam() {
+        if (!(getPlayer() instanceof ServerPlayer player)) return;
+        ItemStack railgun = findDevice(player, TAB_RAILGUN);
+        if (railgun.isEmpty() || !RailgunModuleStorage.entryData(railgun).hasEhvBeam()) return;
+        RailgunSettings settings = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(railgun, RailgunSettings.DEFAULT);
+        ModDataComponents.RAILGUN_SETTINGS.set(railgun, settings.withEhvBeam(!settings.ehvBeamEnabled()));
     }
 
     public void toggleRailgunChargedSplash() {

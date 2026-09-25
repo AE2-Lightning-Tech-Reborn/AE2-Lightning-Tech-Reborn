@@ -14,10 +14,11 @@ public record RailgunSettings(
         boolean soundEnabled,
         RailgunExecutionMode executionMode,
         boolean chargedSplash,
-        boolean chainDamage) {
+        boolean chainDamage,
+        boolean ehvBeamEnabled) {
 
     public static final RailgunSettings DEFAULT = new RailgunSettings(
-            false, false, true, RailgunExecutionMode.NORMAL, true, true);
+            false, false, true, RailgunExecutionMode.NORMAL, true, true, false);
 
     private static final Codec<RailgunSettings> CURRENT_CODEC = RecordCodecBuilder.create(b -> b.group(
             Codec.BOOL.fieldOf("terrain").forGetter(RailgunSettings::terrainDestruction),
@@ -27,7 +28,8 @@ public record RailgunSettings(
                     .forGetter(RailgunSettings::executionMode),
             Codec.BOOL.optionalFieldOf("charged_splash", true)
                     .forGetter(RailgunSettings::chargedSplash),
-            Codec.BOOL.optionalFieldOf("chain_damage", true).forGetter(RailgunSettings::chainDamage))
+            Codec.BOOL.optionalFieldOf("chain_damage", true).forGetter(RailgunSettings::chainDamage),
+            Codec.BOOL.optionalFieldOf("ehv_beam", false).forGetter(RailgunSettings::ehvBeamEnabled))
             .apply(b, RailgunSettings::new));
 
     private static final Codec<LegacySettings> LEGACY_CODEC = RecordCodecBuilder.create(b -> b.group(
@@ -49,6 +51,10 @@ public record RailgunSettings(
             .xmap(value -> value.map(settings -> settings, LegacySettings::upgrade), Either::left);
 
     // 1.20.1 has no StreamCodec; the component shim persists this codec in stack NBT.
+    public RailgunSettings(boolean terrain, boolean pvp, boolean sound, RailgunExecutionMode mode,
+                           boolean splash, boolean chain) {
+        this(terrain, pvp, sound, mode, splash, chain, false);
+    }
 
     /** Source-compatible constructor for callers using the former boolean setting. */
     public RailgunSettings(
@@ -76,19 +82,19 @@ public record RailgunSettings(
     public RailgunSettings withTerrain(boolean v) {
         return new RailgunSettings(
                 v, this.pvp, this.soundEnabled, this.executionMode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withPvp(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, v, this.soundEnabled, this.executionMode,
-                this.chargedSplash, this.chainDamage);
+                this.chargedSplash, this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withSound(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, v, this.executionMode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     /** Legacy adapter retained for source compatibility. */
@@ -104,19 +110,24 @@ public record RailgunSettings(
     public RailgunSettings withExecutionMode(RailgunExecutionMode mode) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, mode, this.chargedSplash,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withChargedSplash(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, this.executionMode, v,
-                this.chainDamage);
+                this.chainDamage, this.ehvBeamEnabled);
     }
 
     public RailgunSettings withChainDamage(boolean v) {
         return new RailgunSettings(
                 this.terrainDestruction, this.pvp, this.soundEnabled, this.executionMode,
-                this.chargedSplash, v);
+                this.chargedSplash, v, this.ehvBeamEnabled);
+    }
+
+    public RailgunSettings withEhvBeam(boolean enabled) {
+        return new RailgunSettings(terrainDestruction, pvp, soundEnabled, executionMode,
+                chargedSplash, chainDamage, enabled);
     }
 
     /** Player targeting requires both this railgun's opt-in and server permission. */

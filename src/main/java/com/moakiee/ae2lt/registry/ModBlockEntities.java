@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.registry;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
+import com.moakiee.ae2lt.blockentity.NetworkedCrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
 import com.moakiee.ae2lt.blockentity.GhostOutputBlockEntity;
@@ -117,15 +118,15 @@ public final class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<CrystalCatalyzerBlockEntity>>
             CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
                     "crystal_catalyzer",
-                    () -> BlockEntityType.Builder.of(
-                            CrystalCatalyzerBlockEntity::new,
+                    () -> BlockEntityType.Builder.<CrystalCatalyzerBlockEntity>of(
+                            NetworkedCrystalCatalyzerBlockEntity::new,
                             ModBlocks.CRYSTAL_CATALYZER.get())
                             .build(null));
 
     public static final RegistryObject<BlockEntityType<CrystalCatalyzerBlockEntity>>
             PIGMEE_CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
                     "pigmee_crystal_catalyzer",
-                    () -> BlockEntityType.Builder.of(
+                    () -> BlockEntityType.Builder.<CrystalCatalyzerBlockEntity>of(
                             CrystalCatalyzerBlockEntity::new,
                             ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get())
                             .build(null));
