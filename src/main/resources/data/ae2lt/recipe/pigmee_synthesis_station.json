@@ -1,9 +1,10 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
-  "pattern": ["IPI", "CTC", "III"],
+  "pattern": ["DPD", "CTC", "DAD"],
   "key": {
-    "I": "minecraft:iron_ingot",
+    "D": "minecraft:diamond",
+    "A": "minecraft:anvil",
     "P": "ae2lt:pigmee_fumo",
     "C": "minecraft:chest",
     "T": "minecraft:crafting_table"
