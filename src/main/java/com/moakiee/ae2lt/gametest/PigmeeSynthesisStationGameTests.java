@@ -109,6 +109,33 @@ public final class PigmeeSynthesisStationGameTests {
     }
 
     @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty")
+    public static void combinesAdjacentStorages(GameTestHelper helper) {
+        var host = station(helper);
+        helper.setBlock(SOURCE, Blocks.CHEST);
+        helper.setBlock(STATION.east(), Blocks.CHEST);
+        var below = (ChestBlockEntity) helper.getBlockEntity(SOURCE);
+        var east = (ChestBlockEntity) helper.getBlockEntity(STATION.east());
+        below.setItem(0, new ItemStack(Items.IRON_INGOT, 60));
+        east.setItem(0, new ItemStack(Items.IRON_INGOT, 12));
+
+        var inventory = host.getInventory();
+        var key = AEItemKey.of(Items.IRON_INGOT);
+        var action = IActionSource.empty();
+        helper.assertTrue(inventory.getAvailableStacks().get(key) == 72,
+                "Both adjacent chests must contribute to available stock");
+        helper.assertTrue(inventory.insert(key, 10, Actionable.MODULATE, action) == 10,
+                "Insertion must continue into the next chest when the first one fills");
+        helper.assertTrue(inventory.getAvailableStacks().get(key) == 82,
+                "Insertion must update the combined stock exactly once");
+        helper.assertTrue(inventory.extract(key, 75, Actionable.MODULATE, action) == 75,
+                "Extraction must span both chests");
+        helper.setBlock(SOURCE, Blocks.AIR);
+        helper.assertTrue(inventory.getAvailableStacks().get(key) <= 7,
+                "Removing a chest must discard its stock from an open terminal");
+        helper.succeed();
+    }
+
+    @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty")
     public static void rejectsMeInterface(GameTestHelper helper) {
         var host = station(helper);
         helper.setBlock(SOURCE, AEBlocks.INTERFACE.block());

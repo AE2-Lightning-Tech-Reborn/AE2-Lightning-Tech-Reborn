@@ -20,6 +20,7 @@ import net.minecraftforge.common.extensions.IForgeMenuType;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.item.railgun.RailgunExecutionMode;
+import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
 import com.moakiee.ae2lt.item.railgun.RailgunSettings;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
@@ -400,9 +401,12 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
         if (railgun.isEmpty()) return;
         RailgunSettings s = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(railgun, RailgunSettings.DEFAULT);
+        RailgunModuleEntries modules = ModDataComponents.RAILGUN_MODULE_ENTRIES.getOrDefault(
+                railgun, RailgunModuleEntries.EMPTY);
         ModDataComponents.RAILGUN_SETTINGS.set(
                 railgun,
-                s.withExecutionMode(s.executionMode().next()));
+                s.withExecutionMode(s.executionMode().next(
+                        modules.hasOverloadExecution() && !modules.hasMultidimensionalExecution())));
     }
 
     public void toggleRailgunChargedSplash() {
