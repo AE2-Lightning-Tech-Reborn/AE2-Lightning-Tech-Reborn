@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.machine.lightningchamber;
 
 import java.util.Objects;
 
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import com.moakiee.ae2lt.util.LongEnergyStorage;
 
 /**
  * FE buffer for the lightning simulation chamber.
@@ -10,7 +10,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
  * <p>The machine consumes FE through AE grid ticks only, but the actual energy
  * source remains NeoForge FE.</p>
  */
-public final class LightningSimulationChamberEnergyStorage implements IEnergyStorage {
+public final class LightningSimulationChamberEnergyStorage implements LongEnergyStorage {
     private final long capacity;
     private final Runnable changeListener;
 
@@ -69,10 +69,12 @@ public final class LightningSimulationChamberEnergyStorage implements IEnergySto
         return (int) extracted;
     }
 
+    @Override
     public long getStoredEnergyLong() {
         return storedEnergy;
     }
 
+    @Override
     public long getCapacityLong() {
         return capacity;
     }

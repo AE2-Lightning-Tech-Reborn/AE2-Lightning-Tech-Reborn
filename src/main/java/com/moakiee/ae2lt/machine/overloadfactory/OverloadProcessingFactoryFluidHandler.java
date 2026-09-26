@@ -3,9 +3,9 @@ package com.moakiee.ae2lt.machine.overloadfactory;
 import java.util.Objects;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import com.moakiee.ae2lt.util.IndexedFluidHandler;
 
-public final class OverloadProcessingFactoryFluidHandler implements IFluidHandler {
+public final class OverloadProcessingFactoryFluidHandler implements IndexedFluidHandler {
     private final NotifyingFluidTank inputTank;
     private final NotifyingFluidTank outputTank;
 
@@ -45,6 +45,18 @@ public final class OverloadProcessingFactoryFluidHandler implements IFluidHandle
     @Override
     public int fill(FluidStack resource, FluidAction action) {
         return inputTank.fill(resource, action);
+    }
+
+    @Override
+    public int fillTank(int tank, FluidStack resource, FluidAction action) {
+        Objects.checkIndex(tank, getTanks());
+        return tank == 0 ? inputTank.fill(resource, action) : 0;
+    }
+
+    @Override
+    public FluidStack drainTank(int tank, FluidStack resource, FluidAction action) {
+        Objects.checkIndex(tank, getTanks());
+        return tank == 1 ? outputTank.drain(resource, action) : FluidStack.EMPTY;
     }
 
     @Override

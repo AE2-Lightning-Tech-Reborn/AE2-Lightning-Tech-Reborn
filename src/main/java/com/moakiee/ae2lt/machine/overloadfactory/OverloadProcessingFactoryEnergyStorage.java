@@ -2,9 +2,9 @@ package com.moakiee.ae2lt.machine.overloadfactory;
 
 import java.util.Objects;
 
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import com.moakiee.ae2lt.util.LongEnergyStorage;
 
-public final class OverloadProcessingFactoryEnergyStorage implements IEnergyStorage {
+public final class OverloadProcessingFactoryEnergyStorage implements LongEnergyStorage {
     private final long capacity;
     private final Runnable changeListener;
 
@@ -63,10 +63,12 @@ public final class OverloadProcessingFactoryEnergyStorage implements IEnergyStor
         return (int) extracted;
     }
 
+    @Override
     public long getStoredEnergyLong() {
         return storedEnergy;
     }
 
+    @Override
     public long getCapacityLong() {
         return capacity;
     }

@@ -2,9 +2,9 @@ package com.moakiee.ae2lt.machine.teslacoil;
 
 import java.util.Objects;
 
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import com.moakiee.ae2lt.util.LongEnergyStorage;
 
-public final class TeslaCoilEnergyStorage implements IEnergyStorage {
+public final class TeslaCoilEnergyStorage implements LongEnergyStorage {
     private final long capacity;
     private final Runnable changeListener;
 
@@ -63,10 +63,12 @@ public final class TeslaCoilEnergyStorage implements IEnergyStorage {
         return (int) extracted;
     }
 
+    @Override
     public long getStoredEnergyLong() {
         return storedEnergy;
     }
 
+    @Override
     public long getCapacityLong() {
         return capacity;
     }
