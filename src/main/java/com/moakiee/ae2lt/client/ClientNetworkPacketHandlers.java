@@ -24,6 +24,7 @@ import com.moakiee.ae2lt.network.tianshu.MaintenanceSummarySyncPacket;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
 import com.moakiee.ae2lt.registry.ModItems;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.particles.ParticleTypes;
@@ -37,8 +38,8 @@ public final class ClientNetworkPacketHandlers {
     private ClientNetworkPacketHandlers() {
     }
 
-    public static void handleEasterEgg() {
-        EasterEggOverlay.trigger();
+    public static void handleEasterEgg(GlobalPos source) {
+        EasterEggOverlay.trigger(source);
     }
 
     public static void handleFrequencyResponse(Component message) {

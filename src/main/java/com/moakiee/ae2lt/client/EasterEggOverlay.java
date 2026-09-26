@@ -1,7 +1,10 @@
 package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.logic.EasterEggAudience;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -12,24 +15,25 @@ public final class EasterEggOverlay implements IGuiOverlay {
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(AE2LightningTech.MODID, "textures/gui/easter_egg.png");
 
-    private static final int DISPLAY_TICKS = 40;
-
-    private static int ticksRemaining = 0;
+    private static final EasterEggDisplayState STATE = new EasterEggDisplayState();
+    private static GlobalPos source;
 
     private EasterEggOverlay() {
     }
 
-    public static void trigger() {
-        ticksRemaining = DISPLAY_TICKS;
+    public static void trigger(GlobalPos origin) {
+        if (isNearby(origin) && STATE.trigger()) source = origin;
     }
 
     public static boolean isActive() {
-        return ticksRemaining > 0;
+        return STATE.isActive();
     }
 
     public static void tick() {
-        if (ticksRemaining > 0) {
-            ticksRemaining--;
+        STATE.tick();
+        if (source != null && !isNearby(source)) {
+            STATE.dismiss();
+            source = null;
         }
     }
 
@@ -39,7 +43,8 @@ public final class EasterEggOverlay implements IGuiOverlay {
      * tick counter does not retain references that survive the logical client).
      */
     public static void reset() {
-        ticksRemaining = 0;
+        STATE.reset();
+        source = null;
     }
 
     // 1.20.1 IGuiOverlay passes a GuiGraphics (GuiComponent was removed); alpha is applied via setColor.
@@ -50,7 +55,7 @@ public final class EasterEggOverlay implements IGuiOverlay {
             float partialTick,
             int screenWidth,
             int screenHeight) {
-        if (ticksRemaining <= 0) {
+        if (!STATE.isVisible() || !isNearby(source)) {
             return;
         }
 
@@ -71,13 +76,22 @@ public final class EasterEggOverlay implements IGuiOverlay {
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
 
-        // Fade out over the last 10 ticks.
-        float alpha = Math.min(1.0F, ticksRemaining / 10.0F);
-
         guiGraphics.pose().pushPose();
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-        guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        guiGraphics.pose().popPose();
+        guiGraphics.flush();
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        try {
+            guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
+        } finally {
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+            guiGraphics.pose().popPose();
+        }
+    }
+
+    private static boolean isNearby(GlobalPos origin) {
+        Minecraft minecraft = Minecraft.getInstance();
+        return origin != null && minecraft.player != null && minecraft.level != null
+                && EasterEggAudience.includes(origin, minecraft.level.dimension(), minecraft.player.position());
     }
 }

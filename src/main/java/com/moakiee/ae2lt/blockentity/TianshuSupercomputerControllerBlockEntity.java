@@ -1224,7 +1224,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         return true;
     }
 
-    private KeyCounter reusableSeedSnapshot() {
+    public KeyCounter reusableSeedSnapshot() {
         var result = new KeyCounter();
         var drives = seedDrives();
         if (drives != null) {

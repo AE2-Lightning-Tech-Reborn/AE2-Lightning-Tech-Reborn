@@ -283,6 +283,9 @@ public final class AE2LTCommonConfig {
     public static int overloadArmorUndyingComboWindowTicks() { return VALUES.overloadArmorUndyingComboWindowTicks.get(); }
 
     // ── Railgun: damage (per-tier base + beam settle) ────────────────────────
+    public static double railgunPercentageTier1() { return VALUES.railgunPercentageTier1.get(); }
+    public static double railgunPercentageTier2() { return VALUES.railgunPercentageTier2.get(); }
+    public static double railgunPercentageTier3() { return VALUES.railgunPercentageTier3.get(); }
     public static int railgunBeamDamagePerSettle() { return VALUES.railgunBeamDamagePerSettle.get(); }
     public static double railgunBeamBypass() { return VALUES.railgunBeamBypass.get(); }
     public static int railgunBaseDamageEhv1() { return VALUES.railgunBaseDamageEhv1.get(); }
@@ -403,6 +406,9 @@ public final class AE2LTCommonConfig {
         private final ForgeConfigSpec.IntValue overloadArmorUndyingComboWindowTicks;
 
         // ── Railgun fields ────────────────────────────────────────────────
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier1;
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier2;
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier3;
         private final ForgeConfigSpec.IntValue railgunBeamDamagePerSettle;
         private final ForgeConfigSpec.DoubleValue railgunBeamBypass;
         private final ForgeConfigSpec.IntValue railgunBaseDamageEhv1;
@@ -699,6 +705,15 @@ public final class AE2LTCommonConfig {
 
             builder.push("railgun");
             builder.push("damage");
+            railgunPercentageTier1 = builder
+                    .comment("Fraction of target max health added by percentage execution at EHV1.")
+                    .defineInRange("percentageTier1", 0.10D, 0.0D, 1.0D);
+            railgunPercentageTier2 = builder
+                    .comment("Fraction of target max health added by percentage execution at EHV2.")
+                    .defineInRange("percentageTier2", 0.15D, 0.0D, 1.0D);
+            railgunPercentageTier3 = builder
+                    .comment("Fraction of target max health added by percentage execution at EHV3.")
+                    .defineInRange("percentageTier3", 0.20D, 0.0D, 1.0D);
             railgunBeamDamagePerSettle = builder
                     .comment("High Voltage beam damage per 2-tick settle.")
                     .defineInRange("beamDamagePerSettle", 20, 0, Integer.MAX_VALUE);

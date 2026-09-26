@@ -287,17 +287,25 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
                             entry.what().getDisplayName(), entry.storageBlocked())
                             .withStyle(ChatFormatting.RED));
                 }
+                if (entry.returnBlocked() > 0) {
+                    lines.add(Component.translatable(
+                            "ae2lt.tianshu.closed_loop.refill.return_blocked_entry",
+                            entry.what().getDisplayName(), entry.returnBlocked())
+                            .withStyle(ChatFormatting.RED));
+                }
             }
-            if (menu.seedRefillSync.state() == SeedRefillSync.STATE_NETWORK_MISSING
-                    || menu.seedRefillSync.state() == SeedRefillSync.STATE_MIXED) {
+            if (menu.seedRefillSync.problems().stream().anyMatch(entry -> entry.networkMissing() > 0)) {
                 lines.add(Component.translatable(
                         "ae2lt.tianshu.closed_loop.refill.network_missing_hint")
                         .withStyle(ChatFormatting.GRAY));
             }
-            if (menu.seedRefillSync.state() == SeedRefillSync.STATE_STORAGE_BLOCKED
-                    || menu.seedRefillSync.state() == SeedRefillSync.STATE_MIXED) {
+            if (menu.seedRefillSync.problems().stream().anyMatch(entry -> entry.storageBlocked() > 0)) {
                 lines.add(Component.translatable(
                         "ae2lt.tianshu.closed_loop.refill.storage_blocked_hint")
+                        .withStyle(ChatFormatting.GRAY));
+            }
+            if (menu.seedRefillSync.problems().stream().anyMatch(entry -> entry.returnBlocked() > 0)) {
+                lines.add(Component.translatable("ae2lt.tianshu.closed_loop.refill.return_blocked_hint")
                         .withStyle(ChatFormatting.GRAY));
             }
         }
@@ -322,6 +330,8 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
                 Component.translatable("ae2lt.tianshu.closed_loop.refill.status.storage_blocked");
             case SeedRefillSync.STATE_MIXED ->
                 Component.translatable("ae2lt.tianshu.closed_loop.refill.status.mixed");
+            case SeedRefillSync.STATE_RETURN_BLOCKED ->
+                Component.translatable("ae2lt.tianshu.closed_loop.refill.status.return_blocked");
             case SeedRefillSync.STATE_UNAVAILABLE ->
                 Component.translatable("ae2lt.tianshu.closed_loop.refill.status.unavailable");
             default -> Component.translatable("ae2lt.tianshu.closed_loop.status."
@@ -334,7 +344,8 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         return switch (menu.seedRefillSync.state()) {
             case SeedRefillSync.STATE_COMPLETE -> 0x228822;
             case SeedRefillSync.STATE_NETWORK_MISSING -> 0xAA7700;
-            case SeedRefillSync.STATE_STORAGE_BLOCKED, SeedRefillSync.STATE_MIXED -> 0xAA2222;
+            case SeedRefillSync.STATE_STORAGE_BLOCKED, SeedRefillSync.STATE_RETURN_BLOCKED,
+                    SeedRefillSync.STATE_MIXED -> 0xAA2222;
             case SeedRefillSync.STATE_UNAVAILABLE -> 0xAA2222;
             default -> switch (menu.closedLoopDraftStatus) {
                 case VALID, ENCODED -> 0x228822;
@@ -348,6 +359,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     private static boolean isRefillProblem(int state) {
         return state == SeedRefillSync.STATE_NETWORK_MISSING
                 || state == SeedRefillSync.STATE_STORAGE_BLOCKED
+                || state == SeedRefillSync.STATE_RETURN_BLOCKED
                 || state == SeedRefillSync.STATE_MIXED;
     }
 

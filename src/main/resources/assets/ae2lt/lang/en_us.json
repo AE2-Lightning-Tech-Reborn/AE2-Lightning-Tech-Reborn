@@ -1,4 +1,5 @@
 {
+  "block.ae2lt.overload_alloy_anvil": "Overload Alloy Anvil",
   "itemGroup.ae2lt": "AE2 Lightning Tech Reborn",
   "itemGroup.ae2lt.pigmee": "Lightning Tech? Pigmee Tech!",
   "structure.ae2lt.alien_starship": "Alien Starship",
@@ -997,6 +998,7 @@
   "ae2lt.railgun.config.overload_execution_mode.off": "Off",
   "ae2lt.railgun.config.overload_execution_mode.normal": "Normal Death",
   "ae2lt.railgun.config.overload_execution_mode.forced": "Forced Death",
+  "ae2lt.railgun.config.overload_execution_mode.percentage": "Percentage Damage",
   "ae2lt.railgun.config.charged_splash": "Charged Splash",
   "ae2lt.device_hub.module.counted": "%s x%s",
   "ae2lt.device_hub.module.railgun.core": "Overload Core Module",
@@ -1177,6 +1179,9 @@
   "ae2lt.tianshu.closed_loop.refill.status.storage_blocked": "Seed storage cannot accept seeds",
   "ae2lt.tianshu.closed_loop.refill.status.mixed": "Seed refill incomplete",
   "ae2lt.tianshu.closed_loop.refill.status.unavailable": "Refill unavailable",
+  "ae2lt.tianshu.closed_loop.refill.status.return_blocked": "Excess seeds could not be returned",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_entry": "Could not return to ME network: %s ×%s",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_hint": "The ME network is full or rejects these seeds. They remain in seed storage.",
   "ae2lt.tianshu.closed_loop.refill.network_missing_entry": "Missing from ME network: %s ×%s",
   "ae2lt.tianshu.closed_loop.refill.storage_blocked_entry": "Seed storage cannot accept: %s ×%s",
   "ae2lt.tianshu.closed_loop.refill.network_missing_hint": "Add the missing seeds to the current ME network.",

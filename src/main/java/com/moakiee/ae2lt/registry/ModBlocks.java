@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock;
 import com.moakiee.ae2lt.block.AtmosphericIonizerBlock;
 import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
@@ -60,6 +61,10 @@ public final class ModBlocks {
     private static final String EXTENDEDAE_MODID = "expatternprovider";
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, AE2LightningTech.MODID);
+
+    public static final RegistryObject<OverloadAlloyAnvilBlock> OVERLOAD_ALLOY_ANVIL =
+            registerBlock("overload_alloy_anvil", () -> new OverloadAlloyAnvilBlock(
+                    BlockBehaviour.Properties.copy(net.minecraft.world.level.block.Blocks.ANVIL)));
 
     private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)

@@ -32,8 +32,9 @@ class RailgunSettingsTest {
     }
 
     @Test
-    void executionModeCyclesThroughAllThreeStates() {
-        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.OFF.next());
+    void executionModeCyclesThroughAllFourStates() {
+        assertEquals(RailgunExecutionMode.PERCENTAGE, RailgunExecutionMode.OFF.next());
+        assertEquals(RailgunExecutionMode.NORMAL, RailgunExecutionMode.PERCENTAGE.next());
         assertEquals(RailgunExecutionMode.FORCED, RailgunExecutionMode.NORMAL.next());
         assertEquals(RailgunExecutionMode.OFF, RailgunExecutionMode.FORCED.next());
     }

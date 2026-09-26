@@ -1,4 +1,5 @@
 {
+  "block.ae2lt.overload_alloy_anvil": "过载合金砧",
   "structure.ae2lt.alien_starship": "外星飞船",
   "message.ae2lt.config_migrated_v2": "[AE2 闪电科技：重生] 本次更新涉及平衡调整，ae2lt-common.toml 已被重置为默认值。如果你之前改过其中的配置项，请到新文件里重新设定。",
   "message.ae2lt.config_migrated_v2.matrix": "[AE2 闪电科技：重生] 过载处理工厂的矩阵槽上限已调整为 32 枚。原有超过 32 枚的堆叠会被保留，但仅 32 枚参与并行计算，请打开 GUI 直接取出多余的矩阵。",
@@ -997,6 +998,7 @@
   "ae2lt.railgun.config.overload_execution_mode.off": "关闭",
   "ae2lt.railgun.config.overload_execution_mode.normal": "普通至死",
   "ae2lt.railgun.config.overload_execution_mode.forced": "强制至死",
+  "ae2lt.railgun.config.overload_execution_mode.percentage": "百分比伤害",
   "ae2lt.railgun.config.charged_splash": "蓄力溅射",
   "ae2lt.device_hub.module.counted": "%s ×%s",
   "ae2lt.device_hub.module.railgun.core": "过载内核模块",
@@ -1177,6 +1179,9 @@
   "ae2lt.tianshu.closed_loop.refill.status.storage_blocked": "种子仓无法存入",
   "ae2lt.tianshu.closed_loop.refill.status.mixed": "补种未完成",
   "ae2lt.tianshu.closed_loop.refill.status.unavailable": "补种不可用",
+  "ae2lt.tianshu.closed_loop.refill.status.return_blocked": "多余种子无法退回",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_entry": "未能退回 ME 网络：%s ×%s",
+  "ae2lt.tianshu.closed_loop.refill.return_blocked_hint": "ME 网络已满或不接受这些种子；它们仍保留在种子仓中。",
   "ae2lt.tianshu.closed_loop.refill.network_missing_entry": "ME 网络缺少：%s ×%s",
   "ae2lt.tianshu.closed_loop.refill.storage_blocked_entry": "种子仓无法存入：%s ×%s",
   "ae2lt.tianshu.closed_loop.refill.network_missing_hint": "请将缺少的种子放入当前 ME 网络。",
