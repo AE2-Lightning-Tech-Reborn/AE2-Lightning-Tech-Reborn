@@ -6,10 +6,13 @@ import com.moakiee.ae2lt.client.core.TianshuCoreEffectRenderer;
 import com.moakiee.ae2lt.registry.ModEntities;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModFumos;
+import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.client.renderer.entity.ArmorStandRenderer;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;
 import net.minecraft.client.renderer.entity.TntRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
@@ -60,12 +63,24 @@ public final class ModEntityRenderers {
     }
 
     @SubscribeEvent
+    public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(CelestweaveArmorModel.OUTER_LAYER, CelestweaveArmorModel::createOuterLayer);
+        event.registerLayerDefinition(CelestweaveArmorModel.INNER_LAYER, CelestweaveArmorModel::createInnerLayer);
+    }
+
+    @SubscribeEvent
     public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        CelestweaveArmorModel.bake(event.getEntityModels());
         for (var skin : event.getSkins()) {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
+                renderer.addLayer(new CelestweaveArmorGlowLayer<>(renderer));
                 renderer.addLayer(new PhaseWingLayer(renderer, event.getEntityModels()));
             }
+        }
+        ArmorStandRenderer armorStand = event.getRenderer(EntityType.ARMOR_STAND);
+        if (armorStand != null) {
+            armorStand.addLayer(new CelestweaveArmorGlowLayer<>(armorStand));
         }
     }
 
@@ -91,6 +106,15 @@ public final class ModEntityRenderers {
                 return renderer;
             }
         }, ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM);
+        event.registerItem(CelestweaveArmorClientExtensions.INSTANCE,
+                ModItems.CELESTWEAVE_OCULUS.get(),
+                ModItems.CELESTWEAVE_CORE.get(),
+                ModItems.CELESTWEAVE_CONDUIT.get(),
+                ModItems.CELESTWEAVE_STRIDE.get(),
+                ModItems.PHASE_LOCK_PROJECTION.get(),
+                ModItems.PHASE_LOCK_PROJECTION_HEAD.get(),
+                ModItems.PHASE_LOCK_PROJECTION_LEGS.get(),
+                ModItems.PHASE_LOCK_PROJECTION_FEET.get());
     }
 
     @SubscribeEvent

@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.assets;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -48,12 +47,24 @@ final class ArmorModuleTextureContractTest {
     }
 
     @Test
-    void celestweaveArmorDoesNotDeclareRenderedArmorLayers() throws Exception {
+    void celestweaveArmorLayersHaveWornTextures() throws Exception {
         String source = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorMaterials.java"));
+                "src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorMaterials.java"))
+                .replaceAll("\\s+", "");
 
-        assertFalse(
-                source.contains("new ArmorMaterial.Layer"),
-                "Celestweave should remain equipable without rendering a worn armor model");
+        assertTrue(
+                source.contains("newArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID,\"celestweave\"))"),
+                "Celestweave should declare its ae2lt:celestweave worn armor layer");
+        for (String texture : List.of(
+                "models/armor/celestweave_layer_1",
+                "models/armor/celestweave_layer_1_glow",
+                "models/armor/celestweave_layer_2",
+                "models/armor/celestweave_layer_2_glow",
+                "entity/celestweave_phase_wing",
+                "entity/celestweave_phase_wing_glow")) {
+            Path texturePath = Path.of("src/main/resources/assets/ae2lt/textures", texture + ".png");
+
+            assertTrue(Files.isRegularFile(texturePath), texture + " texture should exist");
+        }
     }
 }
