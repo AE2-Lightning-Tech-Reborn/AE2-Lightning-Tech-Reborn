@@ -23,20 +23,14 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
-    private final Blitter workArea;
-    private final Blitter slotFrame;
-    private final Blitter processBase;
-    private final Blitter energyFrame;
+    private final Blitter miningOverlay;
     private final ToggleButton autoExportButton;
     private final ActionButton configureOutputButton;
     public MiningFactoryScreen(MiningFactoryMenu menu, Inventory inventory, Component title, ScreenStyle style) {
         super(menu, inventory, title, style);
         imageWidth = 176;
-        imageHeight = 178;
-        workArea = style.getImage("workArea");
-        slotFrame = style.getImage("slotFrame");
-        processBase = style.getImage("processBase");
-        energyFrame = style.getImage("energyFrame");
+        imageHeight = 183;
+        miningOverlay = style.getImage("miningOverlay");
         widgets.add("processArea", new OverloadProcessingFactoryProgressWidget(menu::getProgress, style.getImage("processOverlay")));
         widgets.add("energyBar", new OverloadProcessingFactoryEnergyBar(() -> menu.energy, () -> 1_000_000L, style.getImage("energyBar")));
         widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
@@ -72,15 +66,15 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
 
     @Override public void drawBG(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTicks) {
         super.drawBG(graphics, x, y, mouseX, mouseY, partialTicks);
-        // Recompose the existing factory texture; the player inventory and outer frame stay shared.
-        workArea.copy().dest(x + 7, y + 20, 162, 60).blit(graphics);
-        for (Slot slot : menu.slots) {
-            if (slot.isActive() && slot.index < com.moakiee.ae2lt.machine.miningfactory.MiningFactoryInventory.SIZE) {
-                slotFrame.copy().dest(x + slot.x - 1, y + slot.y - 1).blit(graphics);
-            }
+        // Reveal the falling fragments from top to bottom using the same batch progress as the arrow.
+        int filled = Math.clamp((int) Math.ceil(miningOverlay.getSrcHeight() * menu.getProgress()),
+                0, miningOverlay.getSrcHeight());
+        if (filled > 0) {
+            miningOverlay.copy()
+                    .src(miningOverlay.getSrcX(), miningOverlay.getSrcY(), miningOverlay.getSrcWidth(), filled)
+                    .dest(x + 25, y + 43, miningOverlay.getSrcWidth(), filled)
+                    .blit(graphics);
         }
-        processBase.copy().dest(x + 80, y + 46).blit(graphics);
-        energyFrame.copy().dest(x + 8, y + 40).blit(graphics);
     }
 
     private Component statusText() {

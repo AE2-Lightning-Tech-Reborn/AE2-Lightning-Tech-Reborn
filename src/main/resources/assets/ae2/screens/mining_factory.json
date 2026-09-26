@@ -5,41 +5,41 @@
     "common/player_inventory.json"
   ],
   "background": {
-    "texture": "ae2lt:textures/guis/overload_processing_factory.png",
+    "texture": "ae2lt:textures/guis/mining_factory.png",
     "srcRect": [
       0,
       0,
       176,
-      178
+      183
     ]
   },
   "slots": {
     "PLAYER_INVENTORY": {
       "left": 8,
-      "bottom": 79,
-      "grid": "BREAK_AFTER_9COLS"
+      "grid": "BREAK_AFTER_9COLS",
+      "top": 99
     },
     "PLAYER_HOTBAR": {
       "left": 8,
-      "bottom": 21,
-      "grid": "HORIZONTAL"
+      "grid": "HORIZONTAL",
+      "top": 157
     },
     "MACHINE_INPUT": {
-      "left": 29,
-      "top": 24
+      "left": 26,
+      "top": 23
     },
     "CONFIG": {
-      "left": 29,
-      "top": 60
+      "left": 26,
+      "top": 59
     },
     "MACHINE_OUTPUT": {
-      "left": 114,
-      "top": 24,
+      "left": 98,
+      "top": 23,
       "grid": "BREAK_AFTER_3COLS"
     },
     "AE2LT_OVERLOAD_FACTORY_MATRIX": {
-      "left": 87,
-      "top": 60
+      "left": 62,
+      "top": 59
     }
   },
   "text": {
@@ -58,73 +58,46 @@
       },
       "position": {
         "left": 8,
-        "bottom": 90
+        "top": 88
       }
     }
   },
   "images": {
-    "workArea": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
-      "srcRect": [
-        85,
-        24,
-        1,
-        1
-      ]
-    },
-    "slotFrame": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
-      "srcRect": [
-        7,
-        98,
-        18,
-        18
-      ]
-    },
-    "processBase": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
-      "srcRect": [
-        84,
-        46,
-        31,
-        10
-      ]
-    },
-    "energyFrame": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
-      "srcRect": [
-        138,
-        40,
-        10,
-        22
-      ]
-    },
     "energyBar": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
+      "texture": "ae2lt:textures/guis/mining_factory.png",
       "srcRect": [
-        176,
-        0,
-        6,
-        18
+        177,
+        1,
+        4,
+        16
       ]
     },
     "processOverlay": {
-      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
+      "texture": "ae2lt:textures/guis/mining_factory.png",
       "srcRect": [
         176,
         18,
-        31,
+        51,
         10
+      ]
+    },
+    "miningOverlay": {
+      "texture": "ae2lt:textures/guis/mining_factory.png",
+      "srcRect": [
+        176,
+        28,
+        18,
+        14
       ]
     }
   },
   "widgets": {
     "energyBar": {
-      "left": 10,
-      "top": 42
+      "left": 47,
+      "top": 23
     },
     "processArea": {
-      "left": 80,
+      "left": 44,
       "top": 46
     },
     "lightningStatus": {
