@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/light_gray_dye"
+    "layer0": "ae2lt:item/dye_base"
   }
 }

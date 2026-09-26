@@ -2,8 +2,14 @@ package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.registry.ModFumos;
+import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
+import com.moakiee.ae2lt.lightning.RainbowPigmeeTransformation;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.util.FastColor;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.item.DyeColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -16,19 +22,47 @@ public final class RainbowPigmeeColors {
     }
 
     public static int currentColor() {
+        return 0xFF000000 | Mth.hsvToRgb((float) (animationTicks() % 240.0 / 240.0), 0.65F, 1.0F);
+    }
+
+    static double animationTicks() {
         var minecraft = Minecraft.getInstance();
-        double ticks = minecraft.level == null ? 0 : minecraft.level.getGameTime() % 240L
+        return minecraft.level == null ? 0 : minecraft.level.getGameTime() % 24000L
                 + minecraft.getTimer().getGameTimeDeltaPartialTick(true);
-        return 0xFF000000 | Mth.hsvToRgb((float) (ticks / 240.0), 0.65F, 1.0F);
+    }
+
+    /** Vanilla's dye sequence and 25-tick crossfade, lifted for the darker Pigmee texture. */
+    public static int sheepColor() {
+        double ticks = animationTicks();
+        int index = (int) (ticks / 25.0);
+        return FastColor.ARGB32.lerp((float) (ticks % 25.0 / 25.0),
+                brighten(Sheep.getColor(DyeColor.byId(index % 16))),
+                brighten(Sheep.getColor(DyeColor.byId((index + 1) % 16))));
+    }
+
+    private static int brighten(int color) {
+        int r = color >> 16 & 255, g = color >> 8 & 255, b = color & 255;
+        float scale = 255.0F / Math.max(1, Math.max(r, Math.max(g, b)));
+        // Preserve each dye's hue; keep a light floor instead of cycling into near-black.
+        return FastColor.ARGB32.color(255,
+                Math.round(48 + r * scale * 207 / 255),
+                Math.round(48 + g * scale * 207 / 255),
+                Math.round(48 + b * scale * 207 / 255));
     }
 
     @SubscribeEvent
     public static void blockColors(RegisterColorHandlersEvent.Block event) {
         event.register((state, level, pos, index) -> currentColor(), ModFumos.RAINBOW_PIGMEE_FUMO.get());
+        event.register((state, level, pos, index) -> level != null && pos != null
+                && level.getBlockEntity(pos) instanceof FumoBlockEntity fumo
+                && RainbowPigmeeTransformation.matchesName(fumo.getCustomName()) ? sheepColor() : -1,
+                ModFumos.PIGMEE_FUMO.get());
     }
 
     @SubscribeEvent
     public static void itemColors(RegisterColorHandlersEvent.Item event) {
         event.register((stack, index) -> currentColor(), ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
+        event.register((stack, index) -> RainbowPigmeeTransformation.matchesName(
+                stack.get(DataComponents.CUSTOM_NAME)) ? sheepColor() : -1, ModFumos.PIGMEE_FUMO_ITEM.get());
     }
 }

@@ -11,9 +11,11 @@ allprojects {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
             gameDirectory = project.layout.buildDirectory.dir('rainbow-pigmee-gametest').get().asFile
         }
-        if (project.hasProperty('rainbowClientProbe')) {
+        if (project.hasProperty('rainbowClientProbe') || project.hasProperty('rainbowManualTest')) {
             neoForge.runs.client {
                 systemProperty 'ae2lt.rainbowClientProbe', 'true'
+                systemProperty 'ae2lt.rainbowManualTest', project.hasProperty('rainbowManualTest').toString()
+                systemProperty 'ae2lt.rainbowFlowCapture', project.hasProperty('rainbowFlowCapture').toString()
                 jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
                 gameDirectory = project.layout.buildDirectory.dir('rainbow-pigmee-client').get().asFile
                 programArguments.addAll '--quickPlaySingleplayer', 'RainbowPigmeeTest'

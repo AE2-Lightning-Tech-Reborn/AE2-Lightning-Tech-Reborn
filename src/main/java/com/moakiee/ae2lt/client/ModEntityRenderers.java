@@ -90,7 +90,7 @@ public final class ModEntityRenderers {
                 }
                 return renderer;
             }
-        }, ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM);
+        }, ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM, ModFumos.RAINBOW_PIGMEE_FUMO_ITEM);
     }
 
     @SubscribeEvent
@@ -107,7 +107,7 @@ public final class ModEntityRenderers {
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, itemId);
         ModelResourceLocation modelId = ModelResourceLocation.inventory(id);
         event.getModels().computeIfPresent(modelId, (ignored, model) ->
-                itemId.equals("hyperdimensional_pigmee_fumo")
+                (itemId.equals("hyperdimensional_pigmee_fumo") || itemId.equals("rainbow_pigmee_fumo"))
                         ? new HyperdimensionalPigmeeBakedModel(model)
                         : new SpinningFumoBakedModel(model));
     }

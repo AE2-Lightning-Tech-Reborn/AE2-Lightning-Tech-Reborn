@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.debug;
 
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
 import com.moakiee.ae2lt.client.RainbowPigmeeColors;
+import com.moakiee.ae2lt.client.RainbowPigmeeShader;
 import com.moakiee.ae2lt.client.ctm.ConnectedTextureBakedModel;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModFumos;
@@ -16,7 +17,11 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -39,7 +44,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class RainbowPigmeeClientProbe implements IModPlugin {
     private static IJeiRuntime runtime;
-    private static int ticks, phase, firstColor;
+    private static int ticks, phase, firstColor, firstSheepColor, flowFrames;
     private static boolean done;
     private static volatile boolean ready;
     private static volatile Throwable serverFailure;
@@ -52,7 +57,13 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
         if (!Boolean.getBoolean("ae2lt.rainbowClientProbe") || done) return;
         var mc = Minecraft.getInstance();
         mc.options.pauseOnLostFocus = false;
-        if (mc.player == null || mc.getSingleplayerServer() == null || ++ticks % 40 != 0) return;
+        if (mc.player == null || mc.getSingleplayerServer() == null) return;
+        ticks++;
+        if (Boolean.getBoolean("ae2lt.rainbowFlowCapture") && mc.screen instanceof ArtPreview
+                && ticks % 2 == 0 && flowFrames < 80) {
+            capture(String.format(java.util.Locale.ROOT, "rainbow-flow-%03d.png", flowFrames++));
+        }
+        if (ticks % 40 != 0) return;
         try {
             if (serverFailure != null) throw new AssertionError(serverFailure);
             switch (phase) {
@@ -67,16 +78,39 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
                     if (!ready || runtime == null || !mc.level.getBlockState(new BlockPos(3,100,9)).is(ModFumos.RAINBOW_PIGMEE_FUMO.get())) {
                         require(ticks < 1600, "Client fixture/JEI timeout"); return;
                     }
+                    if (Boolean.getBoolean("ae2lt.rainbowManualTest")) {
+                        mc.getWindow().setTitle("Minecraft AE2LT Alpha - Rainbow Pigmee Manual Test");
+                        mc.options.hideGui = false;
+                        mc.setScreen(null);
+                        done = true;
+                        System.out.println("RAINBOW_MANUAL_READY: world open; four Pigmee variants placed; test items in hotbar; automatic probe stopped.");
+                        return;
+                    }
                     checkSlabs(); checkJei();
+                    require(RainbowPigmeeShader.isLoaded(), "Per-pixel rainbow shader did not load");
                     firstColor = RainbowPigmeeColors.currentColor();
+                    firstSheepColor = RainbowPigmeeColors.sheepColor();
+                    require(mc.getItemColors().getColor(new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()),0) == -1,
+                            "Ordinary Pigmee must retain its original colours");
+                    require(mc.getItemColors().getColor(namedPigmee(),0) == RainbowPigmeeColors.sheepColor(),
+                            "Named Pigmee item must use vanilla sheep colours");
+                    var namedPos = new BlockPos(5,100,9);
+                    require(mc.getBlockColors().getColor(mc.level.getBlockState(namedPos),mc.level,namedPos,0)
+                            == RainbowPigmeeColors.sheepColor(), "Placed Pigmee name/tint did not reach the client");
+                    require(mc.getItemRenderer().getModel(new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()),
+                            mc.level,mc.player,0).isCustomRenderer(), "Rainbow item must use flowing surface renderer");
+                    require(mc.getItemRenderer().getModel(new ItemStack(ModItems.DYE_BASE.get()), mc.level,mc.player,0)
+                            .getParticleIcon().contents().name().equals(ResourceLocation.parse("ae2lt:item/dye_base")),
+                            "Dye base is still using a placeholder sprite");
 
                 }
                 case 2 -> {
                     capture("rainbow-pigmee-slabs.png");
-                    move(3.5, 101.4, 12.5, 180, 12);
+                    move(4.5, 102.0, 4.0, 0, 15);
                 }
                 case 3 -> {
                     require(firstColor != RainbowPigmeeColors.currentColor(), "Rainbow colour is frozen");
+                    require(firstSheepColor != RainbowPigmeeColors.sheepColor(), "Named sheep colour is frozen");
                     require(mc.getItemColors().getColor(new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()),0) == RainbowPigmeeColors.currentColor(), "Item tint missing");
                     capture("rainbow-pigmee-close.png");
                     mc.options.hideGui = false;
@@ -93,14 +127,21 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
                 }
                 case 5 -> {
                     capture("rainbow-pigmee-jei-dyes.png");
-                    System.out.println("RAINBOW_QA PASS: animated block/item tint; 99 slab states; coplanar CTM and unculled inset faces; all 16 JEI layouts and hint-only acquisition.");
+                    mc.setScreen(new ArtPreview());
+                }
+                case 6 -> capture("rainbow-pigmee-art-items-a.png");
+                case 7 -> {
+                    if (Boolean.getBoolean("ae2lt.rainbowFlowCapture") && flowFrames < 80) return;
+                    capture("rainbow-pigmee-art-items-b.png");
+                    System.out.println("RAINBOW_QA PASS: named sheep block/item colours; flowing rainbow item renderer; dye base sprite; 99 slab states; all 16 JEI layouts and hint-only acquisition.");
                     done = true; mc.stop();
                 }
             }
             phase++;
         } catch (Throwable t) {
             t.printStackTrace(); System.out.println("RAINBOW_QA FAIL phase=" + phase + ": " + t);
-            done = true; mc.stop();
+            done = true;
+            if (!Boolean.getBoolean("ae2lt.rainbowManualTest")) mc.stop();
         }
     }
 
@@ -120,7 +161,9 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
         level.setBlockAndUpdate(new BlockPos(1,100,9),ModFumos.PIGMEE_FUMO.get().defaultBlockState());
         level.setBlockAndUpdate(new BlockPos(3,100,9),ModFumos.RAINBOW_PIGMEE_FUMO.get().defaultBlockState());
         ((FumoBlockEntity)level.getBlockEntity(new BlockPos(3,100,9))).toggleSpinning();
-        level.setBlockAndUpdate(new BlockPos(5,100,9),ModBlocks.PIGMEE_BUILDING_SLAB.get().defaultBlockState());
+        level.setBlockAndUpdate(new BlockPos(5,100,9),ModFumos.PIGMEE_FUMO.get().defaultBlockState());
+        ((FumoBlockEntity)level.getBlockEntity(new BlockPos(5,100,9))).setCustomName(Component.literal("jeb_"));
+        level.setBlockAndUpdate(new BlockPos(7,100,9),ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get().defaultBlockState());
         var slab=ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.get(DyeColor.WHITE).get();
         level.setBlockAndUpdate(new BlockPos(20,100,0),slab.defaultBlockState());
         level.setBlockAndUpdate(new BlockPos(21,100,0),slab.defaultBlockState());
@@ -130,7 +173,18 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
         player.getInventory().clearContent();
         player.getInventory().setItem(0,new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()));
         player.getInventory().setItem(1,new ItemStack(ModItems.DYE_BASE.get(),4));
-        player.teleportTo(level,8,109,20,Set.of(),180,35);
+        if (Boolean.getBoolean("ae2lt.rainbowManualTest")) {
+            player.getInventory().setItem(0,namedPigmee());
+            player.getInventory().setItem(1,new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()));
+            player.getInventory().setItem(2,new ItemStack(ModItems.DYE_BASE.get(),64));
+            player.getInventory().setItem(3,new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()));
+            player.getInventory().setItem(4,new ItemStack(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get()));
+            player.getInventory().setItem(5,new ItemStack(Blocks.ANVIL));
+            player.getInventory().setItem(6,new ItemStack(Blocks.LIGHTNING_ROD));
+            player.teleportTo(level,4.5,101.5,4.0,Set.of(),0,12);
+        } else {
+            player.teleportTo(level,8,109,20,Set.of(),180,35);
+        }
     }
 
     private static void checkSlabs() {
@@ -174,6 +228,31 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
     }
 
     private static void move(double x,double y,double z,float yaw,float pitch) {var mc=Minecraft.getInstance();mc.getSingleplayerServer().execute(()->{var p=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());p.teleportTo(p.serverLevel(),x,y,z,Set.of(),yaw,pitch);});}
+    private static ItemStack namedPigmee() {
+        var stack = new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get());
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal("jeb_"));
+        return stack;
+    }
+    private static final class ArtPreview extends Screen {
+        ArtPreview() { super(Component.literal("Pigmee art preview")); }
+        @Override public boolean isPauseScreen() { return false; }
+        @Override public void render(GuiGraphics graphics, int x, int y, float partialTick) {
+            graphics.fill(0,0,width,height,0xff282b34);
+            var items = List.of(new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()), namedPigmee(),
+                    new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()),
+                    new ItemStack(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get()), new ItemStack(ModItems.DYE_BASE.get()));
+            String[] labels = {"Original", "jeb_", "Rainbow", "Hyper", "Dye base"};
+            for (int i = 0; i < items.size(); i++) {
+                int cx = width * (i + 1) / 6;
+                graphics.drawCenteredString(font,labels[i],cx,height/2-45,0xffffff);
+                graphics.pose().pushPose();
+                graphics.pose().translate(cx-24,height/2-24,0); graphics.pose().scale(3,3,3);
+                graphics.renderItem(items.get(i),0,0); graphics.pose().popPose();
+                graphics.renderItem(items.get(i),cx-8,height/2+42);
+            }
+            graphics.drawCenteredString(font,"Native item render - enlarged and inventory size",width/2,24,0xffffff);
+        }
+    }
     private static void capture(String name) {var mc=Minecraft.getInstance();Screenshot.grab(mc.gameDirectory,name,mc.getMainRenderTarget(),text->{});}
     private static void require(boolean value,String message) {if(!value)throw new AssertionError(message);}
 }
