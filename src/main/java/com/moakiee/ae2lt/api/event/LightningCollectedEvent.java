@@ -27,8 +27,9 @@ import com.moakiee.ae2lt.api.lightning.LightningTier;
  *       {@code LightningCollectorBlockEntity#captureLightning} runs. If another mod
  *       intercepts the lightning entity at higher priority and bypasses the
  *       collector, this event will not be posted.</li>
- *   <li>One natural strike may fire this event for at most one collector. There is
- *       no "ehv + hv" split: each event represents exactly one tier and one amount.</li>
+ *   <li>A strike may try multiple nearby collectors if earlier attempts are canceled
+ *       or cannot store any energy. At most one collector successfully stores energy,
+ *       even if it only accepts part of the amount. There is no "ehv + hv" split.</li>
  *   <li>The collector position is the actual block position of the
  *       {@code LightningCollectorBlockEntity}, not the lightning bolt's position.</li>
  * </ul>

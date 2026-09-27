@@ -73,6 +73,8 @@ public final class NaturalLightningTransformationHandler {
             return;
         }
 
+        // Claim the entity before dispatch: overlapping collectors, later ticks and
+        // re-entrant event listeners must never collect the same bolt again.
         data.putBoolean(TRANSFORMATION_CHECKED_TAG, true);
         data.putBoolean(MAIN_HANDLED_TAG, true);
         boolean naturalWeatherLightning = data.getBoolean(NATURAL_WEATHER_LIGHTNING_TAG);
@@ -81,15 +83,19 @@ public final class NaturalLightningTransformationHandler {
     }
 
     private static void tryCaptureLightning(ServerLevel level, BlockPos lightningPos, boolean naturalWeatherLightning) {
-        for (int yOffset = 0; yOffset <= 2; yOffset++) {
-            BlockPos rodPos = lightningPos.below(yOffset);
-            if (!level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
+        // Each collector accepts strikes in the 3x3x3 cube around its top rod.
+        // Search the inverse cube around the strike. With offsets limited to one
+        // block, Manhattan order is also squared-distance order, nearest first.
+        for (BlockPos rodPos : BlockPos.withinManhattan(lightningPos, 1, 1, 1)) {
+            if (!level.hasChunkAt(rodPos) || !level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
                 continue;
             }
 
             if (level.getBlockEntity(rodPos.below()) instanceof LightningCollectorBlockEntity collector
-                    && collector.canCaptureLightning()) {
-                collector.captureLightning(naturalWeatherLightning);
+                    && collector.canCaptureLightning()
+                    && collector.captureLightning(naturalWeatherLightning)) {
+                // Even a partial insertion consumes this bolt. Failed candidates
+                // (e.g. full storage) may fall through, but a success must not.
                 return;
             }
         }

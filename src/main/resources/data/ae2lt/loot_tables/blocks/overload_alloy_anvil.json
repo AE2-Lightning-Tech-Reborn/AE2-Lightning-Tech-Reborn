@@ -4,10 +4,15 @@
     {
       "rolls": 1,
       "entries": [
-        { "type": "minecraft:item", "name": "ae2lt:overload_alloy_anvil" }
+        {
+          "type": "minecraft:item",
+          "name": "ae2lt:overload_alloy_anvil"
+        }
       ],
       "conditions": [
-        { "condition": "minecraft:survives_explosion" }
+        {
+          "condition": "minecraft:survives_explosion"
+        }
       ]
     }
   ]

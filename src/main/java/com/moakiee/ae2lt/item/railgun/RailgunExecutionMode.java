@@ -30,7 +30,7 @@ public enum RailgunExecutionMode implements StringRepresentable {
     }
 
     public RailgunExecutionMode next(boolean supportsPercentage) {
-        RailgunExecutionMode next = next();
+        var next = next();
         return !supportsPercentage && next == PERCENTAGE ? NORMAL : next;
     }
 

@@ -2,9 +2,10 @@ package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.logic.EasterEggAudience;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -35,6 +36,12 @@ public final class EasterEggOverlay implements IGuiOverlay {
             STATE.dismiss();
             source = null;
         }
+    }
+
+    private static boolean isNearby(GlobalPos origin) {
+        var mc = Minecraft.getInstance();
+        return origin != null && mc.player != null && mc.level != null
+                && EasterEggAudience.includes(origin, mc.level.dimension(), mc.player.position());
     }
 
     /**
@@ -76,22 +83,15 @@ public final class EasterEggOverlay implements IGuiOverlay {
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
 
-        guiGraphics.pose().pushPose();
         guiGraphics.flush();
-        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         try {
             guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
         } finally {
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-            com.mojang.blaze3d.systems.RenderSystem.disableBlend();
-            guiGraphics.pose().popPose();
+            RenderSystem.disableBlend();
         }
-    }
-
-    private static boolean isNearby(GlobalPos origin) {
-        Minecraft minecraft = Minecraft.getInstance();
-        return origin != null && minecraft.player != null && minecraft.level != null
-                && EasterEggAudience.includes(origin, minecraft.level.dimension(), minecraft.player.position());
     }
 }

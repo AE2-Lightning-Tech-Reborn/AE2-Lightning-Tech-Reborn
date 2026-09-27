@@ -1,12 +1,11 @@
 package com.moakiee.ae2lt.logic.railgun;
 
-import org.junit.jupiter.api.Test;
-
-import com.moakiee.ae2lt.item.railgun.RailgunChargeTier;
-import com.moakiee.ae2lt.item.railgun.RailgunExecutionMode;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.junit.jupiter.api.Test;
+import com.moakiee.ae2lt.item.railgun.RailgunChargeTier;
+import com.moakiee.ae2lt.item.railgun.RailgunExecutionMode;
 
 class RailgunPercentageDamageTest {
     @Test

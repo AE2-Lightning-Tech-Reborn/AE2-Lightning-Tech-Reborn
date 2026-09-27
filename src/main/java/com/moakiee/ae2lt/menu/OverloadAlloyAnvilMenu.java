@@ -4,7 +4,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 
-/** Retains vanilla anvil combining rules while identifying this anvil for Forge repair events. */
+/** Uses the native anvil recipe, level cost, repair penalty and Forge callbacks. */
 public final class OverloadAlloyAnvilMenu extends AnvilMenu {
     public OverloadAlloyAnvilMenu(int id, Inventory inventory, ContainerLevelAccess access) {
         super(id, inventory, access);

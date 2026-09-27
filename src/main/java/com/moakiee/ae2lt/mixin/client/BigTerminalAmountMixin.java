@@ -8,7 +8,7 @@ import appeng.core.localization.*;
 import appeng.menu.me.common.MEStorageMenu;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.*;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter;
 
 import net.minecraft.network.chat.Component;
@@ -32,7 +32,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
                                     "Lappeng/api/stacks/AEKey;formatAmount(JLappeng/api/stacks/AmountFormat;)Ljava/lang/String;"))
     private String ae2lt$amount(
             AEKey key, long amount, AmountFormat format, Operation<String> original) {
-        if (menu instanceof TianshuPatternEncodingTermMenu m && m.getBigStock(key) != null)
+        if (menu instanceof TianshuMaintenanceMenu m && m.getBigStock(key) != null)
             return ExactAmountFormatter.slot(m.getBigStock(key), key.getAmountPerUnit());
         return original.call(key, amount, format);
     }
@@ -46,7 +46,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
                                     "Lappeng/core/localization/Tooltips;getAmountTooltip(Lappeng/core/localization/ButtonToolTips;Lappeng/api/stacks/AEKey;J)Lnet/minecraft/network/chat/Component;"))
     private Component ae2lt$tooltip(
             ButtonToolTips label, AEKey key, long amount, Operation<Component> original) {
-        if (menu instanceof TianshuPatternEncodingTermMenu m && m.getBigStock(key) != null)
+        if (menu instanceof TianshuMaintenanceMenu m && m.getBigStock(key) != null)
             return label.text(
                     ExactAmountFormatter.full(m.getBigStock(key), key.getAmountPerUnit()));
         return original.call(label, key, amount);

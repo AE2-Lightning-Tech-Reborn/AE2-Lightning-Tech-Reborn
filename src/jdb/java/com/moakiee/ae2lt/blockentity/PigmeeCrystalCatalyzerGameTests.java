@@ -1,8 +1,11 @@
 package com.moakiee.ae2lt.blockentity;
 
-import appeng.capabilities.Capabilities;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
+import appeng.api.networking.ticking.IGridTickable;
+import com.moakiee.ae2lt.grid.FrequencyBindingHost;
+import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
+import com.moakiee.ae2lt.grid.wirelesslink.WirelessLinkRegistry;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeService;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
@@ -23,8 +26,8 @@ import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
-/** Real block/capability/AE grid ticks; no manually invoked machine ticks or free power sources. */
-@GameTestHolder("ae2lt")
+/** Real world ticks/capabilities, plus repeated ticker calls to emulate external accelerators. */
+@GameTestHolder("ae2lt_catalyzer")
 @PrefixGameTestTemplate(false)
 public final class PigmeeCrystalCatalyzerGameTests {
     private static final BlockPos POS = new BlockPos(2, 2, 2);
@@ -51,7 +54,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
         if (!value) throw new net.minecraft.gametest.framework.GameTestAssertException(message);
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 100)
     public static void pigmeeCapabilitiesAndSharedRecipe(GameTestHelper helper) {
         var host = machine(helper);
         helper.runAfterDelay(10, () -> {
@@ -62,7 +65,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
                 require(items != null, "Pigmee item capability missing on " + side);
                 var fluid = host.getCapability(ForgeCapabilities.FLUID_HANDLER, side).orElse(null);
                 require(fluid != null, "Pigmee fluid capability missing on " + side);
-                require(!host.getCapability(ForgeCapabilities.ENERGY, side).isPresent(),
+                require(host.getCapability(ForgeCapabilities.ENERGY, side).orElse(null) == null,
                         "water-only Pigmee must not accept FE from pipes");
                 require(items.insertItem(CATALYST, AEBlocks.QUARTZ_BLOCK.stack(65), true).getCount() == 1,
                         "catalyst insertion must stop at 64");
@@ -72,8 +75,13 @@ public final class PigmeeCrystalCatalyzerGameTests {
                 require(fluid.fill(new FluidStack(Fluids.WATER, 1000), FluidAction.SIMULATE) == 1000,
                         "water pipe simulation must accept one bucket");
             }
-            require(host.getCapability(Capabilities.IN_WORLD_GRID_NODE_HOST).isPresent(),
-                    "AE grid node capability missing");
+            require(host.getGridNode(Direction.UP) == null,
+                    "standalone Pigmee must not expose a grid node capability");
+            require(host.getMainNode().getNode() == null && host.getActionableNode() == null,
+                    "Pigmee must not create an internal grid node");
+            require(!(host instanceof FrequencyBindingHost), "Pigmee still supports frequency binding");
+            require(!WirelessLinkRegistry.get(level.getServer()).isPotentialLinkTarget(level, pos),
+                    "frequency card still accepts Pigmee as a target");
             require(host.getFluid().isEmpty(), "simulated water insertion mutated the tank");
             require(host.getInventory().getStackInSlot(CATALYST).isEmpty(), "simulated catalyst insertion mutated inventory");
             supply(host, 64, 1000);
@@ -94,7 +102,63 @@ public final class PigmeeCrystalCatalyzerGameTests {
         });
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 700)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 350)
+    public static void pigmeeRepeatedTicksDoNotAccelerate(GameTestHelper helper) {
+        var host = machine(helper);
+        long[] firstGameTime = {-1};
+        helper.runAfterDelay(20, () -> supply(host, 64, 3000));
+        helper.onEachTick(() -> {
+            if (helper.getTick() < 20) return;
+            long gameTime = helper.getLevel().getGameTime();
+            int before = output(host) * 100 + host.getProcessingTicksSpent();
+            for (int i = 0; i < 1000; i++) {
+                CrystalCatalyzerBlockEntity.serverTick(helper.getLevel(), host.getBlockPos(), host.getBlockState(), host);
+            }
+            int after = output(host) * 100 + host.getProcessingTicksSpent();
+            require(helper.getLevel().getGameTime() == gameTime, "fixture changed the global game clock");
+            require(after >= before && after <= before + 1,
+                    "1000 calls in one game tick advanced more than once: " + before + " -> " + after);
+            if (after == 0) return;
+            if (firstGameTime[0] < 0) firstGameTime[0] = gameTime;
+            require(after == gameTime - firstGameTime[0] + 1,
+                    "Pigmee work does not match distinct game ticks: " + after);
+            require(host.getMainNode().getNode() == null && host.getMachineStoredEnergy() == 0,
+                    "accelerated Pigmee created a node or used FE");
+            if (output(host) == 3) {
+                require(gameTime - firstGameTime[0] == 299 && host.getFluid().isEmpty(),
+                        "three cycles must require 300 game ticks and three buckets");
+                helper.succeed();
+            }
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 100)
+    public static void pigmeeDropsLegacyWirelessBindingOnLoad(GameTestHelper helper) {
+        var host = machine(helper);
+        var level = helper.getLevel();
+        var manager = WirelessFrequencyManager.get();
+        require(manager != null, "wireless manager missing");
+        int frequency = 1_000_123;
+        manager.registerDevice(frequency, new WirelessFrequencyManager.DeviceEntry(
+                level.dimension(), host.getBlockPos(), false, false));
+        var tag = new CompoundTag();
+        host.saveAdditional(tag);
+        tag.putInt("FrequencyId", frequency);
+        var proxy = new CompoundTag();
+        proxy.putInt("owner", 123);
+        tag.put("proxy", proxy);
+        host.loadTag(tag);
+        helper.runAfterDelay(20, () -> {
+            require(host.getMainNode().getNode() == null, "old proxy NBT recreated a Pigmee node");
+            require(manager.getDevices(frequency).stream().noneMatch(d -> d.pos().equals(host.getBlockPos())),
+                    "old Pigmee still appears in the wireless device list");
+            host.saveAdditional(tag);
+            require(!tag.contains("FrequencyId") && !tag.contains("proxy"), "legacy AE state was saved again");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 700)
     public static void pigmeeRunsTwoWaterOnlyCyclesWithoutNetworkPower(GameTestHelper helper) {
         var host = machine(helper);
         long[] firstProgress = {-1};
@@ -125,7 +189,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
         });
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 800)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 800)
     public static void pigmeeWaitsForFullCatalystStackAndWater(GameTestHelper helper) {
         var host = machine(helper);
         helper.runAfterDelay(20, () -> supply(host, 63, 1000));
@@ -148,7 +212,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
         });
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 900)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 900)
     public static void pigmeeOutputBackpressurePausesAndResumes(GameTestHelper helper) {
         var host = machine(helper);
         int[] pausedAt = {-1};
@@ -177,7 +241,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
         });
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 500)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 500)
     public static void pigmeeSavedProgressAndLegacyRecipeIdResume(GameTestHelper helper) {
         var host = machine(helper);
         helper.runAfterDelay(20, () -> supply(host, 64, 1000));
@@ -222,7 +286,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
         });
     }
 
-    @GameTest(template = "pigmee_station_empty", timeoutTicks = 400)
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 400)
     public static void normalCatalyzerDoesNotGainFreeProcessing(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.CRYSTAL_CATALYZER.get());
         CrystalCatalyzerBlockEntity host = (CrystalCatalyzerBlockEntity) helper.getBlockEntity(POS);
@@ -231,8 +295,14 @@ public final class PigmeeCrystalCatalyzerGameTests {
             require(!host.isPigmeeVariant() && output(host) == 0, "normal machine produced without FE/lightning");
             require(host.getFluid().getAmount() == 1000 && host.getInventory().getStackInSlot(CATALYST).getCount() == 64,
                     "normal idle machine spent resources");
-            require(host.getCapability(ForgeCapabilities.ENERGY, Direction.UP).isPresent(),
+            require(host.getCapability(ForgeCapabilities.ENERGY, Direction.UP).orElse(null) != null,
                     "normal FE capability disappeared");
+            require(host instanceof FrequencyBindingHost
+                            && host.getMainNode().getNode() != null
+                            && host.getMainNode().getNode().getService(IGridTickable.class) != null,
+                    "normal machine lost wireless binding or AE processing service");
+            require(host.getGridNode(Direction.UP) != null,
+                    "normal AE cable capability disappeared");
             helper.succeed();
         });
     }

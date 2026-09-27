@@ -1224,6 +1224,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         return true;
     }
 
+    /** Detached snapshot of physical seed storage, excluding loans held by active CPUs. */
     public KeyCounter reusableSeedSnapshot() {
         var result = new KeyCounter();
         var drives = seedDrives();
@@ -1430,4 +1431,3 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         persistentStateOwner = false;
     }
 }
-

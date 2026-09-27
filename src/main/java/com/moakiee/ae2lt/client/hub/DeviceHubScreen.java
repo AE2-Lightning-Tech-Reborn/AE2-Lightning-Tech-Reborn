@@ -95,13 +95,14 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private static final int CONFIG_VISIBLE_ROWS = 3;
     private static final int CONFIG_SCROLL_Y = CONFIG_Y;
     private static final int CONFIG_SCROLL_H = 46;
-    private static final int RAILGUN_SETTING_COUNT = 6;
+    private static final int RAILGUN_SETTING_COUNT = 7;
     private static final int RAILGUN_SETTING_TERRAIN = 0;
     private static final int RAILGUN_SETTING_PVP = 1;
     private static final int RAILGUN_SETTING_SOUND = 2;
     private static final int RAILGUN_SETTING_CHAIN_DAMAGE = 3;
     private static final int RAILGUN_SETTING_CHARGED_SPLASH = 4;
     private static final int RAILGUN_SETTING_EXECUTION_MODE = 5;
+    private static final int RAILGUN_SETTING_EHV_BEAM = 6;
 
     private static final int CHECKBOX_WIDTH = 14;
     private static final int CHECKBOX_HEIGHT = 14;
@@ -346,15 +347,15 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                configScrollOffset, RAILGUN_SETTING_COUNT, CONFIG_VISIBLE_ROWS);
+                configScrollOffset, railgunSettingCount(), CONFIG_VISIBLE_ROWS);
         int rowY = y;
         for (int i = 0; i < CONFIG_VISIBLE_ROWS; i++) {
             int settingIndex = i + configScrollOffset;
-            if (settingIndex >= RAILGUN_SETTING_COUNT) {
+            if (settingIndex >= railgunSettingCount()) {
                 break;
             }
             Component label = railgunSettingLabel(settingIndex);
-            if (settingIndex <= RAILGUN_SETTING_CHARGED_SPLASH) {
+            if (settingIndex != RAILGUN_SETTING_EXECUTION_MODE) {
                 drawSettingRow(gfx, x, rowY, label, railgunSettingEnabled(settingIndex));
             } else {
                 gfx.drawString(font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
@@ -369,11 +370,16 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             }
             rowY += CONFIG_ROW_H;
         }
-        renderConfigScrollBar(gfx, RAILGUN_SETTING_COUNT, mouseX, mouseY);
+        renderConfigScrollBar(gfx, railgunSettingCount(), mouseX, mouseY);
+    }
+
+    private int railgunSettingCount() {
+        return menu.hasEhvBeamModule() ? RAILGUN_SETTING_COUNT : RAILGUN_SETTING_COUNT - 1;
     }
 
     private Component railgunSettingLabel(int settingIndex) {
         return switch (settingIndex) {
+            case RAILGUN_SETTING_EHV_BEAM -> Component.translatable("ae2lt.railgun.config.ehv_beam");
             case RAILGUN_SETTING_TERRAIN -> Component.translatable("ae2lt.device_hub.setting.terrain");
             case RAILGUN_SETTING_PVP -> Component.translatable("ae2lt.device_hub.setting.pvp");
             case RAILGUN_SETTING_SOUND -> Component.translatable("ae2lt.device_hub.setting.sound");
@@ -388,6 +394,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
     private boolean railgunSettingEnabled(int settingIndex) {
         return switch (settingIndex) {
+            case RAILGUN_SETTING_EHV_BEAM -> menu.isEhvBeamEnabled();
             case RAILGUN_SETTING_TERRAIN -> menu.isTerrainDestruction();
             case RAILGUN_SETTING_PVP -> menu.isPvp();
             case RAILGUN_SETTING_SOUND -> menu.isSoundEnabled();
@@ -567,10 +574,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         int rowY = topPos + CONFIG_Y;
         for (int i = 0; i < CONFIG_VISIBLE_ROWS; i++) {
             int settingIndex = i + configScrollOffset;
-            if (settingIndex >= RAILGUN_SETTING_COUNT) {
+            if (settingIndex >= railgunSettingCount()) {
                 break;
             }
-            boolean checkboxSetting = settingIndex <= RAILGUN_SETTING_CHARGED_SPLASH;
+            boolean checkboxSetting = settingIndex != RAILGUN_SETTING_EXECUTION_MODE;
             int controlX = checkboxSetting ? checkboxX : buttonX;
             int controlWidth = checkboxSetting ? CHECKBOX_WIDTH : CONFIG_BUTTON_W;
             if (mouseX >= controlX
@@ -579,6 +586,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     && mouseY <= rowY - (checkboxSetting ? 0 : 1)
                             + (checkboxSetting ? CHECKBOX_HEIGHT : CONFIG_BUTTON_H)) {
                 int action = switch (settingIndex) {
+                    case RAILGUN_SETTING_EHV_BEAM -> DeviceHubActionPacket.ACTION_TOGGLE_EHV_BEAM;
                     case RAILGUN_SETTING_TERRAIN -> DeviceHubActionPacket.ACTION_TOGGLE_TERRAIN;
                     case RAILGUN_SETTING_PVP -> DeviceHubActionPacket.ACTION_TOGGLE_PVP;
                     case RAILGUN_SETTING_SOUND -> DeviceHubActionPacket.ACTION_TOGGLE_SOUND;
@@ -630,7 +638,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
 
         int configCount = menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN
-                ? RAILGUN_SETTING_COUNT
+                ? railgunSettingCount()
                 : moduleConfigCount();
         if (configCount > 0
                 && mouseX >= leftPos + 8

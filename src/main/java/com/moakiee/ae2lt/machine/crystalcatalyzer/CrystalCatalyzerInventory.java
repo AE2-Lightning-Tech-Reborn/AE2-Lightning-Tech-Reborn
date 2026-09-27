@@ -83,7 +83,7 @@ public class CrystalCatalyzerInventory extends LargeStackItemHandler {
         return switch (slot) {
             case SLOT_MATRIX -> !pigmeeVariantSupplier.getAsBoolean() && isLightningCollapseMatrix(stack);
             case SLOT_CATALYST -> CrystalCatalyzerRecipeService.isKnownCatalyst(
-                    level, stack, modeSupplier.get());
+                    level, stack, modeSupplier.get(), pigmeeVariantSupplier.getAsBoolean());
             case SLOT_OUTPUT -> false;
             default -> false;
         };

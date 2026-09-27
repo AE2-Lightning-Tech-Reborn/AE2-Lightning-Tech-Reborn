@@ -1,15 +1,15 @@
 package com.moakiee.ae2lt.logic.tianshu.loop;
 
 import appeng.api.config.Actionable;
-import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.storage.MEStorage;
+import net.minecraft.network.chat.Component;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import net.minecraft.network.chat.Component;
 
 /** Server-authoritative implementation of the manual "refill seeds" actions. */
 public final class TianshuSeedRefillService {
@@ -63,13 +63,12 @@ public final class TianshuSeedRefillService {
             @Override public void getAvailableStacks(KeyCounter out) {
                 out.addAll(controller.reusableSeedSnapshot());
             }
-            @Override public Component getDescription() {
-                return Component.translatable("block.ae2lt.closed_loop_seed_storage");
-            }
+            @Override public Component getDescription() { return controller.getBlockState().getBlock().getName(); }
         };
         return reconcile(required, seeds, grid.getStorageService().getInventory(), target.getActionSource());
     }
 
+    /** Reconcile only seeds physically in storage; running CPUs hold their loans separately. */
     static RefillResult reconcile(Map<AEKey, Long> required, MEStorage seeds,
                                   MEStorage network, IActionSource source) {
         var moved = new LinkedHashMap<AEKey, Long>();
@@ -77,6 +76,7 @@ public final class TianshuSeedRefillService {
         var networkMissing = new LinkedHashMap<AEKey, Long>();
         var storageBlocked = new LinkedHashMap<AEKey, Long>();
         var returnBlocked = new LinkedHashMap<AEKey, Long>();
+        // Return obsolete/excess keys first so they cannot occupy the cells needed by new seeds.
         for (var entry : seeds.getAvailableStacks()) {
             long excess = Math.max(0L, entry.getLongValue()
                     - required.getOrDefault(entry.getKey(), 0L));

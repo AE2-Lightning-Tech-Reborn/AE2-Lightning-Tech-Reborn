@@ -612,6 +612,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
             }
         }
 
+        /** Keep our network view out of storage-bus recursion while draining owned inputs. */
         public boolean isNetworkOperationInProgress() {
             return proxying;
         }

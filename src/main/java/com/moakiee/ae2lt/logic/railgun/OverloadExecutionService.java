@@ -108,7 +108,8 @@ public final class OverloadExecutionService {
         if (!RailgunTargetRules.canAffect(player, target, allowPlayerTargets)) return;
 
         RailgunModuleEntries mods = ModDataComponents.RAILGUN_MODULE_ENTRIES.getOrDefault(stack, RailgunModuleEntries.EMPTY);
-        RailgunExecutionMode executionMode = settings.executionMode();
+        RailgunExecutionMode executionMode = mods.hasMultidimensionalExecution()
+                ? settings.executionMode().forMultidimensional() : settings.executionMode();
         if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         DamageSource damageSource =
                 new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
@@ -253,7 +254,8 @@ public final class OverloadExecutionService {
         if (!multidimensional && !mods.hasOverloadExecution()) return;
 
         RailgunSettings settings = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(stack, RailgunSettings.DEFAULT);
-        RailgunExecutionMode executionMode = settings.executionMode();
+        RailgunExecutionMode executionMode = multidimensional
+                ? settings.executionMode().forMultidimensional() : settings.executionMode();
         if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         if (!executionMode.entersExecutionFlow()) {
             DamageSource source =
@@ -280,13 +282,12 @@ public final class OverloadExecutionService {
         forceRemoveNonLiving(target);
     }
 
+    /** Charge the ordinary Overload surcharge and add a bounded max-health damage bonus. */
     public static double percentageBonus(ServerPlayer player, ItemStack stack, LivingEntity target,
                                          RailgunChargeTier tier) {
         if (!AE2LTCommonConfig.overloadExecutionEnabled() || !target.isAlive()) return 0;
-        RailgunModuleEntries mods = ModDataComponents.RAILGUN_MODULE_ENTRIES.getOrDefault(
-                stack, RailgunModuleEntries.EMPTY);
-        RailgunSettings settings = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(
-                stack, RailgunSettings.DEFAULT);
+        var mods = ModDataComponents.RAILGUN_MODULE_ENTRIES.getOrDefault(stack, RailgunModuleEntries.EMPTY);
+        var settings = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(stack, RailgunSettings.DEFAULT);
         if (!RailgunPercentageDamage.eligible(tier, settings.executionMode(),
                 mods.hasOverloadExecution(), mods.hasMultidimensionalExecution(), false)) return 0;
         double fraction = switch (tier) {
@@ -298,13 +299,16 @@ public final class OverloadExecutionService {
         double bonus = RailgunPercentageDamage.bonus(target.getMaxHealth(), fraction);
         if (bonus == 0) return 0;
         long feCost = RailgunEnergyRules.overloadExecutionCostFe();
-        RailgunEnergyBuffer.refillFromNetwork(stack, player,
-                Math.max(0L, feCost - RailgunEnergyBuffer.read(stack)));
+        RailgunEnergyBuffer.refillFromNetwork(stack, player, Math.max(0L, feCost - RailgunEnergyBuffer.read(stack)));
         if (!RailgunEnergyBuffer.tryConsume(stack, player, feCost)) {
             RailgunFireService.sendFail(player, "ae2lt.railgun.fail.no_fe");
             return 0;
         }
         return bonus;
+    }
+
+    public static void clearTrackedTargets(ItemStack stack) {
+        ItemStackTagSupport.updateTag(stack, tag -> tag.remove(TAG_TARGETS));
     }
 
     // ── Execution modes ─────────────────────────────────────────────────────

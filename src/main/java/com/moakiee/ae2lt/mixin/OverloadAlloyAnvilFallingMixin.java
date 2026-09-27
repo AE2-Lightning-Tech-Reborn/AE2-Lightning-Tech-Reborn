@@ -15,6 +15,8 @@ public abstract class OverloadAlloyAnvilFallingMixin {
     @ModifyExpressionValue(method = "causeFallDamage", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/world/level/block/AnvilBlock;damage(Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState ae2lt$keepAlloyAnvilAfterImpact(BlockState damagedState) {
+        // Native damage() returns null for custom anvils, which would cancel their drop.
+        // Keep impact damage and ordinary anvil wear; only this block is indestructible by wear.
         return blockState.getBlock() instanceof OverloadAlloyAnvilBlock ? blockState : damagedState;
     }
 }

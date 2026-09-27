@@ -11,6 +11,7 @@ buildscript {
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
 
@@ -873,3 +874,15 @@ tasks.register('checkWirelessIoBenchmarkRegression') {
         }
     }
 }
+
+// Use the Forge distributable for the sibling LTPP build; never publish mapped development dependencies.
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = 'ae2lt-forge-1.20.1'
+            artifact(tasks.named('jarJar')) { classifier = null }
+        }
+    }
+}
+tasks.withType(GenerateModuleMetadata).configureEach { enabled = false }
+tasks.withType(PublishToMavenLocal).configureEach { dependsOn tasks.named('reobfJarJar') }

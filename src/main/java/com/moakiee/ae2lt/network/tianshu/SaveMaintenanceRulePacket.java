@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.network.tianshu;
 import java.util.function.Supplier;
 import appeng.api.stacks.AEKey;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -66,8 +66,8 @@ public static void handle(SaveMaintenanceRulePacket packet, Supplier<NetworkEven
         var ctx = context.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-        if (player != null && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
-                    && menu.containerId == packet.containerId()) {
+        if (player != null && player.containerMenu instanceof TianshuMaintenanceMenu menu
+                    && menu.maintenanceMenu().containerId == packet.containerId()) {
                 menu.saveMaintenanceRule(packet);
             }
         });

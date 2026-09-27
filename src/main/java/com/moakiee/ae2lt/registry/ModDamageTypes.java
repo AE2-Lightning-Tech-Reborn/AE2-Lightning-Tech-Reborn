@@ -23,6 +23,10 @@ public final class ModDamageTypes {
     public static final ResourceKey<DamageType> ELECTROMAGNETIC = ResourceKey.create(
             Registries.DAMAGE_TYPE,
             new ResourceLocation(AE2LightningTech.MODID, "electromagnetic"));
+    /** Only the EHV beam bypasses ordinary hurt cooldown; HV retains its original type. */
+    public static final ResourceKey<DamageType> ELECTROMAGNETIC_EHV_BEAM = ResourceKey.create(
+            Registries.DAMAGE_TYPE,
+            new ResourceLocation(AE2LightningTech.MODID, "electromagnetic_ehv_beam"));
 
     /**
      * Per-{@link ServerLevel} cache of the resolved holder. Damage-type registries
@@ -30,15 +34,23 @@ public final class ModDamageTypes {
      */
     private static final ConcurrentHashMap<ServerLevel, Holder<DamageType>> ELECTROMAGNETIC_CACHE =
             new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<ServerLevel, Holder<DamageType>> EHV_BEAM_CACHE =
+            new ConcurrentHashMap<>();
 
     public static Holder<DamageType> electromagneticHolder(ServerLevel level) {
         return ELECTROMAGNETIC_CACHE.computeIfAbsent(level, l ->
                 l.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ELECTROMAGNETIC));
     }
 
+    public static Holder<DamageType> electromagneticEhvBeamHolder(ServerLevel level) {
+        return EHV_BEAM_CACHE.computeIfAbsent(level, l ->
+                l.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ELECTROMAGNETIC_EHV_BEAM));
+    }
+
     /** Cleared on server stop so an integrated server re-launch starts fresh. */
     public static void clearCache() {
         ELECTROMAGNETIC_CACHE.clear();
+        EHV_BEAM_CACHE.clear();
     }
 
     private ModDamageTypes() {}

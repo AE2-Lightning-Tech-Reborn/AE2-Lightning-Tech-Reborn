@@ -939,8 +939,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private long insertPassiveInput(int slot, AEKey key, long amount, Actionable mode) {
         if (slot < 0 || slot >= SLOT_COUNT || !(level instanceof ServerLevel)
                 || !getMainNode().isActive() || key == null || amount <= 0
-                || !(getInterfaceLogic() instanceof OverloadedInterfaceLogic supportedLogic)
-                || !supportedLogic.getProxiedStorage().isSupportedType(key.getType())) return 0;
+                || getInterfaceLogic().getStorage().getCapacity(key.getType()) <= 0) return 0;
         if (!(getInterfaceLogic() instanceof OverloadedInterfaceLogic logic)
                 || logic.getProxiedStorage().isNetworkOperationInProgress()) return 0;
         long space = passiveInput.insert(key, amount, Actionable.SIMULATE);
@@ -951,6 +950,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         boolean wasEmpty = passiveInput.isEmpty();
         accepted = passiveInput.insert(key, accepted, Actionable.MODULATE);
         if (accepted > 0) {
+            // Like active imports, pay once when ownership transfers to the buffer.
             PowerCostUtil.consume(grid, key, accepted);
             saveImportBufferChanges(level.getGameTime());
             if (wasEmpty) alertGridTicker();
@@ -2184,6 +2184,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     public void addImportBufferDrops(List<ItemStack> drops) {
+        // Passive inputs travel with the dismantled block item. AEKey.addDrops
+        // truncates large item counts and does not preserve fluids.
         if (importBuffer.isEmpty()) {
             importBufferFlushState.clear();
             return;

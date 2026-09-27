@@ -54,7 +54,7 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 /**
  * Terminal host for {@link PigmeeSynthesisStationBlock}.
  *
- * <p>Only external-storage strategies are accepted from neighbours. In
+ * <p>External-storage strategies from all six neighbours are combined. In
  * particular, a neighbour exposing {@link Capabilities#STORAGE} is
  * skipped entirely; this keeps the station from becoming a disguised terminal
  * merely by placing it next to an interface.</p>
@@ -69,7 +69,6 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
             CraftingTerminalPart.INV_CRAFTING;
 
     private static final String TAG_CRAFTING = "CraftingInventory";
-
     private final AppEngInternalInventory craftingInventory =
             new AppEngInternalInventory(this, 9);
     private final IConfigManager configManager = new appeng.util.ConfigManager(this::saveChanges);
@@ -226,7 +225,8 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
     }
 
     private List<MEStorage> findAdjacentStorages() {
-        if (level == null || level.isClientSide() || isRemoved()) {
+        if (level == null || level.isClientSide() || isRemoved()
+                || !level.hasChunkAt(worldPosition) || level.getBlockEntity(worldPosition) != this) {
             return List.of();
         }
 
@@ -265,6 +265,11 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
             for (var entry : strategies.entrySet()) {
                 Object identity = null;
                 MEStorage wrapper;
+                // A multiblock can replace its inventory without invalidating
+                // every part's capability cache. Use the actual live handler
+                // for AE2's standard adapters, including when it becomes null.
+                // The wrapper and the deduplication identity must be the same
+                // handler, not a cached wrapper paired with a fresh identity.
                 if (entry.getValue() instanceof ForgeExternalStorageStrategy<?, ?>
                         && entry.getKey() == AEKeyType.items()) {
                     var handler = target == null ? null : target.getCapability(
@@ -291,11 +296,13 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
                     wrapper = entry.getValue().createWrapper(false, this::saveChanges);
                 }
                 if (wrapper != null) {
-                    if (identity == null && target != null && entry.getKey() == AEKeyType.items()) {
-                        identity = target.getCapability(
+                    // Multiple ports may expose the exact same handler. Count
+                    // and simulate it only once, independently for each key type.
+                    if (identity == null && entry.getKey() == AEKeyType.items()) {
+                        identity = target == null ? null : target.getCapability(
                                 ForgeCapabilities.ITEM_HANDLER, side.getOpposite()).orElse(null);
-                    } else if (identity == null && target != null && entry.getKey() == AEKeyType.fluids()) {
-                        identity = target.getCapability(
+                    } else if (identity == null && entry.getKey() == AEKeyType.fluids()) {
+                        identity = target == null ? null : target.getCapability(
                                 ForgeCapabilities.FLUID_HANDLER, side.getOpposite()).orElse(null);
                     }
                     if (seenHandlers.computeIfAbsent(entry.getKey(), key ->

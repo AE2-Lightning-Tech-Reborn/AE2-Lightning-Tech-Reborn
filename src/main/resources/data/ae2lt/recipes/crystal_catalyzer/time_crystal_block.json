@@ -1,0 +1,24 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "justdirethings"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "item": "justdirethings:time_crystal_block"
+  },
+  "catalystCount": 1,
+  "inputFluid": {
+    "id": "justdirethings:time_fluid_source",
+    "amount": 1000
+  },
+  "output": {
+    "count": 1,
+    "id": "justdirethings:time_crystal"
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

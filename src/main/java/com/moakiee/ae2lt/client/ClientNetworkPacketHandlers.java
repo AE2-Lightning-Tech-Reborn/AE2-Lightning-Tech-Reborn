@@ -24,7 +24,6 @@ import com.moakiee.ae2lt.network.tianshu.MaintenanceSummarySyncPacket;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
 import com.moakiee.ae2lt.registry.ModItems;
-import net.minecraft.core.GlobalPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.particles.ParticleTypes;
@@ -38,7 +37,7 @@ public final class ClientNetworkPacketHandlers {
     private ClientNetworkPacketHandlers() {
     }
 
-    public static void handleEasterEgg(GlobalPos source) {
+    public static void handleEasterEgg(net.minecraft.core.GlobalPos source) {
         EasterEggOverlay.trigger(source);
     }
 
@@ -170,6 +169,7 @@ public final class ClientNetworkPacketHandlers {
                 packet.chainDamage(),
                 packet.executionMode(),
                 packet.chargedSplash(),
+                packet.ehvBeamEnabled(),
                 packet.moduleNameKeys(),
                 packet.moduleCounts(),
                 packet.moduleEnabled(),
@@ -181,14 +181,18 @@ public final class ClientNetworkPacketHandlers {
     }
 
     public static void handleMaintenanceEditorSync(MaintenanceEditorSyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceEditorData(packet.selectionRevision(), packet.data());
         }
     }
 
     public static void handleMaintenanceSummarySync(MaintenanceSummarySyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceSummary(
                     packet.selectionRevision(), packet.revision(), packet.overflow(), packet.entries());
