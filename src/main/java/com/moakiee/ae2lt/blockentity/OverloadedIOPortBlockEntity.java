@@ -27,10 +27,12 @@ import appeng.util.SettingsFrom;
 import appeng.util.inv.*;
 import appeng.util.inv.filter.AEItemFilters;
 import com.moakiee.ae2lt.logic.OverloadedIOTransfer;
+import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModDataComponents;
+import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -51,11 +53,17 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     public static final int CELL_SLOTS = 6;
     public static final int UPGRADE_SLOTS = 5;
     public static final int SPEED_CARD_SLOTS = 4;
+    public static final int MAX_BATCHES = 16;
+    public static final int MAX_MATRICES = 16;
     private static final String LAST_BATCH_TICK = "lastBatchTick";
     public static final double BATCH_AE = 32;
     private static final String PENDING = "pendingTransfer";
+    private static final String FILTER = "filterInventory";
+    private static final String MATRIX = "matrix";
     private final AppEngInternalInventory input = new AppEngInternalInventory(this, CELL_SLOTS, 1);
     private final AppEngInternalInventory output = new AppEngInternalInventory(this, CELL_SLOTS, 1);
+    private final AppEngInternalInventory filter = new AppEngInternalInventory(this, 1, 1);
+    private final AppEngInternalInventory matrix = new AppEngInternalInventory(this, 1, MAX_MATRICES);
     private final InternalInventory inventory = new CombinedInternalInventory(input, output);
     private final InternalInventory inputExternal = new FilteredInternalInventory(input, AEItemFilters.INSERT_ONLY);
     private final InternalInventory outputExternal = new FilteredInternalInventory(output, AEItemFilters.EXTRACT_ONLY);
@@ -73,6 +81,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     private boolean clientActive;
     private Status status = Status.IDLE;
     private int lastBatches;
+    private java.util.function.Predicate<AEKey> resourceFilter = key -> true;
     public enum Status { IDLE, ACTIVE, NO_NETWORK, REDSTONE, NO_POWER, BLOCKED, RECOVERING }
 
     public OverloadedIOPortBlockEntity(BlockPos pos, BlockState state) {
@@ -82,11 +91,31 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 return StorageCells.isCellHandled(stack);
             }
         });
+        filter.setFilter(new appeng.util.inv.filter.IAEItemFilter() {
+            @Override public boolean allowInsert(InternalInventory inv, int slot, ItemStack stack) {
+                return stack.getItem() instanceof OverloadedFilterComponentItem;
+            }
+        });
+        matrix.setFilter(new appeng.util.inv.filter.IAEItemFilter() {
+            @Override public boolean allowInsert(InternalInventory inv, int slot, ItemStack stack) {
+                return stack.is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get());
+            }
+        });
         getMainNode().setFlags(GridFlags.REQUIRE_CHANNEL).setIdlePowerUsage(4)
                 .addService(IGridTickable.class, this);
     }
 
-    public int getBatchLimit() { return 1; }
+    public int getMatrixCount() {
+        var stack = matrix.getStackInSlot(0);
+        return stack.is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get())
+                ? Math.min(MAX_MATRICES, stack.getCount()) : 0;
+    }
+    public int getBatchLimit() { return Math.min(MAX_BATCHES, 1 + getMatrixCount()); }
+    public long getTransferCap() {
+        int count = getMatrixCount();
+        // Guard before shifting: Java masks long shift distances modulo 64.
+        return count >= 16 ? Long.MAX_VALUE : 1L << (15 + 3 * count);
+    }
     public int getTransferInterval() {
         return Math.max(1, 5 - upgrades.getInstalledUpgrades(AEItems.SPEED_CARD));
     }
@@ -99,6 +128,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     @Override public IConfigManager getConfigManager() { return settings; }
     @Override public IUpgradeInventory getUpgrades() { return upgrades; }
     @Override public InternalInventory getInternalInventory() { return inventory; }
+    public InternalInventory getFilterInventory() { return filter; }
+    public InternalInventory getMatrixInventory() { return matrix; }
     @Override public AECableType getCableConnectionType(Direction side) { return AECableType.SMART; }
     @Override public @Nullable InternalInventory getSubInventory(ResourceLocation id) {
         if (id.equals(ISegmentedInventory.UPGRADES)) return upgrades;
@@ -109,8 +140,20 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         return side == getTop() || side == getTop().getOpposite() ? inputExternal : outputExternal;
     }
     @Override public void onChangeInventory(AppEngInternalInventory inv, int slot) {
+        if (inv == filter) {
+            rebuildFilter();
+            settingsChanged();
+            return;
+        }
+        // Changing throughput keeps the current scan and the shared cooldown.
+        if (inv == matrix) saveChanges();
         if (inv == input && scans != null) scans[slot] = null;
         wake();
+    }
+    private void rebuildFilter() {
+        var stack = filter.getStackInSlot(0);
+        resourceFilter = stack.getItem() instanceof OverloadedFilterComponentItem item
+                ? item.createMatcher(stack) : key -> true;
     }
     private void wake() {
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
@@ -166,8 +209,10 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         boolean[] done = new boolean[CELL_SLOTS];
         int doneCount = 0;
         int attempts = 0;
+        int batchLimit = getBatchLimit();
+        long transferCap = getTransferCap();
         java.util.function.BooleanSupplier payment = () -> pay(grid);
-        while (attempts < getBatchLimit() && doneCount < CELL_SLOTS) {
+        while (attempts < batchLimit && doneCount < CELL_SLOTS) {
             int slot = nextSlot;
             nextSlot = (nextSlot + 1) % CELL_SLOTS;
             if (done[slot]) continue;
@@ -197,7 +242,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 attempts++; // Rejected and missing keys also spend the work budget.
                 var from = mode == OperationMode.EMPTY ? scan.cell : grid.getStorageService().getInventory();
                 var to = mode == OperationMode.EMPTY ? grid.getStorageService().getInventory() : scan.cell;
-                var result = OverloadedIOTransfer.move(from, to, key, source, payment);
+                var result = OverloadedIOTransfer.move(from, to, key, source, payment, transferCap);
                 if (result.inserted() > 0 || result.remainder() > 0) {
                     progressed = true;
                     scan.moved = true;
@@ -235,7 +280,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 }
                 scan.cell.persist();
                 boolean eject = switch (settings.getSetting(Settings.FULLNESS_MODE)) {
-                    case EMPTY -> scan.cell.getStatus() == CellState.EMPTY;
+                    case EMPTY -> isEmptyForFilter(scan.cell);
                     case FULL -> scan.cell.getStatus() == CellState.FULL;
                     case HALF -> stalled;
                 };
@@ -254,10 +299,20 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         return grid.getEnergyService().extractAEPower(BATCH_AE, Actionable.MODULATE, PowerMultiplier.CONFIG)
                 + 1e-6 >= BATCH_AE;
     }
-    private static List<AEKey> keys(KeyCounter counter) {
+    private List<AEKey> keys(KeyCounter counter) {
         var result = new ArrayList<AEKey>();
-        for (var entry : counter) if (entry.getLongValue() > 0) result.add(entry.getKey());
+        for (var entry : counter) {
+            if (entry.getLongValue() > 0 && resourceFilter.test(entry.getKey())) result.add(entry.getKey());
+        }
         return result;
+    }
+    private boolean isEmptyForFilter(StorageCell cell) {
+        if (filter.isEmpty()) return cell.getStatus() == CellState.EMPTY;
+        // Check current contents, not the scan snapshot or whether the destination accepts them.
+        for (var entry : cell.getAvailableStacks()) {
+            if (entry.getLongValue() > 0 && resourceFilter.test(entry.getKey())) return false;
+        }
+        return true;
     }
     private boolean moveCell(int slot) {
         var stack = input.getStackInSlot(slot);
@@ -284,6 +339,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         super.saveAdditional(tag, registries);
         settings.writeToNBT(tag, registries);
         upgrades.writeToNBT(tag, "upgrades", registries);
+        filter.writeToNBT(tag, FILTER, registries);
+        matrix.writeToNBT(tag, MATRIX, registries);
         if (lastTick != Long.MIN_VALUE) tag.putLong(LAST_BATCH_TICK, lastTick);
         if (pending != null) tag.put(PENDING, GenericStack.writeTag(registries, pending));
     }
@@ -291,6 +348,9 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         super.loadTag(tag, registries);
         settings.readFromNBT(tag, registries);
         upgrades.readFromNBT(tag, "upgrades", registries);
+        filter.readFromNBT(tag, FILTER, registries);
+        matrix.readFromNBT(tag, MATRIX, registries);
+        rebuildFilter();
         pending = GenericStack.readTag(registries, tag.getCompound(PENDING));
         java.util.Arrays.fill(scans, null);
         lastTick = tag.contains(LAST_BATCH_TICK) ? tag.getLong(LAST_BATCH_TICK) : Long.MIN_VALUE;
@@ -313,9 +373,11 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     @Override public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
         for (var stack : upgrades) if (!stack.isEmpty()) drops.add(stack);
+        for (var stack : filter) if (!stack.isEmpty()) drops.add(stack);
+        for (var stack : matrix) if (!stack.isEmpty()) drops.add(stack);
     }
     @Override public void clearContent() {
-        super.clearContent(); upgrades.clear(); pending = null;
+        super.clearContent(); upgrades.clear(); filter.clear(); matrix.clear(); pending = null;
         java.util.Arrays.fill(scans, null);
     }
     @Override public void onMainNodeStateChanged(IGridNodeListener.State reason) {
