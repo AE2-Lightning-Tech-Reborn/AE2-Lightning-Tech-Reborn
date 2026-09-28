@@ -1538,5 +1538,6 @@
   "ae2lt.gui.overloaded_io_port.status.redstone": "红石暂停",
   "ae2lt.gui.overloaded_io_port.status.no_power": "供电不足",
   "ae2lt.gui.overloaded_io_port.status.blocked": "等待存储",
-  "ae2lt.gui.overloaded_io_port.status.recovering": "退回资源"
+  "ae2lt.gui.overloaded_io_port.status.recovering": "退回资源",
+  "tooltip.ae2lt.overload_processing_factory.reactions": "也可加工反应仓配方，每次额外消耗 1 个高压闪电；并行时按执行次数累计。"
 }
