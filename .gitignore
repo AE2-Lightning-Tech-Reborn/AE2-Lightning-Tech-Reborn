@@ -30,6 +30,7 @@ run-alloy-anvil-client/
 run-omniversal-gametest/
 run-omniversal-client/
 run-crystal-catalyzer-gametest/
+run-global-batch-gametest/
 run-alpha-completion/
 
 # OS files

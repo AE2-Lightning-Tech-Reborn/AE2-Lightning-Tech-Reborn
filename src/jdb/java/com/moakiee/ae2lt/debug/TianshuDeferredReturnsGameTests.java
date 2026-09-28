@@ -64,6 +64,33 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class TianshuDeferredReturnsGameTests {
     @GameTest(template = "empty")
+    public static void globalAdapterRunsThroughActualTimeWheelCpu(GameTestHelper helper) throws Exception {
+        var fixture = new Fixture(helper.getLevel(), true);
+        var nativeProvider = fixture.service.getProviders(fixture.patterns.getFirst()).iterator().next();
+        fixture.service.removeGlobalCraftingProvider(nativeProvider);
+        var ordinary = new ICraftingProvider() {
+            @Override public List<IPatternDetails> getAvailablePatterns() { return nativeProvider.getAvailablePatterns(); }
+            @Override public boolean isBusy() { return nativeProvider.isBusy(); }
+            @Override public boolean pushPattern(IPatternDetails pattern, KeyCounter[] input) {
+                throw new AssertionError("time-wheel CPU must use the global batch adapter");
+            }
+        };
+        var id = ResourceLocation.fromNamespaceAndPath("ae2lt_global_batch", "timewheel");
+        com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapters.register(id,
+                (provider, pattern, job) -> provider == ordinary
+                        ? (com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider) nativeProvider : null);
+        fixture.service.addGlobalCraftingProvider(ordinary);
+        try {
+            fixture.submitChain();
+            helper.assertTrue(fixture.run(32) == 3, "three batch calls through the global adapter");
+            fixture.assertFinished(helper);
+        } finally {
+            com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapters.unregister(id);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void sharedClosedLoopSeedReturnsBetweenBatchesInSameTick(GameTestHelper helper) throws Exception {
         runSeedTest(helper, false, 2);
     }
