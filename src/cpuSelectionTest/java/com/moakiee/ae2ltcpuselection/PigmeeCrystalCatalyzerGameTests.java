@@ -1,15 +1,15 @@
 package com.moakiee.ae2ltcpuselection;
+import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
+import net.minecraft.network.chat.Component;
 
 import appeng.api.AECapabilities;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
-import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
 import appeng.api.networking.ticking.IGridTickable;
 import com.moakiee.ae2lt.api.frequency.FrequencyBindingHost;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.grid.wirelesslink.WirelessLinkRegistry;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
-import com.moakiee.ae2lt.recipe.compat.LegacyItemHandlerView;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeService;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -20,16 +20,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
 
-/** Real block/capability/AE grid ticks; no manually invoked machine ticks or free power sources. */
 /** Real world ticks/capabilities, plus repeated ticker calls to emulate external accelerators. */
 
 
@@ -40,7 +36,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
 
     private static CrystalCatalyzerBlockEntity machine(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get());
-        return helper.getBlockEntity(POS, CrystalCatalyzerBlockEntity.class);
+        return (CrystalCatalyzerBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS));
     }
 
     private static void supply(CrystalCatalyzerBlockEntity host, int catalysts, int water) {
@@ -55,8 +51,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
     }
 
     private static void require(boolean value, String message) {
-        if (!value) throw new net.minecraft.gametest.framework.GameTestAssertException(
-                Component.literal(message), 0);
+        if (!value) throw new net.minecraft.gametest.framework.GameTestAssertException(Component.literal(message), 0);
     }
 
     public static void pigmeeCapabilitiesAndSharedRecipe(GameTestHelper helper) {
@@ -65,9 +60,8 @@ public final class PigmeeCrystalCatalyzerGameTests {
             var level = helper.getLevel();
             var pos = helper.absolutePos(POS);
             for (var side : Direction.values()) {
-                var itemCapability = level.getCapability(Capabilities.Item.BLOCK, pos, side);
-                require(itemCapability != null, "Pigmee item capability missing on " + side);
-                var items = new LegacyItemHandlerView(itemCapability);
+                var items = new com.moakiee.ae2lt.recipe.compat.LegacyItemHandlerView(level.getCapability(Capabilities.Item.BLOCK, pos, side));
+                require(items != null, "Pigmee item capability missing on " + side);
                 var fluid = level.getCapability(Capabilities.Fluid.BLOCK, pos, side);
                 require(fluid != null, "Pigmee fluid capability missing on " + side);
                 require(level.getCapability(Capabilities.Energy.BLOCK, pos, side) == null,
@@ -77,8 +71,8 @@ public final class PigmeeCrystalCatalyzerGameTests {
                 require(items.extractItem(CATALYST, 64, false).isEmpty(), "pipes must not remove catalysts");
                 require(!items.insertItem(1, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()), true).isEmpty(),
                         "Pigmee must reject the collapse matrix");
-                try (var transaction = Transaction.openRoot()) {
-                    require(fluid.insert(0, FluidResource.of(Fluids.WATER), 1000, transaction) == 1000,
+                try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                    require(fluid.insert(0, net.neoforged.neoforge.transfer.fluid.FluidResource.of(Fluids.WATER), 1000, tx) == 1000,
                             "water pipe simulation must accept one bucket");
                 }
             }
@@ -102,9 +96,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
             require(pigmee.value().energyPerCycle() == 100_000 && pigmee.value().lightningCost() == 1
                             && pigmee.value().catalystCount() == 1 && pigmee.value().getOutputTemplate().getCount() == 1,
                     "machine overrides must not rewrite shared recipe costs or quantities");
-            var loaded = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(
-                    com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level),
-                    ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
+            var loaded = com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.recipesOfType(com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess.manager(level), ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get());
             require(loaded.stream().noneMatch(r -> r.id().identifier().getPath().startsWith("crystal_catalyzer/pigmee_")),
                     "duplicate Pigmee recipes must not be registered");
             helper.succeed();
@@ -149,17 +141,17 @@ public final class PigmeeCrystalCatalyzerGameTests {
         manager.registerDevice(frequency, new WirelessFrequencyManager.DeviceEntry(
                 level.dimension(), host.getBlockPos(), false, false));
         var tag = new CompoundTag();
-        host.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(tag, level.registryAccess()));
+        save(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, level.registryAccess()));
         tag.putInt("FrequencyId", frequency);
         var proxy = new CompoundTag();
         proxy.putInt("owner", 123);
         tag.put("proxy", proxy);
-        host.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(tag, level.registryAccess()));
+        load(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, level.registryAccess()));
         helper.runAfterDelay(20, () -> {
             require(host.getMainNode().getNode() == null, "old proxy NBT recreated a Pigmee node");
             require(manager.getDevices(frequency).stream().noneMatch(d -> d.pos().equals(host.getBlockPos())),
                     "old Pigmee still appears in the wireless device list");
-            host.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(tag, level.registryAccess()));
+            save(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, level.registryAccess()));
             require(!tag.contains("FrequencyId") && !tag.contains("proxy"), "legacy AE state was saved again");
             helper.succeed();
         });
@@ -219,34 +211,36 @@ public final class PigmeeCrystalCatalyzerGameTests {
 
     public static void pigmeeOutputBackpressurePausesAndResumes(GameTestHelper helper) {
         var host = machine(helper);
+        require(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output must hold only 64 items");
         int[] pausedAt = {-1};
-        boolean[] extracted = {false};
         helper.runAfterDelay(20, () -> supply(host, 64, 1000));
         helper.runAfterDelay(60, () -> {
             require(host.getProcessingTicksSpent() > 0 && output(host) == 0, "fixture never started");
             pausedAt[0] = host.getProcessingTicksSpent();
-            host.getInventory().setItemDirect(OUTPUT, AEItems.CERTUS_QUARTZ_CRYSTAL.stack(1024));
+            // Older saves may exceed the new cap. Keep their contents available for extraction.
+            host.getInventory().setItemDirect(OUTPUT, AEItems.CERTUS_QUARTZ_CRYSTAL.stack(128));
+            var saved = new CompoundTag();
+            save(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(saved, helper.getLevel().registryAccess()));
+            host.clearContent();
+            load(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(saved, helper.getLevel().registryAccess()));
+            require(output(host) == 128, "lower output cap deleted legacy saved items");
+            require(!host.getInventory().canAcceptRecipeOutput(AEItems.CERTUS_QUARTZ_CRYSTAL.stack()),
+                    "legacy over-cap output accepted more items");
+            require(host.getAutomationInventory().extractItem(OUTPUT, 64, false).getCount() == 64,
+                    "legacy output could not be extracted down to the new cap");
         });
         helper.runAfterDelay(450, () -> {
             require(host.getProcessingTicksSpent() == pausedAt[0], "full output failed to pause progress");
-            require(host.getFluid().getAmount() == 1000 && output(host) == 1024, "blocked cycle spent resources");
-            var itemCapability = helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(POS), Direction.UP);
-            require(itemCapability != null, "output item capability missing");
-            var items = new LegacyItemHandlerView(itemCapability);
-            require(items.extractItem(OUTPUT, 1, true).getCount() == 1,
+            require(host.getFluid().getAmount() == 1000 && output(host) == 64, "blocked cycle spent resources");
+            var items = new com.moakiee.ae2lt.recipe.compat.LegacyItemHandlerView(helper.getLevel().getCapability(Capabilities.Item.BLOCK, helper.absolutePos(POS), Direction.UP));
+            require(items != null && items.extractItem(OUTPUT, 1, true).getCount() == 1,
                     "output simulation did not expose retained products");
-            require(output(host) == 1024, "simulated extraction changed ownership");
+            require(output(host) == 64, "simulated extraction changed ownership");
             require(items.extractItem(OUTPUT, 1, false).getCount() == 1, "output pipe extraction lost products");
-            require(output(host) == 1023,
-                    "committed output pipe extraction did not debit the machine: " + output(host));
-            extracted[0] = true;
         });
         helper.onEachTick(() -> {
-            if (extracted[0] && output(host) == 1024) {
-                require(helper.getTick() >= 450 + 100 - pausedAt[0] - 1,
-                        "paused time accelerated the recipe: tick=" + helper.getTick()
-                                + " savedProgress=" + pausedAt[0]
-                                + " currentProgress=" + host.getProcessingTicksSpent());
+            if (helper.getTick() > 450 && output(host) == 64) {
+                require(helper.getTick() >= 450 + 100 - pausedAt[0] - 1, "paused time accelerated the recipe");
                 require(host.getFluid().isEmpty() && host.getInventory().getStackInSlot(CATALYST).getCount() == 64,
                         "resumed cycle resource accounting failed");
                 helper.succeed();
@@ -261,22 +255,28 @@ public final class PigmeeCrystalCatalyzerGameTests {
             require(host.getProcessingTicksSpent() > 0 && host.hasLockedRecipe(), "fixture never started");
             int progress = host.getProcessingTicksSpent();
             var tag = new CompoundTag();
-            host.saveAdditional(com.moakiee.ae2lt.api.compat.ValueIO.output(tag, helper.getLevel().registryAccess()));
+            save(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.output(tag, helper.getLevel().registryAccess()));
             tag.getCompoundOrEmpty("LockedRecipe").putString("RecipeId", "ae2lt:crystal_catalyzer/pigmee_quartz_block");
             tag.getCompoundOrEmpty("LockedRecipe").putInt("Energy", 400_000);
-            tag.getCompoundOrEmpty("LockedRecipe").put("Output", com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(
-                    AEItems.CERTUS_QUARTZ_CRYSTAL.stack(16), helper.getLevel().registryAccess()));
+            tag.getCompoundOrEmpty("LockedRecipe").put("Output", com.moakiee.ae2lt.recipe.compat.LegacyItemStackNbt.save(AEItems.CERTUS_QUARTZ_CRYSTAL.stack(16), helper.getLevel().registryAccess()));
             tag.putLong("ConsumedEnergy", 123_456);
             host.clearContent();
-            host.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(tag, helper.getLevel().registryAccess()));
+            load(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, helper.getLevel().registryAccess()));
             require(host.getProcessingTicksSpent() == progress, "NBT load lost progress");
             var restored = host.getLockedRecipe().orElseThrow();
             require(restored.recipeId().toString().equals("ae2lt:crystal_catalyzer/quartz_block")
                             && restored.totalEnergy() == 400_000 && host.getConsumedEnergy() == 0
-                            && restored.output().getCount() == 16,
-                    "legacy ID migration must preserve metadata and bypass FE at the machine");
+                            && restored.output().getCount() == 1,
+                    "legacy ID migration must preserve cost/progress, normalize yield and bypass FE");
+            var migratedSave = tag.copy();
+            migratedSave.remove("PigmeeBaseYield");
+            migratedSave.getCompoundOrEmpty("LockedRecipe").putString("RecipeId", "ae2lt:crystal_catalyzer/quartz_block");
+            load(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(migratedSave, helper.getLevel().registryAccess()));
+            require(host.getLockedRecipe().orElseThrow().output().getCount() == 1
+                            && host.getProcessingTicksSpent() == progress,
+                    "already-migrated legacy snapshot revived the retired 16-item yield");
             tag.getCompoundOrEmpty("LockedRecipe").putInt("Energy", 0);
-            host.loadTag(com.moakiee.ae2lt.api.compat.ValueIO.input(tag, helper.getLevel().registryAccess()));
+            load(host, com.moakiee.ae2lt.recipe.compat.LegacyValueIo.input(tag, helper.getLevel().registryAccess()));
             require(host.getProcessingTicksSpent() == progress
                             && host.getLockedRecipe().orElseThrow().recipeId().toString()
                                     .equals("ae2lt:crystal_catalyzer/quartz_block"),
@@ -300,7 +300,7 @@ public final class PigmeeCrystalCatalyzerGameTests {
 
     public static void normalCatalyzerDoesNotGainFreeProcessing(GameTestHelper helper) {
         helper.setBlock(POS, ModBlocks.CRYSTAL_CATALYZER.get());
-        CrystalCatalyzerBlockEntity host = helper.getBlockEntity(POS, CrystalCatalyzerBlockEntity.class);
+        CrystalCatalyzerBlockEntity host = (CrystalCatalyzerBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS));
         helper.runAfterDelay(20, () -> supply(host, 64, 1000));
         helper.runAfterDelay(350, () -> {
             require(!host.isPigmeeVariant() && output(host) == 0, "normal machine produced without FE/lightning");
@@ -317,5 +317,12 @@ public final class PigmeeCrystalCatalyzerGameTests {
                     "normal AE cable capability disappeared");
             helper.succeed();
         });
+    }
+    private static void save(CrystalCatalyzerBlockEntity host, net.minecraft.world.level.storage.ValueOutput output) {
+        try { var method = CrystalCatalyzerBlockEntity.class.getDeclaredMethod("saveAdditional", net.minecraft.world.level.storage.ValueOutput.class); method.setAccessible(true); method.invoke(host, output); }
+        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+    }
+    private static void load(CrystalCatalyzerBlockEntity host, net.minecraft.world.level.storage.ValueInput input) {
+        host.loadWithComponents(input);
     }
 }

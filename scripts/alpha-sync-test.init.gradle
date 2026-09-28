@@ -1,0 +1,23 @@
+// Native alpha synchronization tests; excluded from release jars.
+allprojects { afterEvaluate {
+    sourceSets {
+        alphaSyncTest {
+            java.setSrcDirs(['src/jdb/java', 'src/cpuSelectionTest/java'])
+            java.setIncludes(["**/ArmorProtectionGameTests.java", "**/OverloadedIOPortGameTests.java", "**/MiningFactoryGameTests.java", "**/LightningCollectorGameTests.java", "**/RainbowPigmeeGameTests.java", "**/PhaseFlightGroundCrouchGameTests.java", "**/GlobalBatchAdaptersGameTests.java", "**/TianshuDeferredReturnsGameTests.java", "**/OverloadFactoryReactionGameTests.java", "**/CrystalCatalyzerFluidGameTests.java", "**/PigmeeBuildingGameTests.java", "**/AppGenProcessorGameTests.java", "**/PigmeeCrystalCatalyzerGameTests.java", "**/TianshuJdbHarness.java", "**/NativeSyncTestAccess.java"])
+            resources.srcDir 'src/jdb/resources'
+            resources.srcDir 'src/overloadTest/resources'
+            compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+            runtimeClasspath += output + sourceSets.main.runtimeClasspath
+        }
+        alphaSyncRegistrar {
+            compileClasspath += sourceSets.alphaSyncTest.output + sourceSets.main.output + sourceSets.main.compileClasspath
+            runtimeClasspath += output + sourceSets.alphaSyncTest.output + sourceSets.main.runtimeClasspath
+        }
+    }
+    neoForge.mods { ae2lt { sourceSet(sourceSets.alphaSyncTest) }; ae2lt_alpha_sync_test { sourceSet(sourceSets.alphaSyncRegistrar) } }
+    neoForge.runs.gameTestServer {
+        gameDirectory = project.file('build/alpha-sync-native')
+        programArguments.addAll('--tests', 'ae2lt_alpha_sync_test:*', '--report', 'alpha-sync-results.xml')
+        systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_alpha_sync_test'
+    }
+} }

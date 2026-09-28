@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "ae2lt:block/slot/electro_chime_crystal"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "ae2lt:block/slot/filter_component"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "ae2lt:block/slot/lightning_collapse_matrix"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "ae2lt:block/slot/mining_tool"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "ae2lt:block/slot/mining_block"
+    }
+  ]
+}

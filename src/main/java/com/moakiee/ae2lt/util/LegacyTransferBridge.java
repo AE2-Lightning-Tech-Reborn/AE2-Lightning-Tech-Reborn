@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.access.ItemAccess;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
@@ -27,7 +27,7 @@ public final class LegacyTransferBridge {
     // Capabilities on different faces expose the same backing object. Sharing its journal
     // prevents separate views from promising the same amount within one root transaction.
     // Weak keys use identity; weak values avoid retaining unloaded machines through the view.
-    private static final LoadingCache<IItemHandlerModifiable, Items> ITEMS = CacheBuilder.newBuilder()
+    private static final LoadingCache<IItemHandler, Items> ITEMS = CacheBuilder.newBuilder()
             .weakKeys().weakValues().build(CacheLoader.from(Items::new));
     private static final LoadingCache<IFluidHandler, Fluids> FLUIDS = CacheBuilder.newBuilder()
             .weakKeys().weakValues().build(CacheLoader.from(Fluids::new));
@@ -36,7 +36,7 @@ public final class LegacyTransferBridge {
 
     private LegacyTransferBridge() {}
 
-    public static ResourceHandler<ItemResource> items(IItemHandlerModifiable handler) {
+    public static ResourceHandler<ItemResource> items(IItemHandler handler) {
         return handler == null ? null : ITEMS.getUnchecked(handler);
     }
 
@@ -54,10 +54,10 @@ public final class LegacyTransferBridge {
     }
 
     private static final class Items extends SnapshotJournal<ItemStack[]> implements ResourceHandler<ItemResource> {
-        private final IItemHandlerModifiable source;
+        private final IItemHandler source;
         private ItemStack[] staged;
 
-        private Items(IItemHandlerModifiable source) { this.source = Objects.requireNonNull(source); }
+        private Items(IItemHandler source) { this.source = Objects.requireNonNull(source); }
         private ItemStack[] copyLive() {
             ItemStack[] result = new ItemStack[source.getSlots()];
             for (int i = 0; i < result.length; i++) result[i] = source.getStackInSlot(i).copy();

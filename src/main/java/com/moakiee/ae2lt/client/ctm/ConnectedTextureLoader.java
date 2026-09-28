@@ -19,6 +19,8 @@ public final class ConnectedTextureLoader {
                 GsonHelper.getAsString(json, "render_type", "minecraft:translucent"),
                 GsonHelper.getAsBoolean(json, "ambientocclusion", true),
                 GsonHelper.getAsBoolean(json, "gui3d", true),
-                GsonHelper.getAsBoolean(json, "uses_block_light", true));
+                GsonHelper.getAsBoolean(json, "uses_block_light", true),
+                json.has("slab_type") ? net.minecraft.world.level.block.state.properties.SlabType.valueOf(
+                        GsonHelper.getAsString(json, "slab_type").toUpperCase(java.util.Locale.ROOT)) : null);
     }
 }

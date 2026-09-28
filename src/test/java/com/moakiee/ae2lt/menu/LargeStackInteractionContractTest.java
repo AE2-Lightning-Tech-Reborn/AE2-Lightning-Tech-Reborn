@@ -61,6 +61,7 @@ class LargeStackInteractionContractTest {
                 "LightningAssemblyChamberMenu.java",
                 "LightningCollectorMenu.java",
                 "LightningSimulationChamberMenu.java",
+                "MiningFactoryMenu.java",
                 "OverloadProcessingFactoryMenu.java",
                 "TeslaCoilMenu.java"), menuNames);
 

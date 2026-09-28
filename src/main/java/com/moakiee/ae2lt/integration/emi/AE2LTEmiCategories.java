@@ -42,6 +42,9 @@ final class AE2LTEmiCategories {
         addCategory(registry, LIGHTNING_ASSEMBLY, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.toStack());
         addCategory(registry, LIGHTNING_SIMULATION, ModBlocks.LIGHTNING_SIMULATION_CHAMBER.toStack());
         addCategory(registry, OVERLOAD_PROCESSING, ModBlocks.OVERLOAD_PROCESSING_FACTORY.toStack());
+        if (net.neoforged.fml.ModList.get().isLoaded("advanced_ae")) {
+            AdvancedAeFactoryEmiCompat.registerWorkstation(registry);
+        }
         addCategory(registry, TESLA_COIL, ModBlocks.TESLA_COIL.toStack());
         addCategory(registry, CRYSTAL_CATALYZER,
                 ModBlocks.CRYSTAL_CATALYZER.toStack(),
@@ -58,7 +61,8 @@ final class AE2LTEmiCategories {
                 .map(EmiLightningTransformRecipe::new).forEach(registry::addRecipe);
         registry.getRecipeManager().getAllRecipesFor(ModRecipeTypes.LIGHTNING_STRIKE_TYPE.get()).stream()
                 .map(EmiLightningStrikeRecipe::new).forEach(registry::addRecipe);
-        registry.getRecipeManager().getAllRecipesFor(ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get()).stream()
+        com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog
+                .displayRecipes(registry.getRecipeManager()).stream()
                 .map(EmiOverloadProcessingRecipe::new).forEach(registry::addRecipe);
         registry.getRecipeManager().getAllRecipesFor(ModRecipeTypes.CRYSTAL_CATALYZER_TYPE.get()).stream()
                 .filter(holder -> !holder.value().getOutputTemplate().isEmpty())

@@ -13,6 +13,7 @@ import com.moakiee.ae2lt.machine.firmament.recipe.FirmamentConversionRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationRecipe;
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe;
+import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
 import net.minecraft.resources.Identifier;
@@ -70,7 +71,7 @@ public final class RecipeConflictScanner {
                         .toList(),
                 conflicts);
         scanPool(
-                recipesOfType(recipeManager, ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get()).stream()
+                OverloadProcessingRecipeCatalog.recipes(recipeManager).stream()
                         .map(RecipeConflictScanner::fromOverloadProcessing)
                         .toList(),
                 conflicts);
@@ -146,9 +147,9 @@ public final class RecipeConflictScanner {
     private static RecipeRequirements fromOverloadProcessing(
             RecipeHolder<OverloadProcessingRecipe> holder) {
         OverloadProcessingRecipe recipe = holder.value();
-        List<FluidRequirement> fluidRequirements = recipe.fluidInput().isEmpty()
+        List<FluidRequirement> fluidRequirements = recipe.inputFluidAmount() == 0
                 ? List.of()
-                : List.of(new FluidRequirement(recipe.fluidInput()));
+                : List.of(new FluidRequirement(recipe.fluidInputAlternatives(), recipe.inputFluidAmount()));
         return new RecipeRequirements(
                 holder.id().identifier(),
                 recipe.itemInputs().stream()
@@ -208,9 +209,9 @@ public final class RecipeConflictScanner {
         return canCover(
                 supplies.stream().map(FluidRequirement::amount).toList(),
                 requirements.stream().map(FluidRequirement::amount).toList(),
-                (supplyIndex, requirementIndex) -> FluidStack.isSameFluidSameComponents(
-                        supplies.get(supplyIndex).stack(),
-                        requirements.get(requirementIndex).stack()));
+                (supplyIndex, requirementIndex) -> supplies.get(supplyIndex).alternatives().stream()
+                        .anyMatch(supply -> requirements.get(requirementIndex).alternatives().stream()
+                                .anyMatch(required -> FluidStack.isSameFluidSameComponents(supply, required))));
     }
 
     static boolean canCover(
@@ -275,19 +276,16 @@ public final class RecipeConflictScanner {
         }
     }
 
-    private record FluidRequirement(FluidStack stack, long amount) {
-        private FluidRequirement(FluidStack stack) {
-            this(stack.copyWithAmount(1), stack.getAmount());
-        }
-
+    private record FluidRequirement(List<FluidStack> alternatives, long amount) {
         private FluidRequirement {
-            if (stack.isEmpty() || amount <= 0L) {
-                throw new IllegalArgumentException("fluid requirement must be non-empty and positive");
+            if (amount <= 0L) {
+                throw new IllegalArgumentException("fluid requirement amount must be positive");
             }
+            alternatives = alternatives.stream().map(stack -> stack.copyWithAmount(1)).toList();
         }
 
         private FluidRequirement scaled() {
-            return new FluidRequirement(stack, scale(amount));
+            return new FluidRequirement(alternatives, scale(amount));
         }
     }
 

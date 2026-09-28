@@ -59,9 +59,9 @@ public record CelestweaveModuleContainer(
                     CelestweaveModuleContainer::new);
 
     public CelestweaveModuleContainer {
-        modules = copyModules(modules);
-        toggles = toggles == null ? Map.of() : Map.copyOf(toggles);
-        submoduleData = copySubmoduleData(submoduleData);
+        modules = ArmorModuleIdMigration.modules(copyModules(modules));
+        toggles = ArmorModuleIdMigration.toggles(toggles);
+        submoduleData = ArmorModuleIdMigration.data(copySubmoduleData(submoduleData));
     }
 
     @Override

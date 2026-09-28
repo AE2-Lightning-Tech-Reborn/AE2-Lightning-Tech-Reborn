@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "type=bottom": {
+      "type": "ae2lt:connected_texture",
+      "base": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel",
+      "ctm": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel_ctm",
+      "slab_type": "bottom",
+      "connection": "ae2lt:same_block",
+      "render_type": "minecraft:solid"
+    },
+    "type=top": {
+      "type": "ae2lt:connected_texture",
+      "base": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel",
+      "ctm": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel_ctm",
+      "slab_type": "top",
+      "connection": "ae2lt:same_block",
+      "render_type": "minecraft:solid"
+    },
+    "type=double": {
+      "type": "ae2lt:connected_texture",
+      "base": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel",
+      "ctm": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel_ctm",
+      "slab_type": "double",
+      "connection": "ae2lt:same_block",
+      "render_type": "minecraft:solid"
+    }
+  }
+}

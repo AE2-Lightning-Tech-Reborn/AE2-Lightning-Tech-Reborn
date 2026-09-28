@@ -51,16 +51,24 @@ public final class FumoRenderClientProbe {
             bindPreviewComponents();
             verifyLightningTooltip(mc);
             var blocks = List.<Block>of(ModFumos.PIGMEE_FUMO.get(), ModFumos.CREATIVE_PIGMEE_FUMO.get(),
-                    ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
+                    ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get(), ModFumos.RAINBOW_PIGMEE_FUMO.get());
             for (Block block : blocks) {
                 verifyPlaced(mc, block);
                 verifyItems(mc, block);
             }
             verifyCompositeLayers();
-            result = "PASS: 24 placed states (3 Pigmees x 4 facings x static/spinning): renderer dispatch, "
+            verifySlabs(mc);
+            var guiAtlas = mc.getAtlasManager().getAtlasOrThrow(net.minecraft.data.AtlasIds.GUI);
+            for (String name : List.of("electro_chime_crystal", "filter_component", "lightning_collapse_matrix", "mining_tool", "mining_block")) {
+                var id = net.minecraft.resources.Identifier.parse("ae2lt:block/slot/" + name);
+                require(guiAtlas.getSprite(id).contents().name().equals(id), "empty slot GUI sprite missing: " + id);
+            }
+            require(com.mojang.blaze3d.systems.RenderSystem.getDevice()
+                    .precompilePipeline(RainbowPigmeeShader.PIPELINE).isValid(), "rainbow GPU shader compile failed");
+            result = "PASS: 32 placed states (4 Pigmees x 4 facings x static/spinning): renderer dispatch, "
                     + "position, lighting, geometry submission, centered rotation and overlay alignment; "
-                    + "12 item contexts, full head-spin revolution, special-layer alignment and composite isolation; "
-                    + "both lightning tiers through AE2 storage-cell tooltip and world icon submission.";
+                    + "16 item contexts, full head-spin revolution, special-layer alignment and composite isolation; "
+                    + "both lightning tiers through AE2 storage-cell tooltip and world icon submission; 96 colored slab states, neighbor culling, rainbow GPU shader compilation and all five empty-slot GUI sprites.";
         } catch (Throwable failure) {
             failure.printStackTrace();
             result = "FAIL: " + failure;
@@ -145,10 +153,10 @@ public final class FumoRenderClientProbe {
                 require(state.yRotation == (spinning ? 87.0F : 0.0F), "incorrect interpolated rotation");
                 var submissions = new ArrayList<Submission>();
                 renderer.submit(state, new PoseStack(), collector(submissions), new CameraRenderState());
-                require(submissions.size() == (state.hyperdimensional ? 2 : 1), "missing placed geometry");
+                require(submissions.size() == (state.hyperdimensional || state.rainbow ? 2 : 1), "missing placed geometry");
                 var bodyPose = submissions.getFirst().pose();
                 near(bodyPose.transformPosition(new Vector3f(0.5F, 0, 0.5F)), new Vector3f(0.5F, 0, 0.5F));
-                if (state.hyperdimensional) {
+                if (state.hyperdimensional || state.rainbow) {
                     var overlayPose = submissions.get(1).pose();
                     var expected = new Matrix4f(bodyPose);
                     if (!spinning) {
@@ -170,7 +178,8 @@ public final class FumoRenderClientProbe {
     }
 
     private static void verifyItems(Minecraft mc, Block block) {
-        boolean hyperdimensional = block == ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get();
+        boolean hyperdimensional = block == ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get()
+                || block == ModFumos.RAINBOW_PIGMEE_FUMO.get();
         for (var context : List.of(ItemDisplayContext.GUI, ItemDisplayContext.HEAD,
                 ItemDisplayContext.GROUND, ItemDisplayContext.FIXED)) {
             for (int angle = 0; angle < (context == ItemDisplayContext.HEAD ? 360 : 1); angle += 6) {
@@ -198,6 +207,47 @@ public final class FumoRenderClientProbe {
         }
     }
 
+    private static void verifySlabs(Minecraft mc) {
+        var slabs = new ArrayList<Block>();
+        com.moakiee.ae2lt.registry.ModBlocks.PIGMEE_BUILDING_SLABS.values().forEach(b -> slabs.add(b.get()));
+        com.moakiee.ae2lt.registry.ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.values().forEach(b -> slabs.add(b.get()));
+        for (var block : slabs) for (var type : net.minecraft.world.level.block.state.properties.SlabType.values()) {
+            var state = block.defaultBlockState().setValue(net.minecraft.world.level.block.SlabBlock.TYPE, type);
+            var model = mc.getModelManager().getBlockStateModelSet().get(state);
+            require(model instanceof com.moakiee.ae2lt.client.ctm.ConnectedSlabBakedModel, "slab CTM model missing: " + state);
+            for (boolean neighbor : new boolean[] {false, true}) {
+                var level = (net.minecraft.client.renderer.block.BlockAndTintGetter) Proxy.newProxyInstance(
+                        net.minecraft.client.renderer.block.BlockAndTintGetter.class.getClassLoader(),
+                        new Class<?>[] {net.minecraft.client.renderer.block.BlockAndTintGetter.class}, (proxy, method, args) -> {
+                            if (method.getName().equals("getBlockState")) return neighbor && args[0].equals(BlockPos.ZERO.east())
+                                    ? state : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                            throw new AssertionError("unexpected model lookup: " + method);
+                        });
+                var parts = new ArrayList<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart>();
+                ((com.moakiee.ae2lt.client.ctm.ConnectedSlabBakedModel) model).collectParts(level, BlockPos.ZERO, state,
+                        net.minecraft.util.RandomSource.create(0), parts);
+                require(!parts.isEmpty(), "missing slab parts");
+                int quadCount = 0;
+                var directions = new ArrayList<Direction>(List.of(Direction.values()));
+                directions.add(null);
+                for (var part : parts) for (var direction : directions) {
+                    var quads = part.getQuads(direction);
+                    if (neighbor && direction == Direction.EAST) require(quads.isEmpty(), "coplanar side not culled");
+                    if (type != net.minecraft.world.level.block.state.properties.SlabType.DOUBLE && direction == null)
+                        require(!quads.isEmpty(), "inset slab face incorrectly culled");
+                    for (var quad : quads) {
+                        quadCount++;
+                        float min = type == net.minecraft.world.level.block.state.properties.SlabType.TOP ? 0.5F : 0;
+                        float max = type == net.minecraft.world.level.block.state.properties.SlabType.BOTTOM ? 0.5F : 1;
+                        for (var point : List.of(quad.position0(), quad.position1(), quad.position2(), quad.position3()))
+                            require(point.y() >= min - 0.002F && point.y() <= max + 0.002F, "slab exceeds half-height bounds");
+                    }
+                }
+                require(quadCount > 0, "empty slab geometry");
+            }
+        }
+    }
+
     private static void verifyCompositeLayers() {
         var state = new ItemStackRenderState();
         var first = state.newLayer();
@@ -220,6 +270,16 @@ public final class FumoRenderClientProbe {
                     if (method.getName().equals("order")) return proxy;
                     if (method.getName().startsWith("submit") && args[0] instanceof PoseStack pose) {
                         submissions.add(new Submission(method.getName(), new Matrix4f(pose.last().pose())));
+                        if (method.getName().equals("submitCustomGeometry")) {
+                            var type = (net.minecraft.client.renderer.rendertype.RenderType) args[1];
+                            try (var bytes = new com.mojang.blaze3d.vertex.ByteBufferBuilder(262144)) {
+                                var buffer = new com.mojang.blaze3d.vertex.BufferBuilder(bytes, type.mode(), type.format());
+                                ((SubmitNodeCollector.CustomGeometryRenderer) args[2]).render(pose.last(), buffer);
+                                try (var mesh = buffer.buildOrThrow()) {
+                                    require(mesh.drawState().vertexCount() > 0, "empty submitted mesh");
+                                }
+                            }
+                        }
                         if (method.getName().equals("submitBlockModel")) {
                             require((int) args[4] == LightCoordsUtil.FULL_BRIGHT, "block lighting lost during submit");
                             require((int) args[5] == OverlayTexture.NO_OVERLAY, "incorrect damage overlay");

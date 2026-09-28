@@ -16,7 +16,7 @@ import net.neoforged.neoforge.client.model.DynamicBlockStateModel;
 import org.jspecify.annotations.Nullable;
 
 /** Connected-texture model with the original six-face neighbour and quadrant rules. */
-public final class ConnectedTextureBakedModel implements DynamicBlockStateModel {
+public class ConnectedTextureBakedModel implements DynamicBlockStateModel {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final float OVERLAY_OFFSET = 1.0F / 1024.0F;
 

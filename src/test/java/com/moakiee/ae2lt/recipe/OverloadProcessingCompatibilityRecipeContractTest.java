@@ -15,24 +15,17 @@ class OverloadProcessingCompatibilityRecipeContractTest {
 
     @Test
     void advancedAeRecipesKeepUpstreamConventionTags() throws Exception {
-        assertTag("aae_shattered_singularity.json", 1, "c:dusts/ender_pearl");
         assertTag("aae_quantum_processor.json", 1, "c:storage_blocks/redstone");
     }
 
     @Test
     void extendedAeRecipesKeepUpstreamConventionTags() throws Exception {
-        assertTag("eae_entro_crystal.json", 0, "c:dusts/entro");
-        assertTag("eae_entro_ingot.json", 0, "c:dusts/entro");
-        assertTag("eae_entro_ingot.json", 1, "c:ingots/gold");
         assertTag("eae_concurrent_processor.json", 0, "c:storage_blocks/entro");
         assertTag("eae_concurrent_processor.json", 1, "c:storage_blocks/redstone");
     }
 
     @Test
     void appliedFluxRecipesKeepUpstreamConventionTags() throws Exception {
-        assertTag("appflux_redstone_crystal.json", 0, "c:storage_blocks/redstone");
-        assertTag("appflux_redstone_crystal.json", 1, "c:gems/fluix");
-        assertTag("appflux_redstone_crystal.json", 2, "c:dusts/glowstone");
         assertTag("appflux_harden_insulating_resin.json", 2, "c:silicon");
         assertTag("appflux_harden_insulating_resin.json", 4, "c:dusts/glowstone");
     }

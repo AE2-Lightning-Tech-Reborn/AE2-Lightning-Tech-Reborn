@@ -10,15 +10,18 @@ import org.joml.Vector3fc;
 
 /** Extra pass for the hyperdimensional Fumo item. */
 final class HyperdimensionalPigmeeItemRenderer implements NoDataSpecialModelRenderer {
-    static final HyperdimensionalPigmeeItemRenderer INSTANCE = new HyperdimensionalPigmeeItemRenderer();
-    private HyperdimensionalPigmeeItemRenderer() {}
+    static final HyperdimensionalPigmeeItemRenderer INSTANCE = new HyperdimensionalPigmeeItemRenderer(false);
+    static final HyperdimensionalPigmeeItemRenderer RAINBOW = new HyperdimensionalPigmeeItemRenderer(true);
+    private final boolean rainbow;
+    private HyperdimensionalPigmeeItemRenderer(boolean rainbow) { this.rainbow = rainbow; }
 
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector,
                        int packedLight, int packedOverlay, boolean hasFoil, int outlineColor) {
         var state = ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get().defaultBlockState();
         var model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
-        HyperdimensionalPigmeePortalLayer.submit(model, poseStack, collector);
+        if (rainbow) RainbowPigmeeSurfaceLayer.submit(model, poseStack, collector);
+            else HyperdimensionalPigmeePortalLayer.submit(model, poseStack, collector);
         HyperdimensionalPigmeeTextureLayer.submitItem(poseStack, collector, packedOverlay);
     }
 

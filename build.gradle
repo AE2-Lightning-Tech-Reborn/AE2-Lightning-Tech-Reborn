@@ -1113,3 +1113,22 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// AdvancedAE's recipe ingredient classes are provided by its bundled addon library.
+configurations { advancedAeRecipeApi { transitive = false } }
+dependencies { advancedAeRecipeApi 'maven.modrinth:advancedae:hPJMJOBd' }
+def advancedAeRecipeApiJar = layout.buildDirectory.file('embedded-libraries/ae2addonlib.jar')
+def extractAdvancedAeRecipeApi = tasks.register('extractAdvancedAeRecipeApi', Copy) {
+    from(zipTree(configurations.advancedAeRecipeApi.singleFile)) {
+        include 'META-INF/jarjar/ae2addonlib-*.jar'
+        eachFile { path = 'ae2addonlib.jar' }
+    }
+    includeEmptyDirs = false
+    into layout.buildDirectory.dir('embedded-libraries')
+}
+
+dependencies {
+    compileOnly files(advancedAeRecipeApiJar).builtBy(extractAdvancedAeRecipeApi)
+    testImplementation files(advancedAeRecipeApiJar).builtBy(extractAdvancedAeRecipeApi)
+    testImplementation 'maven.modrinth:advancedae:hPJMJOBd'
+}

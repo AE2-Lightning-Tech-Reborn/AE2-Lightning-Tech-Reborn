@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.api.distmarker.Dist;
@@ -9,6 +10,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 import appeng.client.gui.style.StyleManager;
 
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.FrequencyScreen;
 import com.moakiee.ae2lt.client.hub.DeviceHubScreen;
@@ -58,6 +60,8 @@ public class ModScreens {
         event.register(LightningSimulationChamberMenu.TYPE, ModScreens::createLightningSimulationChamberScreen);
         event.register(LightningAssemblyChamberMenu.TYPE, ModScreens::createLightningAssemblyChamberScreen);
         event.register(LightningCollectorMenu.TYPE, ModScreens::createLightningCollectorScreen);
+        event.register(OverloadedIOPortMenu.TYPE, ModScreens::createOverloadedIOPortScreen);
+        event.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
         event.register(OverloadProcessingFactoryMenu.TYPE, ModScreens::createOverloadProcessingFactoryScreen);
         event.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
         event.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
@@ -157,6 +161,14 @@ public class ModScreens {
             LightningAssemblyChamberMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/lightning_assembly_chamber.json");
         return new LightningAssemblyChamberScreen(menu, inv, title, style);
+    }
+
+    private static OverloadedIOPortScreen createOverloadedIOPortScreen(OverloadedIOPortMenu menu, Inventory inv, Component title) {
+        return new OverloadedIOPortScreen(menu, inv, title, StyleManager.loadStyleDoc("/screens/overloaded_io_port.json"));
+    }
+
+    private static MiningFactoryScreen createMiningFactoryScreen(MiningFactoryMenu menu, Inventory inventory, Component title) {
+        return new MiningFactoryScreen(menu, inventory, title, StyleManager.loadStyleDoc("/screens/mining_factory.json"));
     }
 
     private static LightningCollectorScreen createLightningCollectorScreen(

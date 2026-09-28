@@ -16,11 +16,13 @@ public final class ModFumos {
     public static DeferredBlock<FumoBlock> MOAKIEE_FUMO;
     public static DeferredBlock<FumoBlock> CYSTRYSU_FUMO;
     public static DeferredBlock<FumoBlock> PIGMEE_FUMO;
+    public static DeferredBlock<FumoBlock> RAINBOW_PIGMEE_FUMO;
     public static DeferredBlock<FumoBlock> CREATIVE_PIGMEE_FUMO;
     public static DeferredBlock<FumoBlock> HYPERDIMENSIONAL_PIGMEE_FUMO;
     public static DeferredItem<FumoBlockItem> MOAKIEE_FUMO_ITEM;
     public static DeferredItem<FumoBlockItem> CYSTRYSU_FUMO_ITEM;
     public static DeferredItem<FumoBlockItem> PIGMEE_FUMO_ITEM;
+    public static DeferredItem<FumoBlockItem> RAINBOW_PIGMEE_FUMO_ITEM;
     public static DeferredItem<FumoBlockItem> CREATIVE_PIGMEE_FUMO_ITEM;
     public static DeferredItem<FumoBlockItem> HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM;
 
@@ -39,6 +41,11 @@ public final class ModFumos {
         PIGMEE_FUMO_ITEM = ModItems.ITEMS.register("pigmee_fumo",
                 id -> new FumoBlockItem(PIGMEE_FUMO.get(), ModItems.registeredProperties(new Item.Properties(), id),
                         "tooltip.ae2lt.pigmee_fumo"));
+
+        RAINBOW_PIGMEE_FUMO = ModBlocks.registerExternalBlock("rainbow_pigmee_fumo", FumoBlock::new);
+        RAINBOW_PIGMEE_FUMO_ITEM = ModItems.ITEMS.register("rainbow_pigmee_fumo",
+                id -> new FumoBlockItem(RAINBOW_PIGMEE_FUMO.get(), ModItems.registeredProperties(new Item.Properties().rarity(Rarity.UNCOMMON), id),
+                        "tooltip.ae2lt.rainbow_pigmee_fumo"));
 
         CREATIVE_PIGMEE_FUMO = ModBlocks.registerExternalBlock("creative_pigmee_fumo", FumoBlock::new);
         CREATIVE_PIGMEE_FUMO_ITEM = ModItems.ITEMS.register("creative_pigmee_fumo",

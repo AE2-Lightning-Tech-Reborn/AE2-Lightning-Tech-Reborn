@@ -19,6 +19,7 @@ public final class PigmeeBuildingBlockItem extends BlockItem {
                                 Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
         if (getBlock() instanceof PigmeeBuildingBlock base) base.appendHoverText(stack, context, tooltip, flag);
+        else if (getBlock() instanceof com.moakiee.ae2lt.block.PigmeeBuildingSlabBlock slab) slab.appendHoverText(stack, context, tooltip, flag);
         else if (getBlock() instanceof PigmeeBuildingPanelBlock panel) panel.appendHoverText(stack, context, tooltip, flag);
     }
 }

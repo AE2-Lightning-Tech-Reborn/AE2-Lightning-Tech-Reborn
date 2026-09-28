@@ -69,6 +69,7 @@ public final class ModEntityRenderers {
         wrapFumoItemModel(event, "moakiee_fumo");
         wrapFumoItemModel(event, "cystrysu_fumo");
         wrapFumoItemModel(event, "pigmee_fumo");
+        wrapFumoItemModel(event, "rainbow_pigmee_fumo");
         wrapFumoItemModel(event, "creative_pigmee_fumo");
         wrapFumoItemModel(event, "hyperdimensional_pigmee_fumo");
     }
@@ -76,7 +77,7 @@ public final class ModEntityRenderers {
     private static void wrapFumoItemModel(ModelEvent.ModifyBakingResult event, String itemId) {
         Identifier id = Identifier.fromNamespaceAndPath(AE2LightningTech.MODID, itemId);
         event.getBakingResult().itemStackModels().computeIfPresent(id, (ignored, model) ->
-                itemId.equals("hyperdimensional_pigmee_fumo")
+                (itemId.equals("hyperdimensional_pigmee_fumo") || itemId.equals("rainbow_pigmee_fumo"))
                         ? new HyperdimensionalPigmeeBakedModel(model)
                         : new SpinningFumoBakedModel(model));
     }

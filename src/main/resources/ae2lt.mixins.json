@@ -50,7 +50,8 @@
     "big.BigCpuListEntryMixin",
     "TianshuStonecutterMenuMixin",
     "TianshuWorkstationContainerMixin",
-    "TianshuCuriosItemLocatorMixin"
+    "TianshuCuriosItemLocatorMixin",
+    "ShapelessRecipeIngredientsAccessor"
   ],
   "client": [
     "client.EncodingHelperAccessor",

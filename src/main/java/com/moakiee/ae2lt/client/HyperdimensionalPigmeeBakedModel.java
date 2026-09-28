@@ -24,6 +24,7 @@ final class HyperdimensionalPigmeeBakedModel extends SpinningFumoBakedModel {
         if (firstLayer == access.ae2lt$activeLayerCount()) return;
         // Keep the baked extents and transforms, but do not draw the ordinary
         // opaque Pigmee body underneath the portal shell (as in 1.21.1's BEWLR).
-        access.ae2lt$layers()[firstLayer].setupSpecialModel(HyperdimensionalPigmeeItemRenderer.INSTANCE, null);
+        access.ae2lt$layers()[firstLayer].setupSpecialModel(stack.is(com.moakiee.ae2lt.registry.ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())
+                ? HyperdimensionalPigmeeItemRenderer.RAINBOW : HyperdimensionalPigmeeItemRenderer.INSTANCE, null);
     }
 }

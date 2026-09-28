@@ -23,6 +23,9 @@ public record ResearchNoteData(
         List<String> descriptionKeys,
         boolean consumed) {
 
+    private static final Identifier LEGACY_UNDYING = Identifier.parse("ae2lt:module_undying");
+    private static final Identifier OVERLOAD_PROTECTION = Identifier.parse("ae2lt:module_overload_protection");
+
     public static final String TAG_RITUAL_SEED = "RitualSeed";
     public static final String TAG_GOAL = "Goal";
     public static final String TAG_RECIPE_ITEMS = "RecipeItems";
@@ -51,7 +54,7 @@ public record ResearchNoteData(
             return null;
         }
 
-        List<Identifier> recipeItems = readResourceLocationList(tag, TAG_RECIPE_ITEMS);
+        List<Identifier> recipeItems = readIdentifierList(tag, TAG_RECIPE_ITEMS);
         List<String> descriptionKeys = readStringList(tag, TAG_DESCRIPTIONS);
         if (recipeItems.size() != 9 || descriptionKeys.size() != recipeItems.size()) {
             return null;
@@ -65,7 +68,7 @@ public record ResearchNoteData(
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             tag.putString(TAG_RITUAL_SEED, ritualSeed.toString());
             tag.putString(TAG_GOAL, goal.name());
-            tag.put(TAG_RECIPE_ITEMS, writeResourceLocationList(recipeItems));
+            tag.put(TAG_RECIPE_ITEMS, writeIdentifierList(recipeItems));
             tag.put(TAG_DESCRIPTIONS, writeStringList(descriptionKeys));
             tag.putBoolean(TAG_CONSUMED, consumed);
         });
@@ -79,7 +82,7 @@ public record ResearchNoteData(
         return ritualSeed.toString().replace("-", "").substring(0, 4).toUpperCase(Locale.ROOT);
     }
 
-    private static List<Identifier> readResourceLocationList(CompoundTag tag, String key) {
+    private static List<Identifier> readIdentifierList(CompoundTag tag, String key) {
         List<Identifier> values = new ArrayList<>();
         ListTag listTag = tag.getListOrEmpty(key);
         for (Tag element : listTag) {
@@ -89,7 +92,9 @@ public record ResearchNoteData(
 
             Identifier id = Identifier.tryParse(stringTag.value());
             if (id != null) {
-                values.add(id);
+                // These are raw recipe IDs, not ItemStack codecs, so registry aliases alone
+                // cannot update old notes before ritual multiset/order comparisons.
+                values.add(LEGACY_UNDYING.equals(id) ? OVERLOAD_PROTECTION : id);
             }
         }
         return values;
@@ -100,13 +105,15 @@ public record ResearchNoteData(
         ListTag listTag = tag.getListOrEmpty(key);
         for (Tag element : listTag) {
             if (element instanceof StringTag stringTag) {
-                values.add(stringTag.value());
+                String value = stringTag.value();
+                values.add("item.ae2lt.module_undying".equals(value)
+                        ? "item.ae2lt.module_overload_protection" : value);
             }
         }
         return values;
     }
 
-    private static ListTag writeResourceLocationList(List<Identifier> values) {
+    private static ListTag writeIdentifierList(List<Identifier> values) {
         ListTag listTag = new ListTag();
         for (Identifier value : values) {
             listTag.add(StringTag.valueOf(value.toString()));

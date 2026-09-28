@@ -27,6 +27,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidStackTemplate;
+import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryInventory;
 import com.moakiee.ae2lt.me.key.LightningKey;
@@ -92,6 +93,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
     private final Optional<FluidStackTemplate> fluidInput;
     private final List<ItemStackTemplate> itemResults;
     private final Optional<FluidStackTemplate> fluidResult;
+    private final SizedFluidIngredient borrowedFluidInput;
     private final long totalEnergy;
     private final int lightningCost;
     private final LightningKey.Tier lightningTier;
@@ -109,10 +111,10 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
         this(priority, itemInputs, fluidInput.isEmpty() ? Optional.empty() : Optional.of(FluidStackTemplate.fromNonEmptyStack(fluidInput)),
                 itemResults.stream().map(ItemStackTemplate::fromNonEmptyStack).toList(),
                 fluidResult.isEmpty() ? Optional.empty() : Optional.of(FluidStackTemplate.fromNonEmptyStack(fluidResult)),
-                totalEnergy, lightningCost, lightningTier, true);
+                totalEnergy, lightningCost, lightningTier, null);
     }
 
-    private OverloadProcessingRecipe(
+    OverloadProcessingRecipe(
             int priority,
             List<OverloadProcessingIngredient> itemInputs,
             Optional<FluidStackTemplate> fluidInput,
@@ -121,7 +123,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
             long totalEnergy,
             int lightningCost,
             LightningKey.Tier lightningTier,
-            boolean decoded) {
+            SizedFluidIngredient borrowedFluidInput) {
         Objects.requireNonNull(itemInputs, "itemInputs");
         Objects.requireNonNull(fluidInput, "fluidInput");
         Objects.requireNonNull(itemResults, "itemResults");
@@ -133,7 +135,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
         if (itemResults.size() > OverloadProcessingFactoryInventory.OUTPUT_SLOT_COUNT) {
             throw new IllegalArgumentException("itemResults must contain at most 1 entry");
         }
-        if (itemInputs.isEmpty() && fluidInput.isEmpty()) {
+        if (itemInputs.isEmpty() && fluidInput.isEmpty() && borrowedFluidInput == null) {
             throw new IllegalArgumentException("recipe must define at least one item or fluid input");
         }
         if (itemResults.isEmpty() && fluidResult.isEmpty()) {
@@ -152,6 +154,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
         this.priority = priority;
         this.itemInputs = List.copyOf(itemInputs);
         this.fluidInput = fluidInput;
+        this.borrowedFluidInput = borrowedFluidInput;
         this.itemResults = List.copyOf(itemResults);
         this.fluidResult = fluidResult;
         this.totalEnergy = totalEnergy;
@@ -159,6 +162,19 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
         this.lightningTier = lightningTier;
         this.totalInputCount = this.itemInputs.stream().mapToInt(OverloadProcessingIngredient::count).sum();
     }
+
+    /** Execution view of an upstream recipe; its original holder ID remains authoritative. */
+    public static OverloadProcessingRecipe borrowed(
+            List<OverloadProcessingIngredient> inputs, SizedFluidIngredient fluid,
+            List<ItemStack> results, FluidStack fluidResult, long energy) {
+        return new OverloadProcessingRecipe(0, inputs, Optional.empty(),
+                results.stream().map(ItemStackTemplate::fromNonEmptyStack).toList(),
+                fluidResult.isEmpty() ? Optional.empty() : Optional.of(FluidStackTemplate.fromNonEmptyStack(fluidResult)),
+                energy, 1, LightningKey.Tier.HIGH_VOLTAGE, fluid);
+    }
+
+    // Templates remain safe during the prepare stage, before item components are bound.
+    List<ItemStackTemplate> resultTemplates() { return itemResults; }
 
     public int priority() {
         return priority;
@@ -170,6 +186,16 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
 
     public FluidStack fluidInput() {
         return fluidInput.map(FluidStackTemplate::create).orElse(FluidStack.EMPTY);
+    }
+
+    public int inputFluidAmount() {
+        return borrowedFluidInput == null ? fluidInput.map(FluidStackTemplate::amount).orElse(0) : borrowedFluidInput.amount();
+    }
+
+    public List<FluidStack> fluidInputAlternatives() {
+        return borrowedFluidInput == null
+                ? (fluidInput.isEmpty() ? List.of() : List.of(fluidInput()))
+                : borrowedFluidInput.ingredient().fluids().stream().map(fluid -> new FluidStack(fluid, borrowedFluidInput.amount())).toList();
     }
 
     public List<ItemStack> itemResults() {
@@ -286,12 +312,15 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
         if (operations <= 0) {
             return false;
         }
-        if (fluidInput.isEmpty()) {
+        int amount = inputFluidAmount();
+        if (amount == 0) {
             return true;
         }
         return !availableFluid.isEmpty()
-                && FluidStack.isSameFluidSameComponents(fluidInput(), availableFluid)
-                && availableFluid.getAmount() >= multiplyExactToInt(fluidInput.get().amount(), operations);
+                && availableFluid.getAmount() >= (long) amount * operations
+                && (borrowedFluidInput == null
+                        ? FluidStack.isSameFluidSameComponents(fluidInput(), availableFluid)
+                        : borrowedFluidInput.ingredient().test(availableFluid));
     }
 
     public List<ItemStack> getScaledItemResults(int operations) {
@@ -345,7 +374,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
     public boolean isIncomplete() {
         return totalEnergy < MIN_TOTAL_ENERGY
                 || lightningCost <= 0
-                || (itemInputs.isEmpty() && fluidInput.isEmpty())
+                || (itemInputs.isEmpty() && fluidInput.isEmpty() && borrowedFluidInput == null)
                 || (itemResults.isEmpty() && fluidResult.isEmpty())
                 || itemInputs.stream().anyMatch(input -> input.ingredient().isEmpty());
     }
@@ -531,7 +560,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
                         LightningKey.Tier.CODEC.optionalFieldOf("lightningTier", DEFAULT_LIGHTNING_TIER)
                                 .forGetter(OverloadProcessingRecipe::lightningTier))
                 .apply(instance, (priority, inputs, inputFluid, results, resultFluid, energy, cost, tier) ->
-                        new OverloadProcessingRecipe(priority, inputs, inputFluid, results, resultFluid, energy, cost, tier, true)));
+                        new OverloadProcessingRecipe(priority, inputs, inputFluid, results, resultFluid, energy, cost, tier, null)));
 
         private static final StreamCodec<RegistryFriendlyByteBuf, OverloadProcessingRecipe> STREAM_CODEC =
                 new StreamCodec<>() {
@@ -546,7 +575,7 @@ public final class OverloadProcessingRecipe implements LegacyMachineRecipe<Overl
                                 ByteBufCodecs.VAR_LONG.decode(buffer),
                                 ByteBufCodecs.VAR_INT.decode(buffer),
                                 TIER_STREAM_CODEC.decode(buffer),
-                                true);
+                                null);
                     }
 
                     @Override

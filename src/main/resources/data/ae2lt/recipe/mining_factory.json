@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    "GMG",
+    "ICI"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:diamond_pickaxe",
+    "G": "ae2:quartz_glass",
+    "M": "ae2:engineering_processor",
+    "C": "ae2:annihilation_core"
+  },
+  "result": {
+    "id": "ae2lt:mining_factory",
+    "count": 1
+  }
+}

@@ -112,17 +112,16 @@ public final class AppGenProcessorGameTests {
 
     private static void assertReactionRecipe(GameTestHelper helper, String name) throws Exception {
         var level = helper.getLevel();
-        var id = Identifier.parse("ae2lt:overload_processing/appgen_" + name);
-        var holder = level.recipeAccess().byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, id));
-        if (!ModList.get().isLoaded("appgen")) {
-            check(holder.isEmpty(), name + " must be excluded without AppGen");
+        var id = Identifier.parse("appgen:reaction/" + name);
+        var holder = OverloadProcessingRecipeService.findRecipeById(level, id);
+        if (!ModList.get().isLoaded("appgen") || !ModList.get().isLoaded("advanced_ae")) {
+            helper.assertTrue(holder.isEmpty(), name + " must be excluded without AppGen");
             helper.succeed();
             return;
         }
-        check(holder.isPresent() && holder.get().value() instanceof OverloadProcessingRecipe,
-                name + " must load as an overload recipe");
-        var recipe = (OverloadProcessingRecipe) holder.orElseThrow().value();
-        // Compare against the actual optional mod's resource, independently of our converted JSON.
+        helper.assertTrue(holder.isPresent(), name + " must be borrowed from the reaction catalog");
+        var recipe = holder.orElseThrow().value();
+        // Compare against the optional mod's resource, independently of the execution view.
         var source = level.getServer().getResourceManager().getResourceOrThrow(
                 Identifier.parse("appgen:recipe/reaction/" + name + ".json"));
         try (var reader = source.openAsReader()) {
@@ -143,10 +142,11 @@ public final class AppGenProcessorGameTests {
             var fluid = new FluidStack(BuiltInRegistries.FLUID.getOptional(Identifier.parse(
                     upstreamFluid.get("ingredient").getAsString())).orElseThrow(),
                     upstreamFluid.get("amount").getAsInt());
-            check(FluidStack.matches(recipe.fluidInput(), fluid), "upstream lava amount retained");
+            helper.assertTrue(recipe.inputFluidAmount() == fluid.getAmount() && recipe.hasRequiredFluid(fluid, 1),
+                    "upstream lava amount retained");
             var output = upstream.getAsJsonObject("itemOutput");
             var result = item(output.get("id").getAsString()).copyWithCount(output.get("count").getAsInt());
-            check(recipe.itemResults().size() == 1
+            helper.assertTrue(recipe.itemResults().size() == 1
                             && ItemStack.matches(recipe.itemResults().getFirst(), result) && recipe.fluidResult().isEmpty(),
                     "upstream output and yield retained");
             check(recipe.totalEnergy() == upstream.get("input_energy").getAsLong()
@@ -164,17 +164,18 @@ public final class AppGenProcessorGameTests {
             check(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                     fluid.copyWithAmount(fluid.getAmount() - 1), FluidStack.EMPTY, 1, 0).isEmpty(),
                     "insufficient lava cannot start a reaction");
-            var input = OverloadProcessingRecipeInput.fromInventory(inventory, fluid);
             var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
             try {
-                var codec = OverloadProcessingRecipe.Serializer.INSTANCE.streamCodec();
-                codec.encode(buffer, recipe);
+                var sourceRecipe = (net.pedroksl.advanced_ae.recipes.ReactionChamberRecipe)
+                        level.recipeAccess().byKey(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, id)).orElseThrow().value();
+                var codec = sourceRecipe.getSerializer().streamCodec();
+                codec.encode(buffer, sourceRecipe);
                 var copy = codec.decode(buffer);
-                check(copy.matches(input, level) && FluidStack.matches(copy.fluidInput(), fluid)
-                                && ItemStack.matches(copy.itemResults().getFirst(), result)
-                                && copy.totalEnergy() == recipe.totalEnergy()
-                                && copy.lightningCost() == 1 && copy.lightningTier() == recipe.lightningTier(),
-                        "client synchronization retains ingredients, lava, yield, FE, and lightning");
+                helper.assertTrue(copy.getFluid().getIngredient().test(fluid)
+                                && copy.getFluid().getAmount() == fluid.getAmount()
+                                && ItemStack.matches(copy.getResultItem(), result)
+                                && copy.getEnergy() == recipe.totalEnergy(),
+                        "upstream client synchronization retains lava, yield and FE without an LT recipe copy");
             } finally {
                 buffer.release();
             }

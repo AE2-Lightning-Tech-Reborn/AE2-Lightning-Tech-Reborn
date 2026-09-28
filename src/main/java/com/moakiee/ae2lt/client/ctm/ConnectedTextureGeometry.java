@@ -8,6 +8,7 @@ import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.state.properties.SlabType;
 import net.neoforged.neoforge.client.model.block.CustomUnbakedBlockStateModel;
 import org.jspecify.annotations.Nullable;
 
@@ -20,7 +21,8 @@ public record ConnectedTextureGeometry(
         String renderType,
         boolean ambientOcclusion,
         boolean gui3d,
-        boolean usesBlockLight) implements CustomUnbakedBlockStateModel {
+        boolean usesBlockLight,
+        @Nullable SlabType slabType) implements CustomUnbakedBlockStateModel {
     public static final MapCodec<ConnectedTextureGeometry> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Identifier.CODEC.optionalFieldOf("connection", Identifier.fromNamespaceAndPath("ae2lt", "same_block"))
                     .forGetter(ConnectedTextureGeometry::connection),
@@ -32,10 +34,11 @@ public record ConnectedTextureGeometry(
             Codec.BOOL.optionalFieldOf("ambientocclusion", true)
                     .forGetter(ConnectedTextureGeometry::ambientOcclusion),
             Codec.BOOL.optionalFieldOf("gui3d", true).forGetter(ConnectedTextureGeometry::gui3d),
-            Codec.BOOL.optionalFieldOf("uses_block_light", true).forGetter(ConnectedTextureGeometry::usesBlockLight))
-            .apply(instance, (connection, base, ctm, overlay, renderType, ambientOcclusion, gui3d, usesBlockLight) ->
+            Codec.BOOL.optionalFieldOf("uses_block_light", true).forGetter(ConnectedTextureGeometry::usesBlockLight),
+            net.minecraft.util.StringRepresentable.fromEnum(SlabType::values).optionalFieldOf("slab_type").forGetter(model -> java.util.Optional.ofNullable(model.slabType())))
+            .apply(instance, (connection, base, ctm, overlay, renderType, ambientOcclusion, gui3d, usesBlockLight, slabType) ->
                     new ConnectedTextureGeometry(connection, base, ctm, overlay.orElse(null), renderType,
-                            ambientOcclusion, gui3d, usesBlockLight)));
+                            ambientOcclusion, gui3d, usesBlockLight, slabType.orElse(null))));
 
     @Override
     public void resolveDependencies(ResolvableModel.Resolver resolver) {
@@ -48,6 +51,10 @@ public record ConnectedTextureGeometry(
         var ctmMaterial = materials.get(new Material(ctm), () -> "ae2lt CTM sheet " + ctm);
         var overlayMaterial = overlay == null ? null
                 : materials.get(new Material(overlay), () -> "ae2lt CTM overlay " + overlay);
+        if (slabType != null) {
+            return new ConnectedSlabBakedModel(baseMaterial, ctmMaterial, overlayMaterial,
+                    renderType, ambientOcclusion, gui3d, usesBlockLight, slabType);
+        }
         return new ConnectedTextureBakedModel(baseMaterial, ctmMaterial, overlayMaterial,
                 ConnectionPredicates.get(connection), renderType, ambientOcclusion, gui3d, usesBlockLight);
     }

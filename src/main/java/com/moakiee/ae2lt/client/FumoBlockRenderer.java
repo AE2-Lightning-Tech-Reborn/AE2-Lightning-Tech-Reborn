@@ -28,6 +28,7 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
         BlockStateModel portalModel;
         BlockState renderedBlockState;
         boolean hyperdimensional;
+        boolean rainbow;
         float yRotation;
     }
 
@@ -43,16 +44,22 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
         BlockState original = blockEntity.getBlockState();
         boolean spinning = blockEntity.isSpinning();
         state.hyperdimensional = original.is(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
+        state.rainbow = original.is(ModFumos.RAINBOW_PIGMEE_FUMO.get());
         state.yRotation = spinning ? blockEntity.getRenderYRot(partialTick) : 0.0F;
         BlockState rendered = spinning && original.hasProperty(FumoBlock.FACING)
                 ? original.setValue(FumoBlock.FACING, Direction.NORTH) : original;
         state.renderedBlockState = rendered;
         var manager = Minecraft.getInstance().getModelManager();
         state.portalModel = manager.getBlockStateModelSet().get(rendered);
-        if (!state.hyperdimensional) {
+        if (!state.hyperdimensional && !state.rainbow) {
             state.model.clear();
             manager.getBlockModelSet().get(rendered).update(
                     state.model, rendered, BlockDisplayContext.create(), blockEntity.getBlockPos().asLong());
+            if (original.is(ModFumos.PIGMEE_FUMO.get())
+                    && com.moakiee.ae2lt.lightning.RainbowPigmeeTransformation.matchesName(blockEntity.getCustomName())) {
+                state.model.tintLayers().clear();
+                state.model.tintLayers().add(RainbowPigmeeColors.sheepColor());
+            }
         }
     }
 
@@ -64,9 +71,10 @@ public final class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEnt
             poseStack.mulPose(Axis.YP.rotationDegrees(state.yRotation));
             poseStack.translate(-0.5D, 0.0D, -0.5D);
         }
-        if (state.hyperdimensional) {
+        if (state.hyperdimensional || state.rainbow) {
             if (state.portalModel != null) {
-                HyperdimensionalPigmeePortalLayer.submit(state.portalModel, poseStack, collector);
+                if (state.rainbow) RainbowPigmeeSurfaceLayer.submit(state.portalModel, poseStack, collector);
+                else HyperdimensionalPigmeePortalLayer.submit(state.portalModel, poseStack, collector);
             }
             HyperdimensionalPigmeeTextureLayer.submitBlock(
                     state.renderedBlockState, poseStack, collector, OverlayTexture.NO_OVERLAY);

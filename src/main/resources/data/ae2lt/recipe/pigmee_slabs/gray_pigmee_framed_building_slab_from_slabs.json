@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "#ae2lt:pigmee_building_slabs",
+  "result": {
+    "id": "ae2lt:gray_pigmee_framed_building_slab",
+    "count": 1
+  }
+}

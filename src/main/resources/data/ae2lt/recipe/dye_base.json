@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:clay_ball",
+    "ae2:silicon"
+  ],
+  "result": {
+    "id": "ae2lt:dye_base",
+    "count": 4
+  }
+}
