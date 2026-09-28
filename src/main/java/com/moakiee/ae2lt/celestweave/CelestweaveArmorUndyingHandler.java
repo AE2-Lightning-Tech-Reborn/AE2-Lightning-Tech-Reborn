@@ -21,12 +21,10 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 import com.moakiee.ae2lt.celestweave.service.ArmorModuleLightningPolicy;
-import com.moakiee.ae2lt.celestweave.module.UndyingSubmodule;
+import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.module.MultidimensionalProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector;
-import com.moakiee.ae2lt.celestweave.service.ArmorEnergyService;
-import com.moakiee.ae2lt.celestweave.service.ArmorLightningService;
-import com.moakiee.ae2lt.celestweave.service.ArmorResourceFeedback;
+import com.moakiee.ae2lt.celestweave.service.ArmorShieldPayment;
 import com.moakiee.ae2lt.registry.ModDamageTypes;
 
 @EventBusSubscriber(modid = AE2LightningTech.MODID)
@@ -50,13 +48,11 @@ public final class CelestweaveArmorUndyingHandler {
                 || damage < player.getHealth() + player.getAbsorptionAmount()) {
             return;
         }
-        long now = player.level().getGameTime();
-        if (tryProtectWithinWindow(player, now)) {
-            event.setAmount(0.0F);
-            event.setCanceled(true);
-        } else if (tryTrigger(player, now)) {
-            event.setAmount(0.0F);
-            event.setCanceled(true);
+        // The old incoming last-stand shortcut must not price a huge hit as a flat revival.
+        // Both replacement tiers carry a shield; bill the actual hit through that path first.
+        // Direct death and post-mitigation fatal damage retain the last-stand hooks below.
+        if (hasActiveLastStand(player)) {
+            CelestweaveArmorDamageHandler.onShieldIncoming(event);
         }
     }
 
@@ -166,32 +162,20 @@ public final class CelestweaveArmorUndyingHandler {
                 return true;
             }
             int comboIndex = capComboIndexForWindow(
-                    ArmorOverloadCombo.nextComboIndex(active.armor(), UndyingSubmodule.INSTANCE, now),
+                    ArmorOverloadCombo.nextComboIndex(active.armor(), OverloadProtectionSubmodule.INSTANCE, now),
                     active.tuning().comboWindowTicks());
             long cost = ArmorOverloadCombo.scaledCost(active.tuning().feCost(), comboIndex);
             var lightningCost = ArmorModuleLightningPolicy
                     .triggeredCost(ArmorModuleLightningPolicy.Trigger.UNDYING)
                     .times(comboIndex);
-            if (!ArmorLightningService.hasCost(player, active.armor(), lightningCost)) {
-                ArmorResourceFeedback.noExtremeHighVoltage(player);
-                continue;
-            }
-            ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
-                    player,
-                    active.armor(),
-                    cost);
-            if (!payment.paid()) {
-                ArmorResourceFeedback.noFe(player);
-                continue;
-            }
-            if (!ArmorLightningService.consume(player, active.armor(), lightningCost)) {
-                payment.refund();
-                ArmorResourceFeedback.noExtremeHighVoltage(player);
+            var quote = ShieldChargeWindow.quoteLastStand(
+                    active.armor(), now, cost, lightningCost.extremeHighVoltage());
+            if (!ArmorShieldPayment.pay(player, active.armor(), quote)) {
                 continue;
             }
             ArmorOverloadCombo.recordTrigger(
                     active.armor(),
-                    UndyingSubmodule.INSTANCE,
+                    OverloadProtectionSubmodule.INSTANCE,
                     now,
                     Math.max(1, active.tuning().comboWindowTicks()),
                     comboIndex);

@@ -18,7 +18,7 @@ final class ArmorModuleTextureContractTest {
             "module_matrix_shield",
             "module_phase_shield",
             "module_reflect",
-            "module_undying",
+            "module_overload_protection",
             "module_dash",
             "module_creative_flight",
             "module_saturation",

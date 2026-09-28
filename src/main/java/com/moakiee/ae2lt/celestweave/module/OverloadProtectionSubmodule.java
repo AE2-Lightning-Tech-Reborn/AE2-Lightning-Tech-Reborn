@@ -1,22 +1,18 @@
 package com.moakiee.ae2lt.celestweave.module;
 
 import java.util.List;
-import java.util.Set;
-
 import org.jetbrains.annotations.Nullable;
-
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
-/** Free unlimited shielding and last-stand protection for the multidimensional tier. */
-public final class MultidimensionalProtectionSubmodule extends AbstractCelestweaveArmorSubmodule {
-    public static final MultidimensionalProtectionSubmodule INSTANCE =
-            new MultidimensionalProtectionSubmodule();
-    public static final String ID = "multidimensional_protection";
+public final class OverloadProtectionSubmodule extends AbstractCelestweaveArmorSubmodule {
 
-    private MultidimensionalProtectionSubmodule() {
+    public static final String ID = "overload_protection";
+    public static final OverloadProtectionSubmodule INSTANCE = new OverloadProtectionSubmodule();
+
+    private OverloadProtectionSubmodule() {
     }
 
     @Override
@@ -26,12 +22,12 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
 
     @Override
     public String nameKey() {
-        return "ae2lt.celestweave.feature.multidimensional_protection.name";
+        return "ae2lt.celestweave.feature.overload_protection.name";
     }
 
     @Override
     public String descriptionKey() {
-        return "ae2lt.celestweave.feature.multidimensional_protection.desc";
+        return "ae2lt.celestweave.feature.overload_protection.desc";
     }
 
     @Override
@@ -45,8 +41,8 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
     }
 
     @Override
-    public Set<String> installGroupIds() {
-        return Set.of(ResistanceSubmodule.INSTALL_GROUP);
+    public String installGroupId() {
+        return ResistanceSubmodule.INSTALL_GROUP;
     }
 
     @Override
@@ -54,9 +50,7 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
         return List.of(config(
                 ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY,
                 Component.translatable("ae2lt.celestweave.config.hit_feedback"),
-                ByteTag.valueOf(isHitFeedbackEnabled(armor)),
-                booleanChoices(),
-                null));
+                ByteTag.valueOf(isHitFeedbackEnabled(armor)), booleanChoices(), null));
     }
 
     @Override
@@ -65,18 +59,15 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
             return false;
         }
         var options = getOptions(armor);
-        options.put(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, value instanceof ByteTag byteTag
-                ? byteTag
-                : ByteTag.valueOf(true));
+        options.put(key, value instanceof ByteTag byteTag ? byteTag : ByteTag.valueOf(true));
         setOptions(armor, options);
         return true;
     }
 
     public static boolean isHitFeedbackEnabled(ItemStack armor) {
         var options = INSTANCE.getOptions(armor);
-        if (!options.contains(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)) {
-            return true;
-        }
-        return options.getBoolean(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY);
+        return !options.contains(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY, Tag.TAG_BYTE)
+                || options.getBoolean(ResistanceSubmodule.HIT_FEEDBACK_CONFIG_KEY);
     }
+
 }

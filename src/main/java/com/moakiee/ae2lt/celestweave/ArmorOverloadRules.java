@@ -6,6 +6,8 @@ public final class ArmorOverloadRules {
     public static final long RESISTANCE_PASSIVE_DRAIN_FE = 1_000L;
     public static final long MATRIX_SHIELD_ACTIVE_COST_FE_PER_DAMAGE = 5_000L;
     public static final long PHASE_SHIELD_ACTIVE_COST_FE_PER_DAMAGE = 20_000L;
+    public static final float PHASE_SHIELD_MAX_DAMAGE = 1_024.0F;
+    public static final long PHASE_SHIELD_COST_EHV_PER_DAMAGE = 2L;
     public static final long REFLECT_PASSIVE_DRAIN_FE = 0L;
     public static final long REFLECT_ACTIVE_COST_FE_PER_DAMAGE = 5_000L;
     public static final long DASH_PASSIVE_DRAIN_FE = 0L;

@@ -10,15 +10,15 @@ import org.junit.jupiter.api.Test;
 
 import com.moakiee.ae2lt.celestweave.module.MultidimensionalProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
-import com.moakiee.ae2lt.celestweave.module.UndyingSubmodule;
+import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
 
 final class MultidimensionalProtectionContractTest {
     @Test
-    void occupiesBothShieldAndUndyingInstallGroups() {
+    void sharesTheMitigationInstallGroupWithOtherShields() {
         var groups = MultidimensionalProtectionSubmodule.INSTANCE.installGroupIds();
 
         assertTrue(groups.contains(ResistanceSubmodule.INSTALL_GROUP));
-        assertTrue(groups.contains(UndyingSubmodule.INSTANCE.installGroupId()));
+        assertTrue(groups.contains(OverloadProtectionSubmodule.INSTANCE.installGroupId()));
     }
 
     @Test
@@ -52,7 +52,7 @@ final class MultidimensionalProtectionContractTest {
         int undyingFree = undying.indexOf(
                 "if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId()))");
         int ordinaryBranch = undying.indexOf("int comboIndex =", undyingFree);
-        int undyingPayment = undying.indexOf("ArmorEnergyService.consumeActiveCostPayment(", undyingFree);
+        int undyingPayment = undying.indexOf("ArmorShieldPayment.pay(", undyingFree);
         assertTrue(undyingFree >= 0 && undyingFree < ordinaryBranch);
         assertTrue(ordinaryBranch < undyingPayment);
         String freeBranch = undying.substring(undyingFree, ordinaryBranch);

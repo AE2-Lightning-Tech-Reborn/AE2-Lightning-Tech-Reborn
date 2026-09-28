@@ -6,16 +6,17 @@ import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 import com.moakiee.ae2lt.celestweave.ArmorOverloadRules;
 import com.moakiee.ae2lt.celestweave.ArmorPart;
-import com.moakiee.ae2lt.celestweave.module.UndyingSubmodule;
+import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
 
-public final class UndyingSubmoduleItem extends AbstractSingleArmorSubmoduleItem {
+public final class OverloadProtectionSubmoduleItem extends AbstractSingleArmorSubmoduleItem {
 
-    public UndyingSubmoduleItem(Properties properties) {
+    public OverloadProtectionSubmoduleItem(Properties properties) {
         super(
                 properties,
                 ArmorPart.CHEST,
-                UndyingSubmodule.INSTANCE,
+                OverloadProtectionSubmodule.INSTANCE,
                 stack -> List.of(
+                        new DeviceCapability.StagedMitigation(OverloadProtectionSubmodule.ID),
                         new DeviceCapability.LastStandTuning(
                                 ArmorOverloadRules.UNDYING_TRIGGER_COST_FE,
                                 AE2LTCommonConfig.overloadArmorUndyingComboWindowTicks()),

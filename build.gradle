@@ -215,6 +215,12 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        protectionGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-protection-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         crystalCatalyzerGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-crystal-catalyzer-gametest')
@@ -338,6 +344,9 @@ if (providers.gradleProperty('ae2ltCellWorkbenchGameTestsOnly').getOrElse('false
 }
 if (providers.gradleProperty('ae2ltPhaseLockGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/PhaseLockCreativeRecoveryGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltProtectionGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/ArmorProtectionGameTests.java'])
 }
 if (providers.gradleProperty('ae2ltRecipeSyncGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/OverloadProcessingRecipeSyncGameTests.java',
