@@ -19,7 +19,7 @@ import com.moakiee.ae2lt.registry.ModItems;
  * <p>Slot layout:
  * 0 = catalyst (256) —— parallel = amount / catalystCount
  * 1 = lightning collapse matrix (1)
- * 2 = output (1024, machine-write only)</p>
+ * 2 = output (8192, machine-write only)</p>
  */
 public class CrystalCatalyzerInventory extends LargeStackItemHandler {
     public static final int SLOT_CATALYST = 0;
@@ -30,7 +30,7 @@ public class CrystalCatalyzerInventory extends LargeStackItemHandler {
     public static final int CATALYST_SLOT_LIMIT = 256;
     /** Pigmee catalyzer requires one full stack of reusable catalysts. */
     public static final int PIGMEE_CATALYST_SLOT_LIMIT = 64;
-    public static final int OUTPUT_SLOT_LIMIT = 1024;
+    public static final int OUTPUT_SLOT_LIMIT = 8192;
     public static final int MATRIX_SLOT_LIMIT = 1;
 
     @Nullable
