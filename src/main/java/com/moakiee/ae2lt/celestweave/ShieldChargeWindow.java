@@ -7,7 +7,7 @@ import com.moakiee.ae2lt.celestweave.module.CelestweaveArmorSubmodule;
 import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
 
-/** Shared high-water billing in fixed 20-tick windows; overload raises its caps per trigger. */
+/** Shared high-water billing in fixed 20-tick windows; only last stand advances the overload combo. */
 public final class ShieldChargeWindow {
     public static final int WINDOW_TICKS = 20;
     public static final long OVERLOAD_MAX_FE = 20_000_000_000L;
@@ -16,7 +16,8 @@ public final class ShieldChargeWindow {
     private static final String TAG_UNTIL = "ProtectionChargeUntil";
     private static final String TAG_FE = "ProtectionChargeFe";
     private static final String TAG_EHV = "ProtectionChargeEhv";
-    private static final String TAG_COMBO = "ProtectionChargeCombo";
+    // The previous counter included damage hits; never inherit that as death history.
+    private static final String TAG_COMBO = "ProtectionDeathCombo";
     private static final String TAG_PEAK_FE = "ProtectionPeakFe";
     private static final String TAG_PEAK_EHV = "ProtectionPeakEhv";
 
@@ -60,7 +61,7 @@ public final class ShieldChargeWindow {
                 : Math.min(profile.maxDamage, Math.max(0D, preventedDamage));
         return quoteCosts(state, profile, gameTime,
                 totalCost(damage, ArmorOverloadRules.PHASE_SHIELD_ACTIVE_COST_FE_PER_DAMAGE, profile.maxFe),
-                totalCost(damage, ArmorOverloadRules.PHASE_SHIELD_COST_EHV_PER_DAMAGE, profile.maxEhv));
+                totalCost(damage, ArmorOverloadRules.PHASE_SHIELD_COST_EHV_PER_DAMAGE, profile.maxEhv), false);
     }
 
     public static Quote quoteLastStand(ItemStack armor, long gameTime) {
@@ -69,10 +70,11 @@ public final class ShieldChargeWindow {
 
     static Quote quoteLastStand(State state, long gameTime) {
         // A direct death fills the current combo tier, sharing earlier shielding credit.
-        return quoteCosts(state, Profile.OVERLOAD, gameTime, OVERLOAD_MAX_FE, OVERLOAD_MAX_EHV);
+        return quoteCosts(state, Profile.OVERLOAD, gameTime, OVERLOAD_MAX_FE, OVERLOAD_MAX_EHV, true);
     }
 
-    private static Quote quoteCosts(State state, Profile profile, long gameTime, long feCost, long ehvCost) {
+    private static Quote quoteCosts(State state, Profile profile, long gameTime, long feCost, long ehvCost,
+            boolean lastStand) {
         State safe = state == null ? State.EMPTY : state;
         boolean active = safe.windowUntil() > gameTime;
         long previousFe = active ? Math.min(profile.maxFe, safe.paidFe()) : 0L;
@@ -80,11 +82,13 @@ public final class ShieldChargeWindow {
         long peakFe = Math.min(profile.maxFe, Math.max(active ? safe.peakFe() : 0L, feCost));
         long peakEhv = Math.min(profile.maxEhv, Math.max(active ? safe.peakEhv() : 0L, ehvCost));
         int combo = profile == Profile.OVERLOAD
-                ? Math.min(MAX_COMBO, (active ? safe.combo() : 0) + 1) : 0;
+                ? Math.min(MAX_COMBO, (active ? safe.combo() : 0) + (lastStand ? 1 : 0)) : 0;
+        // Damage always stays at tier one, including after a higher-tier death payment.
+        int chargedTier = lastStand ? combo : 1;
         long feCap = profile == Profile.OVERLOAD
-                ? Math.min(profile.maxFe, ArmorOverloadRules.UNDYING_TRIGGER_COST_FE * combo) : profile.maxFe;
+                ? Math.min(profile.maxFe, ArmorOverloadRules.UNDYING_TRIGGER_COST_FE * chargedTier) : profile.maxFe;
         long ehvCap = profile == Profile.OVERLOAD
-                ? Math.min(profile.maxEhv, ArmorOverloadRules.UNDYING_TRIGGER_COST_EHV * combo) : profile.maxEhv;
+                ? Math.min(profile.maxEhv, ArmorOverloadRules.UNDYING_TRIGGER_COST_EHV * chargedTier) : profile.maxEhv;
         long nextFe = Math.max(previousFe, Math.min(feCap, peakFe));
         long nextEhv = Math.max(previousEhv, Math.min(ehvCap, peakEhv));
         long until = active ? safe.windowUntil() : windowEnd(gameTime);

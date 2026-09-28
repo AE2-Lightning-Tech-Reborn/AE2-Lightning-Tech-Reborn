@@ -33,17 +33,36 @@ class ShieldChargeWindowTest {
     }
 
     @Test
-    void overloadRaisesCapsPerTriggerAndKeepsTheHighestHit() {
+    void overloadDamageAlwaysStopsAtTierOneAndDoesNotAdvanceDeathCombo() {
         var state = ShieldChargeWindow.State.EMPTY;
-        for (int combo = 1; combo <= 20; combo++) {
-            // Only the first hit is huge: later low hits still advance the cap for that peak.
-            var quote = ShieldChargeWindow.quote(state, OVERLOAD, 100L, combo == 1 ? Float.MAX_VALUE : 1D);
-            long fe = Math.min(20_000_000_000L, 2_000_000_000L * combo);
-            long ehv = Math.min(16_384L, 1024L * combo);
-            assertEquals(fe - state.paidFe(), quote.feCost());
-            assertEquals(ehv - state.paidEhv(), quote.ehvCost());
+        for (int hit = 1; hit <= 100; hit++) {
+            var quote = ShieldChargeWindow.quote(state, OVERLOAD, 100L, Float.MAX_VALUE);
+            assertEquals(hit == 1 ? 2_000_000_000L : 0L, quote.feCost());
+            assertEquals(hit == 1 ? 1024L : 0L, quote.ehvCost());
+            assertEquals(0, quote.nextState().combo());
             assertEquals(120L, quote.nextState().windowUntil());
             state = quote.nextState();
+        }
+        var firstDeath = ShieldChargeWindow.quoteLastStand(state, 119L);
+        assertEquals(1, firstDeath.nextState().combo());
+        assertEquals(0L, firstDeath.feCost());
+        assertEquals(0L, firstDeath.ehvCost());
+    }
+
+    @Test
+    void onlyDeathRaisesCapsAndInterveningDamageNeverAddsCharges() {
+        var state = ShieldChargeWindow.State.EMPTY;
+        for (int death = 1; death <= 20; death++) {
+            var quote = ShieldChargeWindow.quoteLastStand(state, 100L);
+            long fe = Math.min(20_000_000_000L, 2_000_000_000L * death);
+            long ehv = Math.min(16_384L, 1024L * death);
+            assertEquals(fe - state.paidFe(), quote.feCost());
+            assertEquals(ehv - state.paidEhv(), quote.ehvCost());
+            var damage = ShieldChargeWindow.quote(quote.nextState(), OVERLOAD, 100L, Float.MAX_VALUE);
+            assertEquals(0L, damage.feCost());
+            assertEquals(0L, damage.ehvCost());
+            assertEquals(quote.nextState().combo(), damage.nextState().combo());
+            state = damage.nextState();
         }
     }
 
@@ -55,7 +74,7 @@ class ShieldChargeWindowTest {
         var second = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 110L, 5D);
         assertEquals(0L, second.feCost());
         assertEquals(0L, second.ehvCost());
-        assertEquals(2, second.nextState().combo());
+        assertEquals(0, second.nextState().combo());
     }
 
     @Test
@@ -75,15 +94,21 @@ class ShieldChargeWindowTest {
     }
 
     @Test
-    void shieldAndDeathShareComboAndOnlyTopUpPaidResources() {
+    void shieldAndDeathSharePaidResourcesButOnlyDeathAdvancesItsTier() {
         var shield = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, 100L, 400D);
         var death = ShieldChargeWindow.quoteLastStand(shield.nextState(), 119L);
-        assertEquals(3_992_000_000L, death.feCost());
-        assertEquals(1_248L, death.ehvCost());
+        assertEquals(1_992_000_000L, death.feCost());
+        assertEquals(224L, death.ehvCost());
+        assertEquals(1, death.nextState().combo());
         assertEquals(120L, death.nextState().windowUntil());
-        var third = ShieldChargeWindow.quote(death.nextState(), OVERLOAD, 119L, 1D);
-        assertEquals(2_000_000_000L, third.feCost());
-        assertEquals(1024L, third.ehvCost());
+        var damage = ShieldChargeWindow.quote(death.nextState(), OVERLOAD, 119L, Float.MAX_VALUE);
+        assertEquals(0L, damage.feCost());
+        assertEquals(0L, damage.ehvCost());
+        assertEquals(1, damage.nextState().combo());
+        var secondDeath = ShieldChargeWindow.quoteLastStand(damage.nextState(), 119L);
+        assertEquals(2_000_000_000L, secondDeath.feCost());
+        assertEquals(1024L, secondDeath.ehvCost());
+        assertEquals(2, secondDeath.nextState().combo());
     }
 
     @Test
@@ -92,7 +117,7 @@ class ShieldChargeWindowTest {
         var next = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 120L, 1D);
         assertEquals(20_000L, next.feCost());
         assertEquals(2L, next.ehvCost());
-        assertEquals(1, next.nextState().combo());
+        assertEquals(0, next.nextState().combo());
         assertEquals(140L, next.nextState().windowUntil());
     }
 
