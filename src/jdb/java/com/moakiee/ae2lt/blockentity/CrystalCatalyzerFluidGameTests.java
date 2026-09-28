@@ -417,6 +417,11 @@ public final class CrystalCatalyzerFluidGameTests {
         if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe().value();
         var host = machine(h, true);
+        check(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output cap must be 64");
+        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(57));
+        check(!host.getInventory().canAcceptRecipeOutput(recipe.getOutputTemplate()),
+                "eight-item mother rock output fit into only seven free spaces");
+        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(56));
         var catalyst = recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(64);
         host.getInventory().setItemDirect(CATALYST, catalyst);
         host.getTank().setFluid(recipe.fluidInput());
@@ -431,8 +436,8 @@ public final class CrystalCatalyzerFluidGameTests {
         });
         h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
-            check(result.getCount() == 8 && ItemStack.isSameItemSameComponents(result, recipe.getOutputTemplate()),
-                    "waiting for eight purified crystals");
+            check(result.getCount() == 64 && ItemStack.isSameItemSameComponents(result, recipe.getOutputTemplate()),
+                    "waiting for eight purified crystals to fill the 64-item output");
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0,
                     "Pigmee must consume only one bucket of water");
             var remaining = host.getInventory().getStackInSlot(CATALYST);

@@ -27,7 +27,7 @@ Both machines share the recipe set, but Pigmee only accepts water recipes. Speci
 |------|----------|-------|
 | Catalyst slot | 256 (normal) / 64 (Pigmee) | Holds the item required by the current mode; the item is **not consumed** during processing |
 | Matrix slot | 1 | Optional Lightning Collapse Matrix for a yield bonus |
-| Output slot | 16,384 | Processed output; written by the machine only, no external input accepted |
+| Output slot | 16,384 normal / 64 Pigmee | Processed output; written by the machine only, no external input accepted |
 | Fluid slot | 16,000 mB | Accepts the recipe fluid through pipes or containers; built-in recipes consume 1,000 mB per cycle |
 | FE Buffer | 1,000,000 FE | Built-in energy buffer |
 
@@ -66,7 +66,7 @@ These recipes load only with their corresponding mod. Pigmee cannot run them; Fl
 
 With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.
 
-The mother rock is retained as the catalyst. Products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE. Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with a base output of eight items and the usual parallel and matrix bonuses. With a matrix, 256 mother rocks produce 16,384 crystals per second. The output slot holds 16,384 items.
+The mother rock is retained as the catalyst. Products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE. Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with a base output of eight items and the usual parallel and matrix bonuses. With a matrix, 256 mother rocks produce 16,384 crystals per second. The normal variant's output slot holds 16,384 items.
 
 Pigmee also accepts these water recipes: 64 matching mother rocks produce eight crystals every 5 seconds for 1 B water, without consuming the rocks. These recipes do not load when AE2CS is absent or its installed version has no mother rocks.
 

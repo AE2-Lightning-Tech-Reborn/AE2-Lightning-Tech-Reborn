@@ -216,24 +216,35 @@ public final class PigmeeCrystalCatalyzerGameTests {
     @GameTest(template = "pigmee_station_empty", timeoutTicks = 900)
     public static void pigmeeOutputBackpressurePausesAndResumes(GameTestHelper helper) {
         var host = machine(helper);
+        require(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output must hold only 64 items");
         int[] pausedAt = {-1};
         helper.runAfterDelay(20, () -> supply(host, 64, 1000));
         helper.runAfterDelay(60, () -> {
             require(host.getProcessingTicksSpent() > 0 && output(host) == 0, "fixture never started");
             pausedAt[0] = host.getProcessingTicksSpent();
-            host.getInventory().setItemDirect(OUTPUT, AEItems.CERTUS_QUARTZ_CRYSTAL.stack(CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT));
+            // Older saves may exceed the new cap. Keep their contents available for extraction.
+            host.getInventory().setItemDirect(OUTPUT, AEItems.CERTUS_QUARTZ_CRYSTAL.stack(128));
+            var saved = new CompoundTag();
+            host.saveAdditional(saved, helper.getLevel().registryAccess());
+            host.clearContent();
+            host.loadTag(saved, helper.getLevel().registryAccess());
+            require(output(host) == 128, "lower output cap deleted legacy saved items");
+            require(!host.getInventory().canAcceptRecipeOutput(AEItems.CERTUS_QUARTZ_CRYSTAL.stack()),
+                    "legacy over-cap output accepted more items");
+            require(host.getAutomationInventory().extractItem(OUTPUT, 64, false).getCount() == 64,
+                    "legacy output could not be extracted down to the new cap");
         });
         helper.runAfterDelay(450, () -> {
             require(host.getProcessingTicksSpent() == pausedAt[0], "full output failed to pause progress");
-            require(host.getFluid().getAmount() == 1000 && output(host) == CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT, "blocked cycle spent resources");
+            require(host.getFluid().getAmount() == 1000 && output(host) == 64, "blocked cycle spent resources");
             var items = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, helper.absolutePos(POS), Direction.UP);
             require(items != null && items.extractItem(OUTPUT, 1, true).getCount() == 1,
                     "output simulation did not expose retained products");
-            require(output(host) == CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT, "simulated extraction changed ownership");
+            require(output(host) == 64, "simulated extraction changed ownership");
             require(items.extractItem(OUTPUT, 1, false).getCount() == 1, "output pipe extraction lost products");
         });
         helper.onEachTick(() -> {
-            if (helper.getTick() > 450 && output(host) == CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT) {
+            if (helper.getTick() > 450 && output(host) == 64) {
                 require(helper.getTick() >= 450 + 100 - pausedAt[0] - 1, "paused time accelerated the recipe");
                 require(host.getFluid().isEmpty() && host.getInventory().getStackInSlot(CATALYST).getCount() == 64,
                         "resumed cycle resource accounting failed");
