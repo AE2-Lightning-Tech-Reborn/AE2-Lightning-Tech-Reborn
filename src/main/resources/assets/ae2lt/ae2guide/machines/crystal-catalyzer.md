@@ -27,7 +27,7 @@ Both machines share the recipe set, but Pigmee only accepts water recipes. Speci
 |------|----------|-------|
 | Catalyst slot | 256 (normal) / 64 (Pigmee) | Holds the item required by the current mode; the item is **not consumed** during processing |
 | Matrix slot | 1 | Optional Lightning Collapse Matrix for a yield bonus |
-| Output slot | 8,192 | Processed output; written by the machine only, no external input accepted |
+| Output slot | 16,384 | Processed output; written by the machine only, no external input accepted |
 | Fluid slot | 16,000 mB | Accepts the recipe fluid through pipes or containers; built-in recipes consume 1,000 mB per cycle |
 | FE Buffer | 1,000,000 FE | Built-in energy buffer |
 
@@ -66,7 +66,7 @@ These recipes load only with their corresponding mod. Pigmee cannot run them; Fl
 
 With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.
 
-The mother rock is retained as the catalyst. Products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE. Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with a base output of eight items and the usual parallel and matrix bonuses. With a matrix, 256 mother rocks produce 8,192 crystals per second. The output slot holds 8,192 items.
+The mother rock is retained as the catalyst. Products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE. Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with a base output of eight items and the usual parallel and matrix bonuses. With a matrix, 256 mother rocks produce 16,384 crystals per second. The output slot holds 16,384 items.
 
 Pigmee also accepts these water recipes: 64 matching mother rocks produce eight crystals every 5 seconds for 1 B water, without consuming the rocks. These recipes do not load when AE2CS is absent or its installed version has no mother rocks.
 
@@ -78,7 +78,7 @@ If the network does not have enough lightning when the operation is ready to com
 
 ## Parallel Output and Fluid
 
-Each built-in recipe consumes **1,000 mB of its specified fluid per cycle**. Parallel output and the matrix bonus do not increase this cost. With 256 catalysts and a matrix, a base-output-one recipe produces 1,024 items for the same bucket of fluid.
+Each built-in recipe consumes **1,000 mB of its specified fluid per cycle**. Parallel output and the matrix bonus do not increase this cost. With 256 catalysts and a matrix, a base-output-one recipe produces 2,048 items for the same bucket of fluid.
 
 For the normal machine, parallel count is slot amount / recipe required amount. Recipes with a base output of one item require 1 matching block each, so inserting 64 valid blocks makes the machine calculate 64 parallel outputs per operation. The Pigmee variant requires exactly one full stack (64 blocks) and produces only the recipe base output, without scaling by catalyst count.
 
@@ -88,7 +88,7 @@ The parallel count is locked when processing starts. Adding or removing items fr
 
 <ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
 
-With a **Lightning Collapse Matrix** installed in the matrix slot, the normal Crystal Catalyzer's per-operation output is increased to **4×**. The matrix is not consumed during processing. The Pigmee variant has no matrix slot effect and always produces only the recipe base output.
+With a **Lightning Collapse Matrix** installed in the matrix slot, the normal Crystal Catalyzer's per-operation output is increased to **8×**. The matrix is not consumed during processing. The Pigmee variant has no matrix slot effect and always produces only the recipe base output.
 
 Final output = base output × parallel count × matrix multiplier.
 

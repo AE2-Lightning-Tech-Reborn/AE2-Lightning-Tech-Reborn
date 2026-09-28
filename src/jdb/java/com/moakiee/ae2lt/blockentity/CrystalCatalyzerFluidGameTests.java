@@ -178,7 +178,7 @@ public final class CrystalCatalyzerFluidGameTests {
     }
 
     private static void fullCycle(GameTestHelper h, String path) {
-        fullCycle(h, path, 1024);
+        fullCycle(h, path, 2048);
     }
 
     private static void fullCycle(GameTestHelper h, String path, int expectedCount) {
@@ -194,17 +194,36 @@ public final class CrystalCatalyzerFluidGameTests {
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0 && lightning(host) == 9,
                     "one cycle must cost exactly 1 B, 100000 FE and one lightning");
             check(host.getInventory().getStackInSlot(CATALYST).getCount() == 256, "catalysts were consumed");
+            if (expectedCount == 16384) {
+                check(host.getInventory().getSlotLimit(OUTPUT) == 16384, "full batch exceeds output capacity");
+                check(host.getInventory().insertRecipeOutput(recipe.getOutputTemplate().copyWithCount(1), false)
+                                .getCount() == 1,
+                        "full output accepted an extra item");
+                var saved = new CompoundTag();
+                host.saveAdditional(saved, h.getLevel().registryAccess());
+                host.clearContent();
+                host.loadTag(saved, h.getLevel().registryAccess());
+                check(host.getInventory().getStackInSlot(OUTPUT).getCount() == 16384,
+                        "saving the full output truncated its count");
+                var automation = host.getAutomationInventory();
+                check(automation.extractItem(OUTPUT, 64, true).getCount() == 64
+                                && host.getInventory().getStackInSlot(OUTPUT).getCount() == 16384,
+                        "simulated extraction changed the full output");
+                check(automation.extractItem(OUTPUT, 64, false).getCount() == 64
+                                && host.getInventory().getStackInSlot(OUTPUT).getCount() == 16320,
+                        "automation extraction lost output items");
+            }
         });
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void legacyWater1024(GameTestHelper h) { fullCycle(h, WATER); }
+    public static void legacyWater2048(GameTestHelper h) { fullCycle(h, WATER); }
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void fluxite1024(GameTestHelper h) { fullCycle(h, "fluxite_block"); }
+    public static void fluxite2048(GameTestHelper h) { fullCycle(h, "fluxite_block"); }
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void uranium1024(GameTestHelper h) { fullCycle(h, "uranium_crystal"); }
+    public static void uranium2048(GameTestHelper h) { fullCycle(h, "uranium_crystal"); }
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void timeCrystal1024(GameTestHelper h) { fullCycle(h, "time_crystal_block"); }
+    public static void timeCrystal2048(GameTestHelper h) { fullCycle(h, "time_crystal_block"); }
 
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void savedCycleWaitsForFluidAndOutput(GameTestHelper h) {
@@ -236,7 +255,7 @@ public final class CrystalCatalyzerFluidGameTests {
             host.getInventory().extractItem(OUTPUT, CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT, false);
         });
         h.succeedWhen(() -> {
-            check(h.getTick() > 100 && host.getInventory().getStackInSlot(OUTPUT).getCount() == 1024, "waiting for recovery");
+            check(h.getTick() > 100 && host.getInventory().getStackInSlot(OUTPUT).getCount() == 2048, "waiting for recovery");
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0 && lightning(host) == 9,
                     "recovered cycle did not settle once");
         });
@@ -367,8 +386,8 @@ public final class CrystalCatalyzerFluidGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void ae2csMotherRock8192(GameTestHelper h) {
-        fullCycle(h, "ae2cs/quantum_mother_rock", 8192);
+    public static void ae2csMotherRock16384(GameTestHelper h) {
+        fullCycle(h, "ae2cs/quantum_mother_rock", 16384);
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)

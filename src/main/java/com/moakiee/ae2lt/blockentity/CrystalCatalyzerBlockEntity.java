@@ -90,7 +90,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     public static final int ENERGY_CAPACITY = 1_000_000;
     public static final int FLUID_TANK_CAPACITY_MB = 16_000;
-    public static final int MATRIX_OUTPUT_MULTIPLIER = 4;
+    public static final int MATRIX_OUTPUT_MULTIPLIER = 8;
     /** Legacy default; explicit recipe fluids are also consumed once per cycle. */
     public static final int FIXED_FLUID_PER_CYCLE_MB = CrystalCatalyzerRecipe.DEFAULT_FLUID_PER_CYCLE_MB;
 
