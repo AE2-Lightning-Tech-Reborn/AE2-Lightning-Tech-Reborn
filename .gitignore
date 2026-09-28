@@ -17,6 +17,7 @@ docs/
 !docs/
 docs/*
 !docs/wireless-io-alpha3-test-port.md
+!docs/tianshu-deferred-matrix-returns.md
 
 # Bundled source mirrors / references
 Source Code/
@@ -62,3 +63,4 @@ DevLog/
 .codex-tmp/
 .eclipse/
 CLAUDE.local.md
+/run-deferred-returns-gametest/
