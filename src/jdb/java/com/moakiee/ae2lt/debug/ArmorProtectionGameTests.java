@@ -132,31 +132,39 @@ public final class ArmorProtectionGameTests {
     }
 
     @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
-    public static void overloadCapsHugeDamageAndSharesDeathCredit(GameTestHelper h) {
+    public static void overloadCombosCapAndDeduplicateDamageCallbacks(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
         var player = equip(h, armor);
         network(h, armor, 16_384);
         h.runAtTickTime(40, () -> {
-            // A bypass-armor fatal hit also exercises the former early undying shortcut.
-            require(ehv(player, armor) == 16_384, "overload fixture missing EHV");
-            require(ArmorEnergyBuffer.read(armor) == CAP, "overload fixture missing FE");
             var event = hit(player, Float.MAX_VALUE, true);
-            require(event.isCanceled() && event.getAmount() == 0, "overload did not zero the huge hit: canceled=" + event.isCanceled() + " amount=" + event.getAmount() + " capabilities=" + ArmorCapabilityCollector.collectPerInstalledUnit(player));
+            require(event.isCanceled() && event.getAmount() == 0, "overload did not zero a huge hit");
+            require(ArmorEnergyBuffer.read(armor) == CAP - 2_000_000_000L && ehv(player, armor) == 15_360,
+                    "first huge hit did not use the initial tier cap");
+            // Reopening/reposting the same attack and reaching Pre must not create another combo.
+            event.setAmount(Float.MAX_VALUE);
             event.setCanceled(false);
-            require(event.getAmount() == 0, "uncancel should not undo overload's numeric defense");
-            require(ArmorEnergyBuffer.read(armor) == 0 && ehv(player, armor) == 0,
-                    "overload did not stop at exactly 20 GFE and 16384 EHV");
+            NeoForge.EVENT_BUS.post(event);
+            event.setAmount(Float.MAX_VALUE);
+            NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Pre(
+                    player, event.getContainer()));
+            require(ArmorEnergyBuffer.read(armor) == CAP - 2_000_000_000L && ehv(player, armor) == 15_360,
+                    "same damage callbacks charged more than once");
+            for (int combo = 2; combo <= 16; combo++) {
+                require(hit(player, 1, false).isCanceled(), "independent combo hit failed");
+                require(ArmorEnergyBuffer.read(armor) == CAP - Math.min(CAP, 2_000_000_000L * combo)
+                                && ehv(player, armor) == 16_384 - 1024L * combo,
+                        "wrong shared high-water fee at combo " + combo);
+            }
             ArmorNetworkBinding.INSTANCE.unbind(armor);
         });
         h.runAtTickTime(41, () -> {
             ArmorTickService.tickEquipped(player, armor, true, h.getLevel().registryAccess(), Dist.DEDICATED_SERVER);
-            var again = hit(player, Float.MAX_VALUE, false);
-            require(again.isCanceled() && again.getAmount() == 0, "paid window failed after resource depletion");
-            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "death did not reuse shield credit");
-            require(ArmorEnergyBuffer.read(armor) == 0, "paid window charged again");
+            require(hit(player, Float.MAX_VALUE, false).isCanceled(), "paid cap failed after depletion");
+            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "death did not reuse capped credit");
             CelestweaveArmorState.setSubmoduleEnabled(armor, OverloadProtectionSubmodule.INSTANCE, false);
             ArmorTickService.tickEquipped(player, armor, true, h.getLevel().registryAccess(), Dist.DEDICATED_SERVER);
-            require(!hit(player, 1, false).isCanceled(), "paid credit ignored the disabled toggle");
+            require(!hit(player, 1, false).isCanceled(), "paid credit ignored disabled toggle");
             CelestweaveArmorState.setSubmoduleEnabled(armor, OverloadProtectionSubmodule.INSTANCE, true);
         });
         h.runAtTickTime(60, () -> {
@@ -167,20 +175,70 @@ public final class ArmorProtectionGameTests {
     }
 
     @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
-    public static void deathThenShieldOnlyPaysResourceDifferences(GameTestHelper h) {
+    public static void directDeathCombosPayDifferencesAndResetAtTwentyTicks(GameTestHelper h) {
+        var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
+        var player = equip(h, armor);
+        network(h, armor, 16_384);
+        for (int i = 0; i < 16; i++) {
+            int combo = i + 1;
+            h.runAtTickTime(40 + i, () -> {
+                ArmorCapabilityCollector.clearCache(player);
+                require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "death combo failed " + combo);
+                require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "same-tick death reentry failed");
+                require(ArmorEnergyBuffer.read(armor) == CAP - Math.min(CAP, 2_000_000_000L * combo)
+                                && ehv(player, armor) == 16_384 - 1024L * combo,
+                        "wrong death fee/reentry charged twice at combo " + combo);
+            });
+        }
+        h.runAtTickTime(59, () -> {
+            ArmorNetworkBinding.INSTANCE.unbind(armor);
+            ArmorTickService.tickEquipped(player, armor, true, h.getLevel().registryAccess(), Dist.DEDICATED_SERVER);
+            require(hit(player, Float.MAX_VALUE, false).isCanceled(), "capped shield required extra resources");
+            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "capped death required extra resources");
+        });
+        h.runAtTickTime(60, () -> {
+            ArmorTickService.tickEquipped(player, armor, true, h.getLevel().registryAccess(), Dist.DEDICATED_SERVER);
+            ArmorCapabilityCollector.clearCache(player);
+            require(!CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "combo extended the fixed window");
+            ArmorNetworkBinding.INSTANCE.bind(armor, GlobalPos.of(h.getLevel().dimension(), h.absolutePos(AP)));
+            storage(player, armor).insert(LightningKey.EXTREME_HIGH_VOLTAGE, 1024, Actionable.MODULATE, ACTION);
+            ArmorEnergyBuffer.write(armor, 2_000_000_000L);
+            CelestweaveArmorState.setModulesPowered(armor, true);
+            CelestweaveArmorState.syncSubmoduleActiveState(player, armor, h.getLevel().registryAccess(), true,
+                    Dist.DEDICATED_SERVER);
+            ArmorCapabilityCollector.clearCache(player);
+            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "new window did not reset combo");
+            require(ArmorEnergyBuffer.read(armor) == 0 && ehv(player, armor) == 0, "new window charged the wrong tier");
+            h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void mixedShieldDeathComboAndFailedPaymentDoNotDoubleBill(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
         var player = equip(h, armor);
         network(h, armor, 16_384);
         h.runAtTickTime(40, () -> {
-            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "initial death guard failed");
-            require(ArmorEnergyBuffer.read(armor) == CAP - 2_000_000_000L && ehv(player, armor) == 15_872,
-                    "initial death fee incorrect");
-            require(hit(player, 400, false).isCanceled(), "shield after death failed");
-            require(ArmorEnergyBuffer.read(armor) == CAP - 2_000_000_000L && ehv(player, armor) == 15_584,
-                    "shield did not reuse FE and pay only the EHV difference");
-            require(hit(player, Float.MAX_VALUE, false).isCanceled(), "huge shield after death failed");
-            require(ArmorEnergyBuffer.read(armor) == 0 && ehv(player, armor) == 0,
-                    "death and shield did not share both caps");
+            ArmorEnergyBuffer.write(armor, 1_999_999_999L);
+            require(!CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "underfunded death was protected");
+            require(ArmorEnergyBuffer.read(armor) == 1_999_999_999L && ehv(player, armor) == 16_384,
+                    "failed death took partial resources");
+            ArmorEnergyBuffer.write(armor, CAP);
+            require(hit(player, 400, false).isCanceled(), "first shield failed");
+            require(ArmorEnergyBuffer.read(armor) == CAP - 8_000_000 && ehv(player, armor) == 15_584,
+                    "small hit was charged the full tier");
+        });
+        h.runAtTickTime(59, () -> {
+            ArmorCapabilityCollector.clearCache(player);
+            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "death did not share shield combo");
+            require(ArmorEnergyBuffer.read(armor) == CAP - 4_000_000_000L && ehv(player, armor) == 14_336,
+                    "second trigger did not top up to tier 2");
+        });
+        h.runAtTickTime(60, () -> {
+            ArmorCapabilityCollector.clearCache(player);
+            require(CelestweaveArmorUndyingHandler.tryProtectForcedDeath(player), "new death window failed");
+            require(ArmorEnergyBuffer.read(armor) == CAP - 6_000_000_000L && ehv(player, armor) == 13_312,
+                    "late combo moved the deadline or failed to reset to tier 1");
             h.succeed();
         });
     }

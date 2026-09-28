@@ -23,7 +23,7 @@ public final class ArmorOverloadRules {
     public static final long PHASE_FLIGHT_ESCAPE_COST_EHV_PER_TICK = 8L;
     public static final long UNDYING_PASSIVE_DRAIN_FE = 4_000L;
     public static final long UNDYING_TRIGGER_COST_FE = 2_000_000_000L;
-    public static final long UNDYING_TRIGGER_COST_EHV = 512L;
+    public static final long UNDYING_TRIGGER_COST_EHV = 1_024L;
     public static final int UNDYING_PULSE_LOAD = 180;
     public static final long PHASE_LOCK_REGEN_COST_FE = 1_000_000L;
     public static final long PHASE_LOCK_REGEN_COST_EHV = 16L;

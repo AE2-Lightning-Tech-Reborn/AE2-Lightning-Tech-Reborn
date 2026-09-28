@@ -10,6 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -83,7 +84,7 @@ public final class CelestweaveArmorDamageHandler {
                     incoming);
             float prevented = ArmorMitigationRules.preventedDamage(
                     staged.stage(), classifyDamage(event.getSource()), incoming);
-            if (payMitigationLightning(player, mitigation, staged, prevented)) {
+            if (payMitigationLightning(player, mitigation, staged, prevented, event.getContainer())) {
                 // Phase is cancellation-only when it covers the whole hit. Mechanisms that
                 // reopen the event deliberately recover the original hit, not zero damage.
                 if (!("phase_shield".equals(staged.stage()) && afterMitigation <= 0.0F)) {
@@ -168,7 +169,8 @@ public final class CelestweaveArmorDamageHandler {
             Player player,
             ActiveCapability mitigation,
             DeviceCapability.StagedMitigation staged,
-            float preventedDamage) {
+            float preventedDamage,
+            DamageContainer damage) {
         if (MultidimensionalProtectionSubmodule.ID.equals(staged.stage())) {
             return true;
         }
@@ -178,7 +180,7 @@ public final class CelestweaveArmorDamageHandler {
         if ("phase_shield".equals(staged.stage()) || OverloadProtectionSubmodule.ID.equals(staged.stage())) {
             return ArmorShieldPayment.pay(serverPlayer, mitigation.armor(), ShieldChargeWindow.quote(
                     mitigation.armor(), ShieldChargeWindow.Profile.forStage(staged.stage()),
-                    serverPlayer.level().getGameTime(), preventedDamage));
+                    serverPlayer.level().getGameTime(), preventedDamage), damage);
         }
         long amount = (long) Math.ceil(preventedDamage
                 * ArmorModuleLightningPolicy.triggeredCost(ArmorModuleLightningPolicy.Trigger.MATRIX_SHIELD)

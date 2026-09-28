@@ -892,7 +892,7 @@
   "ae2lt.celestweave.feature.phase_shield.name": "相位护盾",
   "ae2lt.celestweave.feature.phase_shield.desc": "每击最多抵扣 1024 点伤害；每点消耗 20,000 FE 与 2 EHV，20 tick 内按最高一击补差额；不提供机制防护",
   "ae2lt.celestweave.feature.overload_protection.name": "过载防护",
-  "ae2lt.celestweave.feature.overload_protection.desc": "提供无承伤上限的护盾与免死；20 tick 内共享 20 GFE 与 16,384 EHV 费用上限，达到上限后继续防护",
+  "ae2lt.celestweave.feature.overload_protection.desc": "无承伤上限的护盾与免死；共享 20 tick 连击窗口，首档费用上限 2 GFE＋1024 EHV，逐档补差额，最高 20 GFE＋16,384 EHV",
   "ae2lt.celestweave.feature.reflect.name": "伤害反弹",
   "ae2lt.celestweave.feature.reflect.desc": "将受到的近战伤害的一部分反弹给攻击者",
   "ae2lt.celestweave.feature.dash.name": "冲刺",

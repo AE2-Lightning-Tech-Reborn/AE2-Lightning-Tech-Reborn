@@ -33,38 +33,66 @@ class ShieldChargeWindowTest {
     }
 
     @Test
-    void overloadCapsEachResourceIndependentlyAndStopsChargingAtTheCap() {
-        var first = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, 100L, 10_000D);
-        assertEquals(200_000_000L, first.feCost());
-        assertEquals(16_384L, first.ehvCost());
-        var extreme = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 105L, Float.MAX_VALUE);
-        assertEquals(19_800_000_000L, extreme.feCost());
-        assertEquals(0L, extreme.ehvCost());
-        var repeat = ShieldChargeWindow.quote(extreme.nextState(), OVERLOAD, 119L, Double.POSITIVE_INFINITY);
-        assertEquals(0L, repeat.feCost());
-        assertEquals(0L, repeat.ehvCost());
+    void overloadRaisesCapsPerTriggerAndKeepsTheHighestHit() {
+        var state = ShieldChargeWindow.State.EMPTY;
+        for (int combo = 1; combo <= 20; combo++) {
+            // Only the first hit is huge: later low hits still advance the cap for that peak.
+            var quote = ShieldChargeWindow.quote(state, OVERLOAD, 100L, combo == 1 ? Float.MAX_VALUE : 1D);
+            long fe = Math.min(20_000_000_000L, 2_000_000_000L * combo);
+            long ehv = Math.min(16_384L, 1024L * combo);
+            assertEquals(fe - state.paidFe(), quote.feCost());
+            assertEquals(ehv - state.paidEhv(), quote.ehvCost());
+            assertEquals(120L, quote.nextState().windowUntil());
+            state = quote.nextState();
+        }
     }
 
     @Test
-    void shieldAndLastStandShareTheSameResourceHighWaterMarks() {
+    void lowDamageStillUsesPerDamageFeesInsteadOfPayingTheWholeTier() {
+        var first = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, 100L, 10D);
+        assertEquals(200_000L, first.feCost());
+        assertEquals(20L, first.ehvCost());
+        var second = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 110L, 5D);
+        assertEquals(0L, second.feCost());
+        assertEquals(0L, second.ehvCost());
+        assertEquals(2, second.nextState().combo());
+    }
+
+    @Test
+    void directDeathAdvancesComboButNeverExtendsTheWindow() {
+        var first = ShieldChargeWindow.quoteLastStand(ShieldChargeWindow.State.EMPTY, 100L);
+        assertEquals(2_000_000_000L, first.feCost());
+        assertEquals(1024L, first.ehvCost());
+        var second = ShieldChargeWindow.quoteLastStand(first.nextState(), 119L);
+        assertEquals(2_000_000_000L, second.feCost());
+        assertEquals(1024L, second.ehvCost());
+        assertEquals(120L, second.nextState().windowUntil());
+        var nextWindow = ShieldChargeWindow.quoteLastStand(second.nextState(), 120L);
+        assertEquals(2_000_000_000L, nextWindow.feCost());
+        assertEquals(1024L, nextWindow.ehvCost());
+        assertEquals(1, nextWindow.nextState().combo());
+        assertEquals(140L, nextWindow.nextState().windowUntil());
+    }
+
+    @Test
+    void shieldAndDeathShareComboAndOnlyTopUpPaidResources() {
         var shield = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, 100L, 400D);
-        var lastStand = ShieldChargeWindow.quoteCosts(shield.nextState(), OVERLOAD, 105L, 2_000_000_000L, 512L);
-        assertEquals(1_992_000_000L, lastStand.feCost());
-        assertEquals(0L, lastStand.ehvCost()); // 800 EHV already paid for the shield.
-        var capped = ShieldChargeWindow.quoteCosts(lastStand.nextState(), OVERLOAD, 110L, Long.MAX_VALUE, Long.MAX_VALUE);
-        assertEquals(18_000_000_000L, capped.feCost());
-        assertEquals(15_584L, capped.ehvCost());
-        var shieldAfterDeath = ShieldChargeWindow.quote(capped.nextState(), OVERLOAD, 115L, Float.MAX_VALUE);
-        assertEquals(0L, shieldAfterDeath.feCost());
-        assertEquals(0L, shieldAfterDeath.ehvCost());
+        var death = ShieldChargeWindow.quoteLastStand(shield.nextState(), 119L);
+        assertEquals(3_992_000_000L, death.feCost());
+        assertEquals(1_248L, death.ehvCost());
+        assertEquals(120L, death.nextState().windowUntil());
+        var third = ShieldChargeWindow.quote(death.nextState(), OVERLOAD, 119L, 1D);
+        assertEquals(2_000_000_000L, third.feCost());
+        assertEquals(1024L, third.ehvCost());
     }
 
     @Test
-    void twentyTickBoundaryChargesAFullNewWindow() {
+    void twentyTickBoundaryResetsBothPeakAndCombo() {
         var first = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, 100L, Float.MAX_VALUE);
-        var next = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 120L, Float.MAX_VALUE);
-        assertEquals(20_000_000_000L, next.feCost());
-        assertEquals(16_384L, next.ehvCost());
+        var next = ShieldChargeWindow.quote(first.nextState(), OVERLOAD, 120L, 1D);
+        assertEquals(20_000L, next.feCost());
+        assertEquals(2L, next.ehvCost());
+        assertEquals(1, next.nextState().combo());
         assertEquals(140L, next.nextState().windowUntil());
     }
 
@@ -85,7 +113,7 @@ class ShieldChargeWindowTest {
         var quote = ShieldChargeWindow.quote(ShieldChargeWindow.State.EMPTY, OVERLOAD, Long.MAX_VALUE - 10L,
                 Double.POSITIVE_INFINITY);
         assertEquals(Long.MAX_VALUE, quote.nextState().windowUntil());
-        assertEquals(20_000_000_000L, quote.feCost());
-        assertEquals(16_384L, quote.ehvCost());
+        assertEquals(2_000_000_000L, quote.feCost());
+        assertEquals(1024L, quote.ehvCost());
     }
 }

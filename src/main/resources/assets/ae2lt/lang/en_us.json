@@ -892,7 +892,7 @@
   "ae2lt.celestweave.feature.phase_shield.name": "Phase Shield",
   "ae2lt.celestweave.feature.phase_shield.desc": "Absorbs up to 1024 damage per hit at 20,000 FE and 2 EHV per point; pays only increases to the highest hit in 20 ticks; no mechanism protection",
   "ae2lt.celestweave.feature.overload_protection.name": "Overload Protection",
-  "ae2lt.celestweave.feature.overload_protection.desc": "Unlimited shielding and last-stand protection share a 20 GFE and 16,384 EHV cost cap per 20 ticks; protection continues at the cap",
+  "ae2lt.celestweave.feature.overload_protection.desc": "Unlimited shielding and last stand share a fixed 20-tick combo window: tier caps start at 2 GFE + 1024 EHV, rising with each trigger to 20 GFE + 16,384 EHV; pay only the difference",
   "ae2lt.celestweave.feature.reflect.name": "Damage Reflect",
   "ae2lt.celestweave.feature.reflect.desc": "Reflects a portion of received melee damage back to the attacker",
   "ae2lt.celestweave.feature.dash.name": "Dash",
