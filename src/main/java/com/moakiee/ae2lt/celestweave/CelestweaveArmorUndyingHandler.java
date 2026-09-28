@@ -9,6 +9,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -18,23 +19,17 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
-import com.moakiee.ae2lt.celestweave.service.ArmorModuleLightningPolicy;
-import com.moakiee.ae2lt.celestweave.module.UndyingSubmodule;
 import com.moakiee.ae2lt.celestweave.module.MultidimensionalProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector;
-import com.moakiee.ae2lt.celestweave.service.ArmorEnergyService;
-import com.moakiee.ae2lt.celestweave.service.ArmorLightningService;
-import com.moakiee.ae2lt.celestweave.service.ArmorResourceFeedback;
+import com.moakiee.ae2lt.celestweave.service.ArmorShieldPayment;
 import com.moakiee.ae2lt.registry.ModDamageTypes;
 
 @EventBusSubscriber(modid = AE2LightningTech.MODID)
 public final class CelestweaveArmorUndyingHandler {
     private static final String TAG_PROTECTED_TICK = "ae2lt.undying_protected_tick";
-    private static final String TAG_PROTECTED_UNTIL = "ae2lt.undying_protected_until";
-    // Short post-trigger window: dedup same/adjacent-tick fatal paths without re-charging.
-    private static final int PROTECTION_WINDOW_TICKS = 10;
+    // Untyped forced-death hooks may re-enter via setHealth/kill/loot in the same tick.
+    // Typed damage callbacks instead deduplicate by their shared DamageContainer.
 
     private CelestweaveArmorUndyingHandler() {
     }
@@ -50,13 +45,11 @@ public final class CelestweaveArmorUndyingHandler {
                 || damage < player.getHealth() + player.getAbsorptionAmount()) {
             return;
         }
-        long now = player.level().getGameTime();
-        if (tryProtectWithinWindow(player, now)) {
-            event.setAmount(0.0F);
-            event.setCanceled(true);
-        } else if (tryTrigger(player, now)) {
-            event.setAmount(0.0F);
-            event.setCanceled(true);
+        // The old incoming last-stand shortcut must not price a huge hit as a flat revival.
+        // Both replacement tiers carry a shield; bill the actual hit through that path first.
+        // Direct death and post-mitigation fatal damage retain the last-stand hooks below.
+        if (hasActiveLastStand(player)) {
+            CelestweaveArmorDamageHandler.onShieldIncoming(event);
         }
     }
 
@@ -70,9 +63,7 @@ public final class CelestweaveArmorUndyingHandler {
             return;
         }
         long now = player.level().getGameTime();
-        if (tryProtectWithinWindow(player, now)) {
-            event.setNewDamage(0.0F);
-        } else if (tryTrigger(player, now)) {
+        if (tryTrigger(player, now, event.getContainer())) {
             event.setNewDamage(0.0F);
         }
     }
@@ -115,10 +106,7 @@ public final class CelestweaveArmorUndyingHandler {
             return true;
         }
         long now = player.level().getGameTime();
-        if (tryProtectWithinWindow(player, now)) {
-            return true;
-        }
-        return tryTrigger(player, now);
+        return tryTrigger(player, now, null);
     }
 
     public static boolean wasProtectedThisTick(LivingEntity entity) {
@@ -149,62 +137,23 @@ public final class CelestweaveArmorUndyingHandler {
         return tryProtectForcedDeath(player);
     }
 
-    private static boolean tryProtectWithinWindow(ServerPlayer player, long now) {
-        if (hasActiveLastStand(player) && hasActiveProtectionWindow(player, now)) {
+    private static boolean tryTrigger(ServerPlayer player, long now,
+            DamageContainer damage) {
+        for (var active : collectActiveLastStand(player)) {
+            if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId())) {
+                recordProtectedTick(player, now);
+                restoreSurvivalState(player);
+                return true;
+            }
+            var quote = ShieldChargeWindow.quoteLastStand(active.armor(), now);
+            if (!ArmorShieldPayment.pay(player, active.armor(), quote, damage)) {
+                continue;
+            }
             recordProtectedTick(player, now);
             restoreSurvivalState(player);
             return true;
         }
         return false;
-    }
-
-    private static boolean tryTrigger(ServerPlayer player, long now) {
-        for (var active : collectActiveLastStand(player)) {
-            if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId())) {
-                recordProtectionWindow(player, now);
-                restoreSurvivalState(player);
-                return true;
-            }
-            int comboIndex = capComboIndexForWindow(
-                    ArmorOverloadCombo.nextComboIndex(active.armor(), UndyingSubmodule.INSTANCE, now),
-                    active.tuning().comboWindowTicks());
-            long cost = ArmorOverloadCombo.scaledCost(active.tuning().feCost(), comboIndex);
-            var lightningCost = ArmorModuleLightningPolicy
-                    .triggeredCost(ArmorModuleLightningPolicy.Trigger.UNDYING)
-                    .times(comboIndex);
-            if (!ArmorLightningService.hasCost(player, active.armor(), lightningCost)) {
-                ArmorResourceFeedback.noExtremeHighVoltage(player);
-                continue;
-            }
-            ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
-                    player,
-                    active.armor(),
-                    cost);
-            if (!payment.paid()) {
-                ArmorResourceFeedback.noFe(player);
-                continue;
-            }
-            if (!ArmorLightningService.consume(player, active.armor(), lightningCost)) {
-                payment.refund();
-                ArmorResourceFeedback.noExtremeHighVoltage(player);
-                continue;
-            }
-            ArmorOverloadCombo.recordTrigger(
-                    active.armor(),
-                    UndyingSubmodule.INSTANCE,
-                    now,
-                    Math.max(1, active.tuning().comboWindowTicks()),
-                    comboIndex);
-            recordProtectionWindow(player, now);
-            restoreSurvivalState(player);
-            return true;
-        }
-        return false;
-    }
-
-    private static boolean hasActiveProtectionWindow(ServerPlayer player, long now) {
-        long protectedUntil = player.getPersistentData().getLong(TAG_PROTECTED_UNTIL);
-        return protectedUntil > now;
     }
 
     private static boolean hasActiveLastStand(ServerPlayer player) {
@@ -231,33 +180,6 @@ public final class CelestweaveArmorUndyingHandler {
         player.getPersistentData().putLong(TAG_PROTECTED_TICK, now);
     }
 
-    private static void recordProtectionWindow(ServerPlayer player, long now) {
-        recordProtectedTick(player, now);
-        player.getPersistentData().putLong(TAG_PROTECTED_UNTIL, saturatingAdd(now, PROTECTION_WINDOW_TICKS));
-    }
-
-    private static long saturatingAdd(long left, long right) {
-        if (right <= 0L) {
-            return left;
-        }
-        if (left > Long.MAX_VALUE - right) {
-            return Long.MAX_VALUE;
-        }
-        return left + right;
-    }
-
-    /**
-     * A paid undying trigger opens a protection window during which duplicate fatal paths are
-     * free. Consequently, no more than ceil(combo window / protection window) separately paid
-     * triggers belong to one combo. Clamp the rolling combo counter to that physical maximum so
-     * repeatedly extending ComboUntil cannot grow the price forever.
-     */
-    static int capComboIndexForWindow(int comboIndex, int comboWindowTicks) {
-        int safeWindow = Math.max(1, comboWindowTicks);
-        int maximum = Math.max(1, Math.ceilDiv(safeWindow, PROTECTION_WINDOW_TICKS));
-        return Math.min(Math.max(1, comboIndex), maximum);
-    }
-
     private static void restoreSurvivalState(ServerPlayer player) {
         player.dead = false;
         player.clearFire();
@@ -275,11 +197,10 @@ public final class CelestweaveArmorUndyingHandler {
     private static List<ActiveLastStand> collectActiveLastStand(ServerPlayer player) {
         return ArmorCapabilityCollector.collectPerInstalledStack(player).stream()
                 .flatMap(active -> {
-                    if (active.capability() instanceof DeviceCapability.LastStandTuning tuning) {
+                    if (active.capability() instanceof DeviceCapability.LastStandTuning) {
                         return java.util.stream.Stream.of(new ActiveLastStand(
                                 active.armor(),
-                                active.submoduleId(),
-                                tuning));
+                                active.submoduleId()));
                     }
                     return java.util.stream.Stream.empty();
                 })
@@ -288,7 +209,6 @@ public final class CelestweaveArmorUndyingHandler {
 
     private record ActiveLastStand(
             ItemStack armor,
-            String submoduleId,
-            DeviceCapability.LastStandTuning tuning) {
+            String submoduleId) {
     }
 }

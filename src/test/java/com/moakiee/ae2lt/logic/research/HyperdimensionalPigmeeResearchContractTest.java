@@ -15,7 +15,7 @@ class HyperdimensionalPigmeeResearchContractTest {
 
         assertTrue(generator.contains("RitualGoal.HYPERDIMENSIONAL_PIGMEE"));
         assertTrue(generator.contains("item(\"pigmee_core\")"));
-        assertTrue(generator.contains("item(\"module_undying\")"));
+        assertTrue(generator.contains("item(\"module_overload_protection\")"));
         assertTrue(generator.contains("item(\"module_phase_lock\")"));
         assertTrue(generator.contains("private static final int RANDOM_ITEM_COUNT = 6"));
         assertTrue(generator.contains("AE2LTCommonConfig.easterEggWeights()"));
@@ -67,7 +67,7 @@ class HyperdimensionalPigmeeResearchContractTest {
         assertTrue(burstPacket.contains("public static final byte UNDYING_MODULE = 1"));
         assertTrue(burstPacket.contains("public static final byte PHASE_LOCK_MODULE = 2"));
         assertTrue(burstClient.contains("new ItemStack(ModItems.PIGMEE_CORE.get())"));
-        assertTrue(burstClient.contains("new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_UNDYING.get())"));
+        assertTrue(burstClient.contains("new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get())"));
         assertTrue(burstClient.contains("new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_PHASE_LOCK.get())"));
         assertTrue(burstClient.contains("displayItemActivation(activationItem)"));
         assertTrue(burstClient.contains("ParticleTypes.TOTEM_OF_UNDYING"));

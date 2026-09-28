@@ -28,7 +28,7 @@ import com.moakiee.ae2lt.item.NightVisionSubmoduleItem;
 import com.moakiee.ae2lt.item.WaterBreathingSubmoduleItem;
 import com.moakiee.ae2lt.item.ResistanceSubmoduleItem;
 import com.moakiee.ae2lt.item.ReflectSubmoduleItem;
-import com.moakiee.ae2lt.item.UndyingSubmoduleItem;
+import com.moakiee.ae2lt.item.OverloadProtectionSubmoduleItem;
 import com.moakiee.ae2lt.item.DashSubmoduleItem;
 import com.moakiee.ae2lt.item.FlightSubmoduleItem;
 import com.moakiee.ae2lt.item.PurificationSubmoduleItem;
@@ -377,9 +377,9 @@ public final class ModItems {
             ReflectSubmoduleItem::new,
             new Item.Properties());
 
-    public static final DeferredItem<UndyingSubmoduleItem> CELESTWEAVE_SUBMODULE_UNDYING = ITEMS.registerItem(
-            "module_undying",
-            UndyingSubmoduleItem::new,
+    public static final DeferredItem<OverloadProtectionSubmoduleItem> CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION = ITEMS.registerItem(
+            "module_overload_protection",
+            OverloadProtectionSubmoduleItem::new,
             new Item.Properties().rarity(Rarity.EPIC));
 
     public static final DeferredItem<MultidimensionalProtectionSubmoduleItem>

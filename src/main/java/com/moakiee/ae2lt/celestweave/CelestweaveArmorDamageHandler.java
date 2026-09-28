@@ -10,6 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -21,6 +22,8 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
+import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
+import com.moakiee.ae2lt.celestweave.service.ArmorShieldPayment;
 import com.moakiee.ae2lt.celestweave.module.MultidimensionalProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector;
 import com.moakiee.ae2lt.celestweave.service.ArmorCapabilityCollector.ActiveCapability;
@@ -79,8 +82,14 @@ public final class CelestweaveArmorDamageHandler {
                     staged.stage(),
                     classifyDamage(event.getSource()),
                     incoming);
-            if (payMitigationLightning(player, mitigation, staged, incoming - afterMitigation)) {
-                event.setAmount(afterMitigation);
+            float prevented = ArmorMitigationRules.preventedDamage(
+                    staged.stage(), classifyDamage(event.getSource()), incoming);
+            if (payMitigationLightning(player, mitigation, staged, prevented, event.getContainer())) {
+                // Phase is cancellation-only when it covers the whole hit. Mechanisms that
+                // reopen the event deliberately recover the original hit, not zero damage.
+                if (!("phase_shield".equals(staged.stage()) && afterMitigation <= 0.0F)) {
+                    event.setAmount(afterMitigation);
+                }
                 if (afterMitigation <= 0.0F) {
                     if (!isReflectingDamage()) {
                         reflectIncomingDamage(player, event.getSource(), event.getOriginalAmount());
@@ -104,12 +113,17 @@ public final class CelestweaveArmorDamageHandler {
     }
 
     private static ActiveCapability collectMitigation(java.util.List<ActiveCapability> capabilities) {
+        ActiveCapability best = null;
+        int bestPriority = 0;
         for (var active : capabilities) {
-            if (active.capability() instanceof DeviceCapability.StagedMitigation) {
-                return active;
+            if (active.capability() instanceof DeviceCapability.StagedMitigation staged
+                    && ArmorMitigationRules.priority(staged.stage()) > bestPriority) {
+                best = active;
+                bestPriority = ArmorMitigationRules.priority(staged.stage());
             }
         }
-        return null;
+        // Prefer the strongest shield if external equipment exposes more than one active tier.
+        return best;
     }
 
     private static ArmorMitigationRules.DamageClass classifyDamage(DamageSource source) {
@@ -155,15 +169,18 @@ public final class CelestweaveArmorDamageHandler {
             Player player,
             ActiveCapability mitigation,
             DeviceCapability.StagedMitigation staged,
-            float preventedDamage) {
+            float preventedDamage,
+            DamageContainer damage) {
         if (MultidimensionalProtectionSubmodule.ID.equals(staged.stage())) {
             return true;
         }
         if (!(player instanceof ServerPlayer serverPlayer) || preventedDamage <= 0.0F) {
             return true;
         }
-        if ("phase_shield".equals(staged.stage())) {
-            return payPhaseShield(serverPlayer, mitigation, preventedDamage);
+        if ("phase_shield".equals(staged.stage()) || OverloadProtectionSubmodule.ID.equals(staged.stage())) {
+            return ArmorShieldPayment.pay(serverPlayer, mitigation.armor(), ShieldChargeWindow.quote(
+                    mitigation.armor(), ShieldChargeWindow.Profile.forStage(staged.stage()),
+                    serverPlayer.level().getGameTime(), preventedDamage), damage);
         }
         long amount = (long) Math.ceil(preventedDamage
                 * ArmorModuleLightningPolicy.triggeredCost(ArmorModuleLightningPolicy.Trigger.MATRIX_SHIELD)
@@ -211,37 +228,10 @@ public final class CelestweaveArmorDamageHandler {
         if (MultidimensionalProtectionSubmodule.ID.equals(stage)) {
             return MultidimensionalProtectionSubmodule.isHitFeedbackEnabled(armor);
         }
+        if (OverloadProtectionSubmodule.ID.equals(stage)) {
+            return OverloadProtectionSubmodule.isHitFeedbackEnabled(armor);
+        }
         return ResistanceSubmodule.isHitFeedbackEnabled(armor, stage);
-    }
-
-    private static boolean payPhaseShield(
-            ServerPlayer player,
-            ActiveCapability mitigation,
-            float preventedDamage) {
-        PhaseShieldChargeWindow.Quote quote = PhaseShieldChargeWindow.quote(
-                mitigation.armor(),
-                player.level().getGameTime(),
-                preventedDamage);
-        var lightningCost = ArmorLightningService.LightningCost.ehv(quote.ehvCost());
-        if (!ArmorLightningService.hasCost(player, mitigation.armor(), lightningCost)) {
-            ArmorResourceFeedback.noExtremeHighVoltage(player);
-            return false;
-        }
-        ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
-                player,
-                mitigation.armor(),
-                quote.feCost());
-        if (!payment.paid()) {
-            ArmorResourceFeedback.noFe(player);
-            return false;
-        }
-        if (!ArmorLightningService.consume(player, mitigation.armor(), lightningCost)) {
-            payment.refund();
-            ArmorResourceFeedback.noExtremeHighVoltage(player);
-            return false;
-        }
-        PhaseShieldChargeWindow.record(mitigation.armor(), quote);
-        return true;
     }
 
     public static boolean shouldSuppressShieldHitFeedback(LivingEntity entity) {

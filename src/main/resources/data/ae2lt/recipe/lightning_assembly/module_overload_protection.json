@@ -10,6 +10,12 @@
     },
     {
       "ingredient": {
+        "item": "ae2lt:module_phase_shield"
+      },
+      "count": 1
+    },
+    {
+      "ingredient": {
         "item": "ae2lt:hyperdimensional_topological_lattice"
       },
       "count": 1
@@ -46,7 +52,7 @@
     }
   ],
   "result": {
-    "id": "ae2lt:module_undying",
+    "id": "ae2lt:module_overload_protection",
     "count": 1
   },
   "totalEnergy": 128000000,

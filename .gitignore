@@ -47,6 +47,7 @@ logs/
 
 # Runtime / temporary files
 run/
+run-protection-gametest/
 /run-gametest/
 /run-wireless-io-gametest/
 /benchmark-results/

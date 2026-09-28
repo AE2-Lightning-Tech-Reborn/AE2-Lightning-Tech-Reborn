@@ -191,6 +191,12 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_global_batch,ae2lt_provider_cache,ae2lt_deferred'
         }
 
+        protectionGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-protection-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         crystalCatalyzerGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-crystal-catalyzer-gametest')
@@ -324,6 +330,9 @@ if (providers.gradleProperty('ae2ltGlobalBatchTestsOnly').getOrElse('false').toB
 }
 if (providers.gradleProperty('ae2ltDeferredReturnsTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/TianshuDeferredReturnsGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltProtectionGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/ArmorProtectionGameTests.java'])
 }
 if (providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java'])

@@ -53,7 +53,7 @@ class CreativePigmeeDuplicationRecipeContractTest {
         assertTrue(conversionSource.contains(
                 "new ItemStack(ModItems.RAILGUN_MODULE_MULTIDIMENSIONAL_EXECUTION.get())"));
         assertTrue(conversionSource.contains(
-                "target.is(ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD.get())"));
+                "target.is(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get())"));
         assertTrue(conversionSource.contains(
                 "new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION.get())"));
         assertTrue(creativeSource.indexOf("PigmeeConversionLogic.createResult(target)")
