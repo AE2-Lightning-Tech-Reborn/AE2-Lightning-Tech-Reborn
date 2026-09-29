@@ -45,6 +45,7 @@ repositories {
         }
         filter {
             includeModule "maven.modrinth", "neoecoae"
+            includeModule "maven.modrinth", "extendedae-plus"
         }
     }
     maven {
@@ -431,6 +432,8 @@ dependencies {
     runtimeOnly "curse.maven:mekanism-generators-268566:7904061"
     compileOnly "curse.maven:extendedae-892005:7727948"
     runtimeOnly "curse.maven:extendedae-892005:7727948"
+    compileOnly "curse.maven:extendedae-plus-1337639:8755074"
+    runtimeOnly "curse.maven:extendedae-plus-1337639:8755074"
     compileOnly "curse.maven:glodium-957920:5821676"
     runtimeOnly "curse.maven:glodium-957920:5821676"
     compileOnly "curse.maven:advancedae-1084104:7668664"
