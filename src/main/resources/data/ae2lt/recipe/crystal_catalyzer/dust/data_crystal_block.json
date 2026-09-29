@@ -1,0 +1,22 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "data_energistics"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "mode": "dust",
+  "catalyst": {
+    "item": "data_energistics:data_crystal_block"
+  },
+  "catalystCount": 1,
+  "output": {
+    "id": "data_energistics:data_dust",
+    "count": 1
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}
+

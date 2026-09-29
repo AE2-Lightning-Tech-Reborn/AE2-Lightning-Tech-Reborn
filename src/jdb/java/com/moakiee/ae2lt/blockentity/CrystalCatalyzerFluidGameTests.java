@@ -201,6 +201,8 @@ public final class CrystalCatalyzerFluidGameTests {
     public static void uranium1024(GameTestHelper h) { fullCycle(h, "uranium_crystal"); }
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void timeCrystal1024(GameTestHelper h) { fullCycle(h, "time_crystal_block"); }
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void dataCrystal1024(GameTestHelper h) { fullCycle(h, "data_crystal_block"); }
 
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void savedCycleWaitsForFluidAndOutput(GameTestHelper h) {
