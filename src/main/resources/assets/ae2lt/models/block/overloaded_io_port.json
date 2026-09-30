@@ -1,79 +1,11 @@
 {
   "parent": "ae2:block/io_port",
   "textures": {
-    "side": "ae2lt:block/overloaded_interface",
-    "back": "ae2lt:block/overloaded_pattern_provider",
-    "front": "ae2lt:block/overloaded_io_port/atlas",
-    "top": "ae2lt:block/overloaded_io_port/atlas"
-  },
-  "elements": [
-    {
-      "from": [
-        0,
-        0,
-        0
-      ],
-      "to": [
-        16,
-        16,
-        16
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            8,
-            8
-          ],
-          "texture": "#front"
-        },
-        "east": {
-          "uv": [
-            16,
-            0,
-            0,
-            16
-          ],
-          "texture": "#side"
-        },
-        "south": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#back"
-        },
-        "west": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#side"
-        },
-        "up": {
-          "uv": [
-            0,
-            8,
-            8,
-            16
-          ],
-          "texture": "#top"
-        },
-        "down": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#bottom"
-        }
-      }
-    }
-  ]
+    "side": "ae2lt:block/overloaded_io_port/side",
+    "back": "ae2lt:block/generics/back",
+    "bottom": "ae2lt:block/generics/bottom",
+    "front": "ae2lt:block/overloaded_io_port/front_off",
+    "top": "ae2lt:block/overloaded_io_port/top_off",
+    "particle": "#front"
+  }
 }
