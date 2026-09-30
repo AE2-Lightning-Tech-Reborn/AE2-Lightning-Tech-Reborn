@@ -38,6 +38,12 @@
       "width": 50,
       "height": 20
     },
+    "bookmarkMissing": {
+      "left": 62,
+      "top": 232,
+      "width": 98,
+      "height": 20
+    },
     "start": {
       "left": 164,
       "top": 232,

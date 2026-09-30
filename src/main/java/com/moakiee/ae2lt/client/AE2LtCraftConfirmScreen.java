@@ -8,6 +8,7 @@ import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -22,11 +23,16 @@ import appeng.util.ReadableNumberConverter;
 
 import com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReports;
+import com.moakiee.ae2lt.crafting.report.MissingMaterialBookmarks;
+import com.moakiee.ae2lt.crafting.report.CraftingReportStartState;
+import com.moakiee.ae2lt.integration.eaep.EaepForceCraftingAccess;
+import com.moakiee.ae2lt.integration.jei.JeiBookmarkAccess;
 
 public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu> {
     private final AE2LtCraftConfirmTableRenderer table;
     private final Button start;
     private final Button selectCpu;
+    private final Button bookmarkMissing;
     private final Scrollbar scrollbar;
 
     public AE2LtCraftConfirmScreen(
@@ -34,11 +40,16 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         super(menu, playerInventory, title, style);
         table = new AE2LtCraftConfirmTableRenderer(this);
         scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.BIG);
-        start = widgets.addButton("start", GuiText.Start.text(), menu::startJob);
+        start = widgets.addButton("start", GuiText.Start.text(), this::startJob);
         start.active = false;
         selectCpu = widgets.addButton("selectCpu", getNextCpuButtonLabel(), this::selectNextCpu);
         selectCpu.active = false;
         widgets.addButton("cancel", GuiText.Cancel.text(), menu::goBack);
+        bookmarkMissing = widgets.addButton("bookmarkMissing",
+                Component.translatable("gui.ae2lt.crafting_report.bookmark_missing"), this::bookmarkMissing);
+        bookmarkMissing.active = false;
+        bookmarkMissing.setTooltip(Tooltip.create(
+                Component.translatable("gui.ae2lt.crafting_report.bookmark_missing.tooltip")));
     }
 
     @Override
@@ -50,10 +61,19 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         var exact = ExactPlanReports.get(plan);
         boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
         String bigFailure = bigMode ? ((com.moakiee.ae2lt.crafting.big.BigConfirmMenu)menu).ae2lt$failure() : "";
-        boolean startable = plan != null && !plan.isSimulation() && (exact == null || bigMode);
-        start.active = !menu.hasNoCPU() && startable;
-        selectCpu.active = startable;
+        boolean startable = CraftingReportStartState.normallyStartable(plan, bigMode);
+        boolean canForce = CraftingReportStartState.forceCandidate(plan, bigMode)
+                && EaepForceCraftingAccess.isAvailable(menu);
+        boolean forceStart = canForce && hasShiftDown();
+        start.active = !menu.hasNoCPU() && (startable || forceStart);
+        start.setMessage(forceStart ? Component.translatable("gui.ae2lt.crafting_report.force_start")
+                : GuiText.Start.text());
+        start.setTooltip(canForce ? Tooltip.create(Component.translatable(forceStart
+                ? "gui.ae2lt.crafting_report.force_start.tooltip"
+                : "gui.ae2lt.crafting_report.force_start.hint")) : null);
+        selectCpu.active = startable || forceStart;
         selectCpu.setMessage(getNextCpuButtonLabel());
+        bookmarkMissing.active = JeiBookmarkAccess.isAvailable() && MissingMaterialBookmarks.hasMissing(plan);
 
         Component cpuDetails = Component.empty();
         if (!bigFailure.isEmpty()) {
@@ -93,12 +113,31 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
                 ReadableNumberConverter.format(bytes, 4));
     }
 
+    private void startJob() {
+        var plan = menu.getPlan();
+        boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
+        boolean forceStart = hasShiftDown() && CraftingReportStartState.forceCandidate(plan, bigMode)
+                && EaepForceCraftingAccess.isAvailable(menu);
+        if (menu.hasNoCPU() || (!CraftingReportStartState.normallyStartable(plan, bigMode) && !forceStart)) {
+            return;
+        }
+        if (EaepForceCraftingAccess.synchronize(menu, forceStart)) {
+            menu.startJob();
+        }
+    }
+
     private Component getNextCpuButtonLabel() {
         if (menu.hasNoCPU()) {
             return GuiText.NoCraftingCPUs.text();
         }
         Component cpuName = menu.cpuName == null ? GuiText.Automatic.text() : menu.cpuName;
         return GuiText.SelectedCraftingCPU.text(cpuName);
+    }
+
+    private void bookmarkMissing() {
+        if (bookmarkMissing.active) {
+            JeiBookmarkAccess.addMissingToBookmarks(MissingMaterialBookmarks.keys(menu.getPlan()));
+        }
     }
 
     private void selectNextCpu() {
@@ -122,9 +161,7 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-            if (start.active) {
-                menu.startJob();
-            }
+            startJob();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);

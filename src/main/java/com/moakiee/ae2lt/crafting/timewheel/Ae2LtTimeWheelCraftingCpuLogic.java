@@ -84,6 +84,7 @@ import com.moakiee.ae2lt.crafting.runtime.ExecuteLoopPattern;
 import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
 import com.moakiee.thunderbolt.core.crafting.pattern.PlannedInputPattern;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
+import com.moakiee.ae2lt.integration.eaep.EaepForcedCraftingPlanAccess;
 
 public final class Ae2LtTimeWheelCraftingCpuLogic {
     private static final int WHEEL_SIZE = 64;
@@ -181,6 +182,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     public ICraftingSubmitResult trySubmitJob(IGrid grid, ICraftingPlan plan, IActionSource src,
                                               @Nullable ICraftingRequester requester) {
+        var forced = EaepForcedCraftingPlanAccess.read(plan);
+        if (forced == null) {
+            return CraftingSubmitResult.INCOMPLETE_PLAN;
+        }
         resolvePendingLoad();
         if (this.job != null || this.pendingJobTag != null) {
             return CraftingSubmitResult.CPU_BUSY;
@@ -196,7 +201,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             AELog.warn("Time wheel crafting CPU inventory is not empty yet a job was submitted.");
         }
 
-        var loopPlan = plan instanceof LoopCraftingPlan loop ? loop : null;
+        var loopPlan = forced.original() instanceof LoopCraftingPlan loop ? loop : null;
         var seedRequirements = loopPlan != null
                 ? copyToCounter(loopPlan.totalReusableSeeds()) : new KeyCounter();
         var hostSeedAllocations = loopPlan != null
@@ -207,7 +212,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         var craftId = UUID.randomUUID();
         var linkCpu = new CraftingLink(
                 CraftingCpuHelper.generateLinkData(craftId, requester == null, false), cpu);
-        var candidateJob = new TimeWheelJob(plan, this::postChange, linkCpu, playerId);
+        var candidateJob = new TimeWheelJob(forced.original(), this::postChange, linkCpu, playerId);
+        candidateJob.addManualWaiting(forced.manualMissing());
         loopSeedLedgers.initialize(candidateJob.loopPatterns());
 
         var adjustedUsedItems = copyCounter(plan.usedItems());
@@ -3251,6 +3257,15 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             for (var entry : waitingFor.list) {
                 if (entry.getLongValue() > 0) {
                     waitingKeys.add(entry.getKey());
+                }
+            }
+        }
+
+        private void addManualWaiting(KeyCounter missing) {
+            for (var entry : missing) {
+                if (entry.getKey() != null && entry.getLongValue() > 0) {
+                    insertWaitingFor(entry.getKey(), entry.getLongValue());
+                    addMaxItems(timeTracker, entry.getLongValue(), entry.getKey().getType());
                 }
             }
         }
