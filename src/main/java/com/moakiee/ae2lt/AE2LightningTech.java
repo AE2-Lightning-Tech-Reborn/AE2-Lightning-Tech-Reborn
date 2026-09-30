@@ -152,8 +152,6 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.LIGHTNING_SIMULATION_CHAMBER);
                         output.accept(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         output.accept(ModBlocks.OVERLOAD_PROCESSING_FACTORY);
-                        output.accept(ModBlocks.MINING_FACTORY);
-                        output.accept(ModBlocks.OVERLOADED_IO_PORT);
 
                         // 过载 ME 网络设备
                         output.accept(ModBlocks.OVERLOADED_CONTROLLER);
@@ -221,7 +219,6 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.CLOSED_LOOP_PATTERN_STORAGE);
                         output.accept(ModBlocks.CLOSED_LOOP_SEED_STORAGE);
                         output.accept(ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL);
-                        output.accept(ModItems.TIANSHU_CRAFTING_TERMINAL);
                         output.accept(ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL);
                         output.accept(ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL);
 
@@ -289,7 +286,6 @@ public class AE2LightningTech {
 
                         // 苍穹织雷装备、能量模块
                         output.accept(ModBlocks.OVERLOAD_DEVICE_WORKBENCH);
-                        output.accept(ModBlocks.OVERLOAD_ALLOY_ANVIL);
                         output.accept(ModItems.OVERLOAD_MODULE_BASE);
                         output.accept(ModItems.CELESTWEAVE_OCULUS);
                         output.accept(ModItems.CELESTWEAVE_CORE);
@@ -356,14 +352,6 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.PIGMEE_PATTERN_PROVIDER);
                         output.accept(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         output.accept(ModBlocks.PIGMEE_SYNTHESIS_STATION);
-                        output.accept(ModBlocks.PIGMEE_BUILDING_BLOCK);
-                        output.accept(ModBlocks.PIGMEE_BUILDING_SLAB);
-                        for (var color : net.minecraft.world.item.DyeColor.values()) {
-                            output.accept(ModBlocks.PIGMEE_BUILDING_PANELS.get(color));
-                            output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color));
-                            output.accept(ModBlocks.PIGMEE_BUILDING_SLABS.get(color));
-                            output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.get(color));
-                        }
                         output.accept(ModItems.PIGMEE_CORE);
                         output.accept(ModItems.PIGMEE_ITEM_CELL_HOUSING);
                         output.accept(ModItems.PIGMEE_STORAGE_COMPONENT);
