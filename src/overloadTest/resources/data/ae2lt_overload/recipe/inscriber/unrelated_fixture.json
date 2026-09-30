@@ -1,0 +1,10 @@
+{
+  "type": "ae2:inscriber",
+  "mode": "press",
+  "ingredients": {
+    "top": { "item": "ae2:printed_logic_processor" },
+    "middle": { "item": "minecraft:diamond" },
+    "bottom": { "item": "ae2:printed_silicon" }
+  },
+  "result": { "id": "minecraft:recovery_compass", "count": 1 }
+}

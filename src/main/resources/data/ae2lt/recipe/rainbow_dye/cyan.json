@@ -1,0 +1,21 @@
+{
+  "type": "ae2lt:rainbow_pigmee_dye",
+  "category": "misc",
+  "pattern": [
+    " BB",
+    "BP ",
+    "  B"
+  ],
+  "key": {
+    "P": {
+      "item": "ae2lt:rainbow_pigmee_fumo"
+    },
+    "B": {
+      "item": "ae2lt:dye_base"
+    }
+  },
+  "result": {
+    "id": "minecraft:cyan_dye",
+    "count": 4
+  }
+}

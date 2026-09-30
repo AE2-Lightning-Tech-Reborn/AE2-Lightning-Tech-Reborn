@@ -1,0 +1,30 @@
+// ./gradlew -I scripts/mining-factory-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MiningFactoryGameTests.java', '**/MiningFactoryClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        // Optional integration suite: pass a directory containing Apotheosis,
+        // Apothic Enchanting/Attributes/Spawners, Placebo, Blood Magic and Modopedia jars.
+        if (project.hasProperty('miningCompatMods')) {
+            dependencies.add('runtimeOnly', fileTree(project.property('miningCompatMods')) { include '*.jar' })
+            sourceSets.jdb.java.srcDir 'src/miningCompatTest/java'
+            sourceSets.jdb.java.include '**/MiningFactoryCompatGameTests.java'
+            sourceSets.jdb.compileClasspath += configurations.runtimeClasspath
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_mining'
+            gameDirectory = project.layout.buildDirectory.dir(project.hasProperty('miningCompatMods')
+                    ? 'mining-factory-compat-gametest' : 'mining-factory-gametest').get().asFile
+        }
+        if (project.hasProperty('miningClientProbe')) {
+            neoForge.runs.client {
+                systemProperty 'ae2lt.miningClientProbe', 'true'
+                gameDirectory = project.layout.buildDirectory.dir('mining-factory-client').get().asFile
+                programArguments.addAll '--quickPlaySingleplayer', 'MiningFactoryTest'
+            }
+        }
+    }
+}

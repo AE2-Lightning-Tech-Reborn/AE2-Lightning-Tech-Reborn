@@ -44,7 +44,7 @@ public final class PigmeeBuildingGameTests {
     }
 
     private static ItemStack pigmee(int count) {
-        var stack = new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get(), count);
+        var stack = new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(), count);
         stack.set(DataComponents.CUSTOM_NAME, Component.literal("Pigmee catalyst"));
         return stack;
     }
@@ -87,8 +87,8 @@ public final class PigmeeBuildingGameTests {
             var copy = codec.decode(encoded);
             var result = copy.assemble(input(), level.registryAccess());
             helper.assertTrue(copy.matches(input(), level), "network recipe retains ingredients and shape");
-            helper.assertTrue(result.is(ModBlocks.PIGMEE_BUILDING_BLOCK.asItem()) && result.getCount() == 64,
-                    "8 cobblestone gives 64 building blocks");
+            helper.assertTrue(result.is(ModBlocks.PIGMEE_BUILDING_BLOCK.asItem()) && result.getCount() == 8,
+                    "8 cobblestone gives 8 building blocks");
             helper.assertTrue(ItemStack.matches(copy.getRemainingItems(input()).get(4), pigmee(1)),
                     "network recipe still returns the named catalyst");
         } finally {
@@ -99,7 +99,7 @@ public final class PigmeeBuildingGameTests {
         helper.assertTrue(!recipe.matches(CraftingInput.of(3, 3, wrong), level), "incomplete ring rejected");
         wrong = new ArrayList<>(input().items());
         wrong.set(4, new ItemStack(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get()));
-        helper.assertTrue(!recipe.matches(CraftingInput.of(3, 3, wrong), level), "only ordinary Pigmee is the catalyst");
+        helper.assertTrue(!recipe.matches(CraftingInput.of(3, 3, wrong), level), "only Rainbow Pigmee is the catalyst");
         wrong = new ArrayList<>(input().items());
         wrong.set(0, pigmee(1));
         wrong.set(4, new ItemStack(Items.COBBLESTONE));
@@ -113,7 +113,7 @@ public final class PigmeeBuildingGameTests {
         var menu = table(helper, player, 2, 3);
         menu.clicked(0, 0, ClickType.PICKUP, player);
         helper.assertTrue(menu.getCarried().is(ModBlocks.PIGMEE_BUILDING_BLOCK.asItem())
-                && menu.getCarried().getCount() == 64, "normal click yields a full stack");
+                && menu.getCarried().getCount() == 8, "normal click yields eight blocks");
         helper.assertTrue(ItemStack.matches(menu.getSlot(5).getItem(), pigmee(3)), "stacked catalyst unchanged");
         for (int i = 1; i <= 9; i++) {
             if (i != 5) helper.assertTrue(menu.getSlot(i).getItem().getCount() == 1, "one cobblestone consumed per outer slot");
@@ -121,7 +121,7 @@ public final class PigmeeBuildingGameTests {
         player.getInventory().add(menu.getCarried());
         menu.setCarried(ItemStack.EMPTY);
         menu.clicked(0, 0, ClickType.QUICK_MOVE, player);
-        helper.assertTrue(materials(player) == 128, "two crafts yield exactly 128 blocks");
+        helper.assertTrue(materials(player) == 16, "two crafts yield exactly sixteen blocks");
         helper.assertTrue(ItemStack.matches(menu.getSlot(5).getItem(), pigmee(3)), "Pigmee count and components survive repeated crafting");
         helper.assertTrue(menu.getSlot(0).getItem().isEmpty(), "crafting stops when cobblestone runs out");
         helper.succeed();
@@ -132,8 +132,9 @@ public final class PigmeeBuildingGameTests {
         var player = player(helper);
         var menu = table(helper, player, 3, 1);
         for (int slot = 0; slot < 35; slot++) player.getInventory().setItem(slot, new ItemStack(Items.DIRT, 64));
+        player.getInventory().setItem(35, new ItemStack(ModBlocks.PIGMEE_BUILDING_BLOCK.asItem(), 56));
         menu.clicked(0, 0, ClickType.QUICK_MOVE, player);
-        helper.assertTrue(materials(player) == 64, "one free slot allows exactly one craft");
+        helper.assertTrue(materials(player) == 64, "eight free spaces allow exactly one craft");
         helper.assertTrue(ItemStack.matches(menu.getSlot(5).getItem(), pigmee(1)), "full inventory does not lose Pigmee");
         for (int i = 1; i <= 9; i++) {
             if (i != 5) helper.assertTrue(menu.getSlot(i).getItem().getCount() == 2, "backpressure must not spend extra cobblestone");
@@ -213,12 +214,17 @@ public final class PigmeeBuildingGameTests {
                     ContainerLevelAccess.create(helper.getLevel(), helper.absolutePos(TABLE)));
             player.containerMenu = menu;
             menu.getSlot(0).set(new ItemStack(input));
-            helper.assertTrue(menu.getRecipes().size() == 32, "every basic/finished input offers all 32 choices");
+            helper.assertTrue(menu.getRecipes().size() == 65, "every full input offers 32 panels and 33 slabs");
             var actual = new java.util.HashSet<net.minecraft.world.item.Item>();
             for (var recipe : menu.getRecipes()) {
                 var result = recipe.value().getResultItem(helper.getLevel().registryAccess());
-                helper.assertTrue(result.getCount() == 1, "every conversion is strictly 1:1");
-                actual.add(result.getItem());
+                if (result.getItem() instanceof net.minecraft.world.item.BlockItem item
+                        && item.getBlock() instanceof net.minecraft.world.level.block.SlabBlock) {
+                    helper.assertTrue(result.getCount() == 2, "whole block yields exactly two slabs");
+                } else {
+                    helper.assertTrue(result.getCount() == 1, "whole panel conversion is strictly 1:1");
+                    actual.add(result.getItem());
+                }
             }
             helper.assertTrue(actual.equals(expected), "all 16 colors and both styles are selectable without dye");
             cut(helper, player, input, outputs.get((inputIndex + 7) % outputs.size()));

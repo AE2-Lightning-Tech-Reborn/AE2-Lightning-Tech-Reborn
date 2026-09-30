@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt;
 
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModDataComponents;
@@ -150,6 +152,8 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.LIGHTNING_SIMULATION_CHAMBER);
                         output.accept(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         output.accept(ModBlocks.OVERLOAD_PROCESSING_FACTORY);
+                        output.accept(ModBlocks.MINING_FACTORY);
+                        output.accept(ModBlocks.OVERLOADED_IO_PORT);
 
                         // 过载 ME 网络设备
                         output.accept(ModBlocks.OVERLOADED_CONTROLLER);
@@ -305,7 +309,7 @@ public class AE2LightningTech {
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_MATRIX_SHIELD);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_REFLECT);
-                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_UNDYING);
+                        output.accept(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_PURIFICATION);
                         output.accept(ModItems.CELESTWEAVE_SUBMODULE_RADIATION_PROTECTION);
@@ -344,6 +348,8 @@ public class AE2LightningTech {
                     .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModItems.DYE_BASE);
                         output.accept(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get());
                         output.accept(ModBlocks.PIGMEE_CRYSTAL_CATALYZER);
                         output.accept(ModBlocks.PIGMEE_MENTALMATH_UNIT);
@@ -351,9 +357,12 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         output.accept(ModBlocks.PIGMEE_SYNTHESIS_STATION);
                         output.accept(ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        output.accept(ModBlocks.PIGMEE_BUILDING_SLAB);
                         for (var color : net.minecraft.world.item.DyeColor.values()) {
                             output.accept(ModBlocks.PIGMEE_BUILDING_PANELS.get(color));
                             output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color));
+                            output.accept(ModBlocks.PIGMEE_BUILDING_SLABS.get(color));
+                            output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.get(color));
                         }
                         output.accept(ModItems.PIGMEE_CORE);
                         output.accept(ModItems.PIGMEE_ITEM_CELL_HOUSING);
@@ -443,6 +452,15 @@ public class AE2LightningTech {
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.TESLA_COIL.get(),
                 (blockEntity, side) -> blockEntity.getAutomationInventory());
+
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.OVERLOADED_IO_PORT.get(),
+                (be, side) -> be.getExposedItemHandler(side));
+        event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST, ModBlockEntities.OVERLOADED_IO_PORT.get(),
+                (be, context) -> be);
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, side) -> blockEntity.getAutomationInventory());
+        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage());
 
         // TeslaCoil 是双格高方块,UPPER 半部分没有 BlockEntity;
         // 把 UPPER 的 ItemHandler 查询代理到下方 LOWER 的 BE,
@@ -608,6 +626,11 @@ public class AE2LightningTech {
 
         event.registerBlockEntity(
                 AECapabilities.IN_WORLD_GRID_NODE_HOST,
+                ModBlockEntities.MINING_FACTORY.get(),
+                (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
+
+        event.registerBlockEntity(
+                AECapabilities.IN_WORLD_GRID_NODE_HOST,
                 ModBlockEntities.OVERLOAD_DEVICE_WORKBENCH.get(),
                 (blockEntity, context) -> (IInWorldGridNodeHost) blockEntity);
 
@@ -712,6 +735,11 @@ public class AE2LightningTech {
         event.registerBlockEntity(
                 AE2LTCapabilities.LIGHTNING_ENERGY_BLOCK,
                 ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get(),
+                (blockEntity, side) -> new GridLightningEnergyHandler(blockEntity));
+
+        event.registerBlockEntity(
+                AE2LTCapabilities.LIGHTNING_ENERGY_BLOCK,
+                ModBlockEntities.MINING_FACTORY.get(),
                 (blockEntity, side) -> new GridLightningEnergyHandler(blockEntity));
 
         // TeslaCoil 是双高方块：UPPER 半部分 newBlockEntity 返回 null，
@@ -825,6 +853,15 @@ public class AE2LightningTech {
                     assemblyBeType,
                     null,
                     LightningAssemblyChamberBlockEntity::serverTick);
+
+            ModBlocks.OVERLOADED_IO_PORT.get().setBlockEntity(OverloadedIOPortBlockEntity.class,
+                    ModBlockEntities.OVERLOADED_IO_PORT.get(), null, null);
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.OVERLOADED_IO_PORT.get(), ModBlocks.OVERLOADED_IO_PORT.get().asItem());
+            Upgrades.add(AEItems.SPEED_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), OverloadedIOPortBlockEntity.SPEED_CARD_SLOTS);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), 1);
+
+            ModBlocks.MINING_FACTORY.get().setBlockEntity(MiningFactoryBlockEntity.class,
+                    ModBlockEntities.MINING_FACTORY.get(), null, MiningFactoryBlockEntity::serverTick);
 
             var overloadProcessingFactoryBlock = ModBlocks.OVERLOAD_PROCESSING_FACTORY.get();
             var overloadProcessingFactoryBeType = ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get();

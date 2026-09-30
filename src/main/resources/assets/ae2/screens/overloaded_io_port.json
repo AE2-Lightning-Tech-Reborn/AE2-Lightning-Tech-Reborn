@@ -1,0 +1,64 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json",
+    "common/player_inventory.json",
+    "common/toolbox.json"
+  ],
+  "background": {
+    "texture": "guis/io_port.png",
+    "srcRect": [
+      0,
+      0,
+      176,
+      168
+    ]
+  },
+  "slots": {
+    "AE2LT_OVERLOADED_IO_FILTER": {
+      "left": 66,
+      "top": 53
+    },
+    "AE2LT_OVERLOADED_IO_MATRIX": {
+      "left": 92,
+      "top": 53
+    },
+    "MACHINE_INPUT": {
+      "left": 19,
+      "top": 17,
+      "grid": "BREAK_AFTER_2COLS"
+    },
+    "MACHINE_OUTPUT": {
+      "left": 122,
+      "top": 17,
+      "grid": "BREAK_AFTER_2COLS"
+    }
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "block.ae2lt.overloaded_io_port"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    }
+  },
+  "images": {
+    "filterSlotFrame": {
+      "texture": "ae2lt:textures/guis/overload_processing_factory.png",
+      "srcRect": [90, 59, 18, 18]
+    }
+  },
+  "widgets": {
+    "operationMode": {
+      "left": 80,
+      "top": 17
+    },
+    "lightningStatus": {
+      "left": 156,
+      "top": 4
+    }
+  }
+}

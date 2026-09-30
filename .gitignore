@@ -17,6 +17,7 @@ docs/
 !docs/
 docs/*
 !docs/wireless-io-alpha3-test-port.md
+!docs/tianshu-deferred-matrix-returns.md
 
 # Bundled source mirrors / references
 Source Code/
@@ -29,6 +30,7 @@ run-alloy-anvil-client/
 run-omniversal-gametest/
 run-omniversal-client/
 run-crystal-catalyzer-gametest/
+run-global-batch-gametest/
 run-alpha-completion/
 
 # OS files
@@ -45,9 +47,9 @@ logs/
 
 # Runtime / temporary files
 run/
+run-protection-gametest/
 run-phase-lock-gametest/
 /run-gametest/
-/run-recipe-sync-gametest/
 /run-wireless-io-gametest/
 /benchmark-results/
 out/
@@ -64,6 +66,10 @@ DevLog/
 .codex-tmp/
 .eclipse/
 CLAUDE.local.md
+/run-deferred-returns-gametest/
 
+!docs/overload-factory-borrowed-recipes.md
+run-overload-factory-gametest/
+run-overload-factory-client/
 run-wireless-gametest/
 run-cell-workbench-gametest/
