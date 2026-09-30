@@ -524,6 +524,12 @@ public class AE2LightningTech {
         event.registerItem(
                 Capabilities.EnergyStorage.ITEM,
                 (stack, context) -> new PoweredItemCapabilities(
+                        stack, ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get()),
+                ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get());
+
+        event.registerItem(
+                Capabilities.EnergyStorage.ITEM,
+                (stack, context) -> new PoweredItemCapabilities(
                         stack, ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get()),
                 ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());
 
@@ -1102,6 +1108,9 @@ public class AE2LightningTech {
             Ae2wtlibIntegration.verifyTerminalRegistration();
             GridLinkables.register(
                     ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
+                    WirelessTerminalItem.LINKABLE_HANDLER);
+            GridLinkables.register(
+                    ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.get(),
                     WirelessTerminalItem.LINKABLE_HANDLER);
 
             // Full AE2WTLib integration: make the overloaded frequency card installable

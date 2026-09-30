@@ -48,6 +48,7 @@ logs/
 # Runtime / temporary files
 run/
 run-protection-gametest/
+run-phase-lock-gametest/
 /run-gametest/
 /run-wireless-io-gametest/
 /benchmark-results/
@@ -70,3 +71,5 @@ CLAUDE.local.md
 !docs/overload-factory-borrowed-recipes.md
 run-overload-factory-gametest/
 run-overload-factory-client/
+run-wireless-gametest/
+run-cell-workbench-gametest/

@@ -179,6 +179,30 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        recipeSyncGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-recipe-sync-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'ae2lt.recipeSyncKubeJsFixture', 'true'
+        }
+
+        wirelessGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-wireless-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        cellWorkbenchGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-cell-workbench-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        phaseLockGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-phase-lock-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
         deferredReturnsGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-deferred-returns-gametest')
@@ -333,6 +357,29 @@ if (providers.gradleProperty('ae2ltDeferredReturnsTestsOnly').getOrElse('false')
 }
 if (providers.gradleProperty('ae2ltProtectionGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/ArmorProtectionGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltWirelessGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/TianshuWirelessBindingGameTests.java',
+                                   'com/moakiee/ae2lt/debug/TianshuWirelessChargingGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltCellWorkbenchGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/TianshuCraftingGameTests.java',
+                                   'com/moakiee/ae2lt/debug/TianshuCellScrollFixture.java',
+                                   'com/moakiee/ae2lt/debug/TianshuWirelessGameTestChecks.java'])
+}
+if (providers.gradleProperty('ae2ltPhaseLockGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/PhaseLockCreativeRecoveryGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltRecipeSyncGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/OverloadProcessingRecipeSyncGameTests.java',
+                                   'com/moakiee/ae2lt/debug/TianshuWirelessBindingGameTests.java'])
+}
+def prepareRecipeSyncFixture = tasks.register('prepareRecipeSyncFixture', Copy) {
+    from 'src/jdb/fixtures/overload-recipe-sync.js'
+    into 'run-recipe-sync-gametest/kubejs/server_scripts'
+}
+tasks.matching { it.name == 'runRecipeSyncGameTestServer' }.configureEach {
+    dependsOn prepareRecipeSyncFixture
 }
 if (providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java'])
