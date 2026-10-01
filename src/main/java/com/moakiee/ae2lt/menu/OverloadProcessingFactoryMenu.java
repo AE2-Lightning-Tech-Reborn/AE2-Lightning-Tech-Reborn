@@ -34,7 +34,7 @@ import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeService;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
-public class OverloadProcessingFactoryMenu extends AEBaseMenu implements FrequencyBindingMenu, MachineOutputConfigMenu {
+public class OverloadProcessingFactoryMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<OverloadProcessingFactoryMenu> TYPE = MenuTypeBuilder
             .create(OverloadProcessingFactoryMenu::new, OverloadProcessingFactoryBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.overload_processing_factory"))
@@ -95,6 +95,12 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
     @GuiSync(97)
     public int outputSideMask;
 
+    @GuiSync(120) public int inputTransferRevision;
+    @GuiSync(121) public long inputTransferMoved;
+    @GuiSync(122) public long inputTransferExported;
+    @GuiSync(123) public int inputTransferRemaining;
+    @GuiSync(124) public boolean inputTransferAccepted;
+
     private final OverloadProcessingFactoryBlockEntity host;
     private final List<Slot> machineInputSlots = new ArrayList<>(OverloadProcessingFactoryInventory.INPUT_SLOT_COUNT);
     private final Slot matrixSlot;
@@ -105,6 +111,7 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
     public OverloadProcessingFactoryMenu(int id, Inventory playerInventory, OverloadProcessingFactoryBlockEntity host) {
         super(TYPE, id, playerInventory, host);
         this.host = host;
+        registerClientAction("transferInputs", this::transferInputs);
         // 网络工具 toolbox：手持网络工具时在 GUI 右侧暴露 9 格升级卡槽
         this.toolbox = new ToolboxMenu(this);
 
@@ -253,6 +260,24 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements Frequen
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,
                         host.getBlockPos().getZ() + 0.5D) <= 64.0D;
+    }
+
+    @Override public void clientTransferInputs() { sendClientAction("transferInputs"); }
+    @Override public int getInputTransferRevision() { return inputTransferRevision; }
+    @Override public com.moakiee.ae2lt.machine.common.ManualInputTransfer.Result getInputTransferResult() {
+        return new com.moakiee.ae2lt.machine.common.ManualInputTransfer.Result(
+                inputTransferAccepted, inputTransferMoved, inputTransferExported, inputTransferRemaining);
+    }
+
+    private void transferInputs() {
+        if (!isServerSide() || !isValidMenu() || getPlayer().containerMenu != this || !stillValid(getPlayer())) return;
+        var result = host.transferInputsToOutput();
+        inputTransferAccepted = result.accepted();
+        inputTransferMoved = result.moved();
+        inputTransferExported = result.exported();
+        inputTransferRemaining = result.remainingSlots();
+        inputTransferRevision++;
+        if (result.accepted()) broadcastChanges();
     }
 
     public OverloadProcessingFactoryBlockEntity getHost() {

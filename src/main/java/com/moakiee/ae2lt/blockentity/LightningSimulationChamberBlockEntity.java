@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.ManualItemExport;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.EnumSet;
@@ -89,6 +92,7 @@ public class LightningSimulationChamberBlockEntity extends AENetworkedBlockEntit
     private long consumedEnergy;
     private int processingTicksSpent;
     private boolean working;
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private EnumSet<RelativeSide> allowedOutputs = EnumSet.noneOf(RelativeSide.class);
     private final AdjacentItemAutoExportHelper.DirectionalTargetCache exportTargetCache =
@@ -280,6 +284,19 @@ public class LightningSimulationChamberBlockEntity extends AENetworkedBlockEntit
                 LightningSimulationChamberInventory.SLOT_OUTPUT,
                 1,
                 inventory::getStackInSlot);
+    }
+
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, LightningSimulationChamberInventory.SLOT_INPUT_0, 3,
+                LightningSimulationChamberInventory.SLOT_OUTPUT, 1,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, LightningSimulationChamberInventory.SLOT_OUTPUT, 1,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? getExportTarget(server, direction) : null, budget),
+                this::abortProcessing);
     }
 
     public boolean pushOutResult() {

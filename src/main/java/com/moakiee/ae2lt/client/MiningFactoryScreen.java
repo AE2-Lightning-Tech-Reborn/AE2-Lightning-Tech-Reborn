@@ -47,6 +47,7 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
                 Component.translatable("ae2lt.gui.overload_factory.auto_export.on")));
         autoExportButton.setTooltipOff(List.of(Component.translatable("ae2lt.gui.overload_factory.auto_export.title"),
                 Component.translatable("ae2lt.gui.overload_factory.auto_export.off")));
+        addToLeftToolbar(new InputTransferButton(menu));
         addToLeftToolbar(autoExportButton);
         configureOutputButton = new ActionButton(ActionItems.COG, () -> switchToScreen(createOutputConfigScreen()));
         configureOutputButton.setMessage(Component.translatable("ae2lt.gui.overload_factory.configure_output"));
