@@ -25,6 +25,250 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt_global_batch")
 @PrefixGameTestTemplate(false)
 public final class GlobalBatchAdaptersGameTests {
+    @GameTest(template = "empty", timeoutTicks = 150)
+    public static void realUselessFurnaceAcceptsEightCraftingCopiesFromTianshu(GameTestHelper helper) {
+        if (!hasUselessBigIntegerApi()) { helper.succeed(); return; }
+        UselessFurnaceProbe.run(helper, false);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 150)
+    public static void realUselessFurnaceAcceptsEightOmniversalCopiesFromTianshu(GameTestHelper helper) {
+        if (!hasUselessBigIntegerApi()) { helper.succeed(); return; }
+        UselessFurnaceProbe.run(helper, true);
+    }
+
+    private static boolean hasUselessBigIntegerApi() {
+        if (!net.neoforged.fml.ModList.get().isLoaded("useless_mod")) return false;
+        try {
+            Class.forName("com.sorrowmist.useless.api.crafting.bigint.AlloyFurnaceBigIntegerProvider", false,
+                    GlobalBatchAdaptersGameTests.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException unavailable) { return false; }
+    }
+
+    /** Optional classes resolve only when an actual Useless jar is enabled for the probe. */
+    private static final class UselessFurnaceProbe {
+        static void run(GameTestHelper helper, boolean omniversal) {
+            var corePos = new net.minecraft.core.BlockPos(5, 2, 3);
+            for (var entry : com.sorrowmist.useless.content.blocks.multiblock.OmniversalAlloyFurnaceStructure.entries()) {
+                var block = switch (entry.part()) {
+                    case CORE -> com.sorrowmist.useless.init.ModBlocks.MULTIBLOCK_ALLOY_FURNACE_CORE.get();
+                    case CASING -> com.sorrowmist.useless.init.ModBlocks.OMNIVERSAL_FURNACE_CASING.get();
+                    case COIL -> com.sorrowmist.useless.init.ModBlocks.USELESS_COILS.get(1).get();
+                    case AIR -> net.minecraft.world.level.block.Blocks.AIR;
+                };
+                helper.setBlock(entry.worldPos(corePos, net.minecraft.core.Direction.NORTH), block);
+            }
+            helper.setBlock(corePos.west(), com.sorrowmist.useless.init.ModBlocks.ME_PATTERN_ASSEMBLY.get());
+            helper.setBlock(corePos.east(), com.sorrowmist.useless.init.ModBlocks.OMNIVERSAL_MOLD_HUB.get());
+            helper.setBlock(corePos.west(2), appeng.core.definitions.AEBlocks.CREATIVE_ENERGY_CELL.block());
+            helper.runAfterDelay(50, () -> {
+                var assembly = (com.sorrowmist.useless.content.blockentities.multiblock.MePatternAssemblyBlockEntity)
+                        helper.getBlockEntity(corePos.west());
+                var core = assembly.getController();
+                helper.assertTrue(core != null && core.isFormed(), "real furnace structure formed");
+                core.getEnergyManager().setEnergyStored(1_000_000L);
+                net.minecraft.world.item.ItemStack encoded;
+                if (omniversal) {
+                    var hub = (com.sorrowmist.useless.content.blockentities.multiblock.OmniversalMoldHubBlockEntity)
+                            helper.getBlockEntity(corePos.east());
+                    hub.getMolds().setStackInSlot(0, new net.minecraft.world.item.ItemStack(Items.STICK));
+                    var recipe = com.sorrowmist.useless.content.recipe.AlloyFurnaceRecipeCatalog.entries(helper.getLevel())
+                            .stream().filter(e -> e.identity().recipeId().toString().equals("ae2lt_omniversal:one_mold"))
+                            .findFirst().orElseThrow();
+                    encoded = com.moakiee.ae2lt.integration.useless.UselessModCompat.encodeViewerRecipe(recipe, helper.getLevel());
+                } else {
+                    var recipe = helper.getLevel().getRecipeManager().byKey(ResourceLocation.withDefaultNamespace("oak_planks"))
+                            .orElseThrow();
+                    var holder = new net.minecraft.world.item.crafting.RecipeHolder<>(recipe.id(),
+                            (net.minecraft.world.item.crafting.CraftingRecipe) recipe.value());
+                    var inputs = new net.minecraft.world.item.ItemStack[9];
+                    Arrays.fill(inputs, net.minecraft.world.item.ItemStack.EMPTY);
+                    inputs[0] = new net.minecraft.world.item.ItemStack(Items.OAK_LOG);
+                    encoded = appeng.api.crafting.PatternDetailsHelper.encodeCraftingPattern(holder, inputs,
+                            new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 4), false, false);
+                }
+                helper.assertTrue(!encoded.isEmpty(), "native pattern encoded");
+                assembly.getTerminalPatternInventory().setItemDirect(0, encoded);
+                helper.runAfterDelay(2, () -> {
+                    helper.assertTrue(assembly.getAvailablePatterns().size() == 1, "real furnace published its pattern");
+                    var pattern = assembly.getAvailablePatterns().getFirst();
+                    var inputKey = AEItemKey.of(omniversal ? Items.IRON_INGOT : Items.OAK_LOG);
+                    var outputKey = AEItemKey.of(omniversal ? Items.GOLD_INGOT : Items.OAK_PLANKS);
+                    long inputAmount = omniversal ? 16 : 8;
+                    long outputAmount = omniversal ? 8 : 32;
+                    var fixture = new FurnaceCpu(helper.getLevel(), assembly);
+                    fixture.stock.add(inputKey, inputAmount);
+                    var used = new KeyCounter(); used.add(inputKey, inputAmount);
+                    var plan = new appeng.crafting.CraftingPlan(new GenericStack(outputKey, outputAmount), 100,
+                            false, false, used, new KeyCounter(), new KeyCounter(), Map.of(pattern, 8L));
+                    var submitted = fixture.cpu.getCraftingLogic().trySubmitJob(fixture.grid, plan,
+                            appeng.api.networking.security.IActionSource.empty(), null);
+                    helper.assertTrue(submitted.successful(), "Tianshu submitted real furnace plan: " + submitted);
+                    // Cold recipe/class loading can exhaust the optional mod's global budget.
+                    // Isolate it here so the baseline checks the real dispatch protocol itself.
+                    var budget = new FurnaceBudget();
+                    try {
+                        budget.fullSpeed();
+                        var usage = fixture.cpu.getCraftingLogic().tickCraftingLogic(fixture.energy, fixture.service, 1, 8);
+                        helper.assertTrue(usage.successfulDispatches() == 1 && usage.dispatchedCopies() == 8,
+                                "unthrottled Tianshu must accept eight copies: " + usage);
+                        com.mojang.logging.LogUtils.getLogger().info("Unthrottled real furnace: omniversal={}, usage={}", omniversal, usage);
+                    } finally { budget.restore(); }
+                    var tasks = core.saveWithoutMetadata(helper.getLevel().registryAccess()).getCompound("AeTasks");
+                    var pending = tasks.getList("QueuedCraftingOutputs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                    helper.assertTrue(pending.size() == 1, "one real folded furnace output batch: " + tasks);
+                    var outputs = pending.getCompound(0).getList("Outputs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                    helper.assertTrue(outputs.size() == 1 && java.math.BigInteger.valueOf(outputAmount)
+                                    .equals(new java.math.BigInteger(outputs.getCompound(0).getByteArray("Amount"))),
+                            "real furnace owns exactly the expected output amount: " + tasks);
+                    if (omniversal) verifySingleThrottle(helper, assembly, core, pattern, inputKey, budget);
+                    helper.succeed();
+                });
+            });
+        }
+
+        private static void verifySingleThrottle(GameTestHelper helper, ICraftingProvider assembly,
+                com.sorrowmist.useless.content.blockentities.multiblock.MultiblockAlloyFurnaceCoreBlockEntity core,
+                IPatternDetails pattern, AEItemKey inputKey, FurnaceBudget budget) {
+            try {
+                var math = Class.forName("com.sorrowmist.useless.content.machines.advanced_alloy_furnace.ae.AlloyFurnaceBigIntegerCrafting");
+                boolean scalesRequested = Arrays.stream(math.getMethods()).anyMatch(m ->
+                        m.getName().equals("maximumCraftingPatternCount") && m.getParameterCount() == 5);
+                core.getEnergyManager().setEnergyStored(core.getEnergyManager().getMaxEnergyStoredLong());
+                var target = assembly.getClass().getMethod("bigIntegerTarget").invoke(assembly);
+                var prototype = new KeyCounter(); prototype.add(inputKey, 2);
+                var inputs = new KeyCounter[] {prototype};
+                budget.minimumSpeed();
+                var capacity = target.getClass().getMethod("capacity", IPatternDetails.class, KeyCounter[].class,
+                        java.math.BigInteger.class).invoke(target, pattern, inputs, java.math.BigInteger.valueOf(256));
+                var accepted = (java.math.BigInteger) capacity.getClass().getMethod("accepted").invoke(capacity);
+                long expected = scalesRequested ? 5 : 8;
+                helper.assertTrue(accepted.longValueExact() == expected,
+                        "capacity distinguishes request scaling from intrinsic-capacity scaling: " + accepted);
+                // The actual CPU must accept the machine's once-throttled amount.
+                var fixture = new FurnaceCpu(helper.getLevel(), assembly);
+                fixture.stock.add(inputKey, 512);
+                var used = new KeyCounter(); used.add(inputKey, 512);
+                var plan = new appeng.crafting.CraftingPlan(new GenericStack(AEItemKey.of(Items.GOLD_INGOT), 256), 100,
+                        false, false, used, new KeyCounter(), new KeyCounter(), Map.of(pattern, 256L));
+                helper.assertTrue(fixture.cpu.getCraftingLogic().trySubmitJob(fixture.grid, plan,
+                        appeng.api.networking.security.IActionSource.empty(), null).successful(), "throttled plan submitted");
+                budget.minimumSpeed();
+                var usage = fixture.cpu.getCraftingLogic().tickCraftingLogic(fixture.energy, fixture.service, 1, 256);
+                helper.assertTrue(usage.successfulDispatches() == 1 && usage.dispatchedCopies() == expected,
+                        "Tianshu admission must apply the 2% throttle only once: " + usage);
+                helper.assertTrue(fixture.cpu.getCraftingLogic().getInventory().list.get(inputKey) == 512 - 2 * expected,
+                        "only accepted copies consumed; rejected copies refunded");
+                var pending = core.saveWithoutMetadata(helper.getLevel().registryAccess()).getCompound("AeTasks")
+                        .getList("QueuedCraftingOutputs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                helper.assertTrue(pending.size() == 2, "two real accepted furnace batches");
+                var outputs = pending.getCompound(1).getList("Outputs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                helper.assertTrue(outputs.size() == 1 && java.math.BigInteger.valueOf(expected)
+                                .equals(new java.math.BigInteger(outputs.getCompound(0).getByteArray("Amount"))),
+                        "real furnace owns exactly the once-throttled output amount");
+                com.mojang.logging.LogUtils.getLogger().info("Single furnace throttle: scalesRequested={}, Tianshu 256 -> capacity={} -> usage={}",
+                        scalesRequested, accepted, usage);
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            finally { budget.restore(); }
+        }
+    }
+
+    /** Deterministic optional-mod budget fixture; no production state survives the test. */
+    private static final class FurnaceBudget {
+        final Class<?> type;
+        final java.lang.reflect.Field window, spent, smoothed;
+        final long savedWindow, savedSpent;
+        final double savedSmoothed;
+        FurnaceBudget() {
+            try {
+                type = Class.forName("com.sorrowmist.useless.content.machines.advanced_alloy_furnace.ae.AlloyFurnaceTickBudget");
+                window = field("windowStartNanos"); spent = field("spentThisWindow"); smoothed = field("smoothedNanos");
+                savedWindow = window.getLong(null); savedSpent = spent.getLong(null); savedSmoothed = smoothed.getDouble(null);
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        }
+        private java.lang.reflect.Field field(String name) throws ReflectiveOperationException {
+            var result = type.getDeclaredField(name); result.setAccessible(true); return result;
+        }
+        void fullSpeed() { set(0); }
+        void minimumSpeed() { set(10_000_000_000L); }
+        private void set(long nanos) {
+            try {
+                // Freeze the wall-clock window during the short synchronous probe.
+                window.setLong(null, System.nanoTime() + 1_000_000_000L);
+                spent.setLong(null, nanos); smoothed.setDouble(null, 0D);
+            } catch (IllegalAccessException e) { throw new AssertionError(e); }
+        }
+        void restore() {
+            try {
+                window.setLong(null, savedWindow); spent.setLong(null, savedSpent); smoothed.setDouble(null, savedSmoothed);
+            } catch (IllegalAccessException e) { throw new AssertionError(e); }
+        }
+    }
+
+    private static final class FurnaceCpu {
+        final KeyCounter stock = new KeyCounter();
+        final IEnergyService energy;
+        final IGrid grid;
+        final CraftingService service;
+        final com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU cpu;
+
+        FurnaceCpu(net.minecraft.server.level.ServerLevel level, ICraftingProvider provider) {
+            var disk = new appeng.api.storage.MEStorage() {
+                @Override public long insert(AEKey key, long amount, Actionable mode,
+                        appeng.api.networking.security.IActionSource source) {
+                    if (mode == Actionable.MODULATE) stock.add(key, amount);
+                    return amount;
+                }
+                @Override public long extract(AEKey key, long amount, Actionable mode,
+                        appeng.api.networking.security.IActionSource source) {
+                    long taken = Math.min(amount, stock.get(key));
+                    if (mode == Actionable.MODULATE) stock.remove(key, taken);
+                    return taken;
+                }
+                @Override public void getAvailableStacks(KeyCounter out) { out.addAll(stock); }
+                @Override public net.minecraft.network.chat.Component getDescription() {
+                    return net.minecraft.network.chat.Component.literal("Furnace probe storage");
+                }
+            };
+            energy = valuesProxy(IEnergyService.class, Map.of());
+            var storage = valuesProxy(IStorageService.class, Map.of("getInventory", disk, "getCachedInventory", stock));
+            var values = new HashMap<String, Object>();
+            values.put("getStorageService", storage); values.put("getEnergyService", energy);
+            grid = valuesProxy(IGrid.class, values);
+            service = new CraftingService(grid, storage, energy);
+            service.addGlobalCraftingProvider(provider);
+            values.put("getCraftingService", service);
+            var host = new com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuHost() {
+                @Override public boolean isCpuActive() { return true; }
+                @Override public IGrid getGrid() { return grid; }
+                @Override public appeng.api.networking.security.IActionSource getActionSource() {
+                    return appeng.api.networking.security.IActionSource.empty();
+                }
+                @Override public Level getLevel() { return level; }
+                @Override public void markCpuDirty() { }
+                @Override public net.minecraft.network.chat.Component getDisplayName() {
+                    return net.minecraft.network.chat.Component.literal("Real furnace Tianshu probe");
+                }
+            };
+            cpu = new com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU(host, Long.MAX_VALUE, 31, 256, false);
+        }
+    }
+
+    private static <T> T valuesProxy(Class<T> type, Map<String, Object> values) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, (p, m, a) -> {
+            if (m.getName().equals("extractAEPower")) return a[0];
+            if (values.containsKey(m.getName())) return values.get(m.getName());
+            var returned = m.getReturnType();
+            if (returned == boolean.class) return false;
+            if (returned == int.class) return 0;
+            if (returned == long.class) return 0L;
+            if (returned == double.class) return 0D;
+            if (returned == Optional.class) return Optional.empty();
+            return null;
+        }));
+    }
+
     @GameTest(template = "empty")
     public static void overloadsShareGlobalDispatchAndRefundOnlyUnacceptedInputs(GameTestHelper helper) {
         for (var mode : List.of(BatchCpuAccounting.Mode.LINEAR, BatchCpuAccounting.Mode.SUCCESSFUL_DISPATCH)) {
