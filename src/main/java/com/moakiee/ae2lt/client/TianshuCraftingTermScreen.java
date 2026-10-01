@@ -45,6 +45,7 @@ import net.minecraft.world.item.Items;
 public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extends TianshuMaintenanceTermScreen<M> {
     private static final Blitter SMITHING_BACKGROUND = Blitter.texture("guis/pattern_modes.png").src(128, 70, 124, 66);
     private static final Blitter STONE_BACKGROUND = Blitter.texture("guis/pattern_modes.png").src(0, 140, 124, 66);
+    private static final Blitter STONE_SCROLLBAR_TRACK = Blitter.texture("guis/pattern_modes.png").src(110, 150, 5, 46);
     private static final Blitter STONE_RECIPE = Blitter.texture("guis/pattern_modes.png").src(124, 140, 20, 22);
     private static final Blitter STONE_RECIPE_SELECTED = STONE_RECIPE.copy().src(124, 162, 20, 22);
     private static final Blitter STONE_RECIPE_HOVER = STONE_RECIPE.copy().src(124, 184, 20, 22);
@@ -103,10 +104,10 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         widgets.add("nextCell", nextCell);
         widgets.add("previousUpgrade", previousUpgrade);
         widgets.add("nextUpgrade", nextUpgrade);
-        for (var button : List.of(previousCell, nextCell))
-            button.setMessage(Component.translatable("ae2lt.tianshu.work.scroll_marks"));
-        for (var button : List.of(previousUpgrade, nextUpgrade))
-            button.setMessage(Component.translatable("ae2lt.tianshu.work.scroll_upgrades"));
+        for (var button : List.of(previousCell, previousUpgrade))
+            button.setMessage(Component.translatable("ae2lt.tianshu.work.previous_page"));
+        for (var button : List.of(nextCell, nextUpgrade))
+            button.setMessage(Component.translatable("ae2lt.tianshu.work.next_page"));
         fuzzy = new SettingToggleButton<>(Settings.FUZZY_MODE, FuzzyMode.IGNORE_ALL,
                 (button, backwards) -> menu.setCellFuzzyMode(button.getNextValue(backwards)));
         fuzzy.setDisableBackground(true);
@@ -187,12 +188,12 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             setSlotsHidden(semantic, page != TianshuWorkPage.CELL);
         }
         if (page == TianshuWorkPage.SMITHING) positionRow(Ae2ltSlotSemantics.TIANSHU_SMITHING,
-                compact ? new int[]{92, 111, 130, 170} : new int[]{15, 33, 51, 109}, imageHeight - (compact ? 142 : 140));
+                compact ? new int[]{92, 110, 128, 165} : new int[]{15, 33, 51, 109}, imageHeight - (compact ? 142 : 140));
         if (page == TianshuWorkPage.ANVIL) positionRow(Ae2ltSlotSemantics.TIANSHU_ANVIL,
-                compact ? new int[]{96, 124, 165} : new int[]{27, 76, 134}, imageHeight - (compact ? 141 : 133));
+                compact ? new int[]{96, 124, 165} : new int[]{27, 76, 134}, imageHeight - (compact ? 137 : 133));
         if (page == TianshuWorkPage.STONECUTTING) {
             positionRow(Ae2ltSlotSemantics.TIANSHU_STONECUTTING,
-                    compact ? new int[]{167, 167} : new int[]{15, 147}, imageHeight - (compact ? 159 : 140));
+                    compact ? new int[]{167, 167} : new int[]{15, 147}, imageHeight - (compact ? 156 : 140));
             if (compact) menu.getSlots(Ae2ltSlotSemantics.TIANSHU_STONECUTTING).getLast().y = imageHeight - 119;
         }
         if (page == TianshuWorkPage.CELL) {
@@ -219,11 +220,19 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             var playerPosition = getStyle().getWidget("clearToPlayerInv").resolve(bounds);
             clearGrid.setPosition(clearPosition.getX(), clearPosition.getY());
             clearToPlayer.setPosition(playerPosition.getX(), playerPosition.getY());
-        } else {
-            int clearX = leftPos + (compact ? (page == TianshuWorkPage.STONECUTTING ? 166 : 164)
-                    : (page == TianshuWorkPage.STONECUTTING ? 105 : 137));
-            int clearY = topPos + imageHeight - (page == TianshuWorkPage.ANVIL ? (compact ? 150 : 142)
-                    : page == TianshuWorkPage.STONECUTTING ? (compact ? 169 : 164) : 162);
+        } else if (clearGrid.visible) {
+            var semantic = switch (page) {
+                case SMITHING -> Ae2ltSlotSemantics.TIANSHU_SMITHING;
+                case ANVIL -> Ae2ltSlotSemantics.TIANSHU_ANVIL;
+                case STONECUTTING -> Ae2ltSlotSemantics.TIANSHU_STONECUTTING;
+                default -> throw new IllegalStateException("No work slots for " + page);
+            };
+            var slots = menu.getSlots(semantic);
+            // Two native 8px icons with a 2px gap span exactly one 18px slot frame.
+            // The compact stonecutter puts its input above its output in the same column.
+            var anchor = compact && page == TianshuWorkPage.STONECUTTING ? slots.getFirst() : slots.getLast();
+            int clearX = leftPos + anchor.x - 1;
+            int clearY = topPos + anchor.y - 10;
             clearGrid.setPosition(clearX, clearY);
             clearToPlayer.setPosition(clearX + 10, clearY);
         }
@@ -276,7 +285,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         }
         if (menu.workPage == TianshuWorkPage.STONECUTTING && vertical != 0) {
             var recipes = menu.hasCompactWorkArea()
-                    ? new Rect2i(leftPos + 93, topPos + imageHeight - 160, 72, 48)
+                    ? new Rect2i(leftPos + 93, topPos + imageHeight - 157, 72, 48)
                     : new Rect2i(leftPos + 33, topPos + imageHeight - 155, 93, 46);
             if (recipes.contains((int) x, (int) y)) {
                 stoneScrollbar.setCurrentScroll(stoneScrollbar.getCurrentScroll() - (int) Math.signum(vertical));
@@ -326,9 +335,13 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             STONE_BACKGROUND.dest(offsetX + 8, offsetY + imageHeight - 165).blit(graphics);
         }
         if (compact && menu.workPage == TianshuWorkPage.STONECUTTING) {
-            drawWorkAreaFrame(graphics, offsetX + 93, offsetY + imageHeight - 160, 72, 48);
+            drawWorkAreaFrame(graphics, offsetX + 93, offsetY + imageHeight - 157, 72, 48);
+            // Match AE2's baked track: the 7px handle overhangs the 5px groove by one pixel on each side.
+            var track = stoneScrollbar.getBounds();
+            STONE_SCROLLBAR_TRACK.dest(offsetX + track.getX() + 1, offsetY + track.getY() - 1,
+                    5, track.getHeight() + 2).blit(graphics);
             graphics.pose().pushPose();
-            graphics.pose().translate(offsetX + 183, offsetY + imageHeight - 139, 0);
+            graphics.pose().translate(offsetX + 183, offsetY + imageHeight - 138, 0);
             graphics.pose().mulPose(Axis.ZP.rotationDegrees(90));
             WORK_ARROW.dest(0, 0).blit(graphics);
             graphics.pose().popPose();
@@ -353,12 +366,12 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             var smithingSlots = menu.getSlots(Ae2ltSlotSemantics.TIANSHU_SMITHING);
             for (int i = 0; i < 3; i++) {
                 var slot = smithingSlots.get(i);
-                Blitter.texture("guis/pattern_modes.png").src(134 + i * 18, 94, 18, 18)
-                        .dest(offsetX + slot.x - 1, offsetY + slot.y - 1).blit(graphics);
+                Blitter.texture("guis/pattern_modes.png").src(135 + i * 18, 95, 16, 16)
+                        .dest(offsetX + slot.x, offsetY + slot.y).blit(graphics);
             }
-            WORK_ARROW.dest(offsetX + 150, offsetY + imageHeight - 142).blit(graphics);
+            WORK_ARROW.dest(offsetX + 146, offsetY + imageHeight - 142).blit(graphics);
         } else if (menu.workPage == TianshuWorkPage.ANVIL) {
-            WORK_ARROW.dest(offsetX + (compact ? 146 : 106), offsetY + imageHeight - (compact ? 141 : 133)).blit(graphics);
+            WORK_ARROW.dest(offsetX + (compact ? 146 : 106), offsetY + imageHeight - (compact ? 137 : 133)).blit(graphics);
         }
     }
 
@@ -371,13 +384,16 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         var texture = Blitter.texture("guis/crafting.png");
         texture.src(9, 88, 1, 1).dest(x + 1, y + 1, width - 2, height - 2).blit(graphics);
         texture.src(7, 85, 162, 1).dest(x, y, width, 1).blit(graphics);
+        // The native inset has a two-pixel shadow immediately below its white top edge.
+        texture.src(8, 86, 160, 2).dest(x + 1, y + 1, width - 2, 2).blit(graphics);
         texture.src(7, 152, 162, 1).dest(x, y + height - 1, width, 1).blit(graphics);
         texture.src(7, 86, 1, 66).dest(x, y + 1, 1, height - 2).blit(graphics);
         texture.src(168, 86, 1, 66).dest(x + width - 1, y + 1, 1, height - 2).blit(graphics);
     }
 
     private void drawWorkSlot(GuiGraphics g, int x, int y) {
-        Blitter.texture("guis/crafting.png").src(25, 92, 18, 18).dest(x - 1, y - 1).blit(g);
+        // Use AE2's standalone slot; a grid cell includes its neighbours' shared border colors.
+        Blitter.texture("guis/pattern_modes.png").src(6, 164, 18, 18).dest(x - 1, y - 1).blit(g);
     }
 
     private void drawCellSlot(GuiGraphics graphics, int x, int y, boolean enabled) {
@@ -389,10 +405,13 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
         boolean compact = menu.hasCompactWorkArea();
         if (menu.workPage == TianshuWorkPage.CELL && menu.getMaxCellConfigRow() > 0) {
-            graphics.drawString(font, (menu.cellConfigRow + 1) + "–" + Math.min(menu.cellConfigRow + 3, menu.getCellConfigRows()), compact ? 126 : 56,
-                    imageHeight - 108, 0x413f54, false);
+            var rows = (menu.cellConfigRow + 1) + "–" + Math.min(menu.cellConfigRow + 3, menu.getCellConfigRows());
+            // Center the range between the two controls, including when both row numbers have two digits.
+            int centerX = (previousCell.getX() + previousCell.getWidth() + nextCell.getX()) / 2 - leftPos;
+            int textY = previousCell.getY() - topPos + (previousCell.getHeight() - font.lineHeight) / 2;
+            graphics.drawString(font, rows, centerX - font.width(rows) / 2, textY, 0x413f54, false);
         } else if (menu.workPage == TianshuWorkPage.ANVIL) {
-            graphics.drawString(font, "+", compact ? 115 : 58, imageHeight - (compact ? 137 : 129), 0x413f54, false);
+            graphics.drawString(font, "+", compact ? 115 : 58, imageHeight - (compact ? 133 : 129), 0x413f54, false);
             anvilCostView.renderCost(graphics, compact ? 92 : 8, imageHeight - 109, compact ? 93 : 160, mouseX, mouseY);
         }
     }
