@@ -117,10 +117,6 @@ public class JEIPlugin implements IModPlugin {
         registration.addIngredientInfo(
                 ModItems.PIGMEE_CORE.get(),
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
-        if (ModList.get().isLoaded("advanced_ae")) {
-            registration.addIngredientInfo(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get(),
-                    Component.translatable("tooltip.ae2lt.overload_processing_factory.reactions"));
-        }
 
         registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
                 Component.translatable("jei.ae2lt.rainbow_pigmee.info"));

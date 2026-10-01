@@ -1525,7 +1525,6 @@
   "ae2lt.gui.overloaded_io_port.status.no_power": "Low power",
   "ae2lt.gui.overloaded_io_port.status.blocked": "Waiting",
   "ae2lt.gui.overloaded_io_port.status.recovering": "Returning",
-  "tooltip.ae2lt.overload_processing_factory.reactions": "Also processes Reaction Chamber recipes. Each operation costs 1 additional High Voltage Lightning; parallel operations each pay this cost.",
   "ae2lt.gui.input_transfer.title": "Move Inputs to Outputs",
   "ae2lt.gui.input_transfer.description": "Move inputs to outputs and try auto-export.",
   "ae2lt.gui.input_transfer.progress_warning": "Moving inputs resets processing progress.",
