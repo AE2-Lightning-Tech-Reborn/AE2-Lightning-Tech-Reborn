@@ -16,7 +16,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
-/** Reuses the portal Pigmee's silhouette with drifting, locally coloured light bands. */
+/** Reuses the Pigmee silhouette with model-aligned pixel colour bands. */
 final class RainbowPigmeeSurfaceLayer {
     private static final float SURFACE_OFFSET = 0.002F;
     private static final RenderType SURFACE = RenderType.create("ae2lt_rainbow_pigmee",
@@ -67,16 +67,18 @@ final class RainbowPigmeeSurfaceLayer {
 
     private static void vertex(PoseStack.Pose pose, VertexConsumer consumer, Direction side,
             float x, float y, float z) {
-        // Linear local offsets interpolate continuously, including across neighbouring faces.
-        float tickOffset = x * 48.0F + y * 128.0F + z * 80.0F;
+        // Project before the pose transform so pixels stay attached while turning or held.
+        // One cell per model unit matches the original Pigmee texture's texel density.
+        float u = side.getAxis() == Direction.Axis.X ? z : x;
+        float v = side.getAxis() == Direction.Axis.Y ? z : y;
         float shade = switch (side) {
             case UP -> 1.0F;
-            case DOWN -> 0.94F;
-            case NORTH, SOUTH -> 0.98F;
-            case EAST, WEST -> 0.96F;
+            case DOWN -> 0.50F;
+            case NORTH, SOUTH -> 0.80F;
+            case EAST, WEST -> 0.60F;
         };
         consumer.addVertex(pose.pose(), x + side.getStepX() * SURFACE_OFFSET,
                 y + side.getStepY() * SURFACE_OFFSET, z + side.getStepZ() * SURFACE_OFFSET)
-                .setUv(tickOffset, 0.0F).setColor(shade, shade, shade, 1.0F);
+                .setUv(u, v).setColor(shade, shade, shade, 1.0F);
     }
 }
