@@ -42,7 +42,7 @@ public final class RainbowPigmeeShader {
 
         TickShader(ResourceProvider resources) throws IOException {
             super(resources, ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "rainbow_pigmee"),
-                    DefaultVertexFormat.POSITION_TEX_COLOR);
+                    DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
             animationTicks = getUniform("AnimationTicks");
         }
 

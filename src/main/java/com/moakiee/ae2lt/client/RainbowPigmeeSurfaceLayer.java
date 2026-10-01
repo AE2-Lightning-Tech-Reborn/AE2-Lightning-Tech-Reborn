@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.client;
 
 import java.util.List;
 
+import com.moakiee.ae2lt.block.FumoBlock;
+
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -20,7 +22,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 final class RainbowPigmeeSurfaceLayer {
     private static final float SURFACE_OFFSET = 0.002F;
     private static final RenderType SURFACE = RenderType.create("ae2lt_rainbow_pigmee",
-            DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 4096,
+            DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, VertexFormat.Mode.QUADS, 4096,
             RenderType.CompositeState.builder().setShaderState(
                     new RenderStateShard.ShaderStateShard(RainbowPigmeeShader::get))
                     .createCompositeState(false));
@@ -32,13 +34,14 @@ final class RainbowPigmeeSurfaceLayer {
             PoseStack poses, MultiBufferSource buffers) {
         var consumer = buffers.getBuffer(SURFACE);
         var random = RandomSource.create();
+        Direction facing = state.getValue(FumoBlock.FACING);
         for (var type : model.getRenderTypes(state, random, data)) {
             for (var side : Direction.values()) {
                 random.setSeed(42L);
-                draw(poses.last(), consumer, model.getQuads(state, side, random, data, type));
+                draw(poses.last(), consumer, model.getQuads(state, side, random, data, type), facing);
             }
             random.setSeed(42L);
-            draw(poses.last(), consumer, model.getQuads(state, null, random, data, type));
+            draw(poses.last(), consumer, model.getQuads(state, null, random, data, type), facing);
         }
     }
 
@@ -47,30 +50,38 @@ final class RainbowPigmeeSurfaceLayer {
         var random = RandomSource.create();
         for (var side : Direction.values()) {
             random.setSeed(42L);
-            draw(poses.last(), consumer, model.getQuads(null, side, random));
+            draw(poses.last(), consumer, model.getQuads(null, side, random), Direction.NORTH);
         }
         random.setSeed(42L);
-        draw(poses.last(), consumer, model.getQuads(null, null, random));
+        draw(poses.last(), consumer, model.getQuads(null, null, random), Direction.NORTH);
     }
 
-    private static void draw(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads) {
+    private static void draw(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads,
+            Direction facing) {
         for (var quad : quads) {
             int[] data = quad.getVertices();
             int stride = data.length / 4;
             for (int vertex = 0; vertex < 4; vertex++) {
                 int offset = vertex * stride;
-                vertex(pose, consumer, quad.getDirection(), Float.intBitsToFloat(data[offset]),
+                vertex(pose, consumer, quad.getDirection(), facing, Float.intBitsToFloat(data[offset]),
                         Float.intBitsToFloat(data[offset + 1]), Float.intBitsToFloat(data[offset + 2]));
             }
         }
     }
 
-    private static void vertex(PoseStack.Pose pose, VertexConsumer consumer, Direction side,
+    private static void vertex(PoseStack.Pose pose, VertexConsumer consumer, Direction side, Direction facing,
             float x, float y, float z) {
         // Project before the pose transform so pixels stay attached while turning or held.
         // One cell per model unit matches the original Pigmee texture's texel density.
         float u = side.getAxis() == Direction.Axis.X ? z : x;
         float v = side.getAxis() == Direction.Axis.Y ? z : y;
+        // Block quads already include their facing rotation; recover front-to-back depth.
+        float depth = switch (facing) {
+            case SOUTH -> 1.0F - z;
+            case EAST -> 1.0F - x;
+            case WEST -> x;
+            default -> z;
+        };
         float shade = switch (side) {
             case UP -> 1.0F;
             case DOWN -> 0.50F;
@@ -79,6 +90,8 @@ final class RainbowPigmeeSurfaceLayer {
         };
         consumer.addVertex(pose.pose(), x + side.getStepX() * SURFACE_OFFSET,
                 y + side.getStepY() * SURFACE_OFFSET, z + side.getStepZ() * SURFACE_OFFSET)
-                .setUv(u, v).setColor(shade, shade, shade, 1.0F);
+                .setUv(u, v).setColor(shade, shade, shade, 1.0F)
+                // UV2 carries model-local depth and height for diagonal colour flow.
+                .setUv2(Math.round(depth * 4096.0F), Math.round(y * 4096.0F));
     }
 }
