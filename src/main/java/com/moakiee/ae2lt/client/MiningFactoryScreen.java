@@ -37,7 +37,6 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
                 LightningStatusLines.title(),
                 Component.translatable("ae2lt.gui.status.label", statusText()),
                 LightningStatusLines.progress(menu.getProgress()),
-                Component.translatable("gui.ae2lt.mining_factory.duration", MiningFactoryBlockEntity.PROCESSING_TICKS),
                 Component.translatable("gui.ae2lt.mining_factory.parallel", menu.parallelCapacity),
                 Component.translatable("gui.ae2lt.mining_factory.lightning", menu.lightning),
                 LightningStatusLines.energy(menu.energy, 1_000_000))));

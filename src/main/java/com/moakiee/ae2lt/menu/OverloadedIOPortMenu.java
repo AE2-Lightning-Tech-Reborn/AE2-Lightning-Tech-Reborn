@@ -18,7 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
-import java.util.List;
 
 public class OverloadedIOPortMenu extends UpgradeableMenu<OverloadedIOPortBlockEntity> {
     public static final MenuType<OverloadedIOPortMenu> TYPE = MenuTypeBuilder
@@ -46,7 +45,6 @@ public class OverloadedIOPortMenu extends UpgradeableMenu<OverloadedIOPortBlockE
             @Override public int getMaxStackSize() { return 1; }
         };
         filter.setNotDraggable();
-        filter.setEmptyTooltip(() -> List.of(Component.translatable("ae2lt.gui.overloaded_io_port.filter")));
         addSlot(filter, Ae2ltSlotSemantics.OVERLOADED_IO_FILTER);
         Ae2ltSlotBackgrounds.withBackground(filter, Ae2ltSlotBackgrounds.FILTER_COMPONENT);
         var matrix = new AppEngSlot(getHost().getMatrixInventory(), 0) {
@@ -56,7 +54,6 @@ public class OverloadedIOPortMenu extends UpgradeableMenu<OverloadedIOPortBlockE
             @Override public int getMaxStackSize() { return OverloadedIOPortBlockEntity.MAX_MATRICES; }
         };
         matrix.setNotDraggable();
-        matrix.setEmptyTooltip(() -> List.of(Component.translatable("ae2lt.gui.overloaded_io_port.matrix")));
         addSlot(matrix, Ae2ltSlotSemantics.OVERLOADED_IO_MATRIX);
         Ae2ltSlotBackgrounds.withBackground(matrix, Ae2ltSlotBackgrounds.LIGHTNING_COLLAPSE_MATRIX);
     }
