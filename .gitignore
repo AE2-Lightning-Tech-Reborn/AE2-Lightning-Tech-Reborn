@@ -10,6 +10,7 @@ build/
 Jar/
 
 # Local assistant/docs
+/AGENTS.md
 .aiassistant/
 .docs/
 archive/
