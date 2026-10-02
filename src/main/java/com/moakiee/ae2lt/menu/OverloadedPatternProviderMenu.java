@@ -23,7 +23,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Provid
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ReturnMode;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessSpeedMode;
-import com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic;
+import com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic;
 
 public class OverloadedPatternProviderMenu extends PatternProviderMenu implements FrequencyBindingMenu {
 

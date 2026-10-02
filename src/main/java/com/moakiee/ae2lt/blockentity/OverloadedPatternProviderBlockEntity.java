@@ -36,12 +36,12 @@ import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic;
-import com.moakiee.ae2lt.logic.ProviderTarget;
+import com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic;
+import com.moakiee.ae2lt.logic.provider.ProviderTarget;
 import com.moakiee.ae2lt.logic.WirelessConnectionLists;
 import com.moakiee.ae2lt.logic.WirelessConnectionRef;
-import com.moakiee.ae2lt.logic.WirelessConnectionValidator;
-import com.moakiee.ae2lt.logic.WirelessPatternContainerGroupSelector;
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionValidator;
+import com.moakiee.ae2lt.logic.terminal.WirelessPatternContainerGroupSelector;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -698,12 +698,12 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                                net.minecraft.core.component.DataComponentMap.Builder builder,
                                @Nullable Player player) {
         super.exportSettings(mode, builder, player);
-        com.moakiee.ae2lt.logic.MemoryCardConfigSupport.exportMemoryCardSettings(mode, builder, tag -> {
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_PROVIDER_MODE, providerMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_RETURN_MODE, returnMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_WIRELESS_DISPATCH_MODE, wirelessDispatchMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_WIRELESS_SPEED_MODE, wirelessSpeedMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_BLOCKING_MODE, blockingMode);
+        com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.exportMemoryCardSettings(mode, builder, tag -> {
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_PROVIDER_MODE, providerMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_RETURN_MODE, returnMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_WIRELESS_DISPATCH_MODE, wirelessDispatchMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_WIRELESS_SPEED_MODE, wirelessSpeedMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_BLOCKING_MODE, blockingMode);
             tag.putBoolean(TAG_FILTERED_IMPORT, filteredImport);
             tag.putBoolean(TAG_ADAPTIVE_BATCH_ENABLED, adaptiveBatchEnabled);
             tag.putInt(TAG_MACHINE_PARALLELISM, machineParallelism);
@@ -716,20 +716,20 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                                net.minecraft.core.component.DataComponentMap input,
                                @Nullable Player player) {
         super.importSettings(mode, input, player);
-        com.moakiee.ae2lt.logic.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
-            this.providerMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+        com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
+            this.providerMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_PROVIDER_MODE, ProviderMode.class, this.providerMode);
-            this.returnMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.returnMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_RETURN_MODE, ReturnMode.class, this.returnMode);
-            this.wirelessDispatchMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.wirelessDispatchMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_WIRELESS_DISPATCH_MODE, WirelessDispatchMode.class, this.wirelessDispatchMode);
-            this.wirelessSpeedMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.wirelessSpeedMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_WIRELESS_SPEED_MODE, WirelessSpeedMode.class, this.wirelessSpeedMode);
-            this.blockingMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.blockingMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_BLOCKING_MODE, BlockingMode.class, this.blockingMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.ifBoolean(tag, TAG_FILTERED_IMPORT,
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.ifBoolean(tag, TAG_FILTERED_IMPORT,
                     v -> this.filteredImport = v);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.ifBoolean(tag, TAG_ADAPTIVE_BATCH_ENABLED,
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.ifBoolean(tag, TAG_ADAPTIVE_BATCH_ENABLED,
                     v -> this.adaptiveBatchEnabled = v);
             if (tag.contains(TAG_MACHINE_PARALLELISM)) {
                 machineParallelism = Math.max(1, tag.getInt(TAG_MACHINE_PARALLELISM));
@@ -761,7 +761,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     public void setRemoved() {
         frequencyBinding.setRemoved();
         if (!unloadingChunk) {
-            var removed = com.moakiee.ae2lt.logic.EjectModeRegistry.unregisterAll(this, true);
+            var removed = com.moakiee.ae2lt.logic.provider.EjectModeRegistry.unregisterAll(this, true);
             if (level instanceof net.minecraft.server.level.ServerLevel sl) {
                 var server = sl.getServer();
                 for (var dp : removed) {

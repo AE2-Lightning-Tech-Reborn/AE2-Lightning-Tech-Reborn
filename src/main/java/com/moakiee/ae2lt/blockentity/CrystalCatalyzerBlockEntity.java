@@ -51,8 +51,8 @@ import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerAutomationInventory;
@@ -211,7 +211,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     /** GUI 流体槽交互:光标容器 → tank。成功返回 true。 */
     public boolean tryInsertFluidFromCarried(Player player) {
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.insertFromCarried(player, tank);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.insertFromCarried(player, tank);
         if (changed) {
             saveChanges();
         }
@@ -220,7 +220,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     /** GUI 流体槽交互:tank → 光标容器。成功返回 true。 */
     public boolean tryExtractFluidToCarried(Player player) {
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.extractToCarried(player, tank);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.extractToCarried(player, tank);
         if (changed) {
             saveChanges();
         }
@@ -232,7 +232,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         if (tank.getFluid().isEmpty()) {
             return;
         }
-        com.moakiee.ae2lt.logic.FluidTankInteractionHelper.clear(tank);
+        com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.clear(tank);
         saveChanges();
     }
 

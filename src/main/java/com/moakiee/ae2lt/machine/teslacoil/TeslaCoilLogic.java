@@ -6,7 +6,7 @@ import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
 
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public final class TeslaCoilLogic implements IGridTickable {

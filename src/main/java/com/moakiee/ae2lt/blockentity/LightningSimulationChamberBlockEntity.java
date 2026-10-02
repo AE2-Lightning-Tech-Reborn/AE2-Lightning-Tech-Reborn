@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.blockentity;
 
 import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
-import com.moakiee.ae2lt.logic.ManualItemExport;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,8 +44,8 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.block.LightningSimulationChamberBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.common.SingleOutputLightningRecipeExecutor;

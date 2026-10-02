@@ -12,7 +12,7 @@ import appeng.crafting.pattern.EncodedSmithingTablePattern;
 import appeng.crafting.pattern.EncodedStonecuttingPattern;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import com.moakiee.ae2lt.item.OverloadPatternItem;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternPayload;
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;

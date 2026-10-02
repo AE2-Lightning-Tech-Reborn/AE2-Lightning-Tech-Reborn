@@ -19,7 +19,7 @@ import appeng.menu.slot.FakeSlot;
 import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryService;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryCandidate;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern;

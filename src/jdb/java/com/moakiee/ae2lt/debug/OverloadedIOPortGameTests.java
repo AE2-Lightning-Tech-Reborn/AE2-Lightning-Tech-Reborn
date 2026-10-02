@@ -12,7 +12,7 @@ import appeng.util.SettingsFrom;
 import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
-import com.moakiee.ae2lt.logic.OverloadedIOTransfer;
+import com.moakiee.ae2lt.logic.transfer.OverloadedIOTransfer;
 import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInventory;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipeInput;

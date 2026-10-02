@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.logic.EasterEggAudience;
+import com.moakiee.ae2lt.logic.world.EasterEggAudience;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.client.DeltaTracker;

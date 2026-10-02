@@ -1,15 +1,15 @@
 package com.moakiee.ae2lt.blockentity;
 
 import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
-import com.moakiee.ae2lt.logic.ManualItemExport;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.EnumSet;
 
 import appeng.api.orientation.RelativeSide;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
@@ -24,7 +24,7 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryInventory;
 import com.moakiee.ae2lt.machine.miningfactory.MiningLoot;

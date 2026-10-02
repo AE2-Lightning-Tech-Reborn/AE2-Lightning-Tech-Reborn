@@ -164,7 +164,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String advanced = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/logic/AdvancedAECompat.java"));
+                "src/main/java/com/moakiee/ae2lt/logic/compat/AdvancedAECompat.java"));
         String screen = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/TianshuPatternEncodingTermScreen.java"));
 
