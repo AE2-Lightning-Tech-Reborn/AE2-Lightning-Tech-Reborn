@@ -23,6 +23,8 @@ By default, without a matrix the factory processes 8 blocks per batch. With matr
 
 Tools consume their tool-component durability per block, Fortune and Silk Touch apply through the loot table, and the default cost is 256 FE per block. An **Annihilation Plane** selects a diamond-tier tool by AE2's rules and carries its enchantments, costing no durability but 768 extra FE per block.
 
+The tool must remain usable before each block is processed. Silent Gear tools stop at the mod's own broken state. If a tool breaks during a batch, only completed blocks are charged; the broken tool stays in its slot for removal and repair, and unprocessed inputs remain. Unbreaking and legitimate unbreakable properties still apply.
+
 ## Slots and automation
 
 | Slot | Capacity |
