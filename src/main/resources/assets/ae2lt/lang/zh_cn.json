@@ -1525,7 +1525,7 @@
   "block.ae2lt.black_pigmee_framed_building_slab": "黑色猪咪框板台阶",
   "block.ae2lt.overloaded_io_port": "过载 IO 端口",
   "tooltip.ae2lt.overloaded_io_port.pending": "含待退回资源：接入有空间的 ME 网络以恢复",
-  "ae2lt.gui.overloaded_io_port.cap": "单次上限：%s 原生单位",
+  "ae2lt.gui.overloaded_io_port.cap": "单次上限：%s 搬运单位",
   "ae2lt.gui.overloaded_io_port.status.idle": "待机",
   "ae2lt.gui.overloaded_io_port.status.active": "搬运中",
   "ae2lt.gui.overloaded_io_port.status.no_network": "网络未就绪",

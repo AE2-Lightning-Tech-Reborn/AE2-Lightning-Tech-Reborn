@@ -12,6 +12,7 @@ import appeng.menu.slot.AppEngSlot;
 import appeng.menu.slot.RestrictedInputSlot;
 import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
+import com.moakiee.ae2lt.logic.OverloadedIOPortThroughput;
 import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -28,8 +29,8 @@ public class OverloadedIOPortMenu extends UpgradeableMenu<OverloadedIOPortBlockE
     @GuiSync(3) public OperationMode operation = OperationMode.EMPTY;
     @GuiSync(7) public int transferInterval = 5;
     @GuiSync(9) public OverloadedIOPortBlockEntity.Status status = OverloadedIOPortBlockEntity.Status.IDLE;
-    @GuiSync(13) public int batchLimit = 1;
-    @GuiSync(14) public long transferCap = 32_768;
+    @GuiSync(13) public int batchLimit = OverloadedIOPortThroughput.BASE_ATTEMPTS;
+    @GuiSync(14) public long transferCap = OverloadedIOPortThroughput.BASE_TRANSFER_OPERATIONS;
     public OverloadedIOPortMenu(int id, Inventory player, OverloadedIOPortBlockEntity host) {
         super(TYPE, id, player, host);
     }
