@@ -405,7 +405,7 @@
   "ae2lt.gui.wireless_speed.normal": "Speed: Normal",
   "ae2lt.gui.wireless_speed.fast": "Speed: Fast (Probe)",
   "ae2lt.gui.filtered_import.on": "Filtered Import: ON (Pattern outputs only)",
-  "ae2lt.gui.filtered_import.off": "Filtered Import: OFF",
+  "ae2lt.gui.filtered_import.off": "Filtered Import: OFF (All resources)",
   "ae2lt.gui.adaptive_batch.on": "Adaptive Doubling: ON",
   "ae2lt.gui.adaptive_batch.off": "Adaptive Doubling: OFF (one copy per push)",
   "ae2lt.gui.provider_advanced.open": "Advanced Settings",

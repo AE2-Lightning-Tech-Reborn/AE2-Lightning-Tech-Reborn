@@ -1,0 +1,13 @@
+// ./gradlew -I scripts/provider-return-filter-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/ProviderReturnFilterGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('provider-return-filter-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+        }
+    }
+}

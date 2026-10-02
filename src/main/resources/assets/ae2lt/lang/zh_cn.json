@@ -359,7 +359,7 @@
   "ae2lt.gui.wireless_speed.normal": "速度：普通",
   "ae2lt.gui.wireless_speed.fast": "速度：快速（探针）",
   "ae2lt.gui.filtered_import.on": "输入过滤：开（仅允许样板产物）",
-  "ae2lt.gui.filtered_import.off": "输入过滤：关",
+  "ae2lt.gui.filtered_import.off": "输入过滤：关（允许全部内容）",
   "ae2lt.gui.adaptive_batch.on": "自适应倍增：开",
   "ae2lt.gui.adaptive_batch.off": "自适应倍增：关（每次仅发送一份）",
   "ae2lt.gui.provider_advanced.open": "高级设置",
