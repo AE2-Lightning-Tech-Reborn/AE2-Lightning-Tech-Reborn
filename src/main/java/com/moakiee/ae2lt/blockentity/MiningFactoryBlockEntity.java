@@ -176,7 +176,9 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
         }
         // All prospective tool edits are on a copy. Commit costs and the fixed result together.
         inventory.extractItem(MiningFactoryInventory.INPUT, result.processed(), false);
-        inventory.setStackInSlot(MiningFactoryInventory.TOOL, result.tool());
+        // A native damage hook can leave a repairable broken item without a TOOL component.
+        // Retain that committed result even though it no longer passes insertion validation.
+        inventory.setItemDirect(MiningFactoryInventory.TOOL, result.tool());
         energy.extractInternal((long) result.processed() * unitCost, false);
         pending.addAll(result.drops());
         lastProcessed = result.processed();
