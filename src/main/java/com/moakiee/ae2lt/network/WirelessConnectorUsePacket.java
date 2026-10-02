@@ -77,7 +77,8 @@ public record WirelessConnectorUsePacket(
         boolean isInterface = state.getBlock() instanceof OverloadedInterfaceBlock;
         boolean isPowerSupply = state.getBlock() instanceof OverloadedPowerSupplyBlock;
         boolean isHost = isProvider || isInterface || isPowerSupply;
-        boolean isMachine = targetBe != null;
+        boolean isMachine = targetBe != null
+                || (!state.isAir() && OverloadedWirelessConnectorItem.getSelectedProvider(level, stack) != null);
 
         if (!isHost && !isMachine) return;
 
@@ -161,10 +162,11 @@ public record WirelessConnectorUsePacket(
             return;
         }
 
-        var targets = WirelessConnectorTargetHelper.collectTargets(level, pos, contiguous);
+        var targets = com.moakiee.ae2lt.logic.wireless.support.WirelessConnectorTargetHelper.collectTargets(
+                level, pos, contiguous, Integer.MAX_VALUE, target -> provider.acceptsWirelessTarget(level, target));
         if (targets.isEmpty()) {
             player.displayClientMessage(
-                    Component.translatable("ae2lt.connector.not_machine").withStyle(ChatFormatting.GREEN), true);
+                    provider.getWirelessTargetRejectionMessage().copy().withStyle(ChatFormatting.GREEN), true);
             return;
         }
 
