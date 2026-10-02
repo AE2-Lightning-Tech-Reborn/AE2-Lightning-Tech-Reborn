@@ -25,7 +25,7 @@ class CraftingReportPresentationContractTest {
     @Test
     void reportShowsOnlyTheRequestedByteFormat() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
         String style = Files.readString(ROOT.resolve(
                 "resources/assets/ae2/screens/ae2lt_craft_confirm.json"));
         String chinese = Files.readString(ROOT.resolve(
@@ -43,7 +43,7 @@ class CraftingReportPresentationContractTest {
     @Test
     void bookmarkButtonFitsBetweenCancelAndStartAndDoesNotCloseTheScreen() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
         String plugin = Files.readString(ROOT.resolve(
                 "java/com/moakiee/ae2lt/integration/jei/JEIPlugin.java"));
         var widgets = JsonParser.parseString(Files.readString(ROOT.resolve(
@@ -77,7 +77,7 @@ class CraftingReportPresentationContractTest {
     @Test
     void forceStartUsesOneGuardedSubmissionPathAndPlayerTooltipsDescribeOnlyFunctions() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
         assertTrue(screen.contains("this::startJob"));
         assertFalse(screen.contains("menu::startJob"));
         assertTrue(screen.contains("forceStart = canForce && hasShiftDown()"));

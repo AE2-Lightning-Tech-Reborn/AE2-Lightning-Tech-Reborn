@@ -6,7 +6,7 @@ import appeng.menu.MenuOpener;
 import appeng.menu.SlotSemantics;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
-import com.moakiee.ae2lt.client.CrystalCatalyzerScreen;
+import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;

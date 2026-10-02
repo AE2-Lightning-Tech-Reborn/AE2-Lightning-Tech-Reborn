@@ -4,7 +4,7 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.menu.SlotSemantics;
-import com.moakiee.ae2lt.client.TianshuCraftingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import com.moakiee.ae2lt.menu.TianshuCraftingTermMenu;
 import net.minecraft.client.Minecraft;

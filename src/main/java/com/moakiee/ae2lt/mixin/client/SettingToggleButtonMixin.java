@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-import com.moakiee.ae2lt.client.SettingToggleButtonAccess;
+import com.moakiee.ae2lt.client.widgets.SettingToggleButtonAccess;
 
 @Mixin(value = SettingToggleButton.class, remap = false)
 public abstract class SettingToggleButtonMixin implements SettingToggleButtonAccess {

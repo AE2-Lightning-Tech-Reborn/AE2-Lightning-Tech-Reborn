@@ -532,7 +532,7 @@ public final class TianshuTransferClientProbe {
         var mc = Minecraft.getInstance();
         if (command.equals("workview")) {
             try {
-                var field = com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class.getDeclaredField("anvilName");
+                var field = com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class.getDeclaredField("anvilName");
                 field.setAccessible(true);
                 String name = ((appeng.client.gui.widgets.AETextField) field.get(mc.screen)).getValue();
                 if (!name.equals("Retained Anvil Rename")) throw new IllegalStateException("Client rename changed: " + name);
@@ -546,7 +546,7 @@ public final class TianshuTransferClientProbe {
             report = "native WUT selection packet " + command;
         } else if (command.startsWith("clickpage:")) {
             try {
-                var field = com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class.getDeclaredField("tabs");
+                var field = com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class.getDeclaredField("tabs");
                 field.setAccessible(true);
                 var buttons = (java.util.List<appeng.client.gui.widgets.TabButton>) field.get(mc.screen);
                 var button = buttons.get(com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.valueOf(command.substring(10)).ordinal());

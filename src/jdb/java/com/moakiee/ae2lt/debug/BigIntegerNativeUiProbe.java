@@ -14,7 +14,9 @@ import appeng.menu.me.crafting.*;
 
 import com.moakiee.ae2lt.block.*;
 import com.moakiee.ae2lt.blockentity.*;
-import com.moakiee.ae2lt.client.*;
+import com.moakiee.ae2lt.client.widgets.BigNumberEntry;
+import com.moakiee.ae2lt.client.crafting.AE2LtCraftConfirmScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
 import com.moakiee.ae2lt.crafting.big.*;
 import com.moakiee.ae2lt.logic.craft.*;
 import com.moakiee.ae2lt.logic.tianshu.*;

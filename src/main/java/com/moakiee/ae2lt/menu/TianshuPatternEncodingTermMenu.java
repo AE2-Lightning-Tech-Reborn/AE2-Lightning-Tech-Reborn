@@ -522,7 +522,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!UselessModCompat.isLoaded() || !UselessModCompat.isOmniversalPattern(pattern)) return;
         if (isClientSide()) {
             clearClientUploadSelectionState();
-            com.moakiee.ae2lt.client.TianshuRecipeTransferContext.clear(this);
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.clear(this);
             omniversalDraft = new OmniversalPatternDraft(pattern);
             restoreOmniversalSlots();
             tianshuMode = TianshuEncodingMode.OMNIVERSAL;
@@ -837,7 +837,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void clear() {
         if (isClientSide()) {
-            com.moakiee.ae2lt.client.TianshuRecipeTransferContext.clear(this);
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.clear(this);
             clearClientUploadSelectionState();
         }
         resetProcessingEncodingType();
@@ -2123,7 +2123,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void encode() {
         if (isClientSide()) {
-            beginClientEncoding(com.moakiee.ae2lt.client.TianshuUploadTriggerClient.shouldTrigger(), false);
+            beginClientEncoding(com.moakiee.ae2lt.client.tianshu.TianshuUploadTriggerClient.shouldTrigger(), false);
             return;
         }
         encodeServerWithOptions(false);
@@ -2146,10 +2146,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private void beginClientEncoding(boolean triggerUpload, boolean directUpload) {
         if (tianshuMode == TianshuEncodingMode.OMNIVERSAL) {
             var preview = UselessModCompat.preview(omniversalDraft, getPlayer().level());
-            com.moakiee.ae2lt.client.TianshuRecipeTransferContext.publish(
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.publish(
                     this, "useless_mod:advanced_alloy_furnace", preview.recipeId(), List.of());
         }
-        com.moakiee.ae2lt.client.TianshuRecipeTransferContext.beginEncoding(
+        com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.beginEncoding(
                 this, tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
         pendingTriggeredUpload = triggerUpload;
         pendingDirectUpload = triggerUpload && directUpload;

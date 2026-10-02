@@ -88,9 +88,9 @@ public record UpdateFrequencyBasicPacket(
     public static void handle(UpdateFrequencyBasicPacket pkt, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (pkt.deleted) {
-                com.moakiee.ae2lt.client.ClientFrequencyCache.removeFrequency(pkt.frequencyId);
+                com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.removeFrequency(pkt.frequencyId);
             } else {
-                com.moakiee.ae2lt.client.ClientFrequencyCache.upsertFrequency(
+                com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.upsertFrequency(
                         pkt.frequencyId, pkt.name, pkt.color, pkt.ownerUUID, pkt.security);
             }
         });

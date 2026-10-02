@@ -5,7 +5,7 @@ import appeng.client.gui.me.crafting.CraftConfirmScreen;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.style.StyleManager;
 import appeng.menu.me.crafting.CraftConfirmMenu;
-import com.moakiee.ae2lt.client.AE2LtCraftConfirmScreen;
+import com.moakiee.ae2lt.client.crafting.AE2LtCraftConfirmScreen;
 import com.moakiee.ae2lt.crafting.report.CraftingReportMenuState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;

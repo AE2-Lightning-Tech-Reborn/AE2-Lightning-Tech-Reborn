@@ -166,7 +166,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String advanced = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/logic/compat/AdvancedAECompat.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuPatternEncodingTermScreen.java"));
 
         int refresh = menu.indexOf("private void refreshDerivedConfiguration()");
         int reset = menu.indexOf("resetProcessingEncodingType();", refresh);
@@ -200,9 +200,9 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String config = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuClosedLoopPatternConfigScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuClosedLoopPatternConfigScreen.java"));
         String panel = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuClosedLoopEncodingPanel.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuClosedLoopEncodingPanel.java"));
         String layout = Files.readString(Path.of(
                 "src/main/resources/assets/ae2/screens/terminals/"
                         + "tianshu_pattern_encoding_terminal.json"));
@@ -258,7 +258,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String config = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuClosedLoopPatternConfigScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuClosedLoopPatternConfigScreen.java"));
         String network = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/network/NetworkInit.java"));
 
@@ -279,7 +279,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuGlobalReserveScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuGlobalReserveScreen.java"));
         String layout = Files.readString(Path.of(
                 "src/main/resources/assets/ae2/screens/tianshu_inventory_overview.json"));
 

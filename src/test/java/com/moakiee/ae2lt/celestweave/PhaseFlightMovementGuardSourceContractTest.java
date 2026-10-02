@@ -70,7 +70,7 @@ class PhaseFlightMovementGuardSourceContractTest {
         String phaseFlight = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/celestweave/module/PhaseFlightSubmodule.java"));
         String clientHandler = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java"));
         String packetMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/ServerGamePacketListenerPhaseMovementMixin.java"));
         String clientMixin = Files.readString(Path.of(
