@@ -13,6 +13,8 @@ item_ids:
 
 The **Mining Factory** produces mining drops from each block's own loot table without placing or breaking blocks. Insert block items with a durability tool or an AE2 Annihilation Plane, then connect an ME network holding HV Lightning and supply FE.
 
+Crafting requires 1 **Ultimate Overload Core**, placing this machine at the overload-core stage.
+
 ## Processing and cost
 
 Every batch takes 5 ticks. Blocks, tool durability, FE and one HV Lightning are charged only on the fifth tick; progress is cleared when FE or lightning runs out, the tool tier is too low, the input is unsupported, the output is blocked or the tool breaks, while refilling or extracting products does not interrupt it.

@@ -13,6 +13,8 @@ item_ids:
 
 Moves resources in bulk between storage cells and the ME network. It provides six input and six output slots and reuses the AE2 IO Port's empty, fill and eject settings, requiring a channel and network power.
 
+Crafting requires 1 **Ultimate Overload Core**, placing this port at the overload-core stage.
+
 ## Transfer rate
 
 Each attempt moves one resource type, with a base budget of 1 attempt per round. The port accepts up to 16 **Lightning Collapse Matrices**; each of the first 15 adds 1 attempt for 16 attempts per round, and the 16th adds none. All six input cells share that budget in rotation, and output slots receive only finished cells.
