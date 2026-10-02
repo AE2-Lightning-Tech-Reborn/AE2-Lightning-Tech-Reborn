@@ -55,6 +55,10 @@ public final class NetworkInit {
                 FrequencyCardUsePacket.STREAM_CODEC,
                 FrequencyCardUsePacket::handle);
         registrar.playToServer(
+                FrequencyCardLinkShortcutPacket.TYPE,
+                FrequencyCardLinkShortcutPacket.STREAM_CODEC,
+                FrequencyCardLinkShortcutPacket::handle);
+        registrar.playToServer(
                 ToggleFrequencyCardAutoConnectPacket.TYPE,
                 ToggleFrequencyCardAutoConnectPacket.STREAM_CODEC,
                 ToggleFrequencyCardAutoConnectPacket::handle);
