@@ -1482,7 +1482,6 @@
   "gui.ae2lt.mining_factory.status.output": "Output blocked",
   "gui.ae2lt.mining_factory.status.unsupported": "Unsupported block",
   "gui.ae2lt.mining_factory.status.error": "Loot failed; reinsert input",
-  "jei.ae2lt.mining_factory.info": "Insert block items and a durability tool (or an enchanted Annihilation Plane) to simulate mining against the block loot table in batches: Fortune and Silk Touch apply, tool durability and FE are charged per processed block, and a plane costs more FE but no durability. Each batch takes 5 ticks and consumes one HV Lightning from the ME network on completion, independent of parallel capacity. Loot sampling has its own budget, and each sample scales its drops by the number of blocks it represents. Apotheosis stoneforming, Earth's Boon and Blood Magic Fortune anointments are supported. Area mining does not trigger, and energy-only tools, blocks with block entities and other real mining event effects are not supported. Lightning Collapse Matrices raise parallel capacity using the Overload Processing Factory rules (1 without a matrix, up to 32 matrices). The toolbar configures automatic export and relative output faces; memory cards copy these settings. See the guide for the full rules.",
   "gui.ae2lt.mining_factory.parallel": "Parallel capacity: %s",
   "block.ae2lt.rainbow_pigmee_fumo": "Rainbow Pigmee Fumo",
   "item.ae2lt.dye_base": "Dye Base",

@@ -112,7 +112,7 @@ public final class MiningFactoryGameTests {
     public static void oneLightningPerBatchOnlyAtCompletion(GameTestHelper h) {
         var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
         be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX,
-                new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(), 32));
+                new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(), 1));
         be.processTick();
         h.runAfterDelay(3, () -> {
             be.processTick();
@@ -174,13 +174,14 @@ public final class MiningFactoryGameTests {
 
     @GameTest(template = "empty")
     public static void samplesAreBoundedAndRepeatedTicksDoNotProcessTwice(GameTestHelper h) {
-        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 128, 1_000_000);
+        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
+        be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()));
         completeCycle(h, be, () -> {
             be.processTick();
-            h.assertTrue(output(be, Items.RAW_IRON) == 64 && be.getInventory().getStackInSlot(0).getCount() == 64, "Input/output conservation and no duplicate completion on the same tick");
-            h.assertTrue(be.getLastSamples() == 8 && be.getLastProcessed() == 64, "Expected eight native loot rolls for 64 inputs");
-            h.assertTrue(be.getEnergyStorage().getEnergyStored() == 1_000_000 - 64 * 256, "Full energy debit");
-            h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == 64, "Full durability debit");
+            h.assertTrue(output(be, Items.RAW_IRON) == 256 && be.getInventory().getStackInSlot(0).getCount() == 256, "Input/output conservation and no duplicate completion on the same tick");
+            h.assertTrue(be.getLastSamples() == 8 && be.getLastProcessed() == 256, "Expected eight native loot rolls for 256 inputs");
+            h.assertTrue(be.getEnergyStorage().getEnergyStored() == 1_000_000 - 256 * 256, "Full energy debit");
+            h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == 256, "Full durability debit");
             h.assertTrue(h.getBlockState(POS).is(ModBlocks.MINING_FACTORY.get()), "Virtual mining must not replace the machine");
             h.succeed();
         });
@@ -320,39 +321,73 @@ public final class MiningFactoryGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void noMatrixRunsOneParallel(GameTestHelper h) {
+    public static void noMatrixRunsEightParallel(GameTestHelper h) {
         var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
         be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, ItemStack.EMPTY);
         completeCycle(h, be, () -> {
-            h.assertTrue(be.getInstalledParallelCapacity() == 1 && output(be, Items.RAW_IRON) == 1,
-                    "Unupgraded factory must process one block");
+            h.assertTrue(be.getInstalledParallelCapacity() == 8 && output(be, Items.RAW_IRON) == 8,
+                    "Unupgraded factory must process eight blocks");
             h.succeed();
         });
     }
 
     @GameTest(template = "empty")
-    public static void oneMatrixRunsEightParallel(GameTestHelper h) {
+    public static void oneMatrixRuns256Parallel(GameTestHelper h) {
         var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
         be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()));
         completeCycle(h, be, () -> {
-            h.assertTrue(be.getInstalledParallelCapacity() == 8 && output(be, Items.RAW_IRON) == 8, "One matrix must enable eight parallel");
+            h.assertTrue(be.getInstalledParallelCapacity() == 256 && output(be, Items.RAW_IRON) == 256, "One matrix must enable 256 parallel");
             h.succeed();
         });
     }
 
     @GameTest(template = "empty")
-    public static void fullMatrixStackRuns256WithOnlyEightSamples(GameTestHelper h) {
-        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
+    public static void fullMatrixStackRuns2048WithOnlyEightSamples(GameTestHelper h) {
+        var tool = new ItemStack(Items.NETHERITE_PICKAXE);
+        tool.set(net.minecraft.core.component.DataComponents.MAX_DAMAGE, 4096);
+        var be = fixture(h, tool, 4096, 1_000_000);
         be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, ItemStack.EMPTY);
         ItemStack remainder = be.getAutomationInventory().insertItem(MiningFactoryInventory.MATRIX,
                 new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(), 40), false);
-        h.assertTrue(remainder.getCount() == 8 && be.getInstalledMatrixCount() == 32, "Matrix slot must cap at 32");
+        h.assertTrue(remainder.getCount() == 32 && be.getInstalledMatrixCount() == 8, "Matrix slot must cap at 8");
         completeCycle(h, be, () -> {
-            h.assertTrue(be.getInstalledParallelCapacity() == 256 && output(be, Items.RAW_IRON) == 256, "Full matrix stack must enable 256 parallel");
-            h.assertTrue(be.getLastSamples() == 8 && be.getInventory().getStackInSlot(1).getDamageValue() == 256, "Sample budget and durability must remain independent of parallel upgrades");
-            h.assertTrue(be.getInstalledMatrixCount() == 32, "Processing consumed matrices");
+            h.assertTrue(be.getInstalledParallelCapacity() == 2048 && output(be, Items.RAW_IRON) == 2048, "Full matrix stack must enable 2048 parallel");
+            h.assertTrue(be.getLastSamples() == 8 && be.getInventory().getStackInSlot(1).getDamageValue() == 2048, "Sample budget and durability must remain independent of parallel upgrades");
+            h.assertTrue(be.getInstalledMatrixCount() == 8, "Processing consumed matrices");
             h.succeed();
         });
+    }
+
+    @GameTest(template = "empty")
+    public static void fullMatrixPlaneBatchFitsEnergyBuffer(GameTestHelper h) {
+        var plane = new ItemStack(AEParts.ANNIHILATION_PLANE.asItem());
+        var be = fixture(h, plane, 4096, 4_000_000);
+        h.assertTrue(be.getEnergyStorage().getMaxEnergyStored() == 4_000_000,
+                "Factory must buffer four million FE");
+        completeCycle(h, be, () -> {
+            h.assertTrue(output(be, Items.RAW_IRON) == 2048
+                    && be.getInventory().getStackInSlot(0).getCount() == 2048,
+                    "Full plane batch must process 2048 blocks");
+            h.assertTrue(be.getEnergyStorage().getEnergyStored() == 4_000_000 - 2048 * 1024,
+                    "Full plane batch must debit 2097152 FE");
+            h.assertTrue(ItemStack.matches(plane, be.getInventory().getStackInSlot(1))
+                    && be.getAvailableLightning() == 999 && be.getLastSamples() == 8,
+                    "Full plane batch changed tool, lightning cost or sample budget");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void memoryCardCannotInstallMoreThanEightMatrices(GameTestHelper h) {
+        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 0, 0);
+        be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, ItemStack.EMPTY);
+        var player = h.makeMockPlayer(GameType.SURVIVAL);
+        player.getInventory().setItem(0, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(), 32));
+        h.assertTrue(be.restoreMatricesFromMemoryCard(player, 32) == 0
+                && be.getInstalledMatrixCount() == 8 && be.getMatrixSlotLimit() == 8
+                && player.getInventory().countItem(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()) == 24,
+                "Memory card must install only eight matrices and retain the remaining items");
+        h.succeed();
     }
 
     private static ChestBlockEntity chest(GameTestHelper h, BlockPos pos) {
@@ -436,7 +471,7 @@ public final class MiningFactoryGameTests {
         h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 37 && be.getInventory().getStackInSlot(1).is(Items.DIAMOND_PICKAXE)
                 && be.getInventory().getStackInSlot(10).is(Items.DIAMOND) && be.getInventory().getStackInSlot(10).getCount() == 123,
                 "Adding the matrix slot moved old contents");
-        h.assertTrue(be.getInstalledMatrixCount() == 0 && be.getInstalledParallelCapacity() == 1 && !be.isAutoExportEnabled(), "Legacy save defaults changed");
+        h.assertTrue(be.getInstalledMatrixCount() == 0 && be.getInstalledParallelCapacity() == 8 && !be.isAutoExportEnabled(), "Legacy save defaults changed");
         h.succeed();
     }
 
@@ -477,14 +512,15 @@ public final class MiningFactoryGameTests {
         var context = new net.minecraft.world.item.context.UseOnContext(player, hand,
                 new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(be.getBlockPos()), Direction.UP, be.getBlockPos(), false));
         var result = ModItems.LIGHTNING_COLLAPSE_MATRIX.get().onItemUseFirst(player.getItemInHand(hand), context);
-        h.assertTrue(result.consumesAction() && be.getInstalledMatrixCount() == 32 && player.getItemInHand(hand).getCount() == 8,
+        h.assertTrue(result.consumesAction() && be.getInstalledMatrixCount() == 8 && player.getItemInHand(hand).getCount() == 32,
                 "Shared matrix item shortcut did not honor capacity or hand count");
         h.succeed();
     }
 
     @GameTest(template = "empty")
     public static void cyclesTakeFiveTicksAndChargeOnlyAtCompletion(GameTestHelper h) {
-        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 128, 1_000_000);
+        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 512, 1_000_000);
+        be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()));
         be.processTick();
         for (int elapsed = 0; elapsed < 10; elapsed++) {
             final int tick = elapsed;
@@ -492,10 +528,10 @@ public final class MiningFactoryGameTests {
                 be.processTick();
                 be.processTick();
                 int batches = (tick + 1) / 5;
-                h.assertTrue(output(be, Items.RAW_IRON) == batches * 64L, "Batch finished before its fifth tick: " + tick);
-                h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 128 - batches * 64, "Early input debit");
-                h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == batches * 64, "Early durability debit");
-                h.assertTrue(be.getEnergyStorage().getEnergyStored() == 1_000_000 - batches * 64 * 256, "Early FE debit");
+                h.assertTrue(output(be, Items.RAW_IRON) == batches * 256L, "Batch finished before its fifth tick: " + tick);
+                h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 512 - batches * 256, "Early input debit");
+                h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == batches * 256, "Early durability debit");
+                h.assertTrue(be.getEnergyStorage().getEnergyStored() == 1_000_000 - batches * 256 * 256, "Early FE debit");
                 h.assertTrue(be.getProgressTicks() == (tick + 1) % 5, "Progress did not follow real ticks");
                 if (tick == 9) h.succeed();
             };
@@ -568,7 +604,7 @@ public final class MiningFactoryGameTests {
         });
         h.runAfterDelay(7, () -> {
             be.processTick();
-            h.assertTrue(output(be, Items.DIAMOND_ORE) == 8 && be.getInventory().getStackInSlot(0).getCount() == 56, "Changed batch did not use its current tool and parallel limit");
+            h.assertTrue(output(be, Items.DIAMOND_ORE) == 64 && be.getInventory().getStackInSlot(0).isEmpty(), "Changed batch did not use its current tool and parallel limit");
             h.succeed();
         });
     }
@@ -597,21 +633,22 @@ public final class MiningFactoryGameTests {
     @GameTest(template = "empty")
     public static void largeInputRetainsEveryUnprocessedBlockAcrossFiveTickBatches(GameTestHelper h) {
         var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 4096, 1_000_000);
+        be.getInventory().setStackInSlot(MiningFactoryInventory.MATRIX, new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()));
         be.processTick();
         h.runAfterDelay(4, () -> {
             be.processTick();
-            h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 4032,
-                    "4096 input must retain 4032 after the first 64-block batch");
-            h.assertTrue(output(be, Items.RAW_IRON) == 64 && be.getLastProcessed() == 64,
-                    "First five-tick batch output was not exactly 64");
+            h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 3840,
+                    "4096 input must retain 3840 after the first 256-block batch");
+            h.assertTrue(output(be, Items.RAW_IRON) == 256 && be.getLastProcessed() == 256,
+                    "First five-tick batch output was not exactly 256");
         });
         h.runAfterDelay(9, () -> {
             be.processTick();
-            h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 3968 && output(be, Items.RAW_IRON) == 128,
+            h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 3584 && output(be, Items.RAW_IRON) == 512,
                     "Two batches must conserve all 4096 input blocks");
-            h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == 128
-                    && be.getEnergyStorage().getEnergyStored() == 1_000_000 - 128 * 256,
-                    "Costs must only cover the 128 processed blocks");
+            h.assertTrue(be.getInventory().getStackInSlot(1).getDamageValue() == 512
+                    && be.getEnergyStorage().getEnergyStored() == 1_000_000 - 512 * 256,
+                    "Costs must only cover the 512 processed blocks");
             h.succeed();
         });
     }

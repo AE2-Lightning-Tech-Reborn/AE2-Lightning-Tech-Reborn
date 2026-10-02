@@ -32,14 +32,14 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
         imageHeight = 183;
         miningOverlay = style.getImage("miningOverlay");
         widgets.add("processArea", new OverloadProcessingFactoryProgressWidget(menu::getProgress, style.getImage("processOverlay")));
-        widgets.add("energyBar", new OverloadProcessingFactoryEnergyBar(() -> menu.energy, () -> 1_000_000L, style.getImage("energyBar")));
+        widgets.add("energyBar", new OverloadProcessingFactoryEnergyBar(() -> menu.energy, () -> MiningFactoryBlockEntity.ENERGY_CAPACITY, style.getImage("energyBar")));
         widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
                 LightningStatusLines.title(),
                 Component.translatable("ae2lt.gui.status.label", statusText()),
                 LightningStatusLines.progress(menu.getProgress()),
                 Component.translatable("gui.ae2lt.mining_factory.parallel", menu.parallelCapacity),
                 Component.translatable("gui.ae2lt.mining_factory.lightning", menu.lightning),
-                LightningStatusLines.energy(menu.energy, 1_000_000))));
+                LightningStatusLines.energy(menu.energy, MiningFactoryBlockEntity.ENERGY_CAPACITY))));
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
         autoExportButton = new ToggleButton(Icon.AUTO_EXPORT_ON, Icon.AUTO_EXPORT_OFF,
                 state -> menu.clientToggleAutoExport());

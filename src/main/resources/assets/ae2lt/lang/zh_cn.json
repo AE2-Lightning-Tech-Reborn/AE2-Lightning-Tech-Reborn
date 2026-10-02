@@ -1482,7 +1482,6 @@
   "gui.ae2lt.mining_factory.status.output": "输出已堵塞",
   "gui.ae2lt.mining_factory.status.unsupported": "不支持此方块",
   "gui.ae2lt.mining_factory.status.error": "战利品异常，请重放输入",
-  "jei.ae2lt.mining_factory.info": "放入方块物品与耐久工具（或附魔破坏面板），按方块战利品表批量模拟挖掘：时运、精准采集生效，按实际处理数量消耗工具耐久与 FE，破坏面板不耗耐久但耗电更高。每批 5 tick，完成结算时从 ME 网络消耗 1 单位高压闪电，与并行数无关。战利品抽样有独立预算，样本按代表数量放大产出。支持神化石材转化、大地恩惠与血魔法时运涂油；不会触发范围挖掘，也不支持纯电动工具、带方块实体的方块及其他真实挖掘事件效果。安装闪电坍缩矩阵可按过载处理工厂的规则提高并行（无矩阵为 1 并行，最多 32 枚）。工具栏可设置自动弹出与相对输出面，内存卡可复制这些设置。完整规则见指南。",
   "gui.ae2lt.mining_factory.parallel": "并行上限：%s",
   "block.ae2lt.rainbow_pigmee_fumo": "彩虹猪咪",
   "item.ae2lt.dye_base": "染料基底",

@@ -127,7 +127,7 @@ public final class MiningFactoryClientProbe {
                     require(menu.slots.get(2).getItem().is(Items.RAW_IRON)
                             && menu.slots.get(2).getItem().getCount() == 64, "Output synchronization failed");
                     require(menu.energy == 0, "FE synchronization failed");
-                    require(menu.parallelCapacity == 64 && menu.slots.get(MiningFactoryInventory.MATRIX).getItem().getCount() == 8,
+                    require(menu.parallelCapacity == 2048 && menu.slots.get(MiningFactoryInventory.MATRIX).getItem().getCount() == 8,
                             "Matrix shift-click or parallel capacity sync failed");
                     capture("mining-factory-completed.png");
                     mc.gameMode.handleInventoryMouseClick(menu.containerId, 2, 0, ClickType.QUICK_MOVE, mc.player);

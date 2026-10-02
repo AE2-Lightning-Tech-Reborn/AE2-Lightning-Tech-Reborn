@@ -2,7 +2,6 @@ package com.moakiee.ae2lt.machine.miningfactory;
 
 import com.moakiee.ae2lt.machine.lightningchamber.LargeStackItemHandler;
 import net.minecraft.world.item.ItemStack;
-import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryInventory;
 import com.moakiee.ae2lt.registry.ModItems;
 
 public final class MiningFactoryInventory extends LargeStackItemHandler {
@@ -14,13 +13,14 @@ public final class MiningFactoryInventory extends LargeStackItemHandler {
     public static final int MATRIX = 11;
     public static final int SIZE = 12;
     public static final int CAPACITY = 4096;
+    public static final int MATRIX_SLOT_LIMIT = 8;
 
     public MiningFactoryInventory(Runnable listener) { super(SIZE, listener); }
 
     @Override
     public int getSlotLimit(int slot) {
         validateSlotIndex(slot);
-        return slot == TOOL ? 1 : slot == MATRIX ? OverloadProcessingFactoryInventory.MATRIX_SLOT_LIMIT : CAPACITY;
+        return slot == TOOL ? 1 : slot == MATRIX ? MATRIX_SLOT_LIMIT : CAPACITY;
     }
 
     @Override
@@ -40,8 +40,7 @@ public final class MiningFactoryInventory extends LargeStackItemHandler {
     }
 
     public int getInstalledParallelCapacity() {
-        int count = getInstalledMatrixCount();
-        return count == 0 ? 1 : OverloadProcessingFactoryInventory.getMaxParallelForMatrixCount(count);
+        return MiningFactoryConfig.parallelCapacity(getInstalledMatrixCount());
     }
 
     public static boolean isOutputSlot(int slot) {
