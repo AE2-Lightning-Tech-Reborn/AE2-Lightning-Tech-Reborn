@@ -136,7 +136,11 @@ Wireless Mode, wireless links, and Fast probing also increase idle power usage.
 
 ## Import Filter
 
-With "Filtered Import" enabled, the provider only accepts items listed as outputs on the current pattern when returning products — this prevents unrelated items from entering the network.
+With "Filtered Import" disabled, AUTO pulls every item, fluid or other resource that the connected face allows extracting, including byproducts absent from the patterns. It also works with no patterns installed. Inputs or catalysts will also be pulled back if the machine allows extracting them from that face.
+
+Normal mode follows the provider's facing; all-sides mode checks every active adjacent face and can also pull storage cells from a neighboring ME Drive. Use a wrench to face a single machine when that is the intended target. Wireless mode follows each connection's bound machine face.
+
+With "Filtered Import" enabled, both AUTO extraction and passive returns only accept outputs listed in the loaded patterns; no pattern outputs means no return. Overload patterns retain each output's exact or ID-only matching setting.
 
 ## Overload Pattern and Overload Pattern Encoder
 
