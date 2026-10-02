@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.integration.ae2cs;
 
 import com.moakiee.ae2lt.registry.ModItems;
+import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 
 import appeng.api.config.Actionable;
 import appeng.api.networking.energy.IAEPowerStorage;
@@ -81,6 +82,13 @@ public final class CrystalScienceOverclockGameTests {
         return BuiltInRegistries.BLOCK.getOptional(ResourceLocation.fromNamespaceAndPath("ae2cs", path)).isPresent();
     }
 
+    private static void checkCraftingInput(LightningAssemblyRecipe recipe, String itemId, int count) {
+        ItemStack item = new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse(itemId)));
+        check(recipe.inputs().stream().anyMatch(input -> input.count() == count
+                        && input.ingredient().test(item)),
+                "parallel card recipe is missing " + count + " x " + itemId);
+    }
+
     private static BlockEntity latestMachine(GameTestHelper helper, String path, ItemStack input, double energy) {
         helper.setBlock(POS, BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath("ae2cs", path)));
         BlockEntity machine = helper.getBlockEntity(POS);
@@ -99,9 +107,17 @@ public final class CrystalScienceOverclockGameTests {
 
     @GameTest(template = "empty")
     public static void oneCardCompletesEightPaidRecipesPerTick(GameTestHelper helper) {
-        check(helper.getLevel().getRecipeManager().byKey(ResourceLocation.parse(
-                "ae2lt:lightning_assembly/overload_parallel_card")).isPresent(),
+        var cardRecipe = helper.getLevel().getRecipeManager().byKey(ResourceLocation.parse(
+                "ae2lt:lightning_assembly/overload_parallel_card"));
+        check(cardRecipe.isPresent(),
                 "LT and AE2CS conditional crafting recipe did not load");
+        check(cardRecipe.get().value() instanceof LightningAssemblyRecipe,
+                "parallel card does not use lightning assembly");
+        var assembly = (LightningAssemblyRecipe) cardRecipe.get().value();
+        check(assembly.inputs().size() == 3, "parallel card recipe has unexpected extra inputs");
+        checkCraftingInput(assembly, "ae2cs:overload_card", 2);
+        checkCraftingInput(assembly, "ae2lt:lightning_collapse_matrix", 1);
+        checkCraftingInput(assembly, "ae2cs:resonating_processor", 2);
         BlockEntity machine = pulverizer(helper, new ItemStack(Items.STONE, 16), 80_000, 1);
         tick(machine);
         check(inventory(machine, "getInputInv").getStackInSlot(0).getCount() == 8,

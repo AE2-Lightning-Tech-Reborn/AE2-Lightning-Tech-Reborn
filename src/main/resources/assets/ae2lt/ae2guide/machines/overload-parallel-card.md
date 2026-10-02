@@ -9,7 +9,7 @@ item_ids:
 
 # Overload Parallel Card
 
-The **Overload Parallel Card** is an optional LT and AE2 Crystal Science integration. Craft one in the Lightning Assembly Chamber from two AE2CS Meteorite Overclock Cards, LT components, and Extreme High Voltage Lightning. Up to two can be installed per supported AE2CS machine.
+The **Overload Parallel Card** is an optional LT and AE2 Crystal Science integration. Craft one in the Lightning Assembly Chamber from **two AE2CS Meteorite Overclock Cards, one Lightning Collapse Matrix, and two AE2CS Resonating Processors**, using Extreme High Voltage Lightning. Up to two can be installed per supported AE2CS machine.
 
 One card allows up to **8 operations per game tick**; two cards allow up to **64**. Every operation still pays its full AE power and input cost and checks fluids and output capacity. The machine's internal AE power capacity grows to 8 or 64 times its original size, and CS's normal grid connection charges it. Processing stops when power, inputs, fluids, or output space run out. Recipes that cost more than the native buffer may still need multiple passes. At 20 TPS, with sufficient resources and output space, the caps are **160 or 1,280 recipes per second**.
 

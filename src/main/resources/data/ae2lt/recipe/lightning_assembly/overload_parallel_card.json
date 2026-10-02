@@ -7,6 +7,10 @@
     {
       "type": "neoforge:item_exists",
       "item": "ae2cs:overload_card"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "ae2cs:resonating_processor"
     }
   ],
   "type": "ae2lt:lightning_assembly",
@@ -17,16 +21,12 @@
       "count": 2
     },
     {
-      "ingredient": { "item": "ae2lt:overload_processor" },
-      "count": 2
-    },
-    {
-      "ingredient": { "item": "ae2lt:overload_crystal" },
-      "count": 4
-    },
-    {
-      "ingredient": { "item": "ae2lt:overload_singularity" },
+      "ingredient": { "item": "ae2lt:lightning_collapse_matrix" },
       "count": 1
+    },
+    {
+      "ingredient": { "item": "ae2cs:resonating_processor" },
+      "count": 2
     }
   ],
   "result": {
