@@ -68,6 +68,7 @@ import appeng.api.util.AEColor;
 import appeng.items.parts.ColoredPartItem;
 import appeng.items.parts.PartItem;
 import appeng.items.parts.PartModelsHelper;
+import appeng.api.upgrades.Upgrades;
 
 public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(AE2LightningTech.MODID);
@@ -264,6 +265,10 @@ public final class ModItems {
             "overloaded_frequency_card",
             OverloadedFrequencyCardItem::new,
             new Item.Properties());
+
+    public static final DeferredItem<Item> OVERLOAD_PARALLEL_CARD = ITEMS.register(
+            "overload_parallel_card",
+            () -> Upgrades.createUpgradeCardItem(new Item.Properties()));
 
     public static final DeferredItem<Item> OVERLOADED_PATTERN_PROVIDER_UPGRADE = ITEMS.registerItem(
             "overloaded_pattern_provider_upgrade",

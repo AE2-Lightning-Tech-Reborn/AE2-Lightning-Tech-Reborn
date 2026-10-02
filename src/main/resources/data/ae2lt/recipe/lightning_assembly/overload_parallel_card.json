@@ -1,0 +1,39 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2cs"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "ae2cs:overload_card"
+    }
+  ],
+  "type": "ae2lt:lightning_assembly",
+  "priority": 0,
+  "inputs": [
+    {
+      "ingredient": { "item": "ae2cs:overload_card" },
+      "count": 2
+    },
+    {
+      "ingredient": { "item": "ae2lt:overload_processor" },
+      "count": 2
+    },
+    {
+      "ingredient": { "item": "ae2lt:overload_crystal" },
+      "count": 4
+    },
+    {
+      "ingredient": { "item": "ae2lt:overload_singularity" },
+      "count": 1
+    }
+  ],
+  "result": {
+    "id": "ae2lt:overload_parallel_card",
+    "count": 1
+  },
+  "totalEnergy": 1000000,
+  "lightningCost": 16,
+  "lightningTier": "extreme_high_voltage"
+}

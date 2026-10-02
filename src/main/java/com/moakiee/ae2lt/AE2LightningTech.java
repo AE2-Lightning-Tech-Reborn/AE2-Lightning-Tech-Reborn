@@ -279,6 +279,9 @@ public class AE2LightningTech {
                         output.accept(ModItems.OVERLOAD_PATTERN_ENCODER);
                         output.accept(ModItems.OVERLOADED_WIRELESS_CONNECT_TOOL);
                         output.accept(ModItems.OVERLOADED_FREQUENCY_CARD);
+                        if (net.neoforged.fml.ModList.get().isLoaded("ae2cs")) {
+                            output.accept(ModItems.OVERLOAD_PARALLEL_CARD);
+                        }
                         output.accept(ModItems.OVERLOADED_PATTERN_PROVIDER_UPGRADE);
                         output.accept(ModItems.EXTENDED_OVERLOADED_PATTERN_PROVIDER_UPGRADE);
                         output.accept(ModItems.OVERLOADED_FILTER_COMPONENT);
@@ -1059,6 +1062,7 @@ public class AE2LightningTech {
                     LightningAssemblyChamberBlockEntity.SPEED_CARD_SLOTS);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.OVERLOAD_PROCESSING_FACTORY.get(),
                     OverloadProcessingFactoryBlockEntity.SPEED_CARD_SLOTS);
+            com.moakiee.ae2lt.integration.ae2cs.CrystalScienceOverclockIntegration.registerUpgrades();
 
             Upgrades.add(AEItems.FUZZY_CARD, ModItems.OVERLOADED_FILTER_COMPONENT.get(), 1);
             Upgrades.add(AEItems.INVERTER_CARD, ModItems.OVERLOADED_FILTER_COMPONENT.get(), 1);

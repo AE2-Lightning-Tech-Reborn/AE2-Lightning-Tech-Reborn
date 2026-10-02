@@ -272,6 +272,7 @@
   "ae2lt.gui.wireless_strategy.even": "均分发配",
   "item.ae2lt.overloaded_wireless_connect_tool": "过载无线连接工具",
   "item.ae2lt.overloaded_frequency_card": "过载频率卡",
+  "item.ae2lt.overload_parallel_card": "过载并行卡",
   "tooltip.ae2lt.frequency_card.unbound": "频率：未绑定",
   "tooltip.ae2lt.frequency_card.frequency": "频率：%s",
   "tooltip.ae2lt.frequency_card.auto_on": "自动连接：开启",

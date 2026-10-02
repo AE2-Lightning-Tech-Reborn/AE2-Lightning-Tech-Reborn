@@ -227,6 +227,18 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_catalyzer'
         }
 
+        crystalScienceOverclockGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-crystal-science-overclock-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_cs_overclock'
+        }
+
+        crystalScienceAbsentGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-crystal-science-absent-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_cs_absent'
+        }
+
         cpuSelectionGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-cpu-selection-gametest')
@@ -365,6 +377,12 @@ if (providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').getOrElse('false'
 if (providers.gradleProperty('ae2ltAlloyAnvilTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/block/OverloadAlloyAnvilGameTests.java',
                                    'com/moakiee/ae2lt/client/OverloadAlloyAnvilClientProbe.java'])
+}
+if (providers.gradleProperty('ae2ltCrystalScienceOverclockGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/integration/ae2cs/CrystalScienceOverclockGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltCrystalScienceAbsentSmokeOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/integration/ae2cs/CrystalScienceAbsentGameTests.java'])
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }

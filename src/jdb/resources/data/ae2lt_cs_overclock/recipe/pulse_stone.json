@@ -1,0 +1,9 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:item_exists", "item": "ae2cs:pulse_centrifuge" }
+  ],
+  "type": "ae2cs:pulse_centrifuge_recipe_serializer",
+  "energy_cost": 8000,
+  "input": { "count": 1, "item": "minecraft:stone" },
+  "results": [ { "count": 1, "id": "minecraft:cobblestone" } ]
+}

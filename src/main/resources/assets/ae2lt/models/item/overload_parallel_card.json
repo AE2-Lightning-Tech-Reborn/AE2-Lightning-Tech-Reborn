@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "ae2lt:item/overloaded_frequency_card",
+    "layer1": "ae2lt:item/overload_crystal"
+  }
+}
