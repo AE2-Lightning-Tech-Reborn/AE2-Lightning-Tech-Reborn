@@ -21,12 +21,14 @@ import com.moakiee.ae2lt.integration.jei.category.OverloadGrowthCategory;
 import com.moakiee.ae2lt.integration.jei.category.OverloadProcessingCategory;
 import com.moakiee.ae2lt.integration.jei.category.TeslaCoilCategory;
 import com.moakiee.ae2lt.integration.jei.compat.ae2jeiintegration.AE2JeiIntegrationCompat;
+import com.moakiee.ae2lt.integration.jei.compat.AdvancedAeFactoryJeiCompat;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.RecipeManagerByTypeAccess;
+import com.moakiee.ae2lt.registry.ModFumos;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiClickableArea;
@@ -105,6 +107,16 @@ public class JEIPlugin implements IModPlugin {
         registration.addIngredientInfo(
                 ModItems.PIGMEE_CORE.get(),
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
+        if (ModList.get().isLoaded("advanced_ae")) {
+            registration.addIngredientInfo(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get(),
+                    Component.translatable("tooltip.ae2lt.overload_processing_factory.reactions"));
+        }
+
+        registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
+                Component.translatable("jei.ae2lt.rainbow_pigmee.info"));
+
+        registration.addIngredientInfo(ModBlocks.MINING_FACTORY.get().asItem(),
+                Component.translatable("jei.ae2lt.mining_factory.info"));
 
         var level = Minecraft.getInstance().level;
         if (level == null) {
@@ -156,10 +168,8 @@ public class JEIPlugin implements IModPlugin {
                         .toList());
         registration.addRecipes(
                 OverloadProcessingCategory.TYPE,
-                RecipeManagerByTypeAccess.byType(
-                                level.getRecipeManager(),
-                                com.moakiee.ae2lt.registry.ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get())
-                        .values()
+                com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog
+                        .displayRecipes(level.getRecipeManager())
                         .stream()
                         .toList());
         registration.addRecipes(
@@ -177,6 +187,9 @@ public class JEIPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get()), LightningAssemblyCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get()), LightningSimulationCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get()), OverloadProcessingCategory.TYPE);
+        if (ModList.get().isLoaded("advanced_ae")) {
+            AdvancedAeFactoryJeiCompat.registerCatalyst(registration);
+        }
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.TESLA_COIL.get()), TeslaCoilCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRYSTAL_CATALYZER.get()), CrystalCatalyzerCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get()), CrystalCatalyzerCategory.TYPE);
@@ -193,8 +206,19 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
-        // AE2 1.20.1 ships its own EncodePatternTransferHandler for the vanilla
-        // JEI plugin; its constructor takes (MenuType, Class, transfer-helper).
+        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE,
+                registration.getTransferHelper()));
+        if (ModList.get().isLoaded("ae2wtlib")) {
+        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE,
+                registration.getTransferHelper()));
+            // JEI matches the concrete menu class, not its superclass. The enhanced host shares
+            // the base wireless MenuType; its exact class is sufficient for this registration.
+            registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                    com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu.class,
+                    null, registration.getTransferHelper()));
+        }
         var helper = registration.getTransferHelper();
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
@@ -214,12 +238,16 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class,
+                new TianshuCraftingGhostHandler());
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,
                 clickableAreaHandler(82, 25, 35, 46, LightningSimulationCategory.TYPE));
         registration.addGuiContainerHandler(OverloadProcessingFactoryScreen.class,
-                clickableAreaHandler(84, 46, 31, 10, OverloadProcessingCategory.TYPE));
+                clickableAreaHandler(84, 46, 31, 10, ModList.get().isLoaded("advanced_ae")
+                        ? new RecipeType<?>[] {OverloadProcessingCategory.TYPE, AdvancedAeFactoryJeiCompat.recipeType()}
+                        : new RecipeType<?>[] {OverloadProcessingCategory.TYPE}));
         registration.addGuiContainerHandler(TeslaCoilScreen.class,
                 clickableAreaHandler(43, 22, 36, 40, TeslaCoilCategory.TYPE));
         registration.addGuiContainerHandler(CrystalCatalyzerScreen.class,
@@ -227,11 +255,11 @@ public class JEIPlugin implements IModPlugin {
     }
 
     private static <T extends AbstractContainerScreen<?>> IGuiContainerHandler<T> clickableAreaHandler(
-            int x, int y, int width, int height, RecipeType<?> recipeType) {
+            int x, int y, int width, int height, RecipeType<?>... recipeTypes) {
         return new IGuiContainerHandler<T>() {
             @Override
             public Collection<IGuiClickableArea> getGuiClickableAreas(T screen, double mouseX, double mouseY) {
-                return List.of(IGuiClickableArea.createBasic(x, y, width, height, recipeType));
+                return List.of(IGuiClickableArea.createBasic(x, y, width, height, recipeTypes));
             }
         };
     }

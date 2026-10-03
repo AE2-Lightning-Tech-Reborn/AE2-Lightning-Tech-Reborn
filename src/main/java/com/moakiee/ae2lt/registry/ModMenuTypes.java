@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessTerminalFactory;
 import com.moakiee.ae2lt.menu.AtmosphericIonizerMenu;
@@ -93,6 +95,12 @@ public final class ModMenuTypes {
                     "lightning_collector",
                     () -> LightningCollectorMenu.TYPE);
 
+    public static final RegistryObject<MenuType<OverloadedIOPortMenu>>
+            OVERLOADED_IO_PORT = MENU_TYPES.register("overloaded_io_port", () -> OverloadedIOPortMenu.TYPE);
+
+    public static final RegistryObject<MenuType<MiningFactoryMenu>>
+            MINING_FACTORY = MENU_TYPES.register("mining_factory", () -> MiningFactoryMenu.TYPE);
+
     public static final RegistryObject<MenuType<OverloadProcessingFactoryMenu>>
             OVERLOAD_PROCESSING_FACTORY = MENU_TYPES.register(
                     "overload_processing_factory",
@@ -164,4 +172,12 @@ public final class ModMenuTypes {
 
     private ModMenuTypes() {
     }
+
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu>>
+            TIANSHU_CRAFTING_TERMINAL = MENU_TYPES.register("tianshu_crafting_terminal",
+                    () -> com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE);
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu>>
+            TIANSHU_WIRELESS_CRAFTING_TERMINAL = net.minecraftforge.fml.ModList.get().isLoaded("ae2wtlib")
+                    ? MENU_TYPES.register("wireless_tianshu_crafting_terminal", () -> com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE)
+                    : RegistryObject.create(new ResourceLocation(AE2LightningTech.MODID, "wireless_tianshu_crafting_terminal"), ForgeRegistries.MENU_TYPES);
 }

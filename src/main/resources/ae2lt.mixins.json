@@ -6,6 +6,9 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ae2lt.refmap.json",
   "mixins": [
+    "InscriberProcessorRecipeLoaderMixin",
+    "OverloadAlloyAnvilFallingMixin",
+    "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",
@@ -50,7 +53,8 @@
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "TianshuStonecutterMenuMixin"
   ],
   "client": [
     "client.CableBusRenderStateMixin",

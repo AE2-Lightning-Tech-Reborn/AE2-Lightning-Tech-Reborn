@@ -11,6 +11,7 @@ buildscript {
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
 
@@ -872,4 +873,49 @@ tasks.register('checkWirelessIoBenchmarkRegression') {
                     + failures.join('\n'))
         }
     }
+}
+
+// Use the Forge distributable for the sibling LTPP build; never publish mapped development dependencies.
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = 'ae2lt-forge-1.20.1'
+            artifact(tasks.named('jarJar')) { classifier = null }
+        }
+    }
+}
+tasks.withType(GenerateModuleMetadata).configureEach { enabled = false }
+tasks.withType(PublishToMavenLocal).configureEach { dependsOn tasks.named('reobfJarJar') }
+
+// AdvancedAE ships its recipe ingredient API inside its Jar-in-Jar library.
+// Expose that exact bundled version to the compiler without adding a runtime dependency.
+configurations { advancedAeRecipeApi { transitive = false } }
+dependencies { advancedAeRecipeApi "maven.modrinth:advancedae:${advancedae_version}" }
+def advancedAeRecipeApiJar = layout.buildDirectory.file('embedded-libraries/ae2addonlib.jar')
+def extractAdvancedAeRecipeApi = tasks.register('extractAdvancedAeRecipeApi') {
+    inputs.files(configurations.advancedAeRecipeApi)
+    outputs.file(advancedAeRecipeApiJar)
+    doLast {
+        def nested = zipTree(configurations.advancedAeRecipeApi.singleFile)
+                .matching { include 'META-INF/jarjar/ae2addonlib-*.jar' }.singleFile
+        def output = advancedAeRecipeApiJar.get().asFile
+        output.parentFile.mkdirs()
+        java.nio.file.Files.copy(nested.toPath(), output.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+def advancedAeMcpMappings = tasks.register('advancedAeMcpMappings', net.minecraftforge.gradle.mcp.tasks.DownloadMCPMappings) {
+    mappings = "${mapping_channel}_${mapping_version}"
+    output = layout.buildDirectory.file('embedded-libraries/mcp-mappings.zip')
+}
+def remapAdvancedAeRecipeApi = tasks.register('remapAdvancedAeRecipeApi', net.minecraftforge.gradle.userdev.tasks.RenameJarSrg2Mcp) {
+    input = advancedAeRecipeApiJar
+    mappings = advancedAeMcpMappings.flatMap { it.output }
+    output = layout.buildDirectory.file('embedded-libraries/ae2addonlib-dev.jar')
+    signatureRemoval = true
+    dependsOn extractAdvancedAeRecipeApi
+}
+dependencies {
+    compileOnly files(remapAdvancedAeRecipeApi.flatMap { it.output })
+    testImplementation files(remapAdvancedAeRecipeApi.flatMap { it.output })
+    testImplementation(fg.deobf("maven.modrinth:advancedae:${advancedae_version}")) { transitive = false }
 }

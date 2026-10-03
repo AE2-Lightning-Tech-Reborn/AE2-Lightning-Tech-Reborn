@@ -24,6 +24,7 @@ import com.moakiee.ae2lt.item.CelestweaveCoreItem;
 import com.moakiee.ae2lt.item.CelestweaveOculusItem;
 import com.moakiee.ae2lt.item.CelestweaveStrideItem;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
+import com.moakiee.ae2lt.item.OverloadProtectionSubmoduleItem;
 import com.moakiee.ae2lt.item.DashSubmoduleItem;
 import com.moakiee.ae2lt.item.DigAffinitySubmoduleItem;
 import com.moakiee.ae2lt.item.ExtendedOverloadedPatternProviderUpgradeItem;
@@ -46,7 +47,6 @@ import com.moakiee.ae2lt.item.ReflectSubmoduleItem;
 import com.moakiee.ae2lt.item.ResistanceSubmoduleItem;
 import com.moakiee.ae2lt.item.RisingItem;
 import com.moakiee.ae2lt.item.SaturationSubmoduleItem;
-import com.moakiee.ae2lt.item.UndyingSubmoduleItem;
 import com.moakiee.ae2lt.item.WaterBreathingSubmoduleItem;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessTerminalFactory;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
@@ -79,6 +79,8 @@ public final class ModItems {
             "overload_crystal",
             OverloadCrystalItem::new,
             new Item.Properties());
+
+    public static final RegistryObject<Item> DYE_BASE = registerSimpleItem("dye_base", new Item.Properties());
 
     public static final RegistryObject<Item> OVERLOAD_CRYSTAL_DUST =
             registerSimpleItem("overload_crystal_dust", new Item.Properties());
@@ -297,7 +299,17 @@ public final class ModItems {
 
     static {
         PartModels.registerModels(PartModelsHelper.createModels(TianshuPatternEncodingTerminalPart.class));
+        PartModels.registerModels(PartModelsHelper.createModels(com.moakiee.ae2lt.part.TianshuCraftingTerminalPart.class));
     }
+
+    public static final RegistryObject<PartItem<com.moakiee.ae2lt.part.TianshuCraftingTerminalPart>> TIANSHU_CRAFTING_TERMINAL =
+            ITEMS.register("tianshu_crafting_terminal", () -> new PartItem<>(new Item.Properties(),
+                    com.moakiee.ae2lt.part.TianshuCraftingTerminalPart.class,
+                    com.moakiee.ae2lt.part.TianshuCraftingTerminalPart::new));
+
+    public static final RegistryObject<Item> TIANSHU_WIRELESS_CRAFTING_TERMINAL = TianshuWirelessTerminalFactory.isAvailable()
+            ? ITEMS.register("wireless_tianshu_crafting_terminal", TianshuWirelessTerminalFactory::createCrafting)
+            : RegistryObject.create(new ResourceLocation(AE2LightningTech.MODID, "wireless_tianshu_crafting_terminal"), ForgeRegistries.ITEMS);
 
     public static final RegistryObject<PartItem<TianshuPatternEncodingTerminalPart>> TIANSHU_PATTERN_ENCODING_TERMINAL =
             ITEMS.register("tianshu_pattern_encoding_terminal",
@@ -373,9 +385,9 @@ public final class ModItems {
             ReflectSubmoduleItem::new,
             new Item.Properties());
 
-    public static final RegistryObject<UndyingSubmoduleItem> CELESTWEAVE_SUBMODULE_UNDYING = registerItem(
-            "module_undying",
-            UndyingSubmoduleItem::new,
+    public static final RegistryObject<OverloadProtectionSubmoduleItem> CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION = registerItem(
+            "module_overload_protection",
+            OverloadProtectionSubmoduleItem::new,
             new Item.Properties().rarity(Rarity.EPIC));
 
     public static final RegistryObject<MultidimensionalProtectionSubmoduleItem>
@@ -526,6 +538,12 @@ public final class ModItems {
             () -> new RailgunModuleItem(
                     new Item.Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant(),
                     RailgunModuleType.MULTIDIMENSIONAL_EXECUTION));
+
+    public static final RegistryObject<RailgunModuleItem> RAILGUN_MODULE_EHV_BEAM = ITEMS.register(
+            "railgun_module_ehv_beam",
+            () -> new RailgunModuleItem(
+                    new Item.Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant(),
+                    RailgunModuleType.EHV_BEAM));
 
     public static final RegistryObject<Item> MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE =
             registerSimpleItem("matter_warping_matrix_pattern_storage_upgrade", new Item.Properties());

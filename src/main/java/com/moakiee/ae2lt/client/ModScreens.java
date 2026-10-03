@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import net.minecraft.client.gui.screens.MenuScreens;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.api.distmarker.Dist;
@@ -10,6 +11,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 import appeng.client.gui.style.StyleManager;
 
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.FrequencyScreen;
 import com.moakiee.ae2lt.client.hub.DeviceHubScreen;
@@ -62,6 +64,8 @@ public class ModScreens {
             MenuScreens.register(LightningSimulationChamberMenu.TYPE, ModScreens::createLightningSimulationChamberScreen);
             MenuScreens.register(LightningAssemblyChamberMenu.TYPE, ModScreens::createLightningAssemblyChamberScreen);
             MenuScreens.register(LightningCollectorMenu.TYPE, ModScreens::createLightningCollectorScreen);
+            MenuScreens.register(OverloadedIOPortMenu.TYPE, ModScreens::createOverloadedIOPortScreen);
+            MenuScreens.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
             MenuScreens.register(OverloadProcessingFactoryMenu.TYPE, ModScreens::createOverloadProcessingFactoryScreen);
             MenuScreens.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
             MenuScreens.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
@@ -72,13 +76,31 @@ public class ModScreens {
             MenuScreens.register(MatrixPortMenu.TYPE, MatrixPortScreen::new);
             MenuScreens.register(TianshuSupercomputerControllerMenu.TYPE, TianshuSupercomputerControllerScreen::new);
             MenuScreens.register(TianshuPatternEncodingTermMenu.TYPE, ModScreens::createTianshuPatternEncodingTermScreen);
+            MenuScreens.register(com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE, ModScreens::createTianshuCraftingTermScreen);
             if (TianshuWirelessTerminalFactory.isAvailable()) {
+                MenuScreens.register(com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE, ModScreens::createTianshuWirelessCraftingTermScreen);
                 MenuScreens.register(TianshuWirelessPatternEncodingTermMenu.TYPE,
                         ModScreens::createTianshuWirelessPatternEncodingTermScreen);
             }
             MenuScreens.register(TianshuSeedStorageMenu.TYPE, ModScreens::createTianshuSeedStorageScreen);
             MenuScreens.register(VoidCellMenu.TYPE, ModScreens::createVoidCellScreen);
         });
+    }
+
+    private static TianshuCraftingTermScreen<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu> createTianshuCraftingTermScreen(
+            com.moakiee.ae2lt.menu.TianshuCraftingTermMenu menu, Inventory inventory, Component title) {
+        return new TianshuCraftingTermScreen<>(menu, inventory, title,
+                StyleManager.loadStyleDoc("/screens/terminals/tianshu_crafting_terminal.json"));
+    }
+
+    private static TianshuWirelessCraftingTermScreen<com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu> createTianshuWirelessCraftingTermScreen(
+            com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu menu, Inventory inventory, Component title) {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("ae2wtlib")) {
+            var style = StyleManager.loadStyleDoc("/screens/wireless_tianshu_enhanced_crafting_terminal.json");
+            return new com.moakiee.ae2lt.integration.ae2wtlib.client.TianshuEnhancedWirelessCraftingScreen(menu, inventory, title, style);
+        }
+        var style = StyleManager.loadStyleDoc("/screens/wireless_tianshu_crafting_terminal.json");
+        return new TianshuWirelessCraftingTermScreen<>(menu, inventory, title, style);
     }
 
     private static TianshuPatternEncodingTermScreen<TianshuPatternEncodingTermMenu> createTianshuPatternEncodingTermScreen(
@@ -154,6 +176,14 @@ public class ModScreens {
             LightningAssemblyChamberMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/lightning_assembly_chamber.json");
         return new LightningAssemblyChamberScreen(menu, inv, title, style);
+    }
+
+    private static OverloadedIOPortScreen createOverloadedIOPortScreen(OverloadedIOPortMenu menu, Inventory inv, Component title) {
+        return new OverloadedIOPortScreen(menu, inv, title, StyleManager.loadStyleDoc("/screens/overloaded_io_port.json"));
+    }
+
+    private static MiningFactoryScreen createMiningFactoryScreen(MiningFactoryMenu menu, Inventory inventory, Component title) {
+        return new MiningFactoryScreen(menu, inventory, title, StyleManager.loadStyleDoc("/screens/mining_factory.json"));
     }
 
     private static LightningCollectorScreen createLightningCollectorScreen(

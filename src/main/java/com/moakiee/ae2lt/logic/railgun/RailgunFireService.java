@@ -288,11 +288,18 @@ public final class RailgunFireService {
         int paralysisDur = RailgunDefaults.PARALYSIS_DURATION_TICKS;
         boolean overloadEligible = tier == RailgunChargeTier.EHV3 && !railgunStack.isEmpty();
 
+        Set<Integer> percentageTargets = new HashSet<>();
         for (var hit : hits) {
             LivingEntity target = hit.target();
             if (!RailgunTargetRules.canAffect(player, target, allowPlayerTargets)) continue;
             double armorReduction = DamageContext.effectiveArmorReduction(target);
-            double finalDamage = DamageContext.finalDamage(hit.damage(), ctx.bypassRatio(), armorReduction);
+            double percentageBonus = 0;
+            if (!ctx.isBeam() && tier != RailgunChargeTier.HV && !hit.chainPropagation()
+                    && executionScope.includes(target) && percentageTargets.add(target.getId())) {
+                percentageBonus = OverloadExecutionService.percentageBonus(player, railgunStack, target, tier);
+            }
+            double finalDamage = DamageContext.finalDamage(
+                    Math.min(Float.MAX_VALUE, hit.damage() + percentageBonus), ctx.bypassRatio(), armorReduction);
             target.invulnerableTime = 0; // bypass i-frames for charged shots? keep for fairness on beam, allow here.
             target.hurt(ds, (float) finalDamage);
             if (paralysisDur > 0 && (!(target instanceof Player) || paralyzePlayers)) {

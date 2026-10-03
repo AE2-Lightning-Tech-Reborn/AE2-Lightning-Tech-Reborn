@@ -90,7 +90,7 @@ public class TianshuSupercomputerControllerScreen
                 formatCount(menu.getMaxCopiesPerTick()) + "/t", COL_VALUE);
         y += LINE_H;
 
-        drawRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_loop"),
+        drawStackedRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_loop"),
                 I18n.get("ae2lt.tianshu.gui.value_loop",
                         formatCount(menu.getClosedLoopPatternStorages()),
                         formatCount(menu.getClosedLoopSeedStorages())),

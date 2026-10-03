@@ -37,8 +37,8 @@ public final class ClientNetworkPacketHandlers {
     private ClientNetworkPacketHandlers() {
     }
 
-    public static void handleEasterEgg() {
-        EasterEggOverlay.trigger();
+    public static void handleEasterEgg(net.minecraft.core.GlobalPos source) {
+        EasterEggOverlay.trigger(source);
     }
 
     public static void handleFrequencyResponse(Component message) {
@@ -104,7 +104,7 @@ public final class ClientNetworkPacketHandlers {
         ItemStack activationItem = switch (packet.stage()) {
             case RitualItemBurstPacket.PIGMEE_CORE -> new ItemStack(ModItems.PIGMEE_CORE.get());
             case RitualItemBurstPacket.UNDYING_MODULE ->
-                    new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_UNDYING.get());
+                    new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
             case RitualItemBurstPacket.PHASE_LOCK_MODULE ->
                     new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_PHASE_LOCK.get());
             default -> ItemStack.EMPTY;
@@ -169,6 +169,7 @@ public final class ClientNetworkPacketHandlers {
                 packet.chainDamage(),
                 packet.executionMode(),
                 packet.chargedSplash(),
+                packet.ehvBeamEnabled(),
                 packet.moduleNameKeys(),
                 packet.moduleCounts(),
                 packet.moduleEnabled(),
@@ -180,14 +181,18 @@ public final class ClientNetworkPacketHandlers {
     }
 
     public static void handleMaintenanceEditorSync(MaintenanceEditorSyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceEditorData(packet.selectionRevision(), packet.data());
         }
     }
 
     public static void handleMaintenanceSummarySync(MaintenanceSummarySyncPacket packet) {
-        TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceSummary(
                     packet.selectionRevision(), packet.revision(), packet.overflow(), packet.entries());

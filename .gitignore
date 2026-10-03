@@ -36,6 +36,9 @@ docs/
 CLAUDE.local.md
 else/
 bin/
+run-passive-input-gametest/
+run-alloy-anvil-gametest/
+run-alloy-anvil-client/
 
 # OS files
 Thumbs.db

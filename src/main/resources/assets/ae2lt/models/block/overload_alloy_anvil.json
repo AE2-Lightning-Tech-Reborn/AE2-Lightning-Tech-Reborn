@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/template_anvil",
+  "textures": {
+    "body": "ae2lt:block/overload_machine_frame",
+    "top": "#body",
+    "particle": "#body"
+  }
+}
