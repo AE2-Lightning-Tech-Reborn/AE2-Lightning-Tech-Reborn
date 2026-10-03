@@ -80,6 +80,39 @@ public final class MiningFactoryGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void exhaustedToolCannotProduceDropsOrConsumeInput(GameTestHelper h) {
+        var tool = new ItemStack(Items.DIAMOND_PICKAXE);
+        tool.setDamageValue(tool.getMaxDamage());
+        h.assertTrue(!MiningLoot.isTool(tool), "Exhausted tool is still accepted");
+        var result = MiningLoot.roll(h.getLevel(), h.absolutePos(POS), Blocks.IRON_ORE.defaultBlockState(),
+                tool, 64, 16);
+        h.assertTrue(result.processed() == 0 && result.drops().isEmpty(), "Exhausted tool produced drops");
+        var be = fixture(h, new ItemStack(Items.DIAMOND_PICKAXE), 64, 100_000);
+        h.assertTrue(!be.getInventory().isItemValid(1, tool), "Tool slot accepts exhausted tools");
+        // Simulate a retained or persisted tool that exhausted its durability after insertion.
+        be.getInventory().setItemDirect(1, tool);
+        completeCycle(h, be, () -> {
+            h.assertTrue(be.getInventory().getStackInSlot(0).getCount() == 64, "Exhausted tool consumed input");
+            h.assertTrue(be.getEnergyStorage().getEnergyStored() == 100_000, "Exhausted tool consumed FE");
+            h.assertTrue(output(be, Items.RAW_IRON) == 0, "Exhausted tool generated output");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void unbreakableToolRetainsNativeNbtBehavior(GameTestHelper h) {
+        var tool = new ItemStack(Items.DIAMOND_PICKAXE);
+        tool.setDamageValue(tool.getMaxDamage());
+        tool.getOrCreateTag().putBoolean("Unbreakable", true);
+        h.assertTrue(MiningLoot.isTool(tool), "Unbreakable NBT was ignored");
+        var result = MiningLoot.roll(h.getLevel(), h.absolutePos(POS), Blocks.IRON_ORE.defaultBlockState(),
+                tool, 8, 8);
+        h.assertTrue(result.processed() == 8 && !result.drops().isEmpty(), "Unbreakable tool could not mine");
+        h.assertTrue(result.tool().getDamageValue() == tool.getDamageValue(), "Unbreakable tool took damage");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void wiredNetworkSuppliesLightningFromActualDrive(GameTestHelper h) {
         h.setBlock(POS, ModBlocks.MINING_FACTORY.get());
         MiningFactoryBlockEntity be = (MiningFactoryBlockEntity) h.getBlockEntity(POS);
