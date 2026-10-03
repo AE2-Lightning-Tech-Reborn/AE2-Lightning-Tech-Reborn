@@ -68,7 +68,10 @@ public class OverloadedWirelessConnectorItem extends AE2LTItem {
         boolean isHost = targetBe instanceof WirelessPatternProviderHost
                 || state.getBlock() instanceof OverloadedInterfaceBlock
                 || state.getBlock() instanceof OverloadedPowerSupplyBlock;
-        boolean isMachine = targetBe != null;
+        // Let the selected provider judge non-BE targets on the server. This also
+        // lets it explain a missing core instead of opening the target's own menu.
+        boolean isMachine = targetBe != null
+                || (!state.isAir() && getSelectedProvider(level, context.getItemInHand()) != null);
 
         if (!isHost && !isMachine) {
             return InteractionResult.PASS;

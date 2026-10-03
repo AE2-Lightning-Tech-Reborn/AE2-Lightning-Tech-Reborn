@@ -33,7 +33,8 @@ public final class NetworkInit {
     // Version 3 adds the research-note screen message.
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
     // Version 5 adds workstation/JEI packets, seed-return fields, scoped Easter eggs and railgun modes.
-    private static final String PROTOCOL_VERSION = "5";
+    // Version 6 adds the frequency-card link shortcut packet.
+    private static final String PROTOCOL_VERSION = "6";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -86,6 +87,9 @@ public final class NetworkInit {
                 ToggleFrequencyCardAutoConnectPacket::decode,
                 ToggleFrequencyCardAutoConnectPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
+                (pkt, buf) -> pkt.write(buf), FrequencyCardLinkShortcutPacket::decode,
+                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         // controller UI: C→S
         CHANNEL.registerMessage(
                 nextPacketId++,

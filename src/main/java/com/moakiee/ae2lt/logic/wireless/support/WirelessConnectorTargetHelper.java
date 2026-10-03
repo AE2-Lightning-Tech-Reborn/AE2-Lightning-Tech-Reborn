@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.logic.wireless.support;
 import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -17,14 +18,17 @@ public final class WirelessConnectorTargetHelper {
 
     public static Set<BlockPos> collectTargets(
             Level level, BlockPos origin, boolean contiguous, int maxTargets) {
-        if (maxTargets <= 0) return Set.of();
+        return collectTargets(level, origin, contiguous, maxTargets, pos -> level.getBlockEntity(pos) != null);
+    }
+
+    public static Set<BlockPos> collectTargets(
+            Level level, BlockPos origin, boolean contiguous, int maxTargets, Predicate<BlockPos> acceptsTarget) {
+        if (maxTargets <= 0 || !level.isLoaded(origin) || !acceptsTarget.test(origin)) return Set.of();
         if (!contiguous) {
-            return level.getBlockEntity(origin) != null ? Set.of(origin.immutable()) : Set.of();
+            return Set.of(origin.immutable());
         }
-        if (!level.isLoaded(origin)) return Set.of();
         var originState = level.getBlockState(origin);
         var originBlockEntity = level.getBlockEntity(origin);
-        if (originBlockEntity == null) return Set.of();
 
         var visited = new LinkedHashSet<BlockPos>();
         var queue = new ArrayDeque<BlockPos>();
@@ -36,8 +40,10 @@ public final class WirelessConnectorTargetHelper {
                 var next = current.relative(direction);
                 if (visited.contains(next) || !level.isLoaded(next)) continue;
                 var nextBlockEntity = level.getBlockEntity(next);
-                if (nextBlockEntity == null || nextBlockEntity.getClass() != originBlockEntity.getClass()) continue;
+                if (originBlockEntity != null && (nextBlockEntity == null
+                        || nextBlockEntity.getClass() != originBlockEntity.getClass())) continue;
                 if (!level.getBlockState(next).is(originState.getBlock())) continue;
+                if (!acceptsTarget.test(next)) continue;
                 queue.addLast(next.immutable());
             }
         }

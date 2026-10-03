@@ -130,6 +130,9 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         }
         tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.controls")
                 .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.link_shortcut",
+                        Component.keybind("key.ae2lt.toggle_frequency_card_link"))
+                .withStyle(ChatFormatting.DARK_GRAY));
         super.appendHoverText(stack, level, tooltip, tooltipFlag);
     }
 
@@ -179,38 +182,48 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
     }
 
     public static FrequencyCardCandidateSelector.Selection<ItemStack> selectToggleCard(Player player) {
-        return selectCard(player, false);
+        return selectCard(player, false, false);
+    }
+
+    public static FrequencyCardCandidateSelector.Selection<ItemStack> selectLinkCard(Player player) {
+        return selectCard(player, false, true);
     }
 
     private static FrequencyCardCandidateSelector.Selection<ItemStack> selectAutoConnectCard(Player player) {
-        return selectCard(player, true);
+        return selectCard(player, true, true);
     }
 
     private static FrequencyCardCandidateSelector.Selection<ItemStack> selectCard(
             Player player,
-            boolean requireAutoConnect) {
+            boolean requireAutoConnect,
+            boolean requireBound) {
         UUID playerUuid = player.getUUID();
         var candidates = new ArrayList<FrequencyCardCandidateSelector.Candidate<ItemStack>>();
 
         var main = player.getMainHandItem();
-        addCandidate(candidates, FrequencyCardCandidateSelector.Source.MAIN_HAND, main, playerUuid, requireAutoConnect);
+        addCandidate(candidates, FrequencyCardCandidateSelector.Source.MAIN_HAND, main, playerUuid,
+                requireAutoConnect, requireBound);
 
         var offhand = player.getOffhandItem();
-        addCandidate(candidates, FrequencyCardCandidateSelector.Source.OFF_HAND, offhand, playerUuid, requireAutoConnect);
+        addCandidate(candidates, FrequencyCardCandidateSelector.Source.OFF_HAND, offhand, playerUuid,
+                requireAutoConnect, requireBound);
 
         for (var stack : CuriosFrequencyCardFinder.findFrequencyCards(player)) {
-            addCandidate(candidates, FrequencyCardCandidateSelector.Source.CURIOS, stack, playerUuid, requireAutoConnect);
+            addCandidate(candidates, FrequencyCardCandidateSelector.Source.CURIOS, stack, playerUuid,
+                    requireAutoConnect, requireBound);
         }
 
         var inventory = player.getInventory();
         for (int slot = 0; slot < 9 && slot < inventory.items.size(); slot++) {
             var stack = inventory.items.get(slot);
-            addCandidate(candidates, FrequencyCardCandidateSelector.Source.HOTBAR, stack, playerUuid, requireAutoConnect);
+            addCandidate(candidates, FrequencyCardCandidateSelector.Source.HOTBAR, stack, playerUuid,
+                    requireAutoConnect, requireBound);
         }
 
         for (int slot = 9; slot < inventory.items.size(); slot++) {
             var stack = inventory.items.get(slot);
-            addCandidate(candidates, FrequencyCardCandidateSelector.Source.BACKPACK, stack, playerUuid, requireAutoConnect);
+            addCandidate(candidates, FrequencyCardCandidateSelector.Source.BACKPACK, stack, playerUuid,
+                    requireAutoConnect, requireBound);
         }
 
         // Cards installed inside a wireless terminal's upgrade slot only feed the
@@ -221,7 +234,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         if (requireAutoConnect) {
             for (var stack : TerminalFrequencyCardFinder.findFrequencyCards(player)) {
                 addCandidate(candidates, FrequencyCardCandidateSelector.Source.WIRELESS_TERMINAL,
-                        stack, playerUuid, requireAutoConnect);
+                        stack, playerUuid, requireAutoConnect, requireBound);
             }
         }
 
@@ -233,8 +246,10 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
             FrequencyCardCandidateSelector.Source source,
             ItemStack stack,
             UUID playerUuid,
-            boolean requireAutoConnect) {
-        if (requireAutoConnect ? isUsableAutoCard(stack, playerUuid) : isToggleCandidate(stack, playerUuid)) {
+            boolean requireAutoConnect,
+            boolean requireBound) {
+        if ((requireAutoConnect ? isUsableAutoCard(stack, playerUuid) : isToggleCandidate(stack, playerUuid))
+                && (!requireBound || getData(stack).isBound())) {
             candidates.add(new FrequencyCardCandidateSelector.Candidate<>(source, stack));
         }
     }

@@ -1,0 +1,11 @@
+// Native Forge regressions; fixtures never enter release jars.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ProviderReturnFilterGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/provider-return-filter-forge')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt,ae2lt_io'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

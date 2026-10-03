@@ -4,9 +4,12 @@ import com.moakiee.ae2lt.network.NetworkInit;
 import org.lwjgl.glfw.GLFW;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.network.FrequencyCardLinkShortcutPacket;
 import com.moakiee.ae2lt.network.ToggleFrequencyCardAutoConnectPacket;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -21,6 +24,10 @@ public final class FrequencyCardKeyMappings {
             "key.ae2lt.toggle_frequency_card_auto_connect",
             GLFW.GLFW_KEY_UNKNOWN,
             CATEGORY);
+    private static final KeyMapping TOGGLE_LINK = new KeyMapping(
+            "key.ae2lt.toggle_frequency_card_link",
+            GLFW.GLFW_KEY_UNKNOWN,
+            CATEGORY);
 
     private FrequencyCardKeyMappings() {
     }
@@ -28,6 +35,7 @@ public final class FrequencyCardKeyMappings {
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(TOGGLE_AUTO_CONNECT);
+        event.register(TOGGLE_LINK);
     }
 
     @Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
@@ -42,6 +50,15 @@ public final class FrequencyCardKeyMappings {
             }
             while (TOGGLE_AUTO_CONNECT.consumeClick()) {
                 NetworkInit.sendToServer(ToggleFrequencyCardAutoConnectPacket.forPreferredCard());
+            }
+            while (TOGGLE_LINK.consumeClick()) {
+                var minecraft = Minecraft.getInstance();
+                if (minecraft.player == null || minecraft.level == null || minecraft.screen != null
+                        || !(minecraft.hitResult instanceof BlockHitResult hit)) {
+                    continue;
+                }
+                NetworkInit.sendToServer(new FrequencyCardLinkShortcutPacket(
+                        hit.getBlockPos(), hit.getDirection(), hit.getLocation()));
             }
         }
     }

@@ -156,6 +156,73 @@ class AE2NativeMachineAdapterTest {
         assertSame(external, selected.get(0));
     }
 
+    @Test
+    void unfilteredReturnDrainsAllExposedKeysWithoutPatternOutputs() {
+        var first = new TrackingStorage("first", STICK, 64L);
+        var byproduct = new TrackingStorage("byproduct", COBBLESTONE, 17L);
+        var accepted = new AtomicLong();
+        var filter = AllowedOutputFilter.unrestricted();
+
+        assertFalse(filter.isEmpty(), "unfiltered AUTO must remain eligible for polling");
+        var result = AE2NativeMachineAdapter.extractOutputsFromStorages(
+                List.of(first, byproduct), filter, IActionSource.empty(), acceptingSink(accepted));
+
+        assertSame(OutputReturnResult.EXTRACTED, result);
+        assertEquals(0L, first.amount);
+        assertEquals(0L, byproduct.amount);
+        assertEquals(81L, accepted.get());
+    }
+
+    @Test
+    void filteredReturnLeavesUnlistedByproductsInTheMachine() {
+        var first = new TrackingStorage("first", STICK, 64L);
+        var byproduct = new TrackingStorage("byproduct", COBBLESTONE, 17L);
+        var accepted = new AtomicLong();
+        var filter = new AllowedOutputFilter();
+        filter.allowStrict(STICK);
+
+        var result = AE2NativeMachineAdapter.extractOutputsFromStorages(
+                List.of(first, byproduct), filter, IActionSource.empty(), acceptingSink(accepted));
+
+        assertSame(OutputReturnResult.EXTRACTED, result);
+        assertEquals(0L, first.amount);
+        assertEquals(17L, byproduct.amount);
+        assertEquals(0, byproduct.extractCount);
+        assertEquals(64L, accepted.get());
+    }
+
+    @Test
+    void unfilteredReturnStillRespectsSinkCapacity() {
+        var storage = new TrackingStorage("machine", COBBLESTONE, 17L);
+        var accepted = new AtomicLong();
+        var sink = new MachineAdapter.OutputSink() {
+            @Override
+            public long maxAccept(AEKey what, long available) {
+                return Math.min(5L - accepted.get(), available);
+            }
+
+            @Override
+            public long accept(AEKey what, long amount) {
+                accepted.addAndGet(amount);
+                return amount;
+            }
+
+            @Override
+            public void acceptOverflow(AEKey what, long amount) {
+                throw new AssertionError("unfiltered return over-extracted");
+            }
+        };
+
+        assertSame(OutputReturnResult.EXTRACTED, AE2NativeMachineAdapter.extractOutputsFromStorages(
+                List.of(storage), AllowedOutputFilter.unrestricted(), IActionSource.empty(), sink));
+        assertEquals(12L, storage.amount);
+        assertEquals(5L, accepted.get());
+        assertSame(OutputReturnResult.BLOCKED, AE2NativeMachineAdapter.extractOutputsFromStorages(
+                List.of(storage), AllowedOutputFilter.unrestricted(), IActionSource.empty(), sink));
+        assertEquals(12L, storage.amount);
+        assertEquals(1, storage.extractCount);
+    }
+
     private static MEStorage storage(String description) {
         return () -> Component.literal(description);
     }
