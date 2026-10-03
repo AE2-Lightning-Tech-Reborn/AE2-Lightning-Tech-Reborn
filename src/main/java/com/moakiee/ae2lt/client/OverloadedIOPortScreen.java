@@ -34,7 +34,6 @@ public class OverloadedIOPortScreen extends UpgradeableScreen<OverloadedIOPortMe
                 LightningStatusLines.title(),
                 Component.translatable("ae2lt.gui.status.label", Component.translatable(
                         "ae2lt.gui.overloaded_io_port.status." + menu.status.name().toLowerCase(Locale.ROOT))),
-                Component.translatable("ae2lt.gui.overloaded_io_port.rate", menu.batchLimit, menu.transferInterval),
                 Component.translatable("ae2lt.gui.overloaded_io_port.cap", String.format("%,d", menu.transferCap)))));
     }
     @Override protected void updateBeforeRender() {

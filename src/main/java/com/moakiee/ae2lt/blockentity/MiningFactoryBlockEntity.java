@@ -46,10 +46,11 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public final class MiningFactoryBlockEntity extends AENetworkBlockEntity implements FrequencyBindingHost, LightningCollapseMatrixHost {
     public static final int PROCESSING_TICKS = 5;
+    public static final int ENERGY_CAPACITY = 4_000_000;
     public enum Status { IDLE, WORKING, TOOL, HARVEST, ENERGY, OUTPUT, UNSUPPORTED, ERROR, LIGHTNING }
     private final MiningFactoryInventory inventory = new MiningFactoryInventory(this::inventoryChanged);
     private final OverloadProcessingFactoryEnergyStorage energy =
-            new OverloadProcessingFactoryEnergyStorage(1_000_000, this::saveChanges);
+            new OverloadProcessingFactoryEnergyStorage(ENERGY_CAPACITY, this::saveChanges);
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
     private final List<MiningLoot.Drop> pending = new ArrayList<>();
     private final IItemHandlerModifiable automation = new IItemHandlerModifiable() {

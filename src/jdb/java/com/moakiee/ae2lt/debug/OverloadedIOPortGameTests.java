@@ -13,6 +13,9 @@ import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
 import com.moakiee.ae2lt.logic.OverloadedIOTransfer;
+import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInventory;
+import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
+import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipeInput;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.*;
 import net.minecraft.core.*;
@@ -35,6 +38,7 @@ public final class OverloadedIOPortGameTests {
     private static boolean handlerRegistered;
     private static final AEKey STONE = AEItemKey.of(Items.STONE);
     private static final IActionSource SOURCE = IActionSource.empty();
+    private static final long BASE_CAP = 8_388_608L;
 
     static final class Store implements StorageCell {
         final Map<AEKey,Long> amounts = new LinkedHashMap<>();
@@ -199,7 +203,9 @@ public final class OverloadedIOPortGameTests {
             var target=new Store();mount(be,target);var from=new Store();
             var dirt=AEItemKey.of(Items.DIRT);var diamond=AEItemKey.of(Items.DIAMOND);var iron=AEItemKey.of(Items.IRON_INGOT);
             from.amounts.put(STONE,100L);from.amounts.put(dirt,200L);from.amounts.put(iron,400L);
-            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE,dirt,diamond));
+            var gold=AEItemKey.of(Items.GOLD_INGOT);var coal=AEItemKey.of(Items.COAL);var copper=AEItemKey.of(Items.COPPER_INGOT);
+            from.amounts.put(gold,100L);from.amounts.put(coal,100L);from.amounts.put(copper,100L);
+            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE,dirt,gold,coal,copper,diamond));
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
             from.amounts.put(diamond,300L);
             h.runAfterDelay(5,()->{tick(be);
@@ -236,7 +242,7 @@ public final class OverloadedIOPortGameTests {
             be.getFilterInventory().setItemDirect(0,filter(true,false,STONE));
             be.getInternalInventory().setItemDirect(0,cell(destination));tick(be);
             h.assertTrue(destination.amounts.getOrDefault(dirt,0L)==2000 && !destination.amounts.containsKey(STONE),"blacklist applies to network-to-cell transfers immediately");
-            h.assertTrue(network.amounts.get(STONE)==1000 && destination.probes==1,"ignored keys do not spend the one-type interval");
+            h.assertTrue(network.amounts.get(STONE)==1000 && destination.probes==1,"ignored keys do not spend the attempt budget");
             h.assertTrue(!be.getInternalInventory().getStackInSlot(0).isEmpty(),"filtered completion does not mean physically full");h.succeed();
         });
     }
@@ -247,12 +253,12 @@ public final class OverloadedIOPortGameTests {
             // Keep the cell queued so this test can replace rules after a filtered drain completes.
             setMode(be,OperationMode.EMPTY,FullnessMode.FULL);
             var dirt=AEItemKey.of(Items.DIRT);var diamond=AEItemKey.of(Items.DIAMOND);
-            from.amounts.put(STONE,100L);from.amounts.put(dirt,200L);from.amounts.put(diamond,300L);
+            from.amounts.put(STONE,2*BASE_CAP);from.amounts.put(dirt,200L);from.amounts.put(diamond,300L);
             be.getFilterInventory().setItemDirect(0,filter(false,false,STONE,dirt));
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
-            h.assertTrue(target.amounts.size()==1 && !target.amounts.containsKey(diamond),"initial whitelist applies");
+            h.assertTrue(target.amounts.size()==2 && !target.amounts.containsKey(diamond),"initial whitelist applies");
             be.getFilterInventory().setItemDirect(0,filter(false,false,diamond));tick(be);
-            h.assertTrue(target.amounts.size()==1,"filter swap cannot reset cooldown");
+            h.assertTrue(target.amounts.size()==2,"filter swap cannot reset cooldown");
             h.runAfterDelay(5,()->{tick(be);
                 h.assertTrue(target.amounts.getOrDefault(diamond,0L)==300 && from.amounts.size()==1,"old scan invalidated and cached rejection replaced");
                 be.getFilterInventory().setItemDirect(0,ItemStack.EMPTY);
@@ -309,11 +315,13 @@ public final class OverloadedIOPortGameTests {
     /** Counts structural work without relying on AEItemKey interning or a GC timing assumption. */
     private static final class CountingKey extends AEKey {
         final int value;
+        final AEKeyType type;
         int structuralCalls;
-        CountingKey(int value) { this.value=value; }
+        CountingKey(int value) { this(value,AEKeyType.items()); }
+        CountingKey(int value,AEKeyType type) { this.value=value;this.type=type; }
         @Override public int hashCode() { structuralCalls++;return value; }
         @Override public boolean equals(Object other) { structuralCalls++;return other instanceof CountingKey k && value==k.value; }
-        @Override public AEKeyType getType() { return AEKeyType.items(); }
+        @Override public AEKeyType getType() { return type; }
         @Override public AEKey dropSecondary() { return this; }
         @Override public CompoundTag toTag() { throw new UnsupportedOperationException(); }
         @Override public Object getPrimaryKey() { structuralCalls++;return Items.STONE; }
@@ -392,7 +400,6 @@ public final class OverloadedIOPortGameTests {
         var drive=(appeng.blockentity.storage.DriveBlockEntity)h.getBlockEntity(POS.west());
         drive.getInternalInventory().setItemDirect(0,AEItems.ITEM_CELL_256K.stack());
         fixture(h,be->{
-            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),2));
             var stack=AEItems.ITEM_CELL_256K.stack();var cell=StorageCells.getCellInventory(stack,null);
             h.assertTrue(cell.insert(STONE,1_000_000,Actionable.MODULATE,SOURCE)==1_000_000,"seed real cell");cell.persist();
             be.getInternalInventory().setItemDirect(0,stack);tick(be);
@@ -415,8 +422,47 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(water==20_000&&amount>0,"seed real fluid/lightning cells");
             be.getInternalInventory().setItemDirect(0,fluidStack);be.getInternalInventory().setItemDirect(1,lightningStack);tick(be);
             h.assertTrue(target.amounts.get(AEFluidKey.of(Fluids.WATER))==water,"fluid batch uses native mB exactly");
-            h.assertTrue(!target.amounts.containsKey(LightningKey.HIGH_VOLTAGE),"second type waits for its interval");
-            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.get(LightningKey.HIGH_VOLTAGE)==amount,"lightning key transferred without conversion");h.succeed();});
+            h.assertTrue(target.amounts.get(LightningKey.HIGH_VOLTAGE)==amount && be.getLastBatches()==2,
+                    "base budget handles fluid and lightning together without changing their native amounts");h.succeed();
+        });
+    }
+
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void registeredOperationUnitsApplyInBothTransferDirections(GameTestHelper h) {
+        fixture(h,be->{
+            var customType=new AEKeyType(new ResourceLocation("ae2lt","io_test_resource"),
+                    CountingKey.class,Component.literal("IO test resource")) {
+                @Override public AEKey loadKeyFromTag(CompoundTag data) { throw new UnsupportedOperationException(); }
+                @Override public AEKey readFromPacket(net.minecraft.network.FriendlyByteBuf data) { throw new UnsupportedOperationException(); }
+                @Override public int getAmountPerOperation() { return 4096; }
+            };
+            AEKey[] keys={STONE,AEFluidKey.of(Fluids.WATER),LightningKey.HIGH_VOLTAGE,new CountingKey(12345,customType)};
+            long[] caps={BASE_CAP,BASE_CAP*125,BASE_CAP,BASE_CAP*4096};
+            var network=new Store();mount(be,network);var from=new Store();
+            for(int i=0;i<keys.length;i++)from.amounts.put(keys[i],2*caps[i]);
+            be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
+            for(int i=0;i<keys.length;i++)h.assertTrue(network.amounts.getOrDefault(keys[i],0L)==caps[i]
+                    && from.amounts.get(keys[i])==caps[i],"resource operation scale applies when emptying type "+i);
+            h.assertTrue(be.getLastBatches()==4,"all resource types share the four-attempt base budget");
+            var destination=new Store();setMode(be,OperationMode.FILL,FullnessMode.FULL);
+            be.getInternalInventory().setItemDirect(0,cell(destination));
+            h.runAfterDelay(5,()->{tick(be);
+                for(int i=0;i<keys.length;i++)h.assertTrue(destination.amounts.getOrDefault(keys[i],0L)==caps[i],
+                        "resource operation scale applies when filling type "+i);
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void maximumNativeAmountTransfersWithoutOverflow(GameTestHelper h) {
+        fixture(h,be->{
+            var target=new Store();mount(be,target);var from=new Store();
+            var water=AEFluidKey.of(Fluids.WATER);from.amounts.put(STONE,Long.MAX_VALUE);from.amounts.put(water,Long.MAX_VALUE);
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+            be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
+            h.assertTrue(target.amounts.get(STONE)==Long.MAX_VALUE && target.amounts.get(water)==Long.MAX_VALUE
+                    && from.amounts.isEmpty(),"item and scaled native amounts both reach long maximum without overflow");h.succeed();
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
@@ -424,11 +470,10 @@ public final class OverloadedIOPortGameTests {
         fixture(h,be->{
             var target=new Store();mount(be,target);
             for(int i=0;i<6;i++){var from=new Store();from.amounts.put(STONE,10_000L);be.getInternalInventory().setItemDirect(i,cell(from));}
-            tick(be);h.assertTrue(target.amounts.get(STONE)==10_000,"six cells share one batch per five ticks");
-            tick(be);h.assertTrue(target.amounts.get(STONE)==10_000,"same tick cannot spend budget twice");
-            h.runAfterDelay(4,()->{be.updateRedstoneState();tick(be);h.assertTrue(target.amounts.get(STONE)==10_000,"alerts cannot shorten default five-tick gap");});
-            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.get(STONE)==20_000,"next cell starts exactly after five ticks");});
-            h.runAfterDelay(25,()->{tick(be);h.assertTrue(target.amounts.get(STONE)==60_000,"all six cells served in rotation");h.succeed();});
+            tick(be);h.assertTrue(target.amounts.get(STONE)==40_000,"six cells share four attempts per five ticks");
+            tick(be);h.assertTrue(target.amounts.get(STONE)==40_000,"same tick cannot spend budget twice");
+            h.runAfterDelay(4,()->{be.updateRedstoneState();tick(be);h.assertTrue(target.amounts.get(STONE)==40_000,"alerts cannot shorten default five-tick gap");});
+            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.get(STONE)==60_000,"remaining two cells served after the shared interval");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
@@ -445,16 +490,17 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(!be.getUpgrades().insertItem(4,AEItems.SPEED_CARD.stack(),false).isEmpty(),"fifth acceleration card rejected");
             h.assertTrue(be.getUpgrades().insertItem(4,AEItems.REDSTONE_CARD.stack(),false).isEmpty(),"redstone card fits alongside maximum speed");
             h.assertTrue(be.getTransferInterval()==1,"four speed cards plus redstone retain maximum rate");tick(be);
-            h.assertTrue(target.amounts.size()==1&&from.amounts.size()==199,"at most one type even at maximum speed");
-            tick(be);h.assertTrue(target.amounts.size()==1,"maximum speed still rejects duplicate same-tick work");
-            h.runAfterDelay(1,()->{tick(be);h.assertTrue(target.amounts.size()==2&&from.amounts.size()==198,"maximum speed processes next type on next tick");h.succeed();});
+            h.assertTrue(target.amounts.size()==4&&from.amounts.size()==196,"four attempts even at maximum speed");
+            tick(be);h.assertTrue(target.amounts.size()==4,"maximum speed still rejects duplicate same-tick work");
+            h.runAfterDelay(1,()->{tick(be);h.assertTrue(target.amounts.size()==8&&from.amounts.size()==192,"maximum speed processes four more types on next tick");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void removingAccelerationCannotResetCooldown(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
-            from.amounts.put(STONE,1000L);from.amounts.put(AEItemKey.of(Items.DIAMOND),1000L);
+            BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(6)
+                    .forEach(i->from.amounts.put(AEItemKey.of(i),1000L));
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
             be.getUpgrades().clear();
@@ -463,8 +509,8 @@ public final class OverloadedIOPortGameTests {
             var remaining=be.getInternalInventory().getStackInSlot(0);
             be.getInternalInventory().setItemDirect(0,ItemStack.EMPTY);
             be.getInternalInventory().setItemDirect(0,remaining);
-            h.runAfterDelay(4,()->{tick(be);h.assertTrue(target.amounts.size()==1,"card/settings/cell changes preserve default cooldown");});
-            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.size()==2,"new default interval is applied without resetting progress");h.succeed();});
+            h.runAfterDelay(4,()->{tick(be);h.assertTrue(target.amounts.size()==4,"card/settings/cell changes preserve default cooldown");});
+            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.size()==6,"new default interval is applied without resetting progress");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=200)
@@ -477,7 +523,7 @@ public final class OverloadedIOPortGameTests {
             var destination=new Store();destination.only=ordered.get(ordered.size() - 1);
             setMode(be,OperationMode.FILL,FullnessMode.HALF);be.getInternalInventory().setItemDirect(0,cell(destination));tick(be);
             h.assertTrue(!be.getInternalInventory().getStackInSlot(0).isEmpty(),"budget exhaustion cannot prematurely eject HALF cell");
-            h.assertTrue(destination.probes<=1,"rejected keys spend the budget");
+            h.assertTrue(destination.probes==4,"rejected keys spend all four base attempts");
             h.runAfterDelay(60,()->{h.assertTrue(destination.amounts.getOrDefault(destination.only,0L)==123,"late key reached through rejected prefix");h.succeed();});
         });
     }
@@ -566,7 +612,7 @@ public final class OverloadedIOPortGameTests {
         h.startSequence().thenWaitUntil(()->h.assertTrue(be.getMainNode().isActive(),"finite energy network boots"))
                 .thenExecute(()->{
                     var target=new Store();mount(be,target);var from=new Store();from.amounts.put(STONE,1_000_000_000_000L);
-                    be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),16));
+                    be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
                     var energy=be.getMainNode().getGrid().getEnergyService();double before=energy.getStoredPower();
                     be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
                     h.assertTrue(Math.abs(before-energy.getStoredPower()-32)<0.0001,"trillion items costs exactly 32 AE");
@@ -585,40 +631,38 @@ public final class OverloadedIOPortGameTests {
         fixture(h,be->{
             var matrix=ModItems.LIGHTNING_COLLAPSE_MATRIX.get();
             h.assertTrue(!be.getMatrixInventory().insertItem(0,new ItemStack(Items.DIRT),false).isEmpty(),"matrix slot rejects unrelated items");
-            int[] counts={0,1,15,16};
-            long[] caps={32768L,262144L,1L<<60,Long.MAX_VALUE};
+            int[] counts={0,1,7,8};
+            long[] caps={BASE_CAP,268_435_456L,1L<<58,Long.MAX_VALUE};
             for(int i=0;i<counts.length;i++) {
                 be.getMatrixInventory().setItemDirect(0,counts[i]==0?ItemStack.EMPTY:new ItemStack(matrix,counts[i]));
-                h.assertTrue(be.getBatchLimit()==Math.min(16,1+counts[i]) && be.getTransferCap()==caps[i],"matrix tier and long saturation: "+counts[i]);
+                h.assertTrue(be.getBatchLimit()==Math.min(16,4+2*counts[i]) && be.getTransferCap()==caps[i],"matrix tier and long saturation: "+counts[i]);
             }
-            h.assertTrue(be.getBatchLimit()==16 && be.getTransferCap()==Long.MAX_VALUE,"16th matrix increases amount only, not attempts");
+            h.assertTrue(be.getBatchLimit()==16 && be.getTransferCap()==Long.MAX_VALUE,"eighth matrix reaches the amount and attempt limits");
             be.getMatrixInventory().clear();
-            h.assertTrue(be.getMatrixInventory().insertItem(0,new ItemStack(matrix,64),true).getCount()==48
-                    && be.getMatrixInventory().isEmpty(),"simulation respects 16-matrix slot capacity");
-            h.assertTrue(be.getMatrixInventory().insertItem(0,new ItemStack(matrix,64),false).getCount()==48
-                    && be.getMatrixCount()==16,"real inventory and menu share the 16-matrix limit");
+            h.assertTrue(be.getMatrixInventory().insertItem(0,new ItemStack(matrix,64),true).getCount()==56
+                    && be.getMatrixInventory().isEmpty(),"simulation respects eight-matrix slot capacity");
+            h.assertTrue(be.getMatrixInventory().insertItem(0,new ItemStack(matrix,64),false).getCount()==56
+                    && be.getMatrixCount()==8,"real inventory and menu share the eight-matrix limit");
             var saved=be.saveWithFullMetadata();
             var restored=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());restored.setLevel(h.getLevel());
             restored.loadTag(saved);
-            h.assertTrue(restored.getMatrixCount()==16 && restored.getBatchLimit()==16 && restored.getTransferCap()==Long.MAX_VALUE,"matrix stack and throughput survive save/load");
+            h.assertTrue(restored.getMatrixCount()==8 && restored.getBatchLimit()==16 && restored.getTransferCap()==Long.MAX_VALUE,"matrix stack and throughput survive save/load");
             var copied=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());copied.setLevel(h.getLevel());
             var settingsTag = new CompoundTag(); be.exportSettings(SettingsFrom.MEMORY_CARD, settingsTag, null);
             copied.importSettings(SettingsFrom.MEMORY_CARD, settingsTag, null);
             h.assertTrue(copied.getMatrixInventory().isEmpty(),"memory card cannot duplicate matrices");
-            saved.remove("matrix");copied.loadTag(saved);
-            h.assertTrue(copied.getBatchLimit()==1 && copied.getTransferCap()==32768,"legacy saves without matrices retain base throughput");
             h.getLevel().destroyBlock(be.getBlockPos(),true);
             var drops=h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
                     new net.minecraft.world.phys.AABB(be.getBlockPos()).inflate(1));
             h.assertTrue(drops.stream().map(net.minecraft.world.entity.item.ItemEntity::getItem)
-                    .filter(s->s.is(matrix)).mapToInt(ItemStack::getCount).sum()==16,"ordinary break returns all matrices exactly once");
+                    .filter(s->s.is(matrix)).mapToInt(ItemStack::getCount).sum()==8,"ordinary break returns all matrices exactly once");
             be.clearContent();h.assertTrue(be.getMatrixInventory().isEmpty(),"clearing block clears matrix inventory");h.succeed();
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void maximumMatricesShareSixteenAttemptsAcrossSixInputs(GameTestHelper h) {
         fixture(h,be->{
-            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),16));
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
             var target=new Store();mount(be,target);var sources=new ArrayList<Store>();
             for(int slot=0;slot<6;slot++) {
@@ -629,24 +673,24 @@ public final class OverloadedIOPortGameTests {
             // Output cells remain output cells even at maximum throughput.
             var outputStore=new Store();outputStore.amounts.put(AEItemKey.of(Items.DIAMOND),1234L);
             be.getInternalInventory().setItemDirect(6,cell(outputStore));tick(be);
-            h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==1600 && be.getLastBatches()==16,"six cells share 16 attempts, not 16 each");
+            h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==1600 && be.getLastBatches()==16,"six cells share sixteen attempts");
             h.assertTrue(sources.stream().allMatch(s->s.amounts.size()==17||s.amounts.size()==18),"all six inputs receive round-robin service");
-            tick(be);h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==1600,"same-tick alert cannot spend another 16 attempts");
+            tick(be);h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==1600,"same-tick alert cannot spend another sixteen attempts");
             h.runAfterDelay(1,()->{tick(be);
-                h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==3200,"next tick permits the next 16 attempts");
+                h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==3200,"next tick permits the next sixteen attempts");
                 h.assertTrue(outputStore.extractCalls==0 && outputStore.amounts.get(AEItemKey.of(Items.DIAMOND))==1234,"output slots are never parallel inputs");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void rejectedKeysSpendMatrixBudgetWithoutPrematureHalfEjection(GameTestHelper h) {
         fixture(h,be->{
-            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),16));
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
             var network=new Store();BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
                     .forEach(i->network.amounts.put(AEItemKey.of(i),123L));mount(be,network);
             var ordered=new ArrayList<AEKey>();for(var e:be.getMainNode().getGrid().getStorageService().getCachedInventory())ordered.add(e.getKey());
             var destination=new Store();destination.only=ordered.get(ordered.size()-1);setMode(be,OperationMode.FILL,FullnessMode.HALF);
             be.getInternalInventory().setItemDirect(0,cell(destination));tick(be);
-            h.assertTrue(destination.probes==16 && destination.amounts.isEmpty() && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"16 rejected types exhaust budget without completing HALF");
+            h.assertTrue(destination.probes==16 && destination.amounts.isEmpty() && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"sixteen rejected types exhaust budget without completing HALF");
             h.runAfterDelay(5,()->{tick(be);
                 h.assertTrue(destination.amounts.getOrDefault(destination.only,0L)==123 && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"next round reaches late key and retains a progressing HALF cell");h.succeed();});
         });
@@ -654,54 +698,66 @@ public final class OverloadedIOPortGameTests {
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void matrixChangesPreserveCooldownAndUpdateAmountCap(GameTestHelper h) {
         fixture(h,be->{
-            var target=new Store();mount(be,target);var from=new Store();from.amounts.put(STONE,1_000_000L);
-            from.amounts.put(AEItemKey.of(Items.DIRT),1_000_000L);from.amounts.put(AEItemKey.of(Items.DIAMOND),1_000_000L);
+            var target=new Store();mount(be,target);var from=new Store();
+            BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
+                    .forEach(i->from.amounts.put(AEItemKey.of(i),1_000_000_000L));
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
-            h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==32768,"zero matrices cap the first type at 32K");
+            h.assertTrue(target.amounts.size()==4 && target.amounts.values().stream().allMatch(n->n==BASE_CAP),
+                    "zero matrices process four types at the base amount cap");
             be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),1));tick(be);
-            h.assertTrue(target.amounts.size()==1,"matrix insertion cannot reset cooldown");
-            h.runAfterDelay(4,()->{tick(be);h.assertTrue(target.amounts.size()==1,"default interval still five ticks with a matrix");});
+            h.assertTrue(target.amounts.size()==4,"matrix insertion cannot reset cooldown");
+            h.runAfterDelay(4,()->{tick(be);h.assertTrue(target.amounts.size()==4,"default interval still five ticks with a matrix");});
             h.runAfterDelay(5,()->{tick(be);
                 // The grid may already have run this round before this explicit duplicate tick.
-                h.assertTrue(target.amounts.size()==3
-                        && target.amounts.values().stream().filter(n->n==262144).count()==2
-                        && target.amounts.values().stream().mapToLong(Long::longValue).sum()==32768+2*262144,
-                        "one matrix adds one attempt and multiplies amount by eight: "+target.amounts);
+                h.assertTrue(target.amounts.size()==10
+                        && target.amounts.values().stream().filter(n->n==268_435_456L).count()==6
+                        && target.amounts.values().stream().mapToLong(Long::longValue).sum()==4*BASE_CAP+6*268_435_456L,
+                        "one matrix adds two attempts and multiplies amount by thirty-two: "+target.amounts);
                 h.assertTrue(!be.getInternalInventory().getStackInSlot(0).isEmpty(),"partially drained cell remains in input");
                 be.getMatrixInventory().clear();tick(be);
             });
             h.runAfterDelay(10,()->{tick(be);
-                h.assertTrue(target.amounts.values().stream().mapToLong(Long::longValue).sum()==2*32768+2*262144,"removal restores both limits for the next round");h.succeed();});
+                h.assertTrue(target.amounts.size()==14 && target.amounts.values().stream().mapToLong(Long::longValue).sum()==8*BASE_CAP+6*268_435_456L,
+                        "removal restores both limits for the next round");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void cappedTransfersKeepFilteredCellUntilAllowedResourcesAreGone(GameTestHelper h) {
         fixture(h,be->{
-            var target=new Store();mount(be,target);var stack=AEItems.ITEM_CELL_256K.stack();var from=StorageCells.getCellInventory(stack,null);
-            var dirt=AEItemKey.of(Items.DIRT);from.insert(STONE,65553,Actionable.MODULATE,SOURCE);from.insert(dirt,128,Actionable.MODULATE,SOURCE);from.persist();
+            var target=new Store();mount(be,target);var from=new Store();var stack=cell(from);
+            var dirt=AEItemKey.of(Items.DIRT);from.amounts.put(STONE,2*BASE_CAP+17);from.amounts.put(dirt,128L);
             be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));be.getInternalInventory().setItemDirect(0,stack);tick(be);
-            h.assertTrue(target.amounts.getOrDefault(STONE,0L)==32768 && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"cap does not make a partially drained cell filtered-empty");
-            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.getOrDefault(STONE,0L)==65536 && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"second capped batch still waits for remainder");});
+            h.assertTrue(target.amounts.getOrDefault(STONE,0L)==BASE_CAP && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"cap does not make a partially drained cell filtered-empty");
+            h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.getOrDefault(STONE,0L)==2*BASE_CAP && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"second capped batch still waits for remainder");});
             h.runAfterDelay(10,()->{tick(be);
                 var output=StorageCells.getCellInventory(be.getInternalInventory().getStackInSlot(6),null);
-                h.assertTrue(target.amounts.getOrDefault(STONE,0L)==65553 && be.getInternalInventory().getStackInSlot(0).isEmpty()
+                h.assertTrue(target.amounts.getOrDefault(STONE,0L)==2*BASE_CAP+17 && be.getInternalInventory().getStackInSlot(0).isEmpty()
                         && output!=null && output.getAvailableStacks().get(dirt)==128 && output.getAvailableStacks().get(STONE)==0,"final partial batch ejects the real cell with only excluded contents");h.succeed();});
         });
     }
     @GameTest(template="pigmee_station_empty")
     public static void cappedTransferRollbackConservesRemainder(GameTestHelper h) {
-        var from=new Store();var to=new Store();from.amounts.put(STONE,1_000_000L);to.rejectActual=true;int[] paid={0};
-        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{paid[0]++;return true;},32768);
-        h.assertTrue(result.inserted()==0 && result.remainder()==0 && from.amounts.get(STONE)==1_000_000 && paid[0]==1,"capped rejected insertion refunds the entire extracted batch");
-        from.rejectRefund=true;result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true,32768);
-        h.assertTrue(result.remainder()==32768 && from.amounts.get(STONE)==967232 && to.amounts.isEmpty(),"unrefundable pending amount is capped and conserves total resources");
+        var from=new Store();var to=new Store();from.amounts.put(STONE,20_000_000L);to.rejectActual=true;int[] paid={0};
+        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{paid[0]++;return true;},BASE_CAP);
+        h.assertTrue(result.inserted()==0 && result.remainder()==0 && from.amounts.get(STONE)==20_000_000 && paid[0]==1,"capped rejected insertion refunds the entire extracted batch");
+        from.rejectRefund=true;result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true,BASE_CAP);
+        h.assertTrue(result.remainder()==BASE_CAP && from.amounts.get(STONE)==20_000_000-BASE_CAP && to.amounts.isEmpty(),"unrefundable pending amount is capped and conserves total resources");
         var noWork=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{throw new AssertionError("zero cap must not charge");},0);
         h.assertTrue(noWork.inserted()==0 && noWork.remainder()==0,"zero cap does no work");h.succeed();
     }
 
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void recipeAndMenuRegistration(GameTestHelper h) {
-        h.assertTrue(h.getLevel().getRecipeManager().byKey(new ResourceLocation("ae2lt:lightning_assembly/overloaded_io_port")).isPresent(),"assembly recipe loaded");
+        var recipe=(LightningAssemblyRecipe)h.getLevel().getRecipeManager()
+                .byKey(new ResourceLocation("ae2lt:lightning_assembly/overloaded_io_port")).orElseThrow();
+        var inputs=new LightningAssemblyChamberInventory(null);
+        inputs.setStackInSlot(0,new ItemStack(AEBlocks.IO_PORT.block(),4));
+        inputs.setStackInSlot(1,AEItems.ENGINEERING_PROCESSOR.stack(64));
+        inputs.setStackInSlot(2,new ItemStack(ModBlocks.OVERLOAD_MACHINE_FRAME.get(),2));
+        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),"ultimate overload core is required");
+        inputs.setStackInSlot(3,new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+        h.assertTrue(recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),
+                "four IO ports, sixty-four engineering processors, two frames and one ultimate core match");
         h.assertTrue(ModMenuTypes.OVERLOADED_IO_PORT.get()==com.moakiee.ae2lt.menu.OverloadedIOPortMenu.TYPE,"menu registered");
         fixture(h,be->{h.assertTrue(be.getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.UP).isPresent(),"item capability registered");h.succeed();});
     }

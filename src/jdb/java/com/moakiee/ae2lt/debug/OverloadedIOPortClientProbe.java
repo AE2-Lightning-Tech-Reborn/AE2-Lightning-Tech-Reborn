@@ -92,7 +92,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     require(mc.screen instanceof OverloadedIOPortScreen,"screen binding failed: "+mc.screen + ", menu=" + mc.player.containerMenu + ", client=" + mc.level.getBlockState(POS));
                     var menu=(OverloadedIOPortMenu)mc.player.containerMenu;require(menu.transferInterval==1,"server rate not synchronized");
                     require(menu.slots.size()==55,"six inputs, six outputs, filter, matrix, five upgrades and inventory");
-                    require(menu.batchLimit==1 && menu.transferCap==32768,"base throughput not synchronized");
+                    require(menu.batchLimit==4 && menu.transferCap==8_388_608L,"base throughput not synchronized");
                     capture("overloaded-io-empty.png");
                     var playerFilter=menu.slots.stream().filter(s->s.getItem().is(ModItems.OVERLOADED_FILTER_COMPONENT.get())).findFirst().orElseThrow();
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,playerFilter.index,0,ClickType.QUICK_MOVE,mc.player);
@@ -109,7 +109,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     server(()->{
                         var be=(OverloadedIOPortBlockEntity)mc.getSingleplayerServer().overworld().getBlockEntity(POS);
                         require(be.getFilterInventory().getStackInSlot(0).is(ModItems.OVERLOADED_FILTER_COMPONENT.get()),"shift-click did not route component to filter slot");
-                        require(be.getMatrixCount()==16,"matrix shift-click must fill exactly 16, not one or 64");
+                        require(be.getMatrixCount()==8,"matrix shift-click must fill exactly eight");
                         be.getConfigManager().putSetting(Settings.OPERATION_MODE,OperationMode.EMPTY);
                         var stack=AEItems.ITEM_CELL_256K.stack();var storage=StorageCells.getCellInventory(stack,null);
                         storage.insert(AEItemKey.of(Items.STONE),1_000_000,Actionable.MODULATE,IActionSource.empty());storage.persist();
@@ -122,7 +122,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     var menu=mc.player.containerMenu;
                     var installed=menu.slots.stream().filter(s->s.getItem().is(ModItems.OVERLOADED_FILTER_COMPONENT.get())).findFirst().orElseThrow();
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,installed.index,0,ClickType.QUICK_MOVE,mc.player);
-                    var installedMatrices=menu.slots.stream().filter(s->s.getItem().is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()) && s.getItem().getCount()==16).findFirst().orElseThrow();
+                    var installedMatrices=menu.slots.stream().filter(s->s.getItem().is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()) && s.getItem().getCount()==8).findFirst().orElseThrow();
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,installedMatrices.index,0,ClickType.QUICK_MOVE,mc.player);
                     require(jei!=null,"JEI unavailable");
                     var manager=jei.getRecipeManager();var recipes=manager.createRecipeLookup(LightningAssemblyCategory.TYPE).get()
@@ -141,7 +141,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     });
                 }
                 case 6->{
-                    System.out.println("IO_PORT_QA PASS: native cell/filter/matrix backgrounds, 55 slots, filter and 16-matrix shift-click insertion/removal, 1-to-16 attempt and long-cap synchronization, operation button packet, lightning status, JEI recipe layout.");
+                    System.out.println("IO_PORT_QA PASS: native cell/filter/matrix backgrounds, 55 slots, filter and eight-matrix shift-click insertion/removal, 4-to-16 attempt and long-cap synchronization, operation button packet, lightning status, JEI recipe layout.");
                     result("PASS");done=true;mc.setScreen(null);mc.stop();
                 }
             }

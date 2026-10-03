@@ -46,8 +46,7 @@ public class OverloadedIOPortBlock extends AE2LTBaseEntityBlock<OverloadedIOPort
     @Override public void appendHoverText(ItemStack stack, net.minecraft.world.level.BlockGetter context,
                                           List<Component> lines, TooltipFlag flag) {
         super.appendHoverText(stack, context, lines, flag);
-        lines.add(Component.translatable("tooltip.ae2lt.overloaded_io_port.batch"));
-        lines.add(Component.translatable("tooltip.ae2lt.overloaded_io_port.power"));
+        // Throughput details live in the guide; retain the warning about pending resources.
         if (stack.hasTag() && stack.getTag().contains(OverloadedIOPortBlockEntity.ITEM_PENDING_TAG))
             lines.add(Component.translatable("tooltip.ae2lt.overloaded_io_port.pending")
                     .withStyle(net.minecraft.ChatFormatting.YELLOW));
