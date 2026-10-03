@@ -28,6 +28,7 @@ run2/
 /run-gametest/
 
 # Local assistant/docs
+/AGENTS.md
 .aiassistant/
 .docs/
 archive/
