@@ -27,7 +27,7 @@ public class FumoBlockItem extends AE2LTBlockItem implements Equipable {
 
     @Override
     public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-        consumer.accept(com.moakiee.ae2lt.client.FumoItemRenderExtensions.INSTANCE);
+        consumer.accept(com.moakiee.ae2lt.client.render.FumoItemRenderExtensions.INSTANCE);
     }
 
     @Override

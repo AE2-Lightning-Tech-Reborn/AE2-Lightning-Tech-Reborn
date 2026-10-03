@@ -13,7 +13,7 @@ class PatternProviderToolbarButtonHiderSourceContractTest {
         String hider = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/api/client/PatternProviderToolbarButtonHider.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/OverloadedPatternProviderScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/provider/OverloadedPatternProviderScreen.java"));
 
         assertTrue(hider.contains("com.extendedae_plus.util.GuiUtil$1"));
         assertTrue(hider.contains(

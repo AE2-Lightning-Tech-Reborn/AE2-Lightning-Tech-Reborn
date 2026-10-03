@@ -11,7 +11,7 @@ class AdvancedAECompatSourceContractTest {
     @Test
     void forge120EncoderReceivesItsArrayAndHashMapAbi() throws Exception {
         String source = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/logic/AdvancedAECompat.java"));
+                "src/main/java/com/moakiee/ae2lt/logic/compat/AdvancedAECompat.java"));
 
         assertTrue(source.contains("new HashMap<AEKey, Direction>()"));
         assertTrue(source.contains("inputs.toArray(GenericStack[]::new)"));

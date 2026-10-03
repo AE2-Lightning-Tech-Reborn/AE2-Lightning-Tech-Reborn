@@ -14,7 +14,7 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
 
-import com.moakiee.ae2lt.logic.EjectModeRegistry;
+import com.moakiee.ae2lt.logic.provider.EjectModeRegistry;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 
 /**

@@ -6,8 +6,8 @@ import net.minecraftforge.fml.ModList;
 import appeng.api.implementations.menuobjects.ItemMenuHost;
 import appeng.client.gui.AEBaseScreen;
 
-import com.moakiee.ae2lt.client.FrequencyBindingClient;
-import com.moakiee.ae2lt.client.TextureToggleButton;
+import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
+import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
 import com.moakiee.ae2lt.item.TerminalCardAccess;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;

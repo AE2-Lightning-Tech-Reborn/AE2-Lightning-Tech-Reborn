@@ -34,7 +34,7 @@ public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int 
         ctx.enqueueWork(() -> net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(
                 net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
                     if (net.minecraftforge.fml.ModList.get().isLoaded("jei"))
-                        com.moakiee.ae2lt.client.JeiWirelessSupplyClient.receive(packet);
+                        com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient.receive(packet);
                 }));
         ctx.setPacketHandled(true);
     }

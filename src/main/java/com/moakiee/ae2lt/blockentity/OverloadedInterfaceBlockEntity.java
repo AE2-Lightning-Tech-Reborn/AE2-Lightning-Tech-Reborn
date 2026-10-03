@@ -19,18 +19,18 @@ import com.google.common.util.concurrent.Runnables;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
-import com.moakiee.ae2lt.logic.ConnectionEndpoints;
-import com.moakiee.ae2lt.logic.EjectModeRegistry;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
+import com.moakiee.ae2lt.logic.wireless.ConnectionEndpoints;
+import com.moakiee.ae2lt.logic.provider.EjectModeRegistry;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
-import com.moakiee.ae2lt.logic.FilteredInsertGenericInv;
-import com.moakiee.ae2lt.logic.BufferedInterfaceInput;
-import com.moakiee.ae2lt.logic.OverloadedInterfaceLogic;
-import com.moakiee.ae2lt.logic.OverloadedInterfaceTickDecider;
+import com.moakiee.ae2lt.logic.provider.FilteredInsertGenericInv;
+import com.moakiee.ae2lt.logic.interfaces.BufferedInterfaceInput;
+import com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceLogic;
+import com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceTickDecider;
 import com.moakiee.ae2lt.logic.WirelessConnectionLists;
-import com.moakiee.ae2lt.logic.WirelessConnectionRange;
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionRange;
 import com.moakiee.ae2lt.logic.WirelessConnectionRef;
-import com.moakiee.ae2lt.logic.WirelessConnectionValidator;
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionValidator;
 import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.logic.energy.WirelessEnergyAPI;
@@ -2558,12 +2558,12 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM && !passiveInput.isEmpty()) {
             output.put(TAG_PASSIVE_INPUT, passiveInput.write());
         }
-        com.moakiee.ae2lt.logic.MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> {
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_INTERFACE_MODE, interfaceMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_IO_SPEED_MODE, ioSpeedMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_EXPORT_MODE, exportMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_IMPORT_MODE, importMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeDirection(tag, TAG_ENERGY_DIR, energyOutputDir);
+        com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> {
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_INTERFACE_MODE, interfaceMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_IO_SPEED_MODE, ioSpeedMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_EXPORT_MODE, exportMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_IMPORT_MODE, importMode);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeDirection(tag, TAG_ENERGY_DIR, energyOutputDir);
             long bits = 0;
             for (int i = 0; i < SLOT_COUNT; i++) {
                 if (unlimitedSlots[i]) bits |= (1L << i);
@@ -2584,17 +2584,17 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             saveChanges();
             alertGridTicker();
         }
-        com.moakiee.ae2lt.logic.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
-            this.interfaceMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+        com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
+            this.interfaceMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_INTERFACE_MODE, InterfaceMode.class, this.interfaceMode);
-            this.ioSpeedMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.ioSpeedMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_IO_SPEED_MODE, IOSpeedMode.class, this.ioSpeedMode);
-            this.exportMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.exportMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_EXPORT_MODE, ExportMode.class, this.exportMode);
-            this.importMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
+            this.importMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_IMPORT_MODE, ImportMode.class, this.importMode);
             if (tag.contains(TAG_ENERGY_DIR)) {
-                this.energyOutputDir = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readDirection(tag, TAG_ENERGY_DIR);
+                this.energyOutputDir = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readDirection(tag, TAG_ENERGY_DIR);
             }
             if (tag.contains(TAG_UNLIMITED_SLOTS)) {
                 long bits = tag.getLong(TAG_UNLIMITED_SLOTS);

@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.easteregg.EasterEggOverlay;
+import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
+
 import java.util.List;
 
 import appeng.client.render.crafting.AssemblerAnimationStatus;

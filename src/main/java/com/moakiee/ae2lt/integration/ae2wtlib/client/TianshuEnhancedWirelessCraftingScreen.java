@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.integration.ae2wtlib.client;
 
 import appeng.client.gui.style.ScreenStyle;
-import com.moakiee.ae2lt.client.TianshuWirelessCraftingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuWirelessCraftingTermScreen;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu.WirelessPage;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage;

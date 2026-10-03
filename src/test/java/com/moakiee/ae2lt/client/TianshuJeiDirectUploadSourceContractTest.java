@@ -23,9 +23,9 @@ class TianshuJeiDirectUploadSourceContractTest {
     @Test
     void ambiguousTargetsReplaceJeiWithThePickerInTheSameTick() throws Exception {
         String coordinator = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuDirectUploadClient.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuDirectUploadClient.java"));
         String terminalScreen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuPatternEncodingTermScreen.java"));
 
         int closeRecipeViewer = coordinator.indexOf("recipeScreen.onClose()");
         int openPicker = coordinator.indexOf("terminalScreen.openDirectUploadFallback()");

@@ -12,7 +12,7 @@ class OverloadedInterfaceSidebarLayoutContractTest {
     @Test
     void filterComponentUsesItsOwnAlignedSidebarPanel() throws Exception {
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/OverloadedInterfaceScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/machine/OverloadedInterfaceScreen.java"));
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/OverloadedInterfaceMenu.java"));
         String style = Files.readString(Path.of(

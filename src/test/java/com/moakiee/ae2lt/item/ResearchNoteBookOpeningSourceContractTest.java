@@ -34,7 +34,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         String packet = source("src/main/java/com/moakiee/ae2lt/network/OpenResearchNotePacket.java");
         String bridge = source("src/main/java/com/moakiee/ae2lt/network/ResearchNoteClientBridge.java");
         String bootstrap = source("src/main/java/com/moakiee/ae2lt/client/ResearchNoteClientBootstrap.java");
-        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/LightningKeyClientInit.java");
+        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/equipment/LightningKeyClientInit.java");
 
         assertFalse(packet.contains("net.minecraft.client"));
         assertFalse(packet.contains("com.moakiee.ae2lt.client"));

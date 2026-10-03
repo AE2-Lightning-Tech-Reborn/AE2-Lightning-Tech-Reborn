@@ -15,7 +15,7 @@ class WirelessTianshuAe2wtlibContractTest {
     @Test
     void menuAndStyleExposeTheEntangledSingularity() throws Exception {
         String menu = readJava("menu/TianshuWirelessPatternEncodingTermMenu.java");
-        String screen = readJava("client/TianshuWirelessPatternEncodingTermScreen.java");
+        String screen = readJava("client/tianshu/TianshuWirelessPatternEncodingTermScreen.java");
         String style = Files.readString(MAIN.resolve(Path.of(
                 "resources/assets/ae2/screens/wireless_tianshu_pattern_encoding_terminal.json")));
         String terminalStyle = Files.readString(MAIN.resolve(Path.of(

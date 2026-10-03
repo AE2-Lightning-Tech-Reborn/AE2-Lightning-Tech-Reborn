@@ -18,7 +18,7 @@ import appeng.core.sync.network.NetworkHandler;
 import appeng.core.sync.packets.SwitchGuisPacket;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.client.ClientFrequencyCache;
+import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
 import com.moakiee.ae2lt.grid.FrequencyAccessLevel;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
@@ -876,7 +876,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // impression of the same widget being created twice.
     }
 
-    private java.util.List<com.moakiee.ae2lt.client.ClientFrequencyCache.CachedFrequency> filteredFrequencies() {
+    private java.util.List<com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.CachedFrequency> filteredFrequencies() {
         var all = ClientFrequencyCache.getAllFrequenciesSorted();
         String q = selectionSearchQuery.trim().toLowerCase(java.util.Locale.ROOT);
         if (q.isEmpty()) return all;

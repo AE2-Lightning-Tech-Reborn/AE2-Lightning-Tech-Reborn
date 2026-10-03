@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class OverloadedInterfaceTickerContractTest {
     private static final Path LOGIC_SOURCE = Path.of(
-            "src/main/java/com/moakiee/ae2lt/logic/OverloadedInterfaceLogic.java");
+            "src/main/java/com/moakiee/ae2lt/logic/interfaces/OverloadedInterfaceLogic.java");
 
     @Test
     void proxyTickerMustAcceptAlertsFromInterfaceStateChanges() throws IOException {

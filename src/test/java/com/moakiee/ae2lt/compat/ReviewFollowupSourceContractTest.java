@@ -40,7 +40,7 @@ class ReviewFollowupSourceContractTest {
         String integration = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/integration/ae2wtlib/Ae2wtlibIntegration.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuWirelessPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuWirelessPatternEncodingTermScreen.java"));
         String menuHost = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/integration/ae2wtlib/TianshuWTMenuHost.java"));
 

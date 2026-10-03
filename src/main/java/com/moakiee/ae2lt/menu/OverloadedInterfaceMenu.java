@@ -11,7 +11,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
-import com.moakiee.ae2lt.logic.OverloadedInterfaceLogic;
+import com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceLogic;
 
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;

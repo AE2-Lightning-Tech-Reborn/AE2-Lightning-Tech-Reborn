@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.client.player.LocalPlayer;
 
-import com.moakiee.ae2lt.client.ShieldHitFeedbackClientState;
+import com.moakiee.ae2lt.client.equipment.ShieldHitFeedbackClientState;
 
 @Mixin(LocalPlayer.class)
 public abstract class LocalPlayerShieldHitFeedbackMixin {

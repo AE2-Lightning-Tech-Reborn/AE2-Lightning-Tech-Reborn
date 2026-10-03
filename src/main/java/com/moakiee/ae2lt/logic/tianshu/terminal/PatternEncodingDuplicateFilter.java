@@ -7,7 +7,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.core.definitions.AEItems;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import com.moakiee.ae2lt.item.OverloadPatternItem;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternPayload;
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;

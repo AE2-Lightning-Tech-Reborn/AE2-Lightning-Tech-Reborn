@@ -102,7 +102,7 @@ import com.moakiee.ae2lt.me.cell.BulkLightningCellHandler;
 import com.moakiee.ae2lt.me.cell.FixedInfiniteCellHandler;
 import com.moakiee.ae2lt.me.cell.VoidCellHandler;
 
-import com.moakiee.ae2lt.logic.MachineAdapterRegistry;
+import com.moakiee.ae2lt.logic.provider.MachineAdapterRegistry;
 import com.moakiee.ae2lt.logic.craft.BatchPatternEligibility;
 import com.moakiee.thunderbolt.CoreConfig;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
@@ -850,15 +850,15 @@ public class AE2LightningTech {
 
     private static GenericInternalInventory getGenericInternalInventoryCapability(BlockEntity blockEntity) {
         if (blockEntity instanceof OverloadedPatternProviderBlockEntity be) {
-            var logic = (com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic) be.getLogic();
-            return new com.moakiee.ae2lt.logic.InsertOnlyReturnInvWrapper(
-                    (com.moakiee.ae2lt.logic.UnlimitedReturnInventory) logic.getInternalReturnInv(),
+            var logic = (com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic) be.getLogic();
+            return new com.moakiee.ae2lt.logic.provider.InsertOnlyReturnInvWrapper(
+                    (com.moakiee.ae2lt.logic.provider.UnlimitedReturnInventory) logic.getInternalReturnInv(),
                     logic);
         }
         if (blockEntity instanceof ExtendedOverloadedPatternProviderBlockEntity be) {
-            var logic = (com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic) be.getLogic();
-            return new com.moakiee.ae2lt.logic.InsertOnlyReturnInvWrapper(
-                    (com.moakiee.ae2lt.logic.UnlimitedReturnInventory) logic.getInternalReturnInv(),
+            var logic = (com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic) be.getLogic();
+            return new com.moakiee.ae2lt.logic.provider.InsertOnlyReturnInvWrapper(
+                    (com.moakiee.ae2lt.logic.provider.UnlimitedReturnInventory) logic.getInternalReturnInv(),
                     logic);
         }
         if (blockEntity instanceof PigmeePatternProviderBlockEntity be) {

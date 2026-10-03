@@ -10,7 +10,7 @@ import appeng.core.definitions.*;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
-import com.moakiee.ae2lt.client.OverloadedIOPortScreen;
+import com.moakiee.ae2lt.client.machine.OverloadedIOPortScreen;
 import com.moakiee.ae2lt.integration.jei.category.LightningAssemblyCategory;
 import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;

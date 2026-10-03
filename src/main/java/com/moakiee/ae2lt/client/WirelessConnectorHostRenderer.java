@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.render.Ae2ltRenderTypes;
+import com.moakiee.ae2lt.client.render.WirelessConnectorRenderer;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 

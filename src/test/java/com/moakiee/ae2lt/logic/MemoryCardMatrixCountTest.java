@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

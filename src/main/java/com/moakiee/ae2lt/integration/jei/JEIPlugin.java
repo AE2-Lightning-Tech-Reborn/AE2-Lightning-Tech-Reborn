@@ -5,11 +5,11 @@ import java.util.List;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessTerminalFactory;
-import com.moakiee.ae2lt.client.CrystalCatalyzerScreen;
-import com.moakiee.ae2lt.client.LightningAssemblyChamberScreen;
-import com.moakiee.ae2lt.client.LightningSimulationChamberScreen;
-import com.moakiee.ae2lt.client.OverloadProcessingFactoryScreen;
-import com.moakiee.ae2lt.client.TeslaCoilScreen;
+import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
+import com.moakiee.ae2lt.client.machine.LightningAssemblyChamberScreen;
+import com.moakiee.ae2lt.client.machine.LightningSimulationChamberScreen;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryScreen;
+import com.moakiee.ae2lt.client.machine.TeslaCoilScreen;
 import com.moakiee.ae2lt.integration.jei.category.CrystalCatalyzerCategory;
 import com.moakiee.ae2lt.integration.jei.category.FirmamentConversionCategory;
 import com.moakiee.ae2lt.integration.jei.category.LightningAssemblyCategory;
@@ -235,7 +235,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class,
+        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class,
                 new TianshuCraftingGhostHandler());
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));

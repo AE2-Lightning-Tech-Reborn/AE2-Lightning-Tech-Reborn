@@ -12,7 +12,7 @@ import appeng.menu.slot.AppEngSlot;
 import appeng.menu.slot.RestrictedInputSlot;
 import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
-import com.moakiee.ae2lt.logic.OverloadedIOPortThroughput;
+import com.moakiee.ae2lt.logic.transfer.OverloadedIOPortThroughput;
 import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;

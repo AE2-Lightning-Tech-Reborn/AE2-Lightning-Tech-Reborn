@@ -21,7 +21,7 @@ import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.util.SlotPositionAccess;
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryService;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryCandidate;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern;
@@ -678,7 +678,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void clear() {
         if (isClientSide()) {
-            com.moakiee.ae2lt.client.TianshuRecipeTransferContext.clear(this);
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.clear(this);
             clearClientUploadSelectionState();
         }
         resetProcessingEncodingType();
@@ -1905,7 +1905,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public void encode() {
         if (isClientSide()) {
             beginClientEncoding(
-                    com.moakiee.ae2lt.client.TianshuUploadTriggerClient.shouldTrigger(), false);
+                    com.moakiee.ae2lt.client.tianshu.TianshuUploadTriggerClient.shouldTrigger(), false);
             return;
         }
         encodeServerWithOptions(false);
@@ -1926,7 +1926,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void beginClientEncoding(boolean triggerUpload, boolean directUpload) {
-        com.moakiee.ae2lt.client.TianshuRecipeTransferContext.beginEncoding(
+        com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.beginEncoding(
                 this, tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
         pendingTriggeredUpload = triggerUpload;
         pendingDirectUpload = triggerUpload && directUpload;

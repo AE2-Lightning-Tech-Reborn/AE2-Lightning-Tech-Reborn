@@ -1,8 +1,8 @@
 package com.moakiee.ae2lt.debug;
 
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
-import com.moakiee.ae2lt.client.RainbowPigmeeColors;
-import com.moakiee.ae2lt.client.RainbowPigmeeShader;
+import com.moakiee.ae2lt.client.render.RainbowPigmeeColors;
+import com.moakiee.ae2lt.client.render.RainbowPigmeeShader;
 import com.moakiee.ae2lt.client.ctm.ConnectedTextureBakedModel;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModFumos;

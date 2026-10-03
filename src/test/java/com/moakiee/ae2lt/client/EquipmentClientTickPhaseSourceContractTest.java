@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 class EquipmentClientTickPhaseSourceContractTest {
     @Test
     void forgeHandlersMatchMainPostTickSemantics() throws Exception {
-        assertEndPhase("FrequencyCardKeyMappings.java");
-        assertEndPhase("ShieldHitFeedbackClientState.java");
+        assertEndPhase("frequency/FrequencyCardKeyMappings.java");
+        assertEndPhase("equipment/ShieldHitFeedbackClientState.java");
     }
 
     private static void assertEndPhase(String fileName) throws Exception {

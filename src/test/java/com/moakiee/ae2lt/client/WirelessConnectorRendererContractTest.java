@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class WirelessConnectorRendererContractTest {
     private static final Path RENDERER = Path.of(
             "src", "main", "java", "com", "moakiee", "ae2lt", "client",
-            "WirelessConnectorRenderer.java");
+            "render/WirelessConnectorRenderer.java");
     @Test
     void forgeOverlayUsesTheCameraRelativeTranslucentStageContract() throws IOException {
         String source = Files.readString(RENDERER);

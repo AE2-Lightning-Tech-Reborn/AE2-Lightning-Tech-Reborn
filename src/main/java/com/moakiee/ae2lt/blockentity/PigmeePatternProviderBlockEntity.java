@@ -32,7 +32,7 @@ import appeng.menu.locator.MenuLocator;
 import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
-import com.moakiee.ae2lt.logic.PigmeePatternProviderReturnInventory;
+import com.moakiee.ae2lt.logic.provider.PigmeePatternProviderReturnInventory;
 import com.moakiee.ae2lt.menu.PigmeePatternProviderMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;

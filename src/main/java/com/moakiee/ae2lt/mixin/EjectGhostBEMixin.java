@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import com.moakiee.ae2lt.logic.EjectModeRegistry;
+import com.moakiee.ae2lt.logic.provider.EjectModeRegistry;
 
 /**
  * Mixin into {@link Level#getBlockEntity} to return a cached Ghost BE
