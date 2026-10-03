@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -19,8 +20,9 @@ public final class ConnectedSlabBakedModel extends ConnectedTextureBakedModel {
 
     public ConnectedSlabBakedModel(TextureAtlasSprite base, TextureAtlasSprite ctm,
             @Nullable TextureAtlasSprite overlay, ChunkRenderTypeSet renderTypes,
-            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight, SlabType type) {
-        super(base, ctm, overlay, ConnectionPredicates.SAME_SLAB, renderTypes, ambientOcclusion, gui3d, usesBlockLight);
+            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight, ItemTransforms transforms, SlabType type) {
+        super(base, ctm, overlay, ConnectionPredicates.SAME_SLAB, renderTypes,
+                ambientOcclusion, gui3d, usesBlockLight, transforms);
         this.type = type;
     }
 

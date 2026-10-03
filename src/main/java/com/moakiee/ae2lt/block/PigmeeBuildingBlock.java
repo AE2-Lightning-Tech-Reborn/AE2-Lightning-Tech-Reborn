@@ -17,13 +17,4 @@ public final class PigmeeBuildingBlock extends Block {
                 .requiresCorrectToolForDrops());
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, BlockGetter context,
-            List<Component> lines, TooltipFlag flag) {
-        super.appendHoverText(stack, context, lines, flag);
-        lines.add(Component.translatable("tooltip.ae2lt.pigmee_building_block")
-                .withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("tooltip.ae2lt.pigmee_building_block.styles")
-                .withStyle(ChatFormatting.GRAY));
-    }
 }

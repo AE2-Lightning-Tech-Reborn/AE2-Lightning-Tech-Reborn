@@ -49,16 +49,6 @@ public class OverloadProcessingFactoryBlock extends AE2LTBaseEntityBlock<Overloa
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, BlockGetter context,
-            List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        super.appendHoverText(stack, context, tooltipComponents, tooltipFlag);
-        if (ModList.get().isLoaded("advanced_ae")) {
-            tooltipComponents.add(Component.translatable("tooltip.ae2lt.overload_processing_factory.reactions")
-                    .withStyle(ChatFormatting.GRAY));
-        }
-    }
-
-    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
         builder.add(WORKING);

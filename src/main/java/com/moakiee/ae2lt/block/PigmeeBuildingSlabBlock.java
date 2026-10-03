@@ -16,9 +16,4 @@ public final class PigmeeBuildingSlabBlock extends SlabBlock {
                 .requiresCorrectToolForDrops());
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.level.BlockGetter context, List<Component> lines, TooltipFlag flag) {
-        super.appendHoverText(stack, context, lines, flag);
-        lines.add(Component.translatable("tooltip.ae2lt.pigmee_building_slab").withStyle(ChatFormatting.GRAY));
-    }
 }

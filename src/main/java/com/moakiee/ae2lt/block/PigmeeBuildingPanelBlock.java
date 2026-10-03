@@ -30,13 +30,4 @@ public final class PigmeeBuildingPanelBlock extends Block {
         return framed;
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, BlockGetter context,
-            List<Component> lines, TooltipFlag flag) {
-        super.appendHoverText(stack, context, lines, flag);
-        lines.add(Component.translatable("tooltip.ae2lt.pigmee_building_panel")
-                .withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("tooltip.ae2lt.pigmee_building_panel.restore")
-                .withStyle(ChatFormatting.GRAY));
-    }
 }

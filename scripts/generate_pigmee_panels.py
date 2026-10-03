@@ -170,18 +170,8 @@ def generate():
         if identifier not in pickaxe["values"]:
             pickaxe["values"].append(identifier)
     write_json(pickaxe_path, pickaxe)
-    langs["en_us"]["tooltip.ae2lt.pigmee_building_panel"] = (
-        "Connects to panels of the same color and style. Stonecut 1:1 into any of the 32 colors and styles; no dye needed.")
-    langs["zh_cn"]["tooltip.ae2lt.pigmee_building_panel"] = (
-        "同色同款自动连纹；切石机可 1∶1 自由切换全部 32 种颜色与款式，无需染料。")
-    langs["en_us"]["tooltip.ae2lt.pigmee_building_panel.restore"] = (
-        "Craft 1 panel into 1 basic Pigmee Building Block in any crafting grid.")
-    langs["zh_cn"]["tooltip.ae2lt.pigmee_building_panel.restore"] = (
-        "在任意合成栏中放入 1 块成品，可还原为 1 个基础猪咪建材。")
-    langs["en_us"]["tooltip.ae2lt.pigmee_building_block.styles"] = (
-        "Stonecut 1:1 into any of the 32 colored plain or framed panels; no dye needed.")
-    langs["zh_cn"]["tooltip.ae2lt.pigmee_building_block.styles"] = (
-        "切石机可 1∶1 直接制作全部 32 种彩色素板与框板，无需染料。")
+    # Panel, slab and conversion behaviour is documented in the guide page
+    # materials/pigmee-building-materials.md; items carry no tooltip text.
     for locale, values in langs.items():
         write_json(ASSETS / f"lang/{locale}.json", values)
     print("Generated 32 panel blocks, 64 textures, 32 dye-free stonecutting recipes, and 1 crafting return recipe.")

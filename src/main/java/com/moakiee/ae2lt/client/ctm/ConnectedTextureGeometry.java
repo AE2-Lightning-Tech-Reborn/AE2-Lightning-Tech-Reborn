@@ -51,12 +51,14 @@ public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextu
         @Nullable TextureAtlasSprite overlay = context.hasMaterial("overlay")
                 ? spriteGetter.apply(context.getMaterial("overlay"))
                 : null;
+        // Keep inherited display transforms for inventory, held and dropped block items.
+        var transforms = context.getTransforms();
         if (slabType != null) {
             return new ConnectedSlabBakedModel(base, ctm, overlay, renderTypes,
-                    ambientOcclusion, gui3d, usesBlockLight, slabType);
+                    ambientOcclusion, gui3d, usesBlockLight, transforms, slabType);
         }
         ConnectionPredicate predicate = ConnectionPredicates.get(connectionId);
         return new ConnectedTextureBakedModel(base, ctm, overlay, predicate, renderTypes,
-                ambientOcclusion, gui3d, usesBlockLight);
+                ambientOcclusion, gui3d, usesBlockLight, transforms);
     }
 }
