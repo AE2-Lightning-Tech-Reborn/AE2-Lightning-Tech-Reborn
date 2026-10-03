@@ -1423,6 +1423,8 @@
   "ae2lt.tianshu.work.upgrades": "升级卡",
   "ae2lt.tianshu.work.scroll_marks": "配置标记：在 3×3 槽内滚动滚轮，逐行浏览。",
   "ae2lt.tianshu.work.scroll_upgrades": "升级卡：在右侧槽内滚动滚轮，逐格浏览。",
+  "ae2lt.tianshu.work.previous_page": "上一页",
+  "ae2lt.tianshu.work.next_page": "下一页",
   "ae2lt.tianshu.wireless.trash_notice": "离开后销毁",
   "ae2lt.tianshu.work.cell_copy_clear": "当前：取出元件时清空配置格。",
   "ae2lt.tianshu.work.cell_copy_keep": "当前：取出元件时保留配置格。",
