@@ -6,6 +6,7 @@ import java.util.List;
 import appeng.core.definitions.AEParts;
 import com.moakiee.ae2lt.compat.mining.ApothicMiningLoot;
 import com.moakiee.ae2lt.compat.mining.BloodMagicMiningTool;
+import com.moakiee.ae2lt.compat.mining.SilentGearMiningTool;
 import net.minecraft.core.BlockPos;
 
 import net.minecraft.server.level.ServerLevel;
@@ -36,7 +37,10 @@ public final class MiningLoot {
                 || stack.canPerformAction(net.minecraftforge.common.ToolActions.SHOVEL_DIG)
                 || stack.canPerformAction(net.minecraftforge.common.ToolActions.HOE_DIG)
                 || stack.canPerformAction(net.minecraftforge.common.ToolActions.SWORD_DIG)
-                || stack.canPerformAction(net.minecraftforge.common.ToolActions.SHEARS_DIG));
+                || stack.canPerformAction(net.minecraftforge.common.ToolActions.SHEARS_DIG))
+                // Silent Gear breaks one durability point earlier than vanilla and keeps the item.
+                // Only its pickaxe, axe and digger types gate their own tool actions on that state.
+                && !SilentGearMiningTool.isBroken(stack);
     }
 
     public static BlockState stateOf(ItemStack input) {

@@ -1,0 +1,66 @@
+// Native Silent Gear regression for the mining factory. Fixtures never enter release jars.
+// Pass a directory holding the Silent Gear and Silent Lib jars for 1.20.1, for example:
+//   gradlew -I scripts/mining-silentgear-test.init.gradle -PminingSilentGearMods=libs/silentgear-1.20.1 runGameTestServer
+// The jars are published into a local Maven repository so ForgeGradle deobfuscates them like any
+// other mod dependency, which the 1.20.1 dev workspace requires.
+allprojects {
+    afterEvaluate {
+        if (!project.hasProperty('miningSilentGearMods')) {
+            throw new GradleException('Pass -PminingSilentGearMods=<directory with the Silent Gear and Silent Lib jars>')
+        }
+        def modDir = project.file(project.property('miningSilentGearMods'))
+        if (!modDir.isDirectory()) {
+            throw new GradleException('miningSilentGearMods is not a directory: ' + modDir)
+        }
+
+        def repoDir = project.file('build/silentgear-mods-repo')
+        def coordinates = []
+        project.fileTree(modDir) { include '*.jar' }.files.sort { it.name }.each { jar ->
+            def match = (jar.name - '.jar') =~ /^(.*?)-(\d.*)$/
+            if (!match.matches()) {
+                throw new GradleException('Cannot derive a Maven version from ' + jar.name)
+            }
+            def group = 'local.silentgear'
+            def artifact = match.group(1)
+            def version = match.group(2)
+            def target = new File(repoDir, "${group.replace('.', '/')}/${artifact}/${version}/${artifact}-${version}")
+            target.parentFile.mkdirs()
+            if (!new File(target.path + '.jar').exists() || new File(target.path + '.jar').length() != jar.length()) {
+                java.nio.file.Files.copy(jar.toPath(), new File(target.path + '.jar').toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            new File(target.path + '.pom').text = """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>${group}</groupId>
+  <artifactId>${artifact}</artifactId>
+  <version>${version}</version>
+  <packaging>jar</packaging>
+</project>
+"""
+            coordinates << "${group}:${artifact}:${version}".toString()
+        }
+
+        repositories {
+            maven {
+                name 'SilentGearLocal'
+                url = repoDir.toURI()
+            }
+        }
+        dependencies {
+            coordinates.each { coordinate ->
+                add('jdbCompileOnly', fg.deobf(coordinate))
+                add('runtimeOnly', fg.deobf(coordinate))
+            }
+        }
+
+        sourceSets.jdb.java.srcDir 'src/miningSilentGearTest/java'
+        // The Silent Gear suite reuses the mining factory fixtures, so its base tests compile too.
+        sourceSets.jdb.java.setIncludes(['**/MiningFactoryGameTests.java', '**/MiningFactorySilentGearGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_mining'
+            workingDirectory project.file('build/mining-silentgear-gametest')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}
