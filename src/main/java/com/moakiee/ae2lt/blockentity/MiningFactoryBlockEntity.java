@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.ManualItemExport;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.EnumSet;
@@ -65,6 +68,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
     };
     private final AdjacentItemAutoExportHelper.DirectionalTargetCache exportTargets =
             new AdjacentItemAutoExportHelper.DirectionalTargetCache();
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private EnumSet<RelativeSide> allowedOutputs = EnumSet.noneOf(RelativeSide.class);
     private Status status = Status.IDLE;
@@ -261,6 +265,28 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
 
     public void onNeighborChanged(BlockPos pos) {
         if (pos != null && worldPosition.distManhattan(pos) == 1) exportTargets.invalidate();
+    }
+
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, MiningFactoryInventory.INPUT, 1,
+                MiningFactoryInventory.OUTPUT, 9,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, MiningFactoryInventory.OUTPUT, 9,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? exportTargets.resolve(server, worldPosition, direction) : null, budget),
+                () -> {
+                    resetProgress();
+                    status = Status.IDLE;
+                    lastProcessed = 0;
+                    lastSamples = 0;
+                    var state = getBlockState();
+                    if (state.getValue(MiningFactoryBlock.WORKING)) {
+                        level.setBlock(worldPosition, state.setValue(MiningFactoryBlock.WORKING, false), Block.UPDATE_CLIENTS);
+                    }
+                });
     }
 
     public boolean pushOutResult() {

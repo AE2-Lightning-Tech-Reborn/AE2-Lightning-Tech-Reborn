@@ -22,7 +22,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-public class MiningFactoryMenu extends AEBaseMenu implements FrequencyBindingMenu, MachineOutputConfigMenu {
+public class MiningFactoryMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<MiningFactoryMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(MenuTypeBuilder
             .create(MiningFactoryMenu::new, MiningFactoryBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.mining_factory"))
@@ -36,6 +36,12 @@ public class MiningFactoryMenu extends AEBaseMenu implements FrequencyBindingMen
     @GuiSync(35) public int progressTicks;
     @GuiSync(36) public long lightning;
 
+    @GuiSync(120) public int inputTransferRevision;
+    @GuiSync(121) public long inputTransferMoved;
+    @GuiSync(122) public long inputTransferExported;
+    @GuiSync(123) public int inputTransferRemaining;
+    @GuiSync(124) public boolean inputTransferAccepted;
+
     private final MiningFactoryBlockEntity host;
     private final Slot inputSlot;
     private final Slot toolSlot;
@@ -44,6 +50,7 @@ public class MiningFactoryMenu extends AEBaseMenu implements FrequencyBindingMen
     public MiningFactoryMenu(int id, Inventory playerInventory, MiningFactoryBlockEntity host) {
         super(TYPE, id, playerInventory, host);
         this.host = host;
+        registerClientAction("transferInputs", this::transferInputs);
         var blockInput = new LargeStackAppEngSlot(host.getInventory(), MiningFactoryInventory.INPUT);
         blockInput.setEmptyTooltip(() -> List.of(Component.translatable("gui.ae2lt.mining_factory.status.idle")));
         inputSlot = addSlot(blockInput, SlotSemantics.MACHINE_INPUT);
@@ -126,6 +133,24 @@ public class MiningFactoryMenu extends AEBaseMenu implements FrequencyBindingMen
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,
                         host.getBlockPos().getZ() + 0.5D) <= 64.0D;
+    }
+
+    @Override public void clientTransferInputs() { sendClientAction("transferInputs"); }
+    @Override public int getInputTransferRevision() { return inputTransferRevision; }
+    @Override public com.moakiee.ae2lt.machine.common.ManualInputTransfer.Result getInputTransferResult() {
+        return new com.moakiee.ae2lt.machine.common.ManualInputTransfer.Result(
+                inputTransferAccepted, inputTransferMoved, inputTransferExported, inputTransferRemaining);
+    }
+
+    private void transferInputs() {
+        if (!isServerSide() || !isValidMenu() || getPlayer().containerMenu != this || !stillValid(getPlayer())) return;
+        var result = host.transferInputsToOutput();
+        inputTransferAccepted = result.accepted();
+        inputTransferMoved = result.moved();
+        inputTransferExported = result.exported();
+        inputTransferRemaining = result.remainingSlots();
+        inputTransferRevision++;
+        if (result.accepted()) broadcastChanges();
     }
 
     public MiningFactoryBlockEntity getHost() {
