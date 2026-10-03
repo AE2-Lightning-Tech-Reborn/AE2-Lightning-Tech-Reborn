@@ -146,6 +146,38 @@ public abstract class LivingEntityPhaseJumpMixin {
         original.call(entity, x, y, z);
     }
 
+    @WrapOperation(
+            method = "aiStep",
+            at = @At(
+                    value = "INVOKE", remap = false,
+                    target = "Lnet/minecraft/world/entity/LivingEntity;jumpInFluid(Lnet/minecraftforge/fluids/FluidType;)V"))
+    private void ae2lt$authorizeFluidJumpInput(
+            LivingEntity entity,
+            net.minecraftforge.fluids.FluidType fluidType,
+            Operation<Void> original) {
+        if (entity instanceof Player player) {
+            PhaseFlightMovementGuard.runAsSelfMovement(player, () -> original.call(entity, fluidType));
+            return;
+        }
+        original.call(entity, fluidType);
+    }
+
+    @WrapOperation(
+            method = "goDownInWater",
+            at = @At(
+                    value = "INVOKE", remap = false,
+                    target = "Lnet/minecraft/world/entity/LivingEntity;sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V"))
+    private void ae2lt$authorizeWaterDescendInput(
+            LivingEntity entity,
+            net.minecraftforge.fluids.FluidType fluidType,
+            Operation<Void> original) {
+        if (entity instanceof Player player) {
+            PhaseFlightMovementGuard.runAsSelfMovement(player, () -> original.call(entity, fluidType));
+            return;
+        }
+        original.call(entity, fluidType);
+    }
+
     private static void runAsScopedVanillaTravelMovement(LivingEntity entity, Runnable movement) {
         if (entity instanceof Player player
                 && PhaseFlightMovementGuard.isVanillaTravelScopeActive(player)) {

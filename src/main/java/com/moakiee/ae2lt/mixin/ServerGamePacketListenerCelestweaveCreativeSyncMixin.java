@@ -32,7 +32,8 @@ import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
  *
  * <p>This wrapper is deliberately placed at the narrow server-side mutation point instead of
  * suppressing the client listener. The server can compare the authoritative stack with the
- * uploaded stack and reject only a state echo of the same UUID-bound armor. A projection is
+ * uploaded stack and reject a state echo of the same UUID-bound armor or an old projection
+ * over restored armor. Only the four equipped armor slots are guarded. A projection is
  * recognized from the server-owned private slot instead of its uploaded link: an older client can
  * omit or corrupt that private tag, and trusting it would reintroduce a false equip. Empty stacks,
  * another item, and another armor UUID still reach vanilla, so real creative-mode moves, equips
@@ -51,7 +52,9 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             Operation<Void> original) {
         var listener = (ServerGamePacketListenerImpl) (Object) this;
         ItemStack authoritative = slot.getItem();
-        if (!ae2lt$isSameCelestweaveEquipmentEcho(listener.player, authoritative, uploaded)) {
+        // Only equipped armor slots reject echoes; storage-slot creative edits remain valid.
+        if (slot.index < 5 || slot.index > 8
+                || !ae2lt$isSameCelestweaveEquipmentEcho(listener.player, authoritative, uploaded)) {
             original.call(slot, uploaded);
             return;
         }
@@ -70,10 +73,16 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             ItemStack authoritative,
             ItemStack uploaded) {
         if (authoritative.isEmpty()
-                || uploaded.isEmpty()
-                || authoritative.getItem() != uploaded.getItem()) {
+                || uploaded.isEmpty()) {
             return false;
         }
+
+        if (authoritative.getItem() instanceof BaseCelestweaveArmorItem
+                && uploaded.getItem() instanceof PhaseLockProjectionItem) {
+            // An unpowered collapse already restored the only real armor stack.
+            return true;
+        }
+        if (authoritative.getItem() != uploaded.getItem()) return false;
 
         if (authoritative.getItem() instanceof BaseCelestweaveArmorItem) {
             UUID authoritativeId = CelestweaveArmorState.getArmorId(authoritative);
