@@ -199,19 +199,6 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
-        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
-                com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE,
-                registration.getTransferHelper()));
-        if (ModList.get().isLoaded("ae2wtlib")) {
-        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
-                com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE,
-                registration.getTransferHelper()));
-            // JEI matches the concrete menu class, not its superclass. The enhanced host shares
-            // the base wireless MenuType; its exact class is sufficient for this registration.
-            registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
-                    com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu.class,
-                    null, registration.getTransferHelper()));
-        }
         var helper = registration.getTransferHelper();
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
@@ -231,8 +218,6 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class,
-                new TianshuCraftingGhostHandler());
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,
