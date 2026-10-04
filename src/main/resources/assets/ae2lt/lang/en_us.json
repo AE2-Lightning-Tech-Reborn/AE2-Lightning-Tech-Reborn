@@ -1486,9 +1486,9 @@
   "block.ae2lt.rainbow_pigmee_fumo": "Rainbow Pigmee Fumo",
   "item.ae2lt.dye_base": "Dye Base",
   "tooltip.ae2lt.rainbow_pigmee_fumo.1": "It wears the sky after the rain.",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.2": "Place it in the centre; the positions of four Dye Bases choose the colour.",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.3": "Surround it with eight cobblestone for eight Pigmee Building Blocks.",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.4": "Returned after crafting, ready to be used again.",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.2": "Craft with one colorable item to cycle 16 colors; uncolored starts at white.",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.3": "Place four identical items in a dye recipe layout to choose that color.",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.4": "The Pigmee remains; it still makes dyes and Pigmee Building Blocks.",
   "jei.ae2lt.rainbow_pigmee.info": "Pigmee once asked a shimmering sheep about the secret of its name. The sky answered with a rumble.",
   "block.ae2lt.pigmee_building_slab": "Pigmee Building Slab",
   "block.ae2lt.white_pigmee_building_slab": "White Pigmee Plain Slab",
@@ -1538,5 +1538,6 @@
   "ae2lt.gui.input_transfer.progress_warning": "Moving inputs resets processing progress.",
   "ae2lt.gui.input_transfer.pending": "Processing…",
   "ae2lt.gui.input_transfer.result": "Moved %s · Exported %s · Input slots left %s",
-  "ae2lt.gui.input_transfer.cooldown": "Please try again shortly."
+  "ae2lt.gui.input_transfer.cooldown": "Please try again shortly.",
+  "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved."
 }

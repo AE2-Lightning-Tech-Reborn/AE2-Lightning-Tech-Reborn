@@ -129,7 +129,8 @@ public class JEIPlugin implements IModPlugin {
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
 
         registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
-                Component.translatable("jei.ae2lt.rainbow_pigmee.info"));
+                Component.translatable("jei.ae2lt.rainbow_pigmee.info"),
+                Component.translatable("jei.ae2lt.rainbow_pigmee.coloring"));
 
         var level = Minecraft.getInstance().level;
         if (level == null) {
