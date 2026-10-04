@@ -1450,9 +1450,9 @@
   "block.ae2lt.rainbow_pigmee_fumo": "彩虹猪咪",
   "item.ae2lt.dye_base": "染料基底",
   "tooltip.ae2lt.rainbow_pigmee_fumo.1": "它把雨后的天空披在了身上。",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.2": "放在工作台中央，用四个染料基底的位置选择颜色。",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.3": "也能将周围的八块圆石变成八块猪咪建材。",
-  "tooltip.ae2lt.rainbow_pigmee_fumo.4": "合成后保留，可以反复使用。",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.2": "与一件可染色物品合成，依次切换16色；无色从白色开始。",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.3": "四件相同物品按染料配方摆放，可直接染成对应颜色。",
+  "tooltip.ae2lt.rainbow_pigmee_fumo.4": "猪咪保留；仍可制作染料与猪咪建材。",
   "jei.ae2lt.rainbow_pigmee.info": "猪咪曾向一只流光溢彩的羊讨教名字的秘密。那天，天空响了一声。",
   "block.ae2lt.pigmee_building_slab": "猪咪建材台阶",
   "block.ae2lt.white_pigmee_building_slab": "白色猪咪素板台阶",
@@ -1502,5 +1502,6 @@
   "ae2lt.gui.input_transfer.progress_warning": "转移会重置加工进度。",
   "ae2lt.gui.input_transfer.pending": "处理中…",
   "ae2lt.gui.input_transfer.result": "转移 %s · 弹出 %s · 剩余输入槽 %s",
-  "ae2lt.gui.input_transfer.cooldown": "请稍后重试。"
+  "ae2lt.gui.input_transfer.cooldown": "请稍后重试。",
+  "jei.ae2lt.rainbow_pigmee.coloring": "与一件可染色物品合成，按白、橙、品红、淡蓝、黄、黄绿、粉红、灰、淡灰、青、紫、蓝、棕、绿、红、黑循环。无色版本从白色开始。将四件完全相同且可堆叠的物品，放到对应染料配方的四个染料基底位置，可一次染出四件目标颜色物品，彩虹猪咪放中央并保留。皮革装备与潜影盒等不可堆叠物品使用单件换色。混合色皮革从最接近的MC颜色继续循环。支持具有完整16色变体的物品；无色版本通过等量染色配方识别。物品名称、附魔和储存内容会保留。"
 }
