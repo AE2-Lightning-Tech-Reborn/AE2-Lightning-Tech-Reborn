@@ -342,6 +342,64 @@ public final class CrystalCatalyzerFluidGameTests {
         PigmeeCrystalCatalyzerGameTests.normalCatalyzerDoesNotGainFreeProcessing(h);
     }
 
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void amethystMotherRockProducesSixteen(GameTestHelper h) {
+        singleMotherRockCycle(h, "budding_amethyst");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void flawlessQuartzMotherRockProducesSixteen(GameTestHelper h) {
+        singleMotherRockCycle(h, "flawless_budding_quartz");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void flawlessOverloadMotherRockProducesSixteen(GameTestHelper h) {
+        singleMotherRockCycle(h, "flawless_budding_overload_crystal");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void motherRockMatrixBatchFitsOutputCapacity(GameTestHelper h) {
+        // 256 * 16 * 8 exceeds the output slot: cap parallelism at 128, keep all catalysts.
+        fullCycle(h, "flawless_budding_quartz", 16384);
+    }
+
+    @GameTest(template = "empty")
+    public static void degradingMotherRocksAreNotCatalysts(GameTestHelper h) {
+        for (var id : List.of("ae2:flawed_budding_quartz", "ae2:chipped_budding_quartz",
+                "ae2:damaged_budding_quartz", "ae2lt:flawed_budding_overload_crystal",
+                "ae2lt:cracked_budding_overload_crystal", "ae2lt:damaged_budding_overload_crystal",
+                "extendedae:entro_budding_fully", "extendedae:entro_budding_mostly",
+                "extendedae:entro_budding_half", "extendedae:entro_budding_hardly",
+                "justdirethings:time_crystal_budding_block", "appgen:budding_ember_flawed",
+                "appgen:budding_ember_chipped", "appgen:budding_ember_damaged",
+                "neoecoae:flawed_budding_energized_crystal", "neoecoae:chipped_budding_energized_crystal",
+                "neoecoae:damaged_budding_energized_crystal")) {
+            var key = ResourceLocation.parse(id);
+            if (!BuiltInRegistries.ITEM.containsKey(key)) continue;
+            check(!CrystalCatalyzerRecipeService.isKnownCatalyst(h.getLevel(),
+                    new ItemStack(BuiltInRegistries.ITEM.get(key))), "degrading mother rock accepted: " + id);
+        }
+        h.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void reusableMotherRocksMatchNaturalHarvest(GameTestHelper h) {
+        var host = machine(h, false);
+        host.getTank().setFluid(new FluidStack(Fluids.WATER, 1000));
+        for (var route : List.of(
+                new String[]{"budding_amethyst", "minecraft:budding_amethyst", "minecraft:amethyst_cluster"},
+                new String[]{"flawless_budding_quartz", "ae2:flawless_budding_quartz", "ae2:quartz_cluster"},
+                new String[]{"flawless_budding_overload_crystal", "ae2lt:flawless_budding_overload_crystal",
+                        "ae2lt:overload_crystal_cluster"},
+                new String[]{"budding_ember_flawless", "appgen:budding_ember_flawless", "appgen:ember_cluster"},
+                new String[]{"flawless_budding_energized_crystal", "neoecoae:flawless_budding_energized_crystal",
+                        "neoecoae:energized_crystal_cluster"})) {
+            checkMotherRock(h, host, route[0], route[1], route[2],
+                    BuiltInRegistries.ITEM.containsKey(ResourceLocation.parse(route[1])));
+        }
+        h.succeed();
+    }
+
     /** Compare upstream loot definitions, before modpack global loot modifiers, including Entro. */
     @GameTest(template = "empty")
     public static void ae2csMotherRocksMatchNaturalHarvest(GameTestHelper h) {
@@ -350,39 +408,47 @@ public final class CrystalCatalyzerFluidGameTests {
         for (var family : List.of("nether_quartz", "energized_certus_quartz", "ender_quartz",
                 "energized_fluix", "fluix", "redstone", "resonating", "quantum", "link", "meteor", "entro")) {
             var catalystId = ResourceLocation.parse("ae2cs:" + family + "_mother_rock");
-            var candidate = find(h, "ae2cs/" + family + "_mother_rock");
             boolean available = BuiltInRegistries.ITEM.containsKey(catalystId)
                     && (!family.equals("entro") || ModList.get().isLoaded("extendedae"));
-            check(candidate.isPresent() == available, "incorrect optional recipe presence: " + family);
-            if (!available) continue;
-
-            var recipe = candidate.orElseThrow().recipe().value();
             var clusterId = ResourceLocation.parse(family.equals("entro")
                     ? "extendedae:entro_cluster" : "ae2cs:" + family + "_crystal_cluster");
-            check(BuiltInRegistries.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + family);
-            var rawDrops = new ArrayList<ItemStack>();
-            var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(h.getLevel())
-                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
-                            net.minecraft.world.phys.Vec3.atCenterOf(h.absolutePos(POS)))
-                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
-                            BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState())
-                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.TOOL,
-                            new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE))
-                    .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.BLOCK);
-            h.getLevel().getServer().reloadableRegistries()
-                    .getLootTable(BuiltInRegistries.BLOCK.get(clusterId).getLootTable())
-                    .getRandomItemsRaw(lootParams, rawDrops::add);
-            check(rawDrops.stream().anyMatch(drop -> ItemStack.isSameItemSameComponents(drop, recipe.getOutputTemplate())),
-                    "mature loot definition differs from catalyzer output: " + family + " drops=" + rawDrops);
-
-            var catalyst = new ItemStack(BuiltInRegistries.ITEM.get(catalystId));
-            host.getInventory().setItemDirect(CATALYST, catalyst);
-            check(host.findProcessableRecipe().orElseThrow().recipe().id().equals(candidate.get().recipe().id()),
-                    "machine did not select the mother rock recipe: " + family);
-            check(recipe.isWaterRecipe() && recipe.fluidInput().getAmount() == 1000,
-                    "mother rock must retain the standard water cost: " + family);
+            checkMotherRock(h, host, "ae2cs/" + family + "_mother_rock", catalystId.toString(),
+                    clusterId.toString(), available);
         }
         h.succeed();
+    }
+
+    private static void checkMotherRock(GameTestHelper h, CrystalCatalyzerBlockEntity host,
+            String path, String catalyst, String cluster, boolean available) {
+        var candidate = find(h, path);
+        check(candidate.isPresent() == available, "incorrect optional recipe presence: " + path);
+        if (!available) return;
+        var recipe = candidate.orElseThrow().recipe().value();
+        var clusterId = ResourceLocation.parse(cluster);
+        check(BuiltInRegistries.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + path);
+        var rawDrops = new ArrayList<ItemStack>();
+        var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(h.getLevel())
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
+                        net.minecraft.world.phys.Vec3.atCenterOf(h.absolutePos(POS)))
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
+                        BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState())
+                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.TOOL,
+                        new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE))
+                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.BLOCK);
+        h.getLevel().getServer().reloadableRegistries()
+                .getLootTable(BuiltInRegistries.BLOCK.get(clusterId).getLootTable())
+                .getRandomItemsRaw(lootParams, rawDrops::add);
+        check(rawDrops.stream().anyMatch(drop -> ItemStack.isSameItemSameComponents(drop, recipe.getOutputTemplate())),
+                "mature loot definition differs from catalyzer output: " + path + " drops=" + rawDrops);
+
+        host.getInventory().setItemDirect(CATALYST,
+                new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse(catalyst))));
+        check(host.findProcessableRecipe().orElseThrow().recipe().id().equals(candidate.get().recipe().id()),
+                "machine did not select the mother rock recipe: " + path);
+        check(recipe.catalystCount() == 1 && recipe.getOutputTemplate().getCount() == 16,
+                "mother rock must produce sixteen items per catalyst: " + path);
+        check(recipe.isWaterRecipe() && recipe.fluidInput().getAmount() == 1000,
+                "mother rock must retain the standard water cost: " + path);
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)
@@ -391,8 +457,12 @@ public final class CrystalCatalyzerFluidGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)
-    public static void ae2csSingleMotherRockProducesEight(GameTestHelper h) {
-        var candidate = find(h, "ae2cs/quantum_mother_rock");
+    public static void ae2csSingleMotherRockProducesSixteen(GameTestHelper h) {
+        singleMotherRockCycle(h, "ae2cs/quantum_mother_rock");
+    }
+
+    private static void singleMotherRockCycle(GameTestHelper h, String path) {
+        var candidate = find(h, path);
         if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe().value();
         var host = powered(h, 10);
@@ -403,25 +473,34 @@ public final class CrystalCatalyzerFluidGameTests {
         });
         h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
-            check(result.getCount() == 8 && ItemStack.isSameItemSameComponents(result, recipe.getOutputTemplate()),
-                    "waiting for eight purified crystals from one mother rock");
+            check(result.getCount() == 16 && ItemStack.isSameItemSameComponents(result, recipe.getOutputTemplate()),
+                    "waiting for sixteen crystals from one mother rock: " + path);
             check(host.getInventory().getStackInSlot(CATALYST).getCount() == 1, "mother rock was consumed");
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0 && lightning(host) == 9,
-                    "eight crystals must retain the standard cycle cost");
+                    "sixteen crystals must retain the standard cycle cost");
         });
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void pigmeeAe2csMotherRockRemainsReusable(GameTestHelper h) {
-        var candidate = find(h, "ae2cs/quantum_mother_rock");
+        pigmeeMotherRockCycle(h, "ae2cs/quantum_mother_rock");
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void pigmeeAmethystMotherRockRemainsReusable(GameTestHelper h) {
+        pigmeeMotherRockCycle(h, "budding_amethyst");
+    }
+
+    private static void pigmeeMotherRockCycle(GameTestHelper h, String path) {
+        var candidate = find(h, path);
         if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe().value();
         var host = machine(h, true);
         check(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output cap must be 64");
-        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(57));
+        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(49));
         check(!host.getInventory().canAcceptRecipeOutput(recipe.getOutputTemplate()),
-                "eight-item mother rock output fit into only seven free spaces");
-        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(56));
+                "sixteen-item mother rock output fit into only fifteen free spaces");
+        host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(48));
         var catalyst = recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(64);
         host.getInventory().setItemDirect(CATALYST, catalyst);
         host.getTank().setFluid(recipe.fluidInput());
@@ -432,12 +511,12 @@ public final class CrystalCatalyzerFluidGameTests {
             tag.getCompound("LockedRecipe").putInt("OutputMultiplier", 64);
             host.clearContent();
             host.loadTag(tag, h.getLevel().registryAccess());
-            check(host.getLockedRecipe().orElseThrow().output().getCount() == 8, "reload lost the base yield");
+            check(host.getLockedRecipe().orElseThrow().output().getCount() == 16, "reload lost the base yield");
         });
         h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
             check(result.getCount() == 64 && ItemStack.isSameItemSameComponents(result, recipe.getOutputTemplate()),
-                    "waiting for eight purified crystals to fill the 64-item output");
+                    "waiting for sixteen crystals to fill the 64-item output: " + path);
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0,
                     "Pigmee must consume only one bucket of water");
             var remaining = host.getInventory().getStackInSlot(CATALYST);

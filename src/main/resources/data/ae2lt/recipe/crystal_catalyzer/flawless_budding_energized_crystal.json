@@ -2,20 +2,24 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",
-      "modid": "ae2cs"
+      "modid": "neoecoae"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "ae2cs:redstone_mother_rock"
+      "item": "neoecoae:flawless_budding_energized_crystal"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "neoecoae:energized_crystal"
     }
   ],
   "type": "ae2lt:crystal_catalyzer",
   "catalyst": {
-    "item": "ae2cs:redstone_mother_rock"
+    "item": "neoecoae:flawless_budding_energized_crystal"
   },
   "catalystCount": 1,
   "output": {
-    "id": "ae2cs:purified_redstone_crystal",
+    "id": "neoecoae:energized_crystal",
     "count": 16
   },
   "energyPerCycle": 100000,

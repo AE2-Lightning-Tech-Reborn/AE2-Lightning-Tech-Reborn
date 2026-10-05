@@ -2,20 +2,24 @@
   "neoforge:conditions": [
     {
       "type": "neoforge:mod_loaded",
-      "modid": "ae2cs"
+      "modid": "appgen"
     },
     {
       "type": "neoforge:item_exists",
-      "item": "ae2cs:redstone_mother_rock"
+      "item": "appgen:budding_ember_flawless"
+    },
+    {
+      "type": "neoforge:item_exists",
+      "item": "appgen:ember_crystal"
     }
   ],
   "type": "ae2lt:crystal_catalyzer",
   "catalyst": {
-    "item": "ae2cs:redstone_mother_rock"
+    "item": "appgen:budding_ember_flawless"
   },
   "catalystCount": 1,
   "output": {
-    "id": "ae2cs:purified_redstone_crystal",
+    "id": "appgen:ember_crystal",
     "count": 16
   },
   "energyPerCycle": 100000,
