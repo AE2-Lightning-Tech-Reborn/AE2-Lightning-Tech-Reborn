@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.client.provider;
 
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
+import com.moakiee.ae2lt.client.widgets.PageButton;
+import com.moakiee.ae2lt.client.widgets.PageInput;
 
 import java.util.List;
 
@@ -11,12 +13,14 @@ import net.minecraft.world.entity.player.Inventory;
 
 import appeng.api.config.ActionItems;
 import appeng.client.gui.implementations.PatternProviderScreen;
+import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.api.client.PatternProviderToolbarButtonHider;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ReturnMode;
+import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 import com.moakiee.ae2lt.mixin.client.PatternProviderScreenAccessor;
@@ -40,6 +44,7 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     private final ProviderBlockingModeButton blockingModeButton;
     private final TextureToggleButton adaptiveBatchButton;
     private final ActionButton advancedSettingsButton;
+    private final PageButton pageButton;
 
     private static final int SLOTS_PER_PAGE = 36;
 
@@ -55,6 +60,10 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
         addToLeftToolbar(this.blockingModeButton);
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
+
+        this.pageButton = new PageButton(
+                this::isHandlingRightClick, menu::clientPrevPage, menu::clientNextPage);
+        addToLeftToolbar(this.pageButton);
 
         this.autoReturnButton = new TextureToggleButton(
                 TextureToggleButton.ButtonType.AUTO_RETURN,
@@ -116,9 +125,9 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
             String pageText = (this.menu.getCurrentPage() + 1) + "/" + tp;
             int textWidth = this.font.width(pageText);
             guiGraphics.drawString(this.font, pageText,
-                    PatternProviderPageIndicator.centeredX(this.imageWidth, textWidth),
+                    GuiTextLayout.centeredX(this.imageWidth, textWidth),
                     33,
-                    0x404040,
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
                     false);
         }
     }
@@ -144,20 +153,16 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
         this.adaptiveBatchButton.setState(this.menu.isAdaptiveBatchEnabled());
         this.advancedSettingsButton.setVisibility(
                 this.menu.isWirelessTuningVisible() || this.menu.isFilteredImportVisible());
+
+        this.pageButton.setPage(this.menu.getCurrentPage(), this.menu.getTotalPages());
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.menu.getTotalPages() > 1) {
-            var direction = PatternProviderPageScroll.directionForDelta(scrollY);
-            if (direction == PatternProviderPageScroll.Direction.PREVIOUS) {
-                this.menu.clientPrevPage();
-                return true;
-            }
-            if (direction == PatternProviderPageScroll.Direction.NEXT) {
-                this.menu.clientNextPage();
-                return true;
-            }
+        if (this.menu.getTotalPages() > 1
+                && PageInput.handleScroll(
+                        scrollY, this.menu::clientPrevPage, this.menu::clientNextPage)) {
+            return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
