@@ -9,7 +9,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(BlockEntity.class)
 public abstract class BlockEntityInventoryChangeMixin {
-    @Inject(method = "setChanged", at = @At("TAIL"))
+    // This is a latency hint; normal polling remains the fallback if it cannot be injected.
+    @Inject(method = "setChanged()V", at = @At("TAIL"), require = 0, expect = 0)
     private void ae2lt$wakeWirelessImport(CallbackInfo callback) {
         OverloadedInterfaceBlockEntity.onTargetInventoryChanged((BlockEntity) (Object) this);
     }

@@ -224,6 +224,36 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification_fallback", timeoutTicks = 180)
+    public static void importWithoutTargetChangeNotificationsStillPolls(GameTestHelper helper) {
+        if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
+            helper.succeed();
+            return;
+        }
+        var fixture = createFixture(helper, 1);
+        var previous = (net.minecraft.world.level.block.entity.BarrelBlockEntity) fixture.inventories[0];
+        // Model a third-party override that does not call BlockEntity.setChanged().
+        var silent = new net.minecraft.world.level.block.entity.BarrelBlockEntity(
+                previous.getBlockPos(), previous.getBlockState()) {
+            @Override public void setChanged() {}
+        };
+        helper.getLevel().setBlockEntity(silent);
+        var owner = fixture.blockEntity;
+        var key = AEItemKey.of(Items.STONE);
+        var clock = new GridStartClock();
+        helper.onEachTick(() -> {
+            long tick = clock.tick(helper, owner);
+            if (tick == 80) silent.setItem(0, key.toStack(64));
+            if (tick == 110) {
+                require(silent.isEmpty(), "unnotified inventory was not polled within 30 ticks");
+                require(owner.benchmarkBufferedImportAmount() == 0
+                                && storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
+                        "polling fallback lost or duplicated the unnotified input");
+                helper.succeed();
+            }
+        });
+    }
+
     /** Bound asynchronous fixture startup separately from the measured behavior. */
     static final class GridStartClock {
         private long offset = -1;
