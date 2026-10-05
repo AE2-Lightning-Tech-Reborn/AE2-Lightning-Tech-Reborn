@@ -1,0 +1,27 @@
+// ./gradlew -I scripts/railgun-beam-test.init.gradle runGameTestServer
+// Client probe: add -Pae2ltBeamClientProbe=true and provide a disposable BeamProbe save
+// under build/railgun-beam-client/saves/ before running runClient2.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                '**/RailgunCombatGameTests.java',
+                '**/RailgunBeamGameTests.java',
+                '**/RailgunBeamClientProbe.java'
+        ])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.file('build/railgun-beam-gametest')
+            systemProperty('neoforge.enabledGameTestNamespaces', 'ae2lt_railgun')
+        }
+        if (project.hasProperty('ae2ltBeamClientProbe')) {
+            neoForge.runs.client2 {
+                jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp') })
+                gameDirectory = project.file('build/railgun-beam-client')
+                systemProperty('ae2lt.beamClientProbe', 'true')
+                programArguments.addAll '--quickPlaySingleplayer', 'BeamProbe'
+            }
+        }
+    }
+}

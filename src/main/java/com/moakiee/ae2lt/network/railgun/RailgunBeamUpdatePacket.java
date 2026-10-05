@@ -14,8 +14,9 @@ import com.moakiee.ae2lt.network.NetworkInit;
 /**
  * Server to tracking client: keepalive/update packet for an active beam owned
  * by player {@code shooterId}. {@code active=false} signals beam stop.
+ * {@code ehv} is the server's firing mode, independent of compensation ammunition.
  */
-public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolean active)
+public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolean active, boolean ehv)
         implements CustomPacketPayload {
 
     public static final Type<RailgunBeamUpdatePacket> TYPE =
@@ -34,6 +35,7 @@ public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolea
         buf.writeDouble(from.x); buf.writeDouble(from.y); buf.writeDouble(from.z);
         buf.writeDouble(to.x); buf.writeDouble(to.y); buf.writeDouble(to.z);
         buf.writeBoolean(active);
+        buf.writeBoolean(ehv);
     }
 
     public static RailgunBeamUpdatePacket decode(RegistryFriendlyByteBuf buf) {
@@ -41,7 +43,7 @@ public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolea
                 buf.readUUID(),
                 new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()),
                 new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()),
-                buf.readBoolean());
+                buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(RailgunBeamUpdatePacket p, IPayloadContext ctx) {
