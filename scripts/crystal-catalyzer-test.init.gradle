@@ -1,0 +1,20 @@
+// Isolated native recipe/machine suite. Optional real-mod jars may be supplied
+// with -Pae2ltJdbProbeMods=<paths separated by the platform path separator>.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                '**/CrystalCatalyzerFluidGameTests.java',
+                '**/PigmeeCrystalCatalyzerGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        (project.findProperty('ae2ltJdbProbeMods') ?: '').split(File.pathSeparator)
+                .findAll { !it.isBlank() }.each { path ->
+                    dependencies.add('runtimeOnly', files(path))
+                }
+        neoForge.runs.crystalCatalyzerGameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir(
+                    'crystal-catalyzer-gametest/' + (project.findProperty('catalyzerFixture') ?: 'base')).get().asFile
+        }
+    }
+}

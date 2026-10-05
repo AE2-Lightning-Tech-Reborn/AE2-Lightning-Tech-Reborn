@@ -399,6 +399,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     /**
      * Full multiplier = parallel × matrix. Parallel is {@code amount / catalystCount},
+     * capped so the batch fits the output slot's total capacity,
      * where {@code amount} is the current catalyst stack size and {@code catalystCount}
      * is the per-instance input declared by the recipe. Catalyst is <em>not</em>
      * consumed, so an existing parallel factor is snapshotted at lock time via
@@ -426,7 +427,14 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             return 1;
         }
         int amount = inventory.getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount();
-        return Math.max(1, amount / perInstance);
+        int matrix = inventory.hasLightningCollapseMatrix() ? MATRIX_OUTPUT_MULTIPLIER : 1;
+        long outputPerParallel = (long) recipe.getOutputTemplate().getCount() * matrix;
+        int capacityParallel = outputPerParallel > 0
+                ? (int) (inventory.getSlotLimit(CrystalCatalyzerInventory.SLOT_OUTPUT) / outputPerParallel)
+                : 0;
+        // Bound the batch by the full slot capacity. Current contents still apply
+        // backpressure, but a high-yield recipe must be able to start when empty.
+        return Math.max(1, Math.min(amount / perInstance, capacityParallel));
     }
 
     @Override
