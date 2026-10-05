@@ -32,11 +32,20 @@ final class WirelessBatchCadence<T> {
         var state = state(target, pattern);
         state.expireIfIdle(gameTick);
         state.finishCapacityAudit(gameTick);
+        boolean bulkRefill = state.bulkInterval > 0;
         boolean earlyBulkProbe = state.nextBulkProbe;
         state.nextBulkProbe = false;
         state.observeBaseline(gameTick, ownedCopies, baselineStatus);
         boolean rejectedSinceSuccess = state.timing.wasBlocked();
         int delay = state.timing.success(gameTick, ownedCopies, acceptedFullChunk);
+        if (bulkRefill && ownedCopies < state.bulkCapacity) {
+            // A reduced allowance or partial receipt cannot sustain the learned
+            // full-reservoir interval. Resume the ordinary physical ramp.
+            state.clearBulkRefill();
+            state.clearStablePrefix();
+            state.timing.reset();
+            delay = state.timing.success(gameTick, ownedCopies, acceptedFullChunk);
+        }
         if (state.bulkInterval > 0) {
             delay = state.bulkInterval;
         }

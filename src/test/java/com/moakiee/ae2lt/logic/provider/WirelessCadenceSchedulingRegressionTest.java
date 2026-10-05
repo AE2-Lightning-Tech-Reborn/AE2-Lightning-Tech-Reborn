@@ -12,6 +12,22 @@ class WirelessCadenceSchedulingRegressionTest {
     private final IPatternDetails pattern = new EmptyPattern();
 
     @Test
+    void callerLimitedRefillStopsUsingTheBulkInterval() {
+        var cadence = new WirelessBatchCadence<String>();
+        cadence.recordSuccess("target", pattern, 0, 2000, false);
+        cadence.usesBulkRefill("target", pattern, 2000);
+        for (int tick = 5; tick <= 20; tick += 5) {
+            cadence.recordSuccess("target", pattern, tick, 512, false,
+                    ProviderTarget.BaselineStatus.PREFIX_COMPLETE);
+        }
+        assertTrue(cadence.usesBulkRefill("target", pattern, 2000));
+        // A fair-share or source limit is not evidence of a full bulk refill.
+        int delay = cadence.recordSuccess("target", pattern, 25, 128, true);
+        assertTrue(delay <= 5, "partial supply retained the bulk wait: " + delay);
+        assertFalse(cadence.usesBulkRefill("target", pattern, 2000));
+    }
+
+    @Test
     void acceptingTheEntireAllowanceDoesNotProveTheMachineDrainedOnlyThatMuch() {
         var cadence = new WirelessBatchCadence<String>();
         cadence.recordSuccess("target", pattern, 0, 2000, false);

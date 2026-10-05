@@ -200,7 +200,8 @@ final class ProviderWirelessDispatch {
     }
 
     void patternsChanged() {
-        patternActivity.clear();
+        // Retained physical proofs must keep their original expiry index, even
+        // when no recipe is dispatched again after this scheduling reset.
         penalties.clear();
         penaltyExpirations.clear();
         batchCadence.clear();
