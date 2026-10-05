@@ -15,11 +15,11 @@ import appeng.menu.me.crafting.CraftingPlanSummaryEntry;
 
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanPresentation;
 
-/** AE2 plan cells fitted to the seven-row AE2LT report texture. */
+/** AE2 plan cells fitted to the resizable AE2LT report texture. */
 final class AE2LtCraftConfirmTableRenderer
         extends AbstractTableRenderer<CraftingPlanSummaryEntry> {
-    AE2LtCraftConfirmTableRenderer(AEBaseScreen<?> screen) {
-        super(screen, 9, 27, 7);
+    AE2LtCraftConfirmTableRenderer(AEBaseScreen<?> screen, int rows) {
+        super(screen, 9, 27, rows);
     }
 
     @Override

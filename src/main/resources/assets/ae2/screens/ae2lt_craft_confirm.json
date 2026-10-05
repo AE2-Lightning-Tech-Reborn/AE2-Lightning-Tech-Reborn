@@ -16,7 +16,7 @@
       "align": "LEFT"
     },
     "cpu_status": {
-      "position": { "left": 109, "top": 220 },
+      "position": { "left": 109, "bottom": 40 },
       "align": "CENTER"
     }
   },
@@ -28,25 +28,25 @@
     },
     "selectCpu": {
       "left": 21,
-      "top": 192,
+      "bottom": 62,
       "width": 180,
       "height": 20
     },
     "cancel": {
       "left": 8,
-      "top": 232,
+      "bottom": 28,
       "width": 50,
       "height": 20
     },
     "bookmarkMissing": {
       "left": 62,
-      "top": 232,
+      "bottom": 28,
       "width": 98,
       "height": 20
     },
     "start": {
       "left": 164,
-      "top": 232,
+      "bottom": 28,
       "width": 50,
       "height": 20
     }

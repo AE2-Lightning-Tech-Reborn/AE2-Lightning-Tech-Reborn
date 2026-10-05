@@ -1347,6 +1347,7 @@
   "gui.ae2lt.crafting_report.ready": "Plan complete. Select a CPU and start crafting.",
   "gui.ae2lt.crafting_report.ready_with_algorithm": "Plan complete (%s). Select a CPU and start crafting.",
   "gui.ae2lt.crafting_report.submit_error": "Crafting could not start: %s",
+  "gui.ae2lt.crafting_report.replan": "Recalculate",
   "gui.ae2lt.crafting_report.bytes": "Bytes: %sB   (%s)",
   "gui.ae2lt.crafting_report.exact_bytes": "Bytes: %sB",
   "gui.ae2lt.crafting_report.bookmark_missing": "Bookmark missing",

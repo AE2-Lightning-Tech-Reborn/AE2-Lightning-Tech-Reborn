@@ -38,9 +38,19 @@ public abstract class CraftConfirmReportRoutingMixin extends AEBaseScreen<CraftC
 
     @Inject(method = "updateBeforeRender", at = @At("TAIL"))
     private void ae2lt$routeReport(CallbackInfo ci) {
-        if (menu instanceof CraftingReportMenuState state && state.ae2lt$shouldShowReport()) {
+        if (!((Object) this instanceof AE2LtCraftConfirmScreen)
+                && menu instanceof CraftingReportMenuState state && state.ae2lt$shouldShowReport()) {
             switchToScreen(new AE2LtCraftConfirmScreen(menu, ae2lt$inventory, ae2lt$title,
                     StyleManager.loadStyleDoc("/screens/ae2lt_craft_confirm.json")));
+        }
+    }
+
+    /** Keep alpha's guarded/Shift-force submission path on the inherited native start button. */
+    @Inject(method = "start", at = @At("HEAD"), cancellable = true)
+    private void ae2lt$startReportJob(CallbackInfo ci) {
+        if ((Object) this instanceof AE2LtCraftConfirmScreen report) {
+            report.startJob();
+            ci.cancel();
         }
     }
 }

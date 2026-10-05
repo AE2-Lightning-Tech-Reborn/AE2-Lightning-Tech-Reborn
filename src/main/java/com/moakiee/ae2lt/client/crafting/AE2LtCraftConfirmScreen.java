@@ -12,10 +12,13 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import appeng.client.gui.AEBaseScreen;
+import appeng.api.config.Settings;
+import appeng.api.config.TerminalStyle;
 import appeng.client.gui.StackWithBounds;
+import appeng.client.gui.me.crafting.CraftConfirmScreen;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.Scrollbar;
+import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.crafting.CraftingPlanSummary;
@@ -27,34 +30,74 @@ import com.moakiee.ae2lt.crafting.report.MissingMaterialBookmarks;
 import com.moakiee.ae2lt.crafting.report.CraftingReportStartState;
 import com.moakiee.ae2lt.integration.eaep.EaepForceCraftingAccess;
 import com.moakiee.ae2lt.integration.jei.JeiBookmarkAccess;
+import com.moakiee.ae2lt.mixin.client.CraftConfirmScreenAccessor;
 
-public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu> {
-    private final AE2LtCraftConfirmTableRenderer table;
+/** Keeps native confirmation-screen integrations, including AE2 Crafting Tree's toolbar. */
+public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
+    private static final int ROW_HEIGHT = 23;
+    private static final int HEADER_HEIGHT = 27;
+    private static final int FOOTER_Y = 188;
+    private static final int FOOTER_HEIGHT = 64;
+    private static final int VERTICAL_PADDING = 28;
+
+    private AE2LtCraftConfirmTableRenderer table;
     private final Button start;
     private final Button selectCpu;
     private final Button bookmarkMissing;
     private final Scrollbar scrollbar;
+    private int visibleRows = 7;
 
     public AE2LtCraftConfirmScreen(
             CraftConfirmMenu menu, Inventory playerInventory, Component title, ScreenStyle style) {
         super(menu, playerInventory, title, style);
-        table = new AE2LtCraftConfirmTableRenderer(this);
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.BIG);
-        start = widgets.addButton("start", GuiText.Start.text(), this::startJob);
-        start.active = false;
-        selectCpu = widgets.addButton("selectCpu", getNextCpuButtonLabel(), this::selectNextCpu);
-        selectCpu.active = false;
-        widgets.addButton("cancel", GuiText.Cancel.text(), menu::goBack);
+        // Reuse the native widgets so integrations and this report control the same buttons.
+        var nativeScreen = (CraftConfirmScreenAccessor) (Object) this;
+        scrollbar = nativeScreen.ae2lt$getScrollbar();
+        start = nativeScreen.ae2lt$getStart();
+        selectCpu = nativeScreen.ae2lt$getSelectCpu();
         bookmarkMissing = widgets.addButton("bookmarkMissing",
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing"), this::bookmarkMissing);
         bookmarkMissing.active = false;
         bookmarkMissing.setTooltip(Tooltip.create(
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing.tooltip")));
+        addToLeftToolbar(new SettingToggleButton<>(Settings.TERMINAL_STYLE,
+                config.getTerminalStyle(), this::toggleTerminalStyle));
+    }
+
+    @Override
+    protected void init() {
+        int maxRows = Math.max(1,
+                (height - HEADER_HEIGHT - FOOTER_HEIGHT - VERTICAL_PADDING) / ROW_HEIGHT);
+        int preferredRows = switch (config.getTerminalStyle()) {
+            case SMALL -> 3;
+            case MEDIUM -> 5;
+            case TALL -> 7;
+            case FULL -> maxRows;
+        };
+        visibleRows = Math.min(maxRows, preferredRows);
+        imageHeight = HEADER_HEIGHT + visibleRows * ROW_HEIGHT + FOOTER_HEIGHT;
+        table = new AE2LtCraftConfirmTableRenderer(this, visibleRows);
+        scrollbar.setHeight(visibleRows * ROW_HEIGHT);
+        super.init();
+    }
+
+    private void toggleTerminalStyle(SettingToggleButton<TerminalStyle> button, boolean backwards) {
+        var next = button.getNextValue(backwards);
+        config.setTerminalStyle(next);
+        button.set(next);
+        rebuildWidgets();
     }
 
     @Override
     protected void updateBeforeRender() {
+        int scroll = scrollbar.getCurrentScroll();
         super.updateBeforeRender();
+
+        // The native implementation opens CraftErrorScreen, which already offers cancel,
+        // replan and retry and returns to this same report instance.
+        if (minecraft.screen != this) {
+            return;
+        }
 
         var errorResult = menu.submitError.result();
         CraftingPlanSummary plan = menu.getPlan();
@@ -103,6 +146,9 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
 
         int size = plan == null ? 0 : plan.getEntries().size();
         scrollbar.setRange(0, table.getScrollableRows(size), 1);
+        // The native screen briefly applies its fixed five-row range. Preserve the smaller
+        // report's last rows instead of letting that range clamp its scroll on every frame.
+        scrollbar.setCurrentScroll(scroll);
     }
 
 
@@ -113,7 +159,7 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
                 ReadableNumberConverter.format(bytes, 4));
     }
 
-    private void startJob() {
+    public void startJob() {
         var plan = menu.getPlan();
         boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
         boolean forceStart = hasShiftDown() && CraftingReportStartState.forceCandidate(plan, bigMode)
@@ -140,8 +186,22 @@ public final class AE2LtCraftConfirmScreen extends AEBaseScreen<CraftConfirmMenu
         }
     }
 
-    private void selectNextCpu() {
-        menu.cycleSelectedCPU(!isHandlingRightClick());
+    @Override
+    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+            int mouseX, int mouseY, float partialTicks) {
+        var background = style.getBackground().copy();
+        background.src(0, 0, imageWidth, HEADER_HEIGHT).dest(offsetX, offsetY).blit(graphics);
+        for (int row = 0; row < visibleRows; row++) {
+            // Only the first row includes the two-pixel top bevel. Repeat an interior row.
+            background.src(0, row == 0 ? HEADER_HEIGHT : HEADER_HEIGHT + ROW_HEIGHT, imageWidth, ROW_HEIGHT)
+                    .dest(offsetX, offsetY + HEADER_HEIGHT + row * ROW_HEIGHT).blit(graphics);
+        }
+        background.src(0, FOOTER_Y - 1, imageWidth, 1)
+                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 1).blit(graphics);
+        background.src(0, FOOTER_Y, imageWidth, FOOTER_HEIGHT - 8)
+                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT).blit(graphics);
+        background.src(0, 252, imageWidth, 8)
+                .dest(offsetX, offsetY + imageHeight - 8).blit(graphics);
     }
 
     @Override
