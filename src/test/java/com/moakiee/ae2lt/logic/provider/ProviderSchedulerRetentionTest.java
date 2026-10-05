@@ -18,13 +18,38 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 
 class ProviderSchedulerRetentionTest {
     @Test
+    void patternReloadRetainsProofAndItsOriginalCleanupDeadline() {
+        var dispatch = new ProviderWirelessDispatch();
+        var targets = targets(1);
+        var pattern = new Pattern();
+        dispatchTick(dispatch, targets, pattern, 0);
+        var target = (ProviderTarget) targets.get(0);
+        var proof = target.adaptiveBatchSnapshots().get(pattern);
+        dispatch.maintain(50);
+        dispatch.patternsChanged();
+        assertEquals(proof, target.adaptiveBatchSnapshots().get(pattern));
+        assertTrue(dispatch.hasMaintenanceWork(), "retained proof needs a cleanup owner");
+        dispatch.maintain(100);
+        assertFalse(target.adaptiveBatchSnapshots().isEmpty());
+        dispatch.maintain(101);
+        assertTrue(target.adaptiveBatchSnapshots().isEmpty());
+        assertFalse(dispatch.hasMaintenanceWork());
+    }
+
+    @org.junit.jupiter.api.BeforeAll
+    static void bootstrapMinecraft() {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+    }
+
+    @Test
     void restoredHistoryIsRetiredAndSavedWithoutAnyNewCraft() {
         var original = targets(1);
         var pattern = new Pattern();
         dispatchTick(new ProviderWirelessDispatch(), original, pattern, 0);
-        var snapshot = ((ProviderTarget) original.getFirst()).adaptiveBatchSnapshots().get(pattern);
+        var snapshot = ((ProviderTarget) original.get(0)).adaptiveBatchSnapshots().get(pattern);
         var restored = targets(1);
-        var target = (ProviderTarget) restored.getFirst();
+        var target = (ProviderTarget) restored.get(0);
         target.restoreAdaptiveBatchSnapshot(pattern, AdaptiveBatchStatePersistence.readSnapshot(
                 AdaptiveBatchStatePersistence.writeSnapshot(snapshot)));
         var wakeups = new java.util.concurrent.atomic.AtomicInteger();
@@ -89,13 +114,13 @@ class ProviderSchedulerRetentionTest {
         for (var pattern : patterns) dispatchTick(dispatch, targets, pattern, 0);
         var before = retained(dispatch, targets);
         for (int tick = 1; tick <= 240; tick++) {
-            dispatchTick(dispatch, targets, patterns.getFirst(), tick);
+            dispatchTick(dispatch, targets, patterns.get(0), tick);
         }
         var after = retained(dispatch, targets);
         System.out.printf("scheduler-retention patterns=128 targets=512 before=%s after=%s%n", before, after);
         assertEquals(new Retained(1, 512, 512, 512), after);
         // A retired pattern can return immediately and rebuild its physical proof.
-        dispatchTick(dispatch, targets, patterns.getLast(), 241);
+        dispatchTick(dispatch, targets, patterns.get(patterns.size() - 1), 241);
     }
 
     static List<WirelessConnection> targets(int count) {
