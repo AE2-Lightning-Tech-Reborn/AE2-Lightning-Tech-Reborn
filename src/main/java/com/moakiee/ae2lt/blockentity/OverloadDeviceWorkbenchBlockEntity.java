@@ -39,7 +39,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkedBlockEntity
     private final AppEngInternalInventory deviceInventory = new AppEngInternalInventory(this, 1, 1) {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            return stack.getItem() instanceof DeviceItem;
+            return DeviceWorkbenchAdapters.get(stack).isPresent();
         }
     };
 
@@ -50,6 +50,16 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkedBlockEntity
 
     public AppEngInternalInventory getDeviceInventory() {
         return deviceInventory;
+    }
+
+    public static void serverTick(Level level, BlockPos pos, BlockState state, OverloadDeviceWorkbenchBlockEntity be) {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel) || !be.isActive()) return;
+        var stack = be.getInstalledDevice();
+        if (be.currentAdapter() instanceof com.moakiee.ae2lt.blockentity.workbench.AddonWorkbenchAdapter addon
+                && addon.serverTick(stack, new com.moakiee.ae2lt.api.device.WorkbenchDevice.Context(serverLevel, pos, be.getGrid()))) {
+            be.saveChanges();
+            be.markForClientUpdate();
+        }
     }
 
     public ItemStack getInstalledDevice() {
