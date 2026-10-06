@@ -19,6 +19,7 @@ class ToolbarButtonSourceContractTest {
     @Test
     void customToolbarIconsReuseAe2sNativeIconButtonFootprint() throws Exception {
         assertUsesNativeIconButton("widgets/TextureToggleButton.java");
+        assertUsesNativeIconButton("widgets/PageButton.java");
         assertUsesNativeIconButton("machine/TeslaCoilModeButton.java");
         assertUsesNativeIconButton("provider/ProviderBlockingModeButton.java");
     }
