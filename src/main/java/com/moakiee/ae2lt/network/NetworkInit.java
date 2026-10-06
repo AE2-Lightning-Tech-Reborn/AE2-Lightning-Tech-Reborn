@@ -34,7 +34,7 @@ public final class NetworkInit {
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
     // Version 5 adds workstation/JEI packets, seed-return fields, scoped Easter eggs and railgun modes.
     // Version 6 adds the frequency-card link shortcut packet.
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "7";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,

@@ -1434,7 +1434,7 @@
   "item.ae2lt.railgun_module_ehv_beam": "极高压光束模块",
   "ae2lt.device_hub.module.railgun.ehv_beam": "极高压光束",
   "ae2lt.module.slot.ehv_beam": "极高压光束",
-  "ae2lt.railgun.ehv_beam.tooltip": "安装上限 1；在设备中枢启用极高压光束，消耗极高压闪电并提升固定伤害。关闭时恢复高压光束。",
+  "ae2lt.railgun.ehv_beam.tooltip": "安装上限 1；在设备中枢启用极高压光束，消耗极高压闪电并提升固定伤害。安装过载内核后，缺额可按 16 高压代偿 1 极高压。关闭时恢复高压光束。",
   "ae2lt.railgun.config.ehv_beam": "极高压光束",
   "block.ae2lt.mining_factory": "挖掘工厂",
   "gui.ae2lt.mining_factory.status.idle": "等待输入方块",

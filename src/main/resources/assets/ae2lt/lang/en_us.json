@@ -1434,7 +1434,7 @@
   "item.ae2lt.railgun_module_ehv_beam": "Extreme High Voltage Beam Module",
   "ae2lt.device_hub.module.railgun.ehv_beam": "EHV Beam",
   "ae2lt.module.slot.ehv_beam": "EHV Beam",
-  "ae2lt.railgun.ehv_beam.tooltip": "Install limit: 1. Enable EHV Beam in the Device Hub to consume EHV lightning for higher fixed damage. Disable to restore HV beam.",
+  "ae2lt.railgun.ehv_beam.tooltip": "Maximum 1; enable in the Device Hub to consume EHV lightning for increased fixed beam damage. With the Overload Core installed, each missing EHV costs 16 HV. Disable to restore the HV beam.",
   "ae2lt.railgun.config.ehv_beam": "EHV Beam",
   "block.ae2lt.mining_factory": "Mining Factory",
   "gui.ae2lt.mining_factory.status.idle": "Insert blocks",
