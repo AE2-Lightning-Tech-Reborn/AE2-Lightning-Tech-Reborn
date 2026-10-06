@@ -1,0 +1,13 @@
+// Forge 1.20.1 integration checks for the final alpha API, recharge and beam changes.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/AddonApiGameTests.java',
+                '**/MachineNetworkRechargeGameTests.java', '**/RailgunBeamGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_addon_api,ae2lt_machine_recharge,ae2lt_railgun'
+            property 'ae2lt.addonApiTests', 'true'
+            workingDirectory project.file('build/alpha-final-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

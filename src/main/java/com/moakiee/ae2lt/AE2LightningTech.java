@@ -424,6 +424,11 @@ public class AE2LightningTech {
         modEventBus.addListener(ModAEKeyTypes::register);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent event) ->
+                event.enqueueWork(() -> {
+                    com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.freeze();
+                    com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.freezeItems();
+                }));
         modEventBus.addListener(this::onConfigChanged);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
@@ -960,7 +965,7 @@ public class AE2LightningTech {
                     OverloadDeviceWorkbenchBlockEntity.class,
                     overloadDeviceWorkbenchBeType,
                     null,
-                    null);
+                    OverloadDeviceWorkbenchBlockEntity::serverTick);
 
             var crystalCatalyzerBlock = ModBlocks.CRYSTAL_CATALYZER.get();
             var crystalCatalyzerBeType = ModBlockEntities.CRYSTAL_CATALYZER.get();

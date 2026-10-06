@@ -104,6 +104,7 @@ public final class WirelessFrequencyManager extends SavedData {
 
     @Nullable
     private static WirelessFrequencyManager instance;
+    private static MinecraftServer owningServer;
 
     private WirelessFrequencyManager() {}
 
@@ -115,6 +116,7 @@ public final class WirelessFrequencyManager extends SavedData {
 
     public static void onServerStart(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
+        owningServer = server;
         instance = overworld.getDataStorage().computeIfAbsent(
                 WirelessFrequencyManager::new,
                 WirelessFrequencyManager::new,
@@ -131,11 +133,18 @@ public final class WirelessFrequencyManager extends SavedData {
             instance.pendingDeviceNotifications.clear();
         }
         instance = null;
+        owningServer = null;
     }
 
     @Nullable
     public static WirelessFrequencyManager get() {
         return instance;
+    }
+
+    /** Returns only the registry owned by this running server, on its thread. */
+    @Nullable
+    public static WirelessFrequencyManager get(MinecraftServer server) {
+        return server != null && server == owningServer && server.isSameThread() ? instance : null;
     }
 
     public static void flushPendingDeviceNotifications() {
