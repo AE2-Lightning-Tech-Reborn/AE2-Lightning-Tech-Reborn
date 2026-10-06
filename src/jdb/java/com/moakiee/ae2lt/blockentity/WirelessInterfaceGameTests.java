@@ -223,8 +223,8 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification_fallback", timeoutTicks = 180)
-    public static void importWithoutTargetChangeNotificationsStillPolls(GameTestHelper helper) {
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling", timeoutTicks = 180)
+    public static void silentInventoryStillImportsWithinPollingBound(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
             return;
@@ -1100,10 +1100,10 @@ public final class WirelessInterfaceGameTests {
                 assertFixtureResult(fixture, state, 0, 0, targets);
                 for (int index = 0; index < targets; index++) {
                     // Observation occurs before this tick's AE grid work, so
-                    // allow one tick in addition to the five-tick watchdog.
-                    require(outputLatency[index] >= 0 && outputLatency[index] <= 6,
+                    // allow one tick in addition to the 20-tick cold polling interval.
+                    require(outputLatency[index] >= 0 && outputLatency[index] <= 21,
                             "phase " + index + " output-to-buffer latency " + outputLatency[index]);
-                    require(networkLatency[index] >= 0 && networkLatency[index] <= 11,
+                    require(networkLatency[index] >= 0 && networkLatency[index] <= outputLatency[index] + 5,
                             "phase " + index + " output-to-network latency " + networkLatency[index]);
                 }
                 helper.succeed();
@@ -1164,8 +1164,8 @@ public final class WirelessInterfaceGameTests {
                 assertFixtureResult(fixture, state, 0, 0, targets);
                 for (int index = 0; index < targets; index++) {
                     // Observation occurs before this tick's AE grid work, so
-                    // allow one tick in addition to the five-tick watchdog.
-                    require(outputLatency[index] >= 0 && outputLatency[index] <= 6,
+                    // allow one tick in addition to the 20-tick cold polling interval.
+                    require(outputLatency[index] >= 0 && outputLatency[index] <= 21,
                             "phase " + index + " output-to-buffer latency " + outputLatency[index]);
                     require(networkLatency[index] >= 0 && networkLatency[index] <= outputLatency[index] + 5,
                             "phase " + index + " output-to-network latency " + networkLatency[index]);
@@ -1218,10 +1218,10 @@ public final class WirelessInterfaceGameTests {
             if (productionTick) {
                 // Each output holds one atomic batch. A bounded recovery can
                 // legitimately block a short burst; measure it separately
-                // from steady production after the watchdog + observation
-                // allowance (six ticks), without discarding the raw totals.
-                boolean steady = (tick >= 46 && tick < 80)
-                        || (tick >= 306 && tick < 380);
+                // from steady production after the cold polling + observation
+                // allowance (21 ticks), without discarding the raw totals.
+                boolean steady = (tick >= 61 && tick < 80)
+                        || (tick >= 321 && tick < 380);
                 for (int index = 0; index < fixture.inventories.length; index++) {
                     boolean ready = fixture.inventories[index].isEmpty();
                     if (ready) latency.recordProduction(tick, index);
@@ -1255,15 +1255,15 @@ public final class WirelessInterfaceGameTests {
                         (double) state.blocked / state.opportunities <= 0.001);
                 require(state.pulseDrainLatency >= 0,
                         "single-tick pulse was never drained");
-                require(state.pulseDrainLatency <= 5,
+                require(state.pulseDrainLatency <= 21,
                         "single-tick pulse drain latency " + state.pulseDrainLatency
-                                + " exceeded 5 ticks");
-                assertFixtureResult(fixture, state, 1.0, 5);
+                                + " exceeded 21 ticks");
+                assertFixtureResult(fixture, state, 1.0, 20);
                 require(minimumSteadyThroughput >= 0.99,
                         "steady throughput " + minimumSteadyThroughput + " fell below 99%");
                 require(latency.extractedItems() == state.producedItems,
                         "transition output attribution did not conserve produced items");
-                require(latency.latencyMax() <= 6,
+                require(latency.latencyMax() <= 21,
                         "transition output waited " + latency.latencyMax() + " ticks");
                 helper.succeed();
             }

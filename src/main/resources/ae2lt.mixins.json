@@ -9,7 +9,6 @@
     "appflux.InterfaceEnergyDistributionMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
-    "BlockEntityInventoryChangeMixin",
     "ServerLevelMixin",
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",
