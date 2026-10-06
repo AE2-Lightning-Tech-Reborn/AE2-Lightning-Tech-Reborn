@@ -297,6 +297,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return CraftingSubmitResult.missingIngredient(missingIngredient);
         }
 
+        borrowOptionalLoopSeeds(forced.original(), candidateJob, seedRequirements);
         this.job = candidateJob;
         seedReturnQuota.clear();
         retainedFinalOutputs.clear();
@@ -323,6 +324,53 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
 
         return CraftingSubmitResult.successful(null);
+    }
+
+    private void borrowOptionalLoopSeeds(
+            ICraftingPlan plan, TimeWheelJob candidateJob, KeyCounter seedRequirements) {
+        var requests = new LinkedHashMap<UUID, AdaptiveLoopSeedLoans.Request>();
+        for (var details : plan.patternTimes().keySet()) {
+            var source = ExecutionTaskInputs.unbound(details);
+            if (source instanceof com.moakiee.ae2lt.logic.tianshu.loop.Ae2ClosedLoopPatternDetails loop
+                    && loop.closedLoopPayload().executionSeedMultiplier() > 1) {
+                requests.putIfAbsent(loop.reusableSeedGroupId(), new AdaptiveLoopSeedLoans.Request(
+                        loop.reusableSeedGroupId(), loop.hasSingleSeedInputPerMember(),
+                        loop.totalReusableSeedRequirements(),
+                        loop.closedLoopPayload().executionSeedMultiplier()));
+            }
+        }
+        if (requests.isEmpty()) return;
+        var ordered = new ArrayList<>(requests.values());
+        ordered.sort(java.util.Comparator.comparing(AdaptiveLoopSeedLoans.Request::group));
+        var loans = AdaptiveLoopSeedLoans.borrow(ordered,
+                key -> loopSeedLedgers.balance(ExecuteLoopPattern.SHARED_SEED_ACCOUNT_ID, key),
+                new AdaptiveLoopSeedLoans.Stock() {
+                    @Override
+                    public long extract(AEKey key, long amount, Actionable mode) {
+                        // Optional parallelism uses spare seed-drive stock only. The planner has
+                        // already reserved normal ME inputs (or seed-producing recipes) for the
+                        // minimum cycle; extra loans must not manufacture more seeds or consume
+                        // unrelated network stock reservations.
+                        return cpu.getHost().extractReusableSeed(key, amount, mode);
+                    }
+
+                    @Override
+                    public void refund(AEKey key, long amount) {
+                        long returned = cpu.getHost().insertReusableSeed(key, amount, Actionable.MODULATE);
+                        if (returned < amount) {
+                            // Storage may have changed during the extraction callback. Preserve
+                            // the remainder as ordinary CPU stock, without an unbacked seed claim.
+                            inventory.insert(key, amount - Math.max(0L, returned), Actionable.MODULATE);
+                        }
+                    }
+                });
+        var previous = candidateJob.loopPatterns();
+        candidateJob.increaseInitialSeedLoans(loans.multipliers());
+        loopSeedLedgers.increaseInitialSeedLoans(previous, candidateJob.loopPatterns());
+        for (var seed : loans.borrowed()) {
+            inventory.insert(seed.getKey(), seed.getLongValue(), Actionable.MODULATE);
+            seedRequirements.add(seed.getKey(), seed.getLongValue());
+        }
     }
 
     public void tickCraftingLogic(IEnergyService energyService, CraftingService craftingService) {
@@ -3388,6 +3436,21 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             data.putBoolean(NBT_CLOSED_LOOP_JOB, closedLoopJob);
             sharedBatchSeedConsumers.writeToNBT(data);
             return data;
+        }
+
+        private void increaseInitialSeedLoans(Map<UUID, Integer> multipliers) {
+            var expanded = new HashMap<IPatternDetails, TaskProgress>();
+            for (var entry : tasks.entrySet()) {
+                var pattern = entry.getKey();
+                if (pattern instanceof ExecuteLoopPattern loop) {
+                    pattern = loop.withInitialSeedMultiplier(
+                            multipliers.getOrDefault(loop.reusableSeedGroupId(), 1));
+                }
+                var task = expanded.computeIfAbsent(pattern, ignored -> new TaskProgress());
+                task.value = Sat.add(task.value, entry.getValue().value);
+            }
+            tasks.clear();
+            tasks.putAll(expanded);
         }
 
         private List<ExecuteLoopPattern> loopPatterns() {
