@@ -16,7 +16,8 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             "AdvCraftingCpuAccessor", "advanced_ae",
             "AdvCraftingCpuLogicMixin", "advanced_ae",
             "ECOCraftingCpuLogicMixin", "neoecoae",
-            "InterfaceEnergyDistributionMixin", "appflux");
+            "InterfaceEnergyDistributionMixin", "appflux",
+            "IpnContainerClickerMixin", "inventoryprofilesnext");
 
     @Override
     public void onLoad(String mixinPackage) {

@@ -57,6 +57,7 @@
     "big.BigCpuListEntryMixin"
   ],
   "client": [
+    "client.IpnContainerClickerMixin",
     "client.CableBusRenderStateMixin",
     "client.CableBusContainerRenderMixin",
     "client.CableBusBakedModelMixin",
