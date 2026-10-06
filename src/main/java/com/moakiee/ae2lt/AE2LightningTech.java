@@ -399,6 +399,8 @@ public class AE2LightningTech {
         modEventBus.addListener(ModAEKeyTypes::register);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) ->
+                event.enqueueWork(com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi::freeze));
         modEventBus.addListener(this::onConfigChanged);
         modContainer.registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT,
