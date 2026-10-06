@@ -26,6 +26,12 @@ public interface WirelessPatternProviderHost {
     /** Read-only live view of the configured endpoints. */
     List<? extends WirelessConnectionRef> getConnections();
 
+    /** Public immutable snapshots; preferred over the legacy implementation-typed view. */
+    default List<WirelessEndpoint> getEndpointSnapshots() {
+        return getConnections().stream()
+                .map(c -> new WirelessEndpoint(c.dimension(), c.pos(), c.boundFace())).toList();
+    }
+
     /** Adds a new endpoint or changes the selected face of an existing endpoint. */
     boolean addOrUpdateConnection(
             ResourceKey<Level> dimension, BlockPos pos, Direction boundFace);
