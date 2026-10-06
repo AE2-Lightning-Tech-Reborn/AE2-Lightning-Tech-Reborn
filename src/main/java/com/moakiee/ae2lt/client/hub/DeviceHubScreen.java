@@ -177,7 +177,9 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         renderStatusPanel(gfx, railgunTab);
         renderModuleList(gfx, mouseX, mouseY, railgunTab);
 
-        if (railgunTab) {
+        if (menu.getAddonState() != null) {
+            renderAddonSettings(gfx, mouseX, mouseY);
+        } else if (railgunTab) {
             renderRailgunSettings(gfx, mouseX, mouseY);
         } else {
             renderModuleConfig(gfx, mouseX, mouseY);
@@ -521,6 +523,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
 
         boolean railgunTab = selectedTab == DeviceHubMenu.TAB_RAILGUN;
+        if (menu.getAddonState() != null) return mouseClickedAddonSettings(mouseX, mouseY);
         if (!railgunTab) {
             if (mouseClickedModuleConfig(mouseX, mouseY)) {
                 playClick();
@@ -639,9 +642,8 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             return true;
         }
 
-        int configCount = menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN
-                ? railgunSettingCount()
-                : moduleConfigCount();
+        int configCount = menu.getAddonState() != null ? menu.getAddonState().settings().size()
+                : menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN ? railgunSettingCount() : moduleConfigCount();
         if (configCount > 0
                 && mouseX >= leftPos + 8
                 && mouseX <= leftPos + 175
@@ -813,11 +815,44 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private static ItemStack railgunStack(Player player) {
-        ItemStack main = player.getMainHandItem();
-        if (main.getItem() instanceof ElectromagneticRailgunItem) {
-            return main;
+        return com.moakiee.ae2lt.api.device.DeviceHubApi.heldDevice(player);
+    }
+
+    private void renderAddonSettings(GuiGraphics gfx, int mouseX, int mouseY) {
+        var state = menu.getAddonState();
+        if (state == null) return;
+        var settings = state.settings();
+        configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(configScrollOffset, settings.size(), CONFIG_VISIBLE_ROWS);
+        gfx.drawString(font, Component.translatable("ae2lt.device_hub.settings"),
+                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+        for (int row = 0; row < CONFIG_VISIBLE_ROWS && row + configScrollOffset < settings.size(); row++) {
+            var setting = settings.get(row + configScrollOffset);
+            int y = topPos + CONFIG_Y + row * CONFIG_ROW_H;
+            String label = font.plainSubstrByWidth(Component.translatable(setting.labelTranslationKey()).getString(),
+                    CONFIG_BUTTON_X - CONFIG_ROW_X - 4);
+            gfx.drawString(font, label, leftPos + CONFIG_ROW_X, y + 1, TEXT_ON_DARK_BG, false);
+            drawConfigValueButton(gfx, leftPos + CONFIG_BUTTON_X, y - 1,
+                    setting.displayValue(), setting.editable(), mouseX, mouseY);
         }
-        ItemStack offhand = player.getOffhandItem();
-        return offhand.getItem() instanceof ElectromagneticRailgunItem ? offhand : ItemStack.EMPTY;
+        renderConfigScrollBar(gfx, settings.size(), mouseX, mouseY);
+    }
+
+    private boolean mouseClickedAddonSettings(double mouseX, double mouseY) {
+        var state = menu.getAddonState();
+        if (state == null) return false;
+        for (int row = 0; row < CONFIG_VISIBLE_ROWS && row + configScrollOffset < state.settings().size(); row++) {
+            var setting = state.settings().get(row + configScrollOffset);
+            int y = topPos + CONFIG_Y + row * CONFIG_ROW_H;
+            int x = leftPos + CONFIG_BUTTON_X;
+            if (mouseX >= x && mouseX <= x + CONFIG_BUTTON_W && mouseY >= y - 1 && mouseY <= y - 1 + CONFIG_BUTTON_H) {
+                if (setting.editable()) {
+                    int direction = mouseX < x + CONFIG_BUTTON_W / 2.0 ? -1 : 1;
+                    PacketDistributor.sendToServer(new com.moakiee.ae2lt.network.hub.AddonHubActionPacket(
+                            menu.containerId, state.session(), state.page(), setting.id(), setting.value(), setting.step(direction)));
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

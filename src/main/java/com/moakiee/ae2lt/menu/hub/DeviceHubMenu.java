@@ -1,6 +1,10 @@
 package com.moakiee.ae2lt.menu.hub;
 
 import java.util.List;
+import com.moakiee.ae2lt.api.device.DeviceHubApi;
+import com.moakiee.ae2lt.api.device.DeviceHubPage;
+import com.moakiee.ae2lt.network.hub.AddonHubStatePacket;
+import com.moakiee.ae2lt.network.hub.AddonHubActionPacket;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -77,6 +81,9 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     private List<Boolean> moduleConfigEditable = List.of();
 
     // ── Server-side state ──
+    private final DeviceSession addonSession = new DeviceSession();
+    private AddonHubStatePacket addonState;
+    private AddonHubStatePacket lastAddonState;
     private int selectedTab;
     private int lastSyncedTab = -1;
     @Nullable
@@ -107,7 +114,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        return player.isAlive() && (trackedPlayer == null || trackedPlayer == player);
     }
 
     // ── Server-side: periodic sync ──
@@ -139,7 +146,27 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         // Build status for current tab
         ItemStack deviceStack = findDevice(serverPlayer, selectedTab);
         DeviceStatusModel status;
-        if (deviceStack.isEmpty()) {
+        var addon = selectedTab == TAB_RAILGUN ? DeviceHubApi.find(deviceStack) : null;
+        DeviceHubPage.Status custom = addon == null ? null : addon.inspect(serverPlayer, deviceStack);
+        AddonHubStatePacket nextAddonState;
+        if (custom != null) {
+            var token = addonSession.bind(deviceStack, heldSlot(serverPlayer, deviceStack));
+            nextAddonState = new AddonHubStatePacket(containerId, token, addon.id(), true, custom.settings());
+        } else {
+            if (lastAddonState != null && lastAddonState.active()) addonSession.clear();
+            nextAddonState = new AddonHubStatePacket(containerId, new java.util.UUID(0, 0),
+                    net.minecraft.resources.ResourceLocation.parse("ae2lt:none"), false, List.of());
+        }
+        if (!nextAddonState.equals(lastAddonState)) {
+            lastAddonState = nextAddonState;
+            PacketDistributor.sendToPlayer(serverPlayer, nextAddonState);
+        }
+        if (custom != null) {
+            status = new DeviceStatusModel(custom.displayName(), custom.hasCore(), custom.powered(),
+                    custom.modules().stream().map(m -> new DeviceStatusModel.ModuleInfo(
+                            m.translationKey(), m.count(), m.enabled())).toList(),
+                    -1, List.of(), false, false, false, false, RailgunExecutionMode.NORMAL, false, false);
+        } else if (deviceStack.isEmpty()) {
             status = DeviceStatusModel.EMPTY;
         } else if (selectedTab == TAB_RAILGUN) {
             status = DeviceStatusModel.fromRailgunStack(deviceStack, serverPlayer, selectedModuleIndex);
@@ -342,6 +369,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         if (tab >= 0 && tab < TAB_COUNT) {
             if (this.selectedTab != tab) {
                 this.selectedModuleIndex = -1;
+                addonSession.clear();
             }
             this.selectedTab = tab;
         }
@@ -380,7 +408,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         if (!AE2LTCommonConfig.railgunTerrainDestructionEnabled()) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(ModDataComponents.RAILGUN_SETTINGS.get(), s.withTerrain(!s.terrainDestruction()));
     }
@@ -388,7 +416,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void toggleRailgunPvp() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(ModDataComponents.RAILGUN_SETTINGS.get(), s.withPvp(!s.pvp()));
     }
@@ -396,7 +424,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void toggleRailgunSound() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(ModDataComponents.RAILGUN_SETTINGS.get(), s.withSound(!s.soundEnabled()));
     }
@@ -404,7 +432,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void toggleRailgunChainDamage() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(ModDataComponents.RAILGUN_SETTINGS.get(), s.withChainDamage(!s.chainDamage()));
     }
@@ -412,7 +440,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void cycleRailgunExecutionMode() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         var modules = RailgunModuleStorage.entryData(railgun);
         RailgunExecutionMode mode = modules.hasMultidimensionalExecution()
@@ -427,7 +455,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void toggleRailgunEhvBeam() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty() || !RailgunModuleStorage.entryData(railgun).hasEhvBeam()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null || !RailgunModuleStorage.entryData(railgun).hasEhvBeam()) return;
         RailgunSettings settings = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(ModDataComponents.RAILGUN_SETTINGS.get(), settings.withEhvBeam(!settings.ehvBeamEnabled()));
     }
@@ -435,7 +463,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     public void toggleRailgunChargedSplash() {
         if (!(getPlayer() instanceof ServerPlayer player)) return;
         ItemStack railgun = findDevice(player, TAB_RAILGUN);
-        if (railgun.isEmpty()) return;
+        if (railgun.isEmpty() || DeviceHubApi.find(railgun) != null) return;
         RailgunSettings s = railgun.getOrDefault(ModDataComponents.RAILGUN_SETTINGS.get(), RailgunSettings.DEFAULT);
         railgun.set(
                 ModDataComponents.RAILGUN_SETTINGS.get(),
@@ -492,11 +520,43 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     }
 
     private static ItemStack findRailgun(Player player) {
-        ItemStack main = player.getMainHandItem();
-        if (main.getItem() instanceof ElectromagneticRailgunItem) return main;
-        ItemStack off = player.getOffhandItem();
-        if (off.getItem() instanceof ElectromagneticRailgunItem) return off;
-        return ItemStack.EMPTY;
+        return DeviceHubApi.heldDevice(player);
+    }
+
+    private static int heldSlot(Player player, ItemStack stack) {
+        return player.getMainHandItem() == stack ? player.getInventory().selected : 40;
+    }
+
+    public void receiveAddonState(AddonHubStatePacket state) { this.addonState = state; }
+
+    public AddonHubStatePacket getAddonState() {
+        return getSelectedTab() == TAB_RAILGUN && addonState != null && addonState.active() ? addonState : null;
+    }
+
+    public boolean isAddonDeviceSelected() {
+        return selectedTab == TAB_RAILGUN && trackedPlayer != null
+                && DeviceHubApi.find(DeviceHubApi.heldDevice(trackedPlayer)) != null;
+    }
+
+    public boolean configureAddon(ServerPlayer player, AddonHubActionPacket action) {
+        if (!player.serverLevel().getServer().isSameThread() || player != trackedPlayer
+                || !player.isAlive() || player.isSpectator() || player.containerMenu != this
+                || action.containerId() != containerId || selectedTab != TAB_RAILGUN) return false;
+        var stack = DeviceHubApi.heldDevice(player);
+        var page = DeviceHubApi.find(stack);
+        if (page == null || !page.id().equals(action.page())
+                || !addonSession.matches(action.session(), stack, heldSlot(player, stack))
+                || !page.canConfigure(player, stack)) return false;
+        var setting = page.inspect(player, stack).settings().stream()
+                .filter(s -> s.id().equals(action.setting())).findFirst().orElse(null);
+        if (setting == null || !setting.editable() || setting.value() != action.expectedValue()
+                || action.value() < setting.min() || action.value() > setting.max()) return false;
+        // Extension inspection may itself invoke callbacks; check identity once more before mutation.
+        if (DeviceHubApi.heldDevice(player) != stack
+                || !addonSession.matches(action.session(), stack, heldSlot(player, stack))) return false;
+        boolean changed = page.setValue(player, stack, setting.id(), action.value());
+        if (changed) { player.getInventory().setChanged(); broadcastChanges(); }
+        return changed;
     }
 
     // ── Server-side ContainerData impl ──

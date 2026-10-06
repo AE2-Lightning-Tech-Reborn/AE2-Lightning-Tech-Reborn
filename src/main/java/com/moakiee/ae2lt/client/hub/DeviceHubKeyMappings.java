@@ -62,8 +62,7 @@ public final class DeviceHubKeyMappings {
 
             while (OPEN_CONFIG.consumeClick()) {
                 int defaultTab = -1;
-                if (minecraft.player.getMainHandItem().getItem() instanceof ElectromagneticRailgunItem
-                        || minecraft.player.getOffhandItem().getItem() instanceof ElectromagneticRailgunItem) {
+                if (!com.moakiee.ae2lt.api.device.DeviceHubApi.heldDevice(minecraft.player).isEmpty()) {
                     defaultTab = DeviceHubMenu.TAB_RAILGUN;
                 }
 
