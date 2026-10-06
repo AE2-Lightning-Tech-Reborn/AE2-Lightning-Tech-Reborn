@@ -54,7 +54,6 @@ public record DeviceHubActionPacket(int action, int value) implements CustomPack
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             if (!(player.containerMenu instanceof DeviceHubMenu menu)) return;
-            if (menu.isAddonDeviceSelected() && pkt.action() != ACTION_SELECT_TAB) return;
             menu.setPlayer(player);
             switch (pkt.action()) {
                 case ACTION_SELECT_TAB -> menu.selectTab(pkt.value());

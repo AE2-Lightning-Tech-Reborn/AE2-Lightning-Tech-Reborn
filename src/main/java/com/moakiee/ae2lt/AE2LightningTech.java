@@ -403,7 +403,6 @@ public class AE2LightningTech {
                 event.enqueueWork(() -> {
                     com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.freeze();
                     com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.freezeItems();
-                    com.moakiee.ae2lt.api.device.DeviceHubApi.freeze();
                 }));
         modEventBus.addListener(this::onConfigChanged);
         modContainer.registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);

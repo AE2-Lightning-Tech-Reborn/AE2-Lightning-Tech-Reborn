@@ -1,70 +1,74 @@
 # 附属 API 接入指南（alpha）
 
-本指南描述 AE2LT alpha 新增的附属接口，目标环境为 Minecraft 1.21.1 / NeoForge。该接口批次尚未发布；alpha 后续计划合并 main。旧的已发布 2.1.0 / 2.1.1 JAR 不因为版本字符串相同就具备这些类型。附属应等接口所在构建发布后再提高最低依赖，或在独立的兼容类中隔离旧、新路径。
+本次面向 Minecraft 1.21.1 / NeoForge，只开放集雷器晶体、工作台设备和基础闪电访问三个明确边界。接口仍处于本地 alpha，尚未发布，后续计划合并 main。已发布的 2.1.0 / 2.1.1 JAR 不因为版本字符串相同就拥有这些新增接口。
 
-编译依赖完整 AE2LT 和 AE2 artifact。api 包含委派到内部实现的 façade，不是独立 API-only JAR。不要把实现类或反射构造器当稳定接入契约。
+编译依赖完整 AE2LT 和 AE2 artifact。公共 façade 可以委派内部实现，不是独立 API-only JAR。附属专属的界面、绑定策略和任务退款流程不在本次稳定契约内。
+
+## 接入范围
+
+| 附属现有实现 | 建议 |
+| --- | --- |
+| CollectorInventoryMixin、CollectorMixin | 使用晶体行为接口替代；保留附属自己的配方、绑定条件及培养规则。 |
+| CoilWorkbenchMixin、整体替换工作台 ticker | 使用按物品注册与 serverTick 回调替代。 |
+| LightningNetwork、SimulationGridBridge、CoilLightning 的内部 LightningKey 引用 | 可改用 LightningApi.keyOf；适合通过节点操作的普通 I/O 可使用 forHost。 |
+| CoilHubHostMixin、CoilHubMenuMixin、CoilHubStatusMixin、CoilHubScreenMixin | 保留在附属兼容层，按支持版本验证，不要求改成通用页面 API。 |
+| CoilMiningCommitMixin、CoilAEWrenchMixin、CoilMouseScrollMixin | 保留；属于 Minecraft/AE2 行为，不是本次扩展点。 |
+| 设备网络绑定、付款和退款任务 | 由附属兼容层管理；没有通用 DeviceNetworkAccess、LightningPayment 或专用 refund API。 |
+
+未发布的 DeviceHubApi/DeviceHubPage、配套配置协议、DeviceNetworkAccess、LightningPayment 和 LightningApi.refund 已撤回。原有中枢实现恢复，未要求附属修改其界面或语言文件以适配新页面协议。
 
 ## 注册阶段
 
-在附属的 `FMLCommonSetupEvent.enqueueWork` 中注册，客户端和专用服务端都要执行。注册按物品 ResourceLocation 分派：同一入口重复注册同一物品会抛异常；不同附属的物品互不覆盖。注册表在 AE2LT 的 load-complete 阶段冻结，之后不能动态注册。
+在附属的 FMLCommonSetupEvent.enqueueWork 中注册，客户端和专用服务端都执行。注册按物品 ResourceLocation 分派；同一个入口重复注册同一物品会抛异常，不同附属的物品互不覆盖。注册表在 load-complete 阶段冻结。
 
 ```java
 event.enqueueWork(() -> {
     CollectorCrystalApi.register(ResourceLocation.parse("overload_sim:simulation_crystal"), crystalBehavior);
     DeviceWorkbenchApi.register(ResourceLocation.parse("overload_sim:resonance_coil"), workbenchDevice);
-    DeviceHubApi.register(ResourceLocation.parse("overload_sim:resonance_coil"), hubPage);
 });
 ```
 
-上面三个适配器分别实现下述公开接口。只为需要接入的物品注册；集雷器的空白、普通、完美模拟晶体若都有不同注册 ID，需要逐个注册。无须继承 DeviceItem，也不要覆盖原生 DeviceKind.RAILGUN。
+空白、普通、完美模拟晶体若都需要接入，应分别注册其物品 ID。只注册要接入的物品，不覆盖 DeviceKind.RAILGUN。
 
-## 集雷器
+## 集雷器晶体与成功事件
 
-公开类型：
+公开类型在 com.moakiee.ae2lt.api.lightning.collector：
 
-- `api.lightning.collector.CollectorCrystalApi`
-- `api.lightning.collector.CollectorCrystalBehavior`
-- `api.event.LightningCaptureCompletedEvent`
+- CollectorCrystalApi.register(itemId, behavior)
+- CollectorCrystalBehavior.preview(ItemStack, LightningTier, OutputRange baseOutput)
+- CollectorCrystalBehavior.onCaptured(Capture, ItemStack original)
 
-`CollectorCrystalBehavior.preview(ItemStack, LightningTier, OutputRange baseOutput)` 在两侧调用，不能修改晶体。返回经过校验的 min/max 范围，GUI 与实际抽取共用该结果。若模拟晶体应该使用基础产量，直接返回 baseOutput。范围允许 0，但上界与跨度必须可用于整数随机抽样。
+preview 在两侧调用且不能修改晶体。返回基础产量 baseOutput 即可维持模拟晶体的基础输出；GUI 预览和实际抽样共用结果。OutputRange 会检查非负数、顺序和整数抽样范围。
 
-注册晶体会被插槽接纳，并跳过原生电鸣晶体培养。实际插入量为正时，集雷器先提交冷却和工作状态，再调用：
+注册行为统一负责插槽准入和输出，并跳过原生电鸣晶体培养。实际入网成功后才调用 onCaptured；Capture 提供 level、collectorPos、tier、naturalWeather、requestedAmount、insertedAmount 和当前晶体查询 supplier。
 
-```java
-ItemStack onCaptured(CollectorCrystalBehavior.Capture capture, ItemStack original)
-```
-
-capture 提供 level、collectorPos、tier、naturalWeather、requestedAmount、insertedAmount 和当前晶体查询 supplier。original 是当前实际栈；回调可原位更新或返回替换栈（EMPTY 表示移除）。回调期间若别的逻辑已替换原始栈，集雷器不会用返回值覆盖新栈。回调应保留自己的取消和原始栈检查，不应在有副作用后抛异常。
-
-对于现有 CrystalBinding，可把 `capture.installedCrystal()` 传给需要复查当前栈的函数。返回的新晶体由上游安装并标记保存/同步，附属不再需要从 mixin 直接操作集雷器内部库存。
+original 是活栈。回调可原位修改或返回替换栈，EMPTY 表示移除。回调期间若其他逻辑换了原栈，上游不会用返回值覆盖新栈。现有 CrystalBinding 可继续使用 capture.installedCrystal() 复查身份。配方选择、结构绑定、培养条件和取消事件仍归附属。
 
 事件顺序：
 
 1. 计算 preview/roll。
-2. 原有 `LightningCollectedEvent`，仍可取消或修改待插入量。
-3. 实际插入；0 插入立即返回失败。
-4. 原生晶体培养（未注册自定义行为时）、冷却及状态提交。
-5. 注册晶体的 onCaptured，保存/同步。
-6. 不可取消的 `LightningCaptureCompletedEvent`。
+2. 原有 LightningCollectedEvent，可取消或修改待入网数量。
+3. 实际插入，0 插入立即失败。
+4. 原生培养（没有注册行为时）、冷却及工作状态提交。
+5. 自定义 onCaptured，保存/同步。
+6. api.event.LightningCaptureCompletedEvent，不可取消的成功观察事件。
 
-取消、零产量和满仓不会调用成功回调或成功事件。部分插入是成功，必须用 insertedAmount 记账。成功事件用于观察；不要在行为回调和事件监听器里重复执行同一次培养。单个集雷器拒绝同 tick 的重复成功和回调重入。
-
-可替代：CollectorInventoryMixin、CollectorMixin。原有 mixin 与新注册实现不要同时处理同一种晶体。
+取消、零产量和满仓不触发成功回调。部分插入算成功，记账使用 insertedAmount。不要在行为回调和成功事件中重复培养。同 tick 重复成功及同一集雷器的回调重入会被拒绝。
 
 ## 工作台
 
-`api.device.WorkbenchDevice` 支持现有 UI 的一个核心槽、模块列表、能量状态和服务器 tick：
+api.device.DeviceWorkbenchApi.register(itemId, WorkbenchDevice) 按物品注册，不需要继承 DeviceItem。WorkbenchDevice 表达现有工作台的一个核心槽、模块列表和生命周期：
 
 - core / canPlaceCore / setCore / mayRemoveCore：核心槽。
 - modules / moduleId / maxInstallAmount：模块显示。
 - canInstallOne / installOne / uninstallOne / uninstallAll：模块变更。
-- storedEnergy / energyCapacity：long 能量值，默认 0。
-- onInserted / onModulesChanged：插入与模块变更回调。
-- serverTick(ItemStack, Context)：仅在工作台网络激活时执行，Context 包含 ServerLevel、位置和当前 IGrid；返回 true 表示需要保存/同步。
+- storedEnergy / energyCapacity：能量显示。
+- onInserted / onModulesChanged：插入和模块变化回调。
+- serverTick(ItemStack, Context)：激活工作台的服务端回调，Context 提供 ServerLevel、位置和当前 IGrid；变化后返回 true，让上游保存/同步。
 
-installOne 不得缩减传入的输入物品栈；成功后工作台负责移除输入中的一个单位。uninstall 返回真正从设备组件移出的物品。setCore 必须允许 EMPTY 清槽。具体存储组件仍由附属维护。
+模块组合、核心要求、能量上限、充电速率和实际组件存储由附属实现。installOne 不得缩减输入栈；成功后工作台负责扣一个输入单位。uninstall 返回实际从设备移出的物品，setCore 必须允许 EMPTY。
 
-例如线圈现有充电逻辑可放进 serverTick：
+线圈充电可直接调用自己的逻辑：
 
 ```java
 long before = CoilEnergy.read(device);
@@ -72,85 +76,53 @@ CoilEnergy.charge(device, context.grid());
 return CoilEnergy.read(device) != before;
 ```
 
-无需调用上游方块的 setBlockEntity 替换 ticker。原生设备仍走原适配器；精确物品注册不会覆盖原生 RAILGUN 条目。当前只开放已有单核心槽布局，没有承诺任意多槽界面。
+不要再整体替换上游方块 ticker。原生设备仍走原适配器；此接口不承诺任意多槽布局或通用设备模块系统。
 
-可替代：CoilWorkbenchMixin 和 ModContent.setup 中整体替换工作台 ticker 的代码。
+## 基础闪电访问
 
-## 设备中枢
-
-`api.device.DeviceHubPage` 为手持设备复用现有第五页，支持模块列表和最多 64 项整数/开关设置：
-
-- id()：页面的 ResourceLocation。
-- inspect(ServerPlayer, ItemStack)：返回 Status。
-- canConfigure(ServerPlayer, ItemStack)：附属权限/核心条件，默认 true。
-- setValue(ServerPlayer, ItemStack, ResourceLocation settingId, int value)：通过校验后的服务端更新。
-
-Status 包含 displayName、hasCore、powered、Module 列表和 Setting 列表，不依赖轨道炮专有布尔字段。Module 提供 translationKey/count/enabled。Setting 提供唯一 id、labelTranslationKey、displayValue、value/min/max/editable。开关使用 min=0/max=1；整数设置使用实际范围。标签由客户端翻译，displayValue 是服务端提供的简短显示字符串。单个字符串限制为 256 字符，settingId 限制为 128 字符。
-
-内置客户端按现有滚动布局渲染设置，点击按钮左半部向前循环、右半部向后循环。无需客户端 mixin、私有坐标字段或单独配置包。此批提供声明式设置页，尚未开放任意自绘页面或无限新增页签。
-
-选择顺序为主手优先、副手次之，原生轨道炮与附属设备一致；原有 G 键会识别注册设备。也可服务端调用 `DeviceHubApi.open(player)`。
-
-服务端每次编辑验证：
-
-- 当前服务端线程、原始玩家、存活、非旁观者；
-- 当前 containerMenu、containerId 和手持设备页；
-- 页面 ID、设备栈对象身份、所在手持槽及随机会话 token；
-- canConfigure、设置 ID、editable、客户端预期旧值和 min/max。
-
-换栈、换手持槽、切页会使旧会话失效。每次实际执行前重新 inspect 并核对身份。原有轨道炮设置包不会修改注册附属设备；模块列表在附属页中用于展示，配置请通过 Setting 表达。
-
-可替代：CoilHubHostMixin、CoilHubMenuMixin、CoilHubStatusMixin、CoilHubScreenMixin，以及 CoilStatusFactory 的内部构造器反射。既有 CoilConfiguration.apply 可由 setValue 调用，id 到 action 的映射由附属维护。
-
-## 闪电与设备网络
-
-`api.lightning.LightningApi`：
+api.lightning.LightningApi 只提供普通访问和公共 AEKey 转换：
 
 ```java
-ILightningEnergyHandler handler = LightningApi.forHost(machine);
-ILightningEnergyHandler playerHandler = LightningApi.forHost(machine, IActionSource.ofPlayer(player));
-AEKey key = LightningApi.keyOf(LightningTier.HIGH_VOLTAGE);
-long refunded = LightningApi.refund(machine, source, LightningTier.HIGH_VOLTAGE, debt);
+ILightningEnergyHandler storage = LightningApi.forHost(machine);
+ILightningEnergyHandler playerStorage = LightningApi.forHost(machine, IActionSource.ofPlayer(player));
+AEKey hv = LightningApi.keyOf(LightningTier.HIGH_VOLTAGE);
 ```
 
-所有调用在服务器线程执行。handler 每次查询当前节点，不缓存 IGrid；普通读写要求节点激活。getStored 是库存快照，getCapacity 可以返回 Long.MAX_VALUE；这都不是本次可提取数量保证。
+服务器线程调用。forHost 每次读取当前节点，普通读写要求节点激活；getStored 是缓存快照，getCapacity 可返回 Long.MAX_VALUE，simulate 不提供预留或原子保证。
 
-keyOf 只转换类型，不检查活跃状态和权限。直接用 AE2 storage 的调用方仍需自行遵守节点条件和 IActionSource。机器调用用 ofMachine，玩家动作保留 ofPlayer。
+keyOf 只返回 AEKey，不检查活跃状态或权限。直接使用 AE2 storage 的附属仍负责节点条件及 IActionSource。玩家操作保留 ofPlayer，机器操作用 ofMachine。
 
-refund 是恢复既有欠款的入口：允许节点存在但尚未激活时插回，不能拿来规避普通生产的活跃限制。没有节点或存储不能完全接收时，调用方保存 debt - refunded，后续只重试余额。它不会凭空恢复一个已销毁的原网络。
+付款、失败退款、未退余额持久化、原网络归属与重启恢复继续由附属负责。尤其不要直接把附属的离线退款路径替换为要求节点激活的普通 handler.insert；可通过 keyOf 使用已有 AE2 存储路径，并保留实际回插量和剩余债务。当前节点所属网络可能发生变化，附属需要按自己的任务语义决定退款目的地。
 
-`LightningPayment.pay(handler, hv, ehv)` 是尽力执行的双电压扣费，不是原子事务。返回 Result(paid, refundHv, refundEhv)。模拟检查通过不代表真实扣费必然足量；部分扣费失败会尝试退回，并返回尚未退回的分电压欠款。处理器须遵守返回 0..requested 的数量契约。调用方必须持久化欠款并阻止重复退款；处理器异常后不能推断“没有扣款”。需要跨重启的任务 exactly-once 仍由附属负责。
+## 中枢 mixin 与语言文件
 
-`api.device.DeviceNetworkAccess` 提供 getBoundPos/bind/unbind/resolve，使用既有 AE2 无线绑定数据和距离/跨维策略；Resolution 返回公共 IGrid、IWirelessAccessPoint 和 Failure。resolve 只判连通性，不能代替玩家授权；bind 为受信服务端入口。
+中枢四个 mixin 可以继续存在。专属显示、操作、状态适配与版本反射集中在附属兼容层，并验证其支持的每个 AE2LT 版本；不要假定内部类永远不变。
 
-## 既有 API 修复
+已核对附属 zh_cn.json / en_us.json：各 131 个键，键集合和格式占位符一致。原界面仍需保留：
 
-- 频率非正 ID 规范化为 -1，NBT 同样处理；保留正 ID 以便发送端延迟加载恢复。
-- FrequencyApi 的 server 参数必须属于当前运行服务器且在其线程，否则返回空/false。
-- setFrequency 仍是受信服务端操作；isValidFrequency 不是权限检查。现有 UI 继续检查菜单与授权。
-- WirelessPatternProviderHost.getEndpointSnapshots() 返回公共不可变 WirelessEndpoint，旧 getConnections 签名为兼容保留。
-- LightningBatchProvider 与 TianshuSynthesizer 先检查线程/能力版本再访问 nonce 历史；相同 nonce 的不同请求被拒绝。
-- retryable 且 acceptedAmount=0 的结果不保留最终回执，可以同 nonce 重试；部分成功/成功重复调用只返回已有回执。
-- 按输出 long 上限约束批量，避免提交后才发生输出数量乘法溢出。
-- 有副作用阶段异常抛 IndeterminateSubmissionException，阻止该 nonce 重放；不能据此自动退款或换 nonce 重发，应核对任务与库存。
-- 完成记录至多保留 1024 项，未定结果会固定保留并占容量；容量全被未定记录占用时拒绝新派发。历史不跨卸载/重启持久化，不是永久幂等服务。
+- efficiency_level / fortune_level 的等级参数与上限。
+- on / off 和 wrench_mode.0 至 wrench_mode.7 的客户端翻译。
+- no_mekanism 的条件工具提示。
 
-## 验证与附属迁移
+前期页面草案缺少翻译参数、可翻译值和 tooltip，是暂缓通用页面 API 的原因之一。草案已撤回，不再要求附属新增无参数标签或改写现有语言键来迁就它。后续保持中英文的设置、模式名和提示验证即可。
 
-可运行的最小附属实现位于 `src/jdb/java/com/moakiee/ae2lt/debug/AddonApiGameTests.java`，仅供开发验证，不包含在发布 JAR。它注册普通纸张和木棍，走真实集雷器、AE 存储、工作台 ticker 和设备中枢服务端流程。
+## 已有正确性修复
+
+批处理回执的线程校验、nonce 请求一致性、临时拒绝重试、输出数量边界与不确定结果处理，以及频率 ID 规范化和 server 归属校验继续保留。它们不代表附属需要采用批处理接口。
+
+WirelessPatternProviderHost.getEndpointSnapshots() 的公共只读快照及原有方法兼容也保留，不属于本附属的迁移要求。
+
+## 验证
+
+可运行的最小集雷器/工作台接入示例位于 src/jdb/java/com/moakiee/ae2lt/debug/AddonApiGameTests.java，仅在指定开发运行中注册，不打入发布 JAR。
 
 ```powershell
 .\gradlew.bat test jar --offline --console=plain
 .\gradlew.bat runAddonApiGameTestServer -Pae2ltAddonApiTestsOnly=true --offline --console=plain
 ```
 
-服务端测试环境：Java 21、Minecraft 1.21.1、NeoForge 21.1.220、AE2 19.2.17、AE2LT alpha、Thunderbolt Core Reborn 2.0.0。6 项 GameTest 已通过；全量单元测试统计 1394 项，1390 通过、4 跳过、0 失败/错误，发布 JAR 构建通过。真实“闪电科技：模拟”目前声明的最低 NeoForge 为 21.1.252，该附属完整客户端/服务端兼容矩阵仍需要在迁移后另行执行，不能拿这组 fixture 测试代替。
+本轮收窄后重新验证：单元测试共 1388 项，1384 通过、4 跳过、0 失败/错误；5 项服务端 GameTest 全通过，其中 4 项覆盖集雷器和工作台，1 项覆盖保留的批处理线程修复。JAR 构建通过，确认没有撤回的 API/协议或测试夹具残留。原有中枢代码与页面框架加入前一致。
 
-建议按以下顺序迁移并分别验证：
+环境：Java 21、Minecraft 1.21.1、NeoForge 21.1.220、AE2 19.2.17、Thunderbolt Core Reborn 2.0.0。附属最低 NeoForge 21.1.252 的真实客户端/服务端联合验证仍应在迁移后执行。
 
-1. 注册三种模拟晶体行为，移除集雷器两个 mixin，验证取消、零入网、部分入网及不同雷击来源。
-2. 注册线圈 WorkbenchDevice，移除工作台 mixin 和 ticker 替换，检查充电与核心/模块物品守恒。
-3. 注册 DeviceHubPage，移除中枢四个 mixin 和状态反射，验证七项设置、双手选择、旧包拒绝及轨道炮共存。
-4. 用 LightningApi / DeviceNetworkAccess 替换内部引用，持久化线圈失败退款余额。
-5. 保留 Minecraft / AE2 的三个独立 mixin；它们不是本批 AE2LT API 的替代目标。
-6. 对固定 alpha 构建做联合运行验证；确认发布最低版本后更新元数据，合并 main 后复测。
+新注册行为和旧 mixin 不要同时处理同一功能。按集雷器、工作台、基础闪电访问逐项迁移，确认接口首发构建再调整最低依赖；alpha 合并 main 后复核。

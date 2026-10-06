@@ -14,9 +14,6 @@ import com.moakiee.ae2lt.api.tianshu.synthesis.TianshuSynthesizer;
 import com.moakiee.ae2lt.blockentity.LightningCollectorBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadDeviceWorkbenchBlockEntity;
-import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
-import com.moakiee.ae2lt.network.hub.AddonHubActionPacket;
-import com.moakiee.ae2lt.network.hub.AddonHubStatePacket;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -30,15 +27,12 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -48,8 +42,6 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class AddonApiGameTests {
     private static final BlockPos POS = new BlockPos(3, 3, 3);
-    private static final ResourceLocation PAGE = ResourceLocation.parse("ae2lt_addon_api:tool");
-    private static final ResourceLocation SETTING = ResourceLocation.parse("ae2lt_addon_api:mode");
 
     @SubscribeEvent public static void setup(FMLCommonSetupEvent event) {
         if (!Boolean.getBoolean("ae2lt.addonApiTests")) return;
@@ -65,7 +57,6 @@ public final class AddonApiGameTests {
                 }
             });
             DeviceWorkbenchApi.register(ResourceLocation.parse("minecraft:stick"), new Tool());
-            DeviceHubApi.register(ResourceLocation.parse("minecraft:stick"), new Page());
         });
     }
 
@@ -83,18 +74,6 @@ public final class AddonApiGameTests {
         public boolean serverTick(ItemStack d, Context context) {
             if (d.has(DataComponents.CUSTOM_NAME)) return false;
             d.set(DataComponents.CUSTOM_NAME, Component.literal("charged")); return true;
-        }
-    }
-
-    private static final class Page implements DeviceHubPage {
-        public ResourceLocation id() { return PAGE; }
-        public Status inspect(ServerPlayer player, ItemStack device) {
-            int value = device.getOrDefault(DataComponents.DAMAGE, 0);
-            return new Status("Test tool", true, true, List.of(),
-                    List.of(new Setting(SETTING, "test.mode", Integer.toString(value), value, 0, 2, true)));
-        }
-        public boolean setValue(ServerPlayer p, ItemStack d, ResourceLocation setting, int value) {
-            d.set(DataComponents.DAMAGE, value); return true;
         }
     }
 
@@ -184,26 +163,6 @@ public final class AddonApiGameTests {
             h.assertTrue(bench.getInstalledDevice().getHoverName().getString().equals("charged"), "native ticker reached addon");
             h.succeed();
         });
-    }
-
-    @GameTest(template = "empty")
-    public static void hubRejectsWrongMenuBoundsAndReplacementStack(GameTestHelper h) throws Exception {
-        var player = FakePlayerFactory.get(h.getLevel(), new com.mojang.authlib.GameProfile(UUID.randomUUID(), "AddonApiTest"));
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
-        var menu = new DeviceHubMenu(43, player.getInventory(), DeviceHubMenu.TAB_RAILGUN);
-        player.containerMenu = menu;
-        menu.broadcastChanges();
-        var field = DeviceHubMenu.class.getDeclaredField("lastAddonState"); field.setAccessible(true);
-        var state = (AddonHubStatePacket) field.get(menu);
-        h.assertTrue(state != null && state.active(), "addon status synchronized");
-        h.assertTrue(!menu.configureAddon(player, new AddonHubActionPacket(44, state.session(), PAGE, SETTING, 0, 1)), "wrong container rejected");
-        h.assertTrue(!menu.configureAddon(player, new AddonHubActionPacket(43, state.session(), PAGE, SETTING, 0, 3)), "out of range rejected");
-        h.assertTrue(menu.configureAddon(player, new AddonHubActionPacket(43, state.session(), PAGE, SETTING, 0, 1)), "valid change accepted");
-        h.assertTrue(!menu.configureAddon(player, new AddonHubActionPacket(43, state.session(), PAGE, SETTING, 0, 2)), "stale expected value rejected");
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
-        h.assertTrue(!menu.configureAddon(player, new AddonHubActionPacket(43, state.session(), PAGE, SETTING, 0, 1)), "replacement stack rejected before next sync");
-        player.containerMenu = player.inventoryMenu;
-        h.succeed();
     }
 
     @GameTest(template = "empty")

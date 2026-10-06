@@ -80,6 +80,7 @@ public class DeviceHubHost implements MenuProvider {
     }
 
     private static boolean hasRailgun(Player player) {
-        return !com.moakiee.ae2lt.api.device.DeviceHubApi.heldDevice(player).isEmpty();
+        return player.getMainHandItem().getItem() instanceof ElectromagneticRailgunItem
+                || player.getOffhandItem().getItem() instanceof ElectromagneticRailgunItem;
     }
 }
