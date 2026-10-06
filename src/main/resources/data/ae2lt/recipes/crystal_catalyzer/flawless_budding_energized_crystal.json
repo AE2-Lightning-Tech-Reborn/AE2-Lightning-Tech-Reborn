@@ -1,0 +1,28 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "neoecoae"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "neoecoae:flawless_budding_energized_crystal"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "neoecoae:energized_crystal"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "item": "neoecoae:flawless_budding_energized_crystal"
+  },
+  "catalystCount": 1,
+  "output": {
+    "id": "neoecoae:energized_crystal",
+    "count": 16
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}
