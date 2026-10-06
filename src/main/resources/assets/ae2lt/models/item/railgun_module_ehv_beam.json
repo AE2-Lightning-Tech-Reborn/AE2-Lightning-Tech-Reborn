@@ -1,7 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "ae2lt:item/overload_module_base",
-    "layer1": "ae2lt:item/lightning_collapse_matrix"
+    "layer0": "ae2lt:item/railgun_module_ehv_beam"
   }
 }
