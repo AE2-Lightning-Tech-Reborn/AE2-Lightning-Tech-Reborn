@@ -1,0 +1,7 @@
+{
+  "type": "avaritia:compressor",
+  "ingredient": { "item": "minecraft:stone" },
+  "inputCount": 100000,
+  "result": { "count": 1, "id": "minecraft:diamond" },
+  "timeCost": 1
+}

@@ -70,7 +70,6 @@ import com.moakiee.ae2lt.item.OverloadPatternItem;
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.Ae2PlainPatternResolver;
-import com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternDefinition;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
@@ -1588,7 +1587,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                         new Ae2PlainPatternResolver(getPlayer().level()),
                         registryAccess()).orElse(null);
                 if (restored == null
-                        || !replaceProcessingInventories(restored.parsedPattern())) {
+                        || !replaceProcessingInventories(details)) {
                     return;
                 }
                 var advancedConfig = advanced == null ? null
@@ -1618,20 +1617,25 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         }
     }
 
-    private boolean replaceProcessingInventories(ParsedPatternDefinition pattern) {
+    private boolean replaceProcessingInventories(appeng.api.crafting.IPatternDetails pattern) {
         var inputs = nullableStackList(tianshuHost.getLogic().getEncodedInputInv().size());
         var outputs = nullableStackList(tianshuHost.getLogic().getEncodedOutputInv().size());
-        for (var input : pattern.inputs()) {
-            if (input.slotIndex() >= inputs.size()) return false;
-            var stack = GenericStack.fromItemStack(input.stack());
-            if (stack == null) return false;
-            inputs.set(input.slotIndex(), stack);
+        var patternInputs = pattern.getInputs();
+        if (patternInputs.length > inputs.size() || pattern.getOutputs().size() > outputs.size()) return false;
+        for (int slot = 0; slot < patternInputs.length; slot++) {
+            var input = patternInputs[slot];
+            var possible = input.getPossibleInputs();
+            if (possible.length == 0) return false;
+            // AE2 separates an input's template amount from its multiplier. The overload edit
+            // metadata only carries templates; restore quantities from the runtime definition,
+            // without converting long amounts through ItemStack's int-sized count.
+            var stack = possible[0];
+            long amount = Math.multiplyExact(stack.amount(), input.getMultiplier());
+            if (amount <= 0) return false;
+            inputs.set(slot, new GenericStack(stack.what(), amount));
         }
-        for (var output : pattern.outputs()) {
-            if (output.slotIndex() >= outputs.size()) return false;
-            var stack = GenericStack.fromItemStack(output.stack());
-            if (stack == null) return false;
-            outputs.set(output.slotIndex(), stack);
+        for (int slot = 0; slot < pattern.getOutputs().size(); slot++) {
+            outputs.set(slot, pattern.getOutputs().get(slot));
         }
         return replaceProcessingInventories(inputs, outputs);
     }
@@ -2175,13 +2179,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             boolean carriesNetworkBlank = isRefundableEncodedPattern(
                     encodedInventory.getStackInSlot(0));
             boolean stagedNetworkBlank = false;
+            var processingInputs = snapshotProcessingInputs();
+            var processingOutputs = snapshotProcessingOutputs();
             ae2EncodingInProgress = true;
             try {
                 stagedNetworkBlank = stageNetworkBlankPattern();
                 try (var ignored = ExtendedAEPlusEncodingCompat.suppressAutomaticUpload(this)) {
                     super.encode();
                 }
-                applyConfiguredProcessingConversion();
+                applyConfiguredProcessingConversion(processingInputs, processingOutputs);
             } finally {
                 ae2EncodingInProgress = false;
                 if (stagedNetworkBlank) returnStagedBlankPatternToNetwork();
@@ -2436,14 +2442,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     /** Applies the persistent processing configuration to the freshly encoded pattern. */
-    private void applyConfiguredProcessingConversion() {
+    private void applyConfiguredProcessingConversion(
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         if (tianshuMode != TianshuEncodingMode.PROCESSING
                 || processingEncodingType == ProcessingPatternEncodingType.NORMAL) return;
         var inventory = tianshuHost.getLogic().getEncodedPatternInv();
         var source = inventory.getStackInSlot(0);
         if (source.isEmpty()) return;
         var converted = convertConfiguredProcessingPattern(
-                source, getAdvancedEncodingConfig(), getOverloadEncodingConfig());
+                source, getAdvancedEncodingConfig(), getOverloadEncodingConfig(), draftInputs, draftOutputs);
         if (converted != null && !converted.isEmpty()) {
             inventory.setItemDirect(0, converted);
         }
@@ -2453,14 +2460,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private ItemStack convertConfiguredProcessingPattern(
             ItemStack source,
             @Nullable ProcessingPatternEncodingType.AdvancedConfig advancedConfig,
-            @Nullable ProcessingPatternEncodingType.OverloadConfig overloadConfig) {
+            @Nullable ProcessingPatternEncodingType.OverloadConfig overloadConfig,
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         ItemStack converted = source;
         if (advancedConfig != null) {
             converted = convertToAdvanced(converted, advancedConfig);
             if (converted == null || converted.isEmpty()) return null;
         }
         if (overloadConfig != null) {
-            converted = convertToOverload(converted, overloadConfig);
+            converted = convertToOverload(converted, overloadConfig, draftInputs, draftOutputs);
             if (converted == null || converted.isEmpty()) return null;
         }
         return converted;
@@ -2478,7 +2486,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     @Nullable
     private ItemStack convertToOverload(
-            ItemStack source, @Nullable ProcessingPatternEncodingType.OverloadConfig config) {
+            ItemStack source, @Nullable ProcessingPatternEncodingType.OverloadConfig config,
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         if (config == null) return null;
         try {
             var editable = conversionService.resolveEditableSource(
@@ -2488,11 +2497,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             var parsed = editable.parsedPattern();
             var builder = EncodedOverloadPattern.builder();
             for (var input : parsed.inputs()) {
-                builder.input(input.slotIndex(), config.isInputIdOnly(input.slotIndex())
+                builder.input(input.slotIndex(), isEncodedSlotIdOnly(
+                        AEItemKey.of(input.stack()), draftInputs, config::isInputIdOnly)
                         ? MatchMode.ID_ONLY : MatchMode.STRICT);
             }
             for (var output : parsed.outputs()) {
-                builder.output(output.slotIndex(), config.isOutputIdOnly(output.slotIndex())
+                builder.output(output.slotIndex(), isEncodedSlotIdOnly(
+                        AEItemKey.of(output.stack()), draftOutputs, config::isOutputIdOnly)
                         ? MatchMode.ID_ONLY : MatchMode.STRICT);
             }
             return conversionService.createOverloadPatternStack(
@@ -2500,6 +2511,20 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         } catch (RuntimeException ignored) {
             return null;
         }
+    }
+
+    private static boolean isEncodedSlotIdOnly(
+            AEKey key, List<GenericStack> draft, java.util.function.IntPredicate idOnly) {
+        boolean found = false;
+        for (int slot = 0; slot < draft.size(); slot++) {
+            var stack = draft.get(slot);
+            if (stack == null || !stack.what().equals(key)) continue;
+            // AE2 removes blank slots and merges equal keys. Attach the mode to the original
+            // item, not its former screen index; a merged strict requirement stays strict.
+            if (!idOnly.test(slot)) return false;
+            found = true;
+        }
+        return found;
     }
 
     private ItemStack encodeSelectedClosedLoopCandidate() {

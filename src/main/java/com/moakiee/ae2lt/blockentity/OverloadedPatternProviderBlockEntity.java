@@ -163,7 +163,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             }
             var logic = be.getOverloadedLogic();
             if (logic != null) {
-                // The overflow queue carries explicit 5..20 tick deadlines.
+                // Overflow learns receipt intervals and keeps continuous consumers hot.
                 // Check the O(1) due time from the BE ticker so AE2's adaptive
                 // grid-tick SLOWER modulation cannot delay an already-due retry.
                 logic.tickOverflowRetries();

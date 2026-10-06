@@ -1,0 +1,21 @@
+// Native amount-editing and limited-input machine regressions.
+// Supply -Pae2ltOverloadRefillModsDir=/path/to/mods with a Re-Avaritia JAR.
+allprojects {
+    afterEvaluate {
+        def modsDir = providers.gradleProperty('ae2ltOverloadRefillModsDir').orNull
+        if (modsDir == null || !file(modsDir).isDirectory()) {
+            throw new GradleException('Set -Pae2ltOverloadRefillModsDir to the target-mod directory')
+        }
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/OverloadQuantityRefillGameTests.java'])
+        sourceSets.jdb.resources.srcDir 'src/overloadRefillTest/resources'
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'top.theillusivec4.curios', 'de.mari_023'])
+        }
+        dependencies.add('runtimeOnly', files(fileTree(modsDir) { include 'Re-Avaritia-neoforge-*.jar' }))
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_overload_refill,ae2lt'
+            gameDirectory = project.layout.buildDirectory.dir('overload-quantity-refill-native').get().asFile
+        }
+    }
+}

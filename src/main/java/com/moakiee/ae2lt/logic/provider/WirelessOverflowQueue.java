@@ -12,14 +12,14 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.GenericStack;
 
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessConnection;
+import com.moakiee.ae2lt.logic.transfer.TransferPollSchedule;
 
-/** Wireless overflow ownership, retry deadlines and compact pattern references. */
+/** Wireless overflow ownership, learned receipt cadence and compact pattern references. */
 final class WirelessOverflowQueue {
     private static final int MAX_BUCKETS = 1024;
     private static final int REARM_BUCKETS = 768;
-    private static final int RETRY_MIN = 5;
-    private static final int RETRY_MAX = 20;
-    private static final int RETRY_STEP = 5;
+    private static final int MAX_IDLE_DELAY = 20;
+    private static final int UNAVAILABLE_RETRY_DELAY = 20;
 
     enum OverflowAttemptResult {
         CLEARED(true, false, true),
@@ -179,11 +179,12 @@ final class WirelessOverflowQueue {
         return retries.pollDue(gameTick);
     }
 
-    void rescheduleBlocked(
+    void rescheduleUnavailable(
             WirelessConnection connection, Bucket bucket, long gameTick) {
-        bucket.retryDelay = nextRetryDelay(
-                bucket.retryDelay, OverflowAttemptResult.BLOCKED);
-        schedule(connection, bucket, gameTick + bucket.retryDelay);
+        // An unloaded/missing target is not evidence about its consumption rate.
+        bucket.retrySchedule.reset();
+        bucket.observationPending = true;
+        schedule(connection, bucket, gameTick + UNAVAILABLE_RETRY_DELAY);
     }
 
     void reschedule(
@@ -191,9 +192,16 @@ final class WirelessOverflowQueue {
             Bucket bucket,
             long gameTick,
             OverflowAttemptResult result) {
-        bucket.retryDelay = nextRetryDelay(
-                bucket.retryDelay, result);
-        schedule(connection, bucket, gameTick + bucket.retryDelay);
+        if (!result.reschedule()) return;
+        if (bucket.observationPending || gameTick > bucket.dueTick) {
+            // A late budget-limited visit cannot measure the machine's period either.
+            bucket.retrySchedule.beginObservation(gameTick);
+            bucket.observationPending = false;
+        }
+        int delay = result == OverflowAttemptResult.PROGRESSED
+                ? bucket.retrySchedule.success(gameTick)
+                : bucket.retrySchedule.failure(gameTick, MAX_IDLE_DELAY);
+        schedule(connection, bucket, gameTick + delay);
     }
 
     long nextDueTick() {
@@ -236,8 +244,9 @@ final class WirelessOverflowQueue {
         var owner = adopt(connection);
         owner.setWirelessOverflow(bucket);
         ownersByAddress.putIfAbsent(owner, owner);
-        bucket.retryDelay = initialRetryDelay();
-        schedule(connection, bucket, gameTick + bucket.retryDelay);
+        bucket.retrySchedule.beginObservation(gameTick);
+        bucket.observationPending = false;
+        schedule(connection, bucket, gameTick + 1);
         refreshBackpressure();
     }
 
@@ -245,6 +254,7 @@ final class WirelessOverflowQueue {
             WirelessConnection connection, Bucket bucket, long dueTick) {
         var owner = canonical(connection);
         if (owner != null && owner.wirelessOverflow() == bucket) {
+            bucket.dueTick = dueTick;
             retries.schedule(owner, dueTick);
         }
     }
@@ -261,7 +271,9 @@ final class WirelessOverflowQueue {
         short stuckIndex;
         long remaining;
         final RoutedPatternOverflow fallback;
-        int retryDelay = initialRetryDelay();
+        final TransferPollSchedule retrySchedule = new TransferPollSchedule();
+        long dueTick;
+        boolean observationPending;
 
         private Bucket(
                 boolean compactMode,
@@ -320,21 +332,5 @@ final class WirelessOverflowQueue {
         public void setPatternId(short patternId) {
             this.patternId = patternId;
         }
-    }
-
-    static int initialRetryDelay() {
-        return RETRY_MIN;
-    }
-
-    static int nextRetryDelay(
-            int currentDelay, OverflowAttemptResult result) {
-        if (result == OverflowAttemptResult.PROGRESSED) {
-            return RETRY_MIN;
-        }
-        if (result == OverflowAttemptResult.CLEARED) {
-            return 0;
-        }
-        int normalized = Math.clamp(currentDelay, RETRY_MIN, RETRY_MAX);
-        return Math.min(RETRY_MAX, normalized + RETRY_STEP);
     }
 }

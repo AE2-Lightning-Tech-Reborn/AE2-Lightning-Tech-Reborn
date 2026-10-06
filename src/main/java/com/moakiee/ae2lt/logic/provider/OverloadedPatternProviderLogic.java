@@ -1274,12 +1274,12 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
             var targetLevel = server.getLevel(conn.dimension());
             if (targetLevel == null || !targetLevel.isLoaded(conn.pos())) {
-                wirelessOverflow.rescheduleBlocked(conn, bucket, gameTick);
+                wirelessOverflow.rescheduleUnavailable(conn, bucket, gameTick);
                 continue;
             }
 
             if (conn.resolveAdapter(targetLevel) == null) {
-                wirelessOverflow.rescheduleBlocked(conn, bucket, gameTick);
+                wirelessOverflow.rescheduleUnavailable(conn, bucket, gameTick);
                 continue;
             }
 
