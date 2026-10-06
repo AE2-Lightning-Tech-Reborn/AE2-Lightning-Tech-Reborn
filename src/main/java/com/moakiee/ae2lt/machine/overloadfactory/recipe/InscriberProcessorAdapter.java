@@ -20,6 +20,7 @@ import appeng.recipes.handlers.InscriberRecipe;
 import com.mojang.logging.LogUtils;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +31,7 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraftforge.common.crafting.CompoundIngredient;
 import net.minecraftforge.common.crafting.StrictNBTIngredient;
+import net.minecraftforge.common.crafting.DifferenceIngredient;
 import net.minecraftforge.fluids.FluidStack;
 
 /** Missing bulk processor recipes, derived before recipe scripts from the datapack recipe graph. */
@@ -39,8 +41,13 @@ final class InscriberProcessorAdapter {
     private static final int MAX_DEPTH = 16;
     private static final int MAX_VARIANTS = 128;
     private static final int MAX_OPERATIONS = 1_000_000;
+    private static final ResourceLocation PRINTED_SILICON = new ResourceLocation("ae2:printed_silicon");
+    private static final ResourceLocation SILICON = new ResourceLocation("ae2:silicon");
+    private static final ResourceLocation EXTENDEDAE_SILICON_BLOCK = new ResourceLocation("expatternprovider:silicon_block");
+    private static final ResourceLocation AE2LT_SILICON_BLOCK = new ResourceLocation("ae2lt:silicon_block");
 
     private final List<RecipeHolder<InscriberRecipe>> printing;
+    private final List<ItemStack> inscriberOutputs;
     private final List<Compression> compressions;
     private int visited;
     private final UnaryOperator<Ingredient> lookup;
@@ -50,13 +57,20 @@ final class InscriberProcessorAdapter {
         this.lookup = lookup;
         printing = inscribers.stream().filter(holder -> {
             var recipe = holder.value();
-            // INSCRIBE preserves both side slots; only one occupied template is unfolded.
-            return recipe.getProcessType() == InscriberProcessType.INSCRIBE
-                    && (recipe.getTopOptional().isEmpty() != recipe.getBottomOptional().isEmpty())
+            boolean topEmpty = recipe.getTopOptional().isEmpty();
+            boolean bottomEmpty = recipe.getBottomOptional().isEmpty();
+            // INSCRIBE preserves its side template; a middle-only PRESS consumes only its middle.
+            boolean singleConsumedInput = (recipe.getProcessType() == InscriberProcessType.INSCRIBE
+                    && (topEmpty || bottomEmpty))
+                    || (recipe.getProcessType() == InscriberProcessType.PRESS && topEmpty && bottomEmpty);
+            return singleConsumedInput
                     && hasItems(recipe.getMiddleInput())
                     && !recipe.getResultItem().isEmpty()
-                    && hasItems(recipe.getTopOptional().isEmpty() ? recipe.getBottomOptional() : recipe.getTopOptional());
+                    && ((topEmpty && bottomEmpty)
+                            || hasItems(topEmpty ? recipe.getBottomOptional() : recipe.getTopOptional()));
         }).toList();
+        inscriberOutputs = inscribers.stream().map(holder -> holder.value().getResultItem())
+                .filter(stack -> !stack.isEmpty()).toList();
         compressions = compressions(sources);
     }
 
@@ -103,47 +117,91 @@ final class InscriberProcessorAdapter {
 
     private List<Material> resolve(Ingredient ingredient, int units, Set<ResourceLocation> path, int depth) {
         if (++visited > 10_000) throw new IllegalArgumentException("inscriber graph is too large");
-        if (depth >= MAX_DEPTH) return List.of(new Material(ingredient, units, "raw"));
+        if (depth >= MAX_DEPTH) return List.of();
         var candidates = printing.stream().filter(h -> matches(ingredient, h.value().getResultItem())).toList();
         var resolved = new ArrayList<Material>();
-        var covered = new ArrayList<ItemStack>();
         for (var holder : candidates) {
             if (!path.add(holder.id())) continue;
             try {
                 int amount = checkedMultiply(units, holder.value().getResultItem().getCount());
-                // Stop a cyclic route at its existing ingredient, without dropping any consumed material.
-                for (var material : resolve(holder.value().getMiddleInput(), amount, path, depth + 1)) {
+                var materials = isSiliconPrint(holder.value())
+                        ? preferredSiliconBlock(amount)
+                        : resolve(holder.value().getMiddleInput(), amount, path, depth + 1);
+                for (var material : materials) {
                     resolved.add(new Material(material.ingredient(), material.units(), holder.id() + "/" + material.route()));
                 }
-                covered.add(holder.value().getResultItem());
-            } catch (ArithmeticException e) {
-                // The original intermediate remains usable if this expansion needs an excessive batch.
+            } catch (ArithmeticException ignored) {
+                // An oversized expansion cannot safely become an intermediate input.
             } finally {
                 path.remove(holder.id());
             }
         }
-        if (!fullyCovered(ingredient, covered)) {
-            var blocks = compressions.stream().filter(c -> matches(ingredient, c.material())).toList();
-            var compressed = new ArrayList<ItemStack>();
+        // Never feed an inscriber product into the factory. Prefer reversible blocks
+        // for ordinary materials and keep the source predicate for unpackable ones.
+        var raw = remainingIngredient(ingredient, inscriberOutputs);
+        if (!raw.isEmpty()) {
+            var excluded = new ArrayList<>(inscriberOutputs);
+            var blocks = compressions.stream()
+                    .filter(c -> matches(ingredient, c.material()))
+                    .filter(c -> inscriberOutputs.stream().noneMatch(output -> output.is(c.material().getItem())))
+                    .toList();
             for (var block : blocks) {
                 try {
                     resolved.add(new Material(StrictNBTIngredient.of( block.block()),
                             checkedMultiply(units, block.units()), "block/" + block.route()));
-                    compressed.add(block.material());
+                    excluded.add(block.material());
                 } catch (ArithmeticException ignored) { }
             }
-            // Keep the original predicate (including tags/custom components) if any alternatives remain.
-            var allCovered = new ArrayList<>(covered);
-            allCovered.addAll(compressed);
-            if (!fullyCovered(ingredient, allCovered)) resolved.add(new Material(ingredient, units, "raw"));
+            raw = remainingIngredient(ingredient, excluded);
+            if (!raw.isEmpty()) resolved.add(new Material(raw, units, "raw"));
         }
         return merge(resolved);
     }
 
-    private boolean fullyCovered(Ingredient ingredient, List<ItemStack> outputs) {
+    private Ingredient remainingIngredient(Ingredient ingredient, List<ItemStack> outputs) {
         var resolved = lookup.apply(ingredient);
-        return ingredient.getClass() == Ingredient.class && resolved != null && resolved.getItems().length > 0
-                && Arrays.stream(resolved.getItems()).allMatch(stack -> outputs.stream().anyMatch(o -> o.is(stack.getItem())));
+        if (resolved == null || resolved.getItems().length == 0) return Ingredient.EMPTY;
+        if (ingredient.getClass() != Ingredient.class) {
+            // A custom predicate cannot be partially subtracted without changing its meaning.
+            return Arrays.stream(resolved.getItems())
+                    .anyMatch(stack -> outputs.stream().anyMatch(output -> output.is(stack.getItem())))
+                    ? Ingredient.EMPTY : ingredient;
+        }
+        var items = resolved.getItems();
+        var remaining = Arrays.stream(items)
+                .filter(stack -> outputs.stream().noneMatch(output -> output.is(stack.getItem())))
+                .toList();
+        if (remaining.isEmpty()) return Ingredient.EMPTY;
+        if (remaining.size() == items.length) return ingredient;
+        return DifferenceIngredient.of(ingredient, Ingredient.of(outputs.stream()));
+    }
+
+    private boolean isSiliconPrint(InscriberRecipe recipe) {
+        if (!BuiltInRegistries.ITEM.getKey(recipe.getResultItem().getItem()).equals(PRINTED_SILICON)
+                || recipe.getMiddleInput().getClass() != Ingredient.class) return false;
+        var middle = lookup.apply(recipe.getMiddleInput());
+        return middle != null && Arrays.stream(middle.getItems())
+                .anyMatch(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(SILICON));
+    }
+
+    private List<Material> preferredSiliconBlock(int units) {
+        var candidates = compressions.stream()
+                .filter(c -> BuiltInRegistries.ITEM.getKey(c.material().getItem()).equals(SILICON))
+                .toList();
+        var preferredId = preferredSiliconBlockId(candidates.stream()
+                .map(c -> BuiltInRegistries.ITEM.getKey(c.block().getItem())).toList());
+        if (preferredId == null) throw new IllegalArgumentException("no reversible ExtendedAE/LT silicon block recipe");
+        var block = candidates.stream()
+                .filter(c -> BuiltInRegistries.ITEM.getKey(c.block().getItem()).equals(preferredId))
+                .findFirst().orElseThrow();
+        return List.of(new Material(StrictNBTIngredient.of( block.block()),
+                checkedMultiply(units, block.units()), "silicon/" + block.route()));
+    }
+
+    static ResourceLocation preferredSiliconBlockId(List<ResourceLocation> available) {
+        if (available.contains(EXTENDEDAE_SILICON_BLOCK)) return EXTENDEDAE_SILICON_BLOCK;
+        if (available.contains(AE2LT_SILICON_BLOCK)) return AE2LT_SILICON_BLOCK;
+        return null;
     }
 
     private static List<Material> merge(List<Material> materials) {
