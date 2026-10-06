@@ -9,6 +9,40 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 
 class WirelessCadenceSchedulingRegressionTest {
+    private WirelessBatchCadence<String> learnedBulk() {
+        var cadence = new WirelessBatchCadence<String>();
+        cadence.recordSuccess("target", pattern, 0, 2000, false);
+        cadence.usesBulkRefill("target", pattern, 2000);
+        for (int tick = 5; tick <= 20; tick += 5) {
+            cadence.recordSuccess("target", pattern, tick, 512, false,
+                    ProviderTarget.BaselineStatus.PREFIX_COMPLETE);
+        }
+        assertTrue(cadence.usesBulkRefill("target", pattern, 2000));
+        return cadence;
+    }
+
+    @Test
+    void rejectedSegmentKeepsTimingButCallerLimitedPrefixMustResetIt() {
+        for (boolean limited : new boolean[] {false, true}) {
+            var cadence = learnedBulk();
+            int delay = cadence.recordSuccess("target", pattern, 40, 512, false,
+                    ProviderTarget.BaselineStatus.PREFIX_COMPLETE, limited);
+            assertEquals(!limited, cadence.usesBulkRefill("target", pattern, 2000));
+            if (limited) assertTrue(delay <= 5);
+            else assertEquals(21, delay);
+        }
+    }
+
+    @Test
+    void partialOwnershipDoesNotProveARejectedSegment() {
+        var cadence = learnedBulk();
+        int delay = cadence.recordSuccess("target", pattern, 40, 612, false,
+                ProviderTarget.BaselineStatus.NONE, false);
+        assertTrue(delay <= 5);
+        assertFalse(cadence.usesBulkRefill("target", pattern, 2000));
+    }
+
+
     private final IPatternDetails pattern = new EmptyPattern();
 
     @Test

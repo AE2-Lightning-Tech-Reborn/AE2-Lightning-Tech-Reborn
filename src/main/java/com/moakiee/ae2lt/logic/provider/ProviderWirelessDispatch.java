@@ -489,10 +489,10 @@ final class ProviderWirelessDispatch {
                 long rampAllowance = ((ProviderTarget) connection)
                         .batchStepRampAllowance(
                                 pattern, equalShareLimit, gameTick);
-                int provenTransaction = ((ProviderTarget) connection)
-                        .provenReservoirTransaction(pattern, gameTick);
+                int reservoirCapacity = ((ProviderTarget) connection)
+                        .reservoirRefillCapacity(pattern, gameTick);
                 boolean bulkRefill = batchCadence.usesBulkRefill(
-                        connection, pattern, provenTransaction);
+                        connection, pattern, reservoirCapacity);
                 if (rampAllowance > share
                         && rampAllowance <= equalShareLimit) {
                     share = Math.min(
@@ -513,8 +513,8 @@ final class ProviderWirelessDispatch {
                 if (share <= 0L) {
                     continue;
                 }
-                ((ProviderTarget) connection).preferReservoirTransaction(
-                        pattern, bulkRefill && share >= provenTransaction);
+                ((ProviderTarget) connection).preferSegmentedReservoirRefill(
+                        pattern, bulkRefill && share >= reservoirCapacity);
                 boolean preserveBatchHistory =
                         batchCadence.shouldPreserveBatchHistory(
                                 connection, pattern, gameTick)
@@ -529,7 +529,7 @@ final class ProviderWirelessDispatch {
                             preserveBatchHistory);
                 } finally {
                     ((ProviderTarget) connection)
-                            .preferReservoirTransaction(pattern, false);
+                            .preferSegmentedReservoirRefill(pattern, false);
                 }
                 if (result.outcome.consumesTargetAttempt()) {
                     state.probeArmed = false;
@@ -546,7 +546,8 @@ final class ProviderWirelessDispatch {
                             gameTick,
                             result.ownedCopies,
                             result.acceptedFullChunk,
-                            result.baselineStatus);
+                            result.baselineStatus,
+                            result.requestLimited);
                     pass.successAndCover(
                             connection, result.ownedCopies, coverageTicks);
                     recordSuccess(connection, pattern, gameTick, false);

@@ -153,9 +153,8 @@ class AdaptiveBatchDispatchStressTest {
 
     @Test
     void reconfiguringMachinesKeepEightyPercentThroughputAndBoundedDispatch() {
-        // TODO(scheduler-reconfiguration-calls): RC4 throughput is 89.53% (>=80%),
-        // but physical-call cost reaches 742.19% (budget 400%). Accepted for this
-        // branch rollout; retain the original cost budget and ownership checks.
+        // Abrupt rate changes must recover within the original throughput and
+        // physical-call budgets; keep the per-target checks as well as the totals.
         int ticks = RECONFIGURING_MODEL.stageTicks
                 * RECONFIGURING_MODEL.stages.size();
         var result = simulate(RECONFIGURING_MODEL, ticks);
