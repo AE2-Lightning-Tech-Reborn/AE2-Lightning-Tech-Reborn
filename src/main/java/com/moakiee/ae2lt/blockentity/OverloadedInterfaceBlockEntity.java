@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.WeakHashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -245,11 +244,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             if (elapsed >= 0 && elapsed < ACTIVE_LEARNING_TICKS) {
                 cooldownUntil = now + Math.max(1, predictedGap - (int) elapsed);
             } else {
-                // TODO: Improve first-output / long-idle detection without increasing empty polling.
-                // FAST's 20-tick cap permits a 19-tick cold wait; the two strict cold-start
-                // GameTests remain known failures. A 5-tick cap would quadruple steady idle
-                // visits, so retain this budget pending an external inventory-change signal
-                // or a separately evaluated polling tradeoff. See wireless-io-alpha3-test-port.md.
+                // Cold inventories retain bounded polling without reacting to unrelated
+                // block-entity dirty marks. FAST may wait up to 20 ticks for new output.
                 int maximum = mode == IOSpeedMode.FAST ? FAST_CD_MAX : NORMAL_CD_MAX;
                 idleDelay = Math.min(maximum, idleDelay + Math.max(1, maximum / 10));
                 cooldownUntil = now + idleDelay;
@@ -753,29 +749,20 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     static final class IoScheduledEntry {
-        final @Nullable OverloadedInterfaceBlockEntity owner;
         final WirelessConnection conn;
         final ConnectionState state;
         final AEKeyType keyType;
         final IoDirection direction;
         final int generation;
         long scheduledFor;
-        @Nullable WeakReference<BlockEntity> observedTarget;
 
-        IoScheduledEntry(@Nullable OverloadedInterfaceBlockEntity owner, WirelessConnection conn, ConnectionState state,
-                         AEKeyType keyType, IoDirection direction,
-                         int generation) {
-            this.owner = owner;
+        IoScheduledEntry(WirelessConnection conn, ConnectionState state,
+                         AEKeyType keyType, IoDirection direction, int generation) {
             this.conn = conn;
             this.state = state;
             this.keyType = keyType;
             this.direction = direction;
             this.generation = generation;
-        }
-
-        IoScheduledEntry(WirelessConnection conn, ConnectionState state,
-                         AEKeyType keyType, IoDirection direction, int generation) {
-            this(null, conn, state, keyType, direction, generation);
         }
     }
 
@@ -813,9 +800,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     { for (int i = 0; i < IO_WHEEL_SLOTS; i++) ioWheel[i] = new ArrayList<>(); }
     private final Map<IoEntryKey, IoScheduledEntry> ioEntries = new HashMap<>();
     private final List<IoScheduledEntry> dueIoEntries = new ArrayList<>();
-    private final Set<IoScheduledEntry> changedTargets = new HashSet<>();
-    private static final Map<BlockEntity, List<WeakReference<IoScheduledEntry>>> TARGET_CHANGE_LISTENERS =
-            new WeakHashMap<>();
     private final ImportBackpressureWaiters importBackpressureWaiters = new ImportBackpressureWaiters();
     private long lastIOWheelTick = -1;
     private long lastIOEntryRefreshTick = Long.MIN_VALUE;
@@ -1238,7 +1222,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             slot.clear();
         }
         dueIoEntries.clear();
-        changedTargets.clear();
         ioEntries.clear();
         importBackpressureWaiters.clear();
         lastIOWheelTick = -1;
@@ -1489,7 +1472,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
         refreshIOWheel(sl, valid, now, activeImport, activeExport);
         pollIOWheel(now);
-        wakeChangedTargets(now);
         importBackpressureWaiters.resumeReady(keyTypeLockUntil, now, dueIoEntries);
 
         for (var entry : dueIoEntries) {
@@ -1575,68 +1557,13 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private void ensureIOEntry(WirelessConnection conn, ConnectionState state,
                                AEKeyType keyType, IoDirection direction, long now) {
         var key = new IoEntryKey(conn, keyType, direction);
-        var existing = ioEntries.get(key);
-        if (existing != null) {
-            registerTargetChangeListener(existing);
+        if (ioEntries.containsKey(key)) {
             return;
         }
-        var entry = new IoScheduledEntry(this, conn, state, keyType, direction, ioScheduleGeneration);
+        var entry = new IoScheduledEntry(conn, state, keyType, direction, ioScheduleGeneration);
         entry.state.cdFor(keyType, direction).reset(ioSpeedMode);
         ioEntries.put(key, entry);
-        registerTargetChangeListener(entry);
         scheduleEntryAt(entry, now + 1);
-    }
-
-    private void registerTargetChangeListener(IoScheduledEntry entry) {
-        if (entry.direction != IoDirection.IMPORT || entry.state.storageBERef == null) return;
-        var target = entry.state.storageBERef.get();
-        if (target == null || entry.observedTarget != null && entry.observedTarget.get() == target) return;
-        entry.observedTarget = new WeakReference<>(target);
-        TARGET_CHANGE_LISTENERS.computeIfAbsent(target, ignored -> new ArrayList<>())
-                .add(new WeakReference<>(entry));
-    }
-
-    public static void onTargetInventoryChanged(BlockEntity target) {
-        // Most worlds/targets have no wireless import observers. In particular,
-        // exports must not perform a weak-map lookup for every vanilla slot write.
-        if (!(target.getLevel() instanceof ServerLevel serverLevel)
-                || !serverLevel.getServer().isSameThread()) return;
-        if (TARGET_CHANGE_LISTENERS.isEmpty()) return;
-        var listeners = TARGET_CHANGE_LISTENERS.get(target);
-        if (listeners == null) return;
-        listeners.removeIf(reference -> {
-            var entry = reference.get();
-            if (entry == null || entry.owner == null || entry.owner.isRemoved()
-                    || entry.generation != entry.owner.ioScheduleGeneration
-                    || entry.state.storageBERef == null || entry.state.storageBERef.get() != target) return true;
-            // An entry already due this/next tick does not need a second wakeup. Slot-wise
-            // writers often issue dozens of setChanged callbacks for the same inventory.
-            // Keep cold-idle entries observable, but avoid rechecking their owner's filters
-            // and inserting into the changed set on every ordinary production-slot write.
-            if (entry.owner.ioSpeedMode != IOSpeedMode.FAST
-                    || !importChangeNeedsWake(entry.scheduledFor, serverLevel.getGameTime())
-                    || entry.owner.changedTargets.contains(entry)) return false;
-            if (!entry.owner.isEntryStillValid(entry)) return true;
-            entry.owner.changedTargets.add(entry);
-            return false;
-        });
-        if (listeners.isEmpty()) TARGET_CHANGE_LISTENERS.remove(target);
-    }
-
-    /** Already-due work is handled by the wheel; notifications only shorten a longer idle wait. */
-    static boolean importChangeNeedsWake(long scheduledFor, long now) {
-        return now < Long.MAX_VALUE && scheduledFor > now + 1;
-    }
-
-    private void wakeChangedTargets(long now) {
-        if (changedTargets.isEmpty()) return;
-        for (var entry : changedTargets) {
-            if (!isEntryStillValid(entry) || entry.scheduledFor <= now) continue;
-            ioWheel[(int) (entry.scheduledFor % IO_WHEEL_SLOTS)].remove(entry);
-            entry.scheduledFor = now;
-            dueIoEntries.add(entry);
-        }
-        changedTargets.clear();
     }
 
     private static boolean isWirelessIoKeyType(AEKeyType keyType) {

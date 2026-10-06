@@ -17,7 +17,6 @@ archive/
 docs/
 !docs/
 docs/*
-!docs/pr-12-review.md
 !docs/wireless-io-alpha3-test-port.md
 !docs/tianshu-deferred-matrix-returns.md
 !docs/addon-api-alpha.md
