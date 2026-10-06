@@ -1388,7 +1388,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         boolean hasConnections = !connections.isEmpty();
         boolean hasEnergyOutput = energyOutputDir != null;
         boolean hasFeKey = AppFluxHelper.FE_KEY != null;
-        boolean mayTransferEnergy = (wirelessMode && hasConnections) || hasEnergyOutput;
+        boolean mayTransferEnergy = wirelessMode ? hasConnections : hasEnergyOutput;
         boolean hasInduction = mayTransferEnergy && hasFeKey && hasInductionCard();
 
         return OverloadedInterfaceTickDecider.hasServerEnergyWork(
