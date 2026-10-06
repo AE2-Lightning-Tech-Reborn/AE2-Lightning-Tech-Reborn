@@ -222,18 +222,24 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         }
     }
 
-    public void nextPage() {
-        if (isClientSide()) {
-            sendClientAction("nextPage");
+    private void nextPage() {
+        if (isServerSide()) {
+            showPage(currentPage + 1);
         }
-        showPage(currentPage + 1);
     }
 
-    public void prevPage() {
-        if (isClientSide()) {
-            sendClientAction("prevPage");
+    private void prevPage() {
+        if (isServerSide()) {
+            showPage(currentPage - 1);
         }
-        showPage(currentPage - 1);
+    }
+
+    public void clientNextPage() {
+        sendClientAction("nextPage");
+    }
+
+    public void clientPrevPage() {
+        sendClientAction("prevPage");
     }
 
     // ── Mode cycles ──────────────────────────────────────────────────────

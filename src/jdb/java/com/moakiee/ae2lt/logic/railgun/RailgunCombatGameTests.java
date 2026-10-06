@@ -243,8 +243,8 @@ public final class RailgunCombatGameTests {
                 check(cow.invulnerableTime > 10, "EHV damage leaves ordinary hurt cooldown active");
                 check(RailgunEnergyBuffer.read(g) == fe - 12_000, "4000 FE per EHV settle");
                 check(inventory.extract(LightningKey.EXTREME_HIGH_VOLTAGE, 1000, Actionable.SIMULATE, source) == 0, "16 EHV per settle");
-                check(inventory.extract(LightningKey.HIGH_VOLTAGE, 1000, Actionable.SIMULATE, source) == 100, "EHV mode never spends HV");
-                check(!(boolean) settle.invoke(null, level, p, g, state, 5), "no EHV stops beam despite HV stock");
+                check(inventory.extract(LightningKey.HIGH_VOLTAGE, 1000, Actionable.SIMULATE, source) == 100, "full EHV payment does not spend HV");
+                check(!(boolean) settle.invoke(null, level, p, g, state, 5), "100 HV cannot compensate the 16 EHV cost");
                 check(RailgunEnergyBuffer.read(g) == fe - 12_000, "failed EHV settle leaves FE intact");
                 var settings = g.get(ModDataComponents.RAILGUN_SETTINGS.get());
                 g.set(ModDataComponents.RAILGUN_SETTINGS.get(), settings.withEhvBeam(false));

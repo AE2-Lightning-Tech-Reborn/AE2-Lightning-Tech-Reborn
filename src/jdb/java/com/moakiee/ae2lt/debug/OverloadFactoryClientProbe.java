@@ -91,7 +91,7 @@ public final class OverloadFactoryClientProbe {
         var fixture = fixture(mc);
         if (fixture != null) {
             screenshotPrefix = "factory-inscriber-";
-            check(fixture.value().totalEnergy() == 123456, "client did not receive KJS's final wrapper energy");
+            checkFixture(fixture.value());
             check(visibleNative.contains(fixture.value()), "JEI omitted the derived wrapper");
             runtime.getRecipesGui().showRecipes(jei.getRecipeCategory(OverloadProcessingCategory.TYPE),
                     java.util.List.of(fixture.value()), java.util.List.of());
@@ -115,7 +115,7 @@ public final class OverloadFactoryClientProbe {
             var fixture = fixture(mc);
             if (fixture != null) {
                 screenshotPrefix = "factory-inscriber-";
-                OverloadFactoryClientProbe.check(fixture.value().totalEnergy() == 123456, "client did not receive KJS's final wrapper energy");
+                checkFixture(fixture.value());
                 var wrapped = emi.getRecipe(fixture.id());
                 OverloadFactoryClientProbe.check(wrapped != null && wrapped.getCategory() == ownCategory, "EMI omitted the derived wrapper");
                 EmiApi.displayRecipe(wrapped);
@@ -128,9 +128,18 @@ public final class OverloadFactoryClientProbe {
 
     private static net.minecraft.world.item.crafting.RecipeHolder<com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe>
             fixture(Minecraft mc) {
-        return OverloadProcessingRecipeCatalog.displayRecipes(mc.level.getRecipeManager()).stream()
+        var routes = OverloadProcessingRecipeCatalog.displayRecipes(mc.level.getRecipeManager()).stream()
                 .filter(h -> h.id().getPath().startsWith("derived/inscriber/ae2lt_overload/inscriber/processor_fixture/"))
-                .findFirst().orElse(null);
+                .toList();
+        check(routes.size() <= 1, "compressed fixture has duplicate loose-item routes");
+        return routes.isEmpty() ? null : routes.getFirst();
+    }
+
+    private static void checkFixture(com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe recipe) {
+        long expectedEnergy = Boolean.getBoolean("ae2lt.inscriberScriptTest") ? 123456 : 400000;
+        check(recipe.totalEnergy() == expectedEnergy, "client did not receive the final wrapper energy");
+        check(recipe.itemInputs().size() == 3 && recipe.itemInputs().stream().allMatch(input -> input.count() == 4),
+                "client did not receive the three compressed input routes");
     }
 
     private static void check(boolean condition, String message) {

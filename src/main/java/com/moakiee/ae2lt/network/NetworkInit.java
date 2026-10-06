@@ -153,11 +153,11 @@ public final class NetworkInit {
                 RailgunFirePacket.TYPE,
                 RailgunFirePacket.STREAM_CODEC,
                 RailgunFirePacket::handle);
-        registrar.playToClient(
+        registrar.versioned("railgun-beam-2").playToClient(
                 RailgunBeamUpdatePacket.TYPE,
                 RailgunBeamUpdatePacket.STREAM_CODEC,
                 RailgunBeamUpdatePacket::handle);
-        registrar.playToClient(
+        registrar.versioned("railgun-beam-2").playToClient(
                 RailgunBeamChainFxPacket.TYPE,
                 RailgunBeamChainFxPacket.STREAM_CODEC,
                 RailgunBeamChainFxPacket::handle);

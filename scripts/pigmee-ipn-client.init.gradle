@@ -1,0 +1,16 @@
+// Run with -PpigmeeIpnMode=baseline|fixed|absent and optional
+// -Pae2ltJdbProbeMods=<IPN:libIPN:KotlinForForge:MouseTweaks jar paths>.
+allprojects {
+    afterEvaluate {
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', null])
+        }
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/PigmeeIpnClientProbe.java'])
+        neoForge.runs.client {
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp') })
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-ipn-client').get().asFile
+            systemProperty 'ae2lt.pigmeeIpnMode', project.findProperty('pigmeeIpnMode') ?: 'fixed'
+            programArguments.addAll '--quickPlaySingleplayer', 'PigmeeIpnTest'
+        }
+    }
+}

@@ -75,7 +75,7 @@ public class LightningSimulationChamberBlockEntity extends AENetworkedBlockEntit
     private static final String TAG_AUTO_EXPORT = "AutoExport";
     private static final String TAG_ALLOWED_OUTPUTS = "AllowedOutputs";
 
-    public static final int ENERGY_CAPACITY = 1_000_000;
+    public static final int ENERGY_CAPACITY = 20_000_000;
     public static final int SPEED_CARD_SLOTS = 4;
 
     private final LightningSimulationChamberInventory inventory =
