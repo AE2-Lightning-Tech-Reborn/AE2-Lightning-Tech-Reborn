@@ -1,0 +1,11 @@
+{
+  "parent": "ae2:block/io_port",
+  "textures": {
+    "side": "ae2lt:block/overloaded_io_port/side",
+    "back": "ae2lt:block/generics/back",
+    "bottom": "ae2lt:block/generics/bottom",
+    "front": "ae2lt:block/overloaded_io_port/front_off",
+    "top": "ae2lt:block/overloaded_io_port/top_off",
+    "particle": "#front"
+  }
+}

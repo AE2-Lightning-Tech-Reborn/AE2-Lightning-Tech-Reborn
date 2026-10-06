@@ -1440,6 +1440,9 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     }
 
     protected AllowedOutputFilter getOrBuildOutputFilter() {
+        if (!overloadedHost.isFilteredImport()) {
+            return AllowedOutputFilter.unrestricted();
+        }
         return returnPolicy.outputFilter(getAvailablePatterns());
     }
 

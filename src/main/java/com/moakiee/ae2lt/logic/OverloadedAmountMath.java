@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.logic;
 
-import java.util.Map;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 final class OverloadedAmountMath {
     private OverloadedAmountMath() {
@@ -24,12 +24,12 @@ final class OverloadedAmountMath {
     }
 
     static <K> void mergeSharedExposure(
-            Map<K, Long> capByKey,
-            Map<K, Long> amountByKey,
+            Object2LongMap<K> capByKey,
+            Object2LongMap<K> amountByKey,
             K key,
             long cap,
             long available) {
-        capByKey.merge(key, cap, OverloadedAmountMath::saturatingAdd);
-        amountByKey.merge(key, Math.max(0, available), Math::max);
+        capByKey.put(key, saturatingAdd(capByKey.getLong(key), cap));
+        amountByKey.put(key, Math.max(amountByKey.getLong(key), Math.max(0, available)));
     }
 }

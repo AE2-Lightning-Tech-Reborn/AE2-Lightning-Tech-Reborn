@@ -147,7 +147,7 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         assertTrue(actualResult > nativeEncode);
         assertTrue(duplicateCheck > actualResult);
         assertTrue(menu.contains("private ItemStack refundableEncodedPattern = ItemStack.EMPTY"));
-        assertTrue(menu.contains("settleNetworkBlankCharge(success);"));
+        assertTrue(menu.contains("settleNetworkBlankCharge();"));
         assertTrue(menu.contains("StorageHelper.poweredInsert("));
         assertTrue(menu.contains("encodedInventory.addItems(removed);"));
         assertTrue(eaepCompat.contains("eap$clientSetShiftUpload"));

@@ -25,6 +25,7 @@ import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructure
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
+import com.moakiee.ae2lt.registry.ModFumos;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.RecipeManagerByTypeAccess;
 import mezz.jei.api.IModPlugin;
@@ -105,6 +106,9 @@ public class JEIPlugin implements IModPlugin {
         registration.addIngredientInfo(
                 ModItems.PIGMEE_CORE.get(),
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
+        registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
+                Component.translatable("jei.ae2lt.rainbow_pigmee.info"),
+                Component.translatable("jei.ae2lt.rainbow_pigmee.coloring"));
 
         var level = Minecraft.getInstance().level;
         if (level == null) {
@@ -156,12 +160,8 @@ public class JEIPlugin implements IModPlugin {
                         .toList());
         registration.addRecipes(
                 OverloadProcessingCategory.TYPE,
-                RecipeManagerByTypeAccess.byType(
-                                level.getRecipeManager(),
-                                com.moakiee.ae2lt.registry.ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get())
-                        .values()
-                        .stream()
-                        .toList());
+                com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog
+                        .displayRecipes(level.getRecipeManager()));
         registration.addRecipes(
                 FirmamentConversionCategory.TYPE,
                 RecipeManagerByTypeAccess.byType(
@@ -177,6 +177,9 @@ public class JEIPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get()), LightningAssemblyCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get()), LightningSimulationCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get()), OverloadProcessingCategory.TYPE);
+        if (net.minecraftforge.fml.ModList.get().isLoaded("advanced_ae")) {
+            com.moakiee.ae2lt.integration.jei.compat.AdvancedAeFactoryJeiCompat.registerCatalyst(registration);
+        }
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.TESLA_COIL.get()), TeslaCoilCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.CRYSTAL_CATALYZER.get()), CrystalCatalyzerCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get()), CrystalCatalyzerCategory.TYPE);
@@ -219,7 +222,10 @@ public class JEIPlugin implements IModPlugin {
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,
                 clickableAreaHandler(82, 25, 35, 46, LightningSimulationCategory.TYPE));
         registration.addGuiContainerHandler(OverloadProcessingFactoryScreen.class,
-                clickableAreaHandler(84, 46, 31, 10, OverloadProcessingCategory.TYPE));
+                clickableAreaHandler(84, 46, 31, 10, net.minecraftforge.fml.ModList.get().isLoaded("advanced_ae")
+                        ? new RecipeType<?>[] {OverloadProcessingCategory.TYPE,
+                                com.moakiee.ae2lt.integration.jei.compat.AdvancedAeFactoryJeiCompat.recipeType()}
+                        : new RecipeType<?>[] {OverloadProcessingCategory.TYPE}));
         registration.addGuiContainerHandler(TeslaCoilScreen.class,
                 clickableAreaHandler(43, 22, 36, 40, TeslaCoilCategory.TYPE));
         registration.addGuiContainerHandler(CrystalCatalyzerScreen.class,
@@ -227,11 +233,11 @@ public class JEIPlugin implements IModPlugin {
     }
 
     private static <T extends AbstractContainerScreen<?>> IGuiContainerHandler<T> clickableAreaHandler(
-            int x, int y, int width, int height, RecipeType<?> recipeType) {
+            int x, int y, int width, int height, RecipeType<?>... recipeTypes) {
         return new IGuiContainerHandler<T>() {
             @Override
             public Collection<IGuiClickableArea> getGuiClickableAreas(T screen, double mouseX, double mouseY) {
-                return List.of(IGuiClickableArea.createBasic(x, y, width, height, recipeType));
+                return List.of(IGuiClickableArea.createBasic(x, y, width, height, recipeTypes));
             }
         };
     }

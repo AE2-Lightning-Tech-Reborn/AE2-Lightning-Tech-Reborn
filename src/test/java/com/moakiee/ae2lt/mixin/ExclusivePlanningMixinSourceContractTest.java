@@ -1,13 +1,18 @@
 package com.moakiee.ae2lt.mixin;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+
+import com.moakiee.ae2lt.crafting.algorithm.ExclusiveCraftingPlanning;
+import com.moakiee.thunderbolt.api.crafting.PlanningChoice;
 
 class ExclusivePlanningMixinSourceContractTest {
     private static final Path CALCULATION = Path.of(
@@ -15,8 +20,6 @@ class ExclusivePlanningMixinSourceContractTest {
     private static final Path SERVICE = Path.of(
             "src/main/java/com/moakiee/ae2lt/mixin/thunderbolt/CraftingServiceExclusivePlanningMixin.java");
     private static final Path MIXINS = Path.of("src/main/resources/ae2lt.mixins.json");
-    private static final Path HELPER = Path.of(
-            "src/main/java/com/moakiee/ae2lt/crafting/algorithm/ExclusiveCraftingPlanning.java");
     private static final Pattern PRIORITY = Pattern.compile("priority\\s*=\\s*(\\d+)");
 
     @Test
@@ -25,7 +28,6 @@ class ExclusivePlanningMixinSourceContractTest {
         String calculation = Files.readString(CALCULATION);
         String service = Files.readString(SERVICE);
         String mixins = Files.readString(MIXINS);
-        String helper = Files.readString(HELPER);
 
         var servicePriority = PRIORITY.matcher(service);
         assertTrue(servicePriority.find(), "CraftingService exclusive mixin must set an explicit priority");
@@ -54,6 +56,11 @@ class ExclusivePlanningMixinSourceContractTest {
         assertTrue(mixins.contains("thunderbolt.CraftingServiceExclusivePlanningMixin"));
         assertFalse(mixins.contains("CraftingCalculationPlanningCandidatesAccessor"));
 
-        assertTrue(helper.contains("PlanningChoice.engine(exclusive), PlanningChoice.VANILLA"));
+        for (var algorithm : ExclusiveCraftingPlanning.ownedAlgorithms()) {
+            var decision = new ExclusiveCraftingPlanning.ExclusivePlanningDecision(algorithm);
+            assertEquals(List.of(
+                    PlanningChoice.engine(ExclusiveCraftingPlanning.normalize(algorithm)),
+                    PlanningChoice.VANILLA), ExclusiveCraftingPlanning.candidatesForConfigure(decision));
+        }
     }
 }

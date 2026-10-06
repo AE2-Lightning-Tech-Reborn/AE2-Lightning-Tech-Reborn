@@ -81,15 +81,14 @@ public final class NaturalLightningTransformationHandler {
     }
 
     private static void tryCaptureLightning(ServerLevel level, BlockPos lightningPos, boolean naturalWeatherLightning) {
-        for (int yOffset = 0; yOffset <= 2; yOffset++) {
-            BlockPos rodPos = lightningPos.below(yOffset);
-            if (!level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
+        for (BlockPos rodPos : BlockPos.withinManhattan(lightningPos, 1, 1, 1)) {
+            if (!level.hasChunkAt(rodPos) || !level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
                 continue;
             }
 
             if (level.getBlockEntity(rodPos.below()) instanceof LightningCollectorBlockEntity collector
-                    && collector.canCaptureLightning()) {
-                collector.captureLightning(naturalWeatherLightning);
+                    && collector.canCaptureLightning()
+                    && collector.captureLightning(naturalWeatherLightning)) {
                 return;
             }
         }

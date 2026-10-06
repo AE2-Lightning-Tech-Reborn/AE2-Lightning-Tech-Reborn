@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.registry;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
+import com.moakiee.ae2lt.blockentity.NetworkedCrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
 import com.moakiee.ae2lt.blockentity.GhostOutputBlockEntity;
@@ -13,10 +14,12 @@ import com.moakiee.ae2lt.blockentity.LightningSimulationChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPatternStorageBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadDeviceWorkbenchBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
 import com.moakiee.ae2lt.blockentity.PigmeeMentalmathUnitBlockEntity;
@@ -90,6 +93,13 @@ public final class ModBlockEntities {
                             ModBlocks.OVERLOAD_PROCESSING_FACTORY.get())
                             .build(null));
 
+    public static final RegistryObject<BlockEntityType<MiningFactoryBlockEntity>>
+            MINING_FACTORY = BLOCK_ENTITY_TYPES.register(
+                    "mining_factory",
+                    () -> BlockEntityType.Builder.of(
+                            MiningFactoryBlockEntity::new,
+                            ModBlocks.MINING_FACTORY.get()).build(null));
+
     public static final RegistryObject<BlockEntityType<TeslaCoilBlockEntity>>
             TESLA_COIL = BLOCK_ENTITY_TYPES.register(
                     "tesla_coil",
@@ -117,8 +127,8 @@ public final class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<CrystalCatalyzerBlockEntity>>
             CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
                     "crystal_catalyzer",
-                    () -> BlockEntityType.Builder.of(
-                            CrystalCatalyzerBlockEntity::new,
+                    () -> BlockEntityType.Builder.<CrystalCatalyzerBlockEntity>of(
+                            NetworkedCrystalCatalyzerBlockEntity::new,
                             ModBlocks.CRYSTAL_CATALYZER.get())
                             .build(null));
 
@@ -153,6 +163,13 @@ public final class ModBlockEntities {
                             OverloadedInterfaceBlockEntity::new,
                             ModBlocks.OVERLOADED_INTERFACE.get())
                             .build(null));
+
+    public static final RegistryObject<BlockEntityType<OverloadedIOPortBlockEntity>>
+            OVERLOADED_IO_PORT = BLOCK_ENTITY_TYPES.register(
+                    "overloaded_io_port",
+                    () -> BlockEntityType.Builder.of(
+                            OverloadedIOPortBlockEntity::new,
+                            ModBlocks.OVERLOADED_IO_PORT.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<OverloadedPowerSupplyBlockEntity>>
             OVERLOADED_POWER_SUPPLY = ModBlocks.hasOverloadedPowerSupply()
@@ -290,6 +307,7 @@ public final class ModBlockEntities {
                             ModFumos.MOAKIEE_FUMO.get(),
                             ModFumos.CYSTRYSU_FUMO.get(),
                             ModFumos.PIGMEE_FUMO.get(),
+                            ModFumos.RAINBOW_PIGMEE_FUMO.get(),
                             ModFumos.CREATIVE_PIGMEE_FUMO.get(),
                             ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get())
                             .build(null));

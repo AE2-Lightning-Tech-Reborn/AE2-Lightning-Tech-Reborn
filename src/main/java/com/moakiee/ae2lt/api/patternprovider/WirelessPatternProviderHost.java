@@ -4,6 +4,7 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
@@ -34,5 +35,13 @@ public interface WirelessPatternProviderHost {
 
     /** Maximum number of endpoint records this host accepts. */
     int getMaxWirelessConnections();
+
+    default boolean acceptsWirelessTarget(Level level, BlockPos pos) {
+        return level.isLoaded(pos) && level.getBlockEntity(pos) != null;
+    }
+
+    default Component getWirelessTargetRejectionMessage() {
+        return Component.translatable("ae2lt.connector.not_machine");
+    }
 }
 

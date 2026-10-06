@@ -21,6 +21,18 @@ class TianshuJeiDirectUploadSourceContractTest {
     }
 
     @Test
+    void jeiTransferSupportsBothInputPackagesWithoutUsingRemovedContainerField() throws Exception {
+        String mixin = Files.readString(Path.of(
+                "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/"
+                        + "JeiRecipeTransferButtonControllerMixin.java"));
+
+        assertTrue(mixin.contains("onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z"));
+        assertTrue(mixin.contains("onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"));
+        assertFalse(mixin.contains("@Accessor(\"parentContainer\")"));
+        assertTrue(mixin.contains("player.containerMenu instanceof TianshuPatternEncodingTermMenu"));
+    }
+
+    @Test
     void ambiguousTargetsReplaceJeiWithThePickerInTheSameTick() throws Exception {
         String coordinator = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/TianshuDirectUploadClient.java"));

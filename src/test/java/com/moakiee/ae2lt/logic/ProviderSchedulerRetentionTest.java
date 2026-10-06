@@ -17,6 +17,34 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 
 class ProviderSchedulerRetentionTest {
+    @Test
+    void patternReloadRetainsProofAndItsOriginalCleanupDeadline() {
+        var dispatch = new ProviderWirelessDispatch();
+        var targets = targets(1);
+        var pattern = new Pattern();
+        dispatchTick(dispatch, targets, pattern, 0);
+        var target = (ProviderTarget) targets.get(0);
+        var proof = target.adaptiveBatchSnapshots().get(pattern);
+        dispatch.maintain(50);
+        dispatch.patternsChanged();
+        assertEquals(proof, target.adaptiveBatchSnapshots().get(pattern));
+        assertTrue(dispatch.hasMaintenanceWork());
+        dispatch.maintain(100);
+        assertFalse(target.adaptiveBatchSnapshots().isEmpty());
+        dispatch.maintain(101);
+        assertTrue(target.adaptiveBatchSnapshots().isEmpty());
+        assertFalse(dispatch.hasMaintenanceWork());
+    }
+
+    @Test
+    void clearingDispatcherDropsPatternMaintenanceWork() {
+        var dispatch = new ProviderWirelessDispatch();
+        dispatchTick(dispatch, targets(1), new Pattern(), 0);
+        assertTrue(dispatch.hasMaintenanceWork());
+        dispatch.clear();
+        assertFalse(dispatch.hasMaintenanceWork());
+    }
+
     @org.junit.jupiter.api.BeforeAll
     static void bootstrapMinecraft() {
         net.minecraft.SharedConstants.tryDetectVersion();

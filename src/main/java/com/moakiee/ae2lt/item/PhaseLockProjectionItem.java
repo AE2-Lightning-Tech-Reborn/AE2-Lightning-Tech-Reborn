@@ -23,7 +23,6 @@ import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorMaterials;
 import com.moakiee.ae2lt.celestweave.PhaseWingFlight;
-import com.moakiee.ae2lt.celestweave.phase.PhaseLockProjectionRules;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockService;
 import com.moakiee.ae2lt.client.CelestweaveArmorRenderExtensions;
 
@@ -85,7 +84,7 @@ public final class PhaseLockProjectionItem extends ArmorItem {
         if (level.isClientSide() || !(entity instanceof ServerPlayer player)) {
             return;
         }
-        if (!PhaseLockProjectionRules.isExpectedSlot(equipmentSlot, slotId)) {
+        if (player.getItemBySlot(equipmentSlot) != stack) {
             stack.setCount(0);
             return;
         }

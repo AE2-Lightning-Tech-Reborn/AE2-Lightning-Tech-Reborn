@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.moakiee.ae2lt.blockentity.ExtendedPatternProviderCapacity;
+import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig;
 import com.moakiee.thunderbolt.core.util.FastWildcardMatcher;
 
 import net.minecraft.resources.ResourceLocation;
@@ -61,6 +62,7 @@ public final class AE2LTCommonConfig {
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        MiningFactoryConfig.define(builder);
         VALUES = new Values(builder);
         SPEC = builder.build();
     }
@@ -283,6 +285,12 @@ public final class AE2LTCommonConfig {
     public static int overloadArmorUndyingComboWindowTicks() { return VALUES.overloadArmorUndyingComboWindowTicks.get(); }
 
     // ── Railgun: damage (per-tier base + beam settle) ────────────────────────
+    public static int railgunEhvBeamDamagePerSettle() { return VALUES.railgunEhvBeamDamagePerSettle.get(); }
+    public static long railgunEhvBeamCostPerSettle() { return VALUES.railgunEhvBeamCostPerSettle.get(); }
+    public static long railgunEhvBeamFeCostPerSettle() { return VALUES.railgunEhvBeamFeCostPerSettle.get(); }
+    public static double railgunPercentageTier1() { return VALUES.railgunPercentageTier1.get(); }
+    public static double railgunPercentageTier2() { return VALUES.railgunPercentageTier2.get(); }
+    public static double railgunPercentageTier3() { return VALUES.railgunPercentageTier3.get(); }
     public static int railgunBeamDamagePerSettle() { return VALUES.railgunBeamDamagePerSettle.get(); }
     public static double railgunBeamBypass() { return VALUES.railgunBeamBypass.get(); }
     public static int railgunBaseDamageEhv1() { return VALUES.railgunBaseDamageEhv1.get(); }
@@ -403,6 +411,12 @@ public final class AE2LTCommonConfig {
         private final ForgeConfigSpec.IntValue overloadArmorUndyingComboWindowTicks;
 
         // ── Railgun fields ────────────────────────────────────────────────
+        private final ForgeConfigSpec.IntValue railgunEhvBeamDamagePerSettle;
+        private final ForgeConfigSpec.LongValue railgunEhvBeamCostPerSettle;
+        private final ForgeConfigSpec.LongValue railgunEhvBeamFeCostPerSettle;
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier1;
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier2;
+        private final ForgeConfigSpec.DoubleValue railgunPercentageTier3;
         private final ForgeConfigSpec.IntValue railgunBeamDamagePerSettle;
         private final ForgeConfigSpec.DoubleValue railgunBeamBypass;
         private final ForgeConfigSpec.IntValue railgunBaseDamageEhv1;
@@ -698,6 +712,22 @@ public final class AE2LTCommonConfig {
             builder.pop();
 
             builder.push("railgun");
+            builder.push("ehvBeam");
+            railgunEhvBeamDamagePerSettle = builder.comment("EHV beam base damage every 2 ticks; requires the module and enabled beam mode.")
+                    .defineInRange("damagePerSettle", 200, 0, Integer.MAX_VALUE);
+            railgunEhvBeamCostPerSettle = builder.comment("Extreme High Voltage lightning consumed every 2 ticks.")
+                    .defineInRange("ehvCostPerSettle", 16L, 1L, Long.MAX_VALUE);
+            railgunEhvBeamFeCostPerSettle = builder.comment("FE consumed every 2 ticks in EHV beam mode.")
+                    .defineInRange("feCostPerSettle", 4000L, 0L, Long.MAX_VALUE);
+            builder.pop();
+            builder.push("percentageExecution");
+            railgunPercentageTier1 = builder.comment("Fraction of max health added by tier-1 charged Overload shots in percentage mode. Never applies to beams or chain propagation.")
+                    .defineInRange("tier1", 0.05D, 0.0D, 1.0D);
+            railgunPercentageTier2 = builder.comment("Fraction of max health added by tier-2 charged Overload shots in percentage mode.")
+                    .defineInRange("tier2", 0.10D, 0.0D, 1.0D);
+            railgunPercentageTier3 = builder.comment("Fraction of max health added by tier-3 charged Overload shots in percentage mode.")
+                    .defineInRange("tier3", 0.20D, 0.0D, 1.0D);
+            builder.pop();
             builder.push("damage");
             railgunBeamDamagePerSettle = builder
                     .comment("High Voltage beam damage per 2-tick settle.")

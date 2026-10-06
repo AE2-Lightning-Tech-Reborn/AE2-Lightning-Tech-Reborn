@@ -69,6 +69,7 @@ public class OverloadProcessingFactoryScreen extends AEBaseScreen<OverloadProces
         this.autoExportButton.setTooltipOff(List.of(
                 Component.translatable("ae2lt.gui.overload_factory.auto_export.title"),
                 Component.translatable("ae2lt.gui.overload_factory.auto_export.off")));
+        addToLeftToolbar(new InputTransferButton(menu));
         addToLeftToolbar(this.autoExportButton);
 
         this.configureOutputButton = new ActionButton(

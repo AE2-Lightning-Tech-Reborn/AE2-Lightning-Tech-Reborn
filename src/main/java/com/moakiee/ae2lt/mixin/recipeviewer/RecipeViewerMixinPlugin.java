@@ -13,6 +13,7 @@ import net.minecraftforge.fml.loading.LoadingModList;
 public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean jeiPresent;
     private boolean emiPresent;
+    private boolean jeiSupplyPresent;
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -22,6 +23,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         // AE2JEIIntegration mod does not exist for 1.20.1).
         jeiPresent = mods.getModFileById("jei") != null;
         emiPresent = mods.getModFileById("emi") != null;
+        jeiSupplyPresent = jeiPresent && mods.getModFileById("ae2wtlib") != null;
     }
 
     @Override
@@ -31,6 +33,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;
         return false;

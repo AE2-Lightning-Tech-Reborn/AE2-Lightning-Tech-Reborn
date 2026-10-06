@@ -30,6 +30,7 @@ public final class CelestweaveShieldFireVisuals {
             return false;
         }
         return ArmorCapabilityCollector.collectPerInstalledStack(player).stream()
-                .anyMatch(active -> active.capability() instanceof DeviceCapability.StagedMitigation);
+                .anyMatch(active -> active.capability() instanceof DeviceCapability.StagedMitigation staged
+                        && com.moakiee.ae2lt.celestweave.ArmorMitigationRules.extinguishesFire(staged.stage()));
     }
 }

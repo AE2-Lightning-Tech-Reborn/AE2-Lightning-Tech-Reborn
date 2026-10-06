@@ -16,16 +16,17 @@ public record SeedRefillSync(int state, List<Entry> problems) implements PacketW
     public static final int STATE_STORAGE_BLOCKED = 3;
     public static final int STATE_MIXED = 4;
     public static final int STATE_UNAVAILABLE = 5;
+    public static final int STATE_RETURN_BLOCKED = 6;
 
     private static final int MAX_MISSING_ENTRIES = 16;
     private static final SeedRefillSync NONE = new SeedRefillSync(STATE_NONE, List.of());
 
-    public record Entry(AEKey what, long networkMissing, long storageBlocked) {
+    public record Entry(AEKey what, long networkMissing, long storageBlocked, long returnBlocked) {
     }
 
     public SeedRefillSync {
         problems = List.copyOf(problems);
-        if (state < STATE_NONE || state > STATE_UNAVAILABLE) {
+        if (state < STATE_NONE || state > STATE_RETURN_BLOCKED) {
             throw new IllegalArgumentException("invalid seed refill state: " + state);
         }
     }
@@ -42,21 +43,26 @@ public record SeedRefillSync(int state, List<Entry> problems) implements PacketW
         if (!result.available()) return new SeedRefillSync(STATE_UNAVAILABLE, List.of());
         boolean networkMissing = !result.networkMissing().isEmpty();
         boolean storageBlocked = !result.storageBlocked().isEmpty();
-        if (!networkMissing && !storageBlocked) {
+        boolean returnBlocked = !result.returnBlocked().isEmpty();
+        if (!networkMissing && !storageBlocked && !returnBlocked) {
             return new SeedRefillSync(STATE_COMPLETE, List.of());
         }
         var entries = new ArrayList<Entry>();
         var keys = new LinkedHashSet<AEKey>();
         keys.addAll(result.networkMissing().keySet());
         keys.addAll(result.storageBlocked().keySet());
+        keys.addAll(result.returnBlocked().keySet());
         for (var key : keys) {
             if (entries.size() >= MAX_MISSING_ENTRIES) break;
             entries.add(new Entry(key,
                     result.networkMissing().getOrDefault(key, 0L),
-                    result.storageBlocked().getOrDefault(key, 0L)));
+                    result.storageBlocked().getOrDefault(key, 0L),
+                    result.returnBlocked().getOrDefault(key, 0L)));
         }
-        int state = networkMissing && storageBlocked ? STATE_MIXED
-                : networkMissing ? STATE_NETWORK_MISSING : STATE_STORAGE_BLOCKED;
+        int problemKinds = (networkMissing ? 1 : 0) + (storageBlocked ? 1 : 0) + (returnBlocked ? 1 : 0);
+        int state = problemKinds > 1 ? STATE_MIXED
+                : networkMissing ? STATE_NETWORK_MISSING
+                : storageBlocked ? STATE_STORAGE_BLOCKED : STATE_RETURN_BLOCKED;
         return new SeedRefillSync(state, entries);
     }
 
@@ -68,6 +74,7 @@ public record SeedRefillSync(int state, List<Entry> problems) implements PacketW
             AEKey.writeKey(data, entry.what());
             data.writeVarLong(entry.networkMissing());
             data.writeVarLong(entry.storageBlocked());
+            data.writeVarLong(entry.returnBlocked());
         }
     }
 
@@ -75,7 +82,7 @@ public record SeedRefillSync(int state, List<Entry> problems) implements PacketW
         int size = data.readVarInt();
         var result = new ArrayList<Entry>(size);
         for (int i = 0; i < size; i++) {
-            result.add(new Entry(AEKey.readKey(data), data.readVarLong(), data.readVarLong()));
+            result.add(new Entry(AEKey.readKey(data), data.readVarLong(), data.readVarLong(), data.readVarLong()));
         }
         return result;
     }

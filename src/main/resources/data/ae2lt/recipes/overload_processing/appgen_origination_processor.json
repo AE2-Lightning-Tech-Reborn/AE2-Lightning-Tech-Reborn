@@ -1,0 +1,39 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "appgen"
+    }
+  ],
+  "type": "ae2lt:overload_processing",
+  "priority": 0,
+  "inputs": [
+    {
+      "ingredient": {
+        "item": "appgen:ember_block"
+      },
+      "count": 9
+    },
+    {
+      "ingredient": {
+        "tag": "forge:storage_blocks/redstone"
+      },
+      "count": 4
+    },
+    {
+      "ingredient": {
+        "tag": "forge:storage_blocks/silicon"
+      },
+      "count": 4
+    }
+  ],
+  "results": [
+    {
+      "count": 36,
+      "id": "appgen:origination_processor"
+    }
+  ],
+  "totalEnergy": 400000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

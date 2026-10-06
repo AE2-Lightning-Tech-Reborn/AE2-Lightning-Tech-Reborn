@@ -31,7 +31,7 @@ public final class ArmorTickService {
                 // Publish the forced-off state to the client so derived activity (e.g. dig affinity
                 // in BreakSpeed) matches the server instead of staying on with no power.
                 CelestweaveArmorState.setModulesPowered(armor, false);
-                CelestweaveArmorState.syncSubmoduleActiveState(player, armor, installedSubmodules, false, dist);
+                CelestweaveArmorState.syncSubmoduleActiveState(player, armor, installedSubmodules, true, dist);
                 CelestweaveArmorState.tickEquipped(player, armor, installedSubmodules, registries);
                 return;
             }

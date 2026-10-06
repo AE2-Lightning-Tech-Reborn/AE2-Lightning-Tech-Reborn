@@ -6,12 +6,14 @@ import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.block.LightningAssemblyChamberBlock;
 import com.moakiee.ae2lt.block.LightningCollectorBlock;
+import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.block.LightningSimulationChamberBlock;
 import com.moakiee.ae2lt.block.OverloadProcessingFactoryBlock;
 import com.moakiee.ae2lt.block.OverloadTntBlock;
 import com.moakiee.ae2lt.block.OverloadCrystalClusterBlock;
 import com.moakiee.ae2lt.block.OverloadedControllerBlock;
 import com.moakiee.ae2lt.block.OverloadedInterfaceBlock;
+import com.moakiee.ae2lt.block.OverloadedIOPortBlock;
 import com.moakiee.ae2lt.block.OverloadedPatternProviderBlock;
 import com.moakiee.ae2lt.block.OverloadedPowerSupplyBlock;
 import com.moakiee.ae2lt.block.TeslaCoilBlock;
@@ -34,6 +36,9 @@ import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
 import com.moakiee.ae2lt.block.PigmeeCrystalCatalyzerBlock;
 import com.moakiee.ae2lt.block.SiliconBlock;
 import com.moakiee.ae2lt.block.PigmeeSynthesisStationBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingPanelBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingSlabBlock;
 import com.moakiee.ae2lt.block.TianshuPatternStorageBlock;
 import com.moakiee.ae2lt.block.TianshuSeedStorageBlock;
 import com.moakiee.ae2lt.block.TianshuSupercomputerControllerBlock;
@@ -44,8 +49,12 @@ import com.moakiee.ae2lt.block.TianshuSupercomputingUnitBlock;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import java.util.function.Supplier;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -60,6 +69,19 @@ public final class ModBlocks {
     private static final String EXTENDEDAE_MODID = "expatternprovider";
 
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, AE2LightningTech.MODID);
+
+    public static final RegistryObject<PigmeeBuildingBlock> PIGMEE_BUILDING_BLOCK =
+            registerBlock("pigmee_building_block", PigmeeBuildingBlock::new);
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_BUILDING_PANELS =
+            registerPigmeePanels(false);
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =
+            registerPigmeePanels(true);
+    public static final RegistryObject<PigmeeBuildingSlabBlock> PIGMEE_BUILDING_SLAB =
+            registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MapColor.COLOR_PINK));
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_BUILDING_SLABS =
+            registerPigmeeSlabs(false);
+    public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_FRAMED_BUILDING_SLABS =
+            registerPigmeeSlabs(true);
 
     private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
@@ -148,6 +170,9 @@ public final class ModBlocks {
     public static final RegistryObject<OverloadProcessingFactoryBlock> OVERLOAD_PROCESSING_FACTORY =
             registerBlock("overload_processing_factory", OverloadProcessingFactoryBlock::new);
 
+    public static final RegistryObject<MiningFactoryBlock> MINING_FACTORY =
+            registerBlock("mining_factory", MiningFactoryBlock::new);
+
     public static final RegistryObject<TeslaCoilBlock> TESLA_COIL =
             registerBlock("tesla_coil", TeslaCoilBlock::new);
 
@@ -205,6 +230,9 @@ public final class ModBlocks {
 
     public static final RegistryObject<OverloadedInterfaceBlock> OVERLOADED_INTERFACE =
             registerBlock("overloaded_interface", OverloadedInterfaceBlock::new);
+
+    public static final RegistryObject<OverloadedIOPortBlock> OVERLOADED_IO_PORT =
+            registerBlock("overloaded_io_port", OverloadedIOPortBlock::new);
 
     public static final RegistryObject<OverloadedPowerSupplyBlock> OVERLOADED_POWER_SUPPLY =
             registerBlock(
@@ -350,6 +378,24 @@ public final class ModBlocks {
                     MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.PATTERN_STORAGE_T2));
 
     private ModBlocks() {
+    }
+
+    private static Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> registerPigmeeSlabs(boolean framed) {
+        var slabs = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_slab" : "_pigmee_building_slab");
+            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMapColor())));
+        }
+        return Collections.unmodifiableMap(slabs);
+    }
+
+    private static Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> registerPigmeePanels(boolean framed) {
+        var panels = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_panel" : "_pigmee_building_panel");
+            panels.put(color, registerBlock(name, () -> new PigmeeBuildingPanelBlock(color, framed)));
+        }
+        return Collections.unmodifiableMap(panels);
     }
 
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> blockFactory) {

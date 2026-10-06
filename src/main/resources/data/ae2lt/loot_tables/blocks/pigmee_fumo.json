@@ -11,7 +11,10 @@
             "entries": [
                 {
                     "type": "minecraft:item",
-                    "name": "ae2lt:pigmee_fumo"
+                    "name": "ae2lt:pigmee_fumo",
+                    "functions": [
+                        { "function": "minecraft:copy_name", "source": "block_entity" }
+                    ]
                 }
             ],
             "rolls": 1.0

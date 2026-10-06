@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -42,11 +43,12 @@ public class ConnectedTextureBakedModel implements IDynamicBakedModel {
     private final boolean ambientOcclusion;
     private final boolean gui3d;
     private final boolean usesBlockLight;
+    private final ItemTransforms transforms;
 
     public ConnectedTextureBakedModel(TextureAtlasSprite baseSprite, TextureAtlasSprite ctmSprite,
             @Nullable TextureAtlasSprite overlaySprite, ConnectionPredicate predicate,
             ChunkRenderTypeSet renderTypes,
-            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
+            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight, ItemTransforms transforms) {
         this.baseSprite = baseSprite;
         this.ctmSprite = ctmSprite;
         this.overlaySprite = overlaySprite;
@@ -55,6 +57,7 @@ public class ConnectedTextureBakedModel implements IDynamicBakedModel {
         this.ambientOcclusion = ambientOcclusion;
         this.gui3d = gui3d;
         this.usesBlockLight = usesBlockLight;
+        this.transforms = transforms;
     }
 
     @Override
@@ -149,6 +152,11 @@ public class ConnectedTextureBakedModel implements IDynamicBakedModel {
     @Override
     public TextureAtlasSprite getParticleIcon() {
         return baseSprite;
+    }
+
+    @Override
+    public ItemTransforms getTransforms() {
+        return transforms;
     }
 
     @Override

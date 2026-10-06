@@ -1,0 +1,7 @@
+{
+  "parent": "ae2lt:block/overloaded_io_port",
+  "textures": {
+    "front": "ae2lt:block/overloaded_io_port/front",
+    "top": "ae2lt:block/overloaded_io_port/top"
+  }
+}
