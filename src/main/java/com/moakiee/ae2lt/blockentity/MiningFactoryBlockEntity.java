@@ -25,6 +25,7 @@ import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryInventory;
 import com.moakiee.ae2lt.machine.miningfactory.MiningLoot;
@@ -51,6 +52,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
     private final MiningFactoryInventory inventory = new MiningFactoryInventory(this::inventoryChanged);
     private final OverloadProcessingFactoryEnergyStorage energy =
             new OverloadProcessingFactoryEnergyStorage(ENERGY_CAPACITY, this::saveChanges);
+    private final MachineRechargeController rechargeController = new MachineRechargeController();
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
     private final List<MiningLoot.Drop> pending = new ArrayList<>();
     private final IItemHandlerModifiable automation = new IItemHandlerModifiable() {
@@ -113,6 +115,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
     }
 
     private void process(ServerLevel server) {
+        rechargeFromAppliedFlux(server.getGameTime());
         pushOutResult();
         flushPending();
         if (!pending.isEmpty() || !inventory.hasOutputRoom()) { status = Status.OUTPUT; return; }
@@ -126,10 +129,6 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
         if (!MiningLoot.canHarvest(state, tool)) { status = Status.HARVEST; return; }
         int unitCost = MiningFactoryConfig.energyPerBlock(MiningLoot.isPlane(tool));
         int requested = Math.min(input.getCount(), getInstalledParallelCapacity());
-        if (energy.getStoredEnergyLong() < (long) requested * unitCost && AppFluxHelper.isAvailable()) {
-            getMainNode().ifPresent((grid, node) -> AppFluxHelper.pullPowerFromNetwork(
-                    grid.getStorageService().getInventory(), energy, IActionSource.ofMachine(this)));
-        }
         requested = (int) Math.min(requested, energy.getStoredEnergyLong() / unitCost);
         if (requested == 0) { status = Status.ENERGY; return; }
         var lightningStorage = lightningStorage();
@@ -186,6 +185,23 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
         flushPending();
         pushOutResult();
         status = pending.isEmpty() ? Status.WORKING : Status.OUTPUT;
+    }
+
+    private void rechargeFromAppliedFlux(long gameTime) {
+        if (!AppFluxHelper.isAvailable()) return;
+        ItemStack input = inventory.getStackInSlot(MiningFactoryInventory.INPUT);
+        ItemStack tool = inventory.getStackInSlot(MiningFactoryInventory.TOOL);
+        long demand = MiningLoot.isTool(tool)
+                ? (long) Math.min(input.getCount(), getInstalledParallelCapacity())
+                        * MiningFactoryConfig.energyPerBlock(MiningLoot.isPlane(tool))
+                : 0L;
+        if (!rechargeController.shouldRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong(), demand,
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE), gameTime)) return;
+        getMainNode().ifPresent((grid, node) -> {
+            AppFluxHelper.pullPowerFromNetwork(grid.getStorageService().getInventory(), energy,
+                    IActionSource.ofMachine(this));
+            rechargeController.afterRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong());
+        });
     }
 
     private MEStorage lightningStorage() {
