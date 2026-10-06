@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
 import appeng.api.inventories.InternalInventory;
+import com.moakiee.ae2lt.util.MixinReflectionSupport;
 
 /**
  * Item handler that supports slot limits larger than the carried stack's
@@ -34,6 +35,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     private int batchDepth;
     private boolean batchChanged;
     private boolean exporting;
+    private boolean savedDuringExport;
 
     protected LargeStackItemHandler(int size, @Nullable Runnable changeListener) {
         if (size <= 0) {
@@ -226,6 +228,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     public final void saveToTag(CompoundTag tag, String key) {
+        if (exporting) savedDuringExport = true;
         if (isEmpty()) {
             tag.remove(key);
             return;
@@ -328,25 +331,41 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
 
     /**
      * Reserve an output while calling foreign storage. Reentrant automation cannot extract the
-     * offer twice or occupy its return space. Failed/partial insertions stay in this exact slot.
-     * The insertion callback must obey the storage API (return the actually accepted quantity).
+     * offer twice or occupy its return space.
+     * Confirmed rejection stays in this exact slot. An unknown receipt must not be retried,
+     * since foreign storage may already have credited the offer before failing.
      */
     public final long exportOutput(int slot, ToLongFunction<ItemStack> insertion) {
         requireMutable();
         validateSlotIndex(slot);
+        Objects.requireNonNull(insertion, "insertion");
         ItemStack original = stacks.get(slot);
         if (original.isEmpty()) return 0;
         long accepted = 0;
         exporting = true;
+        savedDuringExport = false;
         stacks.set(slot, ItemStack.EMPTY);
         try {
-            accepted = Math.max(0L, Math.min(insertion.applyAsLong(original.copy()), original.getCount()));
+            try {
+                long receipt = insertion.applyAsLong(original.copy());
+                if (receipt < 0 || receipt > original.getCount()) {
+                    throw new IllegalStateException("Storage returned invalid inserted amount: " + receipt);
+                }
+                accepted = receipt;
+            } catch (RuntimeException | LinkageError uncertain) {
+                // Retire this attempt without replaying a possibly completed credit.
+                // Other output slots can still make progress after a broken receiver.
+                accepted = original.getCount();
+                MixinReflectionSupport.logReflectionFailure("export machine output to "
+                        + insertion.getClass().getName() + " (receipt unknown; attempt will not be retried)", uncertain);
+            }
             return accepted;
         } finally {
             stacks.set(slot, accepted == original.getCount() ? ItemStack.EMPTY
                     : original.copyWithCount(original.getCount() - (int) accepted));
             exporting = false;
-            if (accepted > 0) onContentsChanged(slot);
+            // A callback snapshot omitted the reserved output; persist any restored remainder.
+            if (accepted > 0 || savedDuringExport) onContentsChanged(slot);
         }
     }
 
