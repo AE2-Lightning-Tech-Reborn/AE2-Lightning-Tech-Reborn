@@ -67,6 +67,7 @@ public final class FrequencyBindingHelper
     }
 
     public void setFrequency(int newFreqId) {
+        newFreqId = newFreqId > 0 ? newFreqId : -1;
         if (newFreqId == this.frequencyId) return;
 
         detach();
@@ -185,7 +186,8 @@ public final class FrequencyBindingHelper
     }
 
     public void load(CompoundTag tag) {
-        frequencyId = tag.contains(TAG_FREQUENCY_ID) ? tag.getInt(TAG_FREQUENCY_ID) : -1;
+        int restoredId = tag.getInt(TAG_FREQUENCY_ID);
+        frequencyId = restoredId > 0 ? restoredId : -1;
     }
 
     public static void writeMemoryFrequency(CompoundTag tag, int frequencyId) {
