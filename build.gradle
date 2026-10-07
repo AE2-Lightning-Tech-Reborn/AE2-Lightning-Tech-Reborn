@@ -54,6 +54,7 @@ sourceSets {
     jdb {
         java.srcDir 'src/jdb/java'
         java.include '**/blockentity/*Interface*GameTests.java'
+        java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }

@@ -183,12 +183,13 @@ class ManualInputTransferTest {
         assertEquals(1, inv.getStackInSlot(0).getCount());
     }
 
-    @Test void throwingReceiverReleasesReservationAndPreservesSource() {
+    @Test void unknownReceiverReceiptReleasesReservationWithoutReplay() {
         var inv = new LightningSimulationChamberInventory(null);
         inv.setItemDirect(4, new ItemStack(Items.STONE, 200));
-        assertThrows(IllegalArgumentException.class, () -> inv.exportOutput(4, stack -> { throw new IllegalArgumentException(); }));
-        assertEquals(200, inv.getStackInSlot(4).getCount());
-        assertEquals(200, inv.extractItem(4, 200, false).getCount());
+        assertEquals(200, inv.exportOutput(4, stack -> { throw new IllegalArgumentException(); }));
+        assertTrue(inv.getStackInSlot(4).isEmpty());
+        inv.setItemDirect(4, new ItemStack(Items.DIRT, 3));
+        assertEquals(3, inv.extractItem(4, 3, false).getCount());
     }
 
     private static ManualInputTransfer.Exporter accepting(LargeStackItemHandler inv, int slot, int limit) {
