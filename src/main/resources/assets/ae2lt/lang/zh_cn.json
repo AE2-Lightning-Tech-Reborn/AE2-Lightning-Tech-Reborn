@@ -1,4 +1,6 @@
 {
+  "ae2lt.gui.interface_mode.normal_hint": "自动扫描跳过同网存储提供者、样板供应器和接口。",
+  "ae2lt.gui.interface_mode.normal_wrench": "用扳手设置方块箭头方向；明确指向后，仅操作该方向并允许同网设备。",
   "tooltip.ae2lt.overloaded_interface.pending_input": "内含待入网资源，放回有电的 ME 网络后继续传输。",
   "structure.ae2lt.alien_starship": "外星飞船",
   "message.ae2lt.config_migrated_v2": "[AE2 闪电科技：重生] 本次更新涉及平衡调整，ae2lt-common.toml 已被重置为默认值。如果你之前改过其中的配置项，请到新文件里重新设定。",
