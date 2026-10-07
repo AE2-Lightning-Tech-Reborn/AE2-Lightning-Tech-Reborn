@@ -754,10 +754,13 @@ public final class OverloadedIOPortGameTests {
         inputs.setStackInSlot(0,new ItemStack(AEBlocks.IO_PORT.block(),4));
         inputs.setStackInSlot(1,AEItems.ENGINEERING_PROCESSOR.stack(64));
         inputs.setStackInSlot(2,new ItemStack(ModBlocks.OVERLOAD_MACHINE_FRAME.get(),2));
-        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),"ultimate overload core is required");
+        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),"overload singularity is required");
         inputs.setStackInSlot(3,new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),
+                "ultimate overload core no longer matches the final IO port recipe");
+        inputs.setStackInSlot(3,new ItemStack(ModItems.OVERLOAD_SINGULARITY.get()));
         h.assertTrue(recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),
-                "four IO ports, sixty-four engineering processors, two frames and one ultimate core match");
+                "four IO ports, sixty-four engineering processors, two frames and one overload singularity match");
         h.assertTrue(ModMenuTypes.OVERLOADED_IO_PORT.get()==com.moakiee.ae2lt.menu.OverloadedIOPortMenu.TYPE,"menu registered");
         fixture(h,be->{h.assertTrue(be.getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.UP).isPresent(),"item capability registered");h.succeed();});
     }
