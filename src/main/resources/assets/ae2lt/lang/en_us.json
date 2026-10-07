@@ -510,6 +510,8 @@
   "gui.ae2lt.lightning_collector.extreme_output.simple": "Extreme Yield: %s",
   "item.ae2lt.overloaded_filter_component": "Overloaded Filter Component",
   "ae2lt.gui.interface_mode.normal": "Normal Mode",
+  "ae2lt.gui.interface_mode.normal_hint": "Automatic scanning skips storage providers, pattern providers and interfaces on this ME network.",
+  "ae2lt.gui.interface_mode.normal_wrench": "Use a wrench to set the block arrow. A pointed face is the only target and allows same-network devices.",
   "ae2lt.gui.interface_mode.wireless": "Wireless Mode",
   "ae2lt.gui.export_mode.off": "Export: OFF",
   "ae2lt.gui.export_mode.auto": "Export: AUTO",

@@ -3,19 +3,48 @@ package com.moakiee.ae2lt.block;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
 
 import appeng.block.AEBaseEntityBlock;
+import appeng.block.crafting.PatternProviderBlock;
+import appeng.block.crafting.PushDirection;
+import appeng.core.definitions.AEBlocks;
 import appeng.menu.locator.MenuLocators;
+import appeng.util.InteractionUtil;
 
 public class OverloadedInterfaceBlock extends AEBaseEntityBlock<OverloadedInterfaceBlockEntity> {
 
     public OverloadedInterfaceBlock() {
         super(metalProps().forceSolidOn());
+        registerDefaultState(defaultBlockState().setValue(PatternProviderBlock.PUSH_DIRECTION, PushDirection.ALL));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(PatternProviderBlock.PUSH_DIRECTION);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level,
+                                              BlockPos pos, Player player, InteractionHand hand,
+                                              BlockHitResult hit) {
+        if (InteractionUtil.canWrenchRotate(heldItem)) {
+            // AE2's native all/opposite/clicked-face/rotation behavior. This
+            // method only updates PUSH_DIRECTION, shared by our blockstate.
+            AEBlocks.PATTERN_PROVIDER.block().setSide(level, pos, hit.getDirection());
+            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+        }
+        return super.useItemOn(heldItem, state, level, pos, player, hand, hit);
     }
 
     @Override

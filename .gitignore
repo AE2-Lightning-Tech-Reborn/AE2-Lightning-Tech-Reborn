@@ -28,6 +28,7 @@ Source Code/
 # Local test/export assets
 else/
 run-passive-input-gametest/
+run-wired-target-client/
 run-alloy-anvil-gametest/
 run-alloy-anvil-client/
 run-omniversal-gametest/

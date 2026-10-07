@@ -84,7 +84,10 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         this.modeButton = new TextureToggleButton(
                 TextureToggleButton.ButtonType.MODE, btn -> menu.cycleInterfaceMode());
         this.modeButton.setTooltipOn(List.of(Component.translatable("ae2lt.gui.interface_mode.wireless")));
-        this.modeButton.setTooltipOff(List.of(Component.translatable("ae2lt.gui.interface_mode.normal")));
+        this.modeButton.setTooltipOff(List.of(
+                Component.translatable("ae2lt.gui.interface_mode.normal"),
+                Component.translatable("ae2lt.gui.interface_mode.normal_hint"),
+                Component.translatable("ae2lt.gui.interface_mode.normal_wrench")));
         addToLeftToolbar(this.modeButton);
 
         this.exportModeButton = new TextureToggleButton(

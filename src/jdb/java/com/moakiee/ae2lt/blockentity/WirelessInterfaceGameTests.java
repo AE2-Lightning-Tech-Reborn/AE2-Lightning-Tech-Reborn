@@ -1378,7 +1378,7 @@ public final class WirelessInterfaceGameTests {
     private static Fixture createLocalFixture(GameTestHelper helper, boolean infiniteCell) {
         var fixture = createFixture(helper, 1, infiniteCell);
         fixture.blockEntity.setInterfaceMode(InterfaceMode.NORMAL);
-        fixture.blockEntity.setEnergyOutputDir(Direction.SOUTH);
+        AEBlocks.PATTERN_PROVIDER.block().setSide(fixture.blockEntity.getLevel(), fixture.blockEntity.getBlockPos(), Direction.SOUTH.getOpposite());
         var targetPos = INTERFACE_POS.south();
         helper.setBlock(targetPos, Blocks.BARREL);
         var target = (Container) helper.getLevel().getBlockEntity(helper.absolutePos(targetPos));

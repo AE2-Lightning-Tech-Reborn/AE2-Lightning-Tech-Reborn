@@ -444,6 +444,8 @@
   "ae2lt.gui.tesla_coil.energy.tooltip": "%s / %s FE",
   "item.ae2lt.overloaded_filter_component": "过载过滤元件",
   "ae2lt.gui.interface_mode.normal": "普通模式",
+  "ae2lt.gui.interface_mode.normal_hint": "自动扫描跳过同网存储提供者、样板供应器和接口。",
+  "ae2lt.gui.interface_mode.normal_wrench": "用扳手设置方块箭头方向；明确指向后，仅操作该方向并允许同网设备。",
   "ae2lt.gui.interface_mode.wireless": "无线模式",
   "ae2lt.gui.export_mode.off": "输出：关",
   "ae2lt.gui.export_mode.auto": "输出：自动",

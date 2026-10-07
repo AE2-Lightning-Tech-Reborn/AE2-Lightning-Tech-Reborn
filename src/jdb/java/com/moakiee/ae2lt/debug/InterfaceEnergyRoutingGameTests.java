@@ -68,7 +68,7 @@ public final class InterfaceEnergyRoutingGameTests {
         host.getInterfaceLogic().getUpgrades().setItemDirect(0,
                 new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse("appflux:induction_card"))));
         if (host instanceof OverloadedInterfaceBlockEntity overloaded) {
-            overloaded.setEnergyOutputDir(Direction.EAST);
+            AEBlocks.PATTERN_PROVIDER.block().setSide(overloaded.getLevel(), overloaded.getBlockPos(), Direction.EAST.getOpposite());
             overloaded.setInterfaceMode(wireless ? OverloadedInterfaceBlockEntity.InterfaceMode.WIRELESS
                     : OverloadedInterfaceBlockEntity.InterfaceMode.NORMAL);
             if (bound) h.assertTrue(overloaded.addOrUpdateConnection(new OverloadedInterfaceBlockEntity.WirelessConnection(

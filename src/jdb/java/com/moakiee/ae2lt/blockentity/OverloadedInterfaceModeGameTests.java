@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.blockentity;
 
 import appeng.api.config.Actionable;
+import appeng.core.definitions.AEBlocks;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
@@ -56,7 +57,7 @@ public final class OverloadedInterfaceModeGameTests {
         Container[] inventories;
         if (local) {
             owner.setInterfaceMode(InterfaceMode.NORMAL);
-            owner.setEnergyOutputDir(Direction.SOUTH);
+            AEBlocks.PATTERN_PROVIDER.block().setSide(owner.getLevel(), owner.getBlockPos(), Direction.SOUTH.getOpposite());
             var pos = new BlockPos(1, 1, 1).south();
             helper.setBlock(pos, Blocks.BARREL);
             inventories = new Container[] {(Container) helper.getLevel().getBlockEntity(helper.absolutePos(pos))};

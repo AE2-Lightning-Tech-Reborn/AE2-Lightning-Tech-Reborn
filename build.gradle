@@ -252,6 +252,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_interface_input'
         }
 
+        wiredTargetClient {
+            client()
+            gameDirectory = project.file('run-wired-target-client')
+            systemProperty 'ae2lt.wiredTargetClientProbe', 'true'
+            programArguments.addAll '--username', 'WiredTargetQA', '--quickPlaySingleplayer', 'WiredTargetQA'
+        }
+
         alloyAnvilGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-alloy-anvil-gametest')
@@ -404,6 +411,11 @@ tasks.matching { it.name == 'runRecipeSyncGameTestServer' }.configureEach {
 }
 if (providers.gradleProperty('ae2ltPassiveInputGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java'])
+}
+if (providers.gradleProperty('ae2ltWiredTargetGameTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/blockentity/OverloadedInterfacePassiveInputGameTests.java',
+                                   'com/moakiee/ae2lt/blockentity/OverloadedInterfaceWiredTargetGameTests.java',
+                                   'com/moakiee/ae2lt/client/OverloadedInterfaceDirectionClientProbe.java'])
 }
 if (providers.gradleProperty('ae2ltAlloyAnvilTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/block/OverloadAlloyAnvilGameTests.java',
