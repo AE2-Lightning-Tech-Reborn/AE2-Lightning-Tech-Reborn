@@ -882,6 +882,9 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.

@@ -6,6 +6,12 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ae2lt.refmap.json",
   "mixins": [
+    "PatternMigrationProviderBatchMixin",
+    "PatternMigrationEaeBatchMixin",
+    "PatternMigrationEaepBatchMixin",
+    "PatternMigrationRefundMixin",
+    "PatternMigrationStorageMountMixin",
+
     "appflux.InterfaceEnergyDistributionMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",

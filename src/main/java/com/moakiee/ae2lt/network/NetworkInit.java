@@ -34,7 +34,7 @@ public final class NetworkInit {
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
     // Version 5 adds workstation/JEI packets, seed-return fields, scoped Easter eggs and railgun modes.
     // Version 6 adds the frequency-card link shortcut packet.
-    private static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "9";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -387,6 +387,16 @@ public final class NetworkInit {
                 OpenResearchNotePacket::decode,
                 OpenResearchNotePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(
+                nextPacketId++,
+                MatrixPatternMigrationActionPacket.class,
+                MatrixPatternMigrationActionPacket::encode, MatrixPatternMigrationActionPacket::decode,
+                MatrixPatternMigrationActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(
+                nextPacketId++,
+                MatrixPatternMigrationStatusPacket.class,
+                MatrixPatternMigrationStatusPacket::encode, MatrixPatternMigrationStatusPacket::decode,
+                MatrixPatternMigrationStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static ResourceLocation id(String path) {

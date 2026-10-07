@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixControllerMenu> {
+    private MatrixMigrationWidget migration;
 
     public MatrixControllerScreen(MatrixControllerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -42,6 +43,13 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         upgrade.setTooltip(Tooltip.create(Component.translatable("ae2lt.matrix.gui.upgrade")));
         upgrade.setPosition(x, y + 22);
         addRenderableWidget(upgrade);
+        migration = new MatrixMigrationWidget(menu, x, y + 44);
+        addRenderableWidget(migration.button);
+    }
+
+    @Override protected void containerTick() {
+        super.containerTick();
+        if (migration != null) migration.update();
     }
 
     private void sendAction(MatrixControllerActionPacket.Action action) {
@@ -56,6 +64,7 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         if (!menu.isFormed()) {
             drawStatus(guiGraphics, Component.translatable("ae2lt.matrix.gui.header_unformed"), COL_AMBER);
             drawUnformed(guiGraphics, issueText(), "ae2lt.matrix.gui.hint_unformed");
+            if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, COL_MUTED);
             return;
         }
         drawStatus(guiGraphics,
@@ -83,6 +92,7 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
                 COL_VALUE);
 
         renderFooter(guiGraphics, multidimensional);
+        if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, COL_MUTED);
     }
 
     private void renderFooter(GuiGraphics guiGraphics, boolean multidimensional) {
