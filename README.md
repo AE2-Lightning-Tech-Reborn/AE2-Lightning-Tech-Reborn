@@ -4,7 +4,7 @@
 
 ## 文档目录
 
-- [大型过载处理工厂：工艺核心、多仓室与 0t 加工](large-overload-processing-factory-design.zh-CN.md) — 背面九仓位、36／144 槽样板仓、水晶仓、工艺解锁、ME／外部供电和首次执行配方缓存。
+- [大型过载处理工厂：工艺核心、多仓室与 0t 加工](large-overload-processing-factory-design.zh-CN.md) — 普通／苍穹专用成型、背面九仓位、36／144 槽样板仓、水晶仓、工艺解锁与 ME／外部供电。
 
 ## 修改规则
 
