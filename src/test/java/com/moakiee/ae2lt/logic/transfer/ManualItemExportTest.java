@@ -44,6 +44,31 @@ class ManualItemExportTest {
         assertEquals(100, inv.getStackInSlot(2).getCount());
     }
 
+    @Test void unknownReceiptCannotAbortHealthyOutputsOrReplayCreditedItems() {
+        var inv = new MiningFactoryInventory(null);
+        inv.setItemDirect(2, new ItemStack(Items.STONE, 64));
+        inv.setItemDirect(3, new ItemStack(Items.DIRT, 64));
+        long[] received = {0};
+        int[] calls = {0};
+        var receiver = new CompositeStorage(Map.of(AEKeyType.items(), new MEStorage() {
+            public Component getDescription() { return Component.literal("Failure after credit"); }
+            public long insert(AEKey what, long amount, Actionable mode, IActionSource source) {
+                received[0] += amount;
+                calls[0]++;
+                if (what.equals(AEItemKey.of(Items.STONE))) throw new IllegalStateException("after credit");
+                return amount;
+            }
+        }));
+        for (int retry = 0; retry < 1000; retry++) {
+            assertDoesNotThrow(() -> ManualItemExport.push(() -> null, true, BlockOrientation.NORTH_UP,
+                    EnumSet.allOf(RelativeSide.class), inv, 2, 9, direction -> receiver,
+                    new ManualInputTransfer.Budget()));
+        }
+        assertEquals(128, received[0]);
+        assertEquals(2, calls[0]);
+        assertTrue(inv.isEmpty());
+    }
+
     @Test void multipleOutputsAndDirectionsShareOneBudget() {
         var inv = new MiningFactoryInventory(null);
         for (int slot = 2; slot < 11; slot++) inv.setItemDirect(slot, new ItemStack(Items.STONE, 4096));

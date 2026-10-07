@@ -365,7 +365,8 @@ if (providers.gradleProperty('ae2ltAddonApiTestsOnly').getOrElse('false').toBool
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/AddonApiGameTests.java'])
 }
 if (providers.gradleProperty('ae2ltInterfaceIoGameTestsOnly').getOrElse('false').toBoolean()) {
-    sourceSets.jdb.java.setIncludes(['**/blockentity/*Interface*GameTests.java'])
+    sourceSets.jdb.java.setIncludes(['**/blockentity/*Interface*GameTests.java',
+                                   '**/blockentity/ManualItemExportReceiptGameTests.java'])
 }
 if (providers.gradleProperty('ae2ltGlobalBatchTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/GlobalBatchAdaptersGameTests.java',

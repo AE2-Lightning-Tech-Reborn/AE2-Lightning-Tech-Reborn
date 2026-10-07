@@ -1,6 +1,8 @@
 package com.moakiee.ae2lt.machine.lightningchamber;
 
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.ToLongFunction;
 
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import appeng.api.inventories.InternalInventory;
+import com.mojang.logging.LogUtils;
 
 /**
  * Item handler that supports slot limits larger than the carried stack's
@@ -26,6 +29,7 @@ import appeng.api.inventories.InternalInventory;
  * 1024.</p>
  */
 public abstract class LargeStackItemHandler implements IItemHandlerModifiable, InternalInventory {
+    private static final Set<String> LOGGED_EXPORT_FAILURES = ConcurrentHashMap.newKeySet();
     private static final String TAG_SLOT = "Slot";
     private static final String TAG_COUNT_INT = "CountInt";
     private static final String TAG_STACK = "Stack";
@@ -36,6 +40,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     private int batchDepth;
     private boolean batchChanged;
     private boolean exporting;
+    private boolean savedDuringExport;
 
     protected LargeStackItemHandler(int size, @Nullable Runnable changeListener) {
         if (size <= 0) {
@@ -228,6 +233,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     public final void saveToTag(CompoundTag tag, String key, HolderLookup.Provider registries) {
+        if (exporting) savedDuringExport = true;
         if (isEmpty()) {
             tag.remove(key);
             return;
@@ -330,25 +336,48 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
 
     /**
      * Reserve an output while calling foreign storage. Reentrant automation cannot extract the
-     * offer twice or occupy its return space. Failed/partial insertions stay in this exact slot.
-     * The insertion callback must obey the storage API (return the actually accepted quantity).
+     * offer twice or occupy its return space.
+     * Confirmed rejection stays in this exact slot. An unknown receipt must not be retried,
+     * since foreign storage may already have credited the offer before failing.
      */
     public final long exportOutput(int slot, ToLongFunction<ItemStack> insertion) {
         requireMutable();
         validateSlotIndex(slot);
+        Objects.requireNonNull(insertion, "insertion");
         ItemStack original = stacks.get(slot);
         if (original.isEmpty()) return 0;
         long accepted = 0;
         exporting = true;
+        savedDuringExport = false;
         stacks.set(slot, ItemStack.EMPTY);
         try {
-            accepted = Math.clamp(insertion.applyAsLong(original.copy()), 0L, original.getCount());
+            try {
+                long receipt = insertion.applyAsLong(original.copy());
+                if (receipt < 0 || receipt > original.getCount()) {
+                    throw new IllegalStateException("Storage returned invalid inserted amount: " + receipt);
+                }
+                accepted = receipt;
+            } catch (RuntimeException | LinkageError uncertain) {
+                // Retire this attempt without replaying a possibly completed credit.
+                // Other output slots can still make progress after a broken receiver.
+                accepted = original.getCount();
+                logUnknownExportReceipt(insertion, uncertain);
+            }
             return accepted;
         } finally {
             stacks.set(slot, accepted == original.getCount() ? ItemStack.EMPTY
                     : original.copyWithCount(original.getCount() - (int) accepted));
             exporting = false;
-            if (accepted > 0) onContentsChanged(slot);
+            // A callback snapshot omitted the reserved output; persist any restored remainder.
+            if (accepted > 0 || savedDuringExport) onContentsChanged(slot);
+        }
+    }
+
+    private static void logUnknownExportReceipt(ToLongFunction<ItemStack> insertion, Throwable failure) {
+        String receiver = insertion.getClass().getName();
+        if (LOGGED_EXPORT_FAILURES.add(receiver)) {
+            LogUtils.getLogger().warn("AE2LT failed to export machine output to {} "
+                    + "(receipt unknown; attempt will not be retried).", receiver, failure);
         }
     }
 
