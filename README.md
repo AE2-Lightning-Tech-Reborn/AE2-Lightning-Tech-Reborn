@@ -4,7 +4,7 @@
 
 ## 文档目录
 
-- [大型过载处理工厂：样板仓、水晶仓与 0t 加工](large-overload-processing-factory-design.zh-CN.md) — 固定结构、T1–T4 核心、按单/被动模式和首次执行配方缓存。
+- [大型过载处理工厂：工艺核心、多仓室与 0t 加工](large-overload-processing-factory-design.zh-CN.md) — 背面九仓位、36／144 槽样板仓、水晶仓、工艺解锁、ME／外部供电和首次执行配方缓存。
 
 ## 修改规则
 
