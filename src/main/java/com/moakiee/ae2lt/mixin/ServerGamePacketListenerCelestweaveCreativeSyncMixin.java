@@ -51,7 +51,8 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             Operation<Void> original) {
         var listener = (ServerGamePacketListenerImpl) (Object) this;
         ItemStack authoritative = slot.getItem();
-        if (!ae2lt$isSameCelestweaveEquipmentEcho(listener.player, authoritative, uploaded)) {
+        if (slot.index < 5 || slot.index > 8
+                || !ae2lt$isSameCelestweaveEquipmentEcho(listener.player, authoritative, uploaded)) {
             original.call(slot, uploaded);
             return;
         }
@@ -69,11 +70,15 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             ServerPlayer player,
             ItemStack authoritative,
             ItemStack uploaded) {
-        if (authoritative.isEmpty()
-                || uploaded.isEmpty()
-                || authoritative.getItem() != uploaded.getItem()) {
+        if (authoritative.isEmpty() || uploaded.isEmpty()) {
             return false;
         }
+
+        if (authoritative.getItem() instanceof BaseCelestweaveArmorItem
+                && uploaded.getItem() instanceof PhaseLockProjectionItem) {
+            return true;
+        }
+        if (authoritative.getItem() != uploaded.getItem()) return false;
 
         if (authoritative.getItem() instanceof BaseCelestweaveArmorItem) {
             UUID authoritativeId = CelestweaveArmorState.getArmorId(authoritative);

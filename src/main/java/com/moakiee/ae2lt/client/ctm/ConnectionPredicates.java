@@ -15,7 +15,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
  * Registry of named {@link ConnectionPredicate}s referenced by the {@code connection}
@@ -41,6 +43,28 @@ public final class ConnectionPredicates {
         @Override
         public boolean connects(BlockAndTintGetter level, BlockPos pos, BlockState self, BlockPos neighbourPos) {
             return level.getBlockState(neighbourPos).is(self.getBlock());
+        }
+    };
+
+    public static final ConnectionPredicate SAME_SLAB = new ConnectionPredicate() {
+        @Override
+        public boolean isActive(BlockAndTintGetter level, BlockPos pos, BlockState self) {
+            return true;
+        }
+
+        @Override
+        public boolean connects(BlockAndTintGetter level, BlockPos pos, BlockState self, Direction dir) {
+            return connects(level, pos, self, pos.relative(dir));
+        }
+
+        @Override
+        public boolean connects(BlockAndTintGetter level, BlockPos pos, BlockState self, BlockPos neighbourPos) {
+            SlabType type = self.getValue(SlabBlock.TYPE);
+            if (type != SlabType.DOUBLE && neighbourPos.getY() != pos.getY()) {
+                return false;
+            }
+            BlockState neighbour = level.getBlockState(neighbourPos);
+            return neighbour.is(self.getBlock()) && neighbour.getValue(SlabBlock.TYPE) == type;
         }
     };
 

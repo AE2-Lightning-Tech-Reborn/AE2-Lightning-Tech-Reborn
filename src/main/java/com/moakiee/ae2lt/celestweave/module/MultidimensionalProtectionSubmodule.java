@@ -46,7 +46,7 @@ public final class MultidimensionalProtectionSubmodule extends AbstractCelestwea
 
     @Override
     public Set<String> installGroupIds() {
-        return Set.of(ResistanceSubmodule.INSTALL_GROUP, UndyingSubmodule.INSTANCE.installGroupId());
+        return Set.of(ResistanceSubmodule.INSTALL_GROUP);
     }
 
     @Override

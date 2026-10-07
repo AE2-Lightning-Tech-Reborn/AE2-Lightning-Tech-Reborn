@@ -1,34 +1,44 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
+
+
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
-import com.moakiee.ae2lt.client.gui.AE2Button;
 import appeng.client.gui.widgets.TabButton;
 import appeng.menu.SlotSemantics;
+import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.TianshuUploadTrigger;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /** Tianshu-specific settings linked from AE2's terminal settings screen. */
-public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodingTermMenu>
+public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         extends AESubScreen<M, TerminalSettingsScreen<M>> {
-    private AE2Button triggerButton;
-    private AE2Button duplicateEncodingButton;
+    private net.minecraft.client.gui.components.Button triggerButton;
+    private net.minecraft.client.gui.components.Button duplicateEncodingButton;
+    private net.minecraft.client.gui.components.Button wirelessSupplyButton;
 
     public TianshuTerminalSettingsScreen(TerminalSettingsScreen<M> parent) {
         super(parent, "/screens/tianshu_terminal_settings.json");
         hideTerminalSlots();
         widgets.add("back", new TabButton(Icon.ARROW_LEFT,
                 Component.translatable("gui.back"), ignored -> returnToParent()));
-        triggerButton = new AE2Button(triggerLabel(), btn -> cycleTrigger());
-        widgets.add("uploadTrigger", triggerButton);
-        duplicateEncodingButton = new AE2Button(duplicateEncodingLabel(), btn -> toggleDuplicateEncoding());
-        widgets.add("duplicateEncoding", duplicateEncodingButton);
+        triggerButton = widgets.addButton("uploadTrigger", triggerLabel(), this::cycleTrigger);
+        duplicateEncodingButton = widgets.addButton(
+                "duplicateEncoding", duplicateEncodingLabel(), this::toggleDuplicateEncoding);
+        wirelessSupplyButton = widgets.addButton("jeiWirelessSupply", wirelessSupplyLabel(), () -> {
+            AE2LTClientConfig.setJeiWirelessSupply(!AE2LTClientConfig.jeiWirelessSupply());
+            if (net.minecraftforge.fml.ModList.get().isLoaded("jei")) JeiWirelessSupplyClient.clear();
+            wirelessSupplyButton.setMessage(wirelessSupplyLabel());
+        });
+        wirelessSupplyButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                Component.translatable("ae2lt.tianshu.settings.jei_supply.hint")));
     }
 
     private void hideTerminalSlots() {
@@ -38,7 +48,8 @@ public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodin
                 SlotSemantics.SMITHING_TABLE_ADDITION, SlotSemantics.SMITHING_TABLE_RESULT,
                 SlotSemantics.STONECUTTING_INPUT, SlotSemantics.BLANK_PATTERN,
                 SlotSemantics.ENCODED_PATTERN, SlotSemantics.PLAYER_INVENTORY,
-                SlotSemantics.PLAYER_HOTBAR)) {
+                SlotSemantics.PLAYER_HOTBAR, Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER,
+                Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK, Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK)) {
             setSlotsHidden(semantic, true);
         }
     }
@@ -66,6 +77,11 @@ public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodin
                 : "ae2lt.tianshu.settings.duplicate_encoding.off");
     }
 
+    private Component wirelessSupplyLabel() {
+        return Component.translatable(AE2LTClientConfig.jeiWirelessSupply()
+                ? "ae2lt.tianshu.settings.jei_supply.on" : "ae2lt.tianshu.settings.jei_supply.off");
+    }
+
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
@@ -80,6 +96,8 @@ public final class TianshuTerminalSettingsScreen<M extends TianshuPatternEncodin
         graphics.drawWordWrap(font,
                 Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"),
                 10, 160, 180, 0x666666);
+        graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
+                10, 202, 0x404040, false);
     }
 
     @Override

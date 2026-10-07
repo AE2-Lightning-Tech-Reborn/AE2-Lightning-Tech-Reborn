@@ -11,11 +11,16 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 
+import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+
 import appeng.api.config.Actionable;
+import appeng.api.config.FuzzyMode;
 import appeng.api.config.Settings;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionSource;
+import appeng.api.networking.storage.IStorageService;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
@@ -37,7 +42,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 public class OverloadedInterfaceLogic extends InterfaceLogic {
@@ -96,7 +100,10 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         var newConfig = new OverloadedConfigInv(
                 com.google.common.collect.Sets.newHashSet(AEKeyTypes.getAll()), null,
                 GenericStackInv.Mode.CONFIG_STACKS, slots,
-                () -> invokeQuietly(M_ON_CONFIG_CHANGED, this));
+                () -> {
+                    invalidateViewCaches();
+                    invokeQuietly(M_ON_CONFIG_CHANGED, this);
+                });
         newConfig.owner = host;
         setField(F_CONFIG, newConfig);
         newConfig.useRegisteredCapacities();
@@ -108,7 +115,10 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                 this, com.google.common.collect.Sets.newHashSet(AEKeyTypes.getAll()),
                 null,
                 slots,
-                () -> invokeQuietly(M_ON_STORAGE_CHANGED, this));
+                () -> {
+                    invalidateViewCaches();
+                    invokeQuietly(M_ON_STORAGE_CHANGED, this);
+                });
         setField(F_STORAGE, proxiedStorage);
         proxiedStorage.useRegisteredCapacities();
         for (var type : AEKeyTypes.getAll()) {
@@ -116,6 +126,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         }
 
         var newUpgrades = UpgradeInventories.forMachine(is, 4, () -> {
+            invalidateViewCaches();
             invokeQuietly(M_ON_UPGRADES_CHANGED, this);
             host.invalidateInductionCardCache();
         });
@@ -135,6 +146,10 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
     public ProxiedStorageInv getProxiedStorage() {
         return proxiedStorage;
+    }
+
+    public void invalidateViewCaches() {
+        proxiedStorage.invalidateViewCaches();
     }
 
     /**
@@ -375,14 +390,34 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
     public static class ProxiedStorageInv extends OverloadedConfigInv {
         private final OverloadedInterfaceLogic logic;
         private boolean proxying = false;
+
+        public boolean isNetworkOperationInProgress() {
+            return proxying;
+        }
+
+        public void runWithNetworkGuard(Runnable action) {
+            if (proxying) return;
+            proxying = true;
+            try {
+                action.run();
+            } finally {
+                proxying = false;
+                invalidateViewCaches();
+            }
+        }
         /** Rebuilt (not reset) each refresh: KeyCounter.reset() keeps zeroed keys, which would leak 0-amount entries to callers. */
         private KeyCounter availableStacksCache = new KeyCounter();
         private long availableStacksCacheTick = Long.MIN_VALUE;
+        private @Nullable FuzzyMode availableStacksCacheFuzzyMode;
         /** Per-slot tick cache for the getStack/getAmount display path. External
          *  IItemHandler pollers hit these every tick; without caching each call
          *  re-simulates the whole ME network. -1 = not yet computed this tick. */
         private final long[] displayAmountCache;
         private long displayAmountCacheTick = Long.MIN_VALUE;
+        private final Object2LongLinkedOpenHashMap<AEKey> capByKey;
+        private @Nullable Object2LongLinkedOpenHashMap<AEKey> capByVariant;
+        private @Nullable Object2LongOpenHashMap<AEKey> amountByVariant;
+        private @Nullable CacheInvalidatingStorage networkInventory;
 
         ProxiedStorageInv(OverloadedInterfaceLogic logic,
                           Set<AEKeyType> supportedTypes,
@@ -391,6 +426,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
             super(supportedTypes, slotFilter, GenericStackInv.Mode.STORAGE, size, listener);
             this.logic = logic;
             this.displayAmountCache = new long[size];
+            this.capByKey = new Object2LongLinkedOpenHashMap<>(size);
         }
 
         @Override
@@ -407,6 +443,65 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         public ConfigInventory cfg() {
             return logic.getConfig();
+        }
+
+        public MEStorage getNetworkInventory(IStorageService storageService) {
+            var delegate = storageService.getInventory();
+            var inventory = networkInventory;
+            if (inventory == null || inventory.storageService != storageService || inventory.delegate != delegate) {
+                inventory = new CacheInvalidatingStorage(storageService, delegate);
+                networkInventory = inventory;
+            }
+            return inventory;
+        }
+
+        private final class CacheInvalidatingStorage implements MEStorage {
+            private final IStorageService storageService;
+            private final MEStorage delegate;
+
+            private CacheInvalidatingStorage(IStorageService storageService, MEStorage delegate) {
+                this.storageService = storageService;
+                this.delegate = delegate;
+            }
+
+            @Override
+            public long insert(AEKey key, long amount, Actionable mode, IActionSource source) {
+                try {
+                    return delegate.insert(key, amount, mode, source);
+                } finally {
+                    if (mode == Actionable.MODULATE && key != null && amount > 0) {
+                        invalidateViewCaches();
+                        storageService.invalidateCache();
+                    }
+                }
+            }
+
+            @Override
+            public long extract(AEKey key, long amount, Actionable mode, IActionSource source) {
+                try {
+                    return delegate.extract(key, amount, mode, source);
+                } finally {
+                    if (mode == Actionable.MODULATE && key != null && amount > 0) {
+                        invalidateViewCaches();
+                        storageService.invalidateCache();
+                    }
+                }
+            }
+
+            @Override
+            public boolean isPreferredStorageFor(AEKey key, IActionSource source) {
+                return delegate.isPreferredStorageFor(key, source);
+            }
+
+            @Override
+            public void getAvailableStacks(KeyCounter out) {
+                delegate.getAvailableStacks(out);
+            }
+
+            @Override
+            public net.minecraft.network.chat.Component getDescription() {
+                return delegate.getDescription();
+            }
         }
 
         public long capForSlot(int slot) {
@@ -437,19 +532,15 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         private long visibleNetworkAmount(AEKey key, long cap) {
             var grid = logic.mainNode.getGrid();
-            if (grid == null || key == null) return 0;
-            var storageService = grid.getStorageService();
-            long reported = storageService.getCachedInventory().get(key);
-            long simulated = simulateNetworkExtraction(storageService.getInventory(), key, cap);
-            return OverloadedAmountMath.mergeReportedAndSimulatedAmount(reported, simulated, cap);
-        }
-
-        private long simulateNetworkExtraction(MEStorage network, AEKey key, long cap) {
-            if (network == null || key == null || cap <= 0) return 0;
+            if (grid == null || key == null || cap <= 0) return 0;
             boolean wasProxying = proxying;
             proxying = true;
             try {
-                return network.extract(key, cap, Actionable.SIMULATE, src());
+                var storageService = grid.getStorageService();
+                long reported = storageService.getCachedInventory().get(key);
+                var network = storageService.getInventory();
+                long simulated = network != null ? network.extract(key, cap, Actionable.SIMULATE, src()) : 0;
+                return OverloadedAmountMath.mergeReportedAndSimulatedAmount(reported, simulated, cap);
             } finally {
                 proxying = wasProxying;
             }
@@ -483,6 +574,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         @Override
         public @Nullable GenericStack getStack(int slot) {
+            if (proxying) return null;
             if (logic.mainNode.getGrid() == null) {
                 return super.getStack(slot);
             }
@@ -492,6 +584,10 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                 return null;
             }
             long amt = displayAmount(slot, key);
+            var cached = stacks[slot];
+            if (amt > 0 && cached != null && cached.amount() == amt && cached.what().equals(key)) {
+                return cached;
+            }
             var result = amt > 0 ? new GenericStack(key, amt) : null;
             stacks[slot] = result;
             return result;
@@ -507,6 +603,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         @Override
         public long getAmount(int slot) {
+            if (proxying) return 0;
             if (logic.mainNode.getGrid() == null) {
                 return super.getAmount(slot);
             }
@@ -577,12 +674,14 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         public long proxyExtract(AEKey what, long amount, Actionable mode) {
             if (proxying) return 0;
             proxying = true;
+            boolean mutationAttempted = false;
             try {
                 var grid = logic.mainNode.getGrid();
                 if (grid == null) return 0;
-                var network = grid.getStorageService().getInventory();
+                var network = getNetworkInventory(grid.getStorageService());
                 long affordable = PowerCostUtil.maxAffordable(grid, what, amount);
                 if (affordable <= 0) return 0;
+                mutationAttempted = mode == Actionable.MODULATE;
                 long extracted = network.extract(what, affordable, mode, src());
                 if (extracted > 0 && mode == Actionable.MODULATE) {
                     PowerCostUtil.consume(grid, what, extracted);
@@ -590,18 +689,21 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                 return extracted;
             } finally {
                 proxying = false;
+                if (mutationAttempted) invalidateViewCaches();
             }
         }
 
         public long proxyInsert(AEKey what, long amount, Actionable mode) {
             if (proxying) return 0;
             proxying = true;
+            boolean mutationAttempted = false;
             try {
                 var grid = logic.mainNode.getGrid();
                 if (grid == null) return 0;
-                var network = grid.getStorageService().getInventory();
+                var network = getNetworkInventory(grid.getStorageService());
                 long affordable = PowerCostUtil.maxAffordable(grid, what, amount);
                 if (affordable <= 0) return 0;
+                mutationAttempted = mode == Actionable.MODULATE;
                 long inserted = network.insert(what, affordable, mode, src());
                 if (inserted > 0 && mode == Actionable.MODULATE) {
                     PowerCostUtil.consume(grid, what, inserted);
@@ -609,11 +711,18 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                 return inserted;
             } finally {
                 proxying = false;
+                if (mutationAttempted) invalidateViewCaches();
             }
         }
 
         public void setDisplayStack(int slot, @Nullable GenericStack stack) {
             stacks[slot] = stack;
+        }
+
+        void invalidateViewCaches() {
+            availableStacksCacheTick = Long.MIN_VALUE;
+            availableStacksCacheFuzzyMode = null;
+            displayAmountCacheTick = Long.MIN_VALUE;
         }
 
         // ── Grid cache: expose a configured view of the ME network ───────
@@ -630,7 +739,10 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
             var be = logic.host.getBlockEntity();
             var level = be != null ? be.getLevel() : null;
             long now = level != null ? level.getGameTime() : Long.MIN_VALUE;
-            if (level != null && now == availableStacksCacheTick) {
+            boolean fuzzy = logic.ourUpgrades.isInstalled(AEItems.FUZZY_CARD);
+            var fuzzyMode = fuzzy ? logic.getConfigManager().getSetting(Settings.FUZZY_MODE) : null;
+            if (level != null && now == availableStacksCacheTick
+                    && fuzzyMode == availableStacksCacheFuzzyMode) {
                 for (var entry : availableStacksCache) {
                     out.add(entry.getKey(), entry.getLongValue());
                 }
@@ -639,33 +751,37 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
             proxying = true;
             try {
                 var fresh = new KeyCounter();
-                var cache = grid.getStorageService().getCachedInventory();
-                boolean fuzzy = logic.ourUpgrades.isInstalled(AEItems.FUZZY_CARD);
-                var fuzzyMode = fuzzy ? logic.getConfigManager().getSetting(Settings.FUZZY_MODE) : null;
                 // Aggregate caps per key: same-key slots mirror the same
                 // network stock and must not double-count
-                var capByKey = new LinkedHashMap<AEKey, Long>();
                 for (int slot = 0; slot < size(); slot++) {
                     var key = cfg().getKey(slot);
                     if (key == null) continue;
-                    capByKey.merge(
-                            key, capForSlot(slot), OverloadedAmountMath::saturatingAdd);
+                    capByKey.put(key, OverloadedAmountMath.saturatingAdd(capByKey.getLong(key), capForSlot(slot)));
                 }
 
                 // A network variant can match several configured keys. Aggregate
                 // every matching slot cap, but retain only one copy of the
                 // physical network amount for that variant.
-                var capByVariant = new LinkedHashMap<AEKey, Long>();
-                var amountByVariant = new LinkedHashMap<AEKey, Long>();
-                for (var capEntry : capByKey.entrySet()) {
+                if (fuzzy && capByVariant == null) {
+                    capByVariant = new Object2LongLinkedOpenHashMap<>(size());
+                    amountByVariant = new Object2LongOpenHashMap<>(size());
+                }
+                var caps = capByKey.object2LongEntrySet().fastIterator();
+                while (caps.hasNext()) {
+                    var capEntry = caps.next();
                     var key = capEntry.getKey();
-                    long cap = capEntry.getValue();
+                    long cap = capEntry.getLongValue();
+                    if (!fuzzy) {
+                        long amount = visibleNetworkAmount(key, cap);
+                        if (amount > 0) fresh.add(key, amount);
+                        continue;
+                    }
                     long configuredAmount = visibleNetworkAmount(key, Long.MAX_VALUE);
                     OverloadedAmountMath.mergeSharedExposure(
                             capByVariant, amountByVariant, key, cap, configuredAmount);
 
-                    if (fuzzy && key.supportsFuzzyRangeSearch()) {
-                        for (var entry : cache.findFuzzy(key, fuzzyMode)) {
+                    if (key.supportsFuzzyRangeSearch()) {
+                        for (var entry : grid.getStorageService().getCachedInventory().findFuzzy(key, fuzzyMode)) {
                             var variant = entry.getKey();
                             // The exact key was already counted for this
                             // configured entry above.
@@ -679,19 +795,27 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                         }
                     }
                 }
-                for (var exposedEntry : capByVariant.entrySet()) {
-                    var variant = exposedEntry.getKey();
-                    long cap = exposedEntry.getValue();
-                    long networkAmount = amountByVariant.getOrDefault(variant, 0L);
-                    long amount = OverloadedAmountMath.capVisibleAmount(networkAmount, cap);
-                    if (amount > 0) fresh.add(variant, amount);
+                if (fuzzy) {
+                    var variants = capByVariant.object2LongEntrySet().fastIterator();
+                    while (variants.hasNext()) {
+                        var exposedEntry = variants.next();
+                        var variant = exposedEntry.getKey();
+                        long cap = exposedEntry.getLongValue();
+                        long networkAmount = amountByVariant.getLong(variant);
+                        long amount = OverloadedAmountMath.capVisibleAmount(networkAmount, cap);
+                        if (amount > 0) fresh.add(variant, amount);
+                    }
                 }
                 availableStacksCache = fresh;
                 availableStacksCacheTick = now;
+                availableStacksCacheFuzzyMode = fuzzyMode;
                 for (var entry : fresh) {
                     out.add(entry.getKey(), entry.getLongValue());
                 }
             } finally {
+                capByKey.clear();
+                if (capByVariant != null) capByVariant.clear();
+                if (amountByVariant != null) amountByVariant.clear();
                 proxying = false;
             }
         }

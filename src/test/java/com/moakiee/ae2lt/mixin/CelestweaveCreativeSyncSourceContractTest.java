@@ -20,5 +20,7 @@ class CelestweaveCreativeSyncSourceContractTest {
                 "PhaseLockService.hasPrivateArmor(player, projection.equipmentSlot())"));
         assertFalse(source.contains("PHASE_LOCK_PROJECTION_LINK.get(uploaded)"));
         assertTrue(source.contains("setRemoteSlot(slot.index, ItemStack.EMPTY)"));
+        assertTrue(source.contains("slot.index < 5 || slot.index > 8"));
+        assertTrue(source.contains("uploaded.getItem() instanceof PhaseLockProjectionItem"));
     }
 }

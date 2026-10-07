@@ -8,7 +8,8 @@ import net.minecraft.util.StringRepresentable;
 public enum RailgunExecutionMode implements StringRepresentable {
     OFF("off"),
     NORMAL("normal"),
-    FORCED("forced");
+    FORCED("forced"),
+    PERCENTAGE("percentage");
 
     public static final Codec<RailgunExecutionMode> CODEC =
             StringRepresentable.fromEnum(RailgunExecutionMode::values);
@@ -21,14 +22,24 @@ public enum RailgunExecutionMode implements StringRepresentable {
 
     public RailgunExecutionMode next() {
         return switch (this) {
-            case OFF -> NORMAL;
+            case OFF -> PERCENTAGE;
+            case PERCENTAGE -> NORMAL;
             case NORMAL -> FORCED;
             case FORCED -> OFF;
         };
     }
 
+    public RailgunExecutionMode next(boolean supportsPercentage) {
+        var next = next();
+        return !supportsPercentage && next == PERCENTAGE ? NORMAL : next;
+    }
+
+    public RailgunExecutionMode forMultidimensional() {
+        return this == PERCENTAGE ? NORMAL : this;
+    }
+
     public boolean entersExecutionFlow() {
-        return this != OFF;
+        return this == NORMAL || this == FORCED;
     }
 
     public boolean forcesRemoval() {

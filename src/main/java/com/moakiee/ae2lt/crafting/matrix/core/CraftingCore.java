@@ -17,6 +17,9 @@ import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.jetbrains.annotations.Nullable;
+
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 
 /**
  * Pure batch crafting engine: assembles one copy of a pattern, aggregates all accepted outputs in
@@ -60,6 +63,11 @@ public final class CraftingCore implements Sweepable {
      * by {@code copies}); materials are assumed to have been extracted upstream already.
      */
     public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long copies) {
+        return pushBatch(details, oneCopyTemplate, copies, null);
+    }
+
+    public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long copies,
+                          @Nullable DeferredCraftingProvider.OutputSink returns) {
         if (copies <= 0 || oneCopyTemplate == null) return 0;
         if (!(details instanceof IMolecularAssemblerSupportedPattern)) return 0;
 
@@ -88,25 +96,33 @@ public final class CraftingCore implements Sweepable {
                 ? Math.min(assembled.outputCount(), Math.max(0L,
                         shared.sharedBatchOutputAmount(assembled.output())))
                 : 0L;
-        boolean wasEmpty = threadsInFlight == 0;
-        accumulate(pending, assembled.output(), saturatedAdd(
+        var outputs = new KeyCounter();
+        outputs.add(assembled.output(), saturatedAdd(
                 sharedOutput,
                 saturatedMultiply(assembled.outputCount() - sharedOutput, accepted)));
         if (assembled.remainders() != null) {
             for (var remainder : assembled.remainders()) {
                 if (remainder != null) {
-                    accumulate(pending, remainder.key(), saturatedMultiply(remainder.count(), accepted));
+                    addOutput(outputs, remainder.key(), saturatedMultiply(remainder.count(), accepted));
                 }
             }
         }
         if (assembled.sharedRemainders() != null) {
             for (var remainder : assembled.sharedRemainders()) {
                 if (remainder != null) {
-                    accumulate(pending, remainder.key(), remainder.count());
+                    addOutput(outputs, remainder.key(), remainder.count());
                 }
             }
         }
 
+        if (returns != null && returns.enqueue(outputs)) {
+            return accepted;
+        }
+
+        boolean wasEmpty = threadsInFlight == 0;
+        for (var output : outputs) {
+            accumulate(pending, output.getKey(), output.getLongValue());
+        }
         pending.copies = saturatedAdd(pending.copies, accepted);
         threadsInFlight = saturatedAdd(threadsInFlight, accepted);
         if (wasEmpty) {
@@ -331,6 +347,13 @@ public final class CraftingCore implements Sweepable {
     private static void accumulate(PendingBatch batch, AEKey key, long amount) {
         if (key != null && amount > 0) {
             batch.outputs.put(key, saturatedAdd(batch.outputs.getLong(key), amount));
+        }
+    }
+
+    private static void addOutput(KeyCounter outputs, AEKey key, long amount) {
+        if (key != null && amount > 0) {
+            long existing = outputs.get(key);
+            outputs.add(key, Math.min(amount, Long.MAX_VALUE - existing));
         }
     }
 

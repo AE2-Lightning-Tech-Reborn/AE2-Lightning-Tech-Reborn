@@ -34,7 +34,7 @@ final class ShieldIncomingDamageContractTest {
         assertTrue(incoming.contains("IncomingDamageResult.pass(afterMitigation)"));
         assertTrue(incoming.contains("IncomingDamageResult.cancel()"));
         int payment = incoming.indexOf("payMitigationLightning");
-        int paidCancellation = incoming.indexOf("return IncomingDamageResult.cancel()", payment);
+        int paidCancellation = incoming.indexOf("? new IncomingDamageResult(incoming, true)", payment);
         assertTrue(payment >= 0 && paidCancellation > payment);
     }
 

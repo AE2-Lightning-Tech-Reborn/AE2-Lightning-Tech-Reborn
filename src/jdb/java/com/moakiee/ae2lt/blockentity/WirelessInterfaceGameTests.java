@@ -76,6 +76,56 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification", timeoutTicks = 140)
+    public static void fastWirelessImportWakesOnTargetChange(GameTestHelper helper) {
+        if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
+            helper.succeed();
+            return;
+        }
+        var fixture = createFixture(helper, 1);
+        var owner = fixture.blockEntity;
+        var target = fixture.inventories[0];
+        var key = AEItemKey.of(Items.STONE);
+        helper.onEachTick(() -> {
+            long tick = helper.getTick();
+            if (tick == 80) target.setItem(0, key.toStack(64));
+            if (tick == 84) {
+                require(target.isEmpty(), "notified inventory did not wake within four ticks");
+                require(storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
+                        "notified import did not reach ME storage");
+                helper.succeed();
+            }
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification", timeoutTicks = 140)
+    public static void fastWirelessImportPollsWithoutTargetNotification(GameTestHelper helper) {
+        if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
+            helper.succeed();
+            return;
+        }
+        var fixture = createFixture(helper, 1);
+        var previous = (net.minecraft.world.level.block.entity.BarrelBlockEntity) fixture.inventories[0];
+        var silent = new net.minecraft.world.level.block.entity.BarrelBlockEntity(
+                previous.getBlockPos(), previous.getBlockState()) {
+            @Override
+            public void setChanged() {}
+        };
+        helper.getLevel().setBlockEntity(silent);
+        var owner = fixture.blockEntity;
+        var key = AEItemKey.of(Items.STONE);
+        helper.onEachTick(() -> {
+            long tick = helper.getTick();
+            if (tick == 80) silent.setItem(0, key.toStack(64));
+            if (tick == 110) {
+                require(silent.isEmpty(), "unnotified inventory was not polled within 30 ticks");
+                require(storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
+                        "polling fallback did not reach ME storage");
+                helper.succeed();
+            }
+        });
+    }
+
     @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 160)
     public static void fastWirelessEmptyExportConfigurationChanges(GameTestHelper helper) {
         checkEmptyExportConfigurationChanges(helper, false);

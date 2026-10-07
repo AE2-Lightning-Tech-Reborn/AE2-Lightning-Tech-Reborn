@@ -4,6 +4,8 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.network.hub.DeviceHubActionPacket;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
 import com.moakiee.ae2lt.network.hub.OpenDeviceHubPacket;
+import com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket;
+import com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamChainFxPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamTogglePacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
@@ -32,7 +34,7 @@ import java.util.Optional;
 public final class NetworkInit {
     // Version 3 adds the research-note screen message.
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
-    private static final String PROTOCOL_VERSION = "4";
+    private static final String PROTOCOL_VERSION = "gtl-8";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -370,16 +372,21 @@ public final class NetworkInit {
                 OpenResearchNotePacket::decode,
                 OpenResearchNotePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        // Exact-quantity stock/confirm packets stay after the existing GTL discriminators so
-        // a mixed 1.20.1_GTL client does not decode wireless, frequency, or Tianshu packets
-        // as bigint payloads. PROTOCOL_VERSION remains 4 because the prior GTL channel
-        // already used that version; these two ids are additive.
         CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.BigStockPacket.class,
                 (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.BigStockPacket::read,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.class,
                 (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::read,
                 com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
+                (packet, buffer) -> packet.write(buffer), FrequencyCardLinkShortcutPacket::decode,
+                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, WirelessJeiSupplyPacket.class,
+                (packet, buffer) -> packet.write(buffer), WirelessJeiSupplyPacket::read,
+                WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, WirelessJeiSupplyResultPacket.class,
+                (packet, buffer) -> packet.write(buffer), WirelessJeiSupplyResultPacket::read,
+                WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static ResourceLocation id(String path) {

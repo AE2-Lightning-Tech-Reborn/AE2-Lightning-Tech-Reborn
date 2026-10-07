@@ -198,14 +198,10 @@ final class ProviderWirelessDispatch {
     }
 
     void patternsChanged() {
-        patternActivity.clear();
         penalties.clear();
         penaltyExpirations.clear();
         batchCadence.clear();
         fairness.clear();
-        for (var connection : states.keySet()) {
-            ((ProviderTarget) connection).clearBatchHistory();
-        }
     }
 
     void prepare(
@@ -486,6 +482,10 @@ final class ProviderWirelessDispatch {
                 long rampAllowance = ((ProviderTarget) connection)
                         .batchStepRampAllowance(
                                 pattern, equalShareLimit, gameTick);
+                int provenTransaction = ((ProviderTarget) connection)
+                        .provenReservoirTransaction(pattern, gameTick);
+                boolean bulkRefill = batchCadence.usesBulkRefill(
+                        connection, pattern, provenTransaction);
                 if (rampAllowance > share
                         && rampAllowance <= equalShareLimit) {
                     share = Math.min(
@@ -493,7 +493,7 @@ final class ProviderWirelessDispatch {
                             pass.raiseAllowance(
                                     connection, rampAllowance));
                 }
-                if (batchCadence.usesSingleChunkRefill(connection, pattern)
+                if (!bulkRefill && batchCadence.usesSingleChunkRefill(connection, pattern)
                         && (!exploratoryAttempt || !reopenReservoirTail)) {
                     int candidate = ((ProviderTarget) connection)
                             .batchStepProvenChunk(
@@ -506,16 +506,24 @@ final class ProviderWirelessDispatch {
                 if (share <= 0L) {
                     continue;
                 }
+                ((ProviderTarget) connection).preferReservoirTransaction(
+                        pattern, bulkRefill && share >= provenTransaction);
                 boolean preserveBatchHistory =
                         batchCadence.shouldPreserveBatchHistory(
                                 connection, pattern, gameTick)
                         || ((ProviderTarget) connection)
                                 .hasReservoirBatchState(pattern, gameTick);
-                var result = attempt.push(
-                        connection,
-                        share,
-                        exploratoryAttempt,
-                        preserveBatchHistory);
+                BatchAttemptResult result;
+                try {
+                    result = attempt.push(
+                            connection,
+                            share,
+                            exploratoryAttempt,
+                            preserveBatchHistory);
+                } finally {
+                    ((ProviderTarget) connection)
+                            .preferReservoirTransaction(pattern, false);
+                }
                 if (result.outcome.consumesTargetAttempt()) {
                     state.probeArmed = false;
                 }
@@ -697,6 +705,7 @@ final class ProviderWirelessDispatch {
         }
         clearReadyQueues();
         patternsChanged();
+        patternActivity.clear();
         states.clear();
     }
 

@@ -2,6 +2,9 @@ package com.moakiee.ae2lt.integration.ae2wtlib;
 
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegisterEvent;
+import appeng.api.upgrades.Upgrades;
+import appeng.core.definitions.AEItems;
+import de.mari_023.ae2wtlib.AE2wtlib;
 
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -90,5 +93,8 @@ public final class Ae2wtlibIntegration {
      */
     public static void register() {
         UpgradeHelper.addUpgradeToAllTerminals(ModItems.OVERLOADED_FREQUENCY_CARD.get(), 1);
+        var terminal = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
+        Upgrades.add(AE2wtlib.QUANTUM_BRIDGE_CARD, terminal, 1);
+        Upgrades.add(AEItems.ENERGY_CARD, terminal, 2);
     }
 }

@@ -102,15 +102,24 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"4\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"gtl-8\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
-                "Existing packet discriminators must remain stable and the new packet must stay last");
+                "Existing packet discriminators must remain stable");
 
         int stock = network.indexOf("BigStockPacket.class");
         int confirm = network.indexOf("ConfirmBigAmountPacket.class");
         assertTrue(stock > openPacket && confirm > stock,
                 "Exact-quantity packets must append after the existing GTL discriminators");
+        int link = network.indexOf("FrequencyCardLinkShortcutPacket.class");
+        assertTrue(link > confirm,
+                "Frequency-card shortcuts must append after the GTL exact-quantity packets");
+        int jeiRequest = network.indexOf("WirelessJeiSupplyPacket.class");
+        int jeiResult = network.indexOf("WirelessJeiSupplyResultPacket.class");
+        assertTrue(jeiRequest > link && jeiResult > jeiRequest,
+                "JEI supply packets must append after all existing GTL discriminators");
+        assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_SERVER)", jeiRequest) > jeiRequest);
+        assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", jeiResult) > jeiResult);
     }
 
     private static String source(String path) throws Exception {

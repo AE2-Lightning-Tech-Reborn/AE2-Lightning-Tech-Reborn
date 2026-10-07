@@ -208,17 +208,17 @@ public final class FirmamentConversionRecipe implements Recipe<FirmamentConversi
     }
 
     @Override
-    public boolean isSpecial() {
-        return true;
-    }
-
-    @Override
     public boolean isIncomplete() {
         return inputs.isEmpty()
                 || results.isEmpty()
                 || results.stream().anyMatch(ItemStack::isEmpty)
                 || processTime <= 0
                 || inputs.stream().anyMatch(input -> input.ingredient().isEmpty());
+    }
+
+    @Override
+    public boolean isSpecial() {
+        return true;
     }
 
     private List<ItemStack> rawResults() {

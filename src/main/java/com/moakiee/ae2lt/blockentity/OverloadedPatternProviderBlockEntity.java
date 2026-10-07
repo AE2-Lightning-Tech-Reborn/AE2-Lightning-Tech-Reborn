@@ -361,6 +361,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             return;
         }
         this.filteredImport = filteredImport;
+        notifyLogicStateChanged();
         saveChanges();
         markForUpdate();
     }

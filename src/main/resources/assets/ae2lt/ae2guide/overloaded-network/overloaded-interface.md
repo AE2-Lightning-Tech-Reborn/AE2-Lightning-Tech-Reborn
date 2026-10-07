@@ -70,6 +70,12 @@ The interface uses an adaptive cooldown — the cooldown shortens when items are
 
 Shift-clicking a configuration slot switches it to **Unlimited Mode**. In this mode, the slot continuously supplies the configured item to remote machines in unlimited quantity.
 
+## Buffered Machine Inputs
+
+Machine and pipe inputs, including wireless EJECT inputs, first enter a persistent local buffer. Matching resources are merged and sent to the ME network every **5 ticks** (0.25 seconds at 20 TPS), with at most **128 resource variants** attempted per pass. Pending inputs appear in the network only after that transfer succeeds. Manual GUI deposits remain immediate.
+
+The input buffer holds up to **1,024 distinct resource variants**, with a shared **36 KiB quantity budget per resource type** (294,912 items for the item type). If the buffer is full, the sender retains the unaccepted remainder. Inputs require an active, powered network; power is charged once when the buffer accepts them. A full network leaves pending resources in the buffer across saves and reloads, and breaking the interface retains them inside the dropped interface item. Place it on a powered network to resume transfer; memory cards do not copy buffered resources.
+
 ## ME Power Cost
 
 Transfers consume ME network power. For large imports or exports, make sure the network has a large enough AE energy buffer; if power is insufficient, transfer pauses or moves only what the network can support.

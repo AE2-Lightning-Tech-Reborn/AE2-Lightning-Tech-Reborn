@@ -46,7 +46,7 @@ import com.moakiee.ae2lt.item.ReflectSubmoduleItem;
 import com.moakiee.ae2lt.item.ResistanceSubmoduleItem;
 import com.moakiee.ae2lt.item.RisingItem;
 import com.moakiee.ae2lt.item.SaturationSubmoduleItem;
-import com.moakiee.ae2lt.item.UndyingSubmoduleItem;
+import com.moakiee.ae2lt.item.OverloadProtectionSubmoduleItem;
 import com.moakiee.ae2lt.item.WaterBreathingSubmoduleItem;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessTerminalFactory;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
@@ -79,6 +79,8 @@ public final class ModItems {
             "overload_crystal",
             OverloadCrystalItem::new,
             new Item.Properties());
+
+    public static final RegistryObject<Item> DYE_BASE = registerSimpleItem("dye_base", new Item.Properties());
 
     public static final RegistryObject<Item> OVERLOAD_CRYSTAL_DUST =
             registerSimpleItem("overload_crystal_dust", new Item.Properties());
@@ -373,9 +375,9 @@ public final class ModItems {
             ReflectSubmoduleItem::new,
             new Item.Properties());
 
-    public static final RegistryObject<UndyingSubmoduleItem> CELESTWEAVE_SUBMODULE_UNDYING = registerItem(
-            "module_undying",
-            UndyingSubmoduleItem::new,
+    public static final RegistryObject<OverloadProtectionSubmoduleItem> CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION = registerItem(
+            "module_overload_protection",
+            OverloadProtectionSubmoduleItem::new,
             new Item.Properties().rarity(Rarity.EPIC));
 
     public static final RegistryObject<MultidimensionalProtectionSubmoduleItem>
@@ -526,6 +528,12 @@ public final class ModItems {
             () -> new RailgunModuleItem(
                     new Item.Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant(),
                     RailgunModuleType.MULTIDIMENSIONAL_EXECUTION));
+
+    public static final RegistryObject<RailgunModuleItem> RAILGUN_MODULE_EHV_BEAM = ITEMS.register(
+            "railgun_module_ehv_beam",
+            () -> new RailgunModuleItem(
+                    new Item.Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant(),
+                    RailgunModuleType.EHV_BEAM));
 
     public static final RegistryObject<Item> MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE =
             registerSimpleItem("matter_warping_matrix_pattern_storage_upgrade", new Item.Properties());

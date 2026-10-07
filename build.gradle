@@ -55,6 +55,19 @@ sourceSets {
     jdb {
         java.srcDir 'src/jdb/java'
         java.include '**/blockentity/*Interface*GameTests.java'
+        java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
+        java.include '**/blockentity/PigmeeCrystalCatalyzerGameTests.java'
+        java.include '**/blockentity/CrystalCatalyzerFluidGameTests.java'
+        java.include '**/debug/JeiWirelessSupplyGameTests.java'
+        java.include '**/debug/PigmeeBuildingGameTests.java'
+        java.include '**/debug/ForgeCraftingInput.java'
+        java.include '**/debug/TianshuDeferredReturnsGameTests.java'
+        java.include '**/debug/ArmorProtectionGameTests.java'
+        java.include '**/debug/OverloadFactoryReactionGameTests.java'
+        java.include '**/debug/TianshuQuantumBridgeGameTests.java'
+        if ((findProperty('ae2ltInscriberFixture') ?: 'false').toBoolean()) {
+            resources.srcDir 'src/overloadTest/resources'
+        }
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -63,6 +76,48 @@ configurations {
     jdbImplementation.extendsFrom implementation
     jdbCompileOnly.extendsFrom compileOnly
     jdbRuntimeOnly.extendsFrom runtimeOnly
+}
+
+tasks.configureEach {
+    if (name == 'runInterfaceIoGameTestServer') {
+        doLast {
+            def logFile = file('run-gametest/interface-io/logs/latest.log')
+            if (!logFile.exists() || !(logFile.getText('UTF-8') =~ /[1-9][0-9]* tests are now running!/).find()) {
+                throw new GradleException('No GameTests ran; check source includes and template namespaces.')
+            }
+        }
+    }
+}
+
+configurations { advancedAeRecipeApi { transitive = false } }
+dependencies { advancedAeRecipeApi "maven.modrinth:advancedae:${advancedae_version}" }
+def advancedAeRecipeApiJar = layout.buildDirectory.file('embedded-libraries/ae2addonlib.jar')
+def extractAdvancedAeRecipeApi = tasks.register('extractAdvancedAeRecipeApi') {
+    inputs.files(configurations.advancedAeRecipeApi)
+    outputs.file(advancedAeRecipeApiJar)
+    doLast {
+        def nested = zipTree(configurations.advancedAeRecipeApi.singleFile)
+                .matching { include 'META-INF/jarjar/ae2addonlib-*.jar' }.singleFile
+        def output = advancedAeRecipeApiJar.get().asFile
+        output.parentFile.mkdirs()
+        java.nio.file.Files.copy(nested.toPath(), output.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+def advancedAeMcpMappings = tasks.register('advancedAeMcpMappings', net.minecraftforge.gradle.mcp.tasks.DownloadMCPMappings) {
+    mappings = "${mapping_channel}_${mapping_version}"
+    output = layout.buildDirectory.file('embedded-libraries/mcp-mappings.zip')
+}
+def remapAdvancedAeRecipeApi = tasks.register('remapAdvancedAeRecipeApi', net.minecraftforge.gradle.userdev.tasks.RenameJarSrg2Mcp) {
+    input = advancedAeRecipeApiJar
+    mappings = advancedAeMcpMappings.flatMap { it.output }
+    output = layout.buildDirectory.file('embedded-libraries/ae2addonlib-dev.jar')
+    signatureRemoval = true
+    dependsOn extractAdvancedAeRecipeApi
+}
+dependencies {
+    compileOnly files(remapAdvancedAeRecipeApi.flatMap { it.output })
+    testImplementation files(remapAdvancedAeRecipeApi.flatMap { it.output })
+    testImplementation(fg.deobf("maven.modrinth:advancedae:${advancedae_version}")) { transitive = false }
 }
 
 minecraft {
@@ -124,7 +179,8 @@ minecraft {
         interfaceIoGameTestServer {
             parent runs.gameTestServer
             workingDirectory project.file('run-gametest/interface-io')
-            property 'forge.enabledGameTestNamespaces', "${mod_id},minecraft,ae2lt_io"
+            property 'forge.enabledGameTestNamespaces',
+                    providers.gradleProperty('ae2ltInterfaceIoTestNamespaces').getOrElse("${mod_id},minecraft,ae2lt_io")
             mods { "${mod_id}" { source sourceSets.jdb } }
         }
 

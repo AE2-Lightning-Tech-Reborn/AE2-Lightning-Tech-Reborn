@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.ManualItemExport;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -110,6 +113,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
     private long consumedEnergy;
     private int processingTicksSpent;
     private boolean working;
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private EnumSet<RelativeSide> allowedOutputs = EnumSet.noneOf(RelativeSide.class);
     private final AdjacentItemAutoExportHelper.DirectionalTargetCache exportTargetCache =
@@ -388,6 +392,19 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
                 inventory::getStackInSlot);
     }
 
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, OverloadProcessingFactoryInventory.SLOT_INPUT_0, 9,
+                OverloadProcessingFactoryInventory.SLOT_OUTPUT_0, 1,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, OverloadProcessingFactoryInventory.SLOT_OUTPUT_0, 1,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? getExportTarget(server, direction) : null, budget),
+                this::abortProcessing);
+    }
+
     public boolean pushOutResult() {
         if (!hasAutoExportWork() || !(level instanceof ServerLevel serverLevel)) {
             return false;
@@ -468,10 +485,10 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
             }
         }
 
-        FluidStack requiredInputFluid = candidate.recipe().fluidInput();
+        var recipe = candidate.recipe();
         int inputFluidCost = 0;
-        if (!requiredInputFluid.isEmpty()) {
-            long scaledInputFluidCost = (long) requiredInputFluid.getAmount() * candidate.parallel();
+        if (recipe.inputFluidAmount() > 0) {
+            long scaledInputFluidCost = (long) recipe.inputFluidAmount() * candidate.parallel();
             if (scaledInputFluidCost > Integer.MAX_VALUE) {
                 return false;
             }
@@ -479,9 +496,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
         }
         if (inputFluidCost > 0) {
             FluidStack currentInput = inputTank.getFluid();
-            if (currentInput.isEmpty()
-                    || !FluidStackHelper.sameFluidAndTag(requiredInputFluid, currentInput)
-                    || currentInput.getAmount() < inputFluidCost) {
+            if (!recipe.hasRequiredFluid(currentInput, candidate.parallel())) {
                 return false;
             }
         }

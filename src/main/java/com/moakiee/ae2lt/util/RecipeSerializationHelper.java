@@ -19,9 +19,23 @@ public final class RecipeSerializationHelper {
 
     public static ItemStack itemStackFromJson(JsonObject json) {
         Item item = itemFromId(resourceLocationFromJson(json, "id"));
-        int count = GsonHelper.getAsInt(json, "count", 1);
+        int count = 1;
+        if (json.has("count")) {
+            try {
+                count = json.get("count").getAsBigDecimal().intValueExact();
+            } catch (ArithmeticException | NumberFormatException failure) {
+                throw new JsonSyntaxException("Item stack count must be a positive integer within the int range", failure);
+            }
+        }
         if (count <= 0) {
             throw new JsonSyntaxException("Item stack count must be positive");
+        }
+        if (json.has("nbt")) {
+            JsonObject nativeStack = json.deepCopy();
+            nativeStack.add("item", json.get("id"));
+            ItemStack result = net.minecraftforge.common.crafting.CraftingHelper.getItemStack(nativeStack, true);
+            result.setCount(count);
+            return result;
         }
         return new ItemStack(item, count);
     }

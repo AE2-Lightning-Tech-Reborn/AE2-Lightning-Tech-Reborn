@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.crafting.algorithm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +15,7 @@ import com.moakiee.thunderbolt.ae2.crafting.CapturedPlanningChoice;
 import com.moakiee.thunderbolt.api.crafting.CraftingAlgorithmProvider;
 import com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines;
 import com.moakiee.thunderbolt.api.crafting.PlanningChoice;
+import com.moakiee.thunderbolt.api.crafting.PlanningRequest;
 import com.moakiee.thunderbolt.core.crafting.planner.CpSatPlanningEngine;
 import com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine;
 
@@ -27,6 +29,15 @@ public final class ExclusiveCraftingPlanning {
     private static final List<ResourceLocation> OWNED_ALGORITHMS = List.of(
             ThunderboltV2PlanningEngine.ID,
             CpSatPlanningEngine.ID);
+    private static final List<ResourceLocation> BASE_SELECTABLE = List.of(
+            ThunderboltV2PlanningEngine.ID, CraftingPlanningEngines.VANILLA_ID);
+    private static final List<ResourceLocation> CP_SAT_SELECTABLE = List.of(
+            ThunderboltV2PlanningEngine.ID, CpSatPlanningEngine.ID, CraftingPlanningEngines.VANILLA_ID);
+    private static final List<PlanningChoice> V2_CANDIDATES = List.of(
+            PlanningChoice.engine(ThunderboltV2PlanningEngine.ID), PlanningChoice.VANILLA);
+    private static final List<PlanningChoice> CP_SAT_CANDIDATES = List.of(
+            PlanningChoice.engine(CpSatPlanningEngine.ID), PlanningChoice.VANILLA);
+    private static final List<PlanningChoice> VANILLA_CANDIDATES = List.of(PlanningChoice.VANILLA);
 
     private ExclusiveCraftingPlanning() {
     }
@@ -36,21 +47,17 @@ public final class ExclusiveCraftingPlanning {
     }
 
     public static List<ResourceLocation> selectable() {
-        var options = new ArrayList<ResourceLocation>(3);
-        options.add(ThunderboltV2PlanningEngine.ID);
-        if (CraftingPlanningEngines.isKnown(CpSatPlanningEngine.ID)) {
-            options.add(CpSatPlanningEngine.ID);
-        }
-        options.add(CraftingPlanningEngines.VANILLA_ID);
-        return List.copyOf(options);
+        return CraftingPlanningEngines.isKnown(CpSatPlanningEngine.ID) ? CP_SAT_SELECTABLE : BASE_SELECTABLE;
     }
 
     public static ResourceLocation normalize(@Nullable ResourceLocation selected) {
-        var options = selectable();
-        if (selected != null && options.contains(selected)) {
+        if (ThunderboltV2PlanningEngine.ID.equals(selected)
+                || CraftingPlanningEngines.VANILLA_ID.equals(selected)
+                || (CpSatPlanningEngine.ID.equals(selected)
+                        && CraftingPlanningEngines.isKnown(CpSatPlanningEngine.ID))) {
             return selected;
         }
-        return options.get(0);
+        return ThunderboltV2PlanningEngine.ID;
     }
 
     public static int displayIndex(@Nullable ResourceLocation selected) {
@@ -85,16 +92,16 @@ public final class ExclusiveCraftingPlanning {
 
     public static ResourceLocation cycle(@Nullable ResourceLocation selected) {
         var options = selectable();
-        int index = options.indexOf(normalize(selected));
+        int index = selected == null ? 0 : Math.max(0, options.indexOf(selected));
         return options.get(Math.floorMod(index + 1, options.size()));
     }
 
     public static List<PlanningChoice> candidatesForSelected(@Nullable ResourceLocation selected) {
         var exclusive = normalize(selected);
         if (CraftingPlanningEngines.VANILLA_ID.equals(exclusive)) {
-            return List.of(PlanningChoice.VANILLA);
+            return VANILLA_CANDIDATES;
         }
-        return List.of(PlanningChoice.engine(exclusive), PlanningChoice.VANILLA);
+        return CpSatPlanningEngine.ID.equals(exclusive) ? CP_SAT_CANDIDATES : V2_CANDIDATES;
     }
 
     @Nullable
@@ -135,23 +142,23 @@ public final class ExclusiveCraftingPlanning {
 
     @Nullable
     private static ResourceLocation exclusiveLockSourceAlgorithm(IGrid grid) {
-        var sources = new ArrayList<ExclusiveCraftingLockSource>();
-        for (var node : grid.getNodes()) {
-            var lock = lockSource(node);
-            if (lock != null) {
-                sources.add(lock);
-            }
-        }
-        return exclusiveAlgorithmFromLockSources(sources);
+        return exclusiveAlgorithmFromSources(grid.getNodes(), ExclusiveCraftingPlanning::lockSource);
     }
 
     @Nullable
     static ResourceLocation exclusiveAlgorithmFromLockSources(
             Iterable<ExclusiveCraftingLockSource> sources) {
+        return exclusiveAlgorithmFromSources(sources, Function.identity());
+    }
+
+    @Nullable
+    private static <T> ResourceLocation exclusiveAlgorithmFromSources(
+            Iterable<T> sources, Function<T, ExclusiveCraftingLockSource> resolver) {
         ExclusiveCraftingLockSource best = null;
         int bestCpu = Integer.MIN_VALUE;
         int bestAlgo = Integer.MIN_VALUE;
-        for (var lock : sources) {
+        for (var source : sources) {
+            var lock = resolver.apply(source);
             if (lock == null || !lock.ae2lt$isExclusiveLockActive()) {
                 continue;
             }
@@ -186,6 +193,14 @@ public final class ExclusiveCraftingPlanning {
         return candidatesForSelected(exclusive);
     }
 
+    public static ExclusivePlanningDecision resolve(@Nullable IGrid grid) {
+        return new ExclusivePlanningDecision(exclusiveAlgorithm(grid));
+    }
+
+    public static List<PlanningChoice> candidatesForConfigure(ExclusivePlanningDecision decision) {
+        return decision == null ? List.of() : decision.candidates();
+    }
+
     public static boolean locksExclusiveAlgorithm(@Nullable IGrid grid) {
         return exclusiveAlgorithm(grid) != null;
     }
@@ -193,6 +208,30 @@ public final class ExclusiveCraftingPlanning {
     public static boolean locksExclusiveEngine(@Nullable IGrid grid) {
         var exclusive = exclusiveAlgorithm(grid);
         return exclusive != null && !CraftingPlanningEngines.VANILLA_ID.equals(exclusive);
+    }
+
+    public static boolean acceptsNodeLessV2Request(@Nullable IGrid grid, @Nullable PlanningRequest request) {
+        if (grid == null || request == null || request.requester() == null
+                || request.requestedAmount() <= 0 || request.output() == null
+                || request.requester().getGridNode() != null
+                || request.craftingService() != grid.getCraftingService()) {
+            return false;
+        }
+        return ThunderboltV2PlanningEngine.ID.equals(exclusiveAlgorithm(grid));
+    }
+
+    public record ExclusivePlanningDecision(@Nullable ResourceLocation algorithm) {
+        public boolean locked() {
+            return algorithm != null;
+        }
+
+        public boolean engineLocked() {
+            return locked() && !CraftingPlanningEngines.VANILLA_ID.equals(algorithm);
+        }
+
+        public List<PlanningChoice> candidates() {
+            return locked() ? candidatesForSelected(algorithm) : List.of();
+        }
     }
 
     public static List<CapturedPlanningChoice> stripVanilla(

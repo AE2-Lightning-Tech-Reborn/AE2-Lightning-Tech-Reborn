@@ -51,11 +51,11 @@ class ClosedLoopPatternRepositoryTest {
         var blockedSeed = new TestKey("blocked_seed");
 
         var networkOnly = SeedRefillSync.of(new TianshuSeedRefillService.RefillResult(
-                true, Map.of(), Map.of(networkSeed, 12L), Map.of()));
+                true, Map.of(), Map.of(), Map.of(networkSeed, 12L), Map.of(), Map.of()));
         var storageOnly = SeedRefillSync.of(new TianshuSeedRefillService.RefillResult(
-                true, Map.of(), Map.of(), Map.of(blockedSeed, 7L)));
+                true, Map.of(), Map.of(), Map.of(), Map.of(blockedSeed, 7L), Map.of()));
         var mixed = SeedRefillSync.of(new TianshuSeedRefillService.RefillResult(
-                true, Map.of(), Map.of(networkSeed, 12L), Map.of(blockedSeed, 7L)));
+                true, Map.of(), Map.of(), Map.of(networkSeed, 12L), Map.of(blockedSeed, 7L), Map.of()));
 
         assertEquals(SeedRefillSync.STATE_NETWORK_MISSING, networkOnly.state());
         assertEquals(12L, networkOnly.problems().get(0).networkMissing());

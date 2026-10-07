@@ -22,10 +22,12 @@ import com.moakiee.ae2lt.menu.LightningCollectorMenu;
 import com.moakiee.ae2lt.menu.LightningSimulationChamberMenu;
 import com.moakiee.ae2lt.menu.MatrixControllerMenu;
 import com.moakiee.ae2lt.menu.MatrixPortMenu;
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 import com.moakiee.ae2lt.menu.OverloadPatternEncoderMenu;
 import com.moakiee.ae2lt.menu.OverloadProcessingFactoryMenu;
 import com.moakiee.ae2lt.menu.OverloadedInterfaceMenu;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 import com.moakiee.ae2lt.menu.OverloadedPowerSupplyMenu;
 import com.moakiee.ae2lt.menu.PigmeePatternProviderMenu;
@@ -56,6 +58,7 @@ public class ModScreens {
             MenuScreens.register(OverloadPatternEncoderMenu.TYPE, OverloadPatternEncoderScreen::new);
             MenuScreens.register(OverloadDeviceWorkbenchMenu.TYPE, OverloadDeviceWorkbenchScreen::new);
             MenuScreens.register(OverloadedInterfaceMenu.TYPE, ModScreens::createOverloadedInterfaceScreen);
+            MenuScreens.register(OverloadedIOPortMenu.TYPE, ModScreens::createOverloadedIOPortScreen);
             if (ModBlocks.hasOverloadedPowerSupply()) {
                 MenuScreens.register(OverloadedPowerSupplyMenu.TYPE, ModScreens::createOverloadedPowerSupplyScreen);
             }
@@ -63,6 +66,7 @@ public class ModScreens {
             MenuScreens.register(LightningAssemblyChamberMenu.TYPE, ModScreens::createLightningAssemblyChamberScreen);
             MenuScreens.register(LightningCollectorMenu.TYPE, ModScreens::createLightningCollectorScreen);
             MenuScreens.register(OverloadProcessingFactoryMenu.TYPE, ModScreens::createOverloadProcessingFactoryScreen);
+            MenuScreens.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
             MenuScreens.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
             MenuScreens.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
             MenuScreens.register(FrequencyMenu.TYPE, FrequencyScreen::new);
@@ -168,6 +172,12 @@ public class ModScreens {
         return new OverloadProcessingFactoryScreen(menu, inv, title, style);
     }
 
+    private static MiningFactoryScreen createMiningFactoryScreen(
+            MiningFactoryMenu menu, Inventory inv, Component title) {
+        var style = StyleManager.loadStyleDoc("/screens/mining_factory.json");
+        return new MiningFactoryScreen(menu, inv, title, style);
+    }
+
     private static TeslaCoilScreen createTeslaCoilScreen(
             TeslaCoilMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/tesla_coil.json");
@@ -184,6 +194,12 @@ public class ModScreens {
             CrystalCatalyzerMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/crystal_catalyzer.json");
         return new CrystalCatalyzerScreen(menu, inv, title, style);
+    }
+
+    private static OverloadedIOPortScreen createOverloadedIOPortScreen(
+            OverloadedIOPortMenu menu, Inventory inv, Component title) {
+        var style = StyleManager.loadStyleDoc("/screens/overloaded_io_port.json");
+        return new OverloadedIOPortScreen(menu, inv, title, style);
     }
 
 }

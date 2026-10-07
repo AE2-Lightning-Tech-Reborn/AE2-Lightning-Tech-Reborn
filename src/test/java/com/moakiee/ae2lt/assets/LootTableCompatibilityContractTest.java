@@ -36,11 +36,13 @@ class LootTableCompatibilityContractTest {
             "minecraft:item");
     private static final Set<String> SUPPORTED_CONDITIONS = Set.of(
             "forge:loot_table_id",
+            "minecraft:block_state_property",
             "minecraft:match_tool",
             "minecraft:random_chance",
             "minecraft:survives_explosion");
     private static final Set<String> SUPPORTED_FUNCTIONS = Set.of(
             "minecraft:apply_bonus",
+            "minecraft:copy_name",
             "minecraft:explosion_decay",
             "minecraft:set_count");
 
@@ -62,7 +64,7 @@ class LootTableCompatibilityContractTest {
                 "ae2lt", "loot_modifiers", "inactive_firmament_spirit_core_end_city.json"));
         inspectForPost120Schema(modifier, readJson(modifier), problems);
 
-        assertEquals(70, tableCount, "The compatibility audit must cover every AE2LT loot table");
+        assertEquals(139, tableCount, "The compatibility audit must cover every AE2LT loot table");
         assertTrue(problems.isEmpty(), String.join(System.lineSeparator(), problems));
     }
 
@@ -116,7 +118,8 @@ class LootTableCompatibilityContractTest {
         validateDiscriminator(path, object, "function", SUPPORTED_FUNCTIONS, problems);
         if (object.has("type") && object.get("type").isJsonPrimitive()) {
             String type = object.get("type").getAsString();
-            if (!type.equals("minecraft:block")
+            boolean slabProperties = object.size() == 1 && Set.of("top", "bottom", "double").contains(type);
+            if (!slabProperties && !type.equals("minecraft:block")
                     && !type.equals("minecraft:chest")
                     && !type.equals("minecraft:uniform")
                     && !type.equals("ae2lt:add_item")

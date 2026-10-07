@@ -74,6 +74,7 @@ public class LightningSimulationChamberScreen extends AEBaseScreen<LightningSimu
         this.autoExportButton.setTooltipOff(List.of(
                 Component.translatable("ae2lt.gui.lightning_simulation.auto_export.title"),
                 Component.translatable("ae2lt.gui.lightning_simulation.auto_export.off")));
+        addToLeftToolbar(new InputTransferButton(menu));
         addToLeftToolbar(this.autoExportButton);
 
         this.configureOutputButton = new ActionButton(

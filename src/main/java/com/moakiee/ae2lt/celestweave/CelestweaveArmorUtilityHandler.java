@@ -224,7 +224,8 @@ public final class CelestweaveArmorUtilityHandler {
             return;
         }
         for (var active : capabilities) {
-            if (active.capability() instanceof DeviceCapability.StagedMitigation) {
+            if (active.capability() instanceof DeviceCapability.StagedMitigation staged
+                    && ArmorMitigationRules.extinguishesFire(staged.stage())) {
                 player.clearFire();
                 player.setRemainingFireTicks(0);
                 return;
@@ -306,6 +307,7 @@ public final class CelestweaveArmorUtilityHandler {
     private static void clearPlayerRuntime(Player player) {
         ArmorCapabilityCollector.clearCache(player);
         PhaseFlightMovementGuard.clear(player);
+        PhaseFlightPlayerState.endControl(player);
         PhaseFlightSubmodule.clearTransientPhaseState(player);
         for (EquipmentSlot slot : List.of(
                 EquipmentSlot.HEAD,

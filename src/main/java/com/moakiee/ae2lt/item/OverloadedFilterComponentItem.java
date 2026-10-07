@@ -1,9 +1,19 @@
 package com.moakiee.ae2lt.item;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+
+import com.google.common.collect.MapMaker;
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.FuzzyMode;
+import appeng.api.stacks.AEKey;
+import appeng.core.definitions.AEItems;
 import appeng.api.storage.cells.ICellWorkbenchItem;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.UpgradeInventories;
@@ -61,6 +71,48 @@ public class OverloadedFilterComponentItem extends AE2LTItem implements ICellWor
     @Override
     public IUpgradeInventory getUpgrades(ItemStack stack) {
         return UpgradeInventories.forItem(stack, UPGRADE_SLOTS);
+    }
+
+    public Predicate<AEKey> createMatcher(ItemStack stack) {
+        var config = getConfigInventory(stack);
+        var configured = new HashSet<AEKey>();
+        for (int slot = 0; slot < config.size(); slot++) {
+            var key = config.getKey(slot);
+            if (key != null) {
+                configured.add(key);
+            }
+        }
+        var upgrades = getUpgrades(stack);
+        var fuzzy = upgrades.isInstalled(AEItems.FUZZY_CARD) ? getFuzzyMode(stack) : null;
+        boolean inverted = upgrades.isInstalled(AEItems.INVERTER_CARD);
+        return createMatcher(configured, fuzzy, inverted);
+    }
+
+    public static Predicate<AEKey> createMatcher(Set<AEKey> configured,
+                                                 @Nullable FuzzyMode fuzzy, boolean inverted) {
+        if (configured.isEmpty()) {
+            return key -> true;
+        }
+        var keys = Set.copyOf(configured);
+        Map<AEKey, Boolean> results = new MapMaker().weakKeys().concurrencyLevel(1).makeMap();
+        return key -> {
+            var cached = results.get(key);
+            if (cached != null) {
+                return cached;
+            }
+            boolean matches = keys.contains(key);
+            if (!matches && fuzzy != null) {
+                for (var configuredKey : keys) {
+                    if (key.fuzzyEquals(configuredKey, fuzzy)) {
+                        matches = true;
+                        break;
+                    }
+                }
+            }
+            boolean allowed = matches != inverted;
+            results.put(key, allowed);
+            return allowed;
+        };
     }
 }
 

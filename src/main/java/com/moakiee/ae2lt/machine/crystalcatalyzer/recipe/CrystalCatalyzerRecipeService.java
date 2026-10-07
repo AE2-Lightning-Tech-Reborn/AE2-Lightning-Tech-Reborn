@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
@@ -27,13 +28,22 @@ public final class CrystalCatalyzerRecipeService {
             @Nullable Level level,
             CrystalCatalyzerInventory inventory,
             Mode mode) {
+        return findRecipe(level, inventory, mode, CrystalCatalyzerRecipe.defaultFluidInput(), false);
+    }
+
+    public static Optional<CrystalCatalyzerRecipeCandidate> findRecipe(
+            @Nullable Level level,
+            CrystalCatalyzerInventory inventory,
+            Mode mode,
+            FluidStack fluid,
+            boolean waterOnly) {
         if (level == null) {
             return Optional.empty();
         }
 
-        CrystalCatalyzerRecipeInput input = CrystalCatalyzerRecipeInput.fromMachine(inventory);
+        CrystalCatalyzerRecipeInput input = CrystalCatalyzerRecipeInput.fromMachine(inventory, fluid);
         for (CrystalCatalyzerRecipe recipe : getRecipes(level)) {
-            if (recipe.mode() != mode) {
+            if (recipe.mode() != mode || (waterOnly && !recipe.isWaterRecipe())) {
                 continue;
             }
             if (recipe.getOutputTemplate().isEmpty()) {
@@ -64,11 +74,15 @@ public final class CrystalCatalyzerRecipeService {
     }
 
     public static boolean isKnownCatalyst(@Nullable Level level, ItemStack stack, Mode mode) {
+        return isKnownCatalyst(level, stack, mode, false);
+    }
+
+    public static boolean isKnownCatalyst(@Nullable Level level, ItemStack stack, Mode mode, boolean waterOnly) {
         if (level == null || stack.isEmpty()) {
             return false;
         }
         for (CrystalCatalyzerRecipe recipe : getRecipes(level)) {
-            if (recipe.mode() != mode) {
+            if (recipe.mode() != mode || (waterOnly && !recipe.isWaterRecipe())) {
                 continue;
             }
             if (recipe.getOutputTemplate().isEmpty()) {

@@ -176,7 +176,14 @@ public final class ArmorPersistentData {
         if (armor == null || armor.isEmpty()) {
             return CelestweaveModuleContainer.EMPTY;
         }
-        return ModDataComponents.CELESTWEAVE_MODULES.getOrDefault(armor, CelestweaveModuleContainer.EMPTY);
+        CelestweaveModuleContainer value = ModDataComponents.CELESTWEAVE_MODULES
+                .getOrDefault(armor, CelestweaveModuleContainer.EMPTY);
+        CompoundTag tag = armor.getTag();
+        if (tag != null && CelestweaveModuleContainer.needsMigration(
+                tag.getCompound(ModDataComponents.CELESTWEAVE_MODULES.nbtKey()))) {
+            ModDataComponents.CELESTWEAVE_MODULES.set(armor, value);
+        }
+        return value;
     }
 
     private static void setContainer(ItemStack armor, CelestweaveModuleContainer container) {

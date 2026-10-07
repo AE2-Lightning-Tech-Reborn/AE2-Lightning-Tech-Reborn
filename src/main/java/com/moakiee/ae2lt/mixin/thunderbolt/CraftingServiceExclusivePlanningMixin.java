@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.mixin.thunderbolt;
 
-import java.util.List;
 import java.util.concurrent.Future;
 
 import com.llamalad7.mixinextras.sugar.Local;
@@ -52,15 +51,15 @@ public abstract class CraftingServiceExclusivePlanningMixin {
             CalculationStrategy strategy,
             CallbackInfoReturnable<Future<ICraftingPlan>> cir,
             @Local CraftingCalculation job) {
-        if (!ExclusiveCraftingPlanning.locksExclusiveAlgorithm(this.grid)) {
+        var decision = ExclusiveCraftingPlanning.resolve(this.grid);
+        if (!decision.locked()) {
             return;
         }
         ((CraftingPlanningControl) job).thunderbolt$configurePlanning(
-                ExclusiveCraftingPlanning.candidatesForConfigure(this.grid, List.of()),
+                ExclusiveCraftingPlanning.candidatesForConfigure(decision),
                 this.grid);
         if (job instanceof ExclusivePlanningLock lock) {
-            lock.ae2lt$setExclusiveEngine(
-                    ExclusiveCraftingPlanning.locksExclusiveEngine(this.grid));
+            lock.ae2lt$setExclusiveEngine(decision.engineLocked());
         }
     }
 }

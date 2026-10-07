@@ -17,7 +17,8 @@ import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceStatus;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.MaintenanceEditorData;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
+import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 /** Shift-middle-click inventory-maintenance rule editor, backed by the menu-bound Tianshu. */
-public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncodingTermMenu>
+public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends AESubScreen<M, AEBaseScreen<M>> {
     private static final int LIST_LEFT = 9;
     private static final int LIST_RIGHT = 187;
@@ -81,7 +82,6 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
 
     @Override
     public void init() {
-        // Preserve the parent terminal's slot positions before this sub-screen hides them.
         hideTerminalSlots();
         super.init();
     }
@@ -104,22 +104,14 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     private void hideTerminalSlots() {
-        for (var semantic : List.of(SlotSemantics.CRAFTING_GRID, SlotSemantics.CRAFTING_RESULT,
-                SlotSemantics.PROCESSING_INPUTS, SlotSemantics.PROCESSING_OUTPUTS,
-                SlotSemantics.SMITHING_TABLE_TEMPLATE, SlotSemantics.SMITHING_TABLE_BASE,
-                SlotSemantics.SMITHING_TABLE_ADDITION, SlotSemantics.SMITHING_TABLE_RESULT,
-                SlotSemantics.STONECUTTING_INPUT, SlotSemantics.BLANK_PATTERN,
-                SlotSemantics.ENCODED_PATTERN, SlotSemantics.PLAYER_INVENTORY,
-                SlotSemantics.PLAYER_HOTBAR)) {
-            setSlotsHidden(semantic, true);
+        for (var slot : menu.slots) {
+            var semantic = menu.getSlotSemantic(slot);
+            if (semantic != null) setSlotsHidden(semantic, true);
         }
     }
 
     @Override
     public void renderSlot(GuiGraphics graphics, Slot slot) {
-        // This screen renders its target and topology itself. The shared menu's
-        // processing-pattern draft slots must never bleed through this sub-screen,
-        // even if another screen or compatibility mod repositions them.
     }
 
     @Override
@@ -318,7 +310,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
                 entry.key, entry.globalAmount, entry.globalMode,
                 entry.ruleAmount, entry.ruleMode)).toList();
         menu.sendMaintenanceSave(new SaveMaintenanceRulePacket(
-                menu.containerId, menu.tianshuSelectionRevision, draft.data.target(),
+                menu.containerId, menu.getTianshuSelectionRevision(), draft.data.target(),
                 draft.data.ruleId(), false, parsedLower, parsedUpper, parsedPerJob,
                 enabled.isSelected(), edits));
         returnToParent();
@@ -331,7 +323,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
             return;
         }
         menu.sendMaintenanceSave(new SaveMaintenanceRulePacket(
-                menu.containerId, menu.tianshuSelectionRevision, draft.data.target(),
+                menu.containerId, menu.getTianshuSelectionRevision(), draft.data.target(),
                 draft.data.ruleId(), true, 0L, 1L, 1L, false, List.of()));
         returnToParent();
     }
@@ -424,7 +416,7 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
     }
 
     /** Second-level editor. Values are committed to the parent draft only when Done is pressed. */
-    private static final class ReserveEditorScreen<M extends TianshuPatternEncodingTermMenu>
+    private static final class ReserveEditorScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
             extends AESubScreen<M, TianshuMaintenanceRuleScreen<M>> {
         private static final int VARIANT_FIRST_ROW = 134;
         private static final int VARIANT_ROW_HEIGHT = 17;
@@ -494,7 +486,6 @@ public final class TianshuMaintenanceRuleScreen<M extends TianshuPatternEncoding
 
         @Override
         public void renderSlot(GuiGraphics graphics, Slot slot) {
-            // The reserve editor also uses only manually rendered item previews.
         }
 
         @Override

@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.event;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.lightning.LightningTransformService;
 import com.moakiee.ae2lt.lightning.ProtectedItemEntityHelper;
+import com.moakiee.ae2lt.lightning.RainbowPigmeeTransformation;
 import com.moakiee.ae2lt.logic.research.ResearchRitualService;
 import com.moakiee.ae2lt.network.EasterEggPacket;
 import com.moakiee.ae2lt.network.NetworkInit;
@@ -40,6 +41,7 @@ public final class LightningItemTransformationHandler {
         }
 
         data.putBoolean(TRANSFORMATION_CHECKED_TAG, true);
+        RainbowPigmeeTransformation.handleLightning(serverLevel, lightningBolt);
         ResearchRitualService.handleLightning(serverLevel, lightningBolt);
         LightningTransformService.handleLightning(serverLevel, lightningBolt);
         checkEasterEgg(serverLevel, lightningBolt);
@@ -79,9 +81,11 @@ public final class LightningItemTransformationHandler {
                 center.offset(-EASTER_EGG_SEARCH_RADIUS, -1, -EASTER_EGG_SEARCH_RADIUS),
                 center.offset(EASTER_EGG_SEARCH_RADIUS, 2, EASTER_EGG_SEARCH_RADIUS))) {
             if (level.getBlockState(pos).is(fumoBlock)) {
+                var source = net.minecraft.core.GlobalPos.of(level.dimension(), pos.immutable());
                 for (ServerPlayer player : level.players()) {
-                    if (player.distanceToSqr(pos.getX(), pos.getY(), pos.getZ()) < 64 * 64) {
-                        NetworkInit.sendToPlayer(player, new EasterEggPacket());
+                    if (com.moakiee.ae2lt.logic.world.EasterEggAudience.includes(
+                            source, player.level().dimension(), player.position())) {
+                        NetworkInit.sendToPlayer(player, new EasterEggPacket(source));
                     }
                 }
                 return;

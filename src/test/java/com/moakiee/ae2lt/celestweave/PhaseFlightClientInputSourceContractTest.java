@@ -54,7 +54,10 @@ class PhaseFlightClientInputSourceContractTest {
         assertTrue(mixin.contains("LivingEntity;setDeltaMovement(DDD)V"));
         assertFalse(mixin.contains("LivingEntity;addDeltaMovement"));
         assertTrue(mixin.contains("PhaseFlightMovementGuard.runAsSelfMovement("));
-        assertFalse(mixin.contains("method = \"aiStep\""));
+        assertTrue(mixin.contains("LivingEntity;jumpInFluid(Lnet/minecraftforge/fluids/FluidType;)V"));
+        assertTrue(mixin.contains("LivingEntity;sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V"));
+        assertFalse(mixin.contains("@WrapMethod(method = \"aiStep\")"));
+        assertFalse(mixin.contains("@Inject(method = \"aiStep\", at = @At(\"HEAD\"))"));
 
         String mixinConfig = Files.readString(Path.of("src/main/resources/ae2lt.mixins.json"));
         assertTrue(mixinConfig.contains("LivingEntityPhaseJumpMixin"));

@@ -19,7 +19,7 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
 
     EmiCrystalCatalyzerRecipe(ResourceLocation id, CrystalCatalyzerRecipe recipe) {
         super(AE2LTEmiCategories.CRYSTAL_CATALYZER, id, recipe, WIDTH, 114);
-        fluid = EmiRecipeWidgets.fluid(CrystalCatalyzerBlockEntity.getFixedFluidPerCycle());
+        fluid = EmiRecipeWidgets.fluid(recipe.fluidInput());
         inputs.add(fluid);
         recipe.catalyst().ifPresent(catalyst ->
                 inputs.add(EmiRecipeWidgets.ingredient(catalyst, recipe.catalystCount())));
@@ -29,12 +29,15 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
     @Override
     public void addWidgets(WidgetHolder widgets) {
         widgets.addTexture(TEXTURE, 0, 0, WIDTH, 62, 22, 14);
-        var fixedFluid = CrystalCatalyzerBlockEntity.getFixedFluidPerCycle();
-        widgets.addTank(fluid, 4, 4, 16, 53, Math.max(1, fixedFluid.getAmount()))
+        var inputFluid = recipe.fluidInput();
+        var fluidTank = widgets.addTank(fluid, 4, 4, 16, 53, Math.max(1, inputFluid.getAmount()))
                 .drawBack(false)
                 .appendTooltip(Component.translatable(
                         "jei.ae2lt.crystal_catalyzer.fluid_fixed",
-                        fixedFluid.getAmount()));
+                        inputFluid.getAmount()));
+        if (!recipe.isWaterRecipe()) {
+            fluidTank.appendTooltip(Component.translatable("jei.ae2lt.crystal_catalyzer.normal_only"));
+        }
 
         if (inputs.size() > 1) {
             int perInstance = Math.max(1, recipe.catalystCount());

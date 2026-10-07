@@ -24,11 +24,13 @@ import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningAssemblyChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningCollectorBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadDeviceWorkbenchBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.ExtendedOverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningSimulationChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
@@ -170,12 +172,14 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.LIGHTNING_SIMULATION_CHAMBER);
                         acceptCreative(output, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         acceptCreative(output, ModBlocks.OVERLOAD_PROCESSING_FACTORY);
+                        acceptCreative(output, ModBlocks.MINING_FACTORY);
 
                         // 过载 ME 网络设备
                         acceptCreative(output, ModBlocks.OVERLOADED_CONTROLLER);
                         acceptCreative(output, ModBlocks.OVERLOADED_PATTERN_PROVIDER);
                         acceptCreative(output, ModBlocks.EXTENDED_OVERLOADED_PATTERN_PROVIDER);
                         acceptCreative(output, ModBlocks.OVERLOADED_INTERFACE);
+                        acceptCreative(output, ModBlocks.OVERLOADED_IO_PORT);
                         if (ModBlocks.hasOverloadedPowerSupply()) {
                             acceptCreative(output, ModBlocks.OVERLOADED_POWER_SUPPLY);
                         }
@@ -323,7 +327,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_MATRIX_SHIELD);
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD);
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_REFLECT);
-                        acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_UNDYING);
+                        acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION);
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION);
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_PURIFICATION);
                         acceptCreative(output, ModItems.CELESTWEAVE_SUBMODULE_RADIATION_PROTECTION);
@@ -347,6 +351,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModItems.RAILGUN_MODULE_RANGE);
                         acceptCreative(output, ModItems.RAILGUN_MODULE_OVERLOAD_EXECUTION);
                         acceptCreative(output, ModItems.RAILGUN_MODULE_MULTIDIMENSIONAL_EXECUTION);
+                        acceptCreative(output, ModItems.RAILGUN_MODULE_EHV_BEAM);
 
                         // Fumo 收藏品（猪咪系列留在独立物品栏）
                         output.accept(ModFumos.MOAKIEE_FUMO_ITEM.get());
@@ -361,12 +366,20 @@ public class AE2LightningTech {
                     .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
+                        acceptCreative(output, ModItems.DYE_BASE);
                         output.accept(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get());
                         acceptCreative(output, ModBlocks.PIGMEE_CRYSTAL_CATALYZER);
                         acceptCreative(output, ModBlocks.PIGMEE_MENTALMATH_UNIT);
                         acceptCreative(output, ModBlocks.PIGMEE_PATTERN_PROVIDER);
                         acceptCreative(output, ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         acceptCreative(output, ModBlocks.PIGMEE_SYNTHESIS_STATION);
+                        acceptCreative(output, ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        acceptCreative(output, ModBlocks.PIGMEE_BUILDING_SLAB);
+                        ModBlocks.PIGMEE_BUILDING_SLABS.values().forEach(slab -> acceptCreative(output, slab));
+                        ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.values().forEach(slab -> acceptCreative(output, slab));
+                        ModBlocks.PIGMEE_BUILDING_PANELS.values().forEach(panel -> acceptCreative(output, panel));
+                        ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.values().forEach(panel -> acceptCreative(output, panel));
                         acceptCreative(output, ModItems.PIGMEE_CORE);
                         acceptCreative(output, ModItems.PIGMEE_ITEM_CELL_HOUSING);
                         acceptCreative(output, ModItems.PIGMEE_STORAGE_COMPONENT);
@@ -713,7 +726,8 @@ public class AE2LightningTech {
     }
 
     private static boolean hasAttachedCapabilitySupport(BlockEntity blockEntity) {
-        return blockEntity instanceof LightningCollectorBlockEntity
+        return blockEntity instanceof MiningFactoryBlockEntity
+                || blockEntity instanceof LightningCollectorBlockEntity
                 || blockEntity instanceof FirmamentConversionCoreBlockEntity
                 || blockEntity instanceof OverloadedControllerBlockEntity
                 || blockEntity instanceof LightningSimulationChamberBlockEntity
@@ -738,6 +752,9 @@ public class AE2LightningTech {
     }
 
     private static IItemHandlerModifiable getItemHandlerCapability(BlockEntity blockEntity) {
+        if (blockEntity instanceof MiningFactoryBlockEntity be) {
+            return be.getAutomationInventory();
+        }
         if (blockEntity instanceof LightningCollectorBlockEntity be) {
             return be.getAutomationInventory();
         }
@@ -782,6 +799,9 @@ public class AE2LightningTech {
     }
 
     private static IEnergyStorage getEnergyCapability(BlockEntity blockEntity, Direction side) {
+        if (blockEntity instanceof MiningFactoryBlockEntity be) {
+            return be.getEnergyStorage();
+        }
         if (blockEntity instanceof LightningSimulationChamberBlockEntity be) {
             return be.getEnergyStorageCapability(side);
         }
@@ -810,6 +830,9 @@ public class AE2LightningTech {
     }
 
     private static ILightningEnergyHandler getLightningEnergyCapability(BlockEntity blockEntity) {
+        if (blockEntity instanceof MiningFactoryBlockEntity be) {
+            return new GridLightningEnergyHandler(be);
+        }
         if (blockEntity instanceof LightningCollectorBlockEntity be) {
             return new GridLightningEnergyHandler(be);
         }
@@ -911,6 +934,15 @@ public class AE2LightningTech {
                     overloadProcessingFactoryBeType,
                     null,
                     OverloadProcessingFactoryBlockEntity::serverTick);
+
+            var miningFactoryBlock = ModBlocks.MINING_FACTORY.get();
+            var miningFactoryBeType = ModBlockEntities.MINING_FACTORY.get();
+            miningFactoryBlock.setBlockEntity(
+                    MiningFactoryBlockEntity.class,
+                    miningFactoryBeType,
+                    null,
+                    MiningFactoryBlockEntity::serverTick);
+            AEBaseBlockEntity.registerBlockEntityItem(miningFactoryBeType, miningFactoryBlock.asItem());
 
             var teslaCoilBlock = ModBlocks.TESLA_COIL.get();
             var teslaCoilBeType = ModBlockEntities.TESLA_COIL.get();
@@ -1029,6 +1061,11 @@ public class AE2LightningTech {
                     null,
                     OverloadedInterfaceBlockEntity::serverTick);
 
+            var ioPortBlock = ModBlocks.OVERLOADED_IO_PORT.get();
+            var ioPortBeType = ModBlockEntities.OVERLOADED_IO_PORT.get();
+            ioPortBlock.setBlockEntity(OverloadedIOPortBlockEntity.class, ioPortBeType, null, null);
+            AEBaseBlockEntity.registerBlockEntityItem(ioPortBeType, ioPortBlock.asItem());
+
             if (ModBlocks.hasOverloadedPowerSupply()) {
                 var powerSupplyBlock = ModBlocks.OVERLOADED_POWER_SUPPLY.get();
                 var powerSupplyBeType = ModBlockEntities.OVERLOADED_POWER_SUPPLY.get();
@@ -1145,6 +1182,9 @@ public class AE2LightningTech {
             Upgrades.add(AEItems.INVERTER_CARD, ModItems.VOID_CELL.get(), 1);
             Upgrades.add(AEItems.CRAFTING_CARD, ModBlocks.OVERLOADED_INTERFACE.get(), 1);
             Upgrades.add(AEItems.FUZZY_CARD, ModBlocks.OVERLOADED_INTERFACE.get(), 1);
+            Upgrades.add(AEItems.SPEED_CARD, ModBlocks.OVERLOADED_IO_PORT.get(),
+                    OverloadedIOPortBlockEntity.SPEED_CARD_SLOTS);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), 1);
 
             registerAppliedFluxInductionCardCompat();
             registerOverloadTntDispenseBehavior();

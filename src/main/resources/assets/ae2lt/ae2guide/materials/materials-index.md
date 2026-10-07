@@ -51,6 +51,7 @@ Weather Condensate items are consumed by the [Atmospheric Ionizer](../machines/a
 | Block | Notes |
 |-------|-------|
 | Overload Crystal Block | Decorative block, also used as a building material for the Budding Overload Crystal conversion multiblock |
+| [Pigmee Building Materials](pigmee-building-materials.md) | Source material for dyed building blocks, stonecut into 32 colored panels and slabs |
 | [Block of Silicon](overload-machine-frame.md) | Compact storage block for silicon |
 | [Overload Machine Frame](overload-machine-frame.md) | Shared base frame for most Overload processing machines |
 | <ItemLink id="ae2lt:overload_tnt" /> | Explosive block that unleashes a barrage of artificial lightning; see [Overload TNT](../lightning/overload-tnt.md) |

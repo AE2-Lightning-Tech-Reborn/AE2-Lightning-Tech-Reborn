@@ -22,6 +22,10 @@ public final class LegacyRegistryAliases {
         }
         registered = true;
 
+        ((net.minecraftforge.registries.ForgeRegistry<net.minecraft.world.item.Item>)
+                net.minecraftforge.registries.ForgeRegistries.ITEMS)
+                .addAlias(id("module_undying"), id("module_overload_protection"));
+
         aliasTianshuComputeUnits();
 
         aliasBlockAndItem(MATRIX_PREFIX + "blank_sub_core", "tianshu_blank_unit");
