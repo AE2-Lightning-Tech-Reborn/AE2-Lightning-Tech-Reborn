@@ -66,6 +66,8 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
         stacks.add(ModBlocks.OVERLOADED_IO_PORT.toStack());
         stacks.add(ModBlocks.OVERLOAD_ALLOY_ANVIL.toStack());
         stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_CRAFTING_TERMINAL.toStack());
+        stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.toStack());
+        stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.toStack());
         stacks.add(ModBlocks.PIGMEE_BUILDING_BLOCK.toStack());
         stacks.add(ModBlocks.PIGMEE_BUILDING_SLAB.toStack());
         for (var color : net.minecraft.world.item.DyeColor.values()) {
