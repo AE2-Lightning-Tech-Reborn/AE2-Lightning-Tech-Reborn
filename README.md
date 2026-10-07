@@ -4,7 +4,7 @@
 
 ## 文档目录
 
-- [大型过载处理工厂与通用多方块框架设计](docs/large-overload-processing-factory-design.zh-CN.md)
+- [大型过载处理工厂与通用多方块框架设计](large-overload-processing-factory-design.zh-CN.md)
 
 ## 修改规则
 
