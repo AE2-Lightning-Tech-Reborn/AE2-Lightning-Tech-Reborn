@@ -78,7 +78,7 @@ Insert ordinary processing patterns as usual. The factory validates the actual i
 
 ## Throughput and costs
 
-Default ordinary core budgets are **16,384 / 65,536 / 262,144 / 1,048,576 source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. These values, FE throughput/capacity and the default auxiliary inventory sizes are configurable under `largeOverloadFactory` in the common config.
+Default ordinary core budgets are **1,024 / 16,384 / 262,144 / unlimited source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. These values, FE throughput/capacity and the default auxiliary inventory sizes are configurable under `largeOverloadFactory` in the common config. Set `operationsPerTick = 0` to remove the source-operation cap; resource costs and server work budgets still apply.
 
 Every ordinary source operation costs at least **one High Voltage Lightning**. A higher native Lightning cost is preserved. A recipe requiring EHV can substitute **four HV for one EHV**, including mixed EHV/HV payments. This is built in: no substitution matrix is required. EHV cannot pay an HV requirement.
 
@@ -95,3 +95,5 @@ Its limit is **1,024 source operations per tick**, shared by all hatches. Each o
 Time Wheel and Tianshu CPUs can receive queued outputs after committing their dispatch, enabling same-tick chains. Other CPUs receive products through the hatch's ME network on a later tick. Synchronous processing does not mean unlimited server work: exhausted budgets continue on later ticks.
 
 If storage is full, a network changes or a structure breaks, already owned materials and products remain in a saved resource account. Automatic returns require the original external network anchor. **Export recovery** creates a capsule for retained resources; breaking a hatch or an energized Controller also preserves owned resources in a capsule. Use the capsule on an active processing hatch to explicitly return those resources to that network. Partial returns remain in the same capsule. Copying a capsule does not copy its resources.
+
+Structure checks and initial indexing of many patterns are spread over multiple ticks. Formation requires a complete valid scan; patterns are published together after indexing finishes.

@@ -33,7 +33,7 @@ public final class LargeFactoryGameTests {
     static final class Store implements MEStorage {
         final Map<AEKey, Long> items = new LinkedHashMap<>();
         boolean accept = true;
-        long calls, enumerations;
+        long calls, enumerations, actualExtractions;
         AEKey shortKey;
         long actualLimit = Long.MAX_VALUE;
         Runnable callback;
@@ -50,6 +50,7 @@ public final class LargeFactoryGameTests {
             calls++;
             long taken = Math.min(amount, get(key));
             if (mode == Actionable.MODULATE) {
+                actualExtractions++;
                 if (key.equals(shortKey)) taken = Math.min(taken, actualLimit);
                 items.put(key, get(key) - taken);
                 if (callback != null) { var run = callback; callback = null; run.run(); }
@@ -145,7 +146,7 @@ public final class LargeFactoryGameTests {
             var output = new KeyCounter();
             long accepted = LargeFactoryExecutor.execute(f.hatch, entry, Map.of(STONE, 4L), 8, produced -> {
                 h.assertTrue(f.store.get(LightningKey.HIGH_VOLTAGE) == 68, "cost already committed when returns are queued");
-                h.assertTrue(f.controller.budget().remainingOperations(h.getLevel().getGameTime()) == 16_384 - 32, "one factory-wide operation budget");
+                h.assertTrue(f.controller.budget().remainingOperations(h.getLevel().getGameTime()) == 1024 - 32, "one factory-wide operation budget");
                 produced.forEach(stack -> output.add(stack.getKey(), stack.getLongValue()));
                 return true;
             }, false);
@@ -172,6 +173,43 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
+    public static void cachedBindingSkipsUnfundedInputsAndPreservesPartialRealReceipt(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            f.pattern(1); f.store.put(STONE, 1); f.store.put(LightningKey.HIGH_VOLTAGE, 1);
+            f.controller.receiveEnergy(20, false); f.controller.toggleNetworkEnergy(); f.hatch.togglePassive();
+            h.assertTrue(f.hatch.passiveStep(), "initialize binding from one real paid sample");
+            f.store.put(STONE, 10); f.store.put(LightningKey.HIGH_VOLTAGE, 10);
+            h.runAfterDelay(1, () -> {
+                long extractions = f.store.actualExtractions;
+                h.assertTrue(!f.hatch.passiveStep() && f.hatch.status().equals("missing_energy") && f.store.actualExtractions == extractions,
+                        "known binding with no FE must not take and refund another sample");
+                f.controller.receiveEnergy(200, false); f.store.shortKey = STONE; f.store.actualLimit = 2; f.store.accept = false;
+                h.assertTrue(!f.hatch.passiveStep(), "cached availability never substitutes for the real receipt");
+                h.assertTrue(f.hatch.account().resources.getOrDefault(STONE, 0L) == 2 && f.store.get(STONE) == 8,
+                        "only the two actually extracted inputs belong to the retained account: owned=" + f.hatch.account().resources
+                                + ", stored=" + f.store.get(STONE) + ", status=" + f.hatch.status());
+                h.assertTrue(f.controller.energyStored() == 200 && f.store.get(LightningKey.HIGH_VOLTAGE) == 10
+                        && f.store.get(DIAMOND) == 2 && f.hatch.account().commitSequence == 1, "failed batch creates no output and spends no costs");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void changingAnAlreadyScannedCellRestartsFormationBeforeClaim(GameTestHelper h) {
+        var f = new Fixture(h, false, false);
+        h.runAfterDelay(5, () -> {
+            h.setBlock(f.pos(BlockPos.ZERO), Blocks.AIR);
+            h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.lastScan() != null, "changed scan completes"))
+                    .thenExecute(() -> {
+                        h.assertTrue(!f.controller.formed() && f.controller.missing()[0] == 1, "stale scanned frame cannot form a factory");
+                        h.setBlock(f.pos(BlockPos.ZERO), LargeFactoryRegistration.block(LargeFactoryComponent.FRAME));
+                    }).thenWaitUntil(() -> h.assertTrue(f.hatch.ready(), "repaired structure forms through a fresh scan"))
+                    .thenSucceed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void partialRealLightningReceiptBecomesOneRecoverableParcel(GameTestHelper h) {
         new Fixture(h, false, false).ready(f -> {
             var entry = f.pattern(4); f.store.put(LightningKey.HIGH_VOLTAGE, 100);
@@ -179,7 +217,7 @@ public final class LargeFactoryGameTests {
             f.controller.receiveEnergy(1000, false);
             h.assertTrue(f.hatch.pushPattern(entry.pattern, f.inputs(4)) == false, "partial actual payment must reject job");
             h.assertTrue(f.hatch.account().resources.getOrDefault(LightningKey.HIGH_VOLTAGE, 0L) == 2, "only actual receipt is owned");
-            h.assertTrue(f.controller.energyStored() == 1000 && f.controller.budget().remainingOperations(h.getLevel().getGameTime()) == 16_384, "failure consumes no FE or operation budget");
+            h.assertTrue(f.controller.energyStored() == 1000 && f.controller.budget().remainingOperations(h.getLevel().getGameTime()) == 1024, "failure consumes no FE or operation budget");
             UUID id = f.hatch.accountId(); f.hatch.releaseResources();
             var ledger = LargeFactoryLedger.get(h.getLevel());
             h.assertTrue(ledger.parcel(id) != null && ledger.parcel(id).resources.size() == 1, "single authoritative recovery account");
@@ -249,10 +287,11 @@ public final class LargeFactoryGameTests {
         });
     }
 
-    @GameTest(template = "empty", timeoutTicks = 80)
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void relocatedFirmamentCoreCannotFormOutsideNaturalStarship(GameTestHelper h) {
         var f = new Fixture(h, true, false);
-        h.runAfterDelay(10, () -> {
+        h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.lastScan() != null, "bounded formation scan finished"))
+                .thenExecute(() -> {
             h.assertTrue(!f.controller.formed() && f.controller.lastScan().diagnostics().stream().anyMatch(d -> d.problem() == LargeFactoryStructure.Problem.FIRMAMENT_OUTSIDE_STARSHIP), "world structure restriction remains enforced");
             h.succeed();
         });
@@ -287,6 +326,35 @@ public final class LargeFactoryGameTests {
             } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         }
         h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void unlimitedT4AcceptsLargeBatchesWhileStillChargingRealResources(GameTestHelper h) {
+        var fixture = new Fixture(h, false, false);
+        h.setBlock(fixture.pos(LargeFactoryStructure.CORE), LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T4));
+        fixture.ready(f -> {
+            h.assertTrue(LargeFactoryConfig.operations(LargeFactoryComponent.CORE_T1) == 1024
+                    && LargeFactoryConfig.operations(LargeFactoryComponent.CORE_T2) == 16_384
+                    && LargeFactoryConfig.operations(LargeFactoryComponent.CORE_T3) == 262_144
+                    && LargeFactoryConfig.operations(LargeFactoryComponent.CORE_T4) == LargeFactoryOperationBudget.UNLIMITED,
+                    "new default core capacities are loaded");
+            var entry = f.pattern(1);
+            f.controller.receiveEnergy(100_000_000, false); f.controller.toggleNetworkEnergy();
+            f.store.put(LightningKey.HIGH_VOLTAGE, 2_000_000);
+            var output = new KeyCounter();
+            long accepted = LargeFactoryExecutor.execute(f.hatch, entry, Map.of(STONE, 1L), Long.MAX_VALUE, produced -> {
+                produced.forEach(stack -> output.add(stack.getKey(), stack.getLongValue())); return true;
+            }, false);
+            h.assertTrue(accepted == 2_000_000 && output.get(DIAMOND) == 4_000_000,
+                    "T4 exceeds the old cap and accepts only the resource-funded part");
+            h.assertTrue(f.store.get(LightningKey.HIGH_VOLTAGE) == 0 && f.controller.energyStored() == 60_000_000,
+                    "unlimited operation budget still pays every lightning and FE cost");
+            h.assertTrue(f.controller.budget().remainingOperations(h.getLevel().getGameTime()) == LargeFactoryOperationBudget.UNLIMITED,
+                    "completed work cannot exhaust an unlimited core");
+            h.assertTrue(LargeFactoryExecutor.execute(f.hatch, entry, Map.of(STONE, 1L), 1, produced -> true, false) == 0,
+                    "unlimited core refuses unpaid work");
+            h.succeed();
+        });
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
@@ -341,6 +409,7 @@ public final class LargeFactoryGameTests {
                 // Global test mounts belong to a particular grid instance; remount if AE2 chose the other grid during merge.
                 var service = f.hatch.getMainNode().getGrid().getStorageService(); service.addGlobalStorageProvider(m -> m.mount(f.store, 0));
                 f.hatch.flushRetained();
+            }).thenWaitUntil(() -> {
                 h.assertTrue(f.store.get(DIAMOND) == 2 && f.hatch.account().empty(), "return survives disassembly without re-execution");
             }).thenSucceed();
         });
@@ -368,7 +437,7 @@ public final class LargeFactoryGameTests {
             var emerald = AEItemKey.of(Items.EMERALD);
             f.hatch.inventory().setItemDirect(1, PatternDetailsHelper.encodeProcessingPattern(
                     List.of(new GenericStack(DIAMOND, 1)), List.of(new GenericStack(emerald, 3))));
-            var second = f.hatch.entries().get(1).pattern;
+            var second = PatternDetailsHelper.decodePattern(f.hatch.inventory().getStackInSlot(1), h.getLevel());
             f.store.put(STONE, 2); f.store.put(LightningKey.HIGH_VOLTAGE, 6);
             f.controller.receiveEnergy(120, false); f.controller.toggleNetworkEnergy();
             var grid = f.hatch.getMainNode().getGrid();
@@ -478,14 +547,19 @@ public final class LargeFactoryGameTests {
                                 List.of(new GenericStack(STONE, slot + 1)), List.of(new GenericStack(DIAMOND, 2L * (slot + 1)))));
                         f.expanded.togglePassive();
                     }
-                    new PerformanceRun(h, factories).sample();
-                });
+                }).thenWaitUntil(() -> h.assertTrue(factories.stream().noneMatch(f -> f.expanded.patternIndexing()), "all 2304 patterns indexed"))
+                .thenExecute(() -> new PerformanceRun(h, factories).sample());
     }
 
     private static final class PerformanceRun {
         final GameTestHelper h; final List<Fixture> factories;
         final com.google.gson.JsonArray results = new com.google.gson.JsonArray();
         final List<Long> durations = new ArrayList<>();
+        final List<Long> singleDurations = new ArrayList<>();
+        final Map<String, Long> completeTickDurations = new java.util.HashMap<>();
+        final Map<String, Long> sectionTotals = new java.util.HashMap<>();
+        final Map<BlockPos, Integer> owners = new java.util.HashMap<>();
+        long coldPeak;
         final java.lang.reflect.Field passiveFlag;
         int phase, tick; long calls, enumerations, produced, gcStart;
         PerformanceRun(GameTestHelper h, List<Fixture> factories) {
@@ -495,6 +569,18 @@ public final class LargeFactoryGameTests {
             // Pause only automatic scheduling between samples so measured work includes the actual production.
             // The production passive executor, quotas, matching and every real AE2 call remain unchanged.
             factories.forEach(f -> mode(f, false));
+            for (int index = 0; index < factories.size(); index++) {
+                var f = factories.get(index);
+                owners.put(f.controller.getBlockPos(), index);
+                for (var hatch : f.controller.hatches()) owners.put(hatch.getBlockPos(), index);
+            }
+            LargeFactoryTiming.setReceiver((host, section, nanos) -> {
+                var owner = owners.get(host.getBlockPos());
+                if (owner == null || tick <= 5) return;
+                String key = phase + ":" + host.getLevel().getGameTime() + ":" + owner;
+                completeTickDurations.merge(key, nanos, Long::sum);
+                sectionTotals.merge(section, nanos, Long::sum);
+            });
         }
         void mode(Fixture f, boolean enabled) {
             try { passiveFlag.setBoolean(f.expanded, enabled); }
@@ -507,10 +593,14 @@ public final class LargeFactoryGameTests {
             long beforeOutput = factories.stream().mapToLong(f -> f.store.get(DIAMOND)).sum();
             long start = System.nanoTime();
             for (var f : factories) {
+                long singleStart = System.nanoTime();
+                long diagnostic = LargeFactoryTiming.begin();
                 mode(f, phase != 1);
                 try { for (int i = 0; i < 64; i++) {
                     if (phase == 1) f.expanded.flushRetained(); else f.expanded.passiveStep();
-                } } finally { mode(f, false); }
+                } } finally { mode(f, false); LargeFactoryTiming.end(f.controller, "stress_64_calls", diagnostic); }
+                long singleElapsed = System.nanoTime() - singleStart;
+                if (tick >= 5) singleDurations.add(singleElapsed); else coldPeak = Math.max(coldPeak, singleElapsed);
             }
             long elapsed = System.nanoTime() - start;
             long newCalls = factories.stream().mapToLong(f -> f.store.calls).sum() - beforeCalls;
@@ -528,11 +618,25 @@ public final class LargeFactoryGameTests {
                 result.addProperty("incremental_mean_ms", durations.stream().mapToLong(Long::longValue).average().orElseThrow() / 1_000_000.0);
                 result.addProperty("incremental_p95_ms", durations.get(30) / 1_000_000.0);
                 result.addProperty("incremental_max_ms", durations.get(31) / 1_000_000.0);
+                singleDurations.sort(Long::compare);
+                result.addProperty("single_factory_64_calls_mean_us", singleDurations.stream().mapToLong(Long::longValue).average().orElseThrow() / 1000.0);
+                result.addProperty("single_factory_64_calls_p95_us", singleDurations.get((int) (singleDurations.size() * .95)) / 1000.0);
+                result.addProperty("single_factory_64_calls_max_us", singleDurations.getLast() / 1000.0);
+                result.addProperty("cold_factory_64_calls_max_us", coldPeak / 1000.0);
+                var totals = new ArrayList<>(completeTickDurations.values()); totals.sort(Long::compare);
+                if (!totals.isEmpty()) {
+                    result.addProperty("complete_factory_tick_mean_us", totals.stream().mapToLong(Long::longValue).average().orElseThrow() / 1000.0);
+                    result.addProperty("complete_factory_tick_p95_us", totals.get((int) (totals.size() * .95)) / 1000.0);
+                    result.addProperty("complete_factory_tick_max_us", totals.getLast() / 1000.0);
+                    result.addProperty("complete_factory_ticks_over_50us", totals.stream().filter(n -> n > 50_000).count());
+                }
+                result.add("profile_sections_total_ns", new com.google.gson.Gson().toJsonTree(sectionTotals));
                 result.addProperty("actual_storage_calls", calls); result.addProperty("full_inventory_enumerations", enumerations);
                 result.addProperty("produced_items_during_measured_work", produced);
                 if (phase == 2) h.assertTrue(produced > 0, "continuous completion samples must include actual production");
                 result.addProperty("process_gc_ms", gc() - gcStart); results.add(result);
                 if (++phase == 3) {
+                    LargeFactoryTiming.setReceiver(null);
                     try { java.nio.file.Files.writeString(java.nio.file.Path.of("large-factory-performance.json"), new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(results) + "\n"); }
                     catch (java.io.IOException e) { throw new AssertionError(e); }
                     h.succeed(); return;
@@ -546,7 +650,8 @@ public final class LargeFactoryGameTests {
                         f.store.put(STONE, 10_000_000); f.store.put(LightningKey.HIGH_VOLTAGE, 10_000_000);
                     }
                 }
-                durations.clear(); tick = 0; calls = 0; enumerations = 0; produced = 0; gcStart = gc();
+                durations.clear(); singleDurations.clear(); completeTickDurations.clear(); sectionTotals.clear(); coldPeak = 0;
+                tick = 0; calls = 0; enumerations = 0; produced = 0; gcStart = gc();
             }
             h.runAfterDelay(1, () -> {
                 if (phase == 1) for (var f : factories) if (f.expanded.account().resources.isEmpty()) {

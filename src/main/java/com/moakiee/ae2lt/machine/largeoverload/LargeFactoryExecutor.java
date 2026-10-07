@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.machine.largeoverload;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import appeng.api.config.Actionable;
-import appeng.api.config.PowerMultiplier;
 import appeng.api.config.PowerUnit;
 import appeng.api.networking.IGrid;
 import appeng.api.stacks.AEKey;
@@ -14,7 +13,17 @@ import com.moakiee.ae2lt.me.key.LightningKey;
 public final class LargeFactoryExecutor {
     private LargeFactoryExecutor() { }
     public record Quote(long copies, long operations, long energy, long externalEnergy,
-            LargeFactoryLightningCost.Payment lightning) { }
+            LargeFactoryLightningCost.Payment lightning, LargeFactoryRecipe recipe, IGrid grid, long capabilityVersion) {
+        Quote limitCopies(long limit) {
+            if (limit == copies) return this;
+            if (limit <= 0 || limit > copies) throw new IllegalArgumentException("Invalid reduced quote");
+            long reducedOperations = Math.multiplyExact(operations / copies, limit);
+            long reducedEnergy = Math.multiplyExact(energy / copies, limit);
+            return new Quote(limit, reducedOperations, reducedEnergy, Math.min(externalEnergy, reducedEnergy),
+                    recipe.lightning().plan(reducedOperations, lightning.highVoltage(), lightning.extremeHighVoltage()).orElseThrow(),
+                    recipe, grid, capabilityVersion);
+        }
+    }
 
     public static Quote quote(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
             Map<AEKey, Long> inputs, long requested) {
@@ -34,9 +43,11 @@ public final class LargeFactoryExecutor {
         if (energy > 0) copies = Math.min(copies, controller.remainingEnergyThroughput() / energy / operationsPerCopy);
         if (copies <= 0) return null;
         long operations = Math.multiplyExact(copies, operationsPerCopy);
-        var storage = grid.getStorageService().getInventory();
-        long high = Math.max(0, hatch.extract(grid, LightningKey.HIGH_VOLTAGE, Long.MAX_VALUE, Actionable.SIMULATE));
-        long extreme = Math.max(0, hatch.extract(grid, LightningKey.EXTREME_HIGH_VOLTAGE, Long.MAX_VALUE, Actionable.SIMULATE));
+        var cost = recipe.lightning();
+        long extreme = cost.extremeHighVoltage() == 0 ? 0
+                : hatch.extract(grid, LightningKey.EXTREME_HIGH_VOLTAGE, Long.MAX_VALUE, Actionable.SIMULATE);
+        long high = cost.highVoltage() > 0 || cost.extremeHighVoltage() > 0 && extreme / cost.extremeHighVoltage() < operations
+                ? hatch.extract(grid, LightningKey.HIGH_VOLTAGE, Long.MAX_VALUE, Actionable.SIMULATE) : 0;
         copies = Math.min(copies, recipe.lightning().maxPayableOperations(operations, high, extreme) / operationsPerCopy);
         if (copies <= 0) { hatch.status("missing_lightning"); return null; }
         operations = Math.multiplyExact(copies, operationsPerCopy);
@@ -57,11 +68,20 @@ public final class LargeFactoryExecutor {
         operations = Math.multiplyExact(copies, operationsPerCopy);
         totalEnergy = Math.multiplyExact(energy, operations);
         var payment = recipe.lightning().plan(operations, high, extreme).orElseThrow();
-        return new Quote(copies, operations, totalEnergy, Math.min(totalEnergy, controller.energyStored()), payment);
+        return new Quote(copies, operations, totalEnergy, Math.min(totalEnergy, controller.energyStored()), payment,
+                recipe, grid, controller.capabilityVersion());
     }
 
     public static long execute(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
             Map<AEKey, Long> inputs, long requested, DeferredCraftingProvider.OutputSink returns, boolean passive) {
+        return execute(hatch, entry, inputs, requested, returns, passive, null);
+    }
+    static long executePrepared(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
+            Map<AEKey, Long> inputs, Quote quote) {
+        return execute(hatch, entry, inputs, quote.copies(), null, true, quote);
+    }
+    private static long execute(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
+            Map<AEKey, Long> inputs, long requested, DeferredCraftingProvider.OutputSink returns, boolean passive, Quote prepared) {
         if (!hatch.ready() || (!passive && hatch.passive()) || hatch.processing()
                 || !LargeFactoryWorkBudget.take(hatch, LargeFactoryWorkBudget.Work.DISPATCH)) return 0;
         var controller = hatch.controller();
@@ -71,8 +91,11 @@ public final class LargeFactoryExecutor {
         try {
             long generation = controller.capabilityVersion();
             var grid = hatch.getMainNode().getGrid();
-            var quote = quote(hatch, entry, inputs, requested);
+            var quote = prepared == null ? quote(hatch, entry, inputs, requested) : prepared;
             if (quote == null || !current(hatch, controller, grid, generation)) return 0;
+            if (prepared != null && (quote.grid() != grid || quote.capabilityVersion() != generation
+                    || hatch.bindRecipe(entry, inputs) != quote.recipe()
+                    || LargeFactoryConfig.energy(quote.recipe()) != quote.energy() / quote.operations())) return 0;
             long nextCommit = Math.incrementExact(account.commitSequence);
             var origin = hatch.origin(grid);
             if (origin == null) return 0;

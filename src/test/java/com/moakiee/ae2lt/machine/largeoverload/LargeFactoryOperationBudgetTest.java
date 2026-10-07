@@ -77,8 +77,8 @@ class LargeFactoryOperationBudgetTest {
 
     @Test
     void hugePatternMultipliersAndLongCapacityNeverOverflow() {
-        var budget = new LargeFactoryOperationBudget(Long.MAX_VALUE);
-        try (var reservation = budget.reserve(1, Long.MAX_VALUE, Long.MAX_VALUE)) {
+        var budget = new LargeFactoryOperationBudget(Long.MAX_VALUE - 1);
+        try (var reservation = budget.reserve(1, Long.MAX_VALUE, Long.MAX_VALUE - 1)) {
             assertEquals(1, reservation.copies());
             reservation.commit(1);
         }
@@ -88,6 +88,37 @@ class LargeFactoryOperationBudgetTest {
             assertEquals(0, reservation.copies());
         }
         assertEquals(1024, small.remainingOperations(1));
+    }
+
+    @Test
+    void unlimitedWorkDoesNotExhaustTheTickOrOverflowCumulativeUsage() {
+        var budget = new LargeFactoryOperationBudget(LargeFactoryOperationBudget.UNLIMITED);
+        for (int batch = 0; batch < 3; batch++) {
+            try (var reservation = budget.reserve(1, Long.MAX_VALUE, 1)) {
+                assertEquals(Long.MAX_VALUE, reservation.copies());
+                assertEquals(0, budget.remainingOperations(1));
+                reservation.commit(Long.MAX_VALUE);
+            }
+            assertEquals(Long.MAX_VALUE, budget.remainingOperations(1));
+        }
+        budget.reconfigure(1, 1024);
+        assertEquals(0, budget.remainingOperations(1));
+        assertEquals(1024, budget.remainingOperations(2));
+    }
+
+    @Test
+    void switchingToUnlimitedAndBackPreservesFiniteUsageAndReservationGuards() {
+        var budget = new LargeFactoryOperationBudget(1024);
+        try (var reservation = budget.reserve(1, 1024, 1)) { reservation.commit(1024); }
+        budget.reconfigure(1, LargeFactoryOperationBudget.UNLIMITED);
+        try (var reservation = budget.reserve(1, Long.MAX_VALUE, 4)) {
+            assertEquals(Long.MAX_VALUE / 4, reservation.copies());
+            assertEquals(3, budget.remainingOperations(1));
+            assertThrows(IllegalStateException.class, () -> budget.reconfigure(1, 16_384));
+            reservation.commit(2);
+        }
+        budget.reconfigure(1, 16_384);
+        assertEquals(16_384 - 1024 - 8, budget.remainingOperations(1));
     }
 
     @Test

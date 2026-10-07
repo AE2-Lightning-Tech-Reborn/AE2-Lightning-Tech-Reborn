@@ -29,6 +29,8 @@ public final class LargeFactoryClientProbe {
     private static boolean done;
     private static volatile boolean pending;
     private static volatile Throwable failure;
+    private static volatile boolean retryPhase;
+    private static int formationWaits;
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.largeFactoryClientProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
@@ -42,6 +44,7 @@ public final class LargeFactoryClientProbe {
         }
         try {
             if (failure != null) throw new AssertionError(failure);
+            if (retryPhase) { phase--; retryPhase = false; }
             switch (phase) {
                 case 0 -> {
                     mc.getWindow().setTitle("LARGE FACTORY QA - disposable world");
@@ -56,7 +59,7 @@ public final class LargeFactoryClientProbe {
                         var part = switch (cell.role()) {
                             case CONTROLLER -> LargeFactoryComponent.CONTROLLER;
                             case FRAME -> LargeFactoryComponent.FRAME;
-                            case CORE -> LargeFactoryComponent.CORE_T1;
+                            case CORE -> LargeFactoryComponent.CORE_T4;
                             case CASING, HATCH -> LargeFactoryComponent.CASING;
                             case AIR -> LargeFactoryComponent.AIR;
                         };
@@ -72,13 +75,21 @@ public final class LargeFactoryClientProbe {
                 case 2 -> server(() -> {
                     var level = mc.getSingleplayerServer().overworld();
                     var hatch = (LargeFactoryHatchBlockEntity) level.getBlockEntity(HATCH);
-                    if (!hatch.ready()) throw new AssertionError("QA factory not ready");
+                    if (!hatch.ready()) {
+                        if (++formationWaits > 15) throw new AssertionError("QA factory not ready after bounded scan wait");
+                        retryPhase = true; return;
+                    }
                     if (hatch.passive()) hatch.togglePassive();
                     for (int i = 0; i < 144; i++) hatch.inventory().setItemDirect(i, PatternDetailsHelper.encodeProcessingPattern(
                             List.of(new GenericStack(AEItemKey.of(Items.STONE), i + 1)), List.of(new GenericStack(AEItemKey.of(Items.DIAMOND), (i + 1) * 2))));
                     open(CONTROLLER);
                 });
-                case 3 -> { assertScreen(); capture("factory-controller-scale2.png"); server(() -> open(HATCH)); }
+                case 3 -> {
+                    assertScreen();
+                    if (((LargeFactoryMenu) mc.player.containerMenu).snapshot.operationsPerTick() != LargeFactoryOperationBudget.UNLIMITED)
+                        throw new AssertionError("unlimited T4 status missing");
+                    capture("factory-controller-scale2.png"); server(() -> open(HATCH));
+                }
                 case 4 -> {
                     assertScreen(); capture("factory-expanded-page1-scale2.png");
                     mc.gameMode.handleInventoryButtonClick(mc.player.containerMenu.containerId, LargeFactoryMenu.MODE);
@@ -107,7 +118,7 @@ public final class LargeFactoryClientProbe {
                     if (((LargeFactoryMenu) mc.player.containerMenu).snapshot.formed()) throw new AssertionError("unformed UI stale");
                     capture("factory-controller-missing-frame-scale3.png");
                     Files.writeString(mc.gameDirectory.toPath().resolve("factory-client-result.txt"),
-                            "PASS: controller, 144-slot hatch, page change, passive mode C2S, S2C status, missing structure; Chinese GUI scales 2 and 3 including 720p.\n");
+                            "PASS: unlimited T4 controller, 144-slot hatch, page change, passive mode C2S, S2C status, missing structure; Chinese GUI scales 2 and 3 including 720p.\n");
                     done = true; mc.stop();
                 }
             }

@@ -114,81 +114,105 @@ public final class LargeFactoryStructure {
     public static ScanResult scan(BlockPos controller, Direction facing, Predicate<BlockPos> loaded,
             Function<BlockPos, LargeFactoryComponent> resolve,
             Function<BlockPos, FirmamentReadiness> firmamentReadiness) {
-        Objects.requireNonNull(loaded, "loaded");
-        Objects.requireNonNull(resolve, "resolve");
-        Objects.requireNonNull(firmamentReadiness, "firmamentReadiness");
-        List<Diagnostic> issues = new ArrayList<>();
-        // Enumerate the whole footprint, including negative chunk coordinates.
-        BlockPos cornerA = worldPosition(controller, BlockPos.ZERO, facing);
-        BlockPos cornerB = worldPosition(controller, new BlockPos(WIDTH - 1, HEIGHT - 1, DEPTH - 1), facing);
-        for (int chunkX = Math.min(cornerA.getX(), cornerB.getX()) >> 4;
-                chunkX <= Math.max(cornerA.getX(), cornerB.getX()) >> 4; chunkX++) {
-            for (int chunkZ = Math.min(cornerA.getZ(), cornerB.getZ()) >> 4;
-                    chunkZ <= Math.max(cornerA.getZ(), cornerB.getZ()) >> 4; chunkZ++) {
-                BlockPos probe = new BlockPos(chunkX << 4, controller.getY(), chunkZ << 4);
-                if (!loaded.test(probe)) {
-                    issues.add(new Diagnostic(Problem.CHUNK_UNLOADED, probe, null, null));
-                }
-            }
-        }
-        if (!issues.isEmpty()) return new ScanResult(Status.INCOMPLETE, null, issues);
+        return new Cursor(controller, facing).advance(Integer.MAX_VALUE, 0, loaded, resolve, firmamentReadiness);
+    }
 
-        List<Member> members = new ArrayList<>(323);
-        List<Member> hatches = new ArrayList<>(9);
-        LargeFactoryComponent core = null;
-        int patternHatches = 0, crystalHatches = 0, processHatches = 0, patternSlots = 0;
-        for (Cell cell : CELLS) {
-            BlockPos position = worldPosition(controller, cell.localPosition(), facing);
-            // Also handle a synchronous unload/change during the scan without reading that chunk.
-            if (!loaded.test(position)) {
-                return new ScanResult(Status.INCOMPLETE, null,
-                        List.of(new Diagnostic(Problem.CHUNK_UNLOADED, position, cell.role(), null)));
-            }
-            LargeFactoryComponent component = Objects.requireNonNull(resolve.apply(position), "resolved component");
-            boolean matches = switch (cell.role()) {
-                case CONTROLLER -> component == LargeFactoryComponent.CONTROLLER;
-                case FRAME -> component == LargeFactoryComponent.FRAME;
-                case CASING -> component == LargeFactoryComponent.CASING;
-                case CORE -> component.isCore();
-                case HATCH -> component == LargeFactoryComponent.CASING || component.isHatch();
-                case AIR -> component == LargeFactoryComponent.AIR;
-            };
-            if (!matches) {
-                addIssue(issues, new Diagnostic(Problem.WRONG_BLOCK, position, cell.role(), component));
-                continue;
-            }
-            if (cell.role() != Role.AIR) members.add(new Member(position, cell.role(), component));
-            if (cell.role() == Role.CORE) core = component;
-            if (component.isHatch()) {
-                hatches.add(new Member(position, cell.role(), component));
-                if (component.isPatternHatch()) {
-                    patternHatches++;
-                    patternSlots += component.patternSlots();
+    /** Caller discards the cursor on any footprint change, rotation or chunk event. */
+    public static final class Cursor {
+        private final BlockPos controller;
+        private final Direction facing;
+        private final List<Diagnostic> issues = new ArrayList<>();
+        private final List<Member> members = new ArrayList<>(323);
+        private final List<Member> hatches = new ArrayList<>(9);
+        private final int[] missing = new int[2];
+        private LargeFactoryComponent core;
+        private int cursor, patternHatches, crystalHatches, processHatches, patternSlots;
+        private ScanResult result;
+        public Cursor(BlockPos controller, Direction facing) {
+            this.controller = controller.immutable(); this.facing = facing;
+        }
+        public int[] missing() { return missing.clone(); }
+        /** Null means more cells remain. The slice is cooperative, never a hard wall-clock guarantee. */
+        public ScanResult advance(int maxCells, long sliceNanos, Predicate<BlockPos> loaded,
+                Function<BlockPos, LargeFactoryComponent> resolve, Function<BlockPos, FirmamentReadiness> firmamentReadiness) {
+            if (result != null) return result;
+            if (maxCells <= 0) throw new IllegalArgumentException("Positive cell quota required");
+            // Enumerate the whole footprint, including negative chunk coordinates.
+            BlockPos cornerA = worldPosition(controller, BlockPos.ZERO, facing);
+            BlockPos cornerB = worldPosition(controller, new BlockPos(WIDTH - 1, HEIGHT - 1, DEPTH - 1), facing);
+            for (int chunkX = Math.min(cornerA.getX(), cornerB.getX()) >> 4;
+                    chunkX <= Math.max(cornerA.getX(), cornerB.getX()) >> 4; chunkX++) {
+                for (int chunkZ = Math.min(cornerA.getZ(), cornerB.getZ()) >> 4;
+                        chunkZ <= Math.max(cornerA.getZ(), cornerB.getZ()) >> 4; chunkZ++) {
+                    BlockPos probe = new BlockPos(chunkX << 4, controller.getY(), chunkZ << 4);
+                    if (!loaded.test(probe)) {
+                        return result = new ScanResult(Status.INCOMPLETE, null, List.of(new Diagnostic(Problem.CHUNK_UNLOADED, probe, null, null)));
+                    }
                 }
-                if (component == LargeFactoryComponent.CRYSTAL_HATCH) crystalHatches++;
-                if (component == LargeFactoryComponent.PROCESS_CORE_HATCH) processHatches++;
             }
-        }
-        boolean firmament = core == LargeFactoryComponent.FIRMAMENT_CORE;
-        if ((firmament && patternHatches == 0) || (!firmament && patternHatches + crystalHatches == 0)) {
-            addIssue(issues, new Diagnostic(Problem.MISSING_PROCESSING_HATCH, controller, Role.HATCH, null));
-        }
-        if (processHatches > 1) {
-            addIssue(issues, new Diagnostic(Problem.TOO_MANY_PROCESS_CORE_HATCHES, controller, Role.HATCH,
-                    LargeFactoryComponent.PROCESS_CORE_HATCH));
-        }
-        if (firmament) {
-            BlockPos center = worldPosition(controller, CORE, facing);
-            FirmamentReadiness readiness = Objects.requireNonNull(firmamentReadiness.apply(center));
-            if (readiness != FirmamentReadiness.READY) {
-                addIssue(issues, new Diagnostic(readiness == FirmamentReadiness.OUTSIDE_STARSHIP
-                        ? Problem.FIRMAMENT_OUTSIDE_STARSHIP : Problem.FIRMAMENT_NOT_EMPTY,
-                        center, Role.CORE, core));
+
+            long start = sliceNanos > 0 ? System.nanoTime() : 0;
+            int read = 0;
+            while (cursor < CELLS.size() && read < maxCells) {
+                if (read > 0 && sliceNanos > 0 && System.nanoTime() - start >= sliceNanos) return null;
+                Cell cell = CELLS.get(cursor++); read++;
+                BlockPos position = worldPosition(controller, cell.localPosition(), facing);
+                // Also handle a synchronous unload/change during the scan without reading that chunk.
+                if (!loaded.test(position)) {
+                    return result = new ScanResult(Status.INCOMPLETE, null,
+                            List.of(new Diagnostic(Problem.CHUNK_UNLOADED, position, cell.role(), null)));
+                }
+                LargeFactoryComponent component = Objects.requireNonNull(resolve.apply(position), "resolved component");
+                if (component == LargeFactoryComponent.AIR) {
+                    if (cell.role() == Role.FRAME) missing[0]++;
+                    if (cell.role() == Role.CASING || cell.role() == Role.HATCH) missing[1]++;
+                }
+                boolean matches = switch (cell.role()) {
+                    case CONTROLLER -> component == LargeFactoryComponent.CONTROLLER;
+                    case FRAME -> component == LargeFactoryComponent.FRAME;
+                    case CASING -> component == LargeFactoryComponent.CASING;
+                    case CORE -> component.isCore();
+                    case HATCH -> component == LargeFactoryComponent.CASING || component.isHatch();
+                    case AIR -> component == LargeFactoryComponent.AIR;
+                };
+                if (!matches) {
+                    addIssue(issues, new Diagnostic(Problem.WRONG_BLOCK, position, cell.role(), component));
+                    continue;
+                }
+                if (cell.role() != Role.AIR) members.add(new Member(position, cell.role(), component));
+                if (cell.role() == Role.CORE) core = component;
+                if (component.isHatch()) {
+                    hatches.add(new Member(position, cell.role(), component));
+                    if (component.isPatternHatch()) {
+                        patternHatches++;
+                        patternSlots += component.patternSlots();
+                    }
+                    if (component == LargeFactoryComponent.CRYSTAL_HATCH) crystalHatches++;
+                    if (component == LargeFactoryComponent.PROCESS_CORE_HATCH) processHatches++;
+                }
             }
+            if (cursor < CELLS.size()) return null;
+            boolean firmament = core == LargeFactoryComponent.FIRMAMENT_CORE;
+            if ((firmament && patternHatches == 0) || (!firmament && patternHatches + crystalHatches == 0)) {
+                addIssue(issues, new Diagnostic(Problem.MISSING_PROCESSING_HATCH, controller, Role.HATCH, null));
+            }
+            if (processHatches > 1) {
+                addIssue(issues, new Diagnostic(Problem.TOO_MANY_PROCESS_CORE_HATCHES, controller, Role.HATCH,
+                        LargeFactoryComponent.PROCESS_CORE_HATCH));
+            }
+            if (firmament) {
+                BlockPos center = worldPosition(controller, CORE, facing);
+                FirmamentReadiness readiness = Objects.requireNonNull(firmamentReadiness.apply(center));
+                if (readiness != FirmamentReadiness.READY) {
+                    addIssue(issues, new Diagnostic(readiness == FirmamentReadiness.OUTSIDE_STARSHIP
+                            ? Problem.FIRMAMENT_OUTSIDE_STARSHIP : Problem.FIRMAMENT_NOT_EMPTY,
+                            center, Role.CORE, core));
+                }
+            }
+            if (!issues.isEmpty()) return result = new ScanResult(Status.INVALID, null, issues);
+            return result = new ScanResult(Status.VALID,
+                    new Formation(controller, facing, core, members, hatches, patternSlots), List.of());
         }
-        if (!issues.isEmpty()) return new ScanResult(Status.INVALID, null, issues);
-        return new ScanResult(Status.VALID,
-                new Formation(controller, facing, core, members, hatches, patternSlots), List.of());
     }
 
     private static void addIssue(List<Diagnostic> issues, Diagnostic issue) {

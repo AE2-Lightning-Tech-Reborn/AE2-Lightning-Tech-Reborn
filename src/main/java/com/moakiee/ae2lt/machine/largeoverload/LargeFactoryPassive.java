@@ -9,59 +9,68 @@ import appeng.api.stacks.AEKey;
 public final class LargeFactoryPassive {
     private LargeFactoryPassive() { }
     public static boolean step(LargeFactoryHatchBlockEntity hatch) {
-        if (!hatch.passive() || !hatch.ready() || hatch.processing()) return false;
-        var account = hatch.account();
-        if (account == null || !account.resources.isEmpty()) return false;
+        if (!hatch.passive() || hatch.processing()) return false;
         var entry = hatch.nextPassiveEntry();
         if (entry == null || !hatch.enabled(entry)) return false;
-        var grid = hatch.getMainNode().getGrid();
+        if (hatch.cachedMissing(entry)) { hatch.status("missing_inputs"); return false; }
+        var account = hatch.account();
+        if (account == null || !account.resources.isEmpty()) return false;
         var controller = hatch.controller();
+        if (controller == null) return false;
+        long remaining = controller.budget().remainingOperations(hatch.getLevel().getGameTime());
+        if (remaining == 0 || hatch.minimumOperations(entry) > remaining
+                || entry.bound() != null && LargeFactoryConfig.energy(entry.bound()) > 0 && controller.remainingEnergyThroughput() == 0) return false;
+        if (!hatch.ready()) return false;
+        var grid = hatch.getMainNode().getGrid();
         var origin = hatch.origin(grid);
         if (origin == null) return false;
-        var storage = grid.getStorageService().getInventory();
-        var sample = new LinkedHashMap<AEKey, Long>();
         try {
             // Plan a concrete one-copy sample without treating simulations as owned inputs.
-            for (var input : entry.pattern.getInputs()) {
-                boolean found = false;
-                int alternatives = 0;
-                for (var possible : input.getPossibleInputs()) {
-                    if (++alternatives > 64) break;
-                    if (possible == null || possible.amount() <= 0 || input.getRemainingKey(possible.what()) != null) continue;
-                    long amount = Math.multiplyExact(possible.amount(), input.getMultiplier());
-                    long total = Math.addExact(sample.getOrDefault(possible.what(), 0L), amount);
-                    if (hatch.extract(grid, possible.what(), total, Actionable.SIMULATE) < total) continue;
-                    LargeFactoryAmounts.add(sample, possible.what(), amount);
-                    found = true;
-                    break;
+            Map<AEKey, Long> sample = entry.exactInputs;
+            if (sample != null) {
+                for (var input : sample.entrySet()) if (hatch.extract(grid, input.getKey(), input.getValue(), Actionable.SIMULATE) < input.getValue()) {
+                    hatch.status("missing_inputs"); return false;
                 }
-                if (!found) { hatch.status("missing_inputs"); return false; }
+            } else {
+                sample = new LinkedHashMap<>();
+                for (var options : entry.inputOptions) {
+                    boolean found = false;
+                    for (var possible : options) {
+                        long total = Math.addExact(sample.getOrDefault(possible.what(), 0L), possible.amount());
+                        if (hatch.extract(grid, possible.what(), total, Actionable.SIMULATE) < total) continue;
+                        LargeFactoryAmounts.add(sample, possible.what(), possible.amount()); found = true; break;
+                    }
+                    if (!found) { hatch.status("missing_inputs"); return false; }
+                }
             }
             if (sample.isEmpty()) return false;
             account.origin = origin;
-            hatch.ledgerChanged();
-            hatch.processing(true);
-            try {
-                if (!extract(hatch, sample, grid)) return false;
-            } finally { hatch.processing(false); }
-            // Only now is matching/cache initialization allowed for this passive sample.
-            if (hatch.controller() != controller || hatch.getMainNode().getGrid() != grid || hatch.bindRecipe(entry, sample) == null) return false;
+            long ownedCopies = 0;
+            if (!entry.hasBoundSignature(sample)) {
+                hatch.processing(true);
+                try { if (!extract(hatch, sample, grid)) return false; }
+                finally { hatch.processing(false); }
+                // Only a first real receipt may initialize a new binding/signature.
+                if (hatch.controller() != controller || hatch.getMainNode().getGrid() != grid || hatch.bindRecipe(entry, sample) == null) return false;
+                ownedCopies = 1;
+            }
             long fairShare = Math.max(1, controller.budget().remainingOperations(hatch.getLevel().getGameTime())
-                    / Math.max(1, controller.hatches().size()) / entry.operations());
+                    / controller.passiveHatchCount() / entry.operations());
             var quote = LargeFactoryExecutor.quote(hatch, entry, sample, fairShare);
             if (quote == null) return false;
             long copies = quote.copies();
             for (var input : sample.entrySet()) {
-                long wanted = Math.multiplyExact(input.getValue(), copies - 1);
+                long wanted = Math.multiplyExact(input.getValue(), copies - ownedCopies);
                 long available = hatch.extract(grid, input.getKey(), wanted, Actionable.SIMULATE);
-                copies = Math.min(copies, 1 + available / input.getValue());
+                copies = Math.min(copies, ownedCopies + available / input.getValue());
             }
-            if (copies > 1) {
+            if (copies <= 0) return false;
+            if (copies > ownedCopies) {
                 hatch.processing(true);
-                try { if (!extract(hatch, LargeFactoryAmounts.scale(sample, copies - 1), grid)) return false; }
+                try { if (!extract(hatch, LargeFactoryAmounts.scale(sample, copies - ownedCopies), grid)) return false; }
                 finally { hatch.processing(false); }
             }
-            long accepted = LargeFactoryExecutor.execute(hatch, entry, sample, copies, null, true);
+            long accepted = LargeFactoryExecutor.executePrepared(hatch, entry, sample, quote.limitCopies(copies));
             return accepted > 0;
         } catch (ArithmeticException overflow) {
             hatch.status("cost_overflow");

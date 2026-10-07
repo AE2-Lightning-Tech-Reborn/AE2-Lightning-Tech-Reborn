@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryMenu;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryOperationBudget;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactorySnapshot;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -109,7 +110,9 @@ public final class LargeFactoryScreen extends AbstractContainerScreen<LargeFacto
         } else {
             graphics.drawString(font, text("core." + s.core()), 184, y, 0xffa6daef, false); y += 18;
             graphics.drawString(font, text("operations"), 184, y, 0xffa7c4d0, false); y += 12;
-            graphics.drawString(font, compact(s.remainingOperations()) + " / " + compact(s.operationsPerTick()), 184, y, 0xffd8f1f5, false); y += 18;
+            String operations = s.operationsPerTick() == LargeFactoryOperationBudget.UNLIMITED ? text("unlimited").getString()
+                    : compact(s.remainingOperations()) + " / " + compact(s.operationsPerTick());
+            graphics.drawString(font, operations, 184, y, 0xffd8f1f5, false); y += 18;
             graphics.drawString(font, text("energy"), 184, y, 0xffa7c4d0, false); y += 12;
             graphics.drawString(font, compact(s.storedEnergy()) + " / " + compact(s.energyCapacity()), 184, y, 0xffd8f1f5, false);
         }

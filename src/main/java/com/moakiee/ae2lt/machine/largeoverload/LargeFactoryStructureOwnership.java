@@ -26,7 +26,7 @@ public final class LargeFactoryStructureOwnership {
         for (var member : formation.members()) {
             if (members.containsKey(member.position())) return Optional.empty();
         }
-        Binding binding = new Binding(machineId, formation);
+        Binding binding = new Binding(this, machineId, formation);
         machines.put(machineId, binding);
         for (var member : formation.members()) members.put(member.position(), binding);
         for (ChunkPos chunk : binding.chunks) {
@@ -36,7 +36,7 @@ public final class LargeFactoryStructureOwnership {
     }
 
     public boolean isCurrent(Binding binding) {
-        return binding != null && machines.get(binding.machineId) == binding;
+        return binding != null && binding.owner == this && binding.valid;
     }
 
     public boolean owns(Binding binding, BlockPos member) {
@@ -47,6 +47,7 @@ public final class LargeFactoryStructureOwnership {
 
     public void release(Binding binding) {
         if (binding == null || !machines.remove(binding.machineId, binding)) return;
+        binding.valid = false;
         for (var member : binding.formation.members()) members.remove(member.position(), binding);
         for (ChunkPos chunk : binding.chunks) {
             Set<Binding> set = chunks.get(chunk);
@@ -71,13 +72,16 @@ public final class LargeFactoryStructureOwnership {
 
     /** Opaque identity token: an earlier wrapper cannot silently inherit a newly formed machine. */
     public static final class Binding {
+        private final LargeFactoryStructureOwnership owner;
+        private boolean valid = true;
         private final UUID machineId;
         private final LargeFactoryStructure.Formation formation;
         private final BlockPos min;
         private final BlockPos max;
         private final Set<ChunkPos> chunks;
 
-        private Binding(UUID machineId, LargeFactoryStructure.Formation formation) {
+        private Binding(LargeFactoryStructureOwnership owner, UUID machineId, LargeFactoryStructure.Formation formation) {
+            this.owner = owner;
             this.machineId = machineId;
             this.formation = formation;
             BlockPos a = LargeFactoryStructure.worldPosition(formation.controller(), BlockPos.ZERO, formation.facing());

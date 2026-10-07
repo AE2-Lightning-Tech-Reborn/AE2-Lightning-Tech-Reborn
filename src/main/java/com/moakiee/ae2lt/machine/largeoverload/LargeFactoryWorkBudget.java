@@ -10,9 +10,9 @@ import net.minecraft.server.level.ServerLevel;
 
 /** Counts work before entering recipe or external-network calls, across dimensions and hatches. */
 public final class LargeFactoryWorkBudget {
-    public enum Work { DISPATCH, MATCH, NETWORK, SCAN, BUILD }
-    private static final int[] SERVER_LIMIT = {512, 512, 4096, 16, 1024};
-    private static final int[] FACTORY_LIMIT = {64, 64, 256, 1, 16};
+    public enum Work { DISPATCH, MATCH, NETWORK, SCAN, BUILD, PATTERN }
+    private static final int[] SERVER_LIMIT = {512, 512, 4096, 16, 1024, 128};
+    private static final int[] FACTORY_LIMIT = {64, 64, 256, 1, 16, 4};
     private static final Map<MinecraftServer, Meter> METERS = new WeakHashMap<>();
     private static final class Meter {
         final Map<UUID, Integer> loaded = new LinkedHashMap<>();

@@ -159,6 +159,27 @@ class LargeFactoryStructureTest {
         return ((long) (p.getX() >> 4) << 32) ^ ((p.getZ() >> 4) & 0xffffffffL);
     }
 
+    @Test
+    void incrementalScanBoundsReadsAndRechecksChunkAvailabilityBetweenSlices() {
+        var blocks = layout(Direction.NORTH, CORE_T1);
+        put(blocks, Direction.NORTH, new BlockPos(3, 2, 8), PATTERN_HATCH);
+        var cursor = new LargeFactoryStructure.Cursor(CONTROLLER_POS, Direction.NORTH);
+        var reads = new AtomicInteger();
+        LargeFactoryStructure.ScanResult result = null;
+        while (result == null) {
+            int before = reads.get();
+            result = cursor.advance(17, 0, p -> true, p -> { reads.incrementAndGet(); return blocks.get(p); },
+                    p -> LargeFactoryStructure.FirmamentReadiness.READY);
+            assertTrue(reads.get() - before <= 17);
+        }
+        assertEquals(scan(Direction.NORTH, blocks), result);
+        assertEquals(567, reads.get());
+        var interrupted = new LargeFactoryStructure.Cursor(CONTROLLER_POS, Direction.NORTH);
+        assertNull(interrupted.advance(17, 0, p -> true, blocks::get, p -> LargeFactoryStructure.FirmamentReadiness.READY));
+        assertEquals(LargeFactoryStructure.Status.INCOMPLETE, interrupted.advance(17, 0, p -> false,
+                p -> { fail("No reads after a covered chunk unloads"); return null; }, p -> null).status());
+    }
+
     private static LargeFactoryStructure.ScanResult scan(Direction facing, Map<BlockPos, LargeFactoryComponent> blocks) {
         return LargeFactoryStructure.scan(CONTROLLER_POS, facing, p -> true, blocks::get,
                 p -> LargeFactoryStructure.FirmamentReadiness.READY);

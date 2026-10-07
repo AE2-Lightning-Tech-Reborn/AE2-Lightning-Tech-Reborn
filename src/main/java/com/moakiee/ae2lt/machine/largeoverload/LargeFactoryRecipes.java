@@ -40,7 +40,9 @@ public final class LargeFactoryRecipes {
     private static final Map<RecipeManager, Snapshot> CACHE = new WeakHashMap<>();
     private static long generation;
     public record Snapshot(Collection<RecipeHolder<?>> sources, long generation, double aeToFE, double nativeMultiplier,
-            List<LargeFactoryRecipe> recipes) { }
+            List<LargeFactoryRecipe> recipes, Map<AEKey, List<LargeFactoryRecipe>> byOutput, List<LargeFactoryRecipe> catalysts) {
+        public List<LargeFactoryRecipe> candidates(AEKey output) { return byOutput.getOrDefault(output, List.of()); }
+    }
     private LargeFactoryRecipes() { }
 
     @SubscribeEvent
@@ -80,7 +82,12 @@ public final class LargeFactoryRecipes {
             }
         }
         result.sort(Comparator.comparing((LargeFactoryRecipe r) -> r.process().ordinal()).thenComparing(r -> r.id().toString()));
-        var snapshot = new Snapshot(manager.getRecipes(), ++generation, aeToFE, nativeMultiplier, List.copyOf(result));
+        var byOutput = new java.util.HashMap<AEKey, List<LargeFactoryRecipe>>();
+        for (var recipe : result) for (var key : recipe.outputs().keySet())
+            byOutput.computeIfAbsent(key, ignored -> new ArrayList<>()).add(recipe);
+        byOutput.replaceAll((key, candidates) -> List.copyOf(candidates));
+        var snapshot = new Snapshot(manager.getRecipes(), ++generation, aeToFE, nativeMultiplier, List.copyOf(result), Map.copyOf(byOutput),
+                result.stream().filter(r -> r.catalyst() != null).toList());
         CACHE.put(manager, snapshot);
         return snapshot;
     }

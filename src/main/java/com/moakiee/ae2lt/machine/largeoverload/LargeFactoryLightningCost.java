@@ -50,17 +50,28 @@ public record LargeFactoryLightningCost(long highVoltage, long extremeHighVoltag
         }
     }
 
-    /** Bounded quote for partial acceptance, including costs too large to multiply as a long. */
+    /** Solve h*n + 4*max(e*n - availableExtreme, 0) <= availableHigh directly. */
     public long maxPayableOperations(long requested, long availableHigh, long availableExtreme) {
         if (requested < 0 || availableHigh < 0 || availableExtreme < 0) {
             throw new IllegalArgumentException("Negative operation count or lightning availability");
         }
-        long low = 0, high = requested;
-        while (low < high) {
-            long middle = low + ((high - low) >>> 1) + 1;
-            if (plan(middle, availableHigh, availableExtreme).isPresent()) low = middle;
-            else high = middle - 1;
+        if (extremeHighVoltage == 0) return Math.min(requested, availableHigh / highVoltage);
+        // plan() must still represent the full EHV source cost before substitution.
+        long bound = Math.min(requested, Long.MAX_VALUE / extremeHighVoltage);
+        if (highVoltage == 0) {
+            long converted = availableHigh / HIGH_PER_EXTREME;
+            long total = converted > Long.MAX_VALUE - availableExtreme ? Long.MAX_VALUE : availableExtreme + converted;
+            return Math.min(bound, total / extremeHighVoltage);
         }
-        return low;
+        bound = Math.min(bound, availableHigh / highVoltage);
+        if (extremeHighVoltage <= (Long.MAX_VALUE - highVoltage) / HIGH_PER_EXTREME
+                && availableExtreme <= (Long.MAX_VALUE - availableHigh) / HIGH_PER_EXTREME) {
+            return Math.min(bound, (availableHigh + HIGH_PER_EXTREME * availableExtreme)
+                    / (highVoltage + HIGH_PER_EXTREME * extremeHighVoltage));
+        }
+        // Rare oversized mixed costs use one exact division, never a count-sized loop or repeated plans.
+        var numerator = java.math.BigInteger.valueOf(availableExtreme).shiftLeft(2).add(java.math.BigInteger.valueOf(availableHigh));
+        var denominator = java.math.BigInteger.valueOf(extremeHighVoltage).shiftLeft(2).add(java.math.BigInteger.valueOf(highVoltage));
+        return numerator.divide(denominator).min(java.math.BigInteger.valueOf(bound)).longValueExact();
     }
 }

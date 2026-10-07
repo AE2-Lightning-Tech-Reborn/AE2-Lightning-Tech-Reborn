@@ -56,6 +56,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     private final IActionSource actionSource = new MachineSource(getMainNode()::getNode);
     private UUID accountId = UUID.randomUUID();
     private BlockPos controllerPos;
+    private LargeFactoryControllerBlockEntity boundController;
     private UUID machine;
     private boolean linked;
     private boolean passive;
@@ -63,10 +64,25 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     private long catalogGeneration = -1;
     private long accessGeneration = -1;
     private List<Entry> entries = List.of();
+    private ArrayList<Entry> buildingEntries;
+    private Entry[] previousSlots;
+    private int buildCursor;
+    private boolean buildSameCatalog;
+    private List<IPatternDetails> publishedPatterns = List.of();
+    private Map<AEKey, Entry> publishedEntries = Map.of();
+    private LargeFactoryLedger ledger;
+    private LargeFactoryLedger.Account cachedAccount;
+    private final Map<AEKey, Long> availability = new java.util.HashMap<>();
+    private IGrid availabilityGrid;
+    private long availabilityTick = Long.MIN_VALUE;
+    private final com.moakiee.ae2lt.logic.transfer.TransferPollSchedule returnSchedule = new com.moakiee.ae2lt.logic.transfer.TransferPollSchedule();
+    private long nextReturnTick;
+    private boolean returnObserving;
     private final BitSet disabledSlots = new BitSet();
     private final Set<ResourceLocation> disabledRecipes = new HashSet<>();
     private int passiveCursor;
     private long deliveryTick;
+    private boolean refreshingPatterns;
     private boolean processing;
     private boolean resourcesReleased;
     private boolean releaseRequested;
@@ -77,18 +93,39 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         public final int slot;
         public final ResourceLocation virtualRecipe;
         public final Map<AEKey, Long> outputs;
+        final List<List<GenericStack>> inputOptions;
+        final Map<AEKey, Long> exactInputs;
         private LargeFactoryRecipe bound;
         private Map<AEKey, Long> signature;
         private long operations;
+        private long minimumOperations = -1;
         private LargeFactoryRecipeAccess.Process knownProcess;
         private int searchCursor;
         public String status = "unbound";
         Entry(IPatternDetails pattern, int slot, ResourceLocation virtualRecipe) {
             this.pattern = pattern; this.slot = slot; this.virtualRecipe = virtualRecipe;
             this.outputs = LargeFactoryAmounts.of(pattern.getOutputs());
+            var options = new ArrayList<List<GenericStack>>();
+            var exact = new LinkedHashMap<AEKey, Long>();
+            boolean disjoint = true;
+            for (var input : pattern.getInputs()) {
+                var choices = new ArrayList<GenericStack>();
+                int visited = 0;
+                for (var possible : input.getPossibleInputs()) {
+                    if (++visited > 64) break;
+                    if (possible != null && possible.amount() > 0 && input.getRemainingKey(possible.what()) == null)
+                        choices.add(new GenericStack(possible.what(), Math.multiplyExact(possible.amount(), input.getMultiplier())));
+                }
+                options.add(List.copyOf(choices));
+                if (choices.size() == 1) LargeFactoryAmounts.add(exact, choices.getFirst().what(), choices.getFirst().amount());
+                else disjoint = false;
+            }
+            inputOptions = List.copyOf(options);
+            exactInputs = disjoint ? Map.copyOf(exact) : null;
         }
         public LargeFactoryRecipe bound() { return bound; }
         public long operations() { return operations; }
+        boolean hasBoundSignature(Map<AEKey, Long> actual) { return bound != null && actual.equals(signature); }
     }
 
     public LargeFactoryHatchBlockEntity(BlockPos pos, BlockState state) {
@@ -119,17 +156,23 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     public UUID accountId() { return accountId; }
     public String status() { return status; }
     void status(String status) { this.status = status; }
-    public void togglePassive() { passive = !passive; patternsChanged(); saveChanges(); }
+    public void togglePassive() { passive = !passive; publishPatterns(); saveChanges(); }
 
     public void bind(BlockPos controller, UUID id) {
         boolean next = controller != null && id != null;
         boolean changed = linked != next || !java.util.Objects.equals(controllerPos, controller) || !java.util.Objects.equals(machine, id);
         controllerPos = controller; machine = id; linked = next;
-        if (changed) { onGridConnectableSidesChanged(); patternsChanged(); }
+        boundController = next && level != null && level.getBlockEntity(controller) instanceof LargeFactoryControllerBlockEntity c ? c : null;
+        if (changed) {
+            onGridConnectableSidesChanged(); accessChanged();
+            availability.clear(); availabilityGrid = null;
+            returnSchedule.reset(); nextReturnTick = 0; returnObserving = false;
+        }
     }
     public LargeFactoryControllerBlockEntity controller() {
-        if (!linked || level == null || controllerPos == null || !level.isLoaded(controllerPos)) return null;
-        return level.getBlockEntity(controllerPos) instanceof LargeFactoryControllerBlockEntity c && c.owns(worldPosition, machine) ? c : null;
+        if (!linked || level == null || boundController == null || boundController.isRemoved()) return null;
+        // The opaque ownership token is revoked before block-change/chunk-unload callbacks can reenter.
+        return boundController.owns(worldPosition, machine) ? boundController : null;
     }
     public boolean ready() { return !isRemoved() && level != null && level.getBlockEntity(worldPosition) == this && controller() != null && getMainNode().isActive() && getMainNode().getGrid() != null && account() != null; }
     @Override public AECableType getCableConnectionType(Direction side) {
@@ -143,73 +186,120 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     @Override public void saveChangedInventory(AppEngInternalInventory inventory) { saveChanges(); patternsChanged(); }
     @Override public void onChangeInventory(AppEngInternalInventory inventory, int slot) { patternsChanged(); }
     public void patternsChanged() { dirtyPatterns = true; }
+    public void accessChanged() { accessGeneration = Long.MIN_VALUE; }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, LargeFactoryHatchBlockEntity hatch) {
         if (level.isClientSide) return;
+        long start = LargeFactoryTiming.begin();
+        try { hatch.tickWork(); } finally { LargeFactoryTiming.end(hatch, "hatch", start); }
+    }
+    private void tickWork() {
+        var hatch = this;
         if (hatch.linked && hatch.controller() == null) hatch.bind(null, null);
         hatch.refreshPatterns();
         hatch.flushRetained();
     }
     private void refreshPatterns() {
+        if (refreshingPatterns) return;
+        refreshingPatterns = true;
+        try { refreshPatternWork(); } finally { refreshingPatterns = false; }
+    }
+    private void refreshPatternWork() {
         if (level == null || level.isClientSide) return;
-        var controller = controller();
         var catalog = LargeFactoryRecipes.get(level.getRecipeManager());
-        long access = controller == null ? -1 : controller.capabilityVersion();
-        if (!dirtyPatterns && catalogGeneration == catalog.generation() && accessGeneration == access) return;
-        dirtyPatterns = false;
         boolean sameCatalog = catalogGeneration == catalog.generation();
-        var previousEntries = entries;
-        catalogGeneration = catalog.generation(); accessGeneration = access;
-        var next = new ArrayList<Entry>();
-        if (crystal()) {
-            if (controller != null && controller.access().allows(LargeFactoryRecipeAccess.Process.CATALYZER)) {
-                for (var recipe : catalog.recipes()) {
-                    if (recipe.catalyst() == null || !hasCatalyst(recipe)) continue;
-                    var source = level.getRecipeManager().byKey(recipe.id()).orElse(null);
-                    if (source == null || !(source.value() instanceof CrystalCatalyzerRecipe catalyst)) continue;
-                    var fluid = catalyst.fluidInput();
-                    if (fluid.isEmpty()) continue;
-                    var patternItem = PatternDetailsHelper.encodeProcessingPattern(
-                            List.of(new GenericStack(AEFluidKey.of(fluid), fluid.getAmount())), LargeFactoryAmounts.stacks(recipe.outputs()));
-                    int materialSlot = -1;
-                    for (int slot = 0; slot < inventory.size(); slot++) if (recipe.catalyst().test(inventory.getStackInSlot(slot))) { materialSlot = slot; break; }
-                    final int identitySlot = materialSlot;
-                    net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, patternItem, tag -> {
-                        tag.putUUID("FactoryHatch", accountId);
-                        tag.putString("FactoryRecipe", recipe.id().toString());
-                        tag.putInt("MaterialSlot", identitySlot);
-                        tag.putLong("RecipeGeneration", catalog.generation());
-                    });
-                    var details = PatternDetailsHelper.decodePattern(patternItem, level);
-                    if (details != null) next.add(new Entry(details, -1, recipe.id()));
-                    if (next.size() >= MAX_VIRTUAL_PATTERNS) { status = "virtual_limit"; break; }
+        boolean accessChanged = accessGeneration == Long.MIN_VALUE;
+        if (!dirtyPatterns && sameCatalog && !accessChanged && buildingEntries == null) return;
+        var controller = controller();
+        if (dirtyPatterns || !sameCatalog || accessChanged) {
+            boolean inventoryChanged = dirtyPatterns;
+            dirtyPatterns = false;
+            catalogGeneration = catalog.generation();
+            accessGeneration = controller == null ? -1 : controller.capabilityVersion();
+            if (!inventoryChanged && sameCatalog && !crystal() && buildingEntries == null) {
+                for (var entry : entries) {
+                    entry.bound = null; entry.operations = 0; entry.signature = null; entry.searchCursor = 0; entry.minimumOperations = -1;
+                    if (!sameCatalog) entry.knownProcess = null;
+                    entry.status = controller != null && entry.knownProcess != null && !controller.access().allows(entry.knownProcess)
+                            ? "process_locked" : "unbound";
                 }
+                publishPatterns();
+                return;
             }
-        } else {
-            for (int slot = 0; slot < inventory.size(); slot++) {
-                var stack = inventory.getStackInSlot(slot);
-                if (stack.isEmpty()) continue;
-                try {
-                    var pattern = PatternDetailsHelper.decodePattern(stack, level);
-                    if (pattern != null && pattern.supportsPushInputsToExternalInventory()
-                            && !(pattern instanceof appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern)) {
-                        next.add(new Entry(pattern, slot, null));
-                    }
-                } catch (RuntimeException invalid) { status = "invalid_pattern"; }
-            }
+            previousSlots = new Entry[inventory.size()];
+            for (var entry : entries) if (entry.slot >= 0) previousSlots[entry.slot] = entry;
+            buildingEntries = new ArrayList<>(); buildCursor = 0; buildSameCatalog = sameCatalog;
+            entries = List.of();
+            publishPatterns(); // Withdraw changed/unauthorized definitions before gradually publishing the replacement.
         }
-        if (sameCatalog) for (var entry : next) for (var previous : previousEntries) {
-            if (entry.slot == previous.slot && java.util.Objects.equals(entry.virtualRecipe, previous.virtualRecipe)
-                    && entry.pattern.getDefinition().equals(previous.pattern.getDefinition())) {
+        long started = System.nanoTime();
+        int processed = 0;
+        int end = crystal() ? catalog.catalysts().size() : inventory.size();
+        if (crystal() && (controller == null || !controller.access().allows(LargeFactoryRecipeAccess.Process.CATALYZER))) buildCursor = end;
+        while (buildCursor < end) {
+            if (!crystal() && inventory.getStackInSlot(buildCursor).isEmpty()) { buildCursor++; continue; }
+            if (crystal() && !hasCatalyst(catalog.catalysts().get(buildCursor))) { buildCursor++; continue; }
+            if (processed > 0 && System.nanoTime() - started >= 15_000) break;
+            if (!crystal() && buildSameCatalog && previousSlots[buildCursor] != null
+                    && previousSlots[buildCursor].pattern.getDefinition().equals(appeng.api.stacks.AEItemKey.of(inventory.getStackInSlot(buildCursor)))) {
+                buildingEntries.add(previousSlots[buildCursor++]); processed++; continue;
+            }
+            if (!LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.PATTERN)) break;
+            processed++;
+            Entry entry = crystal() ? decodeCrystal(catalog.catalysts().get(buildCursor++), catalog.generation()) : decodeSlot(buildCursor++);
+            if (entry == null) continue;
+            buildingEntries.add(entry);
+            if (buildingEntries.size() >= MAX_VIRTUAL_PATTERNS) { status = "virtual_limit"; buildCursor = end; break; }
+        }
+        if (buildCursor == end) {
+            // Publish once: repeatedly rebuilding AE2's catalog for each slice turns indexing quadratic.
+            entries = List.copyOf(buildingEntries);
+            buildingEntries = null; previousSlots = null;
+            publishPatterns();
+        }
+    }
+    private Entry decodeSlot(int slot) {
+        try {
+            var pattern = PatternDetailsHelper.decodePattern(inventory.getStackInSlot(slot), level);
+            if (pattern == null || !pattern.supportsPushInputsToExternalInventory()
+                    || pattern instanceof appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern) return null;
+            var entry = new Entry(pattern, slot, null);
+            var previous = previousSlots[slot];
+            if (buildSameCatalog && previous != null && pattern.getDefinition().equals(previous.pattern.getDefinition()))
                 entry.knownProcess = previous.knownProcess;
-                if (controller != null && entry.knownProcess != null && !controller.access().allows(entry.knownProcess)) entry.status = "process_locked";
-                break;
-            }
-        }
-        entries = List.copyOf(next);
+            return entry;
+        } catch (RuntimeException invalid) { status = "invalid_pattern"; return null; }
+    }
+    private Entry decodeCrystal(LargeFactoryRecipe recipe, long generation) {
+        if (!hasCatalyst(recipe)) return null;
+        var source = level.getRecipeManager().byKey(recipe.id()).orElse(null);
+        if (source == null || !(source.value() instanceof CrystalCatalyzerRecipe catalyst)) return null;
+        var fluid = catalyst.fluidInput();
+        if (fluid.isEmpty()) return null;
+        var item = PatternDetailsHelper.encodeProcessingPattern(List.of(new GenericStack(AEFluidKey.of(fluid), fluid.getAmount())),
+                LargeFactoryAmounts.stacks(recipe.outputs()));
+        int slot = -1;
+        for (int i = 0; i < inventory.size(); i++) if (recipe.catalyst().test(inventory.getStackInSlot(i))) { slot = i; break; }
+        final int materialSlot = slot;
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, item, tag -> {
+            tag.putUUID("FactoryHatch", accountId); tag.putString("FactoryRecipe", recipe.id().toString());
+            tag.putInt("MaterialSlot", materialSlot); tag.putLong("RecipeGeneration", generation);
+        });
+        var pattern = PatternDetailsHelper.decodePattern(item, level);
+        return pattern == null ? null : new Entry(pattern, -1, recipe.id());
+    }
+    private void publishPatterns() {
+        var controller = controller();
+        var published = new LinkedHashMap<AEKey, Entry>();
+        if (!passive && controller != null) for (var entry : entries)
+            if (enabled(entry) && (entry.knownProcess == null || controller.access().allows(entry.knownProcess)))
+                published.putIfAbsent(entry.pattern.getDefinition(), entry);
+        publishedEntries = Map.copyOf(published);
+        publishedPatterns = published.values().stream().map(e -> e.pattern).toList();
         ICraftingProvider.requestUpdate(getMainNode());
     }
     public List<Entry> entries() { refreshPatterns(); return entries; }
+    boolean patternIndexing() { return dirtyPatterns || buildingEntries != null; }
     public boolean enabled(Entry entry) { return entry.virtualRecipe == null ? !disabledSlots.get(entry.slot) : !disabledRecipes.contains(entry.virtualRecipe); }
     public void toggleEntry(int index) {
         var entries = entries();
@@ -217,7 +307,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         var entry = entries.get(index);
         if (entry.virtualRecipe == null) disabledSlots.flip(entry.slot);
         else if (!disabledRecipes.remove(entry.virtualRecipe)) disabledRecipes.add(entry.virtualRecipe);
-        ICraftingProvider.requestUpdate(getMainNode()); saveChanges();
+        publishPatterns(); saveChanges();
     }
     boolean hasCatalyst(LargeFactoryRecipe recipe) {
         if (recipe.catalyst() == null) return !crystal();
@@ -227,15 +317,15 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         return false;
     }
     public Entry find(IPatternDetails pattern) {
-        for (var entry : entries()) if (enabled(entry) && entry.pattern.getDefinition().equals(pattern.getDefinition())) return entry;
-        return null;
+        refreshPatterns();
+        return publishedEntries.get(pattern.getDefinition());
     }
     LargeFactoryRecipe bindRecipe(Entry entry, Map<AEKey, Long> actual) {
         var controller = controller();
         if (controller == null || !enabled(entry) || !entries().contains(entry)) return null;
         if (entry.bound != null && actual.equals(entry.signature) && controller.access().allows(entry.bound.process()) && hasCatalyst(entry.bound)) return entry.bound;
         if (!actual.equals(entry.signature)) { entry.signature = Map.copyOf(actual); entry.searchCursor = 0; entry.bound = null; entry.operations = 0; }
-        var candidates = LargeFactoryRecipes.get(level.getRecipeManager()).recipes();
+        var candidates = LargeFactoryRecipes.get(level.getRecipeManager()).candidates(entry.pattern.getPrimaryOutput().what());
         while (entry.searchCursor < candidates.size()) {
             if (!LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.MATCH)) { entry.status = "binding_pending"; controller.wakeNextTick(); return null; }
             var recipe = candidates.get(entry.searchCursor++);
@@ -252,9 +342,8 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     }
     @Override public List<IPatternDetails> getAvailablePatterns() {
         if (passive || controller() == null) return List.of();
-        return entries().stream().filter(this::enabled)
-                .filter(e -> e.knownProcess == null || controller().access().allows(e.knownProcess))
-                .map(e -> e.pattern).distinct().toList();
+        refreshPatterns();
+        return publishedPatterns;
     }
     @Override public boolean isBusy() {
         var controller = controller();
@@ -274,6 +363,11 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         return pushBatchWithReturns(details, template, requested, job instanceof DeferredCraftingProvider.Job deferred ? deferred.deferredOutputSink() : null);
     }
     private long pushBatchWithReturns(IPatternDetails details, KeyCounter[] template, long requested, OutputSink returns) {
+        long start = LargeFactoryTiming.begin();
+        try { return pushBatchWork(details, template, requested, returns); }
+        finally { LargeFactoryTiming.end(this, "active", start); }
+    }
+    private long pushBatchWork(IPatternDetails details, KeyCounter[] template, long requested, OutputSink returns) {
         if (requested <= 0 || isBusy()) return requested;
         var entry = find(details);
         if (entry == null) return requested;
@@ -286,53 +380,109 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
 
     public LargeFactoryLedger.Account account() {
         if (resourcesReleased || !(level instanceof ServerLevel server)) return null;
-        return LargeFactoryLedger.get(server).claim(accountId, server, worldPosition);
+        if (ledger == null) ledger = LargeFactoryLedger.get(server);
+        if (cachedAccount == null) cachedAccount = ledger.claim(accountId, server, worldPosition);
+        return cachedAccount != null && !cachedAccount.parcel ? cachedAccount : null;
     }
     long extract(IGrid grid, AEKey key, long amount, Actionable mode) {
-        if (amount <= 0 || !LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.NETWORK)) return 0;
-        return grid.getStorageService().getInventory().extract(key, amount, mode, actionSource);
+        if (amount <= 0) return 0;
+        long tick = level.getGameTime();
+        if (availabilityTick != tick || availabilityGrid != grid) {
+            availabilityTick = tick; availabilityGrid = grid; availability.clear();
+        }
+        var hint = availability.get(key);
+        if (mode == Actionable.SIMULATE && hint != null) return Math.min(amount, hint);
+        if (!LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.NETWORK)) return 0;
+        long actual = grid.getStorageService().getInventory().extract(key, mode == Actionable.SIMULATE ? Long.MAX_VALUE : amount, mode, actionSource);
+        if (actual < 0 || mode == Actionable.MODULATE && actual > amount) throw new IllegalStateException("Invalid ME extraction receipt");
+        if (mode == Actionable.SIMULATE) {
+            availability.put(key, actual);
+            return Math.min(amount, actual);
+        }
+        // Hints only price a batch; actual receipts remain authoritative, including partial failures.
+        if (actual < amount || hint == null) availability.remove(key);
+        else availability.put(key, Math.max(0, hint - actual));
+        return actual;
+    }
+    boolean cachedMissing(Entry entry) {
+        if (entry.exactInputs == null || availabilityTick != level.getGameTime() || availabilityGrid != getMainNode().getGrid()) return false;
+        for (var input : entry.exactInputs.entrySet()) {
+            var available = availability.get(input.getKey());
+            if (available != null && available < input.getValue()) return true;
+        }
+        return false;
+    }
+    long minimumOperations(Entry entry) {
+        if (entry.operations > 0) return entry.operations;
+        if (entry.minimumOperations >= 0) return entry.minimumOperations;
+        long minimum = Long.MAX_VALUE;
+        for (var recipe : LargeFactoryRecipes.get(level.getRecipeManager()).candidates(entry.pattern.getPrimaryOutput().what())) {
+            long count = recipe.outputOperations(entry.outputs);
+            if (count > 0) minimum = Math.min(minimum, count);
+        }
+        return entry.minimumOperations = minimum == Long.MAX_VALUE ? 0 : minimum;
     }
     double extractEnergy(IGrid grid, double amount, Actionable mode) {
         if (amount <= 0 || !LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.NETWORK)) return 0;
         return grid.getEnergyService().extractAEPower(amount, mode, appeng.api.config.PowerMultiplier.ONE);
     }
-    void ledgerChanged() { if (level instanceof ServerLevel server) LargeFactoryLedger.get(server).setDirty(); saveChanges(); }
+    void ledgerChanged() {
+        if (level instanceof ServerLevel server) { if (ledger == null) ledger = LargeFactoryLedger.get(server); ledger.setDirty(); }
+        nextReturnTick = 0;
+        saveChanges();
+    }
     UUID origin(IGrid grid) {
         var account = account();
         var identity = grid.getService(LargeFactoryNetworkIdentity.class);
         if (account == null) return null;
         if (!account.empty()) return identity.contains(account.origin) ? account.origin : null;
+        if (identity.contains(account.origin)) return account.origin;
         return identity.externalAnchor(getMainNode().getNode());
     }
     void deliverAfter(long tick) { deliveryTick = tick; }
     public void flushRetained() {
-        if (processing || level == null || level.isClientSide || level.getGameTime() < deliveryTick) return;
+        if (processing || level == null || level.isClientSide || level.getGameTime() < Math.max(deliveryTick, nextReturnTick)) return;
         var account = account();
         var grid = getMainNode().getGrid();
         if (account == null || account.empty() || grid == null || !getMainNode().isActive()) return;
         if (!grid.getService(LargeFactoryNetworkIdentity.class).contains(account.origin)) { status = "origin_missing"; return; }
         processing = true;
         try {
-            transferAccount(account, grid);
+            long tick = level.getGameTime();
+            if (!returnObserving || nextReturnTick > 0 && tick > nextReturnTick) returnSchedule.beginObservation(tick);
+            returnObserving = true;
+            int result = transferAccount(account, grid);
+            if (!account.empty()) nextReturnTick = tick + (result == 0 ? 1
+                    : result == 2 ? returnSchedule.success(tick) : returnSchedule.failure(tick, 100));
+            else { returnSchedule.success(level.getGameTime()); nextReturnTick = 0; returnObserving = false; }
         } finally { processing(false); }
     }
-    private void transferAccount(LargeFactoryLedger.Account account, IGrid grid) {
+    /** 0 unavailable/budgeted out; 1 actual blocked receipt; 2 actual progress. */
+    private int transferAccount(LargeFactoryLedger.Account account, IGrid grid) {
         var storage = grid.getStorageService().getInventory();
+        boolean attempted = false, progressed = false;
         for (var entry : List.copyOf(account.resources.entrySet())) {
             if (getMainNode().getGrid() != grid) break;
             if (!LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.NETWORK)) break;
+            attempted = true;
             long inserted = storage.insert(entry.getKey(), entry.getValue(), Actionable.MODULATE, actionSource);
             if (inserted < 0 || inserted > entry.getValue()) throw new IllegalStateException("Invalid ME insertion receipt");
-            if (inserted == entry.getValue()) account.resources.remove(entry.getKey());
-            else account.resources.put(entry.getKey(), entry.getValue() - inserted);
-            ledgerChanged();
+            if (inserted > 0) {
+                if (inserted == entry.getValue()) account.resources.remove(entry.getKey());
+                else account.resources.put(entry.getKey(), entry.getValue() - inserted);
+                availability.remove(entry.getKey());
+                ledgerChanged(); progressed = true;
+            }
         }
         if (getMainNode().getGrid() == grid && account.energyCreditAE > 0
                 && LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.NETWORK)) {
-            account.energyCreditAE = grid.getEnergyService().injectPower(account.energyCreditAE, Actionable.MODULATE);
-            ledgerChanged();
+            attempted = true;
+            double before = account.energyCreditAE;
+            account.energyCreditAE = grid.getEnergyService().injectPower(before, Actionable.MODULATE);
+            if (account.energyCreditAE < before) { ledgerChanged(); progressed = true; }
         }
         status = account.empty() ? "ready" : "return_blocked";
+        return progressed ? 2 : attempted ? 1 : 0;
     }
     public boolean recoverParcel(UUID id) {
         if (!(level instanceof ServerLevel server) || !getMainNode().isActive() || processing) return false;
@@ -353,6 +503,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         var capsule = LargeFactoryRecoveryItem.create(accountId);
         LargeFactoryLedger.get(server).release(account);
         accountId = UUID.randomUUID();
+        cachedAccount = null;
         if (!player.addItem(capsule)) player.drop(capsule, false);
         saveChanges();
     }
@@ -375,7 +526,11 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     }
     @Override public void clearContent() { for (int i = 0; i < inventory.size(); i++) inventory.setItemDirect(i, ItemStack.EMPTY); }
 
-    public boolean passiveStep() { return LargeFactoryPassive.step(this); }
+    public boolean passiveStep() {
+        long start = LargeFactoryTiming.begin();
+        try { return LargeFactoryPassive.step(this); }
+        finally { LargeFactoryTiming.end(this, "passive", start); }
+    }
     Entry nextPassiveEntry() {
         var entries = entries();
         if (entries.isEmpty()) return null;
@@ -395,6 +550,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     @Override public void loadTag(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadTag(tag, registries);
         accountId = tag.hasUUID("Account") ? tag.getUUID("Account") : UUID.randomUUID();
+        ledger = null; cachedAccount = null; availability.clear(); availabilityGrid = null; nextReturnTick = 0; returnObserving = false; returnSchedule.reset();
         if (crystal() && tag.contains("SlotCount")) inventory = createInventory(Math.clamp(tag.getInt("SlotCount"), 1, 36));
         inventory.readFromNBT(tag, "Patterns", registries);
         passive = tag.getBoolean("Passive");
@@ -404,6 +560,6 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
             var id = ResourceLocation.tryParse(value.getAsString());
             if (id != null) disabledRecipes.add(id);
         }
-        linked = false; controllerPos = null; machine = null; dirtyPatterns = true; resourcesReleased = false;
+        linked = false; controllerPos = null; boundController = null; machine = null; dirtyPatterns = true; resourcesReleased = false;
     }
 }

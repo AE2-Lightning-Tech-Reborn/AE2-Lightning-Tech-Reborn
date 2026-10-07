@@ -22,8 +22,11 @@ public final class LargeFactoryWorld {
     public void add(LargeFactoryControllerBlockEntity controller) {
         controllers.put(controller.getBlockPos(), controller);
         var covered = new java.util.HashSet<net.minecraft.world.level.ChunkPos>();
-        for (var cell : LargeFactoryStructure.cells()) covered.add(new net.minecraft.world.level.ChunkPos(
-                LargeFactoryStructure.worldPosition(controller.getBlockPos(), cell.localPosition(), controller.facing())));
+        var a = LargeFactoryStructure.worldPosition(controller.getBlockPos(), BlockPos.ZERO, controller.facing());
+        var b = LargeFactoryStructure.worldPosition(controller.getBlockPos(), new BlockPos(8, 6, 8), controller.facing());
+        for (int x = Math.min(a.getX(), b.getX()) >> 4; x <= Math.max(a.getX(), b.getX()) >> 4; x++)
+            for (int z = Math.min(a.getZ(), b.getZ()) >> 4; z <= Math.max(a.getZ(), b.getZ()) >> 4; z++)
+                covered.add(new net.minecraft.world.level.ChunkPos(x, z));
         for (var chunk : covered) candidates.computeIfAbsent(chunk, ignored -> new java.util.HashSet<>()).add(controller);
     }
     public void remove(LargeFactoryControllerBlockEntity controller) {
@@ -52,6 +55,7 @@ public final class LargeFactoryWorld {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         var runtime = WORLDS.get(level);
         if (runtime == null) return;
+        for (var controller : runtime.candidates.getOrDefault(event.getChunk().getPos(), java.util.Set.of())) controller.requestScan();
         for (var binding : runtime.ownership.invalidateChunk(event.getChunk().getPos())) {
             var controller = runtime.controllers.get(binding.formation().controller());
             if (controller != null) { controller.suspend(); controller.requestScan(); }

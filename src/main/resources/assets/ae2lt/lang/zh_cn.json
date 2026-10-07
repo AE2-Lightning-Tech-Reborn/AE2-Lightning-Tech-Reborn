@@ -1605,6 +1605,7 @@
   "ae2lt.large_factory.pending": "待返还资源：%s 种",
   "ae2lt.large_factory.dimensions": "9×7×9 · 背面九仓位",
   "ae2lt.large_factory.operations": "源操作／tick",
+  "ae2lt.large_factory.unlimited": "无限",
   "ae2lt.large_factory.energy": "外部储能 FE",
   "ae2lt.large_factory.source_operations": "每份样板：%s 次源操作",
   "ae2lt.large_factory.source_cost": "每次：%s FE · %s 高压 · %s 极高压",

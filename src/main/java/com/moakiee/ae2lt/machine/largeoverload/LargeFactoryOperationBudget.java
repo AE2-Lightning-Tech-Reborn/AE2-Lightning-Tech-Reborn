@@ -2,10 +2,12 @@ package com.moakiee.ae2lt.machine.largeoverload;
 
 /**
  * One server-thread instance per factory, shared by all hatches and active/passive dispatches.
- * Completed operations stay charged until the next server tick; pending reservations block reentry.
+ * Completed operations stay charged until the next server tick for finite cores; pending reservations block reentry.
  */
 public final class LargeFactoryOperationBudget {
     public static final long FIRMAMENT_OPERATIONS_PER_TICK = 1_024;
+    /** Internal unlimited sentinel; each individual transaction still fits in the long amount API. */
+    public static final long UNLIMITED = Long.MAX_VALUE;
     private long capacity;
     private boolean initialized;
     private long tick;
@@ -30,7 +32,7 @@ public final class LargeFactoryOperationBudget {
 
     public long remainingOperations(long currentTick) {
         beginTick(currentTick);
-        return Math.max(0, capacity - used - reserved);
+        return capacity == UNLIMITED ? Long.MAX_VALUE - reserved : Math.max(0, capacity - used - reserved);
     }
 
     /** Config reloads change the ceiling without refunding work already completed this tick. */
@@ -76,7 +78,9 @@ public final class LargeFactoryOperationBudget {
                 throw new IllegalArgumentException("Completion exceeds reserved pattern copies");
             }
             long completed = Math.multiplyExact(completedCopies, sourceOperationsPerCopy);
-            used = Math.addExact(used, completed);
+            // Unlimited cores may finish more than Long.MAX_VALUE operations across separate transactions.
+            // Keep saturated usage so a same-tick change back to a finite cap cannot refund earlier work.
+            used = completed > Long.MAX_VALUE - used ? Long.MAX_VALUE : used + completed;
             reserved -= operations;
             openReservations--;
             closed = true;

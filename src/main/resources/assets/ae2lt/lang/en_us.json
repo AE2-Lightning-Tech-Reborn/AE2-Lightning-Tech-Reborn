@@ -1605,6 +1605,7 @@
   "ae2lt.large_factory.pending": "Retained resource types: %s",
   "ae2lt.large_factory.dimensions": "9×7×9 · nine rear ports",
   "ae2lt.large_factory.operations": "Source ops / tick",
+  "ae2lt.large_factory.unlimited": "Unlimited",
   "ae2lt.large_factory.energy": "External FE buffer",
   "ae2lt.large_factory.source_operations": "Source operations per pattern: %s",
   "ae2lt.large_factory.source_cost": "Per operation: %s FE · %s HV · %s EHV",

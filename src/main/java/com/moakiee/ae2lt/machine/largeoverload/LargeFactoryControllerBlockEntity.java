@@ -26,8 +26,11 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     private LargeFactoryOperationBudget budget;
     private List<LargeFactoryHatchBlockEntity> hatches = List.of();
     private boolean scanRequested = true;
+    private LargeFactoryStructure.Cursor scanCursor;
     private long nextScan;
     private boolean energyReleased;
+    private LargeFactoryLedger ledger;
+    private LargeFactoryLedger.Account cachedEnergyAccount;
     private boolean allowNetworkEnergy = true;
     private boolean preview;
     private long energyTick = Long.MIN_VALUE;
@@ -68,7 +71,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     public Direction facing() { return getBlockState().getValue(LargeFactoryControllerBlock.FACING); }
     public boolean formed() { return binding != null && LargeFactoryWorld.get(level).ownership.isCurrent(binding); }
     public boolean owns(BlockPos position, UUID machine) {
-        return machineId.equals(machine) && formed() && LargeFactoryWorld.get(level).ownership.owns(binding, position);
+        return machineId.equals(machine) && LargeFactoryWorld.get(level).ownership.owns(binding, position);
     }
     public boolean contains(BlockPos position) {
         var a = LargeFactoryStructure.worldPosition(worldPosition, BlockPos.ZERO, facing());
@@ -77,7 +80,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
                 && position.getY() >= Math.min(a.getY(), b.getY()) && position.getY() <= Math.max(a.getY(), b.getY())
                 && position.getZ() >= Math.min(a.getZ(), b.getZ()) && position.getZ() <= Math.max(a.getZ(), b.getZ());
     }
-    public void requestScan() { scanRequested = true; }
+    public void requestScan() { scanRequested = true; scanCursor = null; }
     public void suspend() {
         if (binding != null) LargeFactoryWorld.get(level).ownership.release(binding);
         binding = null;
@@ -87,12 +90,15 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         status = "unformed";
     }
     public void tick() {
+        long start = LargeFactoryTiming.begin();
+        try { tickWork(); } finally { LargeFactoryTiming.end(this, "controller", start); }
+    }
+    private void tickWork() {
         long tick = level.getGameTime();
         builder.tick(this);
         if (scanRequested && tick >= nextScan && !executing && !builder.active()
                 && LargeFactoryWorkBudget.take(this, LargeFactoryWorkBudget.Work.SCAN)) {
-            scanRequested = false;
-            nextScan = tick + 2;
+            nextScan = tick + 1;
             scan();
         }
         if (preview && tick % 20 == 0) LargeFactoryPreview.show(this);
@@ -106,15 +112,19 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         }
     }
     private void scan() {
-        if (formed()) return;
-        missing = LargeFactoryBuilder.missing(this);
-        lastScan = LargeFactoryStructure.scan(worldPosition, facing(), level::isLoaded,
+        if (formed()) { scanRequested = false; return; }
+        if (scanCursor == null) scanCursor = new LargeFactoryStructure.Cursor(worldPosition, facing());
+        var scanned = scanCursor.advance(32, 15_000, level::isLoaded,
                 p -> LargeFactoryRegistration.component(level.getBlockState(p)), p -> {
                     if (!(level.getBlockEntity(p) instanceof FirmamentConversionCoreBlockEntity firmament)
                             || !firmament.isInsideFirmamentStarship()) return LargeFactoryStructure.FirmamentReadiness.OUTSIDE_STARSHIP;
                     return firmament.canJoinLargeFactory() ? LargeFactoryStructure.FirmamentReadiness.READY
                             : LargeFactoryStructure.FirmamentReadiness.INVENTORY_OR_JOB_PRESENT;
                 });
+        if (scanned == null) return;
+        missing = scanCursor.missing();
+        lastScan = scanned;
+        scanCursor = null; scanRequested = false;
         if (lastScan.status() != LargeFactoryStructure.Status.VALID) {
             status = lastScan.status() == LargeFactoryStructure.Status.INCOMPLETE ? "chunk_unloaded" : "invalid_structure";
             return;
@@ -158,7 +168,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         }
         access = new LargeFactoryRecipeAccess(core, unlocked);
         capabilityVersion++;
-        hatches.forEach(LargeFactoryHatchBlockEntity::patternsChanged);
+        hatches.forEach(LargeFactoryHatchBlockEntity::accessChanged);
         completionWake = true;
         setChanged();
     }
@@ -167,8 +177,10 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     public LargeFactoryOperationBudget budget() { return budget; }
     public LargeFactoryComponent core() { return core; }
     private LargeFactoryLedger.Account energyAccount() {
-        return !energyReleased && level instanceof net.minecraft.server.level.ServerLevel server
-                ? LargeFactoryLedger.get(server).claim(machineId, server, worldPosition) : null;
+        if (energyReleased || !(level instanceof net.minecraft.server.level.ServerLevel server)) return null;
+        if (ledger == null) ledger = LargeFactoryLedger.get(server);
+        if (cachedEnergyAccount == null) cachedEnergyAccount = ledger.claim(machineId, server, worldPosition);
+        return cachedEnergyAccount != null && !cachedEnergyAccount.parcel ? cachedEnergyAccount : null;
     }
     public long energyStored() { var account = energyAccount(); return account == null ? 0 : account.externalFE; }
     public void releaseEnergy() {
@@ -241,15 +253,26 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         if (progressed) completionWake = true;
     }
     public void endTick() {
+        long start = LargeFactoryTiming.begin();
+        try { endTickWork(); } finally { LargeFactoryTiming.end(this, "completion", start); }
+    }
+    private void endTickWork() {
         if (!formed() || executing || !completionWake || passiveWorkTick == level.getGameTime() && passiveVisits >= 64) return;
         completionWake = false;
         runPassive();
+        // Exhausting this tick's resource/operation quota must not discard the completion wake.
+        if (lastOperationTick == level.getGameTime()) completionWake = true;
     }
     public void startBuild(net.minecraft.server.level.ServerPlayer player) { builder.start(player); }
     public int[] missing() { return missing.clone(); }
     public String status() { return builder.active() ? "building" : status; }
     public LargeFactoryStructure.ScanResult lastScan() { return lastScan; }
     public List<LargeFactoryHatchBlockEntity> hatches() { return hatches; }
+    int passiveHatchCount() {
+        int count = 0;
+        for (var hatch : hatches) if (hatch.passive()) count++;
+        return Math.max(1, count);
+    }
     public void togglePreview() { preview = !preview; if (preview) LargeFactoryPreview.show(this); }
 
     @Override protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
@@ -263,6 +286,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         machineId = tag.hasUUID("Machine") ? tag.getUUID("Machine") : UUID.randomUUID();
+        ledger = null; cachedEnergyAccount = null;
         core = null;
         try { core = LargeFactoryComponent.valueOf(tag.getString("LastCore")); }
         catch (IllegalArgumentException ignored) { }
@@ -270,6 +294,6 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         capabilityVersion = Math.max(0, tag.getLong("CapabilityVersion"));
         energyReleased = false;
         allowNetworkEnergy = !tag.getBoolean("ExternalOnly");
-        binding = null; scanRequested = true; hatches = List.of();
+        binding = null; scanRequested = true; scanCursor = null; hatches = List.of();
     }
 }

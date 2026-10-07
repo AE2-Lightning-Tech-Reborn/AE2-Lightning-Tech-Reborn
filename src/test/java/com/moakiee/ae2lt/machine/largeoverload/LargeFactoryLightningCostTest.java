@@ -91,6 +91,28 @@ class LargeFactoryLightningCostTest {
     }
 
     @Test
+    void closedFormMaximumIsFeasibleAndItsNextOperationIsNot() {
+        var random = new Random(912723);
+        for (int i = 0; i < 3000; i++) {
+            long hv = i % 3 == 0 ? 0 : i % 3 == 1 ? 1 + random.nextInt(1000) : random.nextLong() & Long.MAX_VALUE;
+            long ehv = i % 3 == 1 ? 0 : i % 3 == 0 ? 1 + random.nextInt(1000) : random.nextLong() & Long.MAX_VALUE;
+            long requested = random.nextLong() & Long.MAX_VALUE;
+            long availableHv = random.nextLong() & Long.MAX_VALUE, availableEhv = random.nextLong() & Long.MAX_VALUE;
+            var cost = new LargeFactoryLightningCost(hv, ehv);
+            long maximum = cost.maxPayableOperations(requested, availableHv, availableEhv);
+            assertTrue(feasible(hv, ehv, maximum, availableHv, availableEhv));
+            if (maximum < requested) assertFalse(feasible(hv, ehv, maximum + 1, availableHv, availableEhv));
+        }
+    }
+
+    private static boolean feasible(long hv, long ehv, long n, long availableHv, long availableEhv) {
+        var extreme = BigInteger.valueOf(ehv).multiply(BigInteger.valueOf(n));
+        var high = BigInteger.valueOf(hv).multiply(BigInteger.valueOf(n)).add(
+                extreme.subtract(BigInteger.valueOf(availableEhv)).max(BigInteger.ZERO).shiftLeft(2));
+        return extreme.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0 && high.compareTo(BigInteger.valueOf(availableHv)) <= 0;
+    }
+
+    @Test
     void zeroBatchIsFreeButInvalidInputIsRejected() {
         assertEquals(new LargeFactoryLightningCost.Payment(0, 0),
                 LargeFactoryLightningCost.FIRMAMENT.plan(0, 0, 0).orElseThrow());

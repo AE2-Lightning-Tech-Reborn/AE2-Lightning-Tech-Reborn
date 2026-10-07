@@ -30,7 +30,20 @@ public record LargeFactoryRecipe(ResourceLocation id, LargeFactoryRecipeAccess.P
 
     /** Determine the exact source multiplicity from every output, then account for every real input. */
     public long match(Map<AEKey, Long> actual, Map<AEKey, Long> declaredOutputs) {
-        if (!outputs.keySet().equals(declaredOutputs.keySet()) || actual.size() > 64) return 0;
+        if (actual.size() > 64) return 0;
+        long operations = outputOperations(declaredOutputs);
+        if (operations == 0) return 0;
+        try {
+            int disjoint = matchDisjoint(actual, operations);
+            return (disjoint >= 0 ? disjoint == 1 : acceptsExactly(actual, operations)) ? operations : 0;
+        } catch (ArithmeticException overflow) {
+            return 0;
+        }
+    }
+
+    /** Output-only lower-bound hint; this never grants a binding or authorizes production. */
+    long outputOperations(Map<AEKey, Long> declaredOutputs) {
+        if (!outputs.keySet().equals(declaredOutputs.keySet())) return 0;
         long operations = 0;
         for (var entry : outputs.entrySet()) {
             long declared = declaredOutputs.get(entry.getKey());
@@ -39,11 +52,25 @@ public record LargeFactoryRecipe(ResourceLocation id, LargeFactoryRecipeAccess.P
             if (operations != 0 && multiple != operations) return 0;
             operations = multiple;
         }
-        try {
-            return acceptsExactly(actual, operations) ? operations : 0;
-        } catch (ArithmeticException overflow) {
-            return 0;
+        return operations;
+    }
+
+    /** Most recipes have disjoint inputs: sum each lane directly; use flow only for real ambiguity. */
+    private int matchDisjoint(Map<AEKey, Long> actual, long operations) {
+        long[] assigned = new long[inputs.size()];
+        for (var entry : actual.entrySet()) {
+            if (entry.getValue() <= 0) return 0;
+            int found = -1;
+            for (int r = 0; r < inputs.size(); r++) if (inputs.get(r).accepts().test(entry.getKey())) {
+                if (found >= 0) return -1;
+                found = r;
+            }
+            if (found < 0) return 0;
+            assigned[found] = Math.addExact(assigned[found], entry.getValue());
         }
+        for (int r = 0; r < inputs.size(); r++)
+            if (assigned[r] != Math.multiplyExact(inputs.get(r).amount(), operations)) return 0;
+        return 1;
     }
 
     /** Capacitated bipartite flow handles overlapping tags without greedy failures or count-sized loops. */
