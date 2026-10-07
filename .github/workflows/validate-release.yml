@@ -3,9 +3,9 @@ name: Validate release workflow
 on:
   push:
     branches: [main, '1.20.1']
-    paths: ['.github/**', 'build.gradle']
+    paths: ['.github/**', 'build.gradle', 'gradle.properties']
   pull_request:
-    paths: ['.github/**', 'build.gradle']
+    paths: ['.github/**', 'build.gradle', 'gradle.properties']
   workflow_dispatch:
 
 permissions:
