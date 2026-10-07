@@ -1,0 +1,78 @@
+package com.moakiee.ae2lt.recipe;
+
+import com.moakiee.ae2lt.registry.ModFumos;
+import com.moakiee.ae2lt.registry.ModRecipeTypes;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.level.Level;
+
+/** One reusable Rainbow Pigmee advances one item through Minecraft's sixteen dye colors. */
+public final class RainbowPigmeeColorCycleRecipe extends CustomRecipe {
+    private RainbowPigmeeColoring coloring = RainbowPigmeeColoring.EMPTY;
+
+    public RainbowPigmeeColorCycleRecipe(CraftingBookCategory category) {
+        super(category);
+    }
+
+    void setColoring(RainbowPigmeeColoring coloring) {
+        this.coloring = coloring;
+    }
+
+    @Override
+    public boolean matches(CraftingInput input, Level level) {
+        return !coloring.next(findTarget(input)).isEmpty();
+    }
+
+    @Override
+    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+        return coloring.next(findTarget(input));
+    }
+
+    @Override
+    public boolean canCraftInDimensions(int width, int height) {
+        return width * height >= 2;
+    }
+
+    @Override
+    public RecipeSerializer<?> getSerializer() {
+        return ModRecipeTypes.RAINBOW_PIGMEE_COLOR_CYCLE_SERIALIZER.get();
+    }
+
+    @Override
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+        var remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
+        for (int slot = 0; slot < input.size(); slot++) {
+            var stack = input.getItem(slot);
+            if (stack.is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())) {
+                remaining.set(slot, stack.copyWithCount(1));
+            }
+        }
+        return remaining;
+    }
+
+    private static ItemStack findTarget(CraftingInput input) {
+        ItemStack target = ItemStack.EMPTY;
+        boolean foundPigmee = false;
+        for (var stack : input.items()) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (stack.is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())) {
+                if (foundPigmee) {
+                    return ItemStack.EMPTY;
+                }
+                foundPigmee = true;
+            } else if (target.isEmpty()) {
+                target = stack;
+            } else {
+                return ItemStack.EMPTY;
+            }
+        }
+        return foundPigmee ? target : ItemStack.EMPTY;
+    }
+}

@@ -7,10 +7,10 @@
  * {@link com.moakiee.ae2lt.api.frequency.FrequencyBindingAccess#save} /
  * {@link com.moakiee.ae2lt.api.frequency.FrequencyBindingAccess#load}.
  *
- * <p>Like the rest of {@code com.moakiee.ae2lt.api.*}, this package only
- * depends on JDK, Minecraft, NeoForge, and the AE2 public API. It does not
- * import any non-{@code api} classes of this mod, so addons can compile
- * against the API surface alone.
+ * <p>Compile against the complete AE2LT and AE2 artifacts. Receiver hosts use
+ * AE2's AENetworkedBlockEntity and SettingsFrom integration classes in addition
+ * to its api package. Binding setters are trusted server operations, not player
+ * authorization checks. Existence, access and connection state are distinct.
  *
  * <h2>Read-only queries</h2>
  * <pre>

@@ -15,7 +15,12 @@ allprojects {
         neoForge.runs.gameTestServer {
             gameDirectory = project.layout.buildDirectory.dir('wireless-io-semantic-gametest').get().asFile
         }
+        neoForge.runs.interfaceIoGameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('wireless-io-semantic-gametest').get().asFile
+        }
         neoForge.runs.wirelessIoGameTestServer {
+            gameDirectory = project.file(providers.gradleProperty('ae2ltBenchmarkRunDirectory')
+                    .getOrElse('run-wireless-io-gametest'))
             jvmArguments.addAll('-Xms512m', '-Xmx2g')
         }
     }

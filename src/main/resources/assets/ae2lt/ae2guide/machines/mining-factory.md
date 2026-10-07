@@ -11,41 +11,35 @@ item_ids:
 
 <BlockImage id="ae2lt:mining_factory" scale="4" />
 
-Put block items into the upper input slot and a durability tool or an AE2 Annihilation Plane into the lower tool slot. Connect an ME network containing HV Lightning, supply FE and extract the mining drops from the nine output slots. The factory evaluates the blocks' current loot tables with the installed tool; it never places or breaks blocks in the world.
+The **Mining Factory** produces mining drops from each block's own loot table without placing or breaking blocks. Insert block items with a durability tool or an AE2 Annihilation Plane, then connect an ME network holding HV Lightning and supply FE.
 
-## Processing and power
+Crafting requires 1 **Overload Machine Frame**.
 
-**Each batch takes exactly 5 ticks (0.25 seconds at 20 TPS).** Loot is rolled and blocks, durability, FE and one HV Lightning are charged only on the fifth tick. Refilling the same block or extracting outputs preserves progress; changing the block type, tool or matrix parallel capacity restarts it. Insufficient power or lightning, invalid inputs or blocked output clears unpaid progress. Unloading and reloading preserves an unfinished cycle.
+## Processing and cost
 
-Parallel capacity follows the **Overload Processing Factory's Lightning Collapse Matrix rules**: no matrix allows one block per batch; by default one matrix enables 8, eight matrices enable 64, and a full stack of 32 enables 256. The matrix slot accepts at most 32. Both factories use `overloadProcessingFactory.parallelPerMatrix`.
+Every batch takes 5 ticks. Blocks, tool durability, FE and one HV Lightning are charged only on the fifth tick; progress is cleared when FE or lightning runs out, the tool tier is too low, the input is unsupported, the output is blocked or the tool breaks, while refilling or extracting products does not interrupt it.
 
-Loot sampling has a separate default budget of **8 independent rolls per batch**. A 256-block batch uses eight samples, each representing 32 blocks. Uneven batches distribute the remainder across samples. Small batches use one sample per block. This preserves expected yield for fixed loot conditions, but produces more variation than independently mining every block. Samples are fresh for each batch, with no persistent loot cache. Set `miningFactory.lootSamplesPerTick` at least as high as the installed parallel capacity for independent rolls.
+By default, without a matrix the factory processes 8 blocks per batch. With matrices installed, each **Lightning Collapse Matrix** provides 256 parallel operations, and the matrix slot holds up to 8 (2,048 parallel, or 8,192 blocks per second at 20 TPS). The independent `miningFactory.baseParallel` and `miningFactory.parallelPerMatrix` settings do not use the Overload Processing Factory configuration. Loot is sampled 8 times per batch by default, matching per-block mining in long-term yield with more variation; set `miningFactory.lootSamplesPerTick` at or above the parallel capacity for independent per-block rolls (2,048 at the default maximum; the setting accepts up to 4,096).
 
-A tool consumes its normal tool-component durability cost for each processed block. Unbreaking is evaluated for every block. Processing stops when the tool breaks, retaining the unprocessed input. Fortune and Silk Touch apply through loot tables. The default power cost is **256 FE per block**.
+Tools consume their tool-component durability per block, Fortune and Silk Touch apply through the loot table, and the default cost is 256 FE per block. An **Annihilation Plane** selects a diamond-tier tool by AE2's rules and carries its enchantments, costing no durability but 768 extra FE per block.
 
-An Annihilation Plane uses AE2's diamond-tier pickaxe/axe/shovel/hoe selection and carries its enchantments into the loot context. It is reusable and costs an additional **768 FE per block**, for a default total of **1,024 FE per block**. Insufficient tool tier retains the input.
+The tool must remain usable before each block is processed. Silent Gear tools stop at the mod's own broken state. If a tool breaks during a batch, only completed blocks are charged; the broken tool stays in its slot for removal and repair, and unprocessed inputs remain. Unbreaking and legitimate unbreakable properties still apply.
 
-## Inventory and automation
+## Slots and automation
 
-- Input capacity: 4,096 blocks. Tool capacity: one item. Matrix capacity: 32 matrices.
-- Output capacity: nine slots of 4,096 items each.
-- Internal buffer: 1,000,000 FE. FE can enter from any side. Applied Flux power can also be supplied through the connected ME network or bound frequency.
-- Each completed batch consumes one HV Lightning from the ME network, independent of parallel count. Connect the network by cable or bound frequency. Speed cards are not accepted.
-- Pipes may insert blocks, tools and matrices and extract outputs from any side. Installed tools and matrices are excluded from automated extraction and automatic export.
-- When output is blocked, processing pauses. Any already-rolled overflow is saved with the machine and is drained before processing more inputs. Removing the machine also drops this pending output.
+| Slot | Capacity |
+| --- | ---: |
+| Block input | 4,096 |
+| Tool | 1 |
+| Matrix | 8 |
+| Output ×9 | 4,096 each |
 
-## Automatic export and configuration
+The internal buffer holds 4,000,000 FE and accepts FE from any side, or Applied Flux power through the ME network or a bound frequency. Each batch consumes one HV Lightning from the network, independent of parallel capacity. Pipes can insert blocks, tools and matrices and extract products; automated extraction and automatic export only handle products.
 
-The compact layout, progress arrow and energy bar follow the Overload Processing Factory. Hover the upper-right status icon for the current state, progress, five-tick batch duration, parallel capacity, energy, available network lightning and batch lightning cost.
-
-The left toolbar provides the same **Auto Export** switch and **Configure Output Sides** screen as the Overload Processing Factory. Export is initially disabled, with no output faces selected. Enable it and select one or more faces to send items to adjacent inventories. Faces are relative to the machine's orientation and rotate with it. A full target retains the remainder; replacing a neighboring container refreshes the target.
-
-Sneak-use the factory while holding matrices to install as many as fit. A memory card copies auto-export, output faces, frequency and the desired matrix count. In survival, restoring a matrix count consumes actual matrices from the player's inventory; excess matrices are returned. Inputs, tools and products are not copied by the memory card.
+The toolbar's **Auto Export** switch and output side settings start disabled and send products to adjacent containers relative to the machine's orientation. A memory card copies the export switch, output faces, frequency and desired matrix count, taking or returning the exact matrices from the player's inventory.
 
 ## Compatibility
 
-The factory supports ordinary block items and tools with a durability and tool component. Blocks with block entities, including containers, are rejected. Energy-only tools need a dedicated cost adapter. Loot-table changes from data packs apply normally; modded loot conditions may require world context that virtual processing cannot provide. Apotheosis stoneforming uses the upstream loot modifier and preserves the selected target. Boon of the Earth evaluates the original enchantment data and probability, with the same sample weights. Blood Magic Fortune anointments stack with Fortune enchantments and consume one use per actual processed block. Anointment expiry ends the current batch; remaining input uses the updated tool in the next batch.
-
-These integrations do not post real break/drop events. Tool `mineBlock` callbacks, area mining, chainsaw tree felling, world entity spawning and experience are not simulated.
+Ordinary block items and tools with a durability tool component are supported; blocks with block entities (containers included) and energy-only tools are not. Modded loot conditions that need world context may not apply, and area mining or chainsaw felling are not simulated.
 
 <RecipeFor id="ae2lt:mining_factory" />

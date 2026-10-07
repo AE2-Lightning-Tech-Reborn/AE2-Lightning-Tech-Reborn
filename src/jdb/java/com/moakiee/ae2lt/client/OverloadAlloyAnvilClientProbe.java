@@ -39,8 +39,8 @@ public final class OverloadAlloyAnvilClientProbe {
                     checkModel(mc.getBlockRenderer().getBlockModel(state), sprites);
                 }
                 checkModel(mc.getItemRenderer().getModel(new ItemStack(ModBlocks.OVERLOAD_ALLOY_ANVIL.get()), null, null, 0), sprites);
-                if (!sprites.equals(java.util.Set.of("ae2lt:block/overload_machine_frame"))) {
-                    throw new AssertionError("alloy top, body and particles must all use alloy texture: " + sprites);
+                if (!sprites.equals(java.util.Set.of("ae2lt:block/overload_anvil"))) {
+                    throw new AssertionError("anvil top, body and particles must all use the anvil texture: " + sprites);
                 }
                 Files.writeString(mc.gameDirectory.toPath().resolve("model-result.txt"),
                         "PASS: all 4 block facings and inventory model have real quads and textures. Sprites: " + sprites);

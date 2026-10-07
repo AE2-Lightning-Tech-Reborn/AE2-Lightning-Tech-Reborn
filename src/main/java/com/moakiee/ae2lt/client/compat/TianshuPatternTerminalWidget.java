@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.client.compat;
 
 import appeng.menu.SlotSemantics;
 import com.illusivesoulworks.polymorph.api.client.widgets.PlayerRecipesWidget;
-import com.moakiee.ae2lt.client.TianshuPatternEncodingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.gui.GuiGraphics;

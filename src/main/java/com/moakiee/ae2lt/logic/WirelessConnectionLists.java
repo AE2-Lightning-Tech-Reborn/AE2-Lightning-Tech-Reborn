@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionValidator;
+
 import java.util.List;
 import java.util.function.Predicate;
 

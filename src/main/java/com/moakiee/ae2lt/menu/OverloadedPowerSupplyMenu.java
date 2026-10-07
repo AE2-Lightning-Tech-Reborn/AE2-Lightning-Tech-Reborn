@@ -19,7 +19,7 @@ import appeng.menu.slot.AppEngSlot;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
-import com.moakiee.ae2lt.logic.OverloadedPowerSupplyLogic;
+import com.moakiee.ae2lt.logic.energy.OverloadedPowerSupplyLogic;
 import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 
 public class OverloadedPowerSupplyMenu extends AEBaseMenu implements FrequencyBindingMenu {

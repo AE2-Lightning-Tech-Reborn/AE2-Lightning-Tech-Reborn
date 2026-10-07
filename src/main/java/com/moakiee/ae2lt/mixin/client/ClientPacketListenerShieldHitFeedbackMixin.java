@@ -9,7 +9,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.world.entity.Entity;
 
-import com.moakiee.ae2lt.client.ShieldHitFeedbackClientState;
+import com.moakiee.ae2lt.client.equipment.ShieldHitFeedbackClientState;
 
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerShieldHitFeedbackMixin {

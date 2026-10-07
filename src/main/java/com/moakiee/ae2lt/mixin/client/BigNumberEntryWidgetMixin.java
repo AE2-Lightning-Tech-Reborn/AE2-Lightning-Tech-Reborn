@@ -4,7 +4,7 @@ import appeng.client.gui.NumberEntryType;
 import appeng.client.gui.widgets.*;
 import appeng.core.localization.GuiText;
 
-import com.moakiee.ae2lt.client.BigNumberEntry;
+import com.moakiee.ae2lt.client.widgets.BigNumberEntry;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
 import net.minecraft.network.chat.Component;

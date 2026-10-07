@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.world.entity.Entity;
 
-import com.moakiee.ae2lt.client.CelestweaveShieldFireVisuals;
+import com.moakiee.ae2lt.client.equipment.CelestweaveShieldFireVisuals;
 
 @Mixin(Entity.class)
 public abstract class EntityShieldFireVisualMixin {

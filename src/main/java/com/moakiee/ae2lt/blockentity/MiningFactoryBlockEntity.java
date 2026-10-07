@@ -1,12 +1,15 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.EnumSet;
 
 import appeng.api.orientation.RelativeSide;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
@@ -21,7 +24,8 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryInventory;
 import com.moakiee.ae2lt.machine.miningfactory.MiningLoot;
@@ -45,10 +49,12 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity implements FrequencyBindingHost, LightningCollapseMatrixHost {
     public static final int PROCESSING_TICKS = 5;
+    public static final int ENERGY_CAPACITY = 4_000_000;
     public enum Status { IDLE, WORKING, TOOL, HARVEST, ENERGY, OUTPUT, UNSUPPORTED, ERROR, LIGHTNING }
     private final MiningFactoryInventory inventory = new MiningFactoryInventory(this::inventoryChanged);
     private final OverloadProcessingFactoryEnergyStorage energy =
-            new OverloadProcessingFactoryEnergyStorage(1_000_000, this::saveChanges);
+            new OverloadProcessingFactoryEnergyStorage(ENERGY_CAPACITY, this::saveChanges);
+    private final MachineRechargeController rechargeController = new MachineRechargeController();
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
     private final List<MiningLoot.Drop> pending = new ArrayList<>();
     private final IItemHandler automation = new IItemHandler() {
@@ -66,6 +72,7 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
     };
     private final AdjacentItemAutoExportHelper.DirectionalTargetCache exportTargets =
             new AdjacentItemAutoExportHelper.DirectionalTargetCache();
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private EnumSet<RelativeSide> allowedOutputs = EnumSet.noneOf(RelativeSide.class);
     private Status status = Status.IDLE;
@@ -109,6 +116,7 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
     }
 
     private void process(ServerLevel server) {
+        rechargeFromAppliedFlux(server.getGameTime());
         pushOutResult();
         flushPending();
         if (!pending.isEmpty() || !inventory.hasOutputRoom()) { status = Status.OUTPUT; return; }
@@ -122,10 +130,6 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
         if (!MiningLoot.canHarvest(state, tool)) { status = Status.HARVEST; return; }
         int unitCost = MiningFactoryConfig.energyPerBlock(MiningLoot.isPlane(tool));
         int requested = Math.min(input.getCount(), getInstalledParallelCapacity());
-        if (energy.getStoredEnergyLong() < (long) requested * unitCost && AppFluxHelper.isAvailable()) {
-            getMainNode().ifPresent((grid, node) -> AppFluxHelper.pullPowerFromNetwork(
-                    grid.getStorageService().getInventory(), energy, IActionSource.ofMachine(this)));
-        }
         requested = (int) Math.min(requested, energy.getStoredEnergyLong() / unitCost);
         if (requested == 0) { status = Status.ENERGY; return; }
         var lightningStorage = lightningStorage();
@@ -171,7 +175,9 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
         }
         // All prospective tool edits are on a copy. Commit costs and the fixed result together.
         inventory.extractItem(MiningFactoryInventory.INPUT, result.processed(), false);
-        inventory.setStackInSlot(MiningFactoryInventory.TOOL, result.tool());
+        // A native damage hook can leave a repairable broken item without a TOOL component.
+        // Retain that committed result even though it no longer passes insertion validation.
+        inventory.setItemDirect(MiningFactoryInventory.TOOL, result.tool());
         energy.extractInternal((long) result.processed() * unitCost, false);
         pending.addAll(result.drops());
         lastProcessed = result.processed();
@@ -180,6 +186,23 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
         flushPending();
         pushOutResult();
         status = pending.isEmpty() ? Status.WORKING : Status.OUTPUT;
+    }
+
+    private void rechargeFromAppliedFlux(long gameTime) {
+        if (!AppFluxHelper.isAvailable()) return;
+        ItemStack input = inventory.getStackInSlot(MiningFactoryInventory.INPUT);
+        ItemStack tool = inventory.getStackInSlot(MiningFactoryInventory.TOOL);
+        long demand = MiningLoot.isTool(tool)
+                ? (long) Math.min(input.getCount(), getInstalledParallelCapacity())
+                        * MiningFactoryConfig.energyPerBlock(MiningLoot.isPlane(tool))
+                : 0L;
+        if (!rechargeController.shouldRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong(), demand,
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE), gameTime)) return;
+        getMainNode().ifPresent((grid, node) -> {
+            AppFluxHelper.pullPowerFromNetwork(grid.getStorageService().getInventory(), energy,
+                    IActionSource.ofMachine(this));
+            rechargeController.afterRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong());
+        });
     }
 
     private MEStorage lightningStorage() {
@@ -262,6 +285,28 @@ public final class MiningFactoryBlockEntity extends AENetworkedBlockEntity imple
 
     public void onNeighborChanged(BlockPos pos) {
         if (pos != null && worldPosition.distManhattan(pos) == 1) exportTargets.invalidate();
+    }
+
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, MiningFactoryInventory.INPUT, 1,
+                MiningFactoryInventory.OUTPUT, 9,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, MiningFactoryInventory.OUTPUT, 9,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? exportTargets.resolve(server, worldPosition, direction) : null, budget),
+                () -> {
+                    resetProgress();
+                    status = Status.IDLE;
+                    lastProcessed = 0;
+                    lastSamples = 0;
+                    var state = getBlockState();
+                    if (state.getValue(MiningFactoryBlock.WORKING)) {
+                        level.setBlock(worldPosition, state.setValue(MiningFactoryBlock.WORKING, false), Block.UPDATE_CLIENTS);
+                    }
+                });
     }
 
     public boolean pushOutResult() {

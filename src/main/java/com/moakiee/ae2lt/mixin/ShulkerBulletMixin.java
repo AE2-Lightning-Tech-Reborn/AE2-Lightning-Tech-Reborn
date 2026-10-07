@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.mixin;
 
-import com.moakiee.ae2lt.logic.FloatingMatterCapture;
+import com.moakiee.ae2lt.logic.world.FloatingMatterCapture;
 import net.minecraft.world.entity.projectile.ShulkerBullet;
 import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;

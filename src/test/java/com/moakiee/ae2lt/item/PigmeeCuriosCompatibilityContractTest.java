@@ -46,9 +46,9 @@ final class PigmeeCuriosCompatibilityContractTest {
     @Test
     void clientRenderingIsRegisteredOnlyBehindTheOptionalCuriosBoundary() throws Exception {
         String clientSetup = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/LightningKeyClientInit.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/LightningKeyClientInit.java"));
         String bridge = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/PigmeeCuriosClientBridge.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/PigmeeCuriosClientBridge.java"));
 
         assertTrue(clientSetup.contains("ModList.get().isLoaded(\"curios\")"));
         assertTrue(clientSetup.contains("PigmeeCuriosClientBridge.registerRenderers()"));

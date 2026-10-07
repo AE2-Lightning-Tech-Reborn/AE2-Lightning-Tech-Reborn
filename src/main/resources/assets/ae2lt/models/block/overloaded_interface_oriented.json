@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "ae2lt:block/overloaded_interface",
+    "down": "ae2lt:block/overloaded_interface",
+    "up": "ae2lt:block/overloaded_interface",
+    "north": "ae2lt:block/overloaded_pattern_provider_alternate_arrow",
+    "south": "ae2lt:block/overloaded_pattern_provider_alternate_arrow",
+    "west": "ae2lt:block/overloaded_pattern_provider_alternate_arrow",
+    "east": "ae2lt:block/overloaded_pattern_provider_alternate_arrow"
+  }
+}

@@ -27,6 +27,7 @@ import appeng.api.networking.security.IActionSource;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.config.RailgunDefaults;
+import com.moakiee.ae2lt.device.energy.LightningCompensationPolicy;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.item.railgun.RailgunChargeTier;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
@@ -158,12 +159,25 @@ public final class RailgunBeamService {
         // SIMULATE phase: prove we can afford the shot, without committing anything,
         // so a later failure cannot leave FE deducted but ammo missing.
         long primaryAvail = 0L;
+        long compensationHvNeeded = 0L;
         if (primaryNeeded > 0L) {
             primaryAvail = grid.getStorageService().getInventory().extract(
                     primaryKey, primaryNeeded, Actionable.SIMULATE, src);
             if (primaryAvail < primaryNeeded) {
-                RailgunFireService.sendFail(player, failKey);
-                return false;
+                int ratio = profile.ehv() ? LightningCompensationPolicy.bestRatio(mods.capabilities()) : 0;
+                if (ratio <= 0) {
+                    RailgunFireService.sendFail(player, failKey);
+                    return false;
+                }
+                // Plan only the EHV shortfall, then prove the actual HV payment.
+                // The shared policy rejects overflow instead of allowing a capped underpayment.
+                var payment = LightningCompensationPolicy.plan(0L, primaryNeeded, Long.MAX_VALUE, primaryAvail, ratio);
+                compensationHvNeeded = payment.highVoltageToConsume();
+                if (!payment.canPay() || grid.getStorageService().getInventory().extract(
+                        LightningKey.HIGH_VOLTAGE, compensationHvNeeded, Actionable.SIMULATE, src) < compensationHvNeeded) {
+                    RailgunFireService.sendFail(player, "ae2lt.railgun.fail.no_compensation_hv");
+                    return false;
+                }
             }
         }
 
@@ -191,6 +205,21 @@ public final class RailgunBeamService {
                 RailgunEnergyBuffer.refund(stack, feCost);
                 RailgunFireService.sendFail(player, failKey);
                 return false;
+            }
+            if (compensationHvNeeded > 0L) {
+                long gotHv = grid.getStorageService().getInventory().extract(
+                        LightningKey.HIGH_VOLTAGE, compensationHvNeeded, Actionable.MODULATE, src);
+                if (gotHv < compensationHvNeeded) {
+                    if (gotPrimary > 0L) {
+                        grid.getStorageService().getInventory().insert(primaryKey, gotPrimary, Actionable.MODULATE, src);
+                    }
+                    if (gotHv > 0L) {
+                        grid.getStorageService().getInventory().insert(LightningKey.HIGH_VOLTAGE, gotHv, Actionable.MODULATE, src);
+                    }
+                    RailgunEnergyBuffer.refund(stack, feCost);
+                    RailgunFireService.sendFail(player, "ae2lt.railgun.fail.no_compensation_hv");
+                    return false;
+                }
             }
         }
 
@@ -237,12 +266,12 @@ public final class RailgunBeamService {
             // Pass HV as the "tier" sentinel — ordinary-beam chains never carry execution.
             RailgunFireService.applyAll(level, player, chain, ctx, stack, RailgunChargeTier.HV);
             if (!chain.isEmpty()) {
-                broadcastBeamChainFx(level, player, chainOrigin, chain, settings.soundEnabled());
+                broadcastBeamChainFx(level, player, chainOrigin, chain, settings.soundEnabled(), profile.ehv());
             }
         }
 
         // Broadcast beam segment
-        broadcastTrace(level, player, trace);
+        broadcastTrace(level, player, trace, profile.ehv());
         return true;
     }
 
@@ -274,8 +303,8 @@ public final class RailgunBeamService {
         return target.getBoundingBox().getCenter();
     }
 
-    private static void broadcastTrace(ServerLevel level, ServerPlayer player, BeamTrace trace) {
-        var pkt = new RailgunBeamUpdatePacket(player.getUUID(), trace.from(), trace.endPoint(), true);
+    private static void broadcastTrace(ServerLevel level, ServerPlayer player, BeamTrace trace, boolean ehv) {
+        var pkt = new RailgunBeamUpdatePacket(player.getUUID(), trace.from(), trace.endPoint(), true, ehv);
         NetworkHandler.sendToTrackingChunk(level, player.chunkPosition(), pkt);
     }
 
@@ -292,7 +321,7 @@ public final class RailgunBeamService {
     private static void broadcastBeamChainFx(ServerLevel level, ServerPlayer player,
                                              Vec3 origin,
                                              List<RailgunChainResolver.Hit> chain,
-                                             boolean soundEnabled) {
+                                             boolean soundEnabled, boolean ehv) {
         java.util.List<Vec3> path = new java.util.ArrayList<>(chain.size() * 2);
         Vec3 prev = origin;
         for (var h : chain) {
@@ -303,7 +332,7 @@ public final class RailgunBeamService {
             prev = cur;
         }
         if (path.isEmpty()) return;
-        var pkt = new RailgunBeamChainFxPacket(player.getUUID(), origin, path, soundEnabled);
+        var pkt = new RailgunBeamChainFxPacket(player.getUUID(), origin, path, soundEnabled, ehv);
         NetworkHandler.sendToTrackingChunk(level, player.chunkPosition(), pkt);
     }
 
@@ -316,7 +345,7 @@ public final class RailgunBeamService {
 
     private static void broadcastStop(ServerPlayer player) {
         if (!(player.level() instanceof ServerLevel sl)) return;
-        var pkt = new RailgunBeamUpdatePacket(player.getUUID(), Vec3.ZERO, Vec3.ZERO, false);
+        var pkt = new RailgunBeamUpdatePacket(player.getUUID(), Vec3.ZERO, Vec3.ZERO, false, false);
         NetworkHandler.sendToTrackingChunk(sl, player.chunkPosition(), pkt);
     }
 }

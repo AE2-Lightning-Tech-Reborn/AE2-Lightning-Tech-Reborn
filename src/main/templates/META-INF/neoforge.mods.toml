@@ -52,6 +52,11 @@ config = "${mod_id}.ae2wtlib.mixins.json"
 [[mixins]]
 config = "${mod_id}.mekanism.mixins.json"
 
+# Applied Flux adds its own adjacent-output ticker to AE2 interfaces. In
+# wireless mode the overloaded interface routes FE through its bound targets.
+[[mixins]]
+config = "${mod_id}.appflux.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]

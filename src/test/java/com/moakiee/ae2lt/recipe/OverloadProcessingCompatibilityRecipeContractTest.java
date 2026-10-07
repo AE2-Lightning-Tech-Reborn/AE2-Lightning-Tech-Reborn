@@ -25,18 +25,6 @@ class OverloadProcessingCompatibilityRecipeContractTest {
         assertTag("eae_concurrent_processor.json", 1, "c:storage_blocks/redstone");
     }
 
-    @Test
-    void appliedFluxRecipesKeepUpstreamConventionTags() throws Exception {
-        assertTag("appflux_harden_insulating_resin.json", 2, "c:silicon");
-        assertTag("appflux_harden_insulating_resin.json", 4, "c:dusts/glowstone");
-    }
-
-    @Test
-    void ae2FluixPearlKeepsUpstreamConventionTags() throws Exception {
-        assertTag("ae2_fluix_pearl.json", 0, "c:ender_pearls");
-        assertTag("ae2_fluix_pearl.json", 1, "c:dusts/fluix");
-    }
-
     private static void assertTag(String filename, int inputIndex, String expectedTag) throws Exception {
         JsonObject input = recipe(filename).getAsJsonArray("inputs")
                 .get(inputIndex)

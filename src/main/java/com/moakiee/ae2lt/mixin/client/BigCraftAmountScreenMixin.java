@@ -6,7 +6,7 @@ import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.NumberEntryWidget;
 import appeng.menu.me.crafting.CraftAmountMenu;
 
-import com.moakiee.ae2lt.client.BigNumberEntry;
+import com.moakiee.ae2lt.client.widgets.BigNumberEntry;
 import com.moakiee.ae2lt.crafting.big.BigAmountMenu;
 import com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket;
 

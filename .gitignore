@@ -10,6 +10,7 @@ build/
 Jar/
 
 # Local assistant/docs
+/AGENTS.md
 .aiassistant/
 .docs/
 archive/
@@ -18,6 +19,8 @@ docs/
 docs/*
 !docs/wireless-io-alpha3-test-port.md
 !docs/tianshu-deferred-matrix-returns.md
+!docs/addon-api-alpha.md
+!docs/alpha-vs-main-2026-10-05.md
 
 # Bundled source mirrors / references
 Source Code/
@@ -25,6 +28,7 @@ Source Code/
 # Local test/export assets
 else/
 run-passive-input-gametest/
+run-wired-target-client/
 run-alloy-anvil-gametest/
 run-alloy-anvil-client/
 run-omniversal-gametest/
@@ -44,6 +48,7 @@ logs/
 
 # Java
 *.class
+scripts/__pycache__/
 
 # Runtime / temporary files
 run/

@@ -1,0 +1,14 @@
+// Native item rendering acceptance without opening or modifying a saved world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PigmeeSlabItemClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.client {
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-slab-item-client').get().asFile
+            systemProperty 'ae2lt.pigmeeSlabItemClientProbe', 'true'
+        }
+    }
+}

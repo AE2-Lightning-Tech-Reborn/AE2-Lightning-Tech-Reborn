@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.EnumSet;
@@ -42,8 +45,8 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.block.LightningAssemblyChamberBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.common.SingleOutputLightningRecipeExecutor;
@@ -73,7 +76,7 @@ public class LightningAssemblyChamberBlockEntity extends AENetworkedBlockEntity
     private static final String TAG_AUTO_EXPORT = "AutoExport";
     private static final String TAG_ALLOWED_OUTPUTS = "AllowedOutputs";
 
-    public static final int ENERGY_CAPACITY = 1_000_000;
+    public static final int ENERGY_CAPACITY = 20_000_000;
     public static final int SPEED_CARD_SLOTS = 4;
 
     private final LightningAssemblyChamberInventory inventory =
@@ -91,6 +94,7 @@ public class LightningAssemblyChamberBlockEntity extends AENetworkedBlockEntity
     private int processingTicksSpent;
     private boolean working;
     private boolean powered;
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private boolean removing;
     private ItemStack clientRecipeResult = ItemStack.EMPTY;
@@ -278,6 +282,19 @@ public class LightningAssemblyChamberBlockEntity extends AENetworkedBlockEntity
                 LightningAssemblyChamberInventory.SLOT_OUTPUT,
                 1,
                 inventory::getStackInSlot);
+    }
+
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, LightningAssemblyChamberInventory.SLOT_INPUT_0, 9,
+                LightningAssemblyChamberInventory.SLOT_OUTPUT, 1,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, LightningAssemblyChamberInventory.SLOT_OUTPUT, 1,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? getExportTarget(server, direction) : null, budget),
+                this::abortProcessing);
     }
 
     public boolean pushOutResult() {

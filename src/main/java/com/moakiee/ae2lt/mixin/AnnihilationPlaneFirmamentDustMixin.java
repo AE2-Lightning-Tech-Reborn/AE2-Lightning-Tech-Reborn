@@ -16,7 +16,7 @@ import appeng.api.stacks.AEKey;
 import appeng.me.helpers.MachineSource;
 import appeng.parts.automation.AnnihilationPlanePart;
 
-import com.moakiee.ae2lt.logic.FirmamentDustGenerationRules;
+import com.moakiee.ae2lt.logic.world.FirmamentDustGenerationRules;
 import com.moakiee.ae2lt.registry.ModItems;
 
 @Mixin(AnnihilationPlanePart.class)

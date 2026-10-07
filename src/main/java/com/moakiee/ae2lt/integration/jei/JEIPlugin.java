@@ -4,11 +4,11 @@ import java.util.Collection;
 import java.util.List;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.client.CrystalCatalyzerScreen;
-import com.moakiee.ae2lt.client.LightningAssemblyChamberScreen;
-import com.moakiee.ae2lt.client.LightningSimulationChamberScreen;
-import com.moakiee.ae2lt.client.OverloadProcessingFactoryScreen;
-import com.moakiee.ae2lt.client.TeslaCoilScreen;
+import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
+import com.moakiee.ae2lt.client.machine.LightningAssemblyChamberScreen;
+import com.moakiee.ae2lt.client.machine.LightningSimulationChamberScreen;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryScreen;
+import com.moakiee.ae2lt.client.machine.TeslaCoilScreen;
 import com.moakiee.ae2lt.integration.jei.category.CrystalCatalyzerCategory;
 import com.moakiee.ae2lt.integration.jei.category.FirmamentConversionCategory;
 import com.moakiee.ae2lt.integration.jei.category.LightningAssemblyCategory;
@@ -127,16 +127,10 @@ public class JEIPlugin implements IModPlugin {
         registration.addIngredientInfo(
                 ModItems.PIGMEE_CORE.get(),
                 Component.translatable("jei.ae2lt.pigmee_core.info"));
-        if (ModList.get().isLoaded("advanced_ae")) {
-            registration.addIngredientInfo(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get(),
-                    Component.translatable("tooltip.ae2lt.overload_processing_factory.reactions"));
-        }
 
         registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
-                Component.translatable("jei.ae2lt.rainbow_pigmee.info"));
-
-        registration.addIngredientInfo(ModBlocks.MINING_FACTORY.get().asItem(),
-                Component.translatable("jei.ae2lt.mining_factory.info"));
+                Component.translatable("jei.ae2lt.rainbow_pigmee.info"),
+                Component.translatable("jei.ae2lt.rainbow_pigmee.coloring"));
 
         var level = Minecraft.getInstance().level;
         if (level == null) {
@@ -257,7 +251,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class,
+        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class,
                 new TianshuCraftingGhostHandler());
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));

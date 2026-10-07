@@ -48,7 +48,7 @@ final class PhaseWingFlightSourceContractTest {
 
     @Test
     void jumpInputDrivesThrustAndCrouchWithoutPerTickPackets() throws Exception {
-        String client = read("src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java");
+        String client = read("src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java");
         String state = read("src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorState.java");
         String packet = read("src/main/java/com/moakiee/ae2lt/network/PhaseFlightInputPacket.java");
         String rules = read("src/main/java/com/moakiee/ae2lt/celestweave/PhaseFlightControlRules.java");
@@ -69,8 +69,8 @@ final class PhaseWingFlightSourceContractTest {
         String wing = read("src/main/java/com/moakiee/ae2lt/celestweave/PhaseWingFlight.java");
         String energy = read("src/main/java/com/moakiee/ae2lt/celestweave/service/ArmorEnergyService.java");
         String playerMixin = read("src/main/java/com/moakiee/ae2lt/mixin/PlayerPhaseFlightMixin.java");
-        String layer = read("src/main/java/com/moakiee/ae2lt/client/PhaseWingLayer.java");
-        String renderers = read("src/main/java/com/moakiee/ae2lt/client/ModEntityRenderers.java");
+        String layer = read("src/main/java/com/moakiee/ae2lt/client/equipment/PhaseWingLayer.java");
+        String renderers = read("src/main/java/com/moakiee/ae2lt/client/render/ModEntityRenderers.java");
 
         assertTrue(module.contains("PhaseWingFlight.isFlightActive(player)"));
         assertTrue(module.contains("player.setNoGravity(!player.isFallFlying())"));
@@ -99,7 +99,7 @@ final class PhaseWingFlightSourceContractTest {
         String lockModule = read("src/main/java/com/moakiee/ae2lt/celestweave/module/PhaseLockSubmodule.java");
         String state = read("src/main/java/com/moakiee/ae2lt/celestweave/PhaseFlightPlayerState.java");
         String clientMixin = read("src/main/java/com/moakiee/ae2lt/mixin/client/LocalPlayerPhaseMovementMixin.java");
-        String clientHandler = read("src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java");
+        String clientHandler = read("src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java");
         String inputPacket = read("src/main/java/com/moakiee/ae2lt/network/PhaseFlightInputPacket.java");
         String settingsPacket = read("src/main/java/com/moakiee/ae2lt/network/FlightInertiaSyncPacket.java");
         String mayFlyMixin = read("src/main/java/com/moakiee/ae2lt/mixin/PlayerMayFlyMixin.java");

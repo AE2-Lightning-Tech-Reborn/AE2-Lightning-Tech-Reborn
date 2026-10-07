@@ -1,7 +1,7 @@
 // ./gradlew -I scripts/rainbow-pigmee-test.init.gradle runGameTestServer
 allprojects {
     afterEvaluate {
-        sourceSets.jdb.java.setIncludes(['**/RainbowPigmeeGameTests.java', '**/PigmeeBuildingGameTests.java',
+        sourceSets.jdb.java.setIncludes(['**/RainbowPigmeeGameTests.java', '**/RainbowPigmeeRecolorGameTests.java', '**/PigmeeBuildingGameTests.java',
                 '**/RainbowPigmeeClientProbe.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',

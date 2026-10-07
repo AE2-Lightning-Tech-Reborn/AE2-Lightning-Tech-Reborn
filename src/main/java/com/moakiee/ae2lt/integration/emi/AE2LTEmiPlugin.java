@@ -61,21 +61,8 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
     }
 
     private static java.util.List<ItemStack> hiddenStacks() {
-        var stacks = new java.util.ArrayList<ItemStack>();
-        stacks.add(ModBlocks.MINING_FACTORY.toStack());
-        stacks.add(ModBlocks.OVERLOADED_IO_PORT.toStack());
-        stacks.add(ModBlocks.OVERLOAD_ALLOY_ANVIL.toStack());
-        stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_CRAFTING_TERMINAL.toStack());
-        stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.toStack());
-        stacks.add(com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.toStack());
-        stacks.add(ModBlocks.PIGMEE_BUILDING_BLOCK.toStack());
-        stacks.add(ModBlocks.PIGMEE_BUILDING_SLAB.toStack());
-        for (var color : net.minecraft.world.item.DyeColor.values()) {
-            stacks.add(ModBlocks.PIGMEE_BUILDING_PANELS.get(color).toStack());
-            stacks.add(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color).toStack());
-            stacks.add(ModBlocks.PIGMEE_BUILDING_SLABS.get(color).toStack());
-            stacks.add(ModBlocks.PIGMEE_FRAMED_BUILDING_SLABS.get(color).toStack());
-        }
-        return stacks;
+        return java.util.List.of(
+                com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.toStack(),
+                com.moakiee.ae2lt.registry.ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.toStack());
     }
 }

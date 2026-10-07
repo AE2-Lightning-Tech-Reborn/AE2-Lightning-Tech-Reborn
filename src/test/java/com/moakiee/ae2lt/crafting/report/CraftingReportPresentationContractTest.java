@@ -25,7 +25,7 @@ class CraftingReportPresentationContractTest {
     @Test
     void reportShowsOnlyTheRequestedByteFormat() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
         String style = Files.readString(ROOT.resolve(
                 "resources/assets/ae2/screens/ae2lt_craft_confirm.json"));
         String chinese = Files.readString(ROOT.resolve(
@@ -43,7 +43,7 @@ class CraftingReportPresentationContractTest {
     @Test
     void bookmarkButtonFitsBetweenCancelAndStartAndDoesNotCloseTheScreen() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
         String plugin = Files.readString(ROOT.resolve(
                 "java/com/moakiee/ae2lt/integration/jei/JEIPlugin.java"));
         var widgets = JsonParser.parseString(Files.readString(ROOT.resolve(
@@ -58,7 +58,7 @@ class CraftingReportPresentationContractTest {
                 < start.get("left").getAsInt());
         assertTrue(screen.contains("JeiBookmarkAccess.isAvailable() && MissingMaterialBookmarks.hasMissing(plan)"));
         int callbackStart = screen.indexOf("private void bookmarkMissing()");
-        int callbackEnd = screen.indexOf("private void selectNextCpu()", callbackStart);
+        int callbackEnd = screen.indexOf("    @Override", callbackStart);
         String callback = screen.substring(callbackStart, callbackEnd);
         assertTrue(callback.contains("MissingMaterialBookmarks.keys(menu.getPlan())"));
         assertFalse(callback.contains("goBack"));
@@ -77,12 +77,16 @@ class CraftingReportPresentationContractTest {
     @Test
     void forceStartUsesOneGuardedSubmissionPathAndPlayerTooltipsDescribeOnlyFunctions() throws Exception {
         String screen = Files.readString(ROOT.resolve(
-                "java/com/moakiee/ae2lt/client/AE2LtCraftConfirmScreen.java"));
-        assertTrue(screen.contains("this::startJob"));
+                "java/com/moakiee/ae2lt/client/crafting/AE2LtCraftConfirmScreen.java"));
+        String routing = Files.readString(ROOT.resolve(
+                "java/com/moakiee/ae2lt/mixin/client/CraftConfirmReportRoutingMixin.java"));
+        assertTrue(routing.contains("@Inject(method = \"start\""));
+        assertTrue(routing.contains("report.startJob();"));
+        assertTrue(routing.contains("ci.cancel();"));
         assertFalse(screen.contains("menu::startJob"));
         assertTrue(screen.contains("forceStart = canForce && hasShiftDown()"));
         assertTrue(screen.contains("start.active = !menu.hasNoCPU() && (startable || forceStart)"));
-        int submitStart = screen.indexOf("private void startJob()");
+        int submitStart = screen.indexOf("public void startJob()");
         int submitEnd = screen.indexOf("private Component getNextCpuButtonLabel()", submitStart);
         String submit = screen.substring(submitStart, submitEnd);
         assertTrue(submit.contains("CraftingReportStartState.normallyStartable(plan, bigMode)"));

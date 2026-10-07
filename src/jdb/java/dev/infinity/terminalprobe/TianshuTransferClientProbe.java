@@ -36,10 +36,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Disposable real-client fixture. Never included in the distributed AE2LT jar. */
-@Mod("ae2lt_terminal_probe")
+@EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class TianshuTransferClientProbe {
     private static volatile String report = "loaded";
     private static BlockPos base;
@@ -51,11 +53,8 @@ public final class TianshuTransferClientProbe {
     private static final java.util.List<ItemStack> workOutputs = new java.util.ArrayList<>();
     private static int workCost;
     private static final java.util.Queue<String> playedWorkSounds = new java.util.concurrent.ConcurrentLinkedQueue<>();
-    public TianshuTransferClientProbe() {
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(TianshuTransferClientProbe::recordWorkSound);
-    }
-
-    private static void recordWorkSound(net.neoforged.neoforge.client.event.sound.PlaySoundSourceEvent event) {
+    @SubscribeEvent
+    public static void recordWorkSound(net.neoforged.neoforge.client.event.sound.PlaySoundSourceEvent event) {
         var sound = event.getSound();
         if (!List.of("minecraft:block.smithing_table.use", "minecraft:block.anvil.use", "minecraft:ui.stonecutter.take_result").contains(sound.getLocation().toString())) return;
         playedWorkSounds.add(sound.getLocation().toString());
@@ -533,7 +532,7 @@ public final class TianshuTransferClientProbe {
         var mc = Minecraft.getInstance();
         if (command.equals("workview")) {
             try {
-                var field = com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class.getDeclaredField("anvilName");
+                var field = com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class.getDeclaredField("anvilName");
                 field.setAccessible(true);
                 String name = ((appeng.client.gui.widgets.AETextField) field.get(mc.screen)).getValue();
                 if (!name.equals("Retained Anvil Rename")) throw new IllegalStateException("Client rename changed: " + name);
@@ -547,7 +546,7 @@ public final class TianshuTransferClientProbe {
             report = "native WUT selection packet " + command;
         } else if (command.startsWith("clickpage:")) {
             try {
-                var field = com.moakiee.ae2lt.client.TianshuCraftingTermScreen.class.getDeclaredField("tabs");
+                var field = com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class.getDeclaredField("tabs");
                 field.setAccessible(true);
                 var buttons = (java.util.List<appeng.client.gui.widgets.TabButton>) field.get(mc.screen);
                 var button = buttons.get(com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage.valueOf(command.substring(10)).ordinal());

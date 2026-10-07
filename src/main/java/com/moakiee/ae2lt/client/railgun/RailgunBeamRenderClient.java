@@ -41,7 +41,7 @@ import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
  *       slow "energy flow" that travels along the beam.</li>
  *   <li>Stacks three rectangular-prism layers per segment (outer halo + mid +
  *       core), each rotating around the beam axis at a different rate so the
- *       beam reads as a glowing cyan-white plasma stream with real volume from
+ *       beam reads as a glowing cyan-white HV or pink-white EHV stream with real volume from
  *       any viewing angle.</li>
  *   <li>Adds a camera-facing flash quad at the impact tip that tracks the
  *       breath pulse for a "burning hot endpoint" feel.</li>
@@ -81,13 +81,15 @@ public final class RailgunBeamRenderClient {
         public final UUID shooterId;
         public Vec3 from;
         public Vec3 to;
+        public boolean ehv;
         public long lastUpdateTick;
         public long lastArcTick;
 
-        BeamState(UUID shooterId, Vec3 f, Vec3 t, long tick) {
+        BeamState(UUID shooterId, Vec3 f, Vec3 t, boolean ehv, long tick) {
             this.shooterId = shooterId;
             this.from = f;
             this.to = t;
+            this.ehv = ehv;
             this.lastUpdateTick = tick;
             this.lastArcTick = tick;
         }
@@ -152,10 +154,11 @@ public final class RailgunBeamRenderClient {
         }
         ACTIVE.compute(p.shooterId(), (k, prev) -> {
             if (prev == null) {
-                return new BeamState(p.shooterId(), p.from(), p.to(), tick);
+                return new BeamState(p.shooterId(), p.from(), p.to(), p.ehv(), tick);
             }
             prev.from = p.from();
             prev.to = p.to();
+            prev.ehv = p.ehv();
             prev.lastUpdateTick = tick;
             return prev;
         });
@@ -210,8 +213,8 @@ public final class RailgunBeamRenderClient {
             // Per-frame: rebuild origin AND endpoint so the beam stays parallel to the
             // rendered barrel during fast camera motion (see RailgunVisuals).
             BeamGeometry g = resolveBeamGeometry(s, mc, partialTick);
-            addBeam(bb, matrix, g.origin, g.endpoint, pulse, smoothTime);
-            addEndpointGlow(bb, matrix, g.endpoint, camPos, pulse);
+            addBeam(bb, matrix, g.origin, g.endpoint, pulse, smoothTime, s.ehv);
+            addEndpointGlow(bb, matrix, g.endpoint, camPos, pulse, s.ehv);
         }
         var built = bb.build();
         if (built != null) {
@@ -246,7 +249,7 @@ public final class RailgunBeamRenderClient {
      * to avoid the per-frame Vec3 allocations the original implementation produced.
      */
     private static void addBeam(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 origin, Vec3 endpoint,
-                                float pulse, double smoothTime) {
+                                float pulse, double smoothTime, boolean ehv) {
         double ax = endpoint.x - origin.x;
         double ay = endpoint.y - origin.y;
         double az = endpoint.z - origin.z;
@@ -303,23 +306,26 @@ public final class RailgunBeamRenderClient {
             float a0 = pulse * flow0;
             float a1 = pulse * flow1;
 
-            // Outer wide blue halo — soft and large.
+            // Keep the mode palette through HV compensation: damage is still EHV.
             addPrismSegment(bb, matrix, afx, afy, afz, atx, aty, atz,
                     oUx, oUy, oUz, oVx, oVy, oVz,
                     OUTER_RADIUS * taper0, OUTER_RADIUS * taper1,
-                    0.22F, 0.58F, 1.00F, 0.18F * a0, 0.18F * a1);
-            // Mid bright cyan — most of the beam's color comes from here.
+                    ehv ? 1.00F : 0.22F, ehv ? 0.30F : 0.58F, ehv ? 0.60F : 1.00F,
+                    0.18F * a0, 0.18F * a1);
+            // Mid plasma layer supplies most of the beam's color.
             addPrismSegment(bb, matrix, afx, afy, afz, atx, aty, atz,
                     mUx, mUy, mUz, mVx, mVy, mVz,
                     MID_RADIUS * taper0, MID_RADIUS * taper1,
-                    0.52F, 0.88F, 1.00F, 0.34F * a0, 0.34F * a1);
+                    ehv ? 1.00F : 0.52F, ehv ? 0.50F : 0.88F, ehv ? 0.75F : 1.00F,
+                    0.34F * a0, 0.34F * a1);
             // Hot near-white core — narrow and bright, with extra pulse intensity.
             float coreA0 = Math.min(1.0F, 1.10F * a0);
             float coreA1 = Math.min(1.0F, 1.10F * a1);
             addPrismSegment(bb, matrix, afx, afy, afz, atx, aty, atz,
                     cUx, cUy, cUz, cVx, cVy, cVz,
                     CORE_RADIUS * taper0, CORE_RADIUS * taper1,
-                    0.95F, 1.00F, 1.00F, 0.70F * coreA0, 0.70F * coreA1);
+                    ehv ? 1.00F : 0.95F, ehv ? 0.80F : 1.00F, ehv ? 0.90F : 1.00F,
+                    0.70F * coreA0, 0.70F * coreA1);
         }
     }
 
@@ -328,7 +334,7 @@ public final class RailgunBeamRenderClient {
      * "burning into the surface" feel; tracks the breath pulse.
      */
     private static void addEndpointGlow(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 center,
-                                        Vec3 cameraPos, float pulse) {
+                                        Vec3 cameraPos, float pulse, boolean ehv) {
         double tcx = cameraPos.x - center.x;
         double tcy = cameraPos.y - center.y;
         double tcz = cameraPos.z - center.z;
@@ -365,7 +371,7 @@ public final class RailgunBeamRenderClient {
                 cx - rx + ux, cy - ry + uy, cz - rz + uz,
                 cx - rx - ux, cy - ry - uy, cz - rz - uz,
                 cx + rx - ux, cy + ry - uy, cz + rz - uz,
-                0.65F, 0.90F, 1.00F, 0.05F * pulse);
+                ehv ? 1.00F : 0.65F, ehv ? 0.65F : 0.90F, ehv ? 0.80F : 1.00F, 0.05F * pulse);
         // Inner bright core (45% radius)
         double irx = rx * 0.45D, iry = ry * 0.45D, irz = rz * 0.45D;
         double iux = ux * 0.45D, iuy = uy * 0.45D, iuz = uz * 0.45D;
@@ -460,7 +466,12 @@ public final class RailgunBeamRenderClient {
                 if (randDir.lengthSqr() < 1.0E-6D) continue;
                 randDir = randDir.normalize().scale(0.4D + mc.level.random.nextDouble() * 0.7D);
                 Vec3 toArc = fromArc.add(randDir);
-                RailgunArcRenderer.spawnBeamSpark(fromArc, toArc, 14 + mc.level.random.nextInt(8));
+                int lifetime = 14 + mc.level.random.nextInt(8);
+                if (s.ehv) {
+                    RailgunArcRenderer.spawnImpactSpark(fromArc, toArc, lifetime);
+                } else {
+                    RailgunArcRenderer.spawnBeamSpark(fromArc, toArc, lifetime);
+                }
             }
         }
     }

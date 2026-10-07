@@ -14,9 +14,19 @@ allprojects {
             sourceSets.jdb.java.include '**/MiningFactoryCompatGameTests.java'
             sourceSets.jdb.compileClasspath += configurations.runtimeClasspath
         }
+        // Native Silent Gear tests, independent of the Apotheosis/Blood Magic suite.
+        // Pass a directory with the Silent Gear and Silent Lib jars to test.
+        if (project.hasProperty('miningSilentGearMods')) {
+            dependencies.add('runtimeOnly', fileTree(project.property('miningSilentGearMods')) { include '*.jar' })
+            sourceSets.jdb.java.srcDir 'src/miningSilentGearTest/java'
+            sourceSets.jdb.java.include '**/MiningFactorySilentGearGameTests.java'
+            sourceSets.jdb.compileClasspath += configurations.runtimeClasspath
+        }
         neoForge.runs.gameTestServer {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_mining'
-            gameDirectory = project.layout.buildDirectory.dir(project.hasProperty('miningCompatMods')
+            if (project.hasProperty('miningBenchmark')) systemProperty 'ae2lt.miningBenchmark', 'true'
+            gameDirectory = project.layout.buildDirectory.dir(project.hasProperty('miningSilentGearMods')
+                    ? 'mining-factory-silentgear-gametest' : project.hasProperty('miningCompatMods')
                     ? 'mining-factory-compat-gametest' : 'mining-factory-gametest').get().asFile
         }
         if (project.hasProperty('miningClientProbe')) {

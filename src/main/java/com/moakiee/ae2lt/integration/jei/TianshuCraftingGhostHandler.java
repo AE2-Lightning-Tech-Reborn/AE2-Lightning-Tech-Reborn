@@ -4,7 +4,7 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.menu.slot.FakeSlot;
-import com.moakiee.ae2lt.client.TianshuCraftingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen;
 import java.util.ArrayList;
 import java.util.List;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;

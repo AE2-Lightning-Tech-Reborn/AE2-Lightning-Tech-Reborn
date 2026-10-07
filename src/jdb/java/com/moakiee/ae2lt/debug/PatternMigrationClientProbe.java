@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.debug;
 
-import com.moakiee.ae2lt.client.MatrixControllerScreen;
-import com.moakiee.ae2lt.client.MatrixPortScreen;
+import com.moakiee.ae2lt.client.machine.MatrixControllerScreen;
+import com.moakiee.ae2lt.client.machine.MatrixPortScreen;
 import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGameTests;
 import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot;
 import com.moakiee.ae2lt.menu.*;
@@ -120,8 +120,8 @@ public final class PatternMigrationClientProbe {
                     if (((MatrixMigrationMenu) mc.player.containerMenu).getMigrationSnapshot().stage()!=PatternMigrationSnapshot.Stage.WAITING)
                         throw new AssertionError("waiting state missing");
                     var screen=(MatrixPortScreen)mc.screen;
-                    var button=screen.children().stream().filter(child -> child instanceof com.moakiee.ae2lt.client.TextureToggleButton)
-                            .map(child -> (com.moakiee.ae2lt.client.TextureToggleButton)child).findFirst().orElseThrow();
+                    var button=screen.children().stream().filter(child -> child instanceof com.moakiee.ae2lt.client.widgets.TextureToggleButton)
+                            .map(child -> (com.moakiee.ae2lt.client.widgets.TextureToggleButton)child).findFirst().orElseThrow();
                     if(button.getStateIndex()!=1 || !button.getMessage().getString().contains("停止"))throw new AssertionError("stop button state missing");
                     capture("migration-port-scale4-waiting.png");
                     screen.mouseClicked(screen.getGuiLeft()-10,screen.getGuiTop()+8,0);

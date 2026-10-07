@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -44,8 +47,8 @@ import com.moakiee.ae2lt.block.OverloadProcessingFactoryBlock;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank;
@@ -103,6 +106,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
     private long consumedEnergy;
     private int processingTicksSpent;
     private boolean working;
+    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;
     private EnumSet<RelativeSide> allowedOutputs = EnumSet.noneOf(RelativeSide.class);
     private final AdjacentItemAutoExportHelper.DirectionalTargetCache exportTargetCache =
@@ -198,7 +202,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
         if (target == null) {
             return false;
         }
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.insertFromCarried(player, target);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.insertFromCarried(player, target);
         if (changed) {
             saveChanges();
         }
@@ -211,7 +215,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
         if (target == null) {
             return false;
         }
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.extractToCarried(player, target);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.extractToCarried(player, target);
         if (changed) {
             saveChanges();
         }
@@ -224,7 +228,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
         if (target == null || target.getFluid().isEmpty()) {
             return;
         }
-        com.moakiee.ae2lt.logic.FluidTankInteractionHelper.clear(target);
+        com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.clear(target);
         saveChanges();
     }
 
@@ -367,6 +371,19 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
                 OverloadProcessingFactoryInventory.SLOT_OUTPUT_0,
                 OverloadProcessingFactoryInventory.OUTPUT_SLOT_COUNT,
                 inventory::getStackInSlot);
+    }
+
+    public ManualInputTransfer.Result transferInputsToOutput() {
+        if (!(level instanceof ServerLevel server) || isRemoved()) {
+            return new ManualInputTransfer.Result(false, 0, 0, 0);
+        }
+        return inputTransfer.execute(server.getGameTime(), inventory, OverloadProcessingFactoryInventory.SLOT_INPUT_0, 9,
+                OverloadProcessingFactoryInventory.SLOT_OUTPUT_0, 1,
+                budget -> ManualItemExport.push(this, autoExport, getOrientation(), allowedOutputs,
+                        inventory, OverloadProcessingFactoryInventory.SLOT_OUTPUT_0, 1,
+                        direction -> server.hasChunkAt(worldPosition.relative(direction))
+                                ? getExportTarget(server, direction) : null, budget),
+                this::abortProcessing);
     }
 
     public boolean pushOutResult() {

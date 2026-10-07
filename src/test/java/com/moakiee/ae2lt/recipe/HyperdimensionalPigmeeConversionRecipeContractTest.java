@@ -35,7 +35,7 @@ class HyperdimensionalPigmeeConversionRecipeContractTest {
         String creativeTab = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/AE2LightningTech.java"));
         String renderers = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/ModEntityRenderers.java"));
+                "src/main/java/com/moakiee/ae2lt/client/render/ModEntityRenderers.java"));
         var recipe = JsonParser.parseString(Files.readString(Path.of(
                 "src/main/resources/data/ae2lt/recipe/hyperdimensional_pigmee_conversion.json")))
                 .getAsJsonObject();

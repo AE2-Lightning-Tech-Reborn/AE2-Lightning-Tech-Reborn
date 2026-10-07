@@ -4,14 +4,14 @@ import appeng.menu.MenuOpener;
 import appeng.menu.SlotSemantics;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
-import com.moakiee.ae2lt.client.MiningFactoryScreen;
+import com.moakiee.ae2lt.client.machine.MiningFactoryScreen;
 import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.machine.miningfactory.MiningFactoryInventory;
-import com.moakiee.ae2lt.client.MachineOutputConfigScreen;
-import com.moakiee.ae2lt.client.OverloadProcessingFactoryScreen;
-import com.moakiee.ae2lt.client.OverloadProcessingFactoryOutputConfigScreen;
+import com.moakiee.ae2lt.client.machine.MachineOutputConfigScreen;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryScreen;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryOutputConfigScreen;
 import com.moakiee.ae2lt.menu.OverloadProcessingFactoryMenu;
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import appeng.api.orientation.RelativeSide;
@@ -127,7 +127,7 @@ public final class MiningFactoryClientProbe {
                     require(menu.slots.get(2).getItem().is(Items.RAW_IRON)
                             && menu.slots.get(2).getItem().getCount() == 64, "Output synchronization failed");
                     require(menu.energy == 0, "FE synchronization failed");
-                    require(menu.parallelCapacity == 64 && menu.slots.get(MiningFactoryInventory.MATRIX).getItem().getCount() == 8,
+                    require(menu.parallelCapacity == 2048 && menu.slots.get(MiningFactoryInventory.MATRIX).getItem().getCount() == 8,
                             "Matrix shift-click or parallel capacity sync failed");
                     capture("mining-factory-completed.png");
                     mc.gameMode.handleInventoryMouseClick(menu.containerId, 2, 0, ClickType.QUICK_MOVE, mc.player);

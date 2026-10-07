@@ -21,7 +21,7 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.item.WeatherCondensateItem;
-import com.moakiee.ae2lt.logic.WeatherControlHelper;
+import com.moakiee.ae2lt.logic.world.WeatherControlHelper;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.logic.research.ResearchRitualService;
 import com.moakiee.ae2lt.machine.atmosphericionizer.AtmosphericIonizerInventory;

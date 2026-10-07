@@ -9,7 +9,7 @@ import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import appeng.menu.locator.MenuLocators;
-import com.moakiee.ae2lt.client.JeiWirelessSupplyClient;
+import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessIngredientSource;
 import com.moakiee.ae2lt.logic.tianshu.terminal.WirelessJeiInventoryPlan;
@@ -219,7 +219,7 @@ public final class JeiWirelessSupplyClientProbe {
                     var parent = (appeng.client.gui.me.common.MEStorageScreen<?>) mc.screen;
                     var settings = new appeng.client.gui.me.common.TerminalSettingsScreen(parent);
                     parent.switchToScreen(settings);
-                    settings.switchToScreen(new com.moakiee.ae2lt.client.TianshuTerminalSettingsScreen(settings));
+                    settings.switchToScreen(new com.moakiee.ae2lt.client.tianshu.TianshuTerminalSettingsScreen(settings));
                     phase = -1;
                 }
                 default -> throw new AssertionError("unknown phase " + phase);

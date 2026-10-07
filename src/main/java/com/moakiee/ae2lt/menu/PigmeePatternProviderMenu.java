@@ -7,7 +7,7 @@ import appeng.menu.slot.AppEngSlot;
 import appeng.menu.slot.RestrictedInputSlot;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.PigmeePatternProviderBlockEntity;
-import com.moakiee.ae2lt.logic.PigmeePatternProviderReturnInventory;
+import com.moakiee.ae2lt.logic.provider.PigmeePatternProviderReturnInventory;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;

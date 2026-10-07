@@ -55,6 +55,10 @@ public final class NetworkInit {
                 FrequencyCardUsePacket.STREAM_CODEC,
                 FrequencyCardUsePacket::handle);
         registrar.playToServer(
+                FrequencyCardLinkShortcutPacket.TYPE,
+                FrequencyCardLinkShortcutPacket.STREAM_CODEC,
+                FrequencyCardLinkShortcutPacket::handle);
+        registrar.playToServer(
                 ToggleFrequencyCardAutoConnectPacket.TYPE,
                 ToggleFrequencyCardAutoConnectPacket.STREAM_CODEC,
                 ToggleFrequencyCardAutoConnectPacket::handle);
@@ -153,11 +157,11 @@ public final class NetworkInit {
                 RailgunFirePacket.TYPE,
                 RailgunFirePacket.STREAM_CODEC,
                 RailgunFirePacket::handle);
-        registrar.playToClient(
+        registrar.versioned("railgun-beam-2").playToClient(
                 RailgunBeamUpdatePacket.TYPE,
                 RailgunBeamUpdatePacket.STREAM_CODEC,
                 RailgunBeamUpdatePacket::handle);
-        registrar.playToClient(
+        registrar.versioned("railgun-beam-2").playToClient(
                 RailgunBeamChainFxPacket.TYPE,
                 RailgunBeamChainFxPacket.STREAM_CODEC,
                 RailgunBeamChainFxPacket::handle);

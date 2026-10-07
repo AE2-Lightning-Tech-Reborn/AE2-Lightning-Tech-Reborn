@@ -51,6 +51,7 @@ AE2 闪电科技引入了大量新材料。以下页面分别详细介绍了各�
 | 方块 | 说明 |
 |------|------|
 | 过载水晶块 | 装饰方块，也是搭建过载水晶母岩转化结构所需的材料 |
+| [猪咪建材](pigmee-building-materials.md) | 染色建筑方块的原料，可切石为 32 种彩色板材与台阶 |
 | [硅块](overload-machine-frame.md) | 硅的压缩存储方块 |
 | [过载机器框架](overload-machine-frame.md) | 多数过载加工机器的共用基础框架 |
 | <ItemLink id="ae2lt:overload_tnt" /> | 爆炸性方块，引爆后产生持续的人工闪电轰炸；详见 [过载 TNT](../lightning/overload-tnt.md) |
