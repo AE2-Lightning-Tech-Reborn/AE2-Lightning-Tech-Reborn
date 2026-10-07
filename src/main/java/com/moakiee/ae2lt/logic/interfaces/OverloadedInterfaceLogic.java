@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.logic.interfaces;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Set;
+import java.util.ArrayList;
 import java.util.function.BiPredicate;
 
 import org.jetbrains.annotations.Nullable;
@@ -78,7 +79,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
     private final ProxiedStorageInv proxiedStorage;
     private final int slotCount;
     private final appeng.api.upgrades.IUpgradeInventory ourUpgrades;
-    private final appeng.helpers.MultiCraftingTracker craftingTrackerRef;
+    private final OverloadedInterfaceCrafting craftingRequests;
 
     public OverloadedInterfaceLogic(IManagedGridNode gridNode,
                                     OverloadedInterfaceBlockEntity host,
@@ -88,7 +89,8 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         this.slotCount = slots;
 
         try {
-            this.craftingTrackerRef = (appeng.helpers.MultiCraftingTracker) F_CRAFTING_TRACKER.get(this);
+            var tracker = (appeng.helpers.MultiCraftingTracker) F_CRAFTING_TRACKER.get(this);
+            this.craftingRequests = new OverloadedInterfaceCrafting(tracker, this, slots);
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Failed to read craftingTracker", e);
         }
@@ -117,6 +119,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         var newUpgrades = UpgradeInventories.forMachine(is, 4, () -> {
             invokeQuietly(M_ON_UPGRADES_CHANGED, this);
+            if (!getUpgrades().isInstalled(AEItems.CRAFTING_CARD)) craftingRequests.reset();
             host.invalidateInductionCardCache();
         });
         setField(F_UPGRADES, newUpgrades);
@@ -173,37 +176,37 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         owner.clearImportBuffer();
     }
 
-    private static final long REACTIVE_COOLDOWN_TICKS = 5;
-    private long lastReactiveTick = -1;
-
-    private boolean invokeCrafting(int slot, AEKey what, long amount) {
+    private boolean updateCraftingRequests() {
         var grid = mainNode.getGrid();
-        if (grid == null || what == null) return false;
-        return craftingTrackerRef.handleCrafting(slot, what, amount,
-                host.getBlockEntity().getLevel(),
-                grid.getCraftingService(), actionSource);
+        var level = host.getBlockEntity().getLevel();
+        if (grid == null || level == null) return false;
+        var cfg = getConfig();
+        var slots = new ArrayList<OverloadedInterfaceCrafting.Slot>();
+        for (int i = 0; i < slotCount; i++) {
+            var stack = cfg.getStack(i);
+            if (stack != null) {
+                slots.add(new OverloadedInterfaceCrafting.Slot(
+                        i, stack.what(), stack.amount(), owner.isSlotUnlimited(i)));
+            }
+        }
+        boolean submitted = craftingRequests.tick(slots, level.getGameTime(), level,
+                grid.getCraftingService(), actionSource,
+                key -> grid.getStorageService().getCachedInventory().get(key));
+        if (submitted) host.saveChanges();
+        return submitted;
     }
 
     void onExtractDeficit(AEKey what) {
         if (!ourUpgrades.isInstalled(AEItems.CRAFTING_CARD)) return;
-        var level = host.getBlockEntity().getLevel();
-        if (level == null) return;
-        long now = level.getGameTime();
-        if (now - lastReactiveTick < REACTIVE_COOLDOWN_TICKS) return;
-        lastReactiveTick = now;
-
         var cfg = getConfig();
         for (int i = 0; i < slotCount; i++) {
             var key = cfg.getKey(i);
             if (key == null || !key.equals(what)) continue;
-            long cap = owner.isSlotUnlimited(i) ? overloadedCap(what) : cfg.getAmount(i);
-            invokeCrafting(i, what, cap);
+            // Defer to the same deficit/backoff policy as normal polling. The
+            // extraction's storage-cache update must finish before planning.
+            mainNode.ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
             break;
         }
-    }
-
-    private static long overloadedCap(AEKey what) {
-        return overloadedCap(what.getType());
     }
 
     private static long overloadedCap(AEKeyType type) {
@@ -270,25 +273,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
                 return OverloadedInterfaceTickDecider.gridTickModulation(
                         hasItemIoWork, false, false);
             }
-            var grid = mainNode.getGrid();
-            if (grid == null) return TickRateModulation.IDLE;
-
-            var cache = grid.getStorageService().getCachedInventory();
-            var cfg = getConfig();
-            boolean didWork = false;
-            for (int i = 0; i < slotCount; i++) {
-                var cfgStack = cfg.getStack(i);
-                if (cfgStack == null) continue;
-                long cap = owner.isSlotUnlimited(i) ? Long.MAX_VALUE : cfgStack.amount();
-                if (cap == Long.MAX_VALUE) {
-                    didWork |= invokeCrafting(i, cfgStack.what(), overloadedCap(cfgStack.what()));
-                } else {
-                    long deficit = cap - cache.get(cfgStack.what());
-                    if (deficit > 0) {
-                        didWork |= invokeCrafting(i, cfgStack.what(), deficit);
-                    }
-                }
-            }
+            boolean didWork = updateCraftingRequests();
             return OverloadedInterfaceTickDecider.gridTickModulation(
                     hasItemIoWork, true, didWork);
         }
