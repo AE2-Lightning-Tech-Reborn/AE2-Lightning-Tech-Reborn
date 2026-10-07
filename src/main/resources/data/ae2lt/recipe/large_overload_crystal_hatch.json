@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CPC",
+    "PMP",
+    "CPC"
+  ],
+  "key": {
+    "C": {
+      "item": "ae2lt:large_overload_casing"
+    },
+    "P": {
+      "item": "ae2lt:overload_processor"
+    },
+    "M": {
+      "item": "ae2lt:crystal_catalyzer"
+    }
+  },
+  "result": {
+    "id": "ae2lt:large_overload_crystal_hatch",
+    "count": 1
+  }
+}

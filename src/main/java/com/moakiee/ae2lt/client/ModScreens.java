@@ -73,6 +73,7 @@ public class ModScreens {
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(com.moakiee.ae2lt.machine.largeoverload.LargeFactoryMenu.TYPE, com.moakiee.ae2lt.client.machine.LargeFactoryScreen::new);
         event.register(OverloadedPatternProviderMenu.TYPE, ModScreens::createOverloadedPatternProviderScreen);
         event.register(PigmeePatternProviderMenu.TYPE, ModScreens::createPigmeePatternProviderScreen);
         event.register(PigmeeMolecularAssemblerMenu.TYPE, ModScreens::createPigmeeMolecularAssemblerScreen);

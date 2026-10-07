@@ -33,6 +33,7 @@ public final class NetworkInit {
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
         var registrar = event.registrar(AE2LightningTech.MODID);
+        registrar.playToClient(LargeFactoryStatusPacket.TYPE, LargeFactoryStatusPacket.STREAM_CODEC, LargeFactoryStatusPacket::handle);
         registrar.playToClient(com.moakiee.ae2lt.network.tianshu.BigStockPacket.TYPE,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle);

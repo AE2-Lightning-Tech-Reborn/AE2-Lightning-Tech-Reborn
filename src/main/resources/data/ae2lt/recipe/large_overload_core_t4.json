@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "KUK",
+    "USU",
+    "KUK"
+  ],
+  "key": {
+    "K": {
+      "item": "ae2lt:large_overload_core_t3"
+    },
+    "U": {
+      "item": "ae2lt:ultimate_overload_core"
+    },
+    "S": {
+      "item": "ae2lt:overload_singularity"
+    }
+  },
+  "result": {
+    "id": "ae2lt:large_overload_core_t4",
+    "count": 1
+  }
+}

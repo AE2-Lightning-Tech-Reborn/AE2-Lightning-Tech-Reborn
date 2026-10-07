@@ -229,6 +229,8 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_CASING);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_CONSTRAINT_FRAME);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_GLASS);
+                        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.PARTS.values().forEach(b -> output.accept(b.get()));
+                        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.PROCESS_CORES.values().forEach(i -> output.accept(i.get()));
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_CONTROLLER);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_PORT);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_STABLE_MAIN_CORE);
@@ -382,6 +384,7 @@ public class AE2LightningTech {
         ModFumos.register();
         LegacyRegistryAliases.register();
         ModBlocks.BLOCKS.register(modEventBus);
+        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);
         CelestweaveArmorMaterials.ARMOR_MATERIALS.register(modEventBus);

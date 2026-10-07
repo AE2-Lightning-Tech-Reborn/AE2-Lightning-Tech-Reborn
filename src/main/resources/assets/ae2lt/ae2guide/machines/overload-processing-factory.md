@@ -13,7 +13,7 @@ item_ids:
   <BlockImage id="ae2lt:overload_processing_factory" scale="4" />
 </Row>
 
-The **Overload Processing Factory** is the largest and highest-throughput processing device in this mod. It supports mixed item and fluid I/O, and unlocks parallel processing via the Lightning Collapse Matrix — making it the backbone of any large-scale industrial Lightning production line.
+The single-block **Overload Processing Factory** supports mixed item and fluid I/O and unlocks parallel processing via the Lightning Collapse Matrix. For the multiblock with independent ME processing hatches, see the [Large Overload Processing Factory](large-overload-factory.md).
 
 ## Slots and Capacity
 

@@ -60,6 +60,7 @@ public final class AE2LTCommonConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         VALUES = new Values(builder);
         com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig.define(builder);
+        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryConfig.define(builder);
         SPEC = builder.build();
     }
 

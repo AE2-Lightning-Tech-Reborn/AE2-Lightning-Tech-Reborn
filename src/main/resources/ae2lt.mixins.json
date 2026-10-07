@@ -9,6 +9,7 @@
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
+    "LargeFactoryChunkChangeMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",

@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "APA",
+    "CMC",
+    "APA"
+  ],
+  "key": {
+    "A": {
+      "item": "ae2lt:overload_alloy_plate"
+    },
+    "P": {
+      "item": "ae2lt:overload_processor"
+    },
+    "C": {
+      "item": "ae2:calculation_processor"
+    },
+    "M": {
+      "item": "ae2cs:crystal_pulverizer"
+    }
+  },
+  "result": {
+    "id": "ae2lt:large_factory_crystal_pulverizer_process_core",
+    "count": 1
+  },
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ae2cs"
+    }
+  ]
+}

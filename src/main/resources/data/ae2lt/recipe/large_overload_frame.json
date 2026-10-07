@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "APA",
+    "PFP",
+    "APA"
+  ],
+  "key": {
+    "A": {
+      "item": "ae2lt:overload_alloy_plate"
+    },
+    "P": {
+      "item": "ae2:quartz_glass"
+    },
+    "F": {
+      "item": "ae2lt:overload_machine_frame"
+    }
+  },
+  "result": {
+    "id": "ae2lt:large_overload_frame",
+    "count": 8
+  }
+}

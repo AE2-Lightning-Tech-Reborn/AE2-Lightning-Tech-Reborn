@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AAA",
+    "ASA",
+    "AAA"
+  ],
+  "key": {
+    "A": {
+      "item": "ae2lt:overload_alloy"
+    },
+    "S": {
+      "item": "ae2:smooth_sky_stone_block"
+    }
+  },
+  "result": {
+    "id": "ae2lt:large_overload_casing",
+    "count": 8
+  }
+}

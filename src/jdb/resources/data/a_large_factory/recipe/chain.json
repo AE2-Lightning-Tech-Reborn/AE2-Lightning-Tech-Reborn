@@ -1,0 +1,8 @@
+{
+  "type": "ae2lt:overload_processing",
+  "inputs": [{"ingredient": {"item": "minecraft:diamond"}, "count": 1}],
+  "results": [{"id": "minecraft:emerald", "count": 3}],
+  "totalEnergy": 10,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

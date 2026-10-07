@@ -43,6 +43,8 @@ public final class LargeFactoryStructureOwnership {
         return isCurrent(binding) && members.get(member) == binding;
     }
 
+    public Binding at(BlockPos position) { return members.get(position); }
+
     public void release(Binding binding) {
         if (binding == null || !machines.remove(binding.machineId, binding)) return;
         for (var member : binding.formation.members()) members.remove(member.position(), binding);

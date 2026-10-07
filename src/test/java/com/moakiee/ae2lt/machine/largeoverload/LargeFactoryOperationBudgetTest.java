@@ -4,6 +4,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class LargeFactoryOperationBudgetTest {
+    @org.junit.jupiter.api.Test void configChangesPreserveAlreadyCommittedOperations() {
+        var budget = new LargeFactoryOperationBudget(100);
+        try (var reservation = budget.reserve(1, 80, 1)) { reservation.commit(80); }
+        budget.reconfigure(1, 40);
+        org.junit.jupiter.api.Assertions.assertEquals(0, budget.remainingOperations(1));
+        budget.reconfigure(1, 120);
+        org.junit.jupiter.api.Assertions.assertEquals(40, budget.remainingOperations(1));
+        org.junit.jupiter.api.Assertions.assertEquals(120, budget.remainingOperations(2));
+    }
     @Test
     void completedWorkDoesNotRestoreSameTickCapacityAcrossHatches() {
         var budget = new LargeFactoryOperationBudget(1024);

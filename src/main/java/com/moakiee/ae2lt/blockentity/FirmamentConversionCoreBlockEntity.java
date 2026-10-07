@@ -42,7 +42,7 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     private final FirmamentConversionInventory inventory =
             new FirmamentConversionInventory(this::onInventoryChanged);
     private final FirmamentConversionAutomationInventory automationInventory =
-            new FirmamentConversionAutomationInventory(inventory);
+            new FirmamentConversionAutomationInventory(inventory, () -> !isOwnedByLargeFactory());
     private FirmamentConversionLockedRecipe lockedRecipe;
     private int progress;
     private boolean initialLootRolled;
@@ -79,6 +79,16 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
         return canProcessHere();
     }
 
+    public boolean isOwnedByLargeFactory() {
+        return level != null && com.moakiee.ae2lt.machine.largeoverload.LargeFactoryWorld.firmamentOwned(level, worldPosition);
+    }
+
+    public boolean canJoinLargeFactory() {
+        if (lockedRecipe != null || progress != 0) return false;
+        for (int slot = 0; slot < inventory.getSlots(); slot++) if (!inventory.getStackInSlot(slot).isEmpty()) return false;
+        return true;
+    }
+
     public boolean hasInactiveSpiritCoreOutput() {
         for (int slot = FirmamentConversionInventory.SLOT_OUTPUT_0;
              slot <= FirmamentConversionInventory.SLOT_OUTPUT_3;
@@ -91,6 +101,7 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     }
 
     public boolean insertHeldItem(Player player, InteractionHand hand) {
+        if (isOwnedByLargeFactory()) return false;
         ItemStack held = player.getItemInHand(hand);
         if (held.isEmpty()) {
             return false;
@@ -163,6 +174,7 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     }
 
     private void tickServer() {
+        if (isOwnedByLargeFactory()) return;
         if (!canProcessHere()) {
             if (lockedRecipe != null || progress != 0) {
                 abortProcessing();

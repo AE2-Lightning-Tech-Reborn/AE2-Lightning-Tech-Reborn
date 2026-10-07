@@ -6,7 +6,7 @@ package com.moakiee.ae2lt.machine.largeoverload;
  */
 public final class LargeFactoryOperationBudget {
     public static final long FIRMAMENT_OPERATIONS_PER_TICK = 1_024;
-    private final long capacity;
+    private long capacity;
     private boolean initialized;
     private long tick;
     private long used;
@@ -30,7 +30,15 @@ public final class LargeFactoryOperationBudget {
 
     public long remainingOperations(long currentTick) {
         beginTick(currentTick);
-        return capacity - used - reserved;
+        return Math.max(0, capacity - used - reserved);
+    }
+
+    /** Config reloads change the ceiling without refunding work already completed this tick. */
+    public void reconfigure(long currentTick, long capacity) {
+        if (capacity <= 0) throw new IllegalArgumentException("Factory operation capacity must be positive");
+        beginTick(currentTick);
+        if (openReservations != 0) throw new IllegalStateException("Cannot reconfigure during a transaction");
+        this.capacity = capacity;
     }
 
     public Reservation reserve(long currentTick, long requestedCopies, long sourceOperationsPerCopy) {
