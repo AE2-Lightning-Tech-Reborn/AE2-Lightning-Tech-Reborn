@@ -4,7 +4,7 @@
 
 ## 文档目录
 
-- [大型过载处理工厂与通用多方块框架设计](large-overload-processing-factory-design.zh-CN.md)
+- [大型过载处理工厂：样板仓、水晶仓与 0t 加工](large-overload-processing-factory-design.zh-CN.md) — 固定结构、T1–T4 核心、按单/被动模式和首次执行配方缓存。
 
 ## 修改规则
 
