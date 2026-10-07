@@ -215,6 +215,19 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_deferred'
         }
 
+        patternMigrationClient {
+            client()
+            gameDirectory = project.file('run-pattern-migration-client')
+            systemProperty 'ae2lt.patternMigrationClientProbe', 'true'
+            programArguments.addAll '--username', 'MigrationQA', '--quickPlaySingleplayer', 'MigrationQA'
+        }
+
+        patternMigrationGameTestServer {
+            type = "gameTestServer"
+            gameDirectory = project.file('run-pattern-migration-gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_migration'
+        }
+
         globalBatchGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-global-batch-gametest')
@@ -374,6 +387,28 @@ if (providers.gradleProperty('ae2ltAddonApiTestsOnly').getOrElse('false').toBool
 if (providers.gradleProperty('ae2ltInterfaceIoGameTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['**/blockentity/*Interface*GameTests.java',
                                    '**/blockentity/ManualItemExportReceiptGameTests.java'])
+}
+def migrationClientWorld = tasks.register('preparePatternMigrationClientWorld') {
+    def source = layout.projectDirectory.file('run-pattern-migration-gametest/world/level.dat')
+    def target = layout.projectDirectory.file('run-pattern-migration-client/saves/MigrationQA/level.dat')
+    inputs.file(source).optional()
+    outputs.file(target)
+    doLast {
+        if (!target.asFile.isFile()) {
+            if (!source.asFile.isFile()) {
+                throw new GradleException('Run runPatternMigrationGameTestServer before the first migration client probe.')
+            }
+            target.asFile.parentFile.mkdirs()
+            java.nio.file.Files.copy(source.asFile.toPath(), target.asFile.toPath())
+        }
+    }
+}
+tasks.matching { it.name == 'runPatternMigrationClient' }.configureEach {
+    dependsOn migrationClientWorld
+}
+if (providers.gradleProperty('ae2ltPatternMigrationTestsOnly').getOrElse('false').toBoolean()) {
+    sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/craft/migration/PatternMigrationGameTests.java',
+                                   'com/moakiee/ae2lt/debug/PatternMigrationClientProbe.java'])
 }
 if (providers.gradleProperty('ae2ltGlobalBatchTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/GlobalBatchAdaptersGameTests.java',

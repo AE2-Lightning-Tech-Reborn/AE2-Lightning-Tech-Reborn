@@ -2203,6 +2203,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         return this.job != null ? this.job.finalOutput : null;
     }
 
+    public long getRemainingOutputAmount() {
+        return this.job != null ? Math.max(0L, this.job.remainingAmount) : 0L;
+    }
+
     public ElapsedTimeTracker getElapsedTimeTracker() {
         return this.job != null ? this.job.timeTracker : new ElapsedTimeTracker();
     }

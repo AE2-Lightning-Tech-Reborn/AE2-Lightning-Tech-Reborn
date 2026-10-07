@@ -53,6 +53,9 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
     private final List<IPatternDetails> cachedPatterns = new ArrayList<>();
     private BlockPos controllerPos;
     private boolean patternsDirty = true;
+    private long patternContentRevision;
+    private int patternBatchDepth;
+    private boolean patternBatchChanged;
     private int usedSlots;
 
     public MatrixPatternStorageBlockEntity(BlockPos pos, BlockState blockState) {
@@ -70,6 +73,32 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
 
     public PatternInventory getInventory() {
         return inventory;
+    }
+
+    public long getPatternContentRevision() {
+        return patternContentRevision;
+    }
+
+    public void beginPatternBatch() {
+        patternBatchDepth++;
+    }
+
+    public void endPatternBatch() {
+        if (patternBatchDepth <= 0) throw new IllegalStateException("Unbalanced pattern mutation batch");
+        if (--patternBatchDepth == 0 && patternBatchChanged) {
+            patternBatchChanged = false;
+            notifyPortPatternsChanged();
+        }
+    }
+
+    /** Migration already decoded this exact physical pattern; avoid decoding it again for both probe and commit. */
+    public ItemStack insertMigrationPattern(int slot, ItemStack stack, IPatternDetails prepared, boolean simulate) {
+        if (slot < 0 || slot >= capacity() || stack.isEmpty() || !items.get(slot).isEmpty()
+                || !(prepared instanceof IMolecularAssemblerSupportedPattern)
+                || !PatternDetailsHelper.isEncodedPattern(stack)
+                || !java.util.Objects.equals(prepared.getDefinition(), AEItemKey.of(stack))) return stack;
+        if (!simulate) inventory.setStackInSlotInternal(slot, stack.copyWithCount(1), false);
+        return stack.getCount() == 1 ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - 1);
     }
 
     public boolean isEmpty() {
@@ -228,9 +257,11 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
     }
 
     private void setChangedAndUpdate() {
+        patternContentRevision++;
         setChanged();
         if (level != null && !level.isClientSide) {
-            notifyPortPatternsChanged();
+            if (patternBatchDepth > 0) patternBatchChanged = true;
+            else notifyPortPatternsChanged();
         }
     }
 
