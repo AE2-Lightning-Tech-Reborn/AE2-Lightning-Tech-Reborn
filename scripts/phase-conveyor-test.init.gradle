@@ -1,0 +1,21 @@
+// Base movement regression: ./gradlew -I scripts/phase-conveyor-test.init.gradle runGameTestServer
+// Also exercise the real MGU conveyor: add -Pae2ltJdbProbeMods=/path/to/mob_grinding_utils.jar
+allprojects {
+    afterEvaluate {
+        def withConveyor = !providers.gradleProperty('ae2ltJdbProbeMods').getOrElse('').isBlank()
+        def testSources = [
+                '**/PhaseLockMovementGameTests.java',
+                '**/PhaseLockCreativeRecoveryGameTests.java']
+        if (withConveyor) testSources.add('**/PhaseLockConveyorGameTests.java')
+        sourceSets.jdb.java.setIncludes(testSources)
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+            gameDirectory = project.layout.buildDirectory
+                    .dir(withConveyor ? 'phase-conveyor-gametest' : 'phase-movement-gametest').get().asFile
+        }
+    }
+}

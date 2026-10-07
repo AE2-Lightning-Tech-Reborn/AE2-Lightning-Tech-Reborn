@@ -151,4 +151,8 @@ CPU 执行耗时另行记录，已经包含其中调用工厂的时间，不能�
 - 整机服务器：`runLargeFactoryGameTestServer -Pae2ltLargeFactoryTestsOnly=true`。可选适配验证通过现有 `-Pae2ltJdbProbeMods=<平台路径分隔符连接的模组 JAR>` 注入上述 NeoECO／Crystal Science／LDLib2。
 - 客户端：`runLargeFactoryClient -Pae2ltLargeFactoryTestsOnly=true`。自动探针结果写入 `run-large-factory-client/factory-client-result.txt`，截图写入该目录的 `screenshots`。
 
-本功能在本地 `feat/large-overload-factory` 开发，尚未合入或推送 alpha。通用框架、通用仓室 API 及其其他机器仍保留至下一代。
+本功能通过 `feat/large-overload-factory` 功能分支交付，未合入 alpha。通用框架、通用仓室 API 及其其他机器仍保留至下一代。
+
+### 功能分支发布前兼容复验
+
+功能分支已合入 LT alpha `8081cccb21afb72d6e024881ef3627226ca8f9d9` 的上游更新，使用 TB alpha `11b1501b535c74312ba32aa7278507a84e68ccf9` 对应的 Thunderbolt 2.0.2，Java 21 构建。46 项单元测试、含 NeoECO／Crystal Science／LDLib2 的 25 项整机测试再次通过，JAR 构建成功。上文性能表保留原测量基线，不将新依赖复验冒充同一次采样。

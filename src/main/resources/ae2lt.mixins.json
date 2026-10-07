@@ -35,6 +35,7 @@
     "ServerPlayerUndyingMixin",
     "ServerPlayerPhaseMovementMixin",
     "EntityPhaseMovementMixin",
+    "mobgrindingutils.EntityConveyorPhaseLockMixin",
     "CommandsPhaseTeleportMixin",
     "PlayerMayFlyMixin",
     "PlayerPhaseFlightMixin",
