@@ -1,4 +1,4 @@
-# AE2 Lightning Tech Reborn — Forge 1.20.1 Port
+# AE2 Lightning Tech — Forge 1.20.1 Port
 
 [中文文档](README_zh_CN.md)
 
