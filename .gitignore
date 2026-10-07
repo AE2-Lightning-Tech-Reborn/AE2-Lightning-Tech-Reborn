@@ -73,3 +73,7 @@ run-overload-factory-gametest/
 run-overload-factory-client/
 run-wireless-gametest/
 run-cell-workbench-gametest/
+
+/run-pattern-migration-gametest/
+/run-pattern-migration-client/
+!docs/tianshu-pattern-migration.md

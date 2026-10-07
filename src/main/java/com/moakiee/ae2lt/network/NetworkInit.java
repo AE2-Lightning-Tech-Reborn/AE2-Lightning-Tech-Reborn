@@ -66,6 +66,10 @@ public final class NetworkInit {
                 MatrixControllerActionPacket.TYPE,
                 MatrixControllerActionPacket.STREAM_CODEC,
                 MatrixControllerActionPacket::handle);
+        registrar.playToServer(MatrixPatternMigrationActionPacket.TYPE,
+                MatrixPatternMigrationActionPacket.STREAM_CODEC, MatrixPatternMigrationActionPacket::handle);
+        registrar.playToClient(MatrixPatternMigrationStatusPacket.TYPE,
+                MatrixPatternMigrationStatusPacket.STREAM_CODEC, MatrixPatternMigrationStatusPacket::handle);
         registrar.playToServer(
                 TianshuControllerActionPacket.TYPE,
                 TianshuControllerActionPacket.STREAM_CODEC,
