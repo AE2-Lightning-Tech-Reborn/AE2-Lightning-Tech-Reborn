@@ -55,6 +55,7 @@ sourceSets {
     jdb {
         java.srcDir 'src/jdb/java'
         java.include '**/blockentity/*Interface*GameTests.java'
+        java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
         java.include '**/blockentity/PigmeeCrystalCatalyzerGameTests.java'
         java.include '**/blockentity/CrystalCatalyzerFluidGameTests.java'
         java.include '**/debug/JeiWirelessSupplyGameTests.java'
