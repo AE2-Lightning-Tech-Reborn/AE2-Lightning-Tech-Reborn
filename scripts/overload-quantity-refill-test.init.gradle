@@ -1,0 +1,11 @@
+// Forge 1.20.1 native terminal editing and same-ID planner regression checks.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OverloadQuantityRefillGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_overload_refill'
+            workingDirectory project.file('build/overload-quantity-refill-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}
