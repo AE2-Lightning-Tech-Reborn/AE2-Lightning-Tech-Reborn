@@ -1,0 +1,17 @@
+// Resolve upstream mods from the exact, validated GitHub Release JARs staged by CI.
+allprojects {
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'ReleaseDependencies'
+                    url = uri(rootProject.file('release-dependencies/maven'))
+                }
+            }
+            filter {
+                includeGroup 'com.moakiee.ae2lt'
+                includeGroup 'com.moakiee.thunderbolt'
+            }
+        }
+    }
+}
