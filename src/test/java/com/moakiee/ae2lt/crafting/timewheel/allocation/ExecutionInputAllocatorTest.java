@@ -34,6 +34,27 @@ class ExecutionInputAllocatorTest {
             C = new TestKey("third"), X = new TestKey("intermediate"), Y = new TestKey("final");
 
     @Test
+    void oneTaskOneSlotStillWithdrawsOnlyActualVariantStockAndReinjectsRejection() {
+        var selected = pattern(X, input(Q, G));
+        var tasks = tasks(selected, 5);
+        var allocator = new ExecutionInputAllocator(tasks, value -> value, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 3, Actionable.MODULATE);
+        var batch = bulk(selected, stock, allocator, 5);
+        assertNotNull(batch);
+        assertEquals(3, batch.actualCopies);
+        assertEquals(3, batch.scaledInputs[0].get(G));
+        assertEquals(0, batch.scaledInputs[0].get(Q));
+        TimeWheelInputExtractor.markDispatched(batch, 1);
+        TimeWheelInputExtractor.reinject(batch, 2, stock);
+        assertEquals(2, stock.list.get(G));
+        assertEquals(0, stock.list.get(Q));
+        tasks.put(selected, 4L); allocator.onTaskChange(selected);
+        var retry = bulk(selected, stock, allocator, 4);
+        assertEquals(2, retry.actualCopies);
+    }
+
+    @Test
     void singleDispatchPreservesQuartzForDependentExactRecipe() {
         var flexible = pattern(X, input(Q, G));
         var exact = pattern(Y, input(X), input(Q));

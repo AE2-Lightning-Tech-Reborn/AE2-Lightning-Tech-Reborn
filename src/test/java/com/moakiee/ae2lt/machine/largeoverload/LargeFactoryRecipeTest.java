@@ -118,4 +118,18 @@ class LargeFactoryRecipeTest {
         assertThrows(ArithmeticException.class, () -> LargeFactoryAmounts.flatten(new KeyCounter[]{first, second}));
         assertThrows(ArithmeticException.class, () -> LargeFactoryAmounts.scale(Map.of(key, Long.MAX_VALUE), 2));
     }
+
+    @Test void flatteningPromotesMultipleKeysAndRejectsNegativeReceipts() {
+        var stone = key(Items.STONE); var diamond = key(Items.DIAMOND);
+        var first = new KeyCounter(); first.add(stone, 3);
+        var second = new KeyCounter(); second.add(diamond, 2); second.add(stone, 5);
+        assertEquals(Map.of(stone, 8L, diamond, 2L), LargeFactoryAmounts.flatten(new KeyCounter[]{first, second}));
+        assertEquals(3, first.get(stone)); assertEquals(5, second.get(stone));
+        second.set(diamond, -1);
+        assertThrows(IllegalArgumentException.class, () -> LargeFactoryAmounts.flatten(new KeyCounter[]{first, second}));
+        second.clear();
+        assertEquals(Map.of(), LargeFactoryAmounts.flatten(new KeyCounter[]{second}));
+        var scaled = LargeFactoryAmounts.scale(Map.of(stone, 3L), 4);
+        assertEquals(Map.of(stone, 12L), scaled);
+    }
 }

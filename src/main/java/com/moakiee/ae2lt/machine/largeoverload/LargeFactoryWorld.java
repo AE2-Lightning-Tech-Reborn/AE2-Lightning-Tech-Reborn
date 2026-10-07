@@ -74,5 +74,9 @@ public final class LargeFactoryWorld {
             for (var controller : java.util.List.copyOf(runtime.controllers.values())) controller.endTick();
         }
     }
-    @SubscribeEvent public static void unloadWorld(LevelEvent.Unload event) { WORLDS.remove(event.getLevel()); }
+    @SubscribeEvent public static void unloadWorld(LevelEvent.Unload event) {
+        var runtime = WORLDS.get(event.getLevel());
+        if (runtime != null) runtime.ownership.invalidateAll();
+        WORLDS.remove(event.getLevel());
+    }
 }

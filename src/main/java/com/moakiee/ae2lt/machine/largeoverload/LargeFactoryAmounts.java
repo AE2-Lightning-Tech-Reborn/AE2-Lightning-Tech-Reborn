@@ -17,12 +17,24 @@ public final class LargeFactoryAmounts {
     private LargeFactoryAmounts() { }
 
     public static Map<AEKey, Long> flatten(KeyCounter[] counters) {
-        var result = new LinkedHashMap<AEKey, Long>();
+        AEKey singleKey = null;
+        long singleAmount = 0;
+        Map<AEKey, Long> result = null;
         for (var counter : counters) for (var entry : counter) {
-            if (entry.getLongValue() < 0) throw new IllegalArgumentException("Negative input");
-            if (entry.getLongValue() > 0) add(result, entry.getKey(), entry.getLongValue());
+            long amount = entry.getLongValue();
+            if (amount < 0) throw new IllegalArgumentException("Negative input");
+            if (amount == 0) continue;
+            var key = entry.getKey();
+            if (result != null) add(result, key, amount);
+            else if (singleKey == null) { singleKey = key; singleAmount = amount; }
+            else if (singleKey.equals(key)) singleAmount = Math.addExact(singleAmount, amount);
+            else {
+                result = new LinkedHashMap<>();
+                result.put(singleKey, singleAmount);
+                result.put(key, amount);
+            }
         }
-        return Map.copyOf(result);
+        return result != null ? Map.copyOf(result) : singleKey == null ? Map.of() : Map.of(singleKey, singleAmount);
     }
 
     public static Map<AEKey, Long> of(List<GenericStack> stacks) {
@@ -39,8 +51,14 @@ public final class LargeFactoryAmounts {
         into.merge(key, amount, Math::addExact);
     }
 
+    /** The returned amounts are read-only and may borrow the input map when the scale is one. */
     public static Map<AEKey, Long> scale(Map<AEKey, Long> values, long copies) {
         if (copies <= 0) throw new IllegalArgumentException("Invalid copies");
+        if (copies == 1 || values.isEmpty()) return values;
+        if (values.size() == 1) {
+            var value = values.entrySet().iterator().next();
+            return Map.of(value.getKey(), Math.multiplyExact(value.getValue(), copies));
+        }
         var result = new LinkedHashMap<AEKey, Long>();
         values.forEach((key, amount) -> result.put(key, Math.multiplyExact(amount, copies)));
         return result;

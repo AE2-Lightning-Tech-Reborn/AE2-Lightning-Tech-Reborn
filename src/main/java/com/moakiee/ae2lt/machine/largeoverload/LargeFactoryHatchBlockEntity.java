@@ -174,7 +174,16 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         // The opaque ownership token is revoked before block-change/chunk-unload callbacks can reenter.
         return boundController.owns(worldPosition, machine) ? boundController : null;
     }
-    public boolean ready() { return !isRemoved() && level != null && level.getBlockEntity(worldPosition) == this && controller() != null && getMainNode().isActive() && getMainNode().getGrid() != null && account() != null; }
+    public boolean ready() { return loadedEndpoint() && controller() != null && activeEndpoint(); }
+    boolean ready(LargeFactoryControllerBlockEntity expected) {
+        return expected != null && loadedEndpoint() && controller() == expected && activeEndpoint();
+    }
+    private boolean loadedEndpoint() {
+        return !isRemoved() && level != null && level.getBlockEntity(worldPosition) == this;
+    }
+    private boolean activeEndpoint() {
+        return getMainNode().isActive() && getMainNode().getGrid() != null && account() != null;
+    }
     @Override public AECableType getCableConnectionType(Direction side) {
         var controller = controller();
         return controller != null && side == controller.facing().getOpposite() ? AECableType.DENSE_SMART : AECableType.NONE;
@@ -348,7 +357,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     @Override public boolean isBusy() {
         var controller = controller();
         var account = account();
-        return passive || processing || !ready() || account == null || !account.resources.isEmpty()
+        return passive || processing || !ready(controller) || account == null || !account.resources.isEmpty()
                 || controller.budget().remainingOperations(level.getGameTime()) <= 0;
     }
     @Override public long getBatchCapacity(IPatternDetails details) {

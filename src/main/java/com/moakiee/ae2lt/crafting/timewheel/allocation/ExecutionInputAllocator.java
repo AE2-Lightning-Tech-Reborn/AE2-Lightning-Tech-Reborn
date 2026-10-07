@@ -102,7 +102,7 @@ public final class ExecutionInputAllocator {
 
     /** The CPU inventory listener also fires on removal/rollback; recording a known key is O(1). */
     public void onInventoryChange(AEKey key) {
-        if (key == null) return;
+        if (key == null || families.isEmpty()) return;
         var family = families.get(key.dropSecondary());
         if (family != null && family.conflict != null) {
             var conflict = family.conflict;
@@ -118,6 +118,7 @@ public final class ExecutionInputAllocator {
     /** Multiple updates during a provider transaction coalesce until the next extraction. This
      * observes accepted copies after rejected inputs have been returned, never provisional counts. */
     public void onTaskChange(IPatternDetails pattern) {
+        if (!indexed) return;
         for (var conflict : byPattern.getOrDefault(pattern, List.of())) {
             conflict.dirtyTasks.add(pattern);
             conflict.revision++;
@@ -240,6 +241,11 @@ public final class ExecutionInputAllocator {
     public CraftingInputAllocation allocate(
             IPatternDetails selected, ICraftingInventory inventory, Level level, long maxCopies) {
         if (maxCopies <= 0) return CraftingInputAllocation.WAIT;
+        // One live task with one input slot has no competing slot to protect, even if that
+        // slot accepts variants. Native extraction and the caller's reservation view still
+        // validate and withdraw the actual material. Do not cache this proof across jobs.
+        if (tasks.size() == 1 && tasks.keySet().iterator().next() == selected
+                && selected.getInputs().length == 1) return CraftingInputAllocation.UNRESTRICTED;
         long tick = level == null ? flowTick + 1 : level.getGameTime();
         if (tick != flowTick) { flowTick = tick; flowWorkRemaining = FLOW_WORK_PER_TICK; }
         index();

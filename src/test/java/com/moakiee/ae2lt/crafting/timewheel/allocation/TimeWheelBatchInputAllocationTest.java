@@ -35,6 +35,22 @@ class TimeWheelBatchInputAllocationTest {
             OUT = key("output"), CONTAINER = key("container");
 
     @Test
+    void oneSlotFastPathStillRespectsReservedStockAndRollsBackRejection() {
+        var pattern = new Pattern(new IPatternDetails.IInput[] {input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 5L), n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 6, Actionable.MODULATE);
+        var result = TimeWheelBatchInputAllocation.withAllocator(pattern, stock, allocator,
+                () -> TimeWheelBatchInputAllocation.extract(pattern, stock, 5, false, Map.of(G, 4L), null,
+                        () -> fail("native fallback would bypass allocation")));
+        assertNotNull(result);
+        assertEquals(2, result.actualCopies);
+        assertEquals(4, stock.list.get(G));
+        ParallelBatchCpuHelper.reinject(result, 2, stock);
+        assertEquals(6, stock.list.get(G));
+    }
+
+    @Test
     void nativeResultKeepsAllocationAcrossPartialRejectionAndRetry() {
         assertTrue(TimeWheelInputExtractor.canExportNativeBatch());
         var flexible = new Pattern(new IPatternDetails.IInput[] {input(null, Q, G)}, List.of(stack(OUT)), false);

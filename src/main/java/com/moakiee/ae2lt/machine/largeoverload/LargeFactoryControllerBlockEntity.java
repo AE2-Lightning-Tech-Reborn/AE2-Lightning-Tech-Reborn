@@ -69,9 +69,9 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         }
     }
     public Direction facing() { return getBlockState().getValue(LargeFactoryControllerBlock.FACING); }
-    public boolean formed() { return binding != null && LargeFactoryWorld.get(level).ownership.isCurrent(binding); }
+    public boolean formed() { return binding != null && binding.isCurrent(); }
     public boolean owns(BlockPos position, UUID machine) {
-        return machineId.equals(machine) && LargeFactoryWorld.get(level).ownership.owns(binding, position);
+        return machineId.equals(machine) && binding != null && binding.owns(position);
     }
     public boolean contains(BlockPos position) {
         var a = LargeFactoryStructure.worldPosition(worldPosition, BlockPos.ZERO, facing());
@@ -223,7 +223,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         var account = energyAccount();
         if (account == null || fromBuffer < 0 || fromBuffer > account.externalFE || total < fromBuffer || total > remainingEnergyThroughput()) throw new IllegalStateException("Invalid factory energy commit");
         account.externalFE -= fromBuffer;
-        LargeFactoryLedger.get((net.minecraft.server.level.ServerLevel) level).setDirty();
+        ledger.setDirty();
         energyUsed += total;
         setChanged();
     }

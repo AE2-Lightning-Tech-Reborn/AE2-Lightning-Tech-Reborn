@@ -50,6 +50,26 @@ class LargeFactoryStructureOwnershipTest {
     }
 
     @Test
+    void worldTeardownRevokesRetainedTokensBeforeReformation() {
+        var ownership = new LargeFactoryStructureOwnership();
+        UUID id = UUID.randomUUID();
+        var first = ownership.claim(id, formation(BlockPos.ZERO)).orElseThrow();
+        var distant = ownership.claim(UUID.randomUUID(), formation(new BlockPos(100, 0, 0))).orElseThrow();
+        assertTrue(first.isCurrent());
+        assertTrue(first.owns(BlockPos.ZERO));
+        ownership.invalidateAll();
+        assertFalse(first.isCurrent());
+        assertFalse(first.owns(BlockPos.ZERO));
+        assertFalse(distant.isCurrent());
+        assertNull(ownership.at(BlockPos.ZERO));
+        var replacement = ownership.claim(id, formation(BlockPos.ZERO)).orElseThrow();
+        assertTrue(replacement.owns(BlockPos.ZERO));
+        ownership.release(first);
+        assertTrue(replacement.isCurrent());
+        assertFalse(first.isCurrent());
+    }
+
+    @Test
     void unloadingAnyCoveredChunkReleasesAllMembersOnlyOfAffectedFactories() {
         var ownership = new LargeFactoryStructureOwnership();
         var first = ownership.claim(UUID.randomUUID(), formation(BlockPos.ZERO)).orElseThrow();

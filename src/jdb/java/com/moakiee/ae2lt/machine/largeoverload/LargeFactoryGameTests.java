@@ -160,6 +160,34 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
+    public static void rejectedSingleOutputSinkRetainsExactlyOneCommittedProduct(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var entry = f.pattern(1);
+            f.store.put(LightningKey.HIGH_VOLTAGE, 4);
+            f.store.accept = false;
+            var sink = new com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider.OutputSink() {
+                @Override public boolean enqueue(KeyCounter outputs) { throw new AssertionError("single output must not need a counter"); }
+                @Override public boolean enqueue(AEKey key, long amount) {
+                    h.assertTrue(key.equals(DIAMOND) && amount == 2, "exact single output");
+                    h.assertTrue(f.hatch.account().commitSequence == 1 && f.store.get(LightningKey.HIGH_VOLTAGE) == 3,
+                            "ownership and payment committed before the sink callback");
+                    return false;
+                }
+            };
+            h.assertTrue(f.hatch.pushPattern(entry.pattern, f.inputs(1), sink), "processing committed despite rejected return");
+            h.assertTrue(f.hatch.account().resources.getOrDefault(DIAMOND, 0L) == 2, "rejected output remains owned by factory");
+            h.assertTrue(!f.hatch.pushPattern(entry.pattern, f.inputs(1), sink), "retained output blocks the next dispatch");
+            h.assertTrue(f.store.get(LightningKey.HIGH_VOLTAGE) == 3, "blocked retry cannot charge again");
+            f.store.accept = true;
+            h.runAfterDelay(2, () -> {
+                f.hatch.flushRetained();
+                h.assertTrue(f.store.get(DIAMOND) == 2 && f.hatch.account().empty(), "exactly one later delivery");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void passiveFirstSampleCountsOnceAndReturnsToItsOwnNetwork(GameTestHelper h) {
         new Fixture(h, false, false).ready(f -> {
             f.pattern(1); f.store.put(STONE, 10); f.store.put(LightningKey.HIGH_VOLTAGE, 10);

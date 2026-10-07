@@ -29,6 +29,11 @@ public final class LargeFactoryExecutor {
             Map<AEKey, Long> inputs, long requested) {
         if (requested <= 0 || !hatch.ready()) return null;
         var controller = hatch.controller();
+        return quote(hatch, entry, inputs, requested, controller);
+    }
+    private static Quote quote(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
+            Map<AEKey, Long> inputs, long requested, LargeFactoryControllerBlockEntity controller) {
+        if (requested <= 0) return null;
         var recipe = hatch.bindRecipe(entry, inputs);
         var account = hatch.account();
         var grid = hatch.getMainNode().getGrid();
@@ -91,7 +96,8 @@ public final class LargeFactoryExecutor {
         try {
             long generation = controller.capabilityVersion();
             var grid = hatch.getMainNode().getGrid();
-            var quote = prepared == null ? quote(hatch, entry, inputs, requested) : prepared;
+            // Readiness was checked at entry. Revalidate again after pricing, which can call ME.
+            var quote = prepared == null ? quote(hatch, entry, inputs, requested, controller) : prepared;
             if (quote == null || !current(hatch, controller, grid, generation)) return 0;
             if (prepared != null && (quote.grid() != grid || quote.capabilityVersion() != generation
                     || hatch.bindRecipe(entry, inputs) != quote.recipe()
@@ -102,9 +108,15 @@ public final class LargeFactoryExecutor {
             var outputs = LargeFactoryAmounts.scale(entry.outputs, quote.copies());
             var consumedInputs = passive ? LargeFactoryAmounts.scale(inputs, quote.copies()) : Map.<AEKey, Long>of();
             // Check future resource amounts before making any new withdrawals.
-            var after = new LinkedHashMap<>(account.resources);
-            subtract(after, consumedInputs);
-            outputs.forEach((key, amount) -> LargeFactoryAmounts.add(after, key, amount));
+            // Active dispatch requires an empty account. Its post-commit resources are exactly
+            // the outputs, so it needs no second temporary copy of the same amounts.
+            Map<AEKey, Long> after = outputs;
+            if (passive) {
+                var retained = new LinkedHashMap<>(account.resources);
+                subtract(retained, consumedInputs);
+                outputs.forEach((key, amount) -> LargeFactoryAmounts.add(retained, key, amount));
+                after = retained;
+            }
             try (var reservation = controller.budget().reserve(hatch.getLevel().getGameTime(), quote.copies(), entry.operations())) {
                 if (reservation.copies() != quote.copies()) return 0;
                 account.origin = origin;
@@ -144,7 +156,7 @@ public final class LargeFactoryExecutor {
                 hatch.ledgerChanged();
                 controller.completed();
                 hatch.status("working");
-                if (returns != null && returns.enqueue(LargeFactoryAmounts.counter(outputs))) {
+                if (returns != null && enqueue(returns, outputs)) {
                     subtract(account.resources, outputs);
                     hatch.ledgerChanged();
                 }
@@ -159,9 +171,17 @@ public final class LargeFactoryExecutor {
         }
     }
 
+    private static boolean enqueue(DeferredCraftingProvider.OutputSink returns, Map<AEKey, Long> outputs) {
+        if (outputs.size() == 1) {
+            var output = outputs.entrySet().iterator().next();
+            return returns.enqueue(output.getKey(), output.getValue());
+        }
+        return returns.enqueue(LargeFactoryAmounts.counter(outputs));
+    }
+
     private static boolean current(LargeFactoryHatchBlockEntity hatch, LargeFactoryControllerBlockEntity controller,
             IGrid grid, long generation) {
-        return hatch.ready() && hatch.controller() == controller && hatch.getMainNode().getGrid() == grid
+        return hatch.ready(controller) && hatch.getMainNode().getGrid() == grid
                 && controller.capabilityVersion() == generation;
     }
     private static boolean withdraw(LargeFactoryHatchBlockEntity hatch, IGrid grid, AEKey key, long amount) {

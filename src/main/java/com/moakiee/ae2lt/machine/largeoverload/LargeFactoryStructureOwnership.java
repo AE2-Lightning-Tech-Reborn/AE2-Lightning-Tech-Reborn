@@ -45,6 +45,14 @@ public final class LargeFactoryStructureOwnership {
 
     public Binding at(BlockPos position) { return members.get(position); }
 
+    /** World teardown must revoke tokens retained by block entities before discarding this index. */
+    public void invalidateAll() {
+        for (var binding : machines.values()) binding.valid = false;
+        machines.clear();
+        members.clear();
+        chunks.clear();
+    }
+
     public void release(Binding binding) {
         if (binding == null || !machines.remove(binding.machineId, binding)) return;
         binding.valid = false;
@@ -105,5 +113,7 @@ public final class LargeFactoryStructureOwnership {
 
         public UUID machineId() { return machineId; }
         public LargeFactoryStructure.Formation formation() { return formation; }
+        boolean isCurrent() { return owner.isCurrent(this); }
+        boolean owns(BlockPos member) { return owner.owns(this, member); }
     }
 }

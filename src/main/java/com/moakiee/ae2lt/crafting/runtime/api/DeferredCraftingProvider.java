@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.crafting.ICraftingProvider;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 
@@ -23,5 +24,13 @@ public interface DeferredCraftingProvider extends ICraftingProvider {
          * this call; neither the sink nor the job view may be retained by the provider.
          */
         boolean enqueue(KeyCounter outputs);
+
+        /** Same ownership contract without requiring a counter for one output. */
+        default boolean enqueue(AEKey key, long amount) {
+            if (amount < 0) return false;
+            var outputs = new KeyCounter();
+            if (amount > 0) outputs.add(key, amount);
+            return enqueue(outputs);
+        }
     }
 }
