@@ -9,8 +9,14 @@ allprojects {
                 }
             }
             filter {
-                includeGroup 'com.moakiee.ae2lt'
-                includeGroup 'com.moakiee.thunderbolt'
+                // Only pin the original release coordinates. ForgeGradle resolves
+                // *_mapped_* versions from its own generated repository.
+                rootProject.fileTree('release-dependencies/maven') {
+                    include '**/*.pom'
+                }.each { pomFile ->
+                    def pom = new XmlSlurper().parse(pomFile)
+                    includeVersion pom.groupId.text(), pom.artifactId.text(), pom.version.text()
+                }
             }
         }
     }
