@@ -70,6 +70,10 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     private boolean buildSameCatalog;
     private List<IPatternDetails> publishedPatterns = List.of();
     private Map<AEKey, Entry> publishedEntries = Map.of();
+    // Same catalog-lifetime identity front cache as the overloaded provider. Neither side
+    // owns transient CPU wrappers, and live capacity/payment state is never cached here.
+    private final Map<IPatternDetails, Entry> resolvedEntries = new com.google.common.collect.MapMaker()
+            .weakKeys().weakValues().concurrencyLevel(1).makeMap();
     private LargeFactoryLedger ledger;
     private LargeFactoryLedger.Account cachedAccount;
     private final Map<AEKey, Long> availability = new java.util.HashMap<>();
@@ -101,6 +105,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         private long minimumOperations = -1;
         private LargeFactoryRecipeAccess.Process knownProcess;
         private int searchCursor;
+        private int catalogIndex = -1;
         public String status = "unbound";
         Entry(IPatternDetails pattern, int slot, ResourceLocation virtualRecipe) {
             this.pattern = pattern; this.slot = slot; this.virtualRecipe = virtualRecipe;
@@ -263,6 +268,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         if (buildCursor == end) {
             // Publish once: repeatedly rebuilding AE2's catalog for each slice turns indexing quadratic.
             entries = List.copyOf(buildingEntries);
+            for (int i = 0; i < entries.size(); i++) entries.get(i).catalogIndex = i;
             buildingEntries = null; previousSlots = null;
             publishPatterns();
         }
@@ -298,6 +304,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         return pattern == null ? null : new Entry(pattern, -1, recipe.id());
     }
     private void publishPatterns() {
+        resolvedEntries.clear();
         var controller = controller();
         var published = new LinkedHashMap<AEKey, Entry>();
         if (!passive && controller != null) for (var entry : entries)
@@ -327,11 +334,16 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     }
     public Entry find(IPatternDetails pattern) {
         refreshPatterns();
-        return publishedEntries.get(pattern.getDefinition());
+        var entry = resolvedEntries.get(pattern);
+        if (entry == null) {
+            entry = publishedEntries.get(pattern.getDefinition());
+            if (entry != null) resolvedEntries.put(pattern, entry);
+        }
+        return entry;
     }
     LargeFactoryRecipe bindRecipe(Entry entry, Map<AEKey, Long> actual) {
         var controller = controller();
-        if (controller == null || !enabled(entry) || !entries().contains(entry)) return null;
+        if (controller == null || !enabled(entry) || !containsEntry(entry)) return null;
         if (entry.bound != null && actual.equals(entry.signature) && controller.access().allows(entry.bound.process()) && hasCatalyst(entry.bound)) return entry.bound;
         if (!actual.equals(entry.signature)) { entry.signature = Map.copyOf(actual); entry.searchCursor = 0; entry.bound = null; entry.operations = 0; }
         var candidates = LargeFactoryRecipes.get(level.getRecipeManager()).candidates(entry.pattern.getPrimaryOutput().what());
@@ -348,6 +360,13 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         entry.bound = null; entry.operations = 0; entry.status = "recipe_mismatch";
         status = "recipe_mismatch";
         return null;
+    }
+    private boolean containsEntry(Entry entry) {
+        var current = entries();
+        int index = entry.catalogIndex;
+        // Rebuilding withdraws the old list immediately; identity also rejects entries from
+        // another hatch or a replaced slot. Reused entries get their new index on publication.
+        return index >= 0 && index < current.size() && current.get(index) == entry;
     }
     @Override public List<IPatternDetails> getAvailablePatterns() {
         if (passive || controller() == null) return List.of();

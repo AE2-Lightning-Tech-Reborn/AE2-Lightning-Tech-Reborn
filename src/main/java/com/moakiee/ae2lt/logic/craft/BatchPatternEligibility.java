@@ -29,16 +29,21 @@ public final class BatchPatternEligibility {
             IPatternDetails details,
             Predicate<IPatternDetails> isClosedLoop,
             Predicate<IPatternDetails> isClosedLoopBatchSafe) {
-        var visited = Collections.newSetFromMap(
-                new IdentityHashMap<IPatternDetails, Boolean>());
+        java.util.Set<IPatternDetails> visited = null;
         var current = details;
 
-        while (current != null && visited.add(current)) {
+        while (current != null) {
+            if (visited != null && !visited.add(current)) return false;
             // Closed-loop execution has stricter accounting requirements than ordinary patterns.
             if (isClosedLoop.test(current)) {
                 return isClosedLoopBatchSafe.test(current);
             }
             if (current instanceof IWrappedPatternDetails wrapped) {
+                // Ordinary patterns have no wrapper graph to walk or remember.
+                if (visited == null) {
+                    visited = Collections.newSetFromMap(new IdentityHashMap<>());
+                    visited.add(current);
+                }
                 current = wrapped.wrappedPatternDetails();
                 continue;
             }

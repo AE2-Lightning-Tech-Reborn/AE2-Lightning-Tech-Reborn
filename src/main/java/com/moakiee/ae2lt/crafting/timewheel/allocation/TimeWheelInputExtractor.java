@@ -98,7 +98,7 @@ public final class TimeWheelInputExtractor {
         int slots = resolved.inputs.length;
         var scalablePerCopy = new KeyCounter[slots];
         var sharedPerBatch = new KeyCounter[slots];
-        var scalableDemand = new HashMap<AEKey, Long>(slots * 2);
+        var scalableDemand = maxCraft == 1 ? null : new HashMap<AEKey, Long>(slots * 2);
         for (int slot = 0; slot < slots; slot++) {
             scalablePerCopy[slot] = new KeyCounter();
             sharedPerBatch[slot] = new KeyCounter();
@@ -107,11 +107,19 @@ public final class TimeWheelInputExtractor {
                         && SharedBatchInputs.isSharedInput(details, slot, entry.getKey());
                 var target = shared ? sharedPerBatch[slot] : scalablePerCopy[slot];
                 target.add(entry.getKey(), entry.getLongValue());
-                if (!shared) {
+                if (!shared && scalableDemand != null) {
                     scalableDemand.merge(
                             entry.getKey(), entry.getLongValue(), TimeWheelInputExtractor::saturatingAdd);
                 }
             }
+        }
+
+        if (maxCraft == 1) {
+            // The native first-copy transaction already withdrew everything. There is no
+            // additional demand to aggregate, simulate or solve. Keep the original holders
+            // as owned stock, independent of the per-copy counters used for refund/dispatch.
+            if (choices != null) choices.retainAssignments();
+            return new BulkResult(resolved.inputs, 1, scalablePerCopy, sharedPerBatch, resolved.remainders);
         }
 
         long additionalCopies = maxCraft - 1;
@@ -296,6 +304,7 @@ public final class TimeWheelInputExtractor {
     }
 
     private static Map<Integer, Map<AEKey, Long>> mutableQuotas(CraftingInputAllocation allocation) {
+        if (allocation.slotAllowances().isEmpty()) return Map.of();
         var result = new HashMap<Integer, Map<AEKey, Long>>();
         allocation.slotAllowances().forEach((slot, amounts) -> result.put(slot, new HashMap<>(amounts)));
         return result;

@@ -459,6 +459,60 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
+    public static void catalogIndexRejectsStaleAndForeignEntriesAndTracksCompaction(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var first = f.pattern(1);
+            var retained = new LargeFactoryHatchBlockEntity.Entry[1];
+            var two = PatternDetailsHelper.encodeProcessingPattern(List.of(new GenericStack(STONE, 2)), List.of(new GenericStack(DIAMOND, 4)));
+            f.hatch.inventory().setItemDirect(1, two);
+            f.expanded.inventory().setItemDirect(0, two.copy());
+            h.startSequence().thenWaitUntil(() -> h.assertTrue(!f.hatch.patternIndexing() && !f.expanded.patternIndexing(), "replacement catalogs published"))
+                    .thenExecute(() -> {
+                        retained[0] = f.hatch.entries().getLast();
+                        h.assertTrue(f.hatch.bindRecipe(retained[0], Map.of(STONE, 2L)) != null, "last entry binds");
+                        h.assertTrue(f.hatch.bindRecipe(f.expanded.entries().getFirst(), Map.of(STONE, 2L)) == null, "same slot and pattern on another hatch is foreign");
+                        f.hatch.inventory().setItemDirect(0, ItemStack.EMPTY);
+                        h.assertTrue(f.hatch.bindRecipe(first, Map.of(STONE, 1L)) == null, "removed entry is revoked immediately");
+                    }).thenWaitUntil(() -> h.assertTrue(!f.hatch.patternIndexing(), "compacted catalog published"))
+                    .thenExecute(() -> {
+                        h.assertTrue(f.hatch.entries().size() == 1 && f.hatch.entries().getFirst() == retained[0], "unchanged entry retained across compaction");
+                        h.assertTrue(f.hatch.bindRecipe(retained[0], Map.of(STONE, 2L)) != null, "retained entry uses new index");
+                        f.hatch.inventory().setItemDirect(1, PatternDetailsHelper.encodeProcessingPattern(List.of(new GenericStack(STONE, 3)), List.of(new GenericStack(DIAMOND, 6))));
+                        h.assertTrue(f.hatch.bindRecipe(retained[0], Map.of(STONE, 2L)) == null, "replacement revokes old identity immediately");
+                    }).thenWaitUntil(() -> h.assertTrue(!f.hatch.patternIndexing(), "new identity published"))
+                    .thenExecute(() -> {
+                        h.assertTrue(f.hatch.bindRecipe(retained[0], Map.of(STONE, 2L)) == null, "old index cannot authenticate replacement identity");
+                        h.assertTrue(f.hatch.bindRecipe(f.hatch.entries().getFirst(), Map.of(STONE, 3L)) != null, "replacement binds normally");
+                    }).thenSucceed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void patternIdentityLookupIsInvalidatedByCatalogPublication(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var entry = f.pattern(1);
+            var definitions = new java.util.concurrent.atomic.AtomicInteger();
+            var caller = new appeng.api.crafting.IPatternDetails() {
+                @Override public AEItemKey getDefinition() { definitions.incrementAndGet(); return entry.pattern.getDefinition(); }
+                @Override public IInput[] getInputs() { return entry.pattern.getInputs(); }
+                @Override public List<GenericStack> getOutputs() { return entry.pattern.getOutputs(); }
+                @Override public boolean supportsPushInputsToExternalInventory() { return true; }
+                @Override public int hashCode() { throw new AssertionError("identity lookup must not hash execution details"); }
+                @Override public boolean equals(Object other) { throw new AssertionError("identity lookup must not compare execution details"); }
+            };
+            for (int i = 0; i < 1000; i++) h.assertTrue(f.hatch.find(caller) == entry, "equivalent execution object resolves");
+            h.assertTrue(definitions.get() == 1, "definition matching occurs once per observed object");
+            f.hatch.toggleEntry(0);
+            h.assertTrue(f.hatch.find(caller) == null, "disabled entry is not retained by identity cache");
+            f.hatch.toggleEntry(0);
+            h.assertTrue(f.hatch.find(caller) == entry, "enabled entry resolves again");
+            f.pattern(2);
+            h.assertTrue(f.hatch.find(caller) == null, "replaced definition is not retained by identity cache");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void realTimeWheelCpuFinishesDependentProcessingChainInOneTick(GameTestHelper h) {
         new Fixture(h, false, false).ready(f -> {
             var first = f.pattern(1).pattern;

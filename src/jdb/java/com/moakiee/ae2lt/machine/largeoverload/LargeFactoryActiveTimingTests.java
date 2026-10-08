@@ -17,6 +17,7 @@ import net.neoforged.neoforge.gametest.*;
 @GameTestHolder("ae2lt_large_factory")
 @PrefixGameTestTemplate(false)
 public final class LargeFactoryActiveTimingTests {
+    private static final int FIRST_PATTERN_SLOT = Boolean.getBoolean("ae2lt.factoryTimingPatternAtEnd") ? 142 : 0;
     private static final AEKey STONE = LargeFactoryGameTests.STONE, DIAMOND = LargeFactoryGameTests.DIAMOND;
     private static final AEKey EMERALD = AEItemKey.of(Items.EMERALD);
     private record Sample(long tick, int factory) { }
@@ -85,7 +86,13 @@ public final class LargeFactoryActiveTimingTests {
                 for (int slot = 0; slot < 143; slot++) f.expanded.inventory().setItemDirect(slot, PatternDetailsHelper.encodeProcessingPattern(
                         List.of(new GenericStack(STONE, slot + 1)), List.of(new GenericStack(DIAMOND, 2L * (slot + 1)))));
                 f.expanded.inventory().setItemDirect(143, PatternDetailsHelper.encodeProcessingPattern(List.of(new GenericStack(DIAMOND, 1)), List.of(new GenericStack(EMERALD, 3))));
-                first[i] = PatternDetailsHelper.decodePattern(f.expanded.inventory().getStackInSlot(0), h.getLevel());
+                if (FIRST_PATTERN_SLOT != 0) {
+                    var firstItem = f.expanded.inventory().getStackInSlot(0).copy();
+                    var lastItem = f.expanded.inventory().getStackInSlot(FIRST_PATTERN_SLOT).copy();
+                    f.expanded.inventory().setItemDirect(0, lastItem);
+                    f.expanded.inventory().setItemDirect(FIRST_PATTERN_SLOT, firstItem);
+                }
+                first[i] = PatternDetailsHelper.decodePattern(f.expanded.inventory().getStackInSlot(FIRST_PATTERN_SLOT), h.getLevel());
                 second[i] = PatternDetailsHelper.decodePattern(f.expanded.inventory().getStackInSlot(143), h.getLevel());
                 var host = new TimeWheelCraftingCpuHost() {
                     @Override public boolean isCpuActive() { return true; }
@@ -163,6 +170,7 @@ public final class LargeFactoryActiveTimingTests {
                 result.addProperty("scenario", List.of("one_batch_per_tick", "two_stage_0t_chain", "32_small_jobs_per_tick").get(phase));
                 result.addProperty("tier", tier == 0 ? "T1" : "T4_unlimited"); result.addProperty("warmup_ticks", 96); result.addProperty("sample_ticks", 64);
                 result.addProperty("total_factories", 16); result.addProperty("total_patterns", 2304); result.addProperty("irrelevant_network_keys", 32768);
+                result.addProperty("first_pattern_slot", FIRST_PATTERN_SLOT);
                 result.addProperty("jobs_per_factory_tick", phase == 2 ? 32 : 1);
                 result.addProperty("source_operations_per_factory_tick", inputs(tier * 8) * (phase == 1 ? 3 : phase == 2 ? 32 : 1));
                 result.add("factory_complete_tick", stats(total)); result.add("provider_callback", stats(callbacks));

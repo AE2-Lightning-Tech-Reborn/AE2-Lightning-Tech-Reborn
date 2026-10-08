@@ -51,6 +51,17 @@ class BatchPatternEligibilityTest {
     }
 
     @Test
+    void rejectsNullAndMultiNodeCyclesWithoutLosingClosedLoopGate() {
+        var a = new MutableWrapper(); var b = new MutableWrapper();
+        assertFalse(BatchPatternEligibility.isEligible(null));
+        assertFalse(BatchPatternEligibility.isEligible(a));
+        a.wrapped = b; b.wrapped = a;
+        assertFalse(BatchPatternEligibility.isEligible(new PatternWrapper(a)));
+        assertFalse(BatchPatternEligibility.isEligible(a, p -> p == b, p -> false));
+        assertTrue(BatchPatternEligibility.isEligible(a, p -> p == b, p -> true));
+    }
+
+    @Test
     void preservesClosedLoopBatchSafetyGate() {
         var unsafeLoop = new ProcessingPattern();
         var safeLoop = new ProcessingPattern();
@@ -141,6 +152,11 @@ class BatchPatternEligibilityTest {
         public IPatternDetails wrappedPatternDetails() {
             return this;
         }
+    }
+
+    private static final class MutableWrapper extends PlainPattern implements IWrappedPatternDetails {
+        private IPatternDetails wrapped;
+        @Override public IPatternDetails wrappedPatternDetails() { return wrapped; }
     }
 
 }

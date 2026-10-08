@@ -35,6 +35,71 @@ class TimeWheelBatchInputAllocationTest {
             OUT = key("output"), CONTAINER = key("container");
 
     @Test
+    void singleCopyKeepsOwnedStockAndDispatchTemplatesIndependent() {
+        var pattern = new Pattern(new IPatternDetails.IInput[] {input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 2L), n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 2, Actionable.MODULATE);
+        var accepted = scoped(pattern, stock, allocator, 1, false);
+        assertNotNull(accepted);
+        var template = ParallelBatchCpuHelper.cloneSingleCopy(accepted);
+        template[0].clear();
+        assertEquals(1, accepted.scaledInputs[0].get(G));
+        ParallelBatchCpuHelper.markDispatched(accepted, 1);
+        assertEquals(0, accepted.scaledInputs[0].get(G));
+        assertEquals(1, ParallelBatchCpuHelper.cloneSingleCopy(accepted)[0].get(G));
+        ParallelBatchCpuHelper.reinject(accepted, 1, stock);
+        assertEquals(1, stock.list.get(G), "accepted stock cannot be refunded");
+        var rejected = scoped(pattern, stock, allocator, 1, false);
+        assertNotNull(rejected);
+        ParallelBatchCpuHelper.reinject(rejected, 1, stock);
+        ParallelBatchCpuHelper.reinject(rejected, 1, stock);
+        assertEquals(1, stock.list.get(G), "rejection refunds exactly once");
+    }
+
+    @Test
+    void singleCopyKeepsFlexibleAssignmentsForCompetingTasks() {
+        var flexible = new Pattern(new IPatternDetails.IInput[] {input(null, Q, G)}, List.of(stack(OUT)), false);
+        var exact = new Pattern(new IPatternDetails.IInput[] {input(null, Q)}, List.of(stack(OUT)), false);
+        var tasks = new LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(flexible, 1L); tasks.put(exact, 1L);
+        var allocator = new ExecutionInputAllocator(tasks, n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 1, Actionable.MODULATE); stock.insert(Q, 1, Actionable.MODULATE);
+        var result = scoped(flexible, stock, allocator, 1, false);
+        assertNotNull(result);
+        assertEquals(1, result.scaledInputs[0].get(G));
+        assertEquals(1, stock.list.get(Q));
+        ParallelBatchCpuHelper.markDispatched(result, 1);
+        tasks.remove(flexible); allocator.onTaskChange(flexible);
+        var remaining = scoped(exact, stock, allocator, 1, false);
+        assertNotNull(remaining);
+        assertEquals(1, remaining.scaledInputs[0].get(Q));
+    }
+
+    @Test
+    void singleCopySharedSeedAndContainerSurviveRejectionAndCommit() {
+        var pattern = new Pattern(new IPatternDetails.IInput[] {input(null, TOOL), input(CONTAINER, G)},
+                List.of(stack(TOOL), stack(OUT)), true);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 1L), n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(TOOL, 1, Actionable.MODULATE); stock.insert(G, 1, Actionable.MODULATE);
+        var rejected = scoped(pattern, stock, allocator, 1, true);
+        assertNotNull(rejected);
+        ParallelBatchCpuHelper.reinject(rejected, 1, stock);
+        assertEquals(1, stock.list.get(TOOL)); assertEquals(1, stock.list.get(G));
+        var accepted = scoped(pattern, stock, allocator, 1, true);
+        assertNotNull(accepted);
+        var job = new Job();
+        ParallelBatchCpuHelper.markDispatched(accepted, 1);
+        ParallelBatchCpuHelper.registerExpectedOutputs(job, pattern, accepted, 1);
+        ParallelBatchCpuHelper.reinject(accepted, 1, stock);
+        assertEquals(0, stock.list.get(TOOL)); assertEquals(0, stock.list.get(G));
+        assertEquals(1, job.waiting.list.get(TOOL)); assertEquals(1, job.waiting.list.get(OUT));
+        assertEquals(1, job.waiting.list.get(CONTAINER)); assertEquals(1, job.remainders);
+    }
+
+    @Test
     void oneSlotFastPathStillRespectsReservedStockAndRollsBackRejection() {
         var pattern = new Pattern(new IPatternDetails.IInput[] {input(null, G)}, List.of(stack(OUT)), false);
         var allocator = new ExecutionInputAllocator(Map.of(pattern, 5L), n -> n, true, true);
