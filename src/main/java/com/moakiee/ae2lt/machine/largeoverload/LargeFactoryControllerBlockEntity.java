@@ -33,9 +33,6 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     private LargeFactoryLedger.Account cachedEnergyAccount;
     private boolean allowNetworkEnergy = true;
     private boolean preview;
-    private long energyTick = Long.MIN_VALUE;
-    private long energyUsed;
-    private long energyReceived;
     private long lastOperationTick = Long.MIN_VALUE;
     private boolean executing;
     private int passiveCursor;
@@ -202,25 +199,14 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         energyReleased = true;
     }
     public long energyCapacity() { return core == null ? 0 : LargeFactoryConfig.capacity(core); }
-    private void beginEnergyTick() {
-        long tick = level.getGameTime();
-        if (energyTick != tick) { energyTick = tick; energyUsed = 0; energyReceived = 0; }
-    }
-    public long remainingEnergyThroughput() {
-        beginEnergyTick();
-        return core == null ? 0 : Math.max(0, LargeFactoryConfig.throughput(core) - energyUsed);
-    }
     public int receiveEnergy(int requested, boolean simulate) {
         if (!formed() || core == LargeFactoryComponent.FIRMAMENT_CORE) return 0;
         var account = energyAccount();
         if (account == null) return 0;
-        beginEnergyTick();
-        long accepted = Math.min(Math.max(0, requested), Math.min(Math.max(0, energyCapacity() - account.externalFE),
-                Math.max(0, LargeFactoryConfig.throughput(core) - energyReceived)));
+        long accepted = Math.min(Math.max(0, requested), Math.max(0, energyCapacity() - account.externalFE));
         if (!simulate && accepted > 0) {
             account.externalFE += accepted;
             ledger.setDirty();
-            energyReceived += accepted;
         }
         return (int) accepted;
     }
@@ -228,11 +214,10 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     public void toggleNetworkEnergy() { allowNetworkEnergy = !allowNetworkEnergy; setChanged(); }
     public void consumeEnergy(long fromBuffer, long total) {
         var account = energyAccount();
-        if (account == null || fromBuffer < 0 || fromBuffer > account.externalFE || total < fromBuffer || total > remainingEnergyThroughput()) throw new IllegalStateException("Invalid factory energy commit");
+        if (account == null || fromBuffer < 0 || fromBuffer > account.externalFE || total < fromBuffer) throw new IllegalStateException("Invalid factory energy commit");
         account.externalFE -= fromBuffer;
         ledger.setDirty();
-        energyUsed += total;
-        // FE is saved only by the ledger; throughput is transient. No block NBT changed,
+        // FE is saved only by the ledger. No block NBT changed,
         // so a chunk/comparator notification for each committed copy is unnecessary.
     }
     public boolean enterExecution() {

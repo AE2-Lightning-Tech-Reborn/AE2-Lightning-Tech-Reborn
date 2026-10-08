@@ -49,7 +49,8 @@ public final class LargeFactoryExecutor {
         long energy;
         try { energy = LargeFactoryConfig.energy(recipe); }
         catch (ArithmeticException overflow) { hatch.status("cost_overflow"); return null; }
-        if (energy > 0) copies = Math.min(copies, controller.remainingEnergyThroughput() / energy / operationsPerCopy);
+        // There is no per-tick FE ceiling. Only a single transaction's exact bill must fit in a long.
+        if (energy > 0) copies = Math.min(copies, Long.MAX_VALUE / energy / operationsPerCopy);
         if (copies <= 0) return null;
         long operations = Math.multiplyExact(copies, operationsPerCopy);
         var cost = recipe.lightning();
@@ -140,8 +141,7 @@ public final class LargeFactoryExecutor {
                     hatch.ledgerChanged();
                 }
                 if (account.energyCreditAE < neededAE || !current(hatch, controller, grid, generation)
-                        || !hatch.hasCatalyst(entry.bound()) || controller.energyStored() < quote.externalEnergy()
-                        || controller.remainingEnergyThroughput() < quote.energy()) {
+                        || !hatch.hasCatalyst(entry.bound()) || controller.energyStored() < quote.externalEnergy()) {
                     hatch.status("payment_changed");
                     return 0;
                 }

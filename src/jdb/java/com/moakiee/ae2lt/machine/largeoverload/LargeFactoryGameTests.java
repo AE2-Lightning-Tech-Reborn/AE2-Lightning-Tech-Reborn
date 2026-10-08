@@ -359,6 +359,107 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
+    public static void t1HasNoPerTickEnergyCeiling(GameTestHelper h) {
+        assertNoPerTickEnergyCeiling(h, LargeFactoryComponent.CORE_T1);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void t2HasNoPerTickEnergyCeiling(GameTestHelper h) {
+        assertNoPerTickEnergyCeiling(h, LargeFactoryComponent.CORE_T2);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void t3HasNoPerTickEnergyCeiling(GameTestHelper h) {
+        assertNoPerTickEnergyCeiling(h, LargeFactoryComponent.CORE_T3);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void t4HasNoPerTickEnergyCeiling(GameTestHelper h) {
+        assertNoPerTickEnergyCeiling(h, LargeFactoryComponent.CORE_T4);
+    }
+
+    private static void assertNoPerTickEnergyCeiling(GameTestHelper h, LargeFactoryComponent core) {
+        var fixture = new Fixture(h, false, false);
+        h.setBlock(fixture.pos(LargeFactoryStructure.CORE), LargeFactoryRegistration.block(core));
+        fixture.ready(f -> {
+            long tick = h.getLevel().getGameTime();
+            long capacity = f.controller.energyCapacity();
+            var port = f.energy.energy();
+            h.assertTrue(port.receiveEnergy(Integer.MAX_VALUE, true) == Math.min(Integer.MAX_VALUE, capacity)
+                    && f.controller.energyStored() == 0, "FE simulation is bounded only by buffer space and does not mutate it");
+            fillEnergyBuffer(h, f);
+            h.assertTrue(port.receiveEnergy(Integer.MAX_VALUE, false) == 0, "full buffer rejects additional FE");
+            f.controller.toggleNetworkEnergy();
+            var input = AEItemKey.of(Items.BRICKS); var result = AEItemKey.of(Items.GOLD_INGOT);
+            f.hatch.inventory().setItemDirect(0, PatternDetailsHelper.encodeProcessingPattern(
+                    List.of(new GenericStack(input, 1)), List.of(new GenericStack(result, 1))));
+            var entry = f.hatch.entries().getFirst();
+            long cost = 2_000_000, copies = capacity / cost;
+            f.store.put(LightningKey.HIGH_VOLTAGE, Long.MAX_VALUE);
+            var quote = LargeFactoryExecutor.quote(f.hatch, entry, Map.of(input, 1L), Long.MAX_VALUE);
+            h.assertTrue(quote != null && quote.copies() == copies && quote.energy() == copies * cost
+                    && f.controller.energyStored() == capacity && f.store.get(LightningKey.HIGH_VOLTAGE) == Long.MAX_VALUE,
+                    "unlimited demand and lightning cannot overflow the FE bill or spend resources during a quote");
+            f.store.put(LightningKey.HIGH_VOLTAGE, copies * 2 + 1);
+            var output = new KeyCounter();
+            for (int batch = 0; batch < 2; batch++) {
+                long accepted = LargeFactoryExecutor.execute(f.hatch, entry, Map.of(input, 1L), Long.MAX_VALUE,
+                        produced -> { produced.forEach(stack -> output.add(stack.getKey(), stack.getLongValue())); return true; }, false);
+                h.assertTrue(accepted == copies && f.controller.energyStored() == capacity - copies * cost,
+                        "batch exceeds the former FE/t cap and pays exactly its affordable 2x recipe bill");
+                h.assertTrue(f.hatch.account().lastEnergyFE == copies * cost && f.hatch.account().empty(),
+                        "committed energy audit and resource account remain exact");
+                if (batch == 0) fillEnergyBuffer(h, f);
+            }
+            h.assertTrue(output.get(result) == copies * 2 && f.store.get(LightningKey.HIGH_VOLTAGE) == 1,
+                    "same-tick refill and second batch pay all lightning and produce exactly once");
+            long remaining = f.controller.energyStored();
+            h.assertTrue(LargeFactoryExecutor.execute(f.hatch, entry, Map.of(input, 1L), 1, produced -> true, false) == 0
+                    && f.controller.energyStored() == remaining && f.store.get(LightningKey.HIGH_VOLTAGE) == 1
+                    && f.hatch.account().empty(), "external-only mode still rejects an unaffordable recipe without charging it");
+            f.controller.toggleNetworkEnergy();
+            h.assertTrue(LargeFactoryExecutor.execute(f.hatch, entry, Map.of(input, 1L), 1, produced -> true, false) == 1
+                    && f.controller.energyStored() == 0 && f.store.get(LightningKey.HIGH_VOLTAGE) == 0
+                    && f.hatch.account().lastEnergyFE == cost && f.hatch.account().empty(),
+                    "ME energy still funds only the actual external-buffer shortfall");
+            h.assertTrue(h.getLevel().getGameTime() == tick, "all receipts and commits occurred in one physical tick");
+            h.succeed();
+        });
+    }
+
+    private static void fillEnergyBuffer(GameTestHelper h, Fixture f) {
+        long remaining = f.controller.energyCapacity() - f.controller.energyStored();
+        while (remaining > 0) {
+            int expected = (int) Math.min(Integer.MAX_VALUE, remaining);
+            h.assertTrue(f.energy.energy().receiveEnergy(Integer.MAX_VALUE, false) == expected,
+                    "each real FE receipt is limited by buffer space, without a shared tick quota");
+            remaining -= expected;
+        }
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void passiveHighEnergyBatchUsesAvailableFEWithoutATickCeiling(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var input = AEItemKey.of(Items.BRICKS); var result = AEItemKey.of(Items.GOLD_INGOT);
+            f.hatch.inventory().setItemDirect(0, PatternDetailsHelper.encodeProcessingPattern(
+                    List.of(new GenericStack(input, 1)), List.of(new GenericStack(result, 1))));
+            fillEnergyBuffer(h, f);
+            f.controller.toggleNetworkEnergy(); f.hatch.togglePassive();
+            f.store.put(input, 100); f.store.put(LightningKey.HIGH_VOLTAGE, 100);
+            long copies = f.controller.energyCapacity() / 2_000_000;
+            h.assertTrue(f.hatch.passiveStep(), "passive high-energy batch executes");
+            h.assertTrue(f.store.get(input) == 100 - copies && f.store.get(result) == copies
+                    && f.store.get(LightningKey.HIGH_VOLTAGE) == 100 - copies
+                    && f.controller.energyStored() == f.controller.energyCapacity() - copies * 2_000_000
+                    && f.hatch.account().empty(), "passive sample is counted once and full resource costs are paid");
+            long extractions = f.store.actualExtractions;
+            h.assertTrue(!f.hatch.passiveStep() && f.store.actualExtractions == extractions && f.hatch.account().empty(),
+                    "insufficient FE cannot extract a second sample or produce unpaid results");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
     public static void unlimitedT4AcceptsLargeBatchesWhileStillChargingRealResources(GameTestHelper h) {
         var fixture = new Fixture(h, false, false);
         h.setBlock(fixture.pos(LargeFactoryStructure.CORE), LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T4));

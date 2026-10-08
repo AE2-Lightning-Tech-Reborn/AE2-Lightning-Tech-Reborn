@@ -7,7 +7,6 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class LargeFactoryConfig {
     private static final long[] DEFAULT_OPERATIONS = {1_024, 16_384, 262_144, 0};
     private static final List<ModConfigSpec.LongValue> OPERATIONS = new ArrayList<>();
-    private static final List<ModConfigSpec.LongValue> THROUGHPUT = new ArrayList<>();
     private static final List<ModConfigSpec.LongValue> CAPACITY = new ArrayList<>();
     private static ModConfigSpec.IntValue energyMultiplier;
     public static final int AUXILIARY_SLOTS = 36;
@@ -21,8 +20,6 @@ public final class LargeFactoryConfig {
             builder.push("tier" + (tier + 1));
             OPERATIONS.add(builder.comment("Cumulative source operations per server tick, shared by every hatch. 0 removes the operation cap; resource and server work budgets still apply.")
                     .defineInRange("operationsPerTick", DEFAULT_OPERATIONS[tier], 0, 1L << 40));
-            THROUGHPUT.add(builder.comment("Total processing FE per tick; adding energy hatches does not increase this.")
-                    .defineInRange("energyPerTick", 16_777_216L << (tier * 2), 1, 1L << 50));
             CAPACITY.add(builder.comment("Capacity of the factory's external FE buffer.")
                     .defineInRange("energyCapacity", 167_772_160L << (tier * 2), 1, 1L << 50));
             builder.pop();
@@ -39,7 +36,6 @@ public final class LargeFactoryConfig {
         long configured = OPERATIONS.get(tier(core)).get();
         return configured == 0 ? LargeFactoryOperationBudget.UNLIMITED : configured;
     }
-    public static long throughput(LargeFactoryComponent core) { return THROUGHPUT.get(tier(core)).get(); }
     public static long capacity(LargeFactoryComponent core) { return CAPACITY.get(tier(core)).get(); }
     public static long energy(LargeFactoryRecipe recipe) {
         return recipe.process() == LargeFactoryRecipeAccess.Process.FIRMAMENT ? 0

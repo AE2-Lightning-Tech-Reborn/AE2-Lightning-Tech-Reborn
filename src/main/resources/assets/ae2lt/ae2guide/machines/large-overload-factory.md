@@ -53,7 +53,7 @@ The Controller's **Preview** button marks structure positions with particles. Bl
 * **Expanded Pattern Hatch:** 144 patterns over four pages. All pages remain available to crafting CPUs.
 * **Crystal Hatch:** 36 resident catalyst slots. Inserting a catalyst exposes its crystal or dust recipes as virtual processing patterns. Their real fluid inputs remain required; the resident catalyst is not consumed.
 * **Process Core Hatch:** 36 slots. Process cores unlock recipe families; duplicates do not increase throughput.
-* **Energy Hatch:** optional FE input. Multiple energy hatches share the central core's FE buffer and throughput.
+* **Energy Hatch:** optional FE input. Multiple energy hatches share the central core's FE buffer. Input is limited by available buffer space, with no factory-wide FE-per-tick cap.
 
 Each processing hatch uses **one ME channel** and connects only on its rear outward face. It can use its own ME network. Its materials, Lightning, automatic ME energy and ordinary returns use that same network. Process Core and Energy Hatches have no ME nodes or channels. Nine processing hatches on one network require sufficient channel capacity.
 
@@ -78,7 +78,7 @@ Insert ordinary processing patterns as usual. The factory validates the actual i
 
 ## Throughput and costs
 
-Default ordinary core budgets are **1,024 / 16,384 / 262,144 / unlimited source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. These values and FE throughput/capacity are configurable under `largeOverloadFactory` in the common config. Set `operationsPerTick = 0` to remove the source-operation cap; resource costs and server work budgets still apply.
+Default ordinary core budgets are **1,024 / 16,384 / 262,144 / unlimited source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. There is **no per-tick processing FE cap** at any tier; every operation must still be paid in full. Operation budgets, the FE cost multiplier and buffer capacity are configurable under `largeOverloadFactory` in the common config. Set `operationsPerTick = 0` to remove the source-operation cap; resource costs and server work budgets still apply.
 
 Every ordinary source operation costs at least **one High Voltage Lightning**. A higher native Lightning cost is preserved. A recipe requiring EHV can substitute **four HV for one EHV**, including mixed EHV/HV payments. This is built in: no substitution matrix is required. EHV cannot pay an HV requirement.
 

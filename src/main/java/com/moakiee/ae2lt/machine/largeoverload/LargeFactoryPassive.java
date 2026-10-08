@@ -18,8 +18,7 @@ public final class LargeFactoryPassive {
         var controller = hatch.controller();
         if (controller == null) return false;
         long remaining = controller.budget().remainingOperations(hatch.getLevel().getGameTime());
-        if (remaining == 0 || hatch.minimumOperations(entry) > remaining
-                || entry.bound() != null && LargeFactoryConfig.energy(entry.bound()) > 0 && controller.remainingEnergyThroughput() == 0) return false;
+        if (remaining == 0 || hatch.minimumOperations(entry) > remaining) return false;
         if (!hatch.ready()) return false;
         var grid = hatch.getMainNode().getGrid();
         var origin = hatch.origin(grid);
