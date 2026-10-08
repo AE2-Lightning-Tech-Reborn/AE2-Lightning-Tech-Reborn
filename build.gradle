@@ -19,7 +19,7 @@ apply plugin: 'org.spongepowered.mixin'
 
 group = mod_group_id
 def releaseTag = System.getenv('TAG')?.trim()
-version = releaseTag ?: mod_version
+version = releaseTag?.startsWith('1.20.1-') ? releaseTag.substring('1.20.1-'.length()) : (releaseTag ?: mod_version)
 def resolvedProjectVersion = project.version.toString()
 
 def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
