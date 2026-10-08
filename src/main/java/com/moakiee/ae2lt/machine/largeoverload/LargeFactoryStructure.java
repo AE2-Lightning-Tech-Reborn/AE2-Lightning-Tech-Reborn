@@ -11,11 +11,12 @@ import net.minecraft.core.Direction;
 
 /** Fixed first-generation LT factory, not a configurable structure framework. */
 public final class LargeFactoryStructure {
-    public static final int WIDTH = 9;
-    public static final int HEIGHT = 7;
-    public static final int DEPTH = 9;
-    public static final BlockPos CONTROLLER = new BlockPos(4, 3, 0);
-    public static final BlockPos CORE = new BlockPos(4, 3, 4);
+    public static final int WIDTH = 3;
+    public static final int HEIGHT = 3;
+    public static final int DEPTH = 3;
+    public static final BlockPos CONTROLLER = new BlockPos(1, 1, 0);
+    public static final BlockPos CORE = new BlockPos(1, 1, 1);
+    public static final BlockPos MAX_CORNER = new BlockPos(WIDTH - 1, HEIGHT - 1, DEPTH - 1);
     private static final int MAX_DIAGNOSTICS = 16;
     private static final List<Cell> CELLS = createCells();
 
@@ -74,7 +75,7 @@ public final class LargeFactoryStructure {
         }
     }
 
-    /** Shared by the scanner and future preview/building UI; air remains an explicit requirement. */
+    /** Shared by the scanner, structure preview and builder. */
     public static List<Cell> cells() {
         return CELLS;
     }
@@ -86,10 +87,11 @@ public final class LargeFactoryStructure {
         }
         if (local.equals(CONTROLLER)) return Role.CONTROLLER;
         if (local.equals(CORE)) return Role.CORE;
+        // The entire rear face accepts hatches, including its edges and corners.
+        if (z == DEPTH - 1) return Role.HATCH;
         int boundaries = (x == 0 || x == WIDTH - 1 ? 1 : 0)
                 + (y == 0 || y == HEIGHT - 1 ? 1 : 0) + (z == 0 || z == DEPTH - 1 ? 1 : 0);
         if (boundaries >= 2) return Role.FRAME;
-        if (z == DEPTH - 1 && x >= 3 && x <= 5 && y >= 2 && y <= 4) return Role.HATCH;
         return boundaries == 1 ? Role.CASING : Role.AIR;
     }
 
@@ -122,7 +124,7 @@ public final class LargeFactoryStructure {
         private final BlockPos controller;
         private final Direction facing;
         private final List<Diagnostic> issues = new ArrayList<>();
-        private final List<Member> members = new ArrayList<>(323);
+        private final List<Member> members = new ArrayList<>(WIDTH * HEIGHT * DEPTH);
         private final List<Member> hatches = new ArrayList<>(9);
         private final int[] missing = new int[2];
         private LargeFactoryComponent core;
@@ -139,7 +141,7 @@ public final class LargeFactoryStructure {
             if (maxCells <= 0) throw new IllegalArgumentException("Positive cell quota required");
             // Enumerate the whole footprint, including negative chunk coordinates.
             BlockPos cornerA = worldPosition(controller, BlockPos.ZERO, facing);
-            BlockPos cornerB = worldPosition(controller, new BlockPos(WIDTH - 1, HEIGHT - 1, DEPTH - 1), facing);
+            BlockPos cornerB = worldPosition(controller, MAX_CORNER, facing);
             for (int chunkX = Math.min(cornerA.getX(), cornerB.getX()) >> 4;
                     chunkX <= Math.max(cornerA.getX(), cornerB.getX()) >> 4; chunkX++) {
                 for (int chunkZ = Math.min(cornerA.getZ(), cornerB.getZ()) >> 4;

@@ -22,37 +22,37 @@ item_ids:
 
 # Large Overload Processing Factory
 
-This fixed **9 × 7 × 9** factory executes processing recipes synchronously. The central processing core sets one operation budget shared by every hatch. A processing pattern that represents four source recipes uses four operations and pays four recipe costs.
+This fixed **3 × 3 × 3** factory executes processing recipes synchronously. The central processing core sets one operation budget shared by every hatch. A processing pattern that represents four source recipes uses four operations and pays four recipe costs.
 
 ## Construction
 
-Place the Controller in the center of the front face. The factory extends four blocks to each side, three above and below, and eight blocks behind it. Place the processing core four blocks directly behind the Controller. Keep the remaining interior empty.
+Place the Controller in the center of the front face. The factory extends one block to each side, one above and below, and two blocks behind it. Place the processing core one block directly behind the Controller. The complete rear face contains the nine hatch positions.
 
-<GameScene zoom="2.5" background="transparent" interactive={true}>
+<GameScene zoom="5" background="transparent" interactive={true}>
   <ImportStructure src="../assets/assemblies/large_overload_factory.snbt" />
-  <DiamondAnnotation pos="4.5 3.5 0.5" color="#85f29e">Controller</DiamondAnnotation>
-  <DiamondAnnotation pos="4.5 3.5 8.5" color="#f2d37a">Rear 3 × 3 hatch area</DiamondAnnotation>
+  <DiamondAnnotation pos="1.5 1.5 0.5" color="#85f29e">Controller</DiamondAnnotation>
+  <DiamondAnnotation pos="1.5 1.5 2.5" color="#f2d37a">Rear 3 × 3 hatch area</DiamondAnnotation>
   <IsometricCamera yaw="215" pitch="25" />
 </GameScene>
 
 | Part | Required |
 | --- | ---: |
-| Frame, along the twelve edges | 84 |
-| Fixed casing | 228 |
+| Frame, on the front and middle layer | 12 |
+| Fixed casing | 4 |
 | Controller | 1 |
 | Central processing core | 1 |
 | Rear hatch positions, filled with hatches or casing | 9 |
 
 At least one Pattern Hatch or Crystal Hatch is required. A factory may have several processing hatches, but only **one Process Core Hatch**. Each hatch occupies one of the nine rear positions. A layout with one process hatch, one energy hatch and seven expanded pattern hatches holds **1,008 patterns**.
 
-The Controller's **Preview** button marks structure positions with particles. Blue marks frame/casing, purple the central core, yellow rear hatch positions and red obstructed interior air. **Build casing** uses blocks from your inventory in small batches, places only into empty positions and respects placement checks. Place the core and your chosen hatches yourself. The Controller reports missing materials and the coordinates of incorrect blocks.
+The Controller's **Preview** button marks structure positions with particles. Blue marks frame/casing, purple the central core, yellow rear hatch positions. **Build casing** uses blocks from your inventory in small batches, places only into empty positions and respects placement checks. Place the core and your chosen hatches yourself. The lightning icon at the top right shows status, energy, operation budget, missing materials and incorrect block coordinates. Hatch menus use the expanded provider layout with 36 slots per page. Left-click the page button for the next page, right-click for the previous page, or use the mouse wheel. Hatch toolbars only show mode, power policy and pagination; structure preview and scanning remain on the Controller.
 
 ## Hatches and networks
 
 * **Pattern Hatch:** 36 encoded processing patterns.
 * **Expanded Pattern Hatch:** 144 patterns over four pages. All pages remain available to crafting CPUs.
-* **Crystal Hatch:** nine resident catalyst slots by default. Inserting a catalyst exposes its crystal or dust recipes as virtual processing patterns. Their real fluid inputs remain required; the resident catalyst is not consumed. Disable unwanted recipe entries with their buttons.
-* **Process Core Hatch:** nine slots by default. Process cores unlock recipe families; duplicates do not increase throughput.
+* **Crystal Hatch:** 36 resident catalyst slots. Inserting a catalyst exposes its crystal or dust recipes as virtual processing patterns. Their real fluid inputs remain required; the resident catalyst is not consumed.
+* **Process Core Hatch:** 36 slots. Process cores unlock recipe families; duplicates do not increase throughput.
 * **Energy Hatch:** optional FE input. Multiple energy hatches share the central core's FE buffer and throughput.
 
 Each processing hatch uses **one ME channel** and connects only on its rear outward face. It can use its own ME network. Its materials, Lightning, automatic ME energy and ordinary returns use that same network. Process Core and Energy Hatches have no ME nodes or channels. Nine processing hatches on one network require sufficient channel capacity.
@@ -78,7 +78,7 @@ Insert ordinary processing patterns as usual. The factory validates the actual i
 
 ## Throughput and costs
 
-Default ordinary core budgets are **1,024 / 16,384 / 262,144 / unlimited source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. These values, FE throughput/capacity and the default auxiliary inventory sizes are configurable under `largeOverloadFactory` in the common config. Set `operationsPerTick = 0` to remove the source-operation cap; resource costs and server work budgets still apply.
+Default ordinary core budgets are **1,024 / 16,384 / 262,144 / unlimited source operations per tick** for T1–T4. Actual batches also require FE, Lightning, input availability and server work budget. Ordinary FE cost is **twice the source recipe's total FE**. These values and FE throughput/capacity are configurable under `largeOverloadFactory` in the common config. Set `operationsPerTick = 0` to remove the source-operation cap; resource costs and server work budgets still apply.
 
 Every ordinary source operation costs at least **one High Voltage Lightning**. A higher native Lightning cost is preserved. A recipe requiring EHV can substitute **four HV for one EHV**, including mixed EHV/HV payments. This is built in: no substitution matrix is required. EHV cannot pay an HV requirement.
 
@@ -94,6 +94,6 @@ Its limit is **1,024 source operations per tick**, shared by all hatches. Each o
 
 Time Wheel and Tianshu CPUs can receive queued outputs after committing their dispatch, enabling same-tick chains. Other CPUs receive products through the hatch's ME network on a later tick. Synchronous processing does not mean unlimited server work: exhausted budgets continue on later ticks.
 
-If storage is full, a network changes or a structure breaks, already owned materials and products remain in a saved resource account. Automatic returns require the original external network anchor. **Export recovery** creates a capsule for retained resources; breaking a hatch or an energized Controller also preserves owned resources in a capsule. Use the capsule on an active processing hatch to explicitly return those resources to that network. Partial returns remain in the same capsule. Copying a capsule does not copy its resources.
+If storage is full, a network changes or a structure breaks, already owned materials and products remain in a saved resource account. Automatic returns require the original external network anchor. Breaking a hatch with retained resources or an energized Controller preserves owned resources in a recovery capsule. Use the capsule on an active processing hatch to explicitly return those resources to that network. Partial returns remain in the same capsule. Copying a capsule does not copy its resources.
 
 Structure checks and initial indexing of many patterns are spread over multiple ticks. Formation requires a complete valid scan; patterns are published together after indexing finishes.

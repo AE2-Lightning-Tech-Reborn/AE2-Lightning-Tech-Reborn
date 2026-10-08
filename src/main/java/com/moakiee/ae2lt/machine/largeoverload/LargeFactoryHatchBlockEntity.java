@@ -599,7 +599,8 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         super.loadTag(tag, registries);
         accountId = tag.hasUUID("Account") ? tag.getUUID("Account") : UUID.randomUUID();
         ledger = null; cachedAccount = null; availability.clear(); availabilityGrid = null; nextReturnTick = 0; returnObserving = false; returnSchedule.reset();
-        if (crystal() && tag.contains("SlotCount")) inventory = createInventory(Math.clamp(tag.getInt("SlotCount"), 1, 36));
+        // Older crystal inventories expand in place; reading their saved slots preserves every catalyst.
+        if (crystal()) inventory = createInventory(LargeFactoryConfig.crystalSlots());
         inventory.readFromNBT(tag, "Patterns", registries);
         passive = tag.getBoolean("Passive");
         disabledSlots.clear(); disabledSlots.or(BitSet.valueOf(tag.getLongArray("DisabledSlots")));

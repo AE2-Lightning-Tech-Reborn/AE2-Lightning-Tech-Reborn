@@ -83,7 +83,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     }
     public boolean contains(BlockPos position) {
         var a = LargeFactoryStructure.worldPosition(worldPosition, BlockPos.ZERO, facing());
-        var b = LargeFactoryStructure.worldPosition(worldPosition, new BlockPos(8, 6, 8), facing());
+        var b = LargeFactoryStructure.worldPosition(worldPosition, LargeFactoryStructure.MAX_CORNER, facing());
         return position.getX() >= Math.min(a.getX(), b.getX()) && position.getX() <= Math.max(a.getX(), b.getX())
                 && position.getY() >= Math.min(a.getY(), b.getY()) && position.getY() <= Math.max(a.getY(), b.getY())
                 && position.getZ() >= Math.min(a.getZ(), b.getZ()) && position.getZ() <= Math.max(a.getZ(), b.getZ());

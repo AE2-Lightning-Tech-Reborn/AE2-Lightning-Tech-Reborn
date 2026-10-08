@@ -1,143 +1,135 @@
 package com.moakiee.ae2lt.client.machine;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import appeng.client.gui.AEBaseScreen;
+import appeng.client.gui.Icon;
+import appeng.client.gui.style.Blitter;
+import appeng.client.gui.style.PaletteColor;
+import appeng.client.gui.style.StyleManager;
+import appeng.client.gui.widgets.IconButton;
+import appeng.client.gui.widgets.ToggleButton;
+import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.gui.LightningStatusLines;
+import com.moakiee.ae2lt.client.widgets.PageButton;
+import com.moakiee.ae2lt.client.widgets.PageInput;
+import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryMenu;
 import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryOperationBudget;
-import com.moakiee.ae2lt.machine.largeoverload.LargeFactorySnapshot;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-public final class LargeFactoryScreen extends AbstractContainerScreen<LargeFactoryMenu> {
-    private final List<Button> rowButtons = new ArrayList<>();
-    private Button mode, power, recovery;
+/** Uses the expanded provider's AE2 layout, inventory slots and toolbar controls. */
+public final class LargeFactoryScreen extends AEBaseScreen<LargeFactoryMenu> {
+    private final PageButton pageButton;
+    private final TextureToggleButton modeButton;
+    private final ToggleButton powerButton;
+
     public LargeFactoryScreen(LargeFactoryMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        imageWidth = 320; imageHeight = 218; inventoryLabelY = 124;
-    }
-    private boolean processingHatch() { return menu.component.isPatternHatch() || menu.component == LargeFactoryComponent.CRYSTAL_HATCH; }
-    @Override protected void init() {
-        super.init();
-        // Keep the player hotbar above recipe-viewer search bars, including a 240px-high GUI.
-        topPos = Math.max(0, (height - imageHeight - 22) / 2);
-        rowButtons.clear();
-        mode = button(12, 22, 72, "mode", LargeFactoryMenu.MODE);
-        mode.visible = processingHatch();
-        if (menu.component == LargeFactoryComponent.CONTROLLER) button(12, 22, 72, "build", LargeFactoryMenu.BUILD);
-        power = button(87, 22, 91, "network_energy", LargeFactoryMenu.POWER);
-        power.visible = menu.pages() == 1;
-        button(182, 22, 61, "preview", LargeFactoryMenu.PREVIEW);
-        button(246, 22, 61, "scan", LargeFactoryMenu.SCAN);
-        if (menu.pages() > 1) {
-            button(87, 22, 24, "previous", LargeFactoryMenu.PAGE_PREVIOUS);
-            button(150, 22, 24, "next", LargeFactoryMenu.PAGE_NEXT);
+        super(menu, inventory, title, StyleManager.loadStyleDoc(menu.machineSlots() > 0
+                ? "/screens/large_factory_pattern.json" : "/screens/large_factory.json"));
+        widgets.add("lightningStatus", new LightningStatusIconWidget(this::statusLines));
+        pageButton = new PageButton(this::isHandlingRightClick,
+                () -> send(LargeFactoryMenu.PAGE_PREVIOUS), () -> send(LargeFactoryMenu.PAGE_NEXT));
+        addToLeftToolbar(pageButton);
+        modeButton = new TextureToggleButton(TextureToggleButton.ButtonType.MODE, ignored -> send(LargeFactoryMenu.MODE));
+        modeButton.setTooltipOn(List.of(text("passive")));
+        modeButton.setTooltipOff(List.of(text("active")));
+        if (processingHatch()) addToLeftToolbar(modeButton);
+        powerButton = new ToggleButton(Icon.POWER_UNIT_AE, Icon.POWER_UNIT_RF, ignored -> send(LargeFactoryMenu.POWER));
+        powerButton.setTooltipOn(List.of(text("network_energy")));
+        powerButton.setTooltipOff(List.of(text("external_only")));
+        addToLeftToolbar(powerButton);
+        if (menu.component == LargeFactoryComponent.CONTROLLER) {
+            toolbar(Icon.CRAFT_HAMMER, "build", LargeFactoryMenu.BUILD);
+            toolbar(Icon.OVERLAY_ON, "preview", LargeFactoryMenu.PREVIEW);
+            toolbar(Icon.SCHEDULING_DEFAULT, "scan", LargeFactoryMenu.SCAN);
         }
-        if (processingHatch()) {
-            button(184, 172, 24, "previous", LargeFactoryMenu.ENTRIES_PREVIOUS);
-            button(284, 172, 24, "next", LargeFactoryMenu.ENTRIES_NEXT);
-            recovery = button(184, 196, 124, "recover", LargeFactoryMenu.RECOVER);
-            for (int i = 0; i < 6; i++) {
-                final int row = i;
-                rowButtons.add(addRenderableWidget(Button.builder(Component.empty(), ignored -> {
-                    if (row < menu.snapshot.rows().size()) send(LargeFactoryMenu.TOGGLE_ENTRY + menu.snapshot.rows().get(row).index());
-                }).bounds(leftPos + 184, topPos + 58 + i * 18, 124, 18).build()));
-            }
-        }
-        updateButtons();
     }
-    private Button button(int x, int y, int width, String label, int action) {
-        return addRenderableWidget(Button.builder(text(label), ignored -> send(action))
-                .bounds(leftPos + x, topPos + y, width, 18).build());
+    private void toolbar(Icon icon, String label, int action) {
+        var button = new IconButton(ignored -> send(action)) {
+            @Override protected Icon getIcon() { return icon; }
+            @Override public List<Component> getTooltipMessage() { return List.of(text(label)); }
+        };
+        button.setMessage(text(label));
+        addToLeftToolbar(button);
     }
-    private void send(int action) {
+    boolean processingHatch() { return menu.component.isPatternHatch() || menu.component == LargeFactoryComponent.CRYSTAL_HATCH; }
+    void send(int action) {
         if (minecraft == null || minecraft.gameMode == null) return;
         if (action == LargeFactoryMenu.PAGE_NEXT) menu.setPage(menu.page() + 1);
         if (action == LargeFactoryMenu.PAGE_PREVIOUS) menu.setPage(menu.page() - 1);
         minecraft.gameMode.handleInventoryButtonClick(menu.containerId, action);
     }
-    @Override protected void containerTick() { super.containerTick(); updateButtons(); }
-    private void updateButtons() {
-        mode.setMessage(text(menu.snapshot.passive() ? "passive" : "active"));
-        power.setMessage(text(menu.snapshot.networkEnergy() ? "network_energy" : "external_only"));
-        if (recovery != null) recovery.setMessage(text("recover_count", menu.snapshot.pendingTypes()));
-        for (int i = 0; i < rowButtons.size(); i++) {
-            var button = rowButtons.get(i);
-            button.visible = i < menu.snapshot.rows().size();
-            if (button.visible) {
-                var row = menu.snapshot.rows().get(i);
-                var label = (row.enabled() ? "● " : "○ ") + row.output().what().getDisplayName().getString();
-                button.setMessage(Component.literal(font.plainSubstrByWidth(label, 116)));
-            }
+    @Override protected void init() {
+        super.init();
+        // All four pages share the first page's coordinates; inactive slots cannot be clicked or shift-moved.
+        for (int i = 36; i < menu.machineSlots(); i++) {
+            menu.slots.get(i).x = menu.slots.get(i % 36).x;
+            menu.slots.get(i).y = menu.slots.get(i % 36).y;
         }
     }
-    @Override protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xff15232d);
-        graphics.fill(leftPos + 1, topPos + 1, leftPos + imageWidth - 1, topPos + 18, 0xff233a47);
-        graphics.fill(leftPos + 180, topPos + 43, leftPos + 181, topPos + 211, 0xff416775);
-        for (var slot : menu.slots) if (slot.isActive() && slot.x >= 0) {
-            int x = leftPos + slot.x, y = topPos + slot.y;
-            graphics.fill(x - 1, y - 1, x + 17, y + 17, 0xff46606c);
-            graphics.fill(x, y, x + 16, y + 16, 0xff0c151d);
-        }
+    @Override protected void updateBeforeRender() {
+        super.updateBeforeRender();
+        setTextContent("dialog_title", title);
+        if (menu.machineSlots() > 0) setTextContent("interface_config", menu.component.isPatternHatch()
+                ? Component.translatable("gui.ae2.Patterns")
+                : text(menu.component == LargeFactoryComponent.CRYSTAL_HATCH ? "catalysts" : "process_cores"));
+        pageButton.setPage(menu.page(), menu.pages());
+        modeButton.setState(menu.snapshot.passive());
+        powerButton.setState(menu.snapshot.networkEnergy());
     }
-    @Override protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        var s = menu.snapshot;
-        graphics.drawString(font, title, 10, 6, 0xffd8f1f5, false);
-        graphics.drawString(font, font.plainSubstrByWidth(text("status." + s.status()).getString(), 162), 12, 46,
-                s.formed() ? 0xff8fe8b5 : 0xffefb96d, false);
-        graphics.drawString(font, text(processingHatch() ? "entries" : "factory_status"), 184, 46, 0xffa7c4d0, false);
-        if (menu.machineSlots() <= 27) graphics.drawString(font, playerInventoryTitle, 12, 124, 0xffa7c4d0, false);
-        if (menu.pages() > 1) graphics.drawCenteredString(font, (menu.page() + 1) + " / " + menu.pages(), 130, 27, 0xffd8f1f5);
-        if (menu.machineSlots() == 0) {
-            int y = 66;
-            if (menu.machineSlots() > 0) y += 26;
-            graphics.drawString(font, text("dimensions"), 12, y, 0xffd8f1f5, false);
-            y += 12;
-            for (var issue : s.issues()) {
-                if (y > 112) break;
-                String line = text("issue." + issue.problem()).getString() + " " + (issue.problem().startsWith("missing_") ? issue.expected() : issue.position().toShortString());
-                graphics.drawString(font, font.plainSubstrByWidth(line, 160), 12, y, 0xffefb96d, false);
-                y += 10;
-            }
-        }
-        int y = 67;
-        if (processingHatch()) {
-            graphics.drawCenteredString(font, (s.entryPage() + 1) + " / " + Math.max(1, (s.entryCount() + 5) / 6), 246, 177, 0xffa7c4d0);
+    @Override public void drawBG(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTick) {
+        super.drawBG(graphics, x, y, mouseX, mouseY, partialTick);
+        if (menu.machineSlots() > 0) {
+            // The factory keeps pending outputs in its account, so reuse this row for status instead of return slots.
+            Blitter.texture(ResourceLocation.fromNamespaceAndPath("ae2", "textures/guis/ex_pattern_provider.png"), 256, 256)
+                    .src(7, 20, 162, 1).dest(x + 7, y + 126, 162, 18).blit(graphics);
         } else {
-            graphics.drawString(font, text("core." + s.core()), 184, y, 0xffa6daef, false); y += 18;
-            graphics.drawString(font, text("operations"), 184, y, 0xffa7c4d0, false); y += 12;
-            String operations = s.operationsPerTick() == LargeFactoryOperationBudget.UNLIMITED ? text("unlimited").getString()
-                    : compact(s.remainingOperations()) + " / " + compact(s.operationsPerTick());
-            graphics.drawString(font, operations, 184, y, 0xffd8f1f5, false); y += 18;
-            graphics.drawString(font, text("energy"), 184, y, 0xffa7c4d0, false); y += 12;
-            graphics.drawString(font, compact(s.storedEnergy()) + " / " + compact(s.energyCapacity()), 184, y, 0xffd8f1f5, false);
-        }
-    }
-    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-        for (int i = 0; i < rowButtons.size(); i++) if (rowButtons.get(i).visible && rowButtons.get(i).isHovered()) {
-            var row = menu.snapshot.rows().get(i);
-            var lines = new ArrayList<Component>();
-            lines.add(row.output().what().getDisplayName().copy().append(" × " + row.output().amount()));
-            lines.add(text("status." + row.status()));
-            if (!row.recipe().isEmpty()) {
-                lines.add(Component.literal(row.recipe()));
-                lines.add(text("source_operations", row.operations()));
-                lines.add(text("source_cost", row.energy(), row.high(), row.extreme()));
-                lines.add(text("compensation"));
+            for (var slot : menu.slots) if (slot.isActive()) {
+                Icon.SLOT_BACKGROUND.getBlitter().dest(x + slot.x - 1, y + slot.y - 1).blit(graphics);
             }
-            lines.add(text(row.enabled() ? "click_disable" : "click_enable"));
-            graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
-            break;
         }
     }
-    private static Component text(String key, Object... arguments) { return Component.translatable("ae2lt.large_factory." + key, arguments); }
-    private static String compact(long value) {
+    @Override public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+        super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
+        int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        if (menu.pages() > 1) {
+            String page = (menu.page() + 1) + " / " + menu.pages();
+            graphics.drawString(font, page, 168 - font.width(page), 31, color, false);
+        }
+        if (menu.component == LargeFactoryComponent.CONTROLLER) {
+            graphics.drawString(font, text("dimensions"), 8, 36, color, false);
+        }
+    }
+    private List<Component> statusLines() {
+        var s = menu.snapshot;
+        var lines = new ArrayList<Component>();
+        lines.add(LightningStatusLines.title());
+        lines.add(Component.translatable("ae2lt.gui.status.label", text("status." + s.status())));
+        lines.add(text("core." + s.core()));
+        if (processingHatch()) lines.add(text(s.passive() ? "passive" : "active"));
+        lines.add(text(s.networkEnergy() ? "network_energy" : "external_only"));
+        lines.add(LightningStatusLines.energy(s.storedEnergy(), s.energyCapacity()));
+        String operations = s.operationsPerTick() == LargeFactoryOperationBudget.UNLIMITED ? text("unlimited").getString()
+                : compact(s.remainingOperations()) + " / " + compact(s.operationsPerTick());
+        lines.add(text("operations").copy().append(": " + operations));
+        for (var issue : s.issues()) {
+            lines.add(text("issue." + issue.problem()).copy().append(" "
+                    + (issue.problem().startsWith("missing_") ? issue.expected() : issue.position().toShortString())));
+        }
+        return lines;
+    }
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (menu.pages() > 1 && PageInput.handleScroll(scrollY,
+                () -> send(LargeFactoryMenu.PAGE_PREVIOUS), () -> send(LargeFactoryMenu.PAGE_NEXT))) return true;
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+    static Component text(String key, Object... arguments) { return Component.translatable("ae2lt.large_factory." + key, arguments); }
+    static String compact(long value) {
         if (value < 10_000) return Long.toString(value);
         if (value < 1_000_000) return String.format(java.util.Locale.ROOT, "%.1fk", value / 1_000d);
         if (value < 1_000_000_000) return String.format(java.util.Locale.ROOT, "%.1fM", value / 1_000_000d);

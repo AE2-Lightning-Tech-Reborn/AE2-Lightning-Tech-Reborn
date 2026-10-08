@@ -24,7 +24,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class LargeFactoryClientProbe {
     private static final BlockPos CONTROLLER = new BlockPos(4, 103, 0);
-    private static final BlockPos HATCH = new BlockPos(4, 103, 8);
+    private static final BlockPos HATCH = CONTROLLER.south(2);
     private static int phase, ticks;
     private static boolean done;
     private static volatile boolean pending;
@@ -110,7 +110,7 @@ public final class LargeFactoryClientProbe {
                     capture("factory-expanded-720p-scale3.png");
                     mc.player.closeContainer(); server(() -> {
                         var level = mc.getSingleplayerServer().overworld();
-                        level.setBlockAndUpdate(CONTROLLER.offset(-4, -3, 0), Blocks.AIR.defaultBlockState());
+                        level.setBlockAndUpdate(CONTROLLER.offset(-1, -1, 0), Blocks.AIR.defaultBlockState());
                         open(CONTROLLER);
                     });
                 }

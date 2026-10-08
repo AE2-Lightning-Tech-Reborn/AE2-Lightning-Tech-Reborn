@@ -61,7 +61,12 @@ public final class LargeFactoryAuxBlockEntity extends BlockEntity {
     }
     @Override protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        items.deserializeNBT(registries, tag.getCompound("ProcessCores"));
+        var saved = tag.getCompound("ProcessCores").copy();
+        // ItemStackHandler otherwise restores the old size and would keep a nine-slot hatch.
+        if (LargeFactoryRegistration.component(getBlockState()) == LargeFactoryComponent.PROCESS_CORE_HATCH) {
+            saved.putInt("Size", LargeFactoryConfig.processSlots());
+        }
+        items.deserializeNBT(registries, saved);
         controllerPos = null; machine = null;
     }
 }

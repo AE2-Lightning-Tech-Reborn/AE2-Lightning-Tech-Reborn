@@ -15,7 +15,7 @@ class LargeFactoryStructureOwnershipTest {
     void intersectingFactoriesCannotAcquirePartialMembership() {
         var ownership = new LargeFactoryStructureOwnership();
         var first = ownership.claim(UUID.randomUUID(), formation(BlockPos.ZERO)).orElseThrow();
-        var overlapping = formation(new BlockPos(8, 0, 0));
+        var overlapping = formation(new BlockPos(2, 0, 0));
         UUID secondId = UUID.randomUUID();
         assertTrue(ownership.claim(secondId, overlapping).isEmpty());
         assertTrue(ownership.isCurrent(first));
@@ -39,12 +39,12 @@ class LargeFactoryStructureOwnershipTest {
     }
 
     @Test
-    void fillingInteriorAirInvalidatesImmediatelyButNearbyChangesDoNot() {
+    void changingCentralCoreInvalidatesImmediatelyButNearbyChangesDoNot() {
         var ownership = new LargeFactoryStructureOwnership();
         var binding = ownership.claim(UUID.randomUUID(), formation(BlockPos.ZERO)).orElseThrow();
         assertTrue(ownership.invalidateAt(new BlockPos(6, 0, 0)).isEmpty());
         assertTrue(ownership.isCurrent(binding));
-        assertEquals(java.util.List.of(binding), ownership.invalidateAt(new BlockPos(0, 0, 5)));
+        assertEquals(java.util.List.of(binding), ownership.invalidateAt(new BlockPos(0, 0, 1)));
         assertFalse(ownership.isCurrent(binding));
         assertFalse(ownership.owns(binding, BlockPos.ZERO));
     }

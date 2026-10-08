@@ -17,29 +17,29 @@ class LargeFactoryStructureTest {
     private static final BlockPos CONTROLLER_POS = new BlockPos(-1, 64, -1);
 
     @Test
-    void fixedLayoutHasExactShellAirAndRearPortCounts() {
+    void fixedCubeHasExactShellAndWholeRearFacePorts() {
         Map<LargeFactoryStructure.Role, Integer> counts = new EnumMap<>(LargeFactoryStructure.Role.class);
         LargeFactoryStructure.cells().forEach(cell -> counts.merge(cell.role(), 1, Integer::sum));
-        assertEquals(567, LargeFactoryStructure.cells().size());
+        assertEquals(27, LargeFactoryStructure.cells().size());
         assertEquals(Map.of(
                 LargeFactoryStructure.Role.CONTROLLER, 1, LargeFactoryStructure.Role.CORE, 1,
-                LargeFactoryStructure.Role.FRAME, 84, LargeFactoryStructure.Role.CASING, 228,
-                LargeFactoryStructure.Role.HATCH, 9, LargeFactoryStructure.Role.AIR, 244), counts);
+                LargeFactoryStructure.Role.FRAME, 12, LargeFactoryStructure.Role.CASING, 4,
+                LargeFactoryStructure.Role.HATCH, 9), counts);
         for (var cell : LargeFactoryStructure.cells()) {
             if (cell.role() == LargeFactoryStructure.Role.HATCH) {
-                assertEquals(8, cell.localPosition().getZ());
-                assertTrue(cell.localPosition().getX() >= 3 && cell.localPosition().getX() <= 5);
-                assertTrue(cell.localPosition().getY() >= 2 && cell.localPosition().getY() <= 4);
+                assertEquals(2, cell.localPosition().getZ());
+                assertTrue(cell.localPosition().getX() >= 0 && cell.localPosition().getX() <= 2);
+                assertTrue(cell.localPosition().getY() >= 0 && cell.localPosition().getY() <= 2);
             }
         }
         assertThrows(UnsupportedOperationException.class, () -> LargeFactoryStructure.cells().clear());
-        assertThrows(IllegalArgumentException.class, () -> LargeFactoryStructure.roleAt(new BlockPos(9, 0, 0)));
+        assertThrows(IllegalArgumentException.class, () -> LargeFactoryStructure.roleAt(new BlockPos(3, 0, 0)));
     }
 
     @Test
-    void coreIsFourBlocksBehindEveryFacingAndAllCellsStayUnique() {
+    void coreIsOneBlockBehindEveryFacingAndAllCellsStayUnique() {
         for (Direction facing : Direction.Plane.HORIZONTAL) {
-            assertEquals(CONTROLLER_POS.relative(facing.getOpposite(), 4),
+            assertEquals(CONTROLLER_POS.relative(facing.getOpposite(), 1),
                     LargeFactoryStructure.worldPosition(CONTROLLER_POS, LargeFactoryStructure.CORE, facing));
             assertEquals(CONTROLLER_POS, LargeFactoryStructure.worldPosition(
                     CONTROLLER_POS, LargeFactoryStructure.CONTROLLER, facing));
@@ -57,10 +57,10 @@ class LargeFactoryStructureTest {
     void formsOrdinaryFactoryWithOnePatternHatchAndNoEnergyOrProcessHatch() {
         for (Direction facing : Direction.Plane.HORIZONTAL) {
             var blocks = layout(facing, CORE_T1);
-            put(blocks, facing, new BlockPos(3, 2, 8), PATTERN_HATCH);
+            put(blocks, facing, new BlockPos(0, 0, 2), PATTERN_HATCH);
             var result = scan(facing, blocks);
             assertEquals(LargeFactoryStructure.Status.VALID, result.status(), result.diagnostics().toString());
-            assertEquals(323, result.formation().members().size());
+            assertEquals(27, result.formation().members().size());
             assertEquals(1, result.formation().hatches().size());
             assertEquals(36, result.formation().patternSlots());
             assertFalse(result.formation().firmament());
@@ -72,19 +72,19 @@ class LargeFactoryStructureTest {
         var blocks = layout(Direction.NORTH, CORE_T4);
         rearHatches(blocks, Direction.NORTH, EXPANDED_PATTERN_HATCH);
         assertEquals(1296, scan(Direction.NORTH, blocks).formation().patternSlots());
-        put(blocks, Direction.NORTH, new BlockPos(3, 2, 8), PROCESS_CORE_HATCH);
-        put(blocks, Direction.NORTH, new BlockPos(4, 2, 8), ENERGY_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(0, 0, 2), PROCESS_CORE_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(1, 0, 2), ENERGY_HATCH);
         var result = scan(Direction.NORTH, blocks);
         assertEquals(1008, result.formation().patternSlots());
         assertEquals(9, result.formation().hatches().size());
     }
 
     @Test
-    void rejectsHatchesInSideWallsFramesAndAirEvenWhenRearHatchExists() {
-        for (BlockPos illegal : new BlockPos[]{new BlockPos(0, 3, 4), new BlockPos(0, 0, 0),
-                new BlockPos(4, 3, 5), new BlockPos(2, 3, 8)}) {
+    void rejectsHatchesInSideWallsFramesAndCoreEvenWhenRearHatchExists() {
+        for (BlockPos illegal : new BlockPos[]{new BlockPos(0, 1, 1), new BlockPos(0, 0, 0),
+                new BlockPos(1, 1, 1), new BlockPos(1, 1, 0)}) {
             var blocks = layout(Direction.WEST, CORE_T2);
-            put(blocks, Direction.WEST, new BlockPos(3, 2, 8), PATTERN_HATCH);
+            put(blocks, Direction.WEST, new BlockPos(0, 0, 2), PATTERN_HATCH);
             put(blocks, Direction.WEST, illegal, EXPANDED_PATTERN_HATCH);
             var result = scan(Direction.WEST, blocks);
             assertEquals(LargeFactoryStructure.Status.INVALID, result.status());
@@ -98,10 +98,10 @@ class LargeFactoryStructureTest {
     void ordinaryRequiresProcessingHatchAndAllowsOnlyOneProcessCoreHatch() {
         var blocks = layout(Direction.NORTH, CORE_T1);
         assertEquals(LargeFactoryStructure.Status.INVALID, scan(Direction.NORTH, blocks).status());
-        put(blocks, Direction.NORTH, new BlockPos(3, 2, 8), CRYSTAL_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(0, 0, 2), CRYSTAL_HATCH);
         assertEquals(LargeFactoryStructure.Status.VALID, scan(Direction.NORTH, blocks).status());
-        put(blocks, Direction.NORTH, new BlockPos(4, 2, 8), PROCESS_CORE_HATCH);
-        put(blocks, Direction.NORTH, new BlockPos(5, 2, 8), PROCESS_CORE_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(1, 0, 2), PROCESS_CORE_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(2, 0, 2), PROCESS_CORE_HATCH);
         assertTrue(scan(Direction.NORTH, blocks).diagnostics().stream().anyMatch(d ->
                 d.problem() == LargeFactoryStructure.Problem.TOO_MANY_PROCESS_CORE_HATCHES));
     }
@@ -109,9 +109,9 @@ class LargeFactoryStructureTest {
     @Test
     void firmamentNeedsRealPatternHatchAndReadyStarshipCore() {
         var blocks = layout(Direction.EAST, FIRMAMENT_CORE);
-        put(blocks, Direction.EAST, new BlockPos(3, 2, 8), CRYSTAL_HATCH);
+        put(blocks, Direction.EAST, new BlockPos(0, 0, 2), CRYSTAL_HATCH);
         assertEquals(LargeFactoryStructure.Status.INVALID, scan(Direction.EAST, blocks).status());
-        put(blocks, Direction.EAST, new BlockPos(4, 2, 8), PATTERN_HATCH);
+        put(blocks, Direction.EAST, new BlockPos(1, 0, 2), PATTERN_HATCH);
         assertTrue(scan(Direction.EAST, blocks).formation().firmament());
         for (var readiness : new LargeFactoryStructure.FirmamentReadiness[]{
                 LargeFactoryStructure.FirmamentReadiness.OUTSIDE_STARSHIP,
@@ -127,7 +127,7 @@ class LargeFactoryStructureTest {
     void missingRequiredChunkReturnsIncompleteBeforeAnyWorldReads() {
         for (Direction facing : Direction.Plane.HORIZONTAL) {
             var blocks = layout(facing, CORE_T1);
-            put(blocks, facing, new BlockPos(3, 2, 8), PATTERN_HATCH);
+            put(blocks, facing, new BlockPos(0, 0, 2), PATTERN_HATCH);
             var chunks = new HashSet<Long>();
             blocks.keySet().forEach(p -> chunks.add(chunk(p)));
             assertTrue(chunks.size() > 1);
@@ -145,7 +145,7 @@ class LargeFactoryStructureTest {
     @Test
     void chunkDisappearingDuringReadNeverProducesAValidSnapshot() {
         var blocks = layout(Direction.NORTH, CORE_T1);
-        put(blocks, Direction.NORTH, new BlockPos(3, 2, 8), PATTERN_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(0, 0, 2), PATTERN_HATCH);
         var reads = new AtomicInteger();
         var result = LargeFactoryStructure.scan(CONTROLLER_POS, Direction.NORTH,
                 p -> reads.get() < 10,
@@ -162,7 +162,7 @@ class LargeFactoryStructureTest {
     @Test
     void incrementalScanBoundsReadsAndRechecksChunkAvailabilityBetweenSlices() {
         var blocks = layout(Direction.NORTH, CORE_T1);
-        put(blocks, Direction.NORTH, new BlockPos(3, 2, 8), PATTERN_HATCH);
+        put(blocks, Direction.NORTH, new BlockPos(0, 0, 2), PATTERN_HATCH);
         var cursor = new LargeFactoryStructure.Cursor(CONTROLLER_POS, Direction.NORTH);
         var reads = new AtomicInteger();
         LargeFactoryStructure.ScanResult result = null;
@@ -173,7 +173,7 @@ class LargeFactoryStructureTest {
             assertTrue(reads.get() - before <= 17);
         }
         assertEquals(scan(Direction.NORTH, blocks), result);
-        assertEquals(567, reads.get());
+        assertEquals(27, reads.get());
         var interrupted = new LargeFactoryStructure.Cursor(CONTROLLER_POS, Direction.NORTH);
         assertNull(interrupted.advance(17, 0, p -> true, blocks::get, p -> LargeFactoryStructure.FirmamentReadiness.READY));
         assertEquals(LargeFactoryStructure.Status.INCOMPLETE, interrupted.advance(17, 0, p -> false,
@@ -202,8 +202,8 @@ class LargeFactoryStructureTest {
 
     private static void rearHatches(Map<BlockPos, LargeFactoryComponent> blocks, Direction facing,
             LargeFactoryComponent component) {
-        for (int x = 3; x <= 5; x++) for (int y = 2; y <= 4; y++) {
-            put(blocks, facing, new BlockPos(x, y, 8), component);
+        for (int x = 0; x <= 2; x++) for (int y = 0; y <= 2; y++) {
+            put(blocks, facing, new BlockPos(x, y, 2), component);
         }
     }
 

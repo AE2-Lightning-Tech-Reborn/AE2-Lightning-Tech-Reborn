@@ -1603,7 +1603,7 @@
   "ae2lt.large_factory.recover": "Export recovery",
   "ae2lt.large_factory.entries": "Processing · toggle",
   "ae2lt.large_factory.pending": "Retained resource types: %s",
-  "ae2lt.large_factory.dimensions": "9×7×9 · nine rear ports",
+  "ae2lt.large_factory.dimensions": "3×3×3 · nine rear ports",
   "ae2lt.large_factory.operations": "Source ops / tick",
   "ae2lt.large_factory.unlimited": "Unlimited",
   "ae2lt.large_factory.energy": "External FE buffer",
@@ -1653,5 +1653,8 @@
   "ae2lt.large_factory.core.firmament_core": "Firmament · 1024/t",
   "ae2lt.large_factory.factory_status": "Factory status",
   "ae2lt.large_factory.status.identity_conflict": "Controller identity belongs to another location",
-  "ae2lt.large_factory.recover_count": "Recover (%s types)"
+  "ae2lt.large_factory.recover_count": "Recover (%s types)",
+  "ae2lt.large_factory.catalysts": "Catalysts",
+  "ae2lt.large_factory.process_cores": "Process cores",
+  "ae2lt.large_factory.status.network_offline": "ME network offline, unpowered or missing a channel"
 }

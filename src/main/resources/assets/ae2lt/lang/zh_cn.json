@@ -1603,7 +1603,7 @@
   "ae2lt.large_factory.recover": "取出恢复胶囊",
   "ae2lt.large_factory.entries": "加工条目 · 点击启停",
   "ae2lt.large_factory.pending": "待返还资源：%s 种",
-  "ae2lt.large_factory.dimensions": "9×7×9 · 背面九仓位",
+  "ae2lt.large_factory.dimensions": "3×3×3 · 背面九仓位",
   "ae2lt.large_factory.operations": "源操作／tick",
   "ae2lt.large_factory.unlimited": "无限",
   "ae2lt.large_factory.energy": "外部储能 FE",
@@ -1653,5 +1653,8 @@
   "ae2lt.large_factory.core.firmament_core": "苍穹专用 · 1024/t",
   "ae2lt.large_factory.factory_status": "工厂状态",
   "ae2lt.large_factory.status.identity_conflict": "控制器身份已被其他位置占用",
-  "ae2lt.large_factory.recover_count": "取恢复胶囊 · %s"
+  "ae2lt.large_factory.recover_count": "取恢复胶囊 · %s",
+  "ae2lt.large_factory.catalysts": "催化材料",
+  "ae2lt.large_factory.process_cores": "工艺核心",
+  "ae2lt.large_factory.status.network_offline": "ME 网络未连接或缺少能源／频道"
 }

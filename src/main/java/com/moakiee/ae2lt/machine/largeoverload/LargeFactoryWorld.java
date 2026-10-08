@@ -23,7 +23,7 @@ public final class LargeFactoryWorld {
         controllers.put(controller.getBlockPos(), controller);
         var covered = new java.util.HashSet<net.minecraft.world.level.ChunkPos>();
         var a = LargeFactoryStructure.worldPosition(controller.getBlockPos(), BlockPos.ZERO, controller.facing());
-        var b = LargeFactoryStructure.worldPosition(controller.getBlockPos(), new BlockPos(8, 6, 8), controller.facing());
+        var b = LargeFactoryStructure.worldPosition(controller.getBlockPos(), LargeFactoryStructure.MAX_CORNER, controller.facing());
         for (int x = Math.min(a.getX(), b.getX()) >> 4; x <= Math.max(a.getX(), b.getX()) >> 4; x++)
             for (int z = Math.min(a.getZ(), b.getZ()) >> 4; z <= Math.max(a.getZ(), b.getZ()) >> 4; z++)
                 covered.add(new net.minecraft.world.level.ChunkPos(x, z));

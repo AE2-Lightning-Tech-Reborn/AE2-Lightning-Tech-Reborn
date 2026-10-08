@@ -27,8 +27,8 @@ import net.neoforged.neoforge.gametest.*;
 public final class LargeFactoryGameTests {
     static final AEKey STONE = AEItemKey.of(Items.STONE), DIAMOND = AEItemKey.of(Items.DIAMOND);
     static final BlockPos CONTROLLER = new BlockPos(6, 4, 2);
-    static final BlockPos PATTERN = new BlockPos(3, 2, 8), EXPANDED = new BlockPos(5, 2, 8);
-    static final BlockPos PROCESS = new BlockPos(3, 4, 8), CRYSTAL = new BlockPos(5, 4, 8), ENERGY = new BlockPos(4, 3, 8);
+    static final BlockPos PATTERN = new BlockPos(0, 0, 2), EXPANDED = new BlockPos(2, 0, 2);
+    static final BlockPos PROCESS = new BlockPos(0, 2, 2), CRYSTAL = new BlockPos(2, 2, 2), ENERGY = new BlockPos(1, 1, 2);
 
     static final class Store implements MEStorage {
         final Map<AEKey, Long> items = new LinkedHashMap<>();
@@ -122,15 +122,15 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 300)
-    public static void rearHatchesStayIndependentAndInteriorChangesCloseImmediately(GameTestHelper h) {
+    public static void rearHatchesStayIndependentAndFrameChangesCloseImmediately(GameTestHelper h) {
         new Fixture(h, false, false).ready(f -> {
             h.assertTrue(f.hatch.inventory().size() == 36 && f.expanded.inventory().size() == 144, "36 and 144 real slots");
             h.assertTrue(f.hatch.getMainNode().getGrid() != f.expanded.getMainNode().getGrid(), "adjacent hatches must not bridge external networks");
             h.assertTrue(f.hatch.getGridConnectableSides(null).equals(Set.of(Direction.SOUTH)), "rear connection only");
             var staleEnergy = f.energy.energy();
             h.assertTrue(staleEnergy.receiveEnergy(100, false) == 100, "real external FE capability");
-            h.setBlock(f.pos(new BlockPos(2, 2, 2)), Blocks.STONE);
-            h.assertTrue(!f.controller.formed() && !f.hatch.ready(), "interior change must revoke execution synchronously");
+            h.setBlock(f.pos(BlockPos.ZERO), Blocks.STONE);
+            h.assertTrue(!f.controller.formed() && !f.hatch.ready(), "frame change must revoke execution synchronously");
             h.assertTrue(staleEnergy.receiveEnergy(100, false) == 0, "stale FE handle must stop immediately");
             h.succeed();
         });
@@ -228,7 +228,9 @@ public final class LargeFactoryGameTests {
         var f = new Fixture(h, false, false);
         h.runAfterDelay(5, () -> {
             h.setBlock(f.pos(BlockPos.ZERO), Blocks.AIR);
-            h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.lastScan() != null, "changed scan completes"))
+            h.assertTrue(!f.controller.formed(), "changing a scanned cell revokes formation immediately");
+            h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.lastScan() != null
+                            && f.controller.missing()[0] == 1, "changed scan completes"))
                     .thenExecute(() -> {
                         h.assertTrue(!f.controller.formed() && f.controller.missing()[0] == 1, "stale scanned frame cannot form a factory");
                         h.setBlock(f.pos(BlockPos.ZERO), LargeFactoryRegistration.block(LargeFactoryComponent.FRAME));
@@ -621,10 +623,10 @@ public final class LargeFactoryGameTests {
             h.assertTrue(f.hatch.controller() == null, "a public bind cannot forge ownership");
             f.hatch.bind(f.controller.getBlockPos(), f.controller.machineId());
             h.assertTrue(f.hatch.controller() == f.controller, "restored valid binding resolves");
-            var interior = f.pos(new BlockPos(2, 2, 2));
-            h.setBlock(interior, Blocks.STONE);
+            var frame = f.pos(BlockPos.ZERO);
+            h.setBlock(frame, Blocks.STONE);
             h.assertTrue(!f.controller.owns(old) && f.hatch.controller() == null, "invalidation revokes captured membership synchronously");
-            h.setBlock(interior, Blocks.AIR);
+            h.setBlock(frame, LargeFactoryRegistration.block(LargeFactoryComponent.FRAME));
             h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.formed() && f.hatch.ready(), "factory reformed"))
                     .thenExecute(() -> h.assertTrue(!f.controller.owns(old)
                             && f.controller.membership(f.hatch.getBlockPos(), f.controller.machineId()) != old,
@@ -832,6 +834,77 @@ public final class LargeFactoryGameTests {
                         h.assertTrue(stones == 0 && diamonds == 20, "real bus withdrew ten inputs and returned twenty products once");
                         h.assertTrue(f.store.get(LightningKey.HIGH_VOLTAGE) == 0 && f.controller.energyStored() == 0, "bus path preserves recipe costs");
                     }).thenSucceed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void crystalAndCoreHatchesExpandOldSavesTo36SlotsWithoutLosingContents(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var registries = h.getLevel().registryAccess();
+            h.assertTrue(f.crystal.inventory().size() == 36 && f.process.inventory().getSlots() == 36, "new auxiliary hatches have 36 slots");
+            var catalyst = new ItemStack(Items.BUDDING_AMETHYST, 8);
+            f.crystal.inventory().setItemDirect(8, catalyst.copy());
+            var oldCrystal = f.crystal.saveWithoutMetadata(registries); oldCrystal.putInt("SlotCount", 9);
+            var crystal = new LargeFactoryHatchBlockEntity(f.crystal.getBlockPos(), f.crystal.getBlockState());
+            crystal.loadWithComponents(oldCrystal, registries);
+            h.assertTrue(crystal.inventory().size() == 36 && ItemStack.matches(crystal.inventory().getStackInSlot(8), catalyst),
+                    "old nine-slot crystal hatch expands without moving or losing catalysts");
+            crystal.inventory().setItemDirect(35, catalyst.copy());
+            var crystalReloaded = new LargeFactoryHatchBlockEntity(f.crystal.getBlockPos(), f.crystal.getBlockState());
+            crystalReloaded.loadWithComponents(crystal.saveWithoutMetadata(registries), registries);
+            h.assertTrue(ItemStack.matches(crystalReloaded.inventory().getStackInSlot(35), catalyst), "crystal slot 36 survives save/reload");
+            var processCore = new ItemStack(LargeFactoryRegistration.PROCESS_CORES.get(LargeFactoryRecipeAccess.Process.SIMULATION).get());
+            f.process.inventory().setStackInSlot(8, processCore.copy());
+            var oldProcess = f.process.saveWithoutMetadata(registries); oldProcess.getCompound("ProcessCores").putInt("Size", 9);
+            var process = new LargeFactoryAuxBlockEntity(f.process.getBlockPos(), f.process.getBlockState());
+            process.loadWithComponents(oldProcess, registries);
+            h.assertTrue(process.inventory().getSlots() == 36 && ItemStack.matches(process.inventory().getStackInSlot(8), processCore),
+                    "old nine-slot core hatch expands without moving or losing cores");
+            process.inventory().setStackInSlot(35, processCore.copy());
+            var processReloaded = new LargeFactoryAuxBlockEntity(f.process.getBlockPos(), f.process.getBlockState());
+            processReloaded.loadWithComponents(process.saveWithoutMetadata(registries), registries);
+            h.assertTrue(ItemStack.matches(processReloaded.inventory().getStackInSlot(35), processCore), "core slot 36 survives save/reload");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void ae2MenuShiftClickCannotReadOrMergeIntoHiddenPages(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(h.getLevel(),
+                    new com.mojang.authlib.GameProfile(UUID.randomUUID(), "FactoryMenuQA"));
+            player.setPos(f.expanded.getBlockPos().getX(), f.expanded.getBlockPos().getY(), f.expanded.getBlockPos().getZ() + 1);
+            player.getInventory().clearContent();
+            var pattern = PatternDetailsHelper.encodeProcessingPattern(List.of(new GenericStack(STONE, 1)), List.of(new GenericStack(DIAMOND, 2)));
+            for (int i = 0; i < 36; i++) f.expanded.inventory().setItemDirect(i, pattern.copy());
+            f.expanded.inventory().setItemDirect(142, pattern.copy());
+            try {
+                var constructor = LargeFactoryMenu.class.getDeclaredConstructor(int.class, net.minecraft.world.entity.player.Inventory.class,
+                        BlockPos.class, net.minecraft.world.level.block.entity.BlockEntity.class, LargeFactoryComponent.class,
+                        net.neoforged.neoforge.items.IItemHandler.class);
+                constructor.setAccessible(true);
+                var menu = constructor.newInstance(1, player.getInventory(), f.expanded.getBlockPos(), f.expanded,
+                        LargeFactoryComponent.EXPANDED_PATTERN_HATCH, f.expanded.inventory().toItemHandler());
+                h.assertTrue(menu.pages() == 4 && menu.getSlots(appeng.menu.SlotSemantics.ENCODED_PATTERN).size() == 144, "AE2 semantic slots retain all four pages");
+                menu.quickMoveStack(player, 142);
+                h.assertTrue(f.expanded.inventory().getStackInSlot(142).getCount() == 1, "hidden source cannot be extracted");
+                player.getInventory().setItem(9, pattern.copy());
+                menu.quickMoveStack(player, menu.getSlots(appeng.menu.SlotSemantics.PLAYER_INVENTORY).getFirst().index);
+                h.assertTrue(player.getInventory().getItem(9).getCount() == 1
+                        && f.expanded.inventory().getStackInSlot(142).getCount() == 1
+                        && f.expanded.inventory().getStackInSlot(36).isEmpty(), "full visible page cannot spill or merge into hidden pages");
+                menu.setPage(3);
+                menu.quickMoveStack(player, menu.getSlots(appeng.menu.SlotSemantics.PLAYER_INVENTORY).getFirst().index);
+                h.assertTrue(player.getInventory().getItem(9).isEmpty() && f.expanded.inventory().getStackInSlot(108).getCount() == 1,
+                        "visible fourth page accepts shift-insert");
+                menu.quickMoveStack(player, 0);
+                h.assertTrue(f.expanded.inventory().getStackInSlot(0).getCount() == 1, "previous page remains protected after navigation");
+                menu.quickMoveStack(player, 108);
+                h.assertTrue(f.expanded.inventory().getStackInSlot(108).isEmpty(), "visible fourth page allows shift-extraction");
+                menu.setPage(99);
+                h.assertTrue(menu.page() == 3, "page is bounded");
+            } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+            h.succeed();
         });
     }
 

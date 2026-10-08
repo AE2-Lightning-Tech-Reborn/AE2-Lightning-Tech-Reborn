@@ -10,18 +10,13 @@ public final class LargeFactoryConfig {
     private static final List<ModConfigSpec.LongValue> THROUGHPUT = new ArrayList<>();
     private static final List<ModConfigSpec.LongValue> CAPACITY = new ArrayList<>();
     private static ModConfigSpec.IntValue energyMultiplier;
-    private static ModConfigSpec.IntValue processSlots;
-    private static ModConfigSpec.IntValue crystalSlots;
+    public static final int AUXILIARY_SLOTS = 36;
     private LargeFactoryConfig() { }
 
     public static void define(ModConfigSpec.Builder builder) {
         builder.push("largeOverloadFactory");
         energyMultiplier = builder.comment("FE multiplier per source operation; firmament mode always uses zero processing FE.")
                 .defineInRange("energyMultiplier", 2, 1, 1024);
-        processSlots = builder.comment("Slots in newly placed process-core hatches; existing inventories keep their saved size.")
-                .defineInRange("processCoreSlots", 9, 8, 36);
-        crystalSlots = builder.comment("Slots in newly placed crystal hatches; existing inventories keep their saved size.")
-                .defineInRange("crystalSlots", 9, 1, 36);
         for (int tier = 0; tier < 4; tier++) {
             builder.push("tier" + (tier + 1));
             OPERATIONS.add(builder.comment("Cumulative source operations per server tick, shared by every hatch. 0 removes the operation cap; resource and server work budgets still apply.")
@@ -34,8 +29,8 @@ public final class LargeFactoryConfig {
         }
         builder.pop();
     }
-    public static int processSlots() { return processSlots.get(); }
-    public static int crystalSlots() { return crystalSlots.get(); }
+    public static int processSlots() { return AUXILIARY_SLOTS; }
+    public static int crystalSlots() { return AUXILIARY_SLOTS; }
     public static int tier(LargeFactoryComponent core) {
         return switch (core) { case CORE_T2 -> 1; case CORE_T3 -> 2; case CORE_T4 -> 3; default -> 0; };
     }
