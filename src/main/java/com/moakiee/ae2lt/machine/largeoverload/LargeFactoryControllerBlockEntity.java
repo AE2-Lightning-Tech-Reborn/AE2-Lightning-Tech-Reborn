@@ -73,6 +73,14 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     public boolean owns(BlockPos position, UUID machine) {
         return machineId.equals(machine) && binding != null && binding.owns(position);
     }
+    LargeFactoryStructureOwnership.Binding membership(BlockPos position, UUID machine) {
+        return owns(position, machine) ? binding : null;
+    }
+    boolean owns(LargeFactoryStructureOwnership.Binding membership) {
+        // Membership was checked when the hatch bound. Every member is revoked together;
+        // an old token must not inherit a replacement formation on this controller.
+        return membership != null && binding == membership && membership.isCurrent();
+    }
     public boolean contains(BlockPos position) {
         var a = LargeFactoryStructure.worldPosition(worldPosition, BlockPos.ZERO, facing());
         var b = LargeFactoryStructure.worldPosition(worldPosition, new BlockPos(8, 6, 8), facing());
@@ -211,9 +219,8 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
                 Math.max(0, LargeFactoryConfig.throughput(core) - energyReceived)));
         if (!simulate && accepted > 0) {
             account.externalFE += accepted;
-            LargeFactoryLedger.get((net.minecraft.server.level.ServerLevel) level).setDirty();
+            ledger.setDirty();
             energyReceived += accepted;
-            setChanged();
         }
         return (int) accepted;
     }
@@ -225,7 +232,8 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         account.externalFE -= fromBuffer;
         ledger.setDirty();
         energyUsed += total;
-        setChanged();
+        // FE is saved only by the ledger; throughput is transient. No block NBT changed,
+        // so a chunk/comparator notification for each committed copy is unnecessary.
     }
     public boolean enterExecution() {
         if (executing || !formed() || energyAccount() == null) return false;

@@ -57,6 +57,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     private UUID accountId = UUID.randomUUID();
     private BlockPos controllerPos;
     private LargeFactoryControllerBlockEntity boundController;
+    private LargeFactoryStructureOwnership.Binding boundMembership;
     private UUID machine;
     private boolean linked;
     private boolean passive;
@@ -168,6 +169,7 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         boolean changed = linked != next || !java.util.Objects.equals(controllerPos, controller) || !java.util.Objects.equals(machine, id);
         controllerPos = controller; machine = id; linked = next;
         boundController = next && level != null && level.getBlockEntity(controller) instanceof LargeFactoryControllerBlockEntity c ? c : null;
+        boundMembership = boundController == null ? null : boundController.membership(worldPosition, id);
         if (changed) {
             onGridConnectableSidesChanged(); accessChanged();
             availability.clear(); availabilityGrid = null;
@@ -177,11 +179,20 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     public LargeFactoryControllerBlockEntity controller() {
         if (!linked || level == null || boundController == null || boundController.isRemoved()) return null;
         // The opaque ownership token is revoked before block-change/chunk-unload callbacks can reenter.
-        return boundController.owns(worldPosition, machine) ? boundController : null;
+        return boundController.owns(boundMembership) ? boundController : null;
     }
-    public boolean ready() { return loadedEndpoint() && controller() != null && activeEndpoint(); }
+    LargeFactoryControllerBlockEntity readyController() {
+        if (!loadedEndpoint()) return null;
+        var controller = controller();
+        return controller != null && activeEndpoint() ? controller : null;
+    }
+    public boolean ready() { return readyController() != null; }
     boolean ready(LargeFactoryControllerBlockEntity expected) {
         return expected != null && loadedEndpoint() && controller() == expected && activeEndpoint();
+    }
+    boolean ready(LargeFactoryControllerBlockEntity expected, IGrid grid) {
+        return expected != null && grid != null && loadedEndpoint() && controller() == expected
+                && getMainNode().isActive() && getMainNode().getGrid() == grid && account() != null;
     }
     private boolean loadedEndpoint() {
         return !isRemoved() && level != null && level.getBlockEntity(worldPosition) == this;
@@ -342,7 +353,9 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         return entry;
     }
     LargeFactoryRecipe bindRecipe(Entry entry, Map<AEKey, Long> actual) {
-        var controller = controller();
+        return bindRecipe(entry, actual, controller());
+    }
+    LargeFactoryRecipe bindRecipe(Entry entry, Map<AEKey, Long> actual, LargeFactoryControllerBlockEntity controller) {
         if (controller == null || !enabled(entry) || !containsEntry(entry)) return null;
         if (entry.bound != null && actual.equals(entry.signature) && controller.access().allows(entry.bound.process()) && hasCatalyst(entry.bound)) return entry.bound;
         if (!actual.equals(entry.signature)) { entry.signature = Map.copyOf(actual); entry.searchCursor = 0; entry.bound = null; entry.operations = 0; }
@@ -374,15 +387,21 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
         return publishedPatterns;
     }
     @Override public boolean isBusy() {
-        var controller = controller();
+        return availableController() == null;
+    }
+    private LargeFactoryControllerBlockEntity availableController() {
+        if (passive || processing) return null;
+        var controller = readyController();
         var account = account();
-        return passive || processing || !ready(controller) || account == null || !account.resources.isEmpty()
-                || controller.budget().remainingOperations(level.getGameTime()) <= 0;
+        return controller == null || account == null || !account.resources.isEmpty()
+                || controller.budget().remainingOperations(level.getGameTime()) <= 0 ? null : controller;
     }
     @Override public long getBatchCapacity(IPatternDetails details) {
-        if (isBusy()) return 0;
+        var controller = availableController();
+        if (controller == null) return 0;
         var entry = find(details);
-        return entry == null ? 0 : controller().budget().remainingOperations(level.getGameTime()) / Math.max(1, entry.operations);
+        return entry == null || controller() != controller ? 0
+                : controller.budget().remainingOperations(level.getGameTime()) / Math.max(1, entry.operations);
     }
     @Override public long pushBatch(IPatternDetails details, KeyCounter[] template, long requested) {
         return pushBatchWithReturns(details, template, requested, null);
@@ -457,7 +476,8 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
     void ledgerChanged() {
         if (level instanceof ServerLevel server) { if (ledger == null) ledger = LargeFactoryLedger.get(server); ledger.setDirty(); }
         nextReturnTick = 0;
-        saveChanges();
+        // Resource balances and commits live only in SavedData. Inventory, mode and account
+        // identity changes separately save block NBT at their own mutation sites.
     }
     UUID origin(IGrid grid) {
         var account = account();
@@ -588,6 +608,6 @@ public final class LargeFactoryHatchBlockEntity extends AENetworkedBlockEntity
             var id = ResourceLocation.tryParse(value.getAsString());
             if (id != null) disabledRecipes.add(id);
         }
-        linked = false; controllerPos = null; boundController = null; machine = null; dirtyPatterns = true; resourcesReleased = false;
+        linked = false; controllerPos = null; boundController = null; boundMembership = null; machine = null; dirtyPatterns = true; resourcesReleased = false;
     }
 }

@@ -27,21 +27,25 @@ public final class LargeFactoryExecutor {
 
     public static Quote quote(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
             Map<AEKey, Long> inputs, long requested) {
-        if (requested <= 0 || !hatch.ready()) return null;
-        var controller = hatch.controller();
-        return quote(hatch, entry, inputs, requested, controller);
+        if (requested <= 0) return null;
+        var controller = hatch.readyController();
+        if (controller == null) return null;
+        return quote(hatch, entry, inputs, requested, controller, hatch.account(), hatch.getMainNode().getGrid());
     }
     private static Quote quote(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
-            Map<AEKey, Long> inputs, long requested, LargeFactoryControllerBlockEntity controller) {
+            Map<AEKey, Long> inputs, long requested, LargeFactoryControllerBlockEntity controller,
+            LargeFactoryLedger.Account account, IGrid grid) {
         if (requested <= 0) return null;
-        var recipe = hatch.bindRecipe(entry, inputs);
-        var account = hatch.account();
-        var grid = hatch.getMainNode().getGrid();
+        var recipe = hatch.bindRecipe(entry, inputs, controller);
         if (recipe == null || account == null || grid == null || hatch.origin(grid) == null) return null;
         long operationsPerCopy = entry.operations();
         long copies = Math.min(requested, controller.budget().remainingOperations(hatch.getLevel().getGameTime()) / operationsPerCopy);
-        for (long amount : inputs.values()) copies = Math.min(copies, Long.MAX_VALUE / amount);
-        for (long amount : entry.outputs.values()) copies = Math.min(copies, Long.MAX_VALUE / amount);
+        // Binding already established positive long-valued amounts. One copy cannot overflow
+        // scaling; only larger batches need per-key multiplication limits.
+        if (copies > 1) {
+            for (long amount : inputs.values()) copies = Math.min(copies, Long.MAX_VALUE / amount);
+            for (long amount : entry.outputs.values()) copies = Math.min(copies, Long.MAX_VALUE / amount);
+        }
         long energy;
         try { energy = LargeFactoryConfig.energy(recipe); }
         catch (ArithmeticException overflow) { hatch.status("cost_overflow"); return null; }
@@ -57,8 +61,9 @@ public final class LargeFactoryExecutor {
         if (copies <= 0) { hatch.status("missing_lightning"); return null; }
         operations = Math.multiplyExact(copies, operationsPerCopy);
         long totalEnergy = Math.multiplyExact(energy, operations);
-        if (totalEnergy > controller.energyStored()) {
-            long deficit = totalEnergy - controller.energyStored();
+        long storedEnergy = controller.energyStored();
+        if (totalEnergy > storedEnergy) {
+            long deficit = totalEnergy - storedEnergy;
             double availableAE = account.energyCreditAE;
             if (controller.allowNetworkEnergy()) {
                 double need = Math.max(0, PowerUnit.FE.convertTo(PowerUnit.AE, deficit) - availableAE);
@@ -87,9 +92,9 @@ public final class LargeFactoryExecutor {
     }
     private static long execute(LargeFactoryHatchBlockEntity hatch, LargeFactoryHatchBlockEntity.Entry entry,
             Map<AEKey, Long> inputs, long requested, DeferredCraftingProvider.OutputSink returns, boolean passive, Quote prepared) {
-        if (!hatch.ready() || (!passive && hatch.passive()) || hatch.processing()
+        var controller = hatch.readyController();
+        if (controller == null || (!passive && hatch.passive()) || hatch.processing()
                 || !LargeFactoryWorkBudget.take(hatch, LargeFactoryWorkBudget.Work.DISPATCH)) return 0;
-        var controller = hatch.controller();
         var account = hatch.account();
         if (account == null || (!passive && !account.resources.isEmpty()) || !controller.enterExecution()) return 0;
         hatch.processing(true);
@@ -97,7 +102,7 @@ public final class LargeFactoryExecutor {
             long generation = controller.capabilityVersion();
             var grid = hatch.getMainNode().getGrid();
             // Readiness was checked at entry. Revalidate again after pricing, which can call ME.
-            var quote = prepared == null ? quote(hatch, entry, inputs, requested, controller) : prepared;
+            var quote = prepared == null ? quote(hatch, entry, inputs, requested, controller, account, grid) : prepared;
             if (quote == null || !current(hatch, controller, grid, generation)) return 0;
             if (prepared != null && (quote.grid() != grid || quote.capabilityVersion() != generation
                     || hatch.bindRecipe(entry, inputs) != quote.recipe()
@@ -181,7 +186,7 @@ public final class LargeFactoryExecutor {
 
     private static boolean current(LargeFactoryHatchBlockEntity hatch, LargeFactoryControllerBlockEntity controller,
             IGrid grid, long generation) {
-        return hatch.ready(controller) && hatch.getMainNode().getGrid() == grid
+        return hatch.ready(controller, grid)
                 && controller.capabilityVersion() == generation;
     }
     private static boolean withdraw(LargeFactoryHatchBlockEntity hatch, IGrid grid, AEKey key, long amount) {

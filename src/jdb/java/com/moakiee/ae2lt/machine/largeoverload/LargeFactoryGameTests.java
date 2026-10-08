@@ -574,6 +574,65 @@ public final class LargeFactoryGameTests {
         });
     }
 
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void eachEnergyAndProductionMutationDirtiesOnlyAuthoritativeResourceData(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var entry = f.pattern(1);
+            f.store.put(LightningKey.HIGH_VOLTAGE, 8);
+            f.controller.toggleNetworkEnergy();
+            var ledger = LargeFactoryLedger.get(h.getLevel());
+            var registry = h.getLevel().registryAccess();
+            var controllerNbt = f.controller.saveWithoutMetadata(registry);
+            var hatchNbt = f.hatch.saveWithoutMetadata(registry);
+            ledger.setDirty(false);
+            h.assertTrue(f.controller.receiveEnergy(1000, false) == 1000 && ledger.isDirty(), "FE receipt immediately dirties SavedData");
+            var produced = new KeyCounter();
+            for (int i = 0; i < 8; i++) {
+                ledger.setDirty(false);
+                h.assertTrue(f.hatch.pushPattern(entry.pattern, f.inputs(1), out -> {
+                    h.assertTrue(ledger.isDirty(), "durable commit is dirty before the output callback");
+                    out.forEach(e -> produced.add(e.getKey(), e.getLongValue())); return true;
+                }), "successive single-copy commit");
+                h.assertTrue(ledger.isDirty(), "every commit remains observable after a save clears dirty state");
+            }
+            h.assertTrue(produced.get(DIAMOND) == 16 && f.controller.energyStored() == 840 && f.hatch.account().empty(), "eight exact payments and returns");
+            h.assertTrue(controllerNbt.equals(f.controller.saveWithoutMetadata(registry))
+                    && hatchNbt.equals(f.hatch.saveWithoutMetadata(registry)), "resource execution does not mutate block NBT");
+            try {
+                var load = LargeFactoryLedger.class.getDeclaredMethod("load", CompoundTag.class, HolderLookup.Provider.class);
+                load.setAccessible(true);
+                var restored = (LargeFactoryLedger) load.invoke(null, ledger.save(new CompoundTag(), registry), registry);
+                h.assertTrue(restored.claim(f.controller.machineId(), h.getLevel(), f.controller.getBlockPos()).externalFE == 840, "post-commit FE reloads from the ledger");
+                var restoredHatch = restored.claim(f.hatch.accountId(), h.getLevel(), f.hatch.getBlockPos());
+                h.assertTrue(restoredHatch.commitSequence == 8 && restoredHatch.empty(), "delivered outputs cannot reappear after reload");
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void capturedMembershipRejectsWrongOwnerAndOldFormation(GameTestHelper h) {
+        new Fixture(h, false, false).ready(f -> {
+            var old = f.controller.membership(f.hatch.getBlockPos(), f.controller.machineId());
+            h.assertTrue(old != null && f.controller.owns(old), "valid member captures the live formation");
+            h.assertTrue(f.controller.membership(f.hatch.getBlockPos(), UUID.randomUUID()) == null
+                    && f.controller.membership(f.controller.getBlockPos().above(20), f.controller.machineId()) == null, "foreign id and position cannot acquire membership");
+            f.hatch.bind(f.controller.getBlockPos(), UUID.randomUUID());
+            h.assertTrue(f.hatch.controller() == null, "a public bind cannot forge ownership");
+            f.hatch.bind(f.controller.getBlockPos(), f.controller.machineId());
+            h.assertTrue(f.hatch.controller() == f.controller, "restored valid binding resolves");
+            var interior = f.pos(new BlockPos(2, 2, 2));
+            h.setBlock(interior, Blocks.STONE);
+            h.assertTrue(!f.controller.owns(old) && f.hatch.controller() == null, "invalidation revokes captured membership synchronously");
+            h.setBlock(interior, Blocks.AIR);
+            h.startSequence().thenWaitUntil(() -> h.assertTrue(f.controller.formed() && f.hatch.ready(), "factory reformed"))
+                    .thenExecute(() -> h.assertTrue(!f.controller.owns(old)
+                            && f.controller.membership(f.hatch.getBlockPos(), f.controller.machineId()) != old,
+                            "an old member token never inherits the replacement formation"))
+                    .thenSucceed();
+        });
+    }
+
     @GameTest(template = "empty", timeoutTicks = 100)
     @SuppressWarnings("unchecked")
     public static void builderUsesActualInventoryAndHonorsCancelledPlacements(GameTestHelper h) {
