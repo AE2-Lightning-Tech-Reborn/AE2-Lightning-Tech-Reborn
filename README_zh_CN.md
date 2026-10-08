@@ -1,4 +1,4 @@
-# AE2 闪电科技：重生 — Forge 1.20.1 移植版
+# AE2 闪电科技：重生 — Forge 1.20.1 GTL 移植版
 
 [English](README.md)
 
@@ -6,7 +6,7 @@
 
 > 必需依赖 AE2 与 雷电核心：重生 · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
 
-本分支是持续维护的 Forge 1.20.1 移植。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
+本分支是持续维护的 Forge 1.20.1 GTL 移植，包含按 GTLCore 是否加载启用的兼容层。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
 
 ## 主要内容
 
@@ -25,12 +25,14 @@
 | Minecraft 1.20.1 | 必需 |
 | Forge 47.1.3+ | 必需 |
 | Applied Energistics 2 15.4.10+ | 必需 |
-| 雷电核心：重生 2.0.0-beta.3 至 `<2.1.0` | 必需 |
+| 雷电核心：重生 2.0.0-beta.5 至 `<2.1.0` | 必需 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
 
 所有可选联动均已隔离，不安装时不应影响正常启动。
+
+雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入的配套构建；仅凭 `2.0.0-beta.5` 版本号无法区分旧构建。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。
 
 ## 构建
 
@@ -40,7 +42,7 @@
 .\gradlew.bat test build
 ```
 
-可发布制品位于 `build/libs/ae2lt-forge-1.20.1-2.1.0-beta.4.jar`。
+默认构建的可发布制品位于 `build/libs/ae2lt-forge-1.20.1-gtl-2.1.0.jar`。
 带 `-slim.jar` 后缀的是开发中间制品，不应对外发布。
 
 ## 公开 API
