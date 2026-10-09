@@ -187,16 +187,160 @@ public final class TianshuDeferredReturnsGameTests {
         helper.assertTrue(data.contains("deferredDeliveryRemainders"), "blocked direct outputs persisted");
         var restored = new TimeWheelCraftingCPU(fixture.host, Long.MAX_VALUE, 31, Long.MAX_VALUE, false);
         restored.getCraftingLogic().readFromNBT(data, helper.getLevel().registryAccess());
+        helper.assertTrue(restored.getCraftingLogic().isCantStoreItems(), "loaded blocked output reports storage failure immediately");
+        var items = new KeyCounter();
+        restored.getCraftingLogic().getAllItems(items);
+        helper.assertTrue(items.get(AEItemKey.of(Items.LADDER)) == 6, "reopened status includes buffered ladders");
+        helper.assertTrue(restored.getCraftingLogic().getStored(AEItemKey.of(Items.LADDER)) == 6,
+                "loaded status has the exact buffered ladder quantity");
         fixture.disk.blocked = false;
         restored.getCraftingLogic().tickCraftingLogic(fixture.energy, fixture.service);
         helper.assertTrue(fixture.disk.items.get(AEItemKey.of(Items.LADDER)) == 6, "all six ladders delivered once");
         helper.assertTrue(fixture.disk.items.get(AEItemKey.of(Items.STICK)) == 2, "surplus sticks preserved");
         helper.assertTrue(!restored.isBusy(), "restored CPU drains fully");
+        helper.assertTrue(!restored.getCraftingLogic().isCantStoreItems(), "loaded storage warning clears after recovery");
         helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void blockedDirectOutputUpdatesTheNativeCraftingMenu(GameTestHelper helper) throws Exception {
+        runStorageStatusMenuTest(helper, false);
+    }
+
+    @GameTest(template = "empty")
+    public static void blockedProcessingOutputUpdatesTheNativeCraftingMenu(GameTestHelper helper) throws Exception {
+        runStorageStatusMenuTest(helper, true);
+    }
+
+    private static void runStorageStatusMenuTest(GameTestHelper helper, boolean processing) throws Exception {
+        var fixture = new Fixture(helper.getLevel(), true);
+        if (processing) fixture.submitProcessingJob(helper.getLevel());
+        else fixture.submitChain();
+        fixture.disk.blocked = true;
+        fixture.run(32);
+        if (processing) fixture.deliverProcessingOutputs();
+        helper.assertTrue(!fixture.cpu.getCraftingLogic().hasJob() && fixture.cpu.isBusy(),
+                "completed production keeps the CPU visible until all output is stored");
+
+        var packets = new java.util.ArrayList<appeng.core.network.ClientboundPacket>();
+        var player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(helper.getLevel(),
+                new com.mojang.authlib.GameProfile(UUID.randomUUID(), "StorageStatus"));
+        new net.minecraft.server.network.ServerGamePacketListenerImpl(helper.getLevel().getServer(),
+                new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND),
+                player, net.minecraft.server.network.CommonListenerCookie.createInitial(player.getGameProfile(), false)) {
+            @Override public void send(net.minecraft.network.protocol.Packet<?> packet) {
+                if (packet instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket custom
+                        && custom.payload() instanceof appeng.core.network.ClientboundPacket payload) {
+                    packets.add(payload);
+                }
+            }
+        };
+        var menu = new StatusMenu(player.getInventory());
+        var receivingMenu = new StatusMenu(player.getInventory());
+        menu.select(fixture.cpu);
+        try {
+            menu.broadcastChanges();
+            helper.assertTrue(menu.isCantStoreItems(), "native menu reports storage failure on completion");
+            syncMenuFields(packets, receivingMenu, helper.getLevel());
+            helper.assertTrue(receivingMenu.isCantStoreItems(), "storage warning is synchronized to the client fields");
+            var status = readStatus(packets, helper.getLevel());
+            helper.assertTrue(status.isFullStatus(), "opening completed CPU sends full status");
+            assertStoredOutput(helper, status, Items.LADDER, 6);
+            assertStoredOutput(helper, status, Items.STICK, 2);
+
+            packets.clear();
+            menu.select(null);
+            menu.broadcastChanges();
+            helper.assertTrue(!menu.isCantStoreItems(), "leaving blocked CPU clears its warning");
+            syncMenuFields(packets, receivingMenu, helper.getLevel());
+            helper.assertTrue(!receivingMenu.isCantStoreItems(), "selection change clears synchronized warning");
+            helper.assertTrue(readStatus(packets, helper.getLevel()).getEntries().isEmpty(), "selection change clears old rows");
+            packets.clear();
+            menu.select(fixture.cpu);
+            menu.broadcastChanges();
+            helper.assertTrue(menu.isCantStoreItems(), "reselecting blocked CPU restores its warning");
+            status = readStatus(packets, helper.getLevel());
+            assertStoredOutput(helper, status, Items.LADDER, 6);
+            long ladderSerial = status.getEntries().stream()
+                    .filter(entry -> AEItemKey.of(Items.LADDER).equals(entry.getWhat()))
+                    .findFirst().orElseThrow().getSerial();
+
+            packets.clear();
+            fixture.disk.blocked = false;
+            fixture.disk.remainingCapacity = 2;
+            fixture.run(32);
+            menu.broadcastChanges();
+            helper.assertTrue(menu.isCantStoreItems(), "partial recovery retains storage warning");
+            status = readStatus(packets, helper.getLevel());
+            helper.assertTrue(!status.isFullStatus(), "open menu receives incremental quantity update");
+            var remainder = status.getEntries().stream()
+                    .filter(entry -> entry.getSerial() == ladderSerial).findFirst().orElseThrow();
+            helper.assertTrue(remainder.getStoredAmount() == 4, "open menu sees four remaining ladders");
+
+            packets.clear();
+            fixture.disk.remainingCapacity = Long.MAX_VALUE;
+            fixture.run(32);
+            menu.broadcastChanges();
+            helper.assertTrue(!menu.isCantStoreItems(), "storage warning clears after full recovery");
+            syncMenuFields(packets, receivingMenu, helper.getLevel());
+            helper.assertTrue(!receivingMenu.isCantStoreItems(), "warning removal is synchronized to client fields");
+            status = readStatus(packets, helper.getLevel());
+            helper.assertTrue(status.getEntries().size() == 2 && status.getEntries().stream().allMatch(entry -> entry.isDeleted()),
+                    "both drained rows are removed from the open menu");
+            fixture.assertFinished(helper);
+        } finally {
+            menu.removed(player);
+        }
+        helper.succeed();
+    }
+
+    private static void assertStoredOutput(GameTestHelper helper, appeng.menu.me.crafting.CraftingStatus status,
+                                           net.minecraft.world.item.Item item, long amount) {
+        var entry = status.getEntries().stream().filter(row -> AEItemKey.of(item).equals(row.getWhat()))
+                .findFirst().orElseThrow();
+        helper.assertTrue(entry.getStoredAmount() == amount && entry.getActiveAmount() == 0 && entry.getPendingAmount() == 0,
+                "completed output is displayed as stored inventory: " + item);
+    }
+
+    private static appeng.menu.me.crafting.CraftingStatus readStatus(
+            List<appeng.core.network.ClientboundPacket> packets, ServerLevel level) {
+        var packet = packets.stream().filter(appeng.core.network.clientbound.CraftingStatusPacket.class::isInstance)
+                .map(appeng.core.network.clientbound.CraftingStatusPacket.class::cast).findFirst().orElseThrow();
+        var buffer = new net.minecraft.network.RegistryFriendlyByteBuf(io.netty.buffer.Unpooled.buffer(), level.registryAccess());
+        try {
+            packet.write(buffer);
+            return appeng.core.network.clientbound.CraftingStatusPacket.decode(buffer).status();
+        } finally {
+            buffer.release();
+        }
+    }
+
+    private static void syncMenuFields(List<appeng.core.network.ClientboundPacket> packets,
+                                       StatusMenu menu, ServerLevel level) {
+        var packet = packets.stream().filter(appeng.core.network.clientbound.GuiDataSyncPacket.class::isInstance)
+                .map(appeng.core.network.clientbound.GuiDataSyncPacket.class::cast).findFirst().orElseThrow();
+        var buffer = new net.minecraft.network.RegistryFriendlyByteBuf(
+                io.netty.buffer.Unpooled.wrappedBuffer(packet.syncData()), level.registryAccess());
+        try {
+            menu.receiveServerSyncData(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    private static final class StatusMenu extends appeng.menu.me.crafting.CraftingCPUMenu {
+        StatusMenu(net.minecraft.world.entity.player.Inventory inventory) {
+            super(TYPE, 27, inventory, null);
+            setValidMenu(true);
+        }
+        void select(TimeWheelCraftingCPU cpu) { setCPU(cpu); }
     }
 
     private static final class Fixture {
         final Disk disk = new Disk();
+        final appeng.me.storage.NetworkStorage network = new appeng.me.storage.NetworkStorage();
+        final KeyCounter processingOutputs = new KeyCounter();
+        ICraftingProvider externalProvider;
         final KeyCounter returnedSeeds = new KeyCounter();
         final IEnergyService energy;
         final CraftingService service;
@@ -223,7 +367,8 @@ public final class TianshuDeferredReturnsGameTests {
             energy = (IEnergyService) Proxy.newProxyInstance(IEnergyService.class.getClassLoader(),
                     new Class<?>[]{IEnergyService.class}, (p, method, args) ->
                             method.getName().equals("extractAEPower") ? args[0] : defaultValue(method.getReturnType()));
-            var storage = proxy(IStorageService.class, Map.of("getInventory", disk, "getCachedInventory", disk.items));
+            network.mount(0, disk);
+            var storage = proxy(IStorageService.class, Map.of("getInventory", network, "getCachedInventory", disk.items));
             var gridValues = new HashMap<String, Object>();
             gridValues.put("getStorageService", storage);
             gridValues.put("getEnergyService", energy);
@@ -259,7 +404,9 @@ public final class TianshuDeferredReturnsGameTests {
                 }
             };
             service = new CraftingService(grid, storage, energy) {
-                @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) { return List.of(port); }
+                @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) {
+                    return List.of(externalProvider != null ? externalProvider : port);
+                }
             };
             gridValues.put("getCraftingService", service);
             host = new TimeWheelCraftingCpuHost() {
@@ -275,6 +422,45 @@ public final class TianshuDeferredReturnsGameTests {
                 }
             };
             cpu = new TimeWheelCraftingCPU(host, Long.MAX_VALUE, 31, Long.MAX_VALUE, false);
+            network.mount(Integer.MAX_VALUE, new MEStorage() {
+                @Override public long insert(AEKey key, long amount, Actionable mode, IActionSource source) {
+                    return cpu.getCraftingLogic().insert(key, amount, mode);
+                }
+                @Override public Component getDescription() { return Component.literal("Test CPU return routing"); }
+            });
+        }
+
+        void submitProcessingJob(ServerLevel level) {
+            var pattern = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeProcessingPattern(
+                    List.of(new GenericStack(AEItemKey.of(Items.OAK_LOG), 2)),
+                    List.of(new GenericStack(AEItemKey.of(Items.LADDER), 6),
+                            new GenericStack(AEItemKey.of(Items.STICK), 2))), level);
+            externalProvider = new ICraftingProvider() {
+                @Override public List<IPatternDetails> getAvailablePatterns() { return List.of(pattern); }
+                @Override public boolean isBusy() { return false; }
+                @Override public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs) {
+                    if (inputs[0].get(AEItemKey.of(Items.OAK_LOG)) != 2) {
+                        throw new AssertionError("processing recipe must receive both logs");
+                    }
+                    for (var output : details.getOutputs()) processingOutputs.add(output.what(), output.amount());
+                    return true;
+                }
+            };
+            var used = new KeyCounter();
+            used.add(AEItemKey.of(Items.OAK_LOG), 2);
+            disk.items.add(AEItemKey.of(Items.OAK_LOG), 2);
+            var plan = new CraftingPlan(new GenericStack(AEItemKey.of(Items.LADDER), 6), 100,
+                    false, false, used, new KeyCounter(), new KeyCounter(), Map.of(pattern, 1L));
+            var result = cpu.getCraftingLogic().trySubmitJob(host.getGrid(), plan, IActionSource.empty(), null);
+            if (!result.successful()) throw new AssertionError("processing submission failed: " + result);
+        }
+
+        void deliverProcessingOutputs() {
+            for (var output : processingOutputs) {
+                long accepted = network.insert(output.getKey(), output.getLongValue(), Actionable.MODULATE, IActionSource.empty());
+                if (accepted != output.getLongValue()) throw new AssertionError("processing output left in machine");
+            }
+            processingOutputs.clear();
         }
 
         void submitChain() {
@@ -371,13 +557,16 @@ public final class TianshuDeferredReturnsGameTests {
         final KeyCounter items = new KeyCounter();
         boolean blocked;
         Runnable beforeInsert = () -> {};
+        long remainingCapacity = Long.MAX_VALUE;
         @Override public long insert(AEKey key, long amount, Actionable mode, IActionSource source) {
             if (blocked) return 0;
+            long accepted = Math.min(amount, remainingCapacity);
             if (mode == Actionable.MODULATE) {
                 beforeInsert.run();
-                items.add(key, amount);
+                items.add(key, accepted);
+                remainingCapacity -= accepted;
             }
-            return amount;
+            return accepted;
         }
         @Override public long extract(AEKey key, long amount, Actionable mode, IActionSource source) {
             long taken = Math.min(amount, items.get(key));

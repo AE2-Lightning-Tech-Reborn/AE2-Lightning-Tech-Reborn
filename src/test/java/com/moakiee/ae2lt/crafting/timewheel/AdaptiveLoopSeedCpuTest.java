@@ -53,6 +53,8 @@ class AdaptiveLoopSeedCpuTest {
                 assertEquals(expectedLoan, run.quota());
                 assertEquals(expectedLoan, run.initialSeed());
                 for (int i = 0; i < 5; i++) run.tick(2);
+                // Final processing returns are now CPU-owned until the next storage retry.
+                run.tick(0);
                 assertEquals(0, run.remaining(), run::state);
                 assertEquals(0, run.taskCount(), run::state);
                 assertEquals(0, run.logic.getWaitingFor(POWDER), run::state);
@@ -73,6 +75,7 @@ class AdaptiveLoopSeedCpuTest {
         final long priorTick;
         final Object priorTypes;
         final java.lang.reflect.Field types;
+        final appeng.me.storage.NetworkStorage network = new appeng.me.storage.NetworkStorage();
         final List<Long> outputs = new ArrayList<>();
         long capacity;
         long networkPowder;
@@ -98,12 +101,24 @@ class AdaptiveLoopSeedCpuTest {
             priorTick = field(TickHandler.class, "tickCounter").getLong(TickHandler.instance());
             var level = fixture.level();
             var source = proxy(IActionSource.class, Map.of());
+            network.mount(0, new appeng.api.storage.MEStorage() {
+                @Override public long insert(AEKey key, long amount, Actionable mode, IActionSource src) {
+                    if (mode == Actionable.MODULATE) networkPowder += amount;
+                    return amount;
+                }
+                @Override public net.minecraft.network.chat.Component getDescription() {
+                    return net.minecraft.network.chat.Component.literal("Adaptive seed test storage");
+                }
+            });
+            var storage = proxy(IStorageService.class, Map.of("getInventory", network));
+            var grid = proxy(IGrid.class, Map.of("getStorageService", storage));
             var host = (TimeWheelCraftingCpuHost) Proxy.newProxyInstance(
                     TimeWheelCraftingCpuHost.class.getClassLoader(), new Class<?>[] {TimeWheelCraftingCpuHost.class},
                     (p, method, args) -> switch (method.getName()) {
                         case "isCpuActive" -> true;
                         case "getLevel" -> level;
                         case "getActionSource" -> source;
+                        case "getGrid" -> grid;
                         case "extractReusableSeed" -> {
                             long taken = Math.min(spareSeed, (long) args[1]);
                             if (args[2] == Actionable.MODULATE) spareSeed -= taken;
