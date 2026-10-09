@@ -16,7 +16,6 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
 import com.moakiee.ae2lt.integration.jei.LargeStackJeiItemRenderer;
-import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import com.moakiee.ae2lt.me.key.LightningKey;
@@ -52,7 +51,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     private static final int TEXTURE_WIDTH = 256;
     private static final int TEXTURE_HEIGHT = 256;
 
-    // category 鍧愭爣 = GUI 鍧愭爣 鈭?鑳屾櫙鍋忕Щ
+    // category 坐标 = GUI 坐标 − 背景偏移
     private static final int FLUID_X = 26 - BACKGROUND_U;   // 4
     private static final int FLUID_Y = 18 - BACKGROUND_V;   // 4
     private static final int FLUID_WIDTH = 16;
@@ -75,9 +74,8 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     private static final int ENERGY_TEXT_Y = BACKGROUND_HEIGHT + 2;       // 64
     private static final int TIME_TEXT_Y = BACKGROUND_HEIGHT + 12;       // 74
     private static final int LIGHTNING_TEXT_Y = BACKGROUND_HEIGHT + 22;  // 84
-    private static final int MATRIX_LINE1_Y = BACKGROUND_HEIGHT + 32;   // 94
-    private static final int MATRIX_LINE2_Y = BACKGROUND_HEIGHT + 42;   // 104
-    private static final int HEIGHT = MATRIX_LINE2_Y + 10;              // 114
+    private static final int MATRIX_TEXT_Y = BACKGROUND_HEIGHT + 32;    // 94
+    private static final int HEIGHT = MATRIX_TEXT_Y + 10;               // 104
 
     private final IDrawable icon;
     private final IDrawable background;
@@ -122,7 +120,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 .addIngredient(ForgeTypes.FLUID_STACK, fluid)
                 .addRichTooltipCallback((slotView, tooltip) -> {
                     tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.fluid_fixed", fluid.getAmount()));
-                    if (!recipe.isWaterRecipe()) {
+                    if (!recipe.isWaterRecipe() || recipe.mode() != Mode.CRYSTAL) {
                         tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.normal_only"));
                     }
                 });
@@ -134,26 +132,22 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                     .addItemStacks(expandIngredient(catalyst, perInstance))
                     .addRichTooltipCallback((recipeSlotView, tooltip) -> {
                         LargeStackCountRenderer.appendCountTooltip(tooltip, perInstance);
+                        tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.catalyst_kept"));
                         tooltip.add(Component.translatable(
                                 "jei.ae2lt.crystal_catalyzer.catalyst_parallel",
-                                perInstance,
-                                CrystalCatalyzerInventory.CATALYST_SLOT_LIMIT));
+                                perInstance));
                     });
         });
 
         var baseOutput = recipe.getOutputTemplate();
-        int matrixMultiplier = CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER;
         int baseCount = baseOutput.getCount();
-        int catalystPerInstance = Math.max(1, recipe.catalystCount());
         builder.addSlot(RecipeIngredientRole.OUTPUT, OUTPUT_X, OUTPUT_Y)
                 .setCustomRenderer(VanillaTypes.ITEM_STACK, LargeStackJeiItemRenderer.INSTANCE)
                 .addItemStack(baseOutput)
                 .addRichTooltipCallback((recipeSlotView, tooltip) -> {
                     LargeStackCountRenderer.appendCountTooltip(tooltip, baseCount);
                     tooltip.add(Component.translatable(
-                            "jei.ae2lt.crystal_catalyzer.output_base", baseCount, matrixMultiplier));
-                    tooltip.add(Component.translatable(
-                            "jei.ae2lt.crystal_catalyzer.output_parallel", catalystPerInstance));
+                            "jei.ae2lt.crystal_catalyzer.output_parallel"));
                 });
     }
 
@@ -177,7 +171,8 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
 
         String timeStr = recipe.mode() == Mode.CRYSTAL ? "1s" : "2s";
         var timeText = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.time", timeStr);
+                "jei.ae2lt.crystal_catalyzer.time",
+                Component.translatable(recipe.mode().translationKey()), timeStr);
         int timeX = (WIDTH - font.width(timeText)) / 2;
         guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
 
@@ -190,15 +185,11 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
         int lightningX = (WIDTH - font.width(lightningText)) / 2;
         guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
 
-        var matrixLine1 = Component.translatable("jei.ae2lt.crystal_catalyzer.matrix_note_line1");
-        int matrixLine1X = (WIDTH - font.width(matrixLine1)) / 2;
-        guiGraphics.drawString(font, matrixLine1, matrixLine1X, MATRIX_LINE1_Y, 0x404040, false);
-
-        var matrixLine2 = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.matrix_note_line2",
+        var matrixText = Component.translatable(
+                "jei.ae2lt.crystal_catalyzer.matrix_note",
                 CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER);
-        int matrixLine2X = (WIDTH - font.width(matrixLine2)) / 2;
-        guiGraphics.drawString(font, matrixLine2, matrixLine2X, MATRIX_LINE2_Y, 0x404040, false);
+        int matrixX = (WIDTH - font.width(matrixText)) / 2;
+        guiGraphics.drawString(font, matrixText, matrixX, MATRIX_TEXT_Y, 0x404040, false);
     }
 
     private void drawProcessOverlay(GuiGraphics guiGraphics, Mode mode) {

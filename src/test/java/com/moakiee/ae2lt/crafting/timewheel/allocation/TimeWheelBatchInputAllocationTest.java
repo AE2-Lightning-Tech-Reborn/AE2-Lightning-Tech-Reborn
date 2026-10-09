@@ -19,6 +19,7 @@ import appeng.api.stacks.KeyCounter;
 import appeng.crafting.inv.ListCraftingInventory;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchTaskHandle;
+import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
 import com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper;
 import com.moakiee.thunderbolt.core.crafting.batch.SharedBatchInputPattern;
@@ -89,6 +90,177 @@ class TimeWheelBatchInputAllocationTest {
         assertEquals(2, job.waiting.list.get(OUT));
         assertEquals(2, job.waiting.list.get(CONTAINER));
         assertEquals(2, job.remainders);
+    }
+
+    @Test
+    void admissionSeesAllocatedInputsAndLimitsTheNativeBatchBeforeBulkExtraction() {
+        var flexible = new Pattern(new IPatternDetails.IInput[]{input(null, Q, G)}, List.of(stack(OUT)), false);
+        var exact = new Pattern(new IPatternDetails.IInput[]{input(null, Q)}, List.of(stack(OUT)), false);
+        var tasks = new LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(flexible, 10_000L);
+        tasks.put(exact, 4L);
+        var allocator = new ExecutionInputAllocator(tasks, n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 10_000, Actionable.MODULATE);
+        stock.insert(Q, 4, Actionable.MODULATE);
+        var result = withLimiter(flexible, stock, allocator, (prototype, available) -> {
+            assertEquals(1, prototype[0].get(G));
+            assertEquals(0, prototype[0].get(Q));
+            assertTrue(available >= 64);
+            assertEquals(9_999, stock.list.get(G), "Only one prototype is reserved before admission");
+            return 64;
+        }, () -> extractInScope(flexible, stock, 10_000));
+        assertNotNull(result);
+        assertEquals(64, result.actualCopies);
+        assertEquals(64, result.scaledInputs[0].get(G));
+        assertEquals(9_936, stock.list.get(G));
+        assertEquals(4, stock.list.get(Q), "Strict sibling stock must stay protected");
+        ParallelBatchCpuHelper.reinject(result, 64, stock);
+        assertEquals(10_000, stock.list.get(G));
+        assertUnscoped(flexible, stock);
+    }
+
+    @Test
+    void zeroOrThrowingAdmissionReturnsThePrototypeAndReleasesTheScope() {
+        var pattern = new Pattern(new IPatternDetails.IInput[]{input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 10_000L), n -> n);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 10_000, Actionable.MODULATE);
+        assertNull(withLimiter(pattern, stock, allocator, (prototype, copies) -> 0,
+                () -> extractInScope(pattern, stock, 10_000)));
+        assertEquals(10_000, stock.list.get(G));
+        assertThrows(IllegalStateException.class, () -> withLimiter(pattern, stock, allocator,
+                (prototype, copies) -> { throw new IllegalStateException("admission failed"); },
+                () -> extractInScope(pattern, stock, 10_000)));
+        assertEquals(10_000, stock.list.get(G));
+        assertUnscoped(pattern, stock);
+    }
+
+    private static <T> T withLimiter(IPatternDetails pattern, ListCraftingInventory stock,
+            ExecutionInputAllocator allocator, TimeWheelBatchInputAllocation.BatchCapacityLimiter limiter,
+            java.util.function.Supplier<T> action) {
+        return TimeWheelBatchInputAllocation.withAllocator(pattern, stock, allocator, limiter, action);
+    }
+
+    @Test
+    void nativeAdmissionLimitsEachProviderAndUsesThePreparedSubmission() {
+        var pattern = new Pattern(new IPatternDetails.IInput[]{input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 10_000L), n -> n);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 10_000, Actionable.MODULATE);
+        var job = new Job();
+        long[] pushed = {0};
+        var provider = new AdmittingProvider((details, prototype, available, context) -> {
+            assertSame(pattern, details);
+            assertSame(job, context);
+            assertEquals(1, prototype[0].get(G));
+            assertEquals(9_999, stock.list.get(G));
+            return new TimeWheelBatchAdmission.PreparedBatch() {
+                @Override public long capacity() { return 64; }
+                @Override public long push(long copies) { pushed[0] += copies; return 0; }
+            };
+        });
+        var blocked = new AdmittingProvider((details, prototype, available, context) -> {
+            throw new IllegalStateException("unavailable provider");
+        });
+        var candidate = new Candidate(provider, 10_000);
+        var candidates = new java.util.ArrayList<>(List.of(candidate, new Candidate(blocked, 10_000)));
+        TimeWheelBatchInputAllocation.withAllocator(pattern, stock, allocator, () -> {
+            var result = TimeWheelBatchInputAllocation.extractWithAdmission(pattern, stock, 10_000, false,
+                    Map.of(), null, candidates, job, () -> fail("unguarded extraction"));
+            assertNotNull(result);
+            assertEquals(64, result.actualCopies);
+            assertEquals(9_936, stock.list.get(G));
+            assertEquals(List.of(candidate), candidates);
+            assertEquals(64, TimeWheelBatchInputAllocation.admittedCapacity(pattern, stock, candidate, 10_000));
+            assertEquals(10_000, TimeWheelBatchInputAllocation.admittedCapacity(pattern,
+                    new ListCraftingInventory(key -> {}), candidate, 10_000));
+            assertEquals(0, TimeWheelBatchInputAllocation.pushAdmitted(provider, pattern,
+                    ParallelBatchCpuHelper.cloneSingleCopy(result), 32, job, () -> fail("prepared push bypassed")));
+            ParallelBatchCpuHelper.markDispatched(result, 32);
+            ParallelBatchCpuHelper.reinject(result, 32, stock);
+            assertEquals(9_968, stock.list.get(G));
+            return null;
+        });
+        assertEquals(32, pushed[0]);
+        assertUnscoped(pattern, stock);
+    }
+
+    @Test
+    void foreignCpuExtractionDoesNotPrepareProvidersOrChangeTheCandidateList() {
+        var pattern = new Pattern(new IPatternDetails.IInput[]{input(null, G)}, List.of(stack(OUT)), false);
+        var stock = new ListCraftingInventory(key -> {});
+        var provider = new AdmittingProvider((details, inputs, copies, job) -> fail("foreign CPU was prepared"));
+        var candidates = new java.util.ArrayList<>(List.of(new Candidate(provider, 64)));
+        int[] calls = {0};
+        assertNull(TimeWheelBatchInputAllocation.extractWithAdmission(pattern, stock, 64, false,
+                Map.of(), null, candidates, new Job(), () -> { calls[0]++; return null; }));
+        assertEquals(1, calls[0]);
+        assertEquals(1, candidates.size());
+    }
+
+    @Test
+    void missingPrototypeLeavesCandidatesUnpreparedAndCanRetryAfterInputArrival() {
+        var pattern = new Pattern(new IPatternDetails.IInput[]{input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 64L), n -> n);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        int[] preparations = {0};
+        var provider = new AdmittingProvider((details, inputs, copies, job) -> {
+            preparations[0]++;
+            return null;
+        });
+        var candidates = new java.util.ArrayList<>(List.of(new Candidate(provider, 64)));
+        TimeWheelBatchInputAllocation.withAllocator(pattern, stock, allocator, () -> {
+            assertNull(TimeWheelBatchInputAllocation.extractWithAdmission(pattern, stock, 64, false,
+                    Map.of(), null, candidates, new Job(), () -> fail("unguarded extraction")));
+            assertEquals(0, preparations[0]);
+            assertEquals(1, candidates.size());
+            stock.insert(G, 64, Actionable.MODULATE);
+            var result = TimeWheelBatchInputAllocation.extractWithAdmission(pattern, stock, 64, false,
+                    Map.of(), null, candidates, new Job(), () -> fail("unguarded extraction"));
+            assertNotNull(result);
+            assertEquals(64, result.actualCopies);
+            assertEquals(1, preparations[0]);
+            ParallelBatchCpuHelper.reinject(result, 64, stock);
+            assertEquals(64, stock.list.get(G));
+            return null;
+        });
+    }
+
+    private record Candidate(IBatchCraftingProvider provider, long capacity) implements TimeWheelBatchCandidate {
+        @Override public IBatchCraftingProvider ae2lt$provider() { return provider; }
+        @Override public long ae2lt$capacity() { return capacity; }
+    }
+
+    @FunctionalInterface
+    private interface Preparation {
+        TimeWheelBatchAdmission.PreparedBatch prepare(IPatternDetails details, KeyCounter[] inputs,
+                                                       long copies, BatchJobView job);
+    }
+
+    private record AdmittingProvider(Preparation preparation) implements TimeWheelBatchAdmission {
+        @Override public PreparedBatch prepareTimeWheelBatch(IPatternDetails details, KeyCounter[] prototype,
+                                                              long copies, BatchJobView job) {
+            return preparation.prepare(details, prototype, copies, job);
+        }
+        @Override public List<IPatternDetails> getAvailablePatterns() { return List.of(); }
+        @Override public boolean isBusy() { return false; }
+        @Override public long pushBatch(IPatternDetails details, KeyCounter[] inputs, long copies) {
+            return fail("ordinary batch must not replay a prepared submission");
+        }
+    }
+
+    private static ParallelBatchCpuHelper.BulkResult extractInScope(IPatternDetails pattern,
+            ListCraftingInventory stock, long copies) {
+        return TimeWheelBatchInputAllocation.extract(pattern, stock, copies, false, Map.of(), null,
+                () -> fail("LT scope must retain input allocation"));
+    }
+
+    private static void assertUnscoped(IPatternDetails pattern, ListCraftingInventory stock) {
+        var calls = new AtomicInteger();
+        TimeWheelBatchInputAllocation.extract(pattern, stock, 1, false, Map.of(), null,
+                () -> { calls.incrementAndGet(); return null; });
+        assertEquals(1, calls.get(), "Admission must release the scoped CPU and inventory");
     }
 
     @Test
