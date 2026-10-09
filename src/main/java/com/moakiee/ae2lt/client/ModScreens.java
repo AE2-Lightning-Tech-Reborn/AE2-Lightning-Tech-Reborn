@@ -67,6 +67,7 @@ public class ModScreens {
             MenuScreens.register(LightningCollectorMenu.TYPE, ModScreens::createLightningCollectorScreen);
             MenuScreens.register(OverloadProcessingFactoryMenu.TYPE, ModScreens::createOverloadProcessingFactoryScreen);
             MenuScreens.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
+            MenuScreens.register(com.moakiee.ae2lt.machine.largeoverload.LargeFactoryMenu.TYPE, com.moakiee.ae2lt.client.machine.LargeFactoryScreen::new);
             MenuScreens.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
             MenuScreens.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
             MenuScreens.register(FrequencyMenu.TYPE, FrequencyScreen::new);

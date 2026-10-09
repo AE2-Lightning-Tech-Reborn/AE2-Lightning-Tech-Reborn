@@ -136,6 +136,18 @@
     "ae2lt:red_pigmee_framed_building_slab",
     "ae2lt:black_pigmee_building_slab",
     "ae2lt:black_pigmee_framed_building_slab",
-    "ae2lt:overloaded_io_port"
+    "ae2lt:overloaded_io_port",
+    "ae2lt:large_overload_controller",
+    "ae2lt:large_overload_frame",
+    "ae2lt:large_overload_casing",
+    "ae2lt:large_overload_core_t1",
+    "ae2lt:large_overload_core_t2",
+    "ae2lt:large_overload_core_t3",
+    "ae2lt:large_overload_core_t4",
+    "ae2lt:large_overload_pattern_hatch",
+    "ae2lt:large_overload_expanded_pattern_hatch",
+    "ae2lt:large_overload_crystal_hatch",
+    "ae2lt:large_overload_process_core_hatch",
+    "ae2lt:large_overload_energy_hatch"
   ]
 }

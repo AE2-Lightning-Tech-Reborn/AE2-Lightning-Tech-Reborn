@@ -1,0 +1,31 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/machine/largeoverload/LargeFactoryGameTests.java',
+                '**/machine/largeoverload/LargeFactoryActiveTimingTests.java',
+                '**/machine/largeoverload/LargeFactoryNativeTimingTests.java'])
+        def timing = providers.gradleProperty('ae2ltLargeFactoryTiming').getOrElse('false').toBoolean()
+        def crystalScienceJar = providers.gradleProperty('ae2ltCrystalScienceJar')
+        if (crystalScienceJar.isPresent()) {
+            def remapType = project.buildscript.classLoader.loadClass('net.minecraftforge.gradle.userdev.tasks.RenameJarSrg2Mcp')
+            def remap = tasks.register('remapLargeFactoryCrystalScienceTestJar', remapType) {
+                input = file(crystalScienceJar.get())
+                mappings = tasks.named('advancedAeMcpMappings').flatMap { it.output }
+                output = layout.buildDirectory.file('large-factory-cs-test/ae2cs-dev.jar')
+                signatureRemoval = true
+            }
+            dependencies.add('jdbRuntimeOnly', files(remap.flatMap { it.output }))
+            tasks.named('compileJdbJava').configure { dependsOn remap }
+        }
+        minecraft.runs.interfaceIoGameTestServer {
+            // A saved GameTest world retains factories and their global work-budget registrations.
+            // Use a fresh world for each invocation so earlier benchmark machines cannot consume grants.
+            def runId = providers.gradleProperty('ae2ltLargeFactoryRunId').getOrElse('run-' + System.currentTimeMillis())
+            workingDirectory layout.buildDirectory.dir('large-factory-runs/' + runId).get().asFile
+            property 'forge.enabledGameTestNamespaces', timing
+                    ? 'ae2lt_large_factory_active,ae2lt_large_factory_native,ae2lt_large_factory'
+                    : 'ae2lt_large_factory'
+            property 'forge.logging.console.level', 'info'
+            jvmArgs '-Xms512m', '-Xmx3g'
+        }
+    }
+}

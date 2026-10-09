@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "MPM",
+    "PFP",
+    "MPM"
+  ],
+  "key": {
+    "M": {
+      "item": "ae2lt:lightning_collapse_matrix"
+    },
+    "P": {
+      "item": "ae2lt:overload_processor"
+    },
+    "F": {
+      "item": "ae2lt:overload_processing_factory"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "ae2lt:large_overload_core_t1"
+  }
+}

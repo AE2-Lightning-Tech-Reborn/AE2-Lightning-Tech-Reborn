@@ -172,6 +172,9 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.LIGHTNING_SIMULATION_CHAMBER);
                         acceptCreative(output, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         acceptCreative(output, ModBlocks.OVERLOAD_PROCESSING_FACTORY);
+                        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.PARTS.values().forEach(b -> output.accept(b.get()));
+                        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.PROCESS_CORES.values().forEach(i -> output.accept(i.get()));
+                        output.accept(com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.RECOVERY.get());
                         acceptCreative(output, ModBlocks.MINING_FACTORY);
 
                         // 过载 ME 网络设备
@@ -401,6 +404,7 @@ public class AE2LightningTech {
                 AE2LTCommonConfig::wirelessConnectorMaxDistance);
         ModFumos.register();
         LegacyRegistryAliases.register();
+        com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModEntities.ENTITY_TYPES.register(modEventBus);

@@ -1,0 +1,30 @@
+{
+  "type": "ae2lt:firmament_conversion",
+  "inputs": [
+    {
+      "ingredient": {
+        "item": "minecraft:stone"
+      },
+      "count": 1
+    }
+  ],
+  "results": [
+    {
+      "id": "minecraft:diamond",
+      "Count": 1
+    },
+    {
+      "id": "minecraft:emerald",
+      "Count": 2
+    },
+    {
+      "id": "minecraft:iron_ingot",
+      "Count": 3
+    },
+    {
+      "id": "minecraft:gold_ingot",
+      "Count": 4
+    }
+  ],
+  "processTime": 1
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "overloaded_pattern_provider.json"
+  ],
+  "text": {
+    "dialog_title": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "interface_stored_items": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 116
+      }
+    }
+  },
+  "slots": {
+    "CONFIG": {
+      "left": 8,
+      "top": 42,
+      "grid": "BREAK_AFTER_9COLS"
+    }
+  },
+  "widgets": {
+    "lightningStatus": {
+      "left": 156,
+      "top": 4
+    }
+  }
+}

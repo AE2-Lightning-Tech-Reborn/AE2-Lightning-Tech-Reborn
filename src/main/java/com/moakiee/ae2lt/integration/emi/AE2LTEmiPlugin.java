@@ -50,6 +50,7 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
                     new EmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class));
         }
         AE2LTEmiCategories.register(registry);
+        registry.addWorkstation(AE2LTEmiCategories.OVERLOAD_PROCESSING, EmiStack.of(com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration.block(com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent.CONTROLLER)));
         registry.addCategory(MULTIBLOCK_STRUCTURE);
         registry.addWorkstation(
                 MULTIBLOCK_STRUCTURE,

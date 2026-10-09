@@ -1,0 +1,26 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json",
+    "common/player_inventory.json"
+  ],
+  "generatedBackground": {
+    "width": 176,
+    "height": 178
+  },
+  "text": {
+    "dialog_title": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    }
+  },
+  "widgets": {
+    "lightningStatus": {
+      "left": 156,
+      "top": 4
+    }
+  }
+}

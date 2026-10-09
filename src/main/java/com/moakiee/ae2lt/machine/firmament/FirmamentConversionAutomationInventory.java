@@ -10,9 +10,15 @@ import net.minecraftforge.items.IItemHandlerModifiable;
  */
 public class FirmamentConversionAutomationInventory implements IItemHandlerModifiable {
     private final FirmamentConversionInventory inventory;
+    private final java.util.function.BooleanSupplier enabled;
 
     public FirmamentConversionAutomationInventory(FirmamentConversionInventory inventory) {
+        this(inventory, () -> true);
+    }
+
+    public FirmamentConversionAutomationInventory(FirmamentConversionInventory inventory, java.util.function.BooleanSupplier enabled) {
         this.inventory = Objects.requireNonNull(inventory, "inventory");
+        this.enabled = Objects.requireNonNull(enabled, "enabled");
     }
 
     @Override
@@ -27,7 +33,7 @@ public class FirmamentConversionAutomationInventory implements IItemHandlerModif
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack) {
-        inventory.setStackInSlot(slot, stack);
+        if (enabled.getAsBoolean()) inventory.setStackInSlot(slot, stack);
     }
 
     @Override
@@ -35,6 +41,7 @@ public class FirmamentConversionAutomationInventory implements IItemHandlerModif
         validateSlotIndex(slot);
         Objects.requireNonNull(stack, "stack");
 
+        if (!enabled.getAsBoolean()) return stack;
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -46,6 +53,7 @@ public class FirmamentConversionAutomationInventory implements IItemHandlerModif
 
     public ItemStack insertItem(ItemStack stack, boolean simulate) {
         Objects.requireNonNull(stack, "stack");
+        if (!enabled.getAsBoolean()) return stack;
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -65,7 +73,7 @@ public class FirmamentConversionAutomationInventory implements IItemHandlerModif
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         validateSlotIndex(slot);
-        if (!inventory.isOutputSlot(slot)) {
+        if (!enabled.getAsBoolean() || !inventory.isOutputSlot(slot)) {
             return ItemStack.EMPTY;
         }
         return inventory.extractItem(slot, amount, simulate);
@@ -82,7 +90,7 @@ public class FirmamentConversionAutomationInventory implements IItemHandlerModif
         if (stack.isEmpty()) {
             return false;
         }
-        return inventory.isInputSlot(slot);
+        return enabled.getAsBoolean() && inventory.isInputSlot(slot);
     }
 
     private void validateSlotIndex(int slot) {

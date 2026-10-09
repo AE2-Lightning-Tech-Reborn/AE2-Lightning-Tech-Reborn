@@ -1,0 +1,33 @@
+{
+    DataVersion: 3955,
+    size: [3, 3, 3],
+    data: [
+        {pos: [0, 0, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [1, 0, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [2, 0, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [0, 0, 1], state: "ae2lt:large_overload_frame"},
+        {pos: [1, 0, 1], state: "ae2lt:large_overload_casing"},
+        {pos: [2, 0, 1], state: "ae2lt:large_overload_frame"},
+        {pos: [0, 0, 2], state: "ae2lt:large_overload_pattern_hatch"},
+        {pos: [1, 0, 2], state: "ae2lt:large_overload_energy_hatch"},
+        {pos: [2, 0, 2], state: "ae2lt:large_overload_expanded_pattern_hatch"},
+        {pos: [0, 1, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [1, 1, 0], state: "ae2lt:large_overload_controller{facing:north}"},
+        {pos: [2, 1, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [0, 1, 1], state: "ae2lt:large_overload_casing"},
+        {pos: [1, 1, 1], state: "ae2lt:large_overload_core_t1"},
+        {pos: [2, 1, 1], state: "ae2lt:large_overload_casing"},
+        {pos: [0, 1, 2], state: "ae2lt:large_overload_casing"},
+        {pos: [1, 1, 2], state: "ae2lt:large_overload_casing"},
+        {pos: [2, 1, 2], state: "ae2lt:large_overload_casing"},
+        {pos: [0, 2, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [1, 2, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [2, 2, 0], state: "ae2lt:large_overload_frame"},
+        {pos: [0, 2, 1], state: "ae2lt:large_overload_frame"},
+        {pos: [1, 2, 1], state: "ae2lt:large_overload_casing"},
+        {pos: [2, 2, 1], state: "ae2lt:large_overload_frame"},
+        {pos: [0, 2, 2], state: "ae2lt:large_overload_process_core_hatch"},
+        {pos: [1, 2, 2], state: "ae2lt:large_overload_casing"},
+        {pos: [2, 2, 2], state: "ae2lt:large_overload_crystal_hatch"}
+    ]
+}

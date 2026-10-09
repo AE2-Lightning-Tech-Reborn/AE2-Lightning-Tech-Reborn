@@ -75,7 +75,8 @@
     "CraftConfirmReplanMixin",
     "NetworkCraftingSimulationSnapshotMixin",
     "mobgrindingutils.EntityConveyorPhaseLockMixin",
-    "TianshuStonecutterMenuMixin"
+    "TianshuStonecutterMenuMixin",
+    "LargeFactoryChunkChangeMixin"
   ],
   "client": [
     "client.IpnContainerClickerMixin",

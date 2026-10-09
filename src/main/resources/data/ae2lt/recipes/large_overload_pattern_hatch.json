@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "CPC",
+    "AQA",
+    "CPC"
+  ],
+  "key": {
+    "C": {
+      "item": "ae2lt:large_overload_casing"
+    },
+    "P": {
+      "item": "ae2:pattern_provider"
+    },
+    "A": {
+      "item": "ae2:capacity_card"
+    },
+    "Q": {
+      "item": "ae2lt:overload_processor"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "ae2lt:large_overload_pattern_hatch"
+  }
+}

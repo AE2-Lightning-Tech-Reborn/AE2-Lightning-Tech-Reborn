@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PAP",
+    "AHA",
+    "PAP"
+  ],
+  "key": {
+    "P": {
+      "item": "ae2lt:overload_processor"
+    },
+    "A": {
+      "item": "ae2:capacity_card"
+    },
+    "H": {
+      "item": "ae2lt:large_overload_pattern_hatch"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "ae2lt:large_overload_expanded_pattern_hatch"
+  }
+}
