@@ -6,6 +6,20 @@ import org.junit.jupiter.api.Test;
 
 class TransferPollScheduleTest {
     @Test
+    void freshObservationDoesNotInventASuccessfulConsumptionSample() {
+        var schedule = new TransferPollSchedule();
+        schedule.beginObservation(0);
+        assertEquals(1, schedule.failure(1, 20));
+        assertEquals(1, schedule.failure(19, 20));
+        assertEquals(1, schedule.success(20));
+        assertEquals(1, schedule.failure(21, 20));
+        assertEquals(10, schedule.success(40));
+        schedule.beginObservation(1000);
+        assertEquals(1, schedule.failure(1001, 20));
+        assertEquals(1, schedule.success(1002));
+    }
+
+    @Test
     void saturatedMachinesKeepEveryProcessingOpportunityWithBoundedPolling() {
         for (int period : new int[] {1, 2, 5, 6, 10, 20, 60}) {
             for (int idleLimit : new int[] {20, 80}) {

@@ -7,7 +7,7 @@
   "refmap": "ae2lt.refmap.json",
   "mixins": [
     "ServerLevelMixin",
-    "BlockEntityInventoryChangeMixin",
+    "appflux.InterfaceEnergyDistributionMixin",
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",
     "AEBaseMenuManagedSlotClickMixin",
@@ -62,9 +62,15 @@
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "PatternMigrationProviderBatchMixin",
+    "PatternMigrationEaeBatchMixin",
+    "PatternMigrationEaepBatchMixin",
+    "PatternMigrationRefundMixin",
+    "PatternMigrationStorageMountMixin"
   ],
   "client": [
+    "client.IpnContainerClickerMixin",
     "client.CableBusRenderStateMixin",
     "client.CableBusContainerRenderMixin",
     "client.CableBusBakedModelMixin",

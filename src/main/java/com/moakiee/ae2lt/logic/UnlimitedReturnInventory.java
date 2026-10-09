@@ -55,6 +55,13 @@ public class UnlimitedReturnInventory extends PatternProviderReturnInventory {
      * it; otherwise use the first empty slot. If all 18 type-slots are
      * occupied by different keys, reject the insert.
      */
+    // AE2 15 exposes one global key predicate rather than per-slot admission.
+    // setStack/load still restore already-owned FE, which may drain through doWork.
+    @Override
+    public boolean isAllowed(AEKey what) {
+        return super.isAllowed(what) && AllowedOutputFilter.unrestricted().matches(what);
+    }
+
     @Override
     public long insert(int slot, AEKey what, long amount, Actionable mode) {
         if (what == null || amount <= 0) return 0;

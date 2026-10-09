@@ -11,13 +11,14 @@ import net.minecraft.nbt.CompoundTag;
  * Its lifetime is bound to the owning block entity; forward the lifecycle
  * methods below from the matching BE callbacks.
  *
- * <p>All methods must be called from the server thread.
+ * <p>Connection operations require the server thread. Forward NBT and lifecycle callbacks
+ * on the owning block entity's logical side; client callbacks never create connections.
  */
 public interface FrequencyBindingAccess {
-    /** {@code -1} when unbound, {@code > 0} when bound to a valid frequency id. */
+    /** {@code -1} when unbound, {@code > 0} for a selected frequency id; existence and connectivity are separate queries. */
     int getFrequencyId();
 
-    /** Bind to a new frequency, or pass {@code -1} to clear the binding. */
+    /** Trusted server-side binding: this does not authorize a player. Non-positive IDs clear the binding. */
     void setFrequency(int frequencyId);
 
     /** Equivalent to {@code setFrequency(-1)}. */

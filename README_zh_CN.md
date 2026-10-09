@@ -1,4 +1,4 @@
-# AE2 闪电科技：重生 — Forge 1.20.1 移植版
+# AE2 闪电科技 — Forge 1.20.1 GTL 移植版
 
 [English](README.md)
 
@@ -6,7 +6,7 @@
 
 > 必需依赖 AE2 与 雷电核心：重生 · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
 
-本分支是持续维护的 Forge 1.20.1 移植。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
+本分支是持续维护的 Forge 1.20.1 GTL 移植，包含按 GTLCore 是否加载启用的兼容层。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
 
 ## 主要内容
 
@@ -16,6 +16,8 @@
 - 过载水晶生长、衰变和批量加工体系。
 - 高吞吐的过载 ME 控制器、接口、样板供应器与线缆。
 - 无线样板路由、天枢超级计算机自动化和可配置批量调度。
+- 闪电坍缩矩阵实体样板迁移，重复样板返还 ME 存储或玩家背包。
+- 过载接口合成去重与失败冷却、原生扳手方向设置及同网络相邻设备保护。
 - 苍穹织雷模块化护甲与电磁炮系统。
 
 ## 依赖
@@ -25,12 +27,14 @@
 | Minecraft 1.20.1 | 必需 |
 | Forge 47.1.3+ | 必需 |
 | Applied Energistics 2 15.4.10+ | 必需 |
-| 雷电核心：重生 2.0.0-beta.3 至 `<2.1.0` | 必需 |
+| 雷电核心：重生 GTL 2.0.0 至 `<2.1.0` | 必需 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
 
 所有可选联动均已隔离，不安装时不应影响正常启动。
+
+雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入、包含批次准入 API 的配套构建，Maven 坐标为 `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.0`。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。
 
 ## 构建
 
@@ -40,8 +44,10 @@
 .\gradlew.bat test build
 ```
 
-可发布制品位于 `build/libs/ae2lt-forge-1.20.1-2.1.0-beta.4.jar`。
+默认构建的可发布制品位于 `build/libs/ae2lt-forge-1.20.1-gtl-2.1.2-beta.jar`。
 带 `-slim.jar` 后缀的是开发中间制品，不应对外发布。
+
+该构建使用 GTL 网络协议 `gtl-10`，客户端与服务端需同时更新。
 
 ## 公开 API
 

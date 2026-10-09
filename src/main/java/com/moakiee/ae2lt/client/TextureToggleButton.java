@@ -169,6 +169,7 @@ public class TextureToggleButton extends IconButton {
         AUTO_EXPORT(texture("auto_export_off"), texture("auto_export_on")),
         // 输入按钮 (3 态):对应 ImportMode { OFF, AUTO, EJECT }。
         AUTO_IMPORT(texture("auto_input_off"), texture("auto_input_on"), texture("auto_input_ejection")),
+        PATTERN_MIGRATION(texture("auto_input_off"), texture("auto_input_ejection")),
         // 过载电源 PowerMode { NORMAL=off, OVERLOAD=on }。
         OVERLOAD_MODE(texture("overloaded_off"), texture("overloaded_on")),
         // 水晶催化器 Mode { CRYSTAL=off, DUST=on }。
@@ -180,7 +181,7 @@ public class TextureToggleButton extends IconButton {
         // 多方块控制器左侧操作栏。
         QUICK_BUILD(texture("quick_build")),
         CPU_SELECTION(
-                texture("quick_compute_on"),
+                texture("algorithm_settings"),
                 texture("lightning_high_voltage"),
                 texture("quick_compute_off")),
         QUICK_COMPUTE(texture("quick_compute_off"), texture("quick_compute_on")),

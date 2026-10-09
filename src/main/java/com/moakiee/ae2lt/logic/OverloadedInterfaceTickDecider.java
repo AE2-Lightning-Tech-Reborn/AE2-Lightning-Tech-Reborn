@@ -29,7 +29,7 @@ public final class OverloadedInterfaceTickDecider {
             boolean hasEnergyOutput,
             boolean hasFeKey,
             boolean hasInductionCard) {
-        return ((wirelessMode && hasWirelessConnections) || hasEnergyOutput)
+        return (wirelessMode ? hasWirelessConnections : hasEnergyOutput)
                 && hasFeKey
                 && hasInductionCard;
     }

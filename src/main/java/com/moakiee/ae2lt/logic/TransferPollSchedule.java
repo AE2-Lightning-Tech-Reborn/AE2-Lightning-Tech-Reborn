@@ -9,6 +9,7 @@ package com.moakiee.ae2lt.logic;
 public final class TransferPollSchedule {
     private static final int ACTIVE_LEARNING_TICKS = 100;
     private long lastSuccess = Long.MIN_VALUE;
+    private long observationStart = Long.MIN_VALUE;
     private int period = 1;
     private int idleDelay = 1;
     private boolean rejected;
@@ -25,7 +26,8 @@ public final class TransferPollSchedule {
 
     public int failure(long tick, int maximumIdleDelay) {
         rejected = true;
-        long elapsed = lastSuccess == Long.MIN_VALUE ? ACTIVE_LEARNING_TICKS : tick - lastSuccess;
+        long anchor = lastSuccess != Long.MIN_VALUE ? lastSuccess : observationStart;
+        long elapsed = anchor == Long.MIN_VALUE ? ACTIVE_LEARNING_TICKS : tick - anchor;
         if (elapsed >= 0 && elapsed < ACTIVE_LEARNING_TICKS) {
             return Math.max(1, period - (int) elapsed);
         }
@@ -37,8 +39,13 @@ public final class TransferPollSchedule {
     }
 
     public void reset() {
-        lastSuccess = Long.MIN_VALUE;
+        lastSuccess = observationStart = Long.MIN_VALUE;
         period = idleDelay = 1;
         rejected = false;
+    }
+
+    public void beginObservation(long tick) {
+        reset();
+        observationStart = tick;
     }
 }

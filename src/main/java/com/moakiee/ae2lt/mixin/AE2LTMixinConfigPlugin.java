@@ -17,7 +17,11 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             "AdvCraftingCpuLogicMixin", "advanced_ae",
             "TransfiniteCraftingLogicMixin", "gtlcore",
             "TransfiniteComputationArrayMachineMixin", "gtlcore",
-            "MECraftingCPUInterfacePartMachineMixin", "gtlcore");
+            "MECraftingCPUInterfacePartMachineMixin", "gtlcore",
+            "PatternMigrationEaeBatchMixin", "expatternprovider",
+            "PatternMigrationEaepBatchMixin", "extendedae_plus",
+            "InterfaceEnergyDistributionMixin", "appflux",
+            "IpnContainerClickerMixin", "inventoryprofilesnext");
 
     @Override
     public void onLoad(String mixinPackage) {

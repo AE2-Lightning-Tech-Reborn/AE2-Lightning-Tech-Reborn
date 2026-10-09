@@ -22,7 +22,8 @@ package com.moakiee.ae2lt.api.lightning;
  *   <li>All amounts are non-negative {@code long} values. Implementations clamp to 0
  *       on negative input.</li>
  *   <li>{@code simulate=true} performs a dry run: nothing is mutated, the return
- *       value is what would have been moved.</li>
+ *       value is what would have been moved. It does not reserve resources;
+ *       a subsequent real transfer may move less.</li>
  *   <li>{@link #getCapacity(LightningTier)} may legitimately return
  *       {@link Long#MAX_VALUE} for grid-backed handlers, since AE2 storage capacity
  *       is the sum of attached cells and not a fixed number on the providing block.
@@ -35,7 +36,8 @@ package com.moakiee.ae2lt.api.lightning;
 public interface ILightningEnergyHandler {
 
     /**
-     * @return amount of {@code tier} lightning currently stored, or 0 if unsupported.
+     * @return cached amount of {@code tier} lightning currently stored, or 0 if unsupported.
+     * This is not a guarantee of how much a subsequent extraction can obtain.
      */
     long getStored(LightningTier tier);
 

@@ -22,7 +22,7 @@ import appeng.menu.slot.AppEngSlot;
 
 import com.moakiee.ae2lt.blockentity.OverloadDeviceWorkbenchBlockEntity;
 import com.moakiee.ae2lt.blockentity.workbench.StructuralSlotSpec;
-import com.moakiee.ae2lt.device.DeviceItem;
+import com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters;
 import com.moakiee.ae2lt.device.DeviceKind;
 import com.moakiee.ae2lt.device.DeviceSlotType;
 import com.moakiee.ae2lt.menu.hub.DeviceHubDisplayRules;
@@ -351,7 +351,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
     }
 
     private List<Slot> getWorkbenchDestinationSlots(ItemStack stack) {
-        if (stack.getItem() instanceof DeviceItem) {
+        if (DeviceWorkbenchAdapters.get(stack).isPresent()) {
             return List.of(deviceSlot);
         }
         if (!host.hasInstalledDevice()) {

@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.function.BiConsumer;
 
 import org.jetbrains.annotations.Nullable;
@@ -28,6 +27,7 @@ import com.moakiee.ae2lt.logic.FilteredInsertGenericInv;
 import com.moakiee.ae2lt.logic.BufferedInterfaceInput;
 import com.moakiee.ae2lt.logic.OverloadedInterfaceLogic;
 import com.moakiee.ae2lt.logic.OverloadedInterfaceTickDecider;
+import com.moakiee.ae2lt.logic.NormalInterfaceTargetPolicy;
 import com.moakiee.ae2lt.logic.WirelessConnectionLists;
 import com.moakiee.ae2lt.logic.WirelessConnectionRange;
 import com.moakiee.ae2lt.logic.WirelessConnectionRef;
@@ -74,6 +74,8 @@ import appeng.api.storage.MEStorage;
 import appeng.api.storage.cells.ICellWorkbenchItem;
 import appeng.api.util.AECableType;
 import appeng.blockentity.misc.InterfaceBlockEntity;
+import appeng.block.crafting.PatternProviderBlock;
+import appeng.block.crafting.PushDirection;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.core.definitions.AEItems;
 import appeng.helpers.InterfaceLogic;
@@ -107,7 +109,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private static final String TAG_IMPORT_MODE   = "ImportMode";
     private static final String TAG_IO_SPEED_MODE  = "IOSpeedMode";
     private static final String TAG_CONNECTIONS    = "WirelessConnections";
-    private static final String TAG_ENERGY_DIR     = "EnergyDir";
     private static final String TAG_UNLIMITED_SLOTS = "UnlimitedSlots";
     private static final String TAG_FILTER_INV     = "FilterInv";
     private static final String TAG_IMPORT_BUFFER  = "ae2ltImportBuffer";
@@ -753,29 +754,20 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     static final class IoScheduledEntry {
-        final @Nullable OverloadedInterfaceBlockEntity owner;
         final WirelessConnection conn;
         final ConnectionState state;
         final AEKeyType keyType;
         final IoDirection direction;
         final int generation;
         long scheduledFor;
-        @Nullable WeakReference<BlockEntity> observedTarget;
 
-        IoScheduledEntry(@Nullable OverloadedInterfaceBlockEntity owner, WirelessConnection conn, ConnectionState state,
+        IoScheduledEntry(WirelessConnection conn, ConnectionState state,
                          AEKeyType keyType, IoDirection direction, int generation) {
-            this.owner = owner;
             this.conn = conn;
             this.state = state;
             this.keyType = keyType;
             this.direction = direction;
             this.generation = generation;
-        }
-
-        IoScheduledEntry(WirelessConnection conn, ConnectionState state,
-                         AEKeyType keyType, IoDirection direction,
-                         int generation) {
-            this(null, conn, state, keyType, direction, generation);
         }
     }
 
@@ -813,9 +805,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     { for (int i = 0; i < IO_WHEEL_SLOTS; i++) ioWheel[i] = new ArrayList<>(); }
     private final Map<IoEntryKey, IoScheduledEntry> ioEntries = new HashMap<>();
     private final List<IoScheduledEntry> dueIoEntries = new ArrayList<>();
-    private final Set<IoScheduledEntry> changedTargets = new HashSet<>();
-    private static final Map<BlockEntity, List<WeakReference<IoScheduledEntry>>> TARGET_CHANGE_LISTENERS =
-            new WeakHashMap<>();
     private final ImportBackpressureWaiters importBackpressureWaiters = new ImportBackpressureWaiters();
     private long lastIOWheelTick = -1;
     private long lastIOEntryRefreshTick = Long.MIN_VALUE;
@@ -828,7 +817,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private IOSpeedMode   ioSpeedMode   = IOSpeedMode.NORMAL;
     private ExportMode    exportMode    = ExportMode.OFF;
     private ImportMode    importMode    = ImportMode.OFF;
-    private @Nullable Direction energyOutputDir = null;
     private final boolean[] unlimitedSlots = new boolean[SLOT_COUNT];
     private final List<WirelessConnection> connections = new ArrayList<>();
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
@@ -1122,11 +1110,31 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         wakeWirelessIo();
     }
 
-    public @Nullable Direction getEnergyOutputDir() { return energyOutputDir; }
-    public void setEnergyOutputDir(@Nullable Direction d) {
-        if (energyOutputDir == d) return; energyOutputDir = d;
-        normalConnectionStates.clear();
-        saveChanges(); markForUpdate();
+    /** The native AE2 wrench direction controls normal item, fluid and energy I/O. */
+    public @Nullable Direction getTargetDirection() {
+        return getBlockState().getOptionalValue(PatternProviderBlock.PUSH_DIRECTION)
+                .orElse(PushDirection.ALL).getDirection();
+    }
+
+    @Override
+    public void setBlockState(BlockState state) {
+        var oldDirection = getTargetDirection();
+        super.setBlockState(state);
+        if (oldDirection != getTargetDirection() && normalConnectionStates != null) {
+            normalConnectionStates.clear();
+            if (level instanceof ServerLevel) wakeWirelessIo();
+        }
+    }
+
+    /** Shared by item/fluid transfers and Applied Flux's adjacent energy ticker. */
+    public boolean allowsNormalInteraction(Direction direction) {
+        if (interfaceMode != InterfaceMode.NORMAL) return false;
+        var targetDirection = getTargetDirection();
+        if (targetDirection != null) return direction == targetDirection;
+        var grid = getMainNode().getGrid();
+        return grid != null && level instanceof ServerLevel sl
+                && !NormalInterfaceTargetPolicy.isProtectedTarget(
+                        sl, getBlockPos().relative(direction), direction.getOpposite(), grid);
     }
 
     public void invalidateInductionCardCache() {
@@ -1274,7 +1282,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             slot.clear();
         }
         dueIoEntries.clear();
-        changedTargets.clear();
         ioEntries.clear();
         importBackpressureWaiters.clear();
         lastIOWheelTick = -1;
@@ -1385,9 +1392,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private boolean hasServerEnergyWork() {
         boolean wirelessMode = interfaceMode == InterfaceMode.WIRELESS;
         boolean hasConnections = !connections.isEmpty();
-        boolean hasEnergyOutput = energyOutputDir != null;
+        boolean hasEnergyOutput = getTargetDirection() != null;
         boolean hasFeKey = AppFluxHelper.FE_KEY != null;
-        boolean mayTransferEnergy = (wirelessMode && hasConnections) || hasEnergyOutput;
+        boolean mayTransferEnergy = wirelessMode ? hasConnections : hasEnergyOutput;
         boolean hasInduction = mayTransferEnergy && hasFeKey && hasInductionCard();
 
         return OverloadedInterfaceTickDecider.hasServerEnergyWork(
@@ -1464,6 +1471,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!activeImport && !activeExport) return;
 
         for (var direction : normalIoDirections()) {
+            if (!allowsNormalInteraction(direction)) continue;
             var conn = new WirelessConnection(
                     sl.dimension(),
                     getBlockPos().relative(direction),
@@ -1488,9 +1496,10 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     private List<Direction> normalIoDirections() {
-        if (OverloadedInterfaceTickDecider.normalIoDirectionCount(energyOutputDir != null) == 1
-                && energyOutputDir != null) {
-            return List.of(energyOutputDir);
+        var direction = getTargetDirection();
+        if (OverloadedInterfaceTickDecider.normalIoDirectionCount(direction != null) == 1
+                && direction != null) {
+            return List.of(direction);
         }
         return ALL_NORMAL_IO_DIRECTIONS;
     }
@@ -1542,7 +1551,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
         refreshIOWheel(sl, valid, now, activeImport, activeExport);
         pollIOWheel(now);
-        wakeChangedTargets(now);
         importBackpressureWaiters.resumeReady(keyTypeLockUntil, now, dueIoEntries);
 
         for (var entry : dueIoEntries) {
@@ -1628,60 +1636,13 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     private void ensureIOEntry(WirelessConnection conn, ConnectionState state,
                                AEKeyType keyType, IoDirection direction, long now) {
         var key = new IoEntryKey(conn, keyType, direction);
-        var existing = ioEntries.get(key);
-        if (existing != null) {
-            registerTargetChangeListener(existing);
+        if (ioEntries.containsKey(key)) {
             return;
         }
-        var entry = new IoScheduledEntry(this, conn, state, keyType, direction, ioScheduleGeneration);
+        var entry = new IoScheduledEntry(conn, state, keyType, direction, ioScheduleGeneration);
         entry.state.cdFor(keyType, direction).reset(ioSpeedMode);
         ioEntries.put(key, entry);
-        registerTargetChangeListener(entry);
         scheduleEntryAt(entry, now + 1);
-    }
-
-    private void registerTargetChangeListener(IoScheduledEntry entry) {
-        if (entry.direction != IoDirection.IMPORT || entry.state.storageBERef == null) return;
-        var target = entry.state.storageBERef.get();
-        if (target == null || entry.observedTarget != null && entry.observedTarget.get() == target) return;
-        entry.observedTarget = new WeakReference<>(target);
-        TARGET_CHANGE_LISTENERS.computeIfAbsent(target, ignored -> new ArrayList<>())
-                .add(new WeakReference<>(entry));
-    }
-
-    public static void onTargetInventoryChanged(BlockEntity target) {
-        if (!(target.getLevel() instanceof ServerLevel serverLevel)
-                || !serverLevel.getServer().isSameThread() || TARGET_CHANGE_LISTENERS.isEmpty()) return;
-        var listeners = TARGET_CHANGE_LISTENERS.get(target);
-        if (listeners == null) return;
-        listeners.removeIf(reference -> {
-            var entry = reference.get();
-            if (entry == null || entry.owner == null || entry.owner.isRemoved()
-                    || entry.generation != entry.owner.ioScheduleGeneration
-                    || entry.state.storageBERef == null || entry.state.storageBERef.get() != target) return true;
-            if (entry.owner.ioSpeedMode != IOSpeedMode.FAST
-                    || !importChangeNeedsWake(entry.scheduledFor, serverLevel.getGameTime())
-                    || entry.owner.changedTargets.contains(entry)) return false;
-            if (!entry.owner.isEntryStillValid(entry)) return true;
-            entry.owner.changedTargets.add(entry);
-            return false;
-        });
-        if (listeners.isEmpty()) TARGET_CHANGE_LISTENERS.remove(target);
-    }
-
-    static boolean importChangeNeedsWake(long scheduledFor, long now) {
-        return now < Long.MAX_VALUE && scheduledFor > now + 1;
-    }
-
-    private void wakeChangedTargets(long now) {
-        if (changedTargets.isEmpty()) return;
-        for (var entry : changedTargets) {
-            if (!isEntryStillValid(entry) || entry.scheduledFor <= now) continue;
-            ioWheel[(int) (entry.scheduledFor % IO_WHEEL_SLOTS)].remove(entry);
-            entry.scheduledFor = now;
-            dueIoEntries.add(entry);
-        }
-        changedTargets.clear();
     }
 
     private static boolean isWirelessIoKeyType(AEKeyType keyType) {
@@ -2486,14 +2447,16 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         var feKey = AppFluxHelper.FE_KEY; if (feKey == null) return;
         var grid = getMainNode().getGrid(); if (grid == null) return;
         if (interfaceMode == InterfaceMode.WIRELESS) tickWirelessEnergy(sl, feKey);
-        else if (energyOutputDir != null)            tickNormalEnergy(sl);
+        else if (getTargetDirection() != null)            tickNormalEnergy(sl);
     }
 
     private void tickNormalEnergy(ServerLevel sl) {
         if (!AppFluxBridge.canUseEnergyHandler()) return;
         var grid = getMainNode().getGrid(); if (grid == null) return;
-        var capCache = AppFluxBridge.createCapCache(sl, getBlockPos(), () -> grid);
-        var target = WirelessEnergyAPI.resolveEnergyTarget(capCache, energyOutputDir.getOpposite());
+        // This path only runs for an explicit direction. The automatic
+        // same-grid check in AppFlux would otherwise veto the player's choice.
+        var capCache = AppFluxBridge.createCapCache(sl, getBlockPos(), () -> null);
+        var target = WirelessEnergyAPI.resolveEnergyTarget(capCache, getTargetDirection().getOpposite());
         if (target == null) return;
         var storage = grid.getStorageService();
         WirelessEnergyAPI.sendToTarget(target, storage, machineSource, AppFluxBridge.TRANSFER_RATE);
@@ -2628,7 +2591,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         data.writeByte(ioSpeedMode.ordinal());
         data.writeByte(exportMode.ordinal());
         data.writeByte(importMode.ordinal());
-        data.writeByte(energyOutputDir != null ? energyOutputDir.get3DDataValue() : -1);
 
         long bits = 0;
         for (int i = 0; i < SLOT_COUNT; i++) {
@@ -2665,10 +2627,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         int importOrd = data.readByte();
         var newImportMode = importOrd >= 0 && importOrd < ImportMode.values().length
                 ? ImportMode.values()[importOrd] : ImportMode.OFF;
-
-        int energyOrd = data.readByte();
-        Direction newEnergyDir = energyOrd >= 0 && energyOrd < 6
-                ? Direction.from3DDataValue(energyOrd) : null;
 
         long newBits = data.readLong();
         boolean[] newUnlimitedSlots = new boolean[SLOT_COUNT];
@@ -2709,14 +2667,12 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                 || newIoSpeedMode != ioSpeedMode
                 || newExportMode != exportMode
                 || newImportMode != importMode
-                || newEnergyDir != energyOutputDir
                 || unlimitedChanged
                 || !newConnections.equals(connections)) {
             interfaceMode = newInterfaceMode;
             ioSpeedMode = newIoSpeedMode;
             exportMode = newExportMode;
             importMode = newImportMode;
-            energyOutputDir = newEnergyDir;
             System.arraycopy(newUnlimitedSlots, 0, unlimitedSlots, 0, SLOT_COUNT);
             invalidateExportConfigCache();
             connections.clear();
@@ -2735,7 +2691,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         d.putString(TAG_IO_SPEED_MODE, ioSpeedMode.name());
         d.putString(TAG_EXPORT_MODE, exportMode.name());
         d.putString(TAG_IMPORT_MODE, importMode.name());
-        d.putInt(TAG_ENERGY_DIR, energyOutputDir!=null ? energyOutputDir.get3DDataValue() : -1);
         long bits = 0;
         for (int i = 0; i < SLOT_COUNT; i++) if (unlimitedSlots[i]) bits |= (1L << i);
         d.putLong(TAG_UNLIMITED_SLOTS, bits);
@@ -2774,8 +2729,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         }
         long bits = d.getLong(TAG_UNLIMITED_SLOTS);
         for (int i = 0; i < SLOT_COUNT; i++) unlimitedSlots[i] = (bits & (1L << i)) != 0;
-        int ev = d.contains(TAG_ENERGY_DIR) ? d.getInt(TAG_ENERGY_DIR) : -1;
-        energyOutputDir = ev>=0 && ev<6 ? Direction.from3DDataValue(ev) : null;
         WirelessConnectionLists.readTagList(
                 d, TAG_CONNECTIONS, connections, MAX_WIRELESS_CONNECTIONS, WirelessConnection::fromTag);
         invalidConnectionScanCursor = 0;
@@ -2825,7 +2778,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_IO_SPEED_MODE, ioSpeedMode);
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_EXPORT_MODE, exportMode);
             com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeEnum(tag, TAG_IMPORT_MODE, importMode);
-            com.moakiee.ae2lt.logic.MemoryCardConfigSupport.writeDirection(tag, TAG_ENERGY_DIR, energyOutputDir);
             long bits = 0;
             for (int i = 0; i < SLOT_COUNT; i++) {
                 if (unlimitedSlots[i]) bits |= (1L << i);
@@ -2855,9 +2807,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                     tag, TAG_EXPORT_MODE, ExportMode.class, this.exportMode);
             this.importMode = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readEnum(
                     tag, TAG_IMPORT_MODE, ImportMode.class, this.importMode);
-            if (tag.contains(TAG_ENERGY_DIR)) {
-                this.energyOutputDir = com.moakiee.ae2lt.logic.MemoryCardConfigSupport.readDirection(tag, TAG_ENERGY_DIR);
-            }
             if (tag.contains(TAG_UNLIMITED_SLOTS)) {
                 long bits = tag.getLong(TAG_UNLIMITED_SLOTS);
                 for (int i = 0; i < SLOT_COUNT; i++) {

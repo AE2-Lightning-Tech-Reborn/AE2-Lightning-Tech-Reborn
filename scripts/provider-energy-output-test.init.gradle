@@ -1,0 +1,12 @@
+// Forge 1.20.1 real Applied Flux regressions in a fresh isolated server world.
+// ./gradlew -I scripts/provider-energy-output-test.init.gradle runInterfaceIoGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/debug/ProviderEnergyOutputGameTests.java'])
+        minecraft.runs.interfaceIoGameTestServer {
+            workingDirectory project.layout.buildDirectory.dir('provider-energy-output-gametest').get().asFile
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_provider_energy'
+            property 'forge.logging.console.level', 'info'
+        }
+    }
+}

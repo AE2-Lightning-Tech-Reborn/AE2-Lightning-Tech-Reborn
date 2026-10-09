@@ -22,6 +22,13 @@ final class WirelessBatchCadence<T> {
     int recordSuccess(T target, IPatternDetails pattern, long gameTick,
             long ownedCopies, boolean acceptedFullChunk,
             ProviderTarget.BaselineStatus baselineStatus) {
+        return recordSuccess(target, pattern, gameTick, ownedCopies,
+                acceptedFullChunk, baselineStatus, false);
+    }
+
+    int recordSuccess(T target, IPatternDetails pattern, long gameTick,
+            long ownedCopies, boolean acceptedFullChunk,
+            ProviderTarget.BaselineStatus baselineStatus, boolean requestLimited) {
         if (ownedCopies <= 0L) {
             throw new IllegalArgumentException(
                     "Successful cadence samples must own at least one copy");
@@ -30,18 +37,29 @@ final class WirelessBatchCadence<T> {
         var state = state(target, pattern);
         state.expireIfIdle(gameTick);
         state.finishCapacityAudit(gameTick);
-        boolean bulkRefill = state.bulkInterval > 0;
         boolean earlyBulkProbe = state.nextBulkProbe;
         state.nextBulkProbe = false;
-        state.observeBaseline(gameTick, ownedCopies, baselineStatus);
-        boolean rejectedSinceSuccess = state.timing.wasBlocked();
-        int delay = state.timing.success(gameTick, ownedCopies, acceptedFullChunk);
-        if (bulkRefill && ownedCopies < state.bulkCapacity) {
+        boolean shortSegmentedRefill = state.bulkInterval > 0
+                && ownedCopies < state.bulkCapacity && !acceptedFullChunk && !requestLimited
+                && (baselineStatus == ProviderTarget.BaselineStatus.PREFIX_COMPLETE
+                        || baselineStatus == ProviderTarget.BaselineStatus.RESERVOIR_PREFIX_COMPLETE);
+        if (shortSegmentedRefill) {
+            if (!earlyBulkProbe) {
+                state.bulkInterval = Math.min(MAX_COVERAGE_TICKS, state.bulkInterval + 1);
+            }
+            state.lastBulkSuccessTick = gameTick;
+            state.lastBulkAuditTick = gameTick;
+            state.bulkRapidProbes = 0;
+            state.bulkFailures = 0;
+        } else if (state.bulkInterval > 0 && ownedCopies < state.bulkCapacity) {
             state.clearBulkRefill();
             state.clearStablePrefix();
             state.timing.reset();
-            delay = state.timing.success(gameTick, ownedCopies, acceptedFullChunk);
+            earlyBulkProbe = false;
         }
+        state.observeBaseline(gameTick, ownedCopies, baselineStatus);
+        boolean rejectedSinceSuccess = state.timing.wasBlocked();
+        int delay = state.timing.success(gameTick, ownedCopies, acceptedFullChunk);
         if (state.bulkInterval > 0) {
             delay = state.bulkInterval;
         }
@@ -113,16 +131,16 @@ final class WirelessBatchCadence<T> {
         return state != null && state.singleChunkRefill;
     }
 
-    boolean usesBulkRefill(T target, IPatternDetails pattern, int provenTransaction) {
+    boolean usesBulkRefill(T target, IPatternDetails pattern, int reservoirCapacity) {
         var state = existingState(target, pattern);
         if (state != null) {
-            state.provenTransaction = provenTransaction;
-            if (state.bulkInterval > 0 && provenTransaction < state.bulkCapacity) {
+            state.reservoirCapacity = reservoirCapacity;
+            if (state.bulkInterval > 0 && reservoirCapacity < state.bulkCapacity) {
                 state.clearBulkRefill();
             }
         }
         return state != null && state.bulkInterval > 0
-                && provenTransaction >= state.bulkCapacity;
+                && reservoirCapacity >= state.bulkCapacity;
     }
 
     boolean shouldPreserveBatchHistory(
@@ -171,7 +189,7 @@ final class WirelessBatchCadence<T> {
         private long stablePrefixStartTick;
         private int bulkInterval;
         private long bulkCapacity;
-        private int provenTransaction;
+        private int reservoirCapacity;
         private long lastBulkSuccessTick = Long.MIN_VALUE;
         private long lastBulkAuditTick = Long.MIN_VALUE;
         private int bulkRapidProbes;
@@ -196,11 +214,11 @@ final class WirelessBatchCadence<T> {
                 singleChunkRefill = stablePrefixSamples >= 4;
                 if (stablePrefixSamples == 4 && bulkInterval == 0
                         && gameTick - stablePrefixStartTick <= 25
-                        && provenTransaction > 0
+                        && reservoirCapacity > 0
                         && ownedCopies <= Integer.MAX_VALUE
                         && timing.estimatedCapacity() >= 3L * ownedCopies
                         && timing.estimatedCapacity() <= 4L * ownedCopies) {
-                    bulkCapacity = provenTransaction;
+                    bulkCapacity = reservoirCapacity;
                     long elapsed = gameTick - stablePrefixStartTick;
                     bulkInterval = (int) Math.max(1L, Math.min(MAX_COVERAGE_TICKS,
                             (elapsed * bulkCapacity + 3L * ownedCopies - 1L)

@@ -5,10 +5,11 @@ import java.util.Objects;
 import java.util.Set;
 
 import appeng.api.stacks.AEKey;
+import net.minecraft.resources.ResourceLocation;
 
 /**
- * Output filter used by auto-return to decide whether a machine stack belongs
- * to one of the patterns loaded in the provider.
+ * Effective return filter: FE is never accepted. Other resources are unrestricted
+ * when import filtering is disabled, otherwise limited to loaded pattern outputs.
  * <p>
  * STRICT outputs are matched by exact {@link AEKey} (including components/NBT).
  * ID_ONLY outputs are matched via {@link AEKey#dropSecondary()}, which strips
@@ -16,6 +17,8 @@ import appeng.api.stacks.AEKey;
  * AEFluidKey even if they share the same registry id.
  */
 public final class AllowedOutputFilter {
+    private static final ResourceLocation FLUX_KEY_TYPE = new ResourceLocation("appflux", "flux");
+    private static final ResourceLocation FE_ID = new ResourceLocation("appflux", "fe");
     private static final AllowedOutputFilter UNRESTRICTED = new AllowedOutputFilter(true);
 
     private final boolean unrestricted;
@@ -36,12 +39,16 @@ public final class AllowedOutputFilter {
 
     public void allowStrict(AEKey key) {
         Objects.requireNonNull(key, "key");
-        strictOutputs.add(key);
+        if (isReturnableResource(key)) {
+            strictOutputs.add(key);
+        }
     }
 
     public void allowIdOnly(AEKey key) {
         Objects.requireNonNull(key, "key");
-        idOnlyKeys.add(key.dropSecondary());
+        if (isReturnableResource(key)) {
+            idOnlyKeys.add(key.dropSecondary());
+        }
     }
 
     public boolean isEmpty() {
@@ -50,6 +57,9 @@ public final class AllowedOutputFilter {
 
     public boolean matches(AEKey key) {
         Objects.requireNonNull(key, "key");
+        if (!isReturnableResource(key)) {
+            return false;
+        }
         if (unrestricted) {
             return true;
         }
@@ -57,6 +67,12 @@ public final class AllowedOutputFilter {
             return true;
         }
         return idOnlyKeys.contains(key.dropSecondary());
+    }
+
+    private static boolean isReturnableResource(AEKey key) {
+        // Match identifiers without loading optional AppFlux classes. An item or
+        // fluid with the same resource ID remains returnable; induction is output-only.
+        return !FLUX_KEY_TYPE.equals(key.getType().getId()) || !FE_ID.equals(key.getId());
     }
 
     @Override

@@ -23,6 +23,12 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IoScheduledE
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.WirelessConnection;
 
 class OverloadedInterfaceBackpressureWaitersTest {
+    @org.junit.jupiter.api.BeforeAll
+    static void bootstrapMinecraft() {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+    }
+
     @Test
     void unlockingOneTypeResumesItOnceAndPreservesOtherSchedulingState() {
         var items = AEKeyType.items();

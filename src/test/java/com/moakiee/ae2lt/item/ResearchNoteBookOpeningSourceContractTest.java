@@ -93,7 +93,9 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "MaintenanceSummarySyncPacket",
                 "UploadTargetsSyncPacket",
                 "ClosedLoopResultPagePacket",
-                "OpenResearchNotePacket");
+                "OpenResearchNotePacket",
+                "MatrixPatternMigrationActionPacket",
+                "MatrixPatternMigrationStatusPacket");
         var matcher = Pattern.compile("(?m)^\\s+([A-Za-z0-9]+Packet)\\.class,$").matcher(network);
         List<String> actualOrder = new ArrayList<>();
         while (matcher.find()) {
@@ -102,7 +104,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"gtl-8\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"gtl-10\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable");
@@ -120,6 +122,10 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "JEI supply packets must append after all existing GTL discriminators");
         assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_SERVER)", jeiRequest) > jeiRequest);
         assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", jeiResult) > jeiResult);
+        int migrationRequest = network.indexOf("MatrixPatternMigrationActionPacket.class");
+        int migrationStatus = network.indexOf("MatrixPatternMigrationStatusPacket.class");
+        assertTrue(migrationRequest > jeiResult && migrationStatus > migrationRequest,
+                "Migration packets must append after every existing GTL discriminator");
     }
 
     private static String source(String path) throws Exception {

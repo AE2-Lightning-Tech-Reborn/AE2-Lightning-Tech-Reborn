@@ -864,9 +864,9 @@ class ProviderTargetTest {
                         : ProviderTarget.BatchChunk.REJECTED);
         target.pushPatternStep(pattern, 1_000L, 2L, true, () -> false,
                 copies -> new ProviderTarget.BatchChunk(copies, true, false));
-        assertTrue(target.provenReservoirTransaction(pattern, 2L) > 0);
+        assertTrue(target.reservoirRefillCapacity(pattern, 2L) > 0);
 
-        target.preferReservoirTransaction(pattern, true);
+        target.preferSegmentedReservoirRefill(pattern, true);
         target.pushPatternStep(pattern, 1_000L, 3L, true, () -> true,
                 copies -> { throw new AssertionError("blocked target was dispatched"); });
 

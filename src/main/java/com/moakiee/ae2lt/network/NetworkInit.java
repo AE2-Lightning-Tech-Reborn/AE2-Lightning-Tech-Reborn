@@ -34,7 +34,8 @@ import java.util.Optional;
 public final class NetworkInit {
     // Version 3 adds the research-note screen message.
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
-    private static final String PROTOCOL_VERSION = "gtl-8";
+    // GTL 10 adds pattern migration and native interface direction synchronization.
+    private static final String PROTOCOL_VERSION = "gtl-10";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -387,6 +388,16 @@ public final class NetworkInit {
         CHANNEL.registerMessage(nextPacketId++, WirelessJeiSupplyResultPacket.class,
                 (packet, buffer) -> packet.write(buffer), WirelessJeiSupplyResultPacket::read,
                 WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(
+                nextPacketId++,
+                MatrixPatternMigrationActionPacket.class,
+                MatrixPatternMigrationActionPacket::encode, MatrixPatternMigrationActionPacket::decode,
+                MatrixPatternMigrationActionPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(
+                nextPacketId++,
+                MatrixPatternMigrationStatusPacket.class,
+                MatrixPatternMigrationStatusPacket::encode, MatrixPatternMigrationStatusPacket::decode,
+                MatrixPatternMigrationStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static ResourceLocation id(String path) {

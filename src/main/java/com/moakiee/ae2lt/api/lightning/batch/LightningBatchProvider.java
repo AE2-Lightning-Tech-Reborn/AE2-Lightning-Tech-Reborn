@@ -22,6 +22,15 @@ public interface LightningBatchProvider {
 
     BatchCapability inspect(BatchRequest request);
 
+    /**
+     * Server-thread only. The same nonce must describe exactly the same request.
+     * A retryable zero-acceptance result may be retried with that nonce; partial
+     * and successful submissions replay their receipt without dispatching again.
+     * Receipts are instance-local and keep 1024 completed requests, not durable
+     * across unload/restart. An indeterminate dispatch is pinned until unload.
+     * @throws com.moakiee.ae2lt.api.crafting.IndeterminateSubmissionException
+     * when dispatch may have moved inputs; do not refund or automatically resubmit
+     */
     BatchSubmission submit(BatchRequest request);
 
     record BatchRequest(
@@ -39,6 +48,9 @@ public interface LightningBatchProvider {
             inputsPerCraft = List.copyOf(Objects.requireNonNull(inputsPerCraft, "inputsPerCraft").stream()
                     .map(List::copyOf)
                     .toList());
+            if (inputsPerCraft.stream().flatMap(List::stream).anyMatch(stack -> stack.amount() <= 0L)) {
+                throw new IllegalArgumentException("input amounts must be positive");
+            }
         }
     }
 

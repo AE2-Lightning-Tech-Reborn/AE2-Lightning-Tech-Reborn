@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.batch.SubmissionHistory;
+import com.moakiee.ae2lt.logic.batch.BatchSnapshots;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -146,14 +149,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     /** Current provider-owned decoded patterns and their stable scheduling handles. */
     private final OverloadedProviderPatternCatalog patternCatalog =
             new OverloadedProviderPatternCatalog();
-    private static final int EXTERNAL_NONCE_HISTORY = 1024;
-    private final Map<java.util.UUID, BatchSubmission> externalBatchSubmissions =
-            new LinkedHashMap<>(64, 0.75F, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<java.util.UUID, BatchSubmission> eldest) {
-                    return size() > EXTERNAL_NONCE_HISTORY;
-                }
-            };
+    private final SubmissionHistory<BatchRequest, BatchSubmission> externalBatchSubmissions = new SubmissionHistory<>(1024);
 
     // ---- auto-return ------------------------------------------------------------
 
@@ -222,7 +218,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             overloadedHost.saveChanges();
         };
         ReturnSlotFilter returnFilter = (slot, key) -> {
-            if (!overloadedHost.isFilteredImport()) return true;
             var filter = getOrBuildOutputFilter();
             return !filter.isEmpty() && filter.matches(key);
         };
@@ -404,7 +399,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         if (details == null || !canUseAdaptiveBatch(details)) {
             return BatchCapability.rejected(RejectionReason.UNSUPPORTED_PROCESSING);
         }
-        long capacity = getBatchCapacity(details);
+        long capacity = BatchSnapshots.safeCapacity(java.util.Arrays.asList(details.getOutputs()), getBatchCapacity(details));
         if (capacity <= 0L) return BatchCapability.rejected(RejectionReason.PROVIDER_BUSY);
         long accepted = Math.min(request.requestedAmount(), capacity);
         return new BatchCapability(API_VERSION, CAPABILITY_ID, accepted, capacity, 2, RejectionReason.NONE);
@@ -412,38 +407,43 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
     @Override
     public BatchSubmission submit(BatchRequest request) {
-        var previous = externalBatchSubmissions.get(request.nonce());
-        if (previous != null) return previous;
+        var reason = validateExternalRequest(request);
+        if (reason != RejectionReason.NONE) return BatchSubmission.rejected(request.requestedAmount(), reason, false);
+        if (externalBatchSubmissions.conflicts(request.nonce(), request)) {
+            reason = RejectionReason.INVALID_REQUEST;
+            return BatchSubmission.rejected(request.requestedAmount(), reason, false);
+        }
+        return externalBatchSubmissions.execute(request.nonce(), request, () -> dispatchExternal(request),
+                result -> result.acceptedAmount() == 0L && result.retryable());
+    }
+
+    private BatchSubmission dispatchExternal(BatchRequest request) {
         var capability = inspect(request);
         if (capability.acceptedAmount() <= 0L) {
-            return remember(request.nonce(), BatchSubmission.rejected(request.requestedAmount(),
-                    capability.rejectionReason(), capability.rejectionReason() == RejectionReason.PROVIDER_BUSY));
+            return BatchSubmission.rejected(request.requestedAmount(), capability.rejectionReason(),
+                    capability.rejectionReason() == RejectionReason.PROVIDER_BUSY);
         }
-        var details = patternCatalog.resolve(request.processingId());
-        if (details == null) {
-            return remember(request.nonce(), BatchSubmission.rejected(request.requestedAmount(),
-                    RejectionReason.UNSUPPORTED_PROCESSING, false));
+        var pattern = patternCatalog.resolve(request.processingId());
+        if (pattern == null) {
+            return BatchSubmission.rejected(request.requestedAmount(), RejectionReason.UNSUPPORTED_PROCESSING, false);
         }
-        try {
-            var counters = request.inputsPerCraft().stream().map(slot -> {
-                var counter = new KeyCounter();
-                for (var stack : slot) counter.add(stack.what(), stack.amount());
-                return counter;
-            }).toArray(KeyCounter[]::new);
-            long offered = capability.acceptedAmount();
-            long leftover = pushBatch(details, counters, offered);
-            long accepted = Math.max(0L, offered - Math.max(0L, Math.min(offered, leftover)));
-            long unaccepted = request.requestedAmount() - accepted;
-            var status = accepted == 0L ? SubmissionStatus.REJECTED
-                    : unaccepted == 0L ? SubmissionStatus.ACCEPTED : SubmissionStatus.PARTIAL;
-            var reason = accepted == 0L ? RejectionReason.NO_CAPACITY : RejectionReason.NONE;
-            return remember(request.nonce(), new BatchSubmission(status, accepted,
-                    multiplySnapshot(java.util.Arrays.asList(details.getOutputs()), accepted), unaccepted,
-                    accepted == 0L, reason));
-        } catch (RuntimeException failure) {
-            return remember(request.nonce(), BatchSubmission.rejected(request.requestedAmount(),
-                    RejectionReason.SUBMISSION_FAILED, false));
+        var outputs = List.copyOf(java.util.Arrays.asList(pattern.getOutputs()));
+        long offered = BatchSnapshots.safeCapacity(outputs, capability.acceptedAmount());
+        var inputs = request.inputsPerCraft().stream().map(slot -> {
+            var counter = new KeyCounter();
+            for (var stack : slot) counter.add(stack.what(), stack.amount());
+            return counter;
+        }).toArray(KeyCounter[]::new);
+        long leftover = pushBatch(pattern, inputs, offered);
+        if (leftover < 0L || leftover > offered) {
+            throw new IllegalStateException("Provider returned an invalid remainder");
         }
+        long accepted = offered - leftover;
+        long unaccepted = request.requestedAmount() - accepted;
+        var status = accepted == 0L ? SubmissionStatus.REJECTED
+                : unaccepted == 0L ? SubmissionStatus.ACCEPTED : SubmissionStatus.PARTIAL;
+        return new BatchSubmission(status, accepted, BatchSnapshots.multiply(outputs, accepted),
+                unaccepted, accepted == 0L, accepted == 0L ? RejectionReason.NO_CAPACITY : RejectionReason.NONE);
     }
 
     private RejectionReason validateExternalRequest(BatchRequest request) {
@@ -453,18 +453,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         if (!(level instanceof ServerLevel serverLevel)
                 || !serverLevel.getServer().isSameThread()) return RejectionReason.NOT_SERVER_THREAD;
         return RejectionReason.NONE;
-    }
-
-    private BatchSubmission remember(java.util.UUID nonce, BatchSubmission submission) {
-        externalBatchSubmissions.put(nonce, submission);
-        return submission;
-    }
-
-    private static List<GenericStack> multiplySnapshot(List<GenericStack> stacks, long multiplier) {
-        if (multiplier <= 0L) return List.of();
-        return stacks.stream()
-                .map(stack -> new GenericStack(stack.what(), Math.multiplyExact(stack.amount(), multiplier)))
-                .toList();
     }
 
     @Override
@@ -1281,12 +1269,12 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
             var targetLevel = server.getLevel(conn.dimension());
             if (targetLevel == null || !targetLevel.isLoaded(conn.pos())) {
-                wirelessOverflow.rescheduleBlocked(conn, bucket, gameTick);
+                wirelessOverflow.rescheduleUnavailable(conn, bucket, gameTick);
                 continue;
             }
 
             if (conn.resolveAdapter(targetLevel) == null) {
-                wirelessOverflow.rescheduleBlocked(conn, bucket, gameTick);
+                wirelessOverflow.rescheduleUnavailable(conn, bucket, gameTick);
                 continue;
             }
 

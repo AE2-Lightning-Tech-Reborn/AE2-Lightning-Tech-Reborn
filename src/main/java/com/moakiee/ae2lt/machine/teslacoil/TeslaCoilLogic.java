@@ -32,14 +32,18 @@ public final class TeslaCoilLogic implements IGridTickable {
             return TickRateModulation.SLEEP;
         }
 
-        rechargeFromAppliedFlux();
+        boolean charging = rechargeFromAppliedFlux();
+        TickRateModulation processing = tickProcessing();
+        return charging ? TickRateModulation.URGENT : processing;
+    }
 
+    private TickRateModulation tickProcessing() {
         if (!host.hasLockedMode()) {
-            // 本地资源 (粉 / 矩阵) 完全不够, 此时 SLEEP 是安全的:
-            // 玩家或自动化补充槽位会通过 onInventoryChanged 重新 alertDevice 唤醒。
             if (!host.hasLocalResourcesForMinimumOperation()) {
                 host.setWorking(false);
-                return TickRateModulation.SLEEP;
+                return AppFluxHelper.isAvailable()
+                        && host.getEnergyStorage().getStoredEnergyLong() < host.getEnergyStorage().getCapacityLong()
+                                ? TickRateModulation.SLOWER : TickRateModulation.SLEEP;
             }
 
             // 本地资源足够, 但当前还不能开工 —— 典型情况: ME 网络输出端已满,
@@ -102,25 +106,26 @@ public final class TeslaCoilLogic implements IGridTickable {
         host.getMainNode().ifPresent((grid, node) -> grid.getTickManager().alertDevice(node));
     }
 
-    private void rechargeFromAppliedFlux() {
+    private boolean rechargeFromAppliedFlux() {
         if (!AppFluxHelper.isAvailable()) {
-            return;
+            return false;
         }
 
         var energy = host.getEnergyStorage();
         long demand = host.hasLockedMode()
                 ? host.getRequiredEnergyForNextTick() : host.getRequiredEnergyForSelectedStart();
         if (!rechargeController.shouldRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong(), demand,
-                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE))) {
-            return;
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE), host.getLevel().getGameTime())) {
+            return false;
         }
 
-        host.getMainNode().ifPresent((grid, node) -> {
-            AppFluxHelper.pullPowerFromNetwork(
-                    grid.getStorageService().getInventory(),
-                    host.getEnergyStorage(),
-                    appeng.api.networking.security.IActionSource.ofMachine(host));
-            rechargeController.afterRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong());
-        });
+        var grid = host.getMainNode().getGrid();
+        if (grid == null) return false;
+        int received = AppFluxHelper.pullPowerFromNetwork(
+                grid.getStorageService().getInventory(),
+                host.getEnergyStorage(),
+                appeng.api.networking.security.IActionSource.ofMachine(host));
+        rechargeController.afterRecharge(energy.getStoredEnergyLong(), energy.getCapacityLong());
+        return received > 0 && energy.getStoredEnergyLong() < energy.getCapacityLong();
     }
 }

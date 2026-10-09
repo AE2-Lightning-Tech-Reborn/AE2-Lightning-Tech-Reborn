@@ -25,7 +25,8 @@ public class LightningCollectorInventory extends LargeStackItemHandler {
     public boolean isItemValid(int slot, ItemStack stack) {
         validateSlotIndex(slot);
         return slot == SLOT_CRYSTAL
-                && (stack.is(ModItems.ELECTRO_CHIME_CRYSTAL.get())
+                && (com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.find(stack) != null
+                || stack.is(ModItems.ELECTRO_CHIME_CRYSTAL.get())
                 || stack.is(ModItems.PERFECT_ELECTRO_CHIME_CRYSTAL.get()));
     }
 

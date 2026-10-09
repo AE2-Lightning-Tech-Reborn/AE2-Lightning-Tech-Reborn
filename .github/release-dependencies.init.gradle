@@ -1,0 +1,27 @@
+// Resolve upstream mods from the exact, validated GitHub Release JARs staged by CI.
+allprojects {
+    // GTL resolves its planner-attach build through Maven, without staged release JARs.
+    if (rootProject.fileTree('release-dependencies/maven') { include '**/*.pom' }.isEmpty()) {
+        return
+    }
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'ReleaseDependencies'
+                    url = uri(rootProject.file('release-dependencies/maven'))
+                }
+            }
+            filter {
+                // Only pin the original release coordinates. ForgeGradle resolves
+                // *_mapped_* versions from its own generated repository.
+                rootProject.fileTree('release-dependencies/maven') {
+                    include '**/*.pom'
+                }.each { pomFile ->
+                    def pom = new XmlSlurper().parse(pomFile)
+                    includeVersion pom.groupId.text(), pom.artifactId.text(), pom.version.text()
+                }
+            }
+        }
+    }
+}

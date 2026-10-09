@@ -76,8 +76,8 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification", timeoutTicks = 140)
-    public static void fastWirelessImportWakesOnTargetChange(GameTestHelper helper) {
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling_bound", timeoutTicks = 140)
+    public static void fastWirelessImportPollsChangedInventoryWithinBound(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
             return;
@@ -86,13 +86,24 @@ public final class WirelessInterfaceGameTests {
         var owner = fixture.blockEntity;
         var target = fixture.inventories[0];
         var key = AEItemKey.of(Items.STONE);
+        long[] observed = {-1, -1};
         helper.onEachTick(() -> {
             long tick = helper.getTick();
             if (tick == 80) target.setItem(0, key.toStack(64));
-            if (tick == 84) {
-                require(target.isEmpty(), "notified inventory did not wake within four ticks");
-                require(storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
-                        "notified import did not reach ME storage");
+            if (tick > 80) {
+                if (observed[0] < 0 && target.isEmpty()) observed[0] = tick;
+                if (observed[1] < 0
+                        && storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64) {
+                    observed[1] = tick;
+                }
+            }
+            if (tick == 106) {
+                require(observed[0] >= 0 && observed[0] - 80 <= 21,
+                        "changed inventory exceeded the cold polling bound");
+                require(observed[1] >= 0 && observed[1] - observed[0] <= 5,
+                        "polled import did not reach ME storage within its flush bound");
+                require(target.isEmpty() && owner.benchmarkBufferedImportAmount() == 0,
+                        "polled import retained an already delivered item");
                 helper.succeed();
             }
         });
@@ -1094,10 +1105,10 @@ public final class WirelessInterfaceGameTests {
                 assertFixtureResult(fixture, state, 0, 0, targets);
                 for (int index = 0; index < targets; index++) {
                     // Observation occurs before this tick's AE grid work, so
-                    // allow one tick in addition to the five-tick watchdog.
-                    require(outputLatency[index] >= 0 && outputLatency[index] <= 6,
+                    // allow one tick in addition to the 20-tick cold polling interval.
+                    require(outputLatency[index] >= 0 && outputLatency[index] <= 21,
                             "phase " + index + " output-to-buffer latency " + outputLatency[index]);
-                    require(networkLatency[index] >= 0 && networkLatency[index] <= 11,
+                    require(networkLatency[index] >= 0 && networkLatency[index] <= outputLatency[index] + 5,
                             "phase " + index + " output-to-network latency " + networkLatency[index]);
                 }
                 helper.succeed();
@@ -1158,8 +1169,8 @@ public final class WirelessInterfaceGameTests {
                 assertFixtureResult(fixture, state, 0, 0, targets);
                 for (int index = 0; index < targets; index++) {
                     // Observation occurs before this tick's AE grid work, so
-                    // allow one tick in addition to the five-tick watchdog.
-                    require(outputLatency[index] >= 0 && outputLatency[index] <= 6,
+                    // allow one tick in addition to the 20-tick cold polling interval.
+                    require(outputLatency[index] >= 0 && outputLatency[index] <= 21,
                             "phase " + index + " output-to-buffer latency " + outputLatency[index]);
                     require(networkLatency[index] >= 0 && networkLatency[index] <= outputLatency[index] + 5,
                             "phase " + index + " output-to-network latency " + networkLatency[index]);
@@ -1213,9 +1224,9 @@ public final class WirelessInterfaceGameTests {
                 // Each output holds one atomic batch. A bounded recovery can
                 // legitimately block a short burst; measure it separately
                 // from steady production after the watchdog + observation
-                // allowance (six ticks), without discarding the raw totals.
-                boolean steady = (tick >= 46 && tick < 80)
-                        || (tick >= 306 && tick < 380);
+                // allowance (21 ticks), without discarding the raw totals.
+                boolean steady = (tick >= 61 && tick < 80)
+                        || (tick >= 321 && tick < 380);
                 for (int index = 0; index < fixture.inventories.length; index++) {
                     boolean ready = fixture.inventories[index].isEmpty();
                     if (ready) latency.recordProduction(tick, index);
@@ -1249,15 +1260,15 @@ public final class WirelessInterfaceGameTests {
                         (double) state.blocked / state.opportunities <= 0.001);
                 require(state.pulseDrainLatency >= 0,
                         "single-tick pulse was never drained");
-                require(state.pulseDrainLatency <= 5,
+                require(state.pulseDrainLatency <= 21,
                         "single-tick pulse drain latency " + state.pulseDrainLatency
-                                + " exceeded 5 ticks");
-                assertFixtureResult(fixture, state, 1.0, 5);
+                                + " exceeded 21 ticks");
+                assertFixtureResult(fixture, state, 1.0, 20);
                 require(minimumSteadyThroughput >= 0.99,
                         "steady throughput " + minimumSteadyThroughput + " fell below 99%");
                 require(latency.extractedItems() == state.producedItems,
                         "transition output attribution did not conserve produced items");
-                require(latency.latencyMax() <= 6,
+                require(latency.latencyMax() <= 21,
                         "transition output waited " + latency.latencyMax() + " ticks");
                 helper.succeed();
             }
@@ -1371,7 +1382,8 @@ public final class WirelessInterfaceGameTests {
     private static Fixture createLocalFixture(GameTestHelper helper, boolean infiniteCell) {
         var fixture = createFixture(helper, 1, infiniteCell);
         fixture.blockEntity.setInterfaceMode(InterfaceMode.NORMAL);
-        fixture.blockEntity.setEnergyOutputDir(Direction.SOUTH);
+        fixture.blockEntity.getLevel().setBlockAndUpdate(fixture.blockEntity.getBlockPos(), fixture.blockEntity.getBlockState().setValue(
+                appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.fromDirection(Direction.SOUTH)));
         var targetPos = INTERFACE_POS.south();
         helper.setBlock(targetPos, Blocks.BARREL);
         var target = (Container) helper.getLevel().getBlockEntity(helper.absolutePos(targetPos));
