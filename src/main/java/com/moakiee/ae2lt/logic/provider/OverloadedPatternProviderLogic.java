@@ -224,7 +224,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             overloadedHost.saveChanges();
         };
         AEKeySlotFilter returnFilter = (slot, key) -> {
-            if (!overloadedHost.isFilteredImport()) return true;
             var filter = getOrBuildOutputFilter();
             return !filter.isEmpty() && filter.matches(key);
         };
