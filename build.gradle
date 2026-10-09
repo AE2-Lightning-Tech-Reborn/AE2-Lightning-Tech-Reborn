@@ -484,7 +484,7 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
                 'TweakClass'              : 'org.spongepowered.asm.launch.MixinTweaker',
                 'TweakOrder'              : 0,
-                'MixinConfigs'            : "${mod_id}.mixins.json,ae2lt.mekanism.mixins.json,ae2lt.recipeviewer.mixins.json,ae2lt.ae2wtlib.mixins.json"
+                'MixinConfigs'            : "${mod_id}.mixins.json,ae2lt.mekanism.mixins.json,ae2lt.recipeviewer.mixins.json,ae2lt.ae2wtlib.mixins.json,ae2lt.ae2cs.mixins.json"
         ])
     }
 

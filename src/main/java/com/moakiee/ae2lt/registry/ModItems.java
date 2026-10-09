@@ -282,6 +282,9 @@ public final class ModItems {
             OverloadedFrequencyCardItem::new,
             new Item.Properties());
 
+    public static final RegistryObject<Item> OVERLOAD_PARALLEL_CARD = ITEMS.register(
+            "overload_parallel_card", () -> appeng.api.upgrades.Upgrades.createUpgradeCardItem(new Item.Properties()));
+
     public static final RegistryObject<OverloadedPatternProviderUpgradeItem> OVERLOADED_PATTERN_PROVIDER_UPGRADE = registerItem(
             "overloaded_pattern_provider_upgrade",
             OverloadedPatternProviderUpgradeItem::new,

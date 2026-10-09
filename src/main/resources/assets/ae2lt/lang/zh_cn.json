@@ -1578,5 +1578,6 @@
   "ae2lt.tianshu.work.next_page": "下一页",
   "ae2lt.tianshu.wireless.trash_notice": "离开后销毁",
   "ae2lt.tianshu.work.cell_copy_clear": "当前：取出元件时清空配置格。",
-  "ae2lt.tianshu.work.cell_copy_keep": "当前：取出元件时保留配置格。"
+  "ae2lt.tianshu.work.cell_copy_keep": "当前：取出元件时保留配置格。",
+  "item.ae2lt.overload_parallel_card": "过载并行卡"
 }

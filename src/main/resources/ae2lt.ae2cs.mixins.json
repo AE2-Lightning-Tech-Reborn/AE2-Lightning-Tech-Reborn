@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.moakiee.ae2lt.mixin.ae2cs",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "com.moakiee.ae2lt.mixin.ae2cs.CrystalScienceMixinPlugin",
+  "mixins": [
+    "CrystalScienceComponentTickMixin",
+    "CrystalScienceEnergyCapacityMixin",
+    "CrystalScienceProcessorMixin",
+    "CrystalScienceGrowthChamberMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

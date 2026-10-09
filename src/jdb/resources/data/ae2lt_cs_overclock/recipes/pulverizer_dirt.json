@@ -1,0 +1,14 @@
+{
+  "type": "ae2cs:crystal_pulverizer_recipe_serializer",
+  "energy_cost": 1000,
+  "input": {
+    "count": 1,
+    "ingredient": {
+      "item": "minecraft:dirt"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "minecraft:cobblestone"
+  }
+}

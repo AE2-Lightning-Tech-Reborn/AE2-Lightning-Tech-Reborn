@@ -305,6 +305,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModItems.OVERLOAD_PATTERN_ENCODER);
                         acceptCreative(output, ModItems.OVERLOADED_WIRELESS_CONNECT_TOOL);
                         acceptCreative(output, ModItems.OVERLOADED_FREQUENCY_CARD);
+                        acceptCreative(output, ModItems.OVERLOAD_PARALLEL_CARD);
                         acceptCreative(output, ModItems.OVERLOADED_PATTERN_PROVIDER_UPGRADE);
                         acceptCreative(output, ModItems.EXTENDED_OVERLOADED_PATTERN_PROVIDER_UPGRADE);
                         acceptCreative(output, ModItems.OVERLOADED_FILTER_COMPONENT);
@@ -1197,6 +1198,7 @@ public class AE2LightningTech {
                     OverloadedIOPortBlockEntity.SPEED_CARD_SLOTS);
             Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), 1);
 
+            com.moakiee.ae2lt.integration.ae2cs.CrystalScienceOverclockIntegration.registerUpgrades();
             registerAppliedFluxInductionCardCompat();
             registerOverloadTntDispenseBehavior();
 

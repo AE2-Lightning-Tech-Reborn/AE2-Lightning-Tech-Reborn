@@ -1,0 +1,25 @@
+allprojects {
+    afterEvaluate {
+        def present = providers.gradleProperty('ae2ltCrystalSciencePresent').getOrElse('false').toBoolean()
+        sourceSets.jdb.java.setIncludes(present
+                ? ['**/integration/ae2cs/CrystalScienceOverclockGameTests.java']
+                : ['**/integration/ae2cs/CrystalScienceAbsentGameTests.java'])
+        if (present) {
+            def inputJar = providers.gradleProperty('ae2ltCrystalScienceJar').get()
+            def remapType = project.buildscript.classLoader.loadClass('net.minecraftforge.gradle.userdev.tasks.RenameJarSrg2Mcp')
+            def remap = tasks.register('remapCrystalScienceTestJar', remapType) {
+                input = file(inputJar)
+                mappings = tasks.named('advancedAeMcpMappings').flatMap { it.output }
+                output = layout.buildDirectory.file('cs-test/ae2cs-dev.jar')
+                signatureRemoval = true
+            }
+            dependencies.add('jdbRuntimeOnly', files(remap.flatMap { it.output }))
+            tasks.named('compileJdbJava').configure { dependsOn remap }
+        }
+        minecraft.runs.interfaceIoGameTestServer {
+            workingDirectory layout.buildDirectory.dir(present ? 'cs-present-gametest' : 'cs-absent-gametest').get().asFile
+            property 'forge.enabledGameTestNamespaces', present ? 'ae2lt_cs_overclock' : 'ae2lt_cs_absent'
+            property 'forge.logging.console.level', 'info'
+        }
+    }
+}

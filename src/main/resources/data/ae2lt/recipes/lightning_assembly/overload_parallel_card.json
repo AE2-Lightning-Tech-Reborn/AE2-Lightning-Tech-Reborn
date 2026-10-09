@@ -1,0 +1,45 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "ae2cs"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "ae2cs:overload_card"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "ae2cs:resonating_processor"
+    }
+  ],
+  "type": "ae2lt:lightning_assembly",
+  "priority": 0,
+  "inputs": [
+    {
+      "ingredient": {
+        "item": "ae2cs:overload_card"
+      },
+      "count": 2
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:lightning_collapse_matrix"
+      },
+      "count": 1
+    },
+    {
+      "ingredient": {
+        "item": "ae2cs:resonating_processor"
+      },
+      "count": 2
+    }
+  ],
+  "result": {
+    "id": "ae2lt:overload_parallel_card",
+    "count": 1
+  },
+  "totalEnergy": 1000000,
+  "lightningCost": 16,
+  "lightningTier": "extreme_high_voltage"
+}

@@ -22,3 +22,6 @@ GTL 的独占规划器、节点缺失 requester、Transfinite/Thunderbolt 接口
 客户端穿戴效果、互动界面和 Useless 实装模组运行不能由服务器测试代替；此记录不把编译通过描述为这些路径的完整运行验证。测试日志和临时适配脚本位于忽略的 build/feature-port-20261009，不进入生产 JAR。
 
 主线最终运行验证：工作站 65/65、兼容服务器 80/80、导入/导出行为与压力场景 77/77、能源输出专项 7/7。能源专项只注册了 7 项，不将旧基线测试数量计入本轮。最终 JUnit 1463/1463，adaptiveBatchStress 6/6，build/reobfJarJar 成功。JAR SHA-256：`9ae4edea083cc843ceda0d800ac624d864860bedc67482a1518b36f2e694629a`。
+
+CS 并行卡分支支持 Forge AE2CS 1.2.0 的五种机器；一张卡 8 次、两张卡 64 次原生处理，逐次扣能并遵守输入、输出和液体约束。CS 实装 8/8、缺失 1/1 真实服务器测试通过，覆盖容量扩展、重载、网络充能和堵塞。Forge 没有晶体灌注机与脉冲离心机，未注册其目标或计入空跑测试。
+该分支最终 JUnit 1463/1463，adaptiveBatchStress 6/6，build/reobfJarJar 成功。JAR SHA-256：`c93dcf16c7a6c4b850e47015999813925e470b9205eb0541a5b76eb068b2d6cf`。
