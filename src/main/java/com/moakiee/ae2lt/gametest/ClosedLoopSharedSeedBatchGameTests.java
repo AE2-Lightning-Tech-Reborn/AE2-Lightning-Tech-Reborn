@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelBatchAdmission;
-import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -72,21 +70,9 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         runScenario(helper, new long[] {1, 1, 1}, false);
     }
 
-    @GameTest(templateNamespace = "minecraft", template = EMPTY_TEMPLATE, timeoutTicks = 30)
-    public static void preparedAdmissionLimitsExtractionBeforeEachSharedBatch(GameTestHelper helper) {
-        runScenario(helper, new long[] {64, 32, 4}, true, true);
-    }
-
     private static void runScenario(
             GameTestHelper helper, long[] dispatches, boolean assertIncrementalNetOutput) {
-        runScenario(helper, dispatches, assertIncrementalNetOutput, false);
-    }
-
-    private static void runScenario(GameTestHelper helper, long[] dispatches,
-            boolean assertIncrementalNetOutput, boolean admission) {
         var fixture = Fixture.create(helper, dispatches);
-        fixture.provider.admission = admission;
-        fixture.provider.stock = () -> fixture.cpu.getCraftingLogic().getStored(fixture.ingredient);
         long cumulative = 0L;
         for (int i = 0; i < dispatches.length; i++) {
             long expectedDispatch = dispatches[i];
@@ -105,8 +91,6 @@ public final class ClosedLoopSharedSeedBatchGameTests {
                                 : fixture.provider.validationFailure);
                 helper.assertTrue(fixture.provider.totalAccepted == expectedNetOutput,
                         "Every planned loop copy must reach the provider");
-                helper.assertTrue(!admission || fixture.provider.preparedSubmissions == dispatches.length,
-                        "Every admitted slice must use its prepared submission exactly once");
                 helper.assertTrue(!fixture.cpu.getCraftingLogic().hasJob(),
                         "The closed-loop job must leave no active job after all output returns");
                 helper.assertTrue(fixture.cpu.getJobStatus() == null,
@@ -180,8 +164,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
                 long expectedCumulative,
                 boolean assertIncrementalNetOutput) {
             var usage = cpu.getCraftingLogic().tickCraftingLogic(
-                    energyService, craftingService, 1,
-                    provider.admission ? provider.totalPlanned : expectedDispatch);
+                    energyService, craftingService, 1, expectedDispatch);
             helper.assertTrue(usage.dispatchedCopies() == expectedDispatch,
                     "The scheduler must dispatch the requested batch split");
             helper.assertTrue(provider.lastAccepted == expectedDispatch,
@@ -403,7 +386,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         }
     }
 
-    private static final class ScriptedBatchProvider implements TimeWheelBatchAdmission {
+    private static final class ScriptedBatchProvider implements IBatchCraftingProvider {
         private final IPatternDetails pattern;
         private final AEKey seed;
         private final AEKey ingredient;
@@ -414,9 +397,6 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         private long lastAccepted;
         private long totalAccepted;
         private String validationFailure;
-        private boolean admission;
-        private int preparedSubmissions;
-        private java.util.function.LongSupplier stock;
 
         private ScriptedBatchProvider(
                 IPatternDetails pattern,
@@ -444,32 +424,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
 
         @Override
         public long getBatchCapacity(IPatternDetails details) {
-            return index < dispatches.length ? (admission ? Long.MAX_VALUE : dispatches[index]) : 0L;
-        }
-
-        @Override
-        public PreparedBatch prepareTimeWheelBatch(IPatternDetails details, KeyCounter[] prototype,
-                                                   long maxCraft, BatchJobView job) {
-            if (!admission) return null;
-            if (stock.getAsLong() != totalPlanned - totalAccepted - 1L) {
-                validationFailure = "Admission must reserve only one prototype before bulk extraction";
-            }
-            var inputs = new KeyCounter[prototype.length];
-            for (int slot = 0; slot < prototype.length; slot++) {
-                inputs[slot] = new KeyCounter();
-                inputs[slot].addAll(prototype[slot]);
-            }
-            long capacity = Math.min(maxCraft, dispatches[index]);
-            return new PreparedBatch() {
-                private boolean submitted;
-                @Override public long capacity() { return capacity; }
-                @Override public long push(long copies) {
-                    if (submitted || copies > capacity) throw new IllegalStateException("invalid prepared offer");
-                    submitted = true;
-                    preparedSubmissions++;
-                    return pushBatch(details, inputs, copies);
-                }
-            };
+            return index < dispatches.length ? dispatches[index] : 0L;
         }
 
         @Override

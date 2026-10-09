@@ -43,7 +43,6 @@
     "thunderbolt.accessor.ElapsedTimeTrackerAccessor",
     "thunderbolt.accessor.ExecutingCraftingJobAccessor",
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
-    "thunderbolt.accessor.BatchCandidateAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",

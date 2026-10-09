@@ -39,7 +39,7 @@ class HyperdimensionalPigmeeResearchContractTest {
         String burstPacket = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/network/RitualItemBurstPacket.java"));
         String burstClient = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/network/RitualItemBurstClientBridge.java"));
+                "src/main/java/com/moakiee/ae2lt/client/ClientNetworkPacketHandlers.java"));
         String networking = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/network/NetworkInit.java"));
         String bootstrap = Files.readString(Path.of(

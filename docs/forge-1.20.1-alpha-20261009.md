@@ -17,9 +17,6 @@ Features already present in the Forge baseline remain on their Forge implementat
   the recipe's actual fluid ingredient, including non-water recipes.
 - Mining factory and overloaded I/O port guides and related English/Chinese
   catalyzer text match the alpha snapshot.
-- Time-wheel batch extraction admits a batch after reserving one concrete input
-  prototype and before taking the remaining materials. Rejection and admission
-  exceptions return that prototype; sibling task allocations remain protected.
 - Ordinary single-copy fallback keeps a provider available after partial batch
   success when that provider is no longer busy.
 
@@ -30,41 +27,18 @@ capability APIs use their Forge equivalents. The minimum Forge version is
 47.1.47 and the Thunderbolt dispatcher API was verified with 2.0.3-beta; the
 declared compatible dependency range is `[2.0.3-beta,2.1.0)`.
 
-Forge Thunderbolt does not expose the newer `PreparedBatch`/capacity limiter
-API. `TimeWheelBatchAdmission` provides the optional contract in AE2LT's own
-package. The existing dispatcher still selects, balances and accounts for
-providers; an LT-scoped Mixin supplies admission and prepared submission only
-for the matching time-wheel task and inventory. Existing Forge providers retain
-their advisory capacity and ordinary submission behavior. A provider must
-implement the optional admission contract to report a tighter concrete-input
-limit. Other CPU paths keep native extraction and submission behavior.
+Time-wheel batches retain the existing LT-scoped input allocator and native
+Thunderbolt dispatch. The test-only admission contract was removed because no
+Forge production provider implemented it. Concrete-input prepared admission
+from newer Thunderbolt APIs is not included in this Forge port.
 
-The admission contract is adapted from
-[Thunderbolt-Core-Reborn](https://github.com/AE2-Lightning-Tech-Reborn/Thunderbolt-Core-Reborn),
-by the AE2-Lightning-Tech-Reborn contributors, under GNU LGPL 3.0. The repository
-license and existing project attribution are retained. No Thunderbolt classes
-or modified dependency JARs are bundled by this port.
+The repository license and existing project attribution are retained. No
+Thunderbolt classes or modified dependency JARs are bundled by this port.
 
 ## Validation
 
-- Full Java 17 compilation, 1,419 unit tests, and six adaptive batch stress tests.
-- Forge 47.1.47 with AE2 15.4.10, Thunderbolt 2.0.3-beta and Applied Flux:
-  47 required GameTests passed, including FE return rejection, historical buffer
-  recovery, shared-seed batches, and prepared admission through the actual Mixin.
-- Admission tests reserve only one prototype from 10,000 inputs before limiting
-  extraction to 64; strict sibling stock stays intact. Zero/throwing admission,
-  partial dispatch, missing-input retry and scope isolation preserve materials.
-- Twelve release metadata tests and the Forge release repository resolution test.
-- `reobfJarJar` builds the distributable. Its Forge metadata, Java 17 bytecode,
-  Mixin/refmap, bundled MixinExtras and JSON resources are checked; development
-  FE GameTest fixtures are excluded.
-
-These checks establish functional behavior and bounded extraction. They do not
-measure overall server MSPT improvements or cover every optional-mod/client
-combination. JEI/EMI presentation was compiled and its resources checked; a live
-client rendering comparison was not performed. A standalone production server
-startup was not completed because the Forge installer download was rejected or
-truncated; production validation is limited to the reobfuscated artifact checks.
+See [the cleanup validation report](code-cleanup-1.20.1-20261009.md) for the
+current unit, stress, native Forge and release artifact checks and their limits.
 
 Reproduce the native regression run with:
 
