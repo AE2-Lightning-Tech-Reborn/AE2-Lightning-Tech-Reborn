@@ -139,13 +139,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private static final ResourceLocation BG_FORM = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/wireless_overloaded_form.png");
     private static final int TEXTURE_SIZE = 256;
 
-    // AE2 standard text tones — matches AE2's own screens such as
-    // terminal.png / craftingcpu.png where titles read as dark charcoal
-    // on the light-lavender panel.
-    // Default text is plain black on the lavender chassis. Hierarchy
-    // comes from {@link ChatFormatting} colours applied where they
-    // carry information (status / access / channel pressure / etc.) —
-    // labels that don't need a tint stay black.
     private static final int AE2_TEXT_TITLE = 0x000000;
     private static final int AE2_TEXT_BODY  = 0x000000;
     /**
@@ -451,13 +444,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         buildTopTabs(x0, y0, false);
 
-        // A back button is shown whenever this screen was opened as a sub-menu of
-        // a parent GUI: card mode (from a wireless terminal) or device mode opened
-        // from a machine's frequency config button. It reopens the parent via
-        // AE2's native SwitchGuisPacket instead of forcing the player to close the
-        // whole GUI. Controller/receiver blocks opened directly have no parent, so
-        // no back button is shown (ESC closes). Styled like AE2's native sub-menu
-        // back button: a BOX-style TabButton carrying the engine's BACK glyph.
+        // Return to the parent menu through AE2 when this screen is a submenu.
         if (freqMenu().hasParentMenu()) {
             Component backTooltip = Component.translatable(
                     freqMenu().isCardMode()
@@ -474,13 +461,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             addRenderableWidget(backButton);
         }
 
-        // Password prompt re-evaluation: if the target frequency now
-        // grants us membership (server accepted our password and
-        // enrolled us as USER), auto-dismiss the popup. Otherwise,
-        // seed the popup for the device-bind case — if the device
-        // we opened is pinned to an ENCRYPTED frequency and we're
-        // still an outsider, pop the prompt immediately so the user
-        // doesn't see the locked GUI body.
+        // Dismiss an accepted password prompt, or open one for an encrypted device binding.
         if (passwordPromptFreqId > 0) {
             var freq = ClientFrequencyCache.getFrequency(passwordPromptFreqId);
             if (freq == null || !needsPasswordUnlock(freq)) {
@@ -492,10 +473,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             checkAutoPasswordPrompt();
         }
 
-        // Password prompt modal takes precedence over both the
-        // delete-confirm modal and the normal tab body — the user
-        // can't meaningfully interact with the selected frequency
-        // until they authenticate.
+        // Authentication takes precedence over other controls.
         if (passwordPromptFreqId > 0) {
             buildPasswordPromptWidgets(x0, y0);
             return;
@@ -837,14 +815,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     // Tab: Selection
 
     private void initSelectionTab(int x0, int y0) {
-        // Search field (was the password field pre-popup-refactor).
-        // Typed queries filter the frequency list by a case-insensitive
-        // substring match on the name; on each keystroke we reset the
-        // scroll to the top and rebuild only the row buttons (the
-        // scrollbar widget itself is replaced by initTabWidgets via
-        // scheduleRebuild because the total count may have changed).
-        // Search field sits in the panel strip below the 4-row well
-        // baked into wireless_overloaded_selection.png (well y=36..120).
+        // Reset pagination when the search changes.
         int searchX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
         AETextField searchField = makeAe2Field(searchX, y0 + 124, INPUT_MAX_WIDTH, INPUT_HEIGHT);
         searchField.setMaxLength(32);
@@ -1039,14 +1010,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int by = y0 + LIST_ROW_FIRST_Y + row * LIST_ROW_HEIGHT;
 
             if (entry.isMember()) {
-                // Build the member-row label as a SINGLE Component instance.
-                // Earlier we used ``.copy().append(...)`` to splice a dimmed
-                // " [O]" suffix onto the coloured name — but AE2Button's
-                // horizontal-scroll text renderer interacts badly with
-                // sibling Components (they can measure differently and end
-                // up painting at staggered positions). A single literal with
-                // a uniform style renders flush on one line inside the row
-                // button.
+                // Use one styled literal to keep AE2Button scrolling text aligned.
                 StringBuilder text = new StringBuilder(entry.name());
                 if (isSelf(entry.uuid())) {
                     text.append(' ')
@@ -1055,11 +1019,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 text.append(" [").append(accessLabel(entry.access())).append(']');
                 Component display = Component.literal(text.toString())
                         .withStyle(entry.access().getFormatting());
-                // Self row is a read-only identity tag — every action in
-                // the popup is self-locked anyway (see the multi-owner
-                // self-lock rule), so disabling the click here avoids
-                // surfacing a popup whose four buttons would all be greyed
-                // out.
                 RowSpriteButton rowBtn = new RowSpriteButton(
                         x0 + LIST_ROW_X, by, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT,
                         display,
@@ -1135,24 +1094,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 ? FrequencyAccessLevel.BLOCKED
                 : popupMemberAccess;
         boolean targetIsOwner = targetLevel == FrequencyAccessLevel.OWNER;
-        // Self-lock (multi-owner): even though an OWNER can operate on
-        // peer OWNERs, acting on yourself would drop the owner count,
-        // breaking the "at least one OWNER remains" invariant. The
-        // Members-tab row for self is already click-disabled, but this
-        // keeps the popup safe if it's reached via another path.
+        // Prevent owners from removing or demoting themselves.
         boolean isSelfTarget = !popupIsStranger && isSelf(popupMemberUUID);
         boolean ownerActingOnSelf = targetIsOwner && isSelfTarget;
 
-        // Permission gates (shared rule from {@link
-        // FrequencyAccessLevel#canActOnLevel}): evaluate max(current,
-        // new) so promotions and demotions both route through the same
-        // rank test. Strangers enter via {@code targetLevel = BLOCKED},
-        // which means every rank-check behaves as if they had no prior
-        // access — an OWNER can mint them straight into ADMIN or
-        // OWNER without the artificial "USER first" stepping stone.
-        // The text-style tint is applied only when the button is
-        // actually clickable — otherwise the dark-red / gold colours
-        // still read as active even on a greyed button.
+        // Check the higher of the current and requested ranks for both promotions and demotions.
         boolean canUser = !ownerActingOnSelf
                 && targetLevel != FrequencyAccessLevel.USER
                 && myAccess.canActOnLevel(FrequencyAccessLevel.higher(targetLevel, FrequencyAccessLevel.USER));
@@ -1362,14 +1308,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                             .copy().withStyle(ChatFormatting.DARK_RED),
                     btn -> { deleteConfirmOpen = true; scheduleRebuild(); }));
         } else {
-            // Leave button: self-cancel via the membership packet.
-            // Works for both ADMIN and USER because the server-side
-            // MEMBERSHIP_CANCEL case allows self-targets regardless
-            // of canEdit (only the self-lock on the last OWNER still
-            // blocks). We disconnect the device FIRST (while we
-            // still have member-level access on the current freq)
-            // and then leave — once we're out of the members map
-            // the server's disconnect access gate would reject us.
+            // Disconnect before leaving, while the player still has access to the frequency.
             addRenderableWidget(new AE2Button(
                     x0 + 31, y0 + 138, 60, 16,
                     Component.translatable("ae2lt.gui.button.leave")
@@ -1391,11 +1330,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        // Per-tab AE2 chassis. Each tab uses a different 195×157 texture
-        // so the recessed wells (list rows / info shelf / blank panel) are
-        // baked into the art instead of redrawn with {@code g.fill} on top.
-        // The six top tab ears are still rendered by TabButton widgets
-        // themselves (AE2's ``TAB_BUTTON_BACKGROUND`` sprite).
         g.blit(
                 backgroundTextureForTab(currentTab),
                 leftPos,
@@ -1559,15 +1493,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         if (popupMemberUUID != null) {
-            // Header inside the popup panel: target member's name with
-            // their access code tacked on as a single line, positioned
-            // in the 14 px strip between the panel top (y=26) and the
-            // first action button (y=40) so it never overlaps the
-            // {@code 设为用户} row.
-            // Stranger popup shows the target dimmed (they have no
-            // access yet) with the localised "stranger" code tagged on
-            // — everything else is the same one-line header layout so
-            // the button stack below stays aligned.
             Component header;
             if (popupIsStranger) {
                 String code = Component.translatable("ae2lt.gui.member.stranger_short").getString();
@@ -1583,11 +1508,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             drawFlatCenteredFitted(g, header, imageWidth / 2, 30, 148, AE2_TEXT_TITLE);
         }
 
-        // Hover feedback for the tab strip is handled natively by
-        // {@link HoverableTabButton}, which flips AE2's BOX TabButton to
-        // its FOCUS sprite whenever the mouse is over it. Nothing to
-        // overlay here — the selected tab is identified by the GUI body
-        // it opens, not by a border accent.
 
         // Inline error toast (server-pushed). Painted last so it sits
         // on top of every modal + tab body, near the bottom edge of
@@ -1848,9 +1768,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.member.none"),
                     imageWidth / 2, 70, AE2_TEXT_MUTED);
         }
-        // No "click a row to manage" hint here — the row buttons read
-        // as clickable on their own, and the chassis bottom (y=143..156)
-        // is already taken by pagination.
     }
 
     private void renderCreateLabels(GuiGraphics g) {
@@ -1861,13 +1778,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         drawFlat(g, Component.translatable("ae2lt.gui.frequency.color").append(":"),
                 16, 82, AE2_TEXT_MUTED);
 
-        // Paint each preset-colour swatch on top of its vanilla Button.
-        // The buttons are plain 14×14 gray cells registered in
-        // {@link #initCreateTab}; this loop fills the 12×12 interior with
-        // the actual preset colour so the user can tell them apart.
-        // Coordinates here are LOCAL to the GUI (renderLabels' pose is
-        // already translated to leftPos/topPos), which matches the local
-        // offsets used when the buttons were positioned (x=42 base).
+        // renderLabels already uses coordinates relative to the GUI.
         for (int i = 0; i < PRESET_COLORS.length; i++) {
             int cx = 42 + (i % 7) * 16;
             int cy = 90 + (i / 7) * 16;
@@ -1884,9 +1795,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             }
         }
 
-        // Live preview swatch + name in the user's chosen colour, sat
-        // between the colour grid (ending y=120) and the Create button
-        // row at y=138 — inset 2 px so it visually nests under the grid.
         g.fill(16, 124, 28, 134, editColor | 0xFF000000);
         if (nameField != null && !nameField.getValue().isBlank()) {
             drawFlatFitted(g, nameField.getValue(), 32, 125,

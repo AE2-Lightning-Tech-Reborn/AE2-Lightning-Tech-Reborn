@@ -345,17 +345,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  ProxiedStorageInv — ME network proxy
-    //
-    //  • getStack/getAmount return REAL display values:
-    //      unlimited  → actual ME network quantity
-    //      limited    → min(configAmount, networkQuantity)
-    //  • extract() proxies to the ME network (capped per config)
-    //  • insert()  proxies to the ME network (crafted items, pipe input)
-    //  • getAvailableStacks() exposes only configured keys to avoid grid cache inflation
-    //  • Re-entrancy guard prevents recursion through InterfaceInventory
-    // ══════════════════════════════════════════════════════════════════════
+    // Exposes configured ME keys, caps limited slots, and guards recursive network access.
 
     public static class ProxiedStorageInv extends OverloadedConfigInv {
         private final OverloadedInterfaceLogic logic;
@@ -708,13 +698,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  ProxiedMenuWrapper — display-only wrapper
-    //
-    //  All mutation methods are no-ops; actual GUI interaction is handled
-    //  entirely by OverloadedInterfaceMenu.clicked() which directly
-    //  operates on the ME network (ME Terminal pattern).
-    // ══════════════════════════════════════════════════════════════════════
+    // Display wrapper; OverloadedInterfaceMenu handles network mutations.
 
     static class ProxiedMenuWrapper extends ConfigMenuInventory {
         private final ProxiedStorageInv proxy;
