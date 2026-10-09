@@ -6,14 +6,7 @@ plugins {
 }
 
 def releaseTag = System.getenv('TAG')?.trim()
-if (releaseTag) {
-    if (!releaseTag.startsWith('v')) {
-        throw new GradleException("Release tags must start with v: ${releaseTag}")
-    }
-    version = releaseTag.substring(1)
-} else {
-    version = mod_version
-}
+version = releaseTag ?: mod_version
 def resolvedProjectVersion = project.version.toString()
 group = mod_group_id
 
@@ -513,9 +506,9 @@ dependencies {
     // Thunderbolt Core — the extracted AE2 infrastructure layer (fast crafting planner,
     // channel/batch/cell/matrix algorithms). Provided at runtime as a separate mod jar in the modpack,
     // so compileOnly here. Published to mavenLocal via `./gradlew publishToMavenLocal` in Thunderbolt Core.
-    compileOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
-    runtimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
-    testRuntimeOnly "com.moakiee.thunderbolt:thunderbolt:${thunderbolt_version}"
+    compileOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
+    runtimeOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
+    testRuntimeOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
     jdbProbeModPaths.each { runtimeOnly files(it) }
 
     implementation "curse.maven:applied-energistics-2-223794:7027323"
