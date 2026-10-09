@@ -48,12 +48,21 @@ final class ArmorModuleTextureContractTest {
     }
 
     @Test
-    void celestweaveArmorDoesNotDeclareRenderedArmorLayers() throws Exception {
-        String source = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorMaterials.java"));
-
-        assertFalse(
-                source.contains("new ArmorMaterial.Layer"),
-                "Celestweave should remain equipable without rendering a worn armor model");
+    void wornTexturesDecodeAndMatchModelUvDimensions() throws Exception {
+        for (String name : List.of("celestweave_layer_1", "celestweave_layer_1_glow",
+                "celestweave_layer_2", "celestweave_layer_2_glow")) {
+            var image = javax.imageio.ImageIO.read(Path.of(
+                    "src/main/resources/assets/ae2lt/textures/models/armor", name + ".png").toFile());
+            org.junit.jupiter.api.Assertions.assertNotNull(image, name);
+            org.junit.jupiter.api.Assertions.assertEquals(128, image.getWidth(), name);
+            org.junit.jupiter.api.Assertions.assertEquals(64, image.getHeight(), name);
+        }
+        for (String name : List.of("celestweave_phase_wing", "celestweave_phase_wing_glow")) {
+            var image = javax.imageio.ImageIO.read(Path.of(
+                    "src/main/resources/assets/ae2lt/textures/entity", name + ".png").toFile());
+            org.junit.jupiter.api.Assertions.assertNotNull(image, name);
+            org.junit.jupiter.api.Assertions.assertEquals(64, image.getWidth(), name);
+            org.junit.jupiter.api.Assertions.assertEquals(32, image.getHeight(), name);
+        }
     }
 }

@@ -50,7 +50,7 @@ public final class CelestweaveArmorMaterials {
 
         @Override
         public String getName() {
-            return "celestweave";
+            return "ae2lt:celestweave";
         }
 
         @Override

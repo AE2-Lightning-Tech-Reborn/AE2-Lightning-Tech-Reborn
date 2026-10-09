@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class CelestweaveArmorRenderSourceContractTest {
     @Test
-    void realAndProjectedArmorSuppressModelsAndProjectionEquipSound() throws Exception {
+    void realAndProjectedArmorUseCustomModelAndProjectionKeepsSilentEquipSound() throws Exception {
         String baseArmor = read(
                 "src/main/java/com/moakiee/ae2lt/celestweave/BaseCelestweaveArmorItem.java");
         String projection = read(
@@ -22,7 +22,7 @@ class CelestweaveArmorRenderSourceContractTest {
         assertTrue(projection.contains("CelestweaveArmorRenderExtensions.INSTANCE"));
         assertTrue(projection.contains("return SoundEvents.EMPTY"));
         assertFalse(projection.contains("equipmentSlot == EquipmentSlot.HEAD"));
-        assertTrue(extensions.contains("original.setAllVisible(false)"));
+        assertTrue(extensions.contains("CelestweaveArmorModel.forSlot(equipmentSlot)"));
         assertTrue(extensions.contains("return original"));
     }
 

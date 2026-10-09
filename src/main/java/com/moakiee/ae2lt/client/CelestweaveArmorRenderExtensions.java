@@ -8,7 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
-/** Implements main's empty armor-material layers on Forge 1.20.1. */
+/** Keeps item.initializeClient as the Forge entry point for real and projected armor. */
 public final class CelestweaveArmorRenderExtensions implements IClientItemExtensions {
     public static final CelestweaveArmorRenderExtensions INSTANCE =
             new CelestweaveArmorRenderExtensions();
@@ -22,6 +22,8 @@ public final class CelestweaveArmorRenderExtensions implements IClientItemExtens
             ItemStack itemStack,
             EquipmentSlot equipmentSlot,
             HumanoidModel<?> original) {
+        var model = CelestweaveArmorModel.forSlot(equipmentSlot);
+        if (model != null) return model;
         original.setAllVisible(false);
         return original;
     }

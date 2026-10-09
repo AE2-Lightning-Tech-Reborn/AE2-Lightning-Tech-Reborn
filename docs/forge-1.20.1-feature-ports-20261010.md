@@ -22,3 +22,6 @@ GTL 的独占规划器、节点缺失 requester、Transfinite/Thunderbolt 接口
 客户端穿戴效果、互动界面和 Useless 实装模组运行不能由服务器测试代替；此记录不把编译通过描述为这些路径的完整运行验证。测试日志和临时适配脚本位于忽略的 build/feature-port-20261009，不进入生产 JAR。
 
 主线最终运行验证：工作站 65/65、兼容服务器 80/80、导入/导出行为与压力场景 77/77、能源输出专项 7/7。能源专项只注册了 7 项，不将旧基线测试数量计入本轮。最终 JUnit 1463/1463，adaptiveBatchStress 6/6，build/reobfJarJar 成功。JAR SHA-256：`9ae4edea083cc843ceda0d800ac624d864860bedc67482a1518b36f2e694629a`。
+
+护甲外观分支导入上游六张材质与自定义模型、能量辉光和相位翼；Forge IClientItemExtensions、NBT 能量和旧皮肤 API 已适配。六张 PNG 解码及尺寸验证通过。客户端实际穿戴与资源重载视觉效果尚未实测。
+该分支最终 JUnit 1463/1463，adaptiveBatchStress 6/6，build/reobfJarJar 成功。JAR SHA-256：`6a202ec9de5bf632b0a2d20d832db20b3f837cfd17e75e30bc6cd6629f80b104`。

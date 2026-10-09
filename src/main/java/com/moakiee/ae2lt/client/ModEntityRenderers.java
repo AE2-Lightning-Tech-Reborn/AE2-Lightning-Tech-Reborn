@@ -67,13 +67,23 @@ public final class ModEntityRenderers {
     }
 
     @SubscribeEvent
+    public static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(CelestweaveArmorModel.OUTER_LAYER, CelestweaveArmorModel::createOuterLayer);
+        event.registerLayerDefinition(CelestweaveArmorModel.INNER_LAYER, CelestweaveArmorModel::createInnerLayer);
+    }
+
+    @SubscribeEvent
     public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        CelestweaveArmorModel.bake(event.getEntityModels());
         for (var skin : event.getSkins()) {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
+                renderer.addLayer(new CelestweaveArmorGlowLayer<>(renderer));
                 renderer.addLayer(new PhaseWingLayer(renderer, event.getEntityModels()));
             }
         }
+        net.minecraft.client.renderer.entity.ArmorStandRenderer armorStand = event.getRenderer(net.minecraft.world.entity.EntityType.ARMOR_STAND);
+        if (armorStand != null) armorStand.addLayer(new CelestweaveArmorGlowLayer<>(armorStand));
     }
 
     @SubscribeEvent
