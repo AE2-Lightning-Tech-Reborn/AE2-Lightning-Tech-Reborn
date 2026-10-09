@@ -67,7 +67,15 @@
     "PatternMigrationEaeBatchMixin",
     "PatternMigrationEaepBatchMixin",
     "PatternMigrationRefundMixin",
-    "PatternMigrationStorageMountMixin"
+    "PatternMigrationStorageMountMixin",
+    "OverloadAlloyAnvilFallingMixin",
+    "OverloadAlloyAnvilMenuMixin",
+    "CraftingCalculationReportMixin",
+    "CraftConfirmMenuReportMixin",
+    "CraftConfirmReplanMixin",
+    "NetworkCraftingSimulationSnapshotMixin",
+    "mobgrindingutils.EntityConveyorPhaseLockMixin",
+    "TianshuStonecutterMenuMixin"
   ],
   "client": [
     "client.IpnContainerClickerMixin",
@@ -88,7 +96,11 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.EncodingHelperAccessor",
+    "client.CraftConfirmReportRoutingMixin",
+    "client.CraftConfirmScreenAccessor",
+    "client.CraftErrorScreenReplanLabelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

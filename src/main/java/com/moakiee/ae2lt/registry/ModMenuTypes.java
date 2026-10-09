@@ -155,6 +155,10 @@ public final class ModMenuTypes {
                     "tianshu_supercomputer_controller",
                     () -> TianshuSupercomputerControllerMenu.TYPE);
 
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu>> TIANSHU_CRAFTING_TERMINAL =
+            MENU_TYPES.register("tianshu_crafting_terminal", () -> com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE);
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu>> TIANSHU_WIRELESS_CRAFTING_TERMINAL =
+            MENU_TYPES.register("wireless_tianshu_crafting_terminal", () -> com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE);
     public static final RegistryObject<MenuType<TianshuPatternEncodingTermMenu>>
             TIANSHU_PATTERN_ENCODING_TERMINAL = MENU_TYPES.register(
                     "tianshu_pattern_encoding_terminal",

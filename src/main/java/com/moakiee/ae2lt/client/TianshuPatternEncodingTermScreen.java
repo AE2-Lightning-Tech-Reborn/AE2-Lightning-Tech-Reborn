@@ -1,17 +1,17 @@
 package com.moakiee.ae2lt.client;
 
+
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
-import com.moakiee.ae2lt.client.gui.AE2Button;
+import net.minecraft.client.gui.components.Button;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.TabButton.Style;
-import com.moakiee.ae2lt.util.SlotPositionAccess;
 import appeng.api.behaviors.ContainerItemStrategies;
 import appeng.api.behaviors.EmptyingAction;
 import appeng.api.config.ActionItems;
@@ -22,7 +22,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
 import appeng.core.definitions.AEItems;
-import appeng.core.sync.network.NetworkHandler;
+import appeng.core.sync.BasePacket;
 import appeng.core.sync.packets.ConfigValuePacket;
 import appeng.core.sync.packets.InventoryActionPacket;
 import appeng.helpers.InventoryAction;
@@ -61,6 +61,7 @@ import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.network.PacketDistributor;
 import com.moakiee.ae2lt.logic.AdvancedAECompat;
 import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.jetbrains.annotations.Nullable;
@@ -73,9 +74,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private final Map<TianshuEncodingMode, TabButton> modeTabs =
             new EnumMap<>(TianshuEncodingMode.class);
     private final TianshuClosedLoopEncodingPanel closedLoopPanel;
+    private final TianshuOmniversalEncodingPanel omniversalPanel;
     private final List<ProcessingMultiplierButton> processingModeButtons;
-    private final AE2Button advancedEncoding;
-    private final AE2Button overloadEncoding;
+    private final Button advancedEncoding;
+    private final Button overloadEncoding;
     private final RepoSlot networkBlankPatternSlot;
     private final Item blankPatternItem;
     @Nullable
@@ -109,13 +111,29 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             modePanels.put(mode, panel);
         }
 
-        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()));
+        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
+            @Override
+            public List<Component> getTooltipMessage() {
+                return menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                        && TianshuUploadTriggerClient.shouldTrigger()
+                        ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
+                                Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
+                        : super.getTooltipMessage();
+            }
+        });
 
         addExtraTab(TianshuEncodingMode.CLOSED_LOOP, ModItems.CLOSED_LOOP_PATTERN.get().getDefaultInstance(),
                 Component.translatable("ae2lt.tianshu.terminal.mode.closed_loop"), "modeTabButton4");
         closedLoopPanel = new TianshuClosedLoopEncodingPanel(this, widgets,
                 () -> switchToScreen(new TianshuClosedLoopPatternConfigScreen<>(this)));
         widgets.add("closedLoopPanel", closedLoopPanel);
+        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded()) {
+            addExtraTab(TianshuEncodingMode.OMNIVERSAL,
+                    com.moakiee.ae2lt.integration.useless.UselessModCompat.icon(),
+                    Component.translatable("ae2lt.tianshu.terminal.mode.omniversal"), "modeTabButton5");
+        }
+        omniversalPanel = new TianshuOmniversalEncodingPanel(this, widgets);
+        widgets.add("omniversalPanel", omniversalPanel);
 
         processingModeButtons = List.of(
                 addProcessingMultiplierButton("processingMultiply2", 2, 4),
@@ -139,13 +157,14 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         var blankPatternSlots = menu.getSlots(SlotSemantics.BLANK_PATTERN);
         if (!blankPatternSlots.isEmpty()) {
             var disabledSlot = blankPatternSlots.get(0);
-            SlotPositionAccess.set(networkBlankPatternSlot, disabledSlot.x, disabledSlot.y);
+            networkBlankPatternSlot.x = disabledSlot.x;
+            networkBlankPatternSlot.y = disabledSlot.y;
             menu.slots.add(networkBlankPatternSlot);
         }
     }
 
-    private AE2Button addCompactButton(String widgetId, Component label, Runnable onPress) {
-        var button = new CompactAE2Button(label, ignored -> onPress.run());
+    private Button addCompactButton(String widgetId, Component label, Runnable onPress) {
+        var button = new CompactButton(label, ignored -> onPress.run());
         widgets.add(widgetId, button);
         return button;
     }
@@ -196,11 +215,12 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         });
         boolean hasDraftInput = hasProcessingDraftInput();
         updateEncodingButton(advancedEncoding, ProcessingPatternEncodingType.ADVANCED,
-                processing && AdvancedAECompat.canEncode(), hasDraftInput, "advanced");
+                processing && AdvancedAECompat.isLoaded(), hasDraftInput, "advanced");
         updateEncodingButton(overloadEncoding, ProcessingPatternEncodingType.OVERLOAD,
                 processing, hasDraftInput, "overload");
         boolean closedLoop = selected == TianshuEncodingMode.CLOSED_LOOP;
         closedLoopPanel.setVisible(closedLoop);
+        omniversalPanel.setVisible(selected == TianshuEncodingMode.OMNIVERSAL);
         setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK, true);
     }
 
@@ -212,7 +232,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
     }
 
-    private void updateEncodingButton(AE2Button button, ProcessingPatternEncodingType type,
+    private void updateEncodingButton(Button button, ProcessingPatternEncodingType type,
                                       boolean visible, boolean enabled, String key) {
         button.visible = visible;
         button.active = enabled;
@@ -239,7 +259,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private void openUploadScreen(boolean directUploadRequested) {
         var stack = firstEncodedPattern();
         if (stack.isEmpty()) return;
-        if (stack.getItem() instanceof ClosedLoopPatternItem) {
+        // The server is authoritative for validating a closed-loop payload. Routing by the
+        // item type here keeps the shared upload button responsive even when the client cannot
+        // decode a registry-backed payload and lets the server report a proper upload failure.
+        if (stack.getItem() instanceof ClosedLoopPatternItem
+                || com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
             menu.uploadEncodedPattern();
             return;
         }
@@ -247,7 +271,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
                 : TianshuPatternUploadRouting.Route.INVALID;
         switch (route) {
-            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER -> menu.uploadEncodedPattern();
+            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
             case PROCESSING_PROVIDER -> switchToScreen(
                     new TianshuUploadTargetScreen<>(this, directUploadRequested));
             case INVALID -> { }
@@ -261,14 +285,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         switchToScreen(new TianshuUploadTargetScreen<>(this, true));
         return true;
     }
-
-
-
-    private void setViewMode(ViewItems viewMode) {
-        menu.getConfigManager().putSetting(Settings.VIEW_MODE, viewMode);
-        NetworkHandler.instance().sendToServer(new ConfigValuePacket(Settings.VIEW_MODE, viewMode));
-    }
-
 
 
 
@@ -291,9 +307,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                         new GenericStack(key, copies),
                         newStack -> {
                             if (newStack == null) {
-                                var message = new InventoryActionPacket(
+                                BasePacket message = new InventoryActionPacket(
                                         InventoryAction.SET_FILTER, slot.index, ItemStack.EMPTY);
-                                NetworkHandler.instance().sendToServer(message);
+                                com.moakiee.ae2lt.network.PacketSender.sendToServer(message);
                             } else {
                                 menu.setClosedLoopMemberCopies(memberIndex, newStack.amount());
                             }
@@ -307,11 +323,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                             this,
                             currentStack,
                             newStack -> {
-                                var message = new InventoryActionPacket(
+                                BasePacket message = new InventoryActionPacket(
                                         InventoryAction.SET_FILTER,
                                         slot.index,
                                         GenericStack.wrapInItemStack(newStack));
-                                NetworkHandler.instance().sendToServer(message);
+                                com.moakiee.ae2lt.network.PacketSender.sendToServer(message);
                             }));
                     return true;
                 }
@@ -322,9 +338,13 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
 
-
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
+        if (menu.getCarried().isEmpty() && omniversalTooltip != null) {
+            drawTooltip(graphics, x, y, omniversalTooltip);
+            return;
+        }
         var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
                 x - leftPos, y - topPos);
         if (menu.getCarried().isEmpty() && multiplierTooltip != null) {
@@ -357,7 +377,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
 
-
     private boolean isClosedLoopMemberSlot(Slot slot) {
         return slot != null
                 && menu.getSlotSemantic(slot) == Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER;
@@ -378,7 +397,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
 
 
-
     @Override
     public void renderSlot(GuiGraphics graphics, Slot slot) {
         if (slot == networkBlankPatternSlot && !slot.hasItem()) {
@@ -388,12 +406,15 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
 
         if (isClosedLoopMemberSlot(slot) && slot.hasItem()) {
+            // Render only the pattern icon here. The standard slot decoration would add the
+            // display stack's amount (1) in the same corner as the per-cycle copy count below.
             graphics.renderItem(slot.getItem().copyWithCount(1), slot.x, slot.y);
             long copies = Math.max(1L,
                     menu.closedLoopDraftSync.copies(slot.getContainerSlot()));
             if (copies > 1L) {
                 var poseStack = graphics.pose();
                 poseStack.pushPose();
+                // Items render at z=100; keep the authoritative per-cycle count above the icon.
                 poseStack.translate(0, 0, 100);
                 StackSizeRenderer.renderSizeLabel(
                         graphics, font, slot.x, slot.y, Long.toString(copies), false);
@@ -411,7 +432,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             poseStack.popPose();
         }
 
-
     }
 
     /**
@@ -421,12 +441,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
      * every interaction except opening the maintenance editor is swallowed above.
      */
 
-
     /** Filters the visible view without deleting entries from AE2's client repository. */
-
-
-
-
 
 
 
@@ -446,13 +461,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     private boolean shouldShowCraftableIndicatorForSlot(Slot slot) {
-        var semantic = menu.getSlotSemantic(slot);
-        if (semantic == SlotSemantics.CRAFTING_GRID
-                || semantic == SlotSemantics.PROCESSING_INPUTS
-                || semantic == SlotSemantics.SMITHING_TABLE_ADDITION
-                || semantic == SlotSemantics.SMITHING_TABLE_BASE
-                || semantic == SlotSemantics.SMITHING_TABLE_TEMPLATE
-                || semantic == SlotSemantics.STONECUTTING_INPUT) {
+        if (menu.isPatternIngredientSlot(slot)) {
             var slotContent = GenericStack.fromItemStack(slot.getItem());
             return slotContent != null && repo.isCraftable(slotContent.what());
         }
@@ -487,7 +496,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
         @Override
         public GridInventoryEntry getEntry() {
-            return repo.hasPower() ? findNetworkBlankPatternEntry() : null;
+            return menu.isPowered() ? findNetworkBlankPatternEntry() : null;
         }
     }
 
@@ -500,14 +509,14 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     /** AE2 button visuals with a compact text layer for the processing-mode controls. */
-    private record ProcessingMultiplierButton(AE2Button button, int factor, int shiftedFactor) {
+    private record ProcessingMultiplierButton(Button button, int factor, int shiftedFactor) {
     }
 
-    private static final class CompactAE2Button extends AE2Button {
+    private static final class CompactButton extends Button {
         private static final float TEXT_SCALE = 0.65F;
 
-        private CompactAE2Button(Component message, Button.OnPress onPress) {
-            super(message, onPress);
+        private CompactButton(Component message, Button.OnPress onPress) {
+            super(0, 0, 8, 8, message, onPress, Button.DEFAULT_NARRATION);
         }
 
         @Override

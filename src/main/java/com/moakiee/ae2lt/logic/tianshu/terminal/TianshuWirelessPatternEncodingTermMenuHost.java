@@ -36,6 +36,7 @@ import appeng.util.inv.InternalInventoryHost;
 public class TianshuWirelessPatternEncodingTermMenuHost extends WirelessTerminalMenuHost
         implements TianshuPatternTerminalHost, IPatternTerminalLogicHost, IViewCellStorage,
         InternalInventoryHost {
+            private com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.empty();
     private static final String TAG_PATTERN_LOGIC = "patternEncodingLogic";
     private static final String TAG_VIEW_CELLS = "viewcells";
 
@@ -55,6 +56,7 @@ public class TianshuWirelessPatternEncodingTermMenuHost extends WirelessTerminal
             logic.readFromNBT(data);
             viewCells.readFromNBT(data, TAG_VIEW_CELLS);
             terminalState.read(data, TianshuTerminalState.NbtFormat.WIRELESS);
+            omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.read(data.getCompound("OmniversalDraft"));
         }
 
         // Tianshu pulls blank patterns from ME storage and stages only the pattern being encoded.
@@ -78,6 +80,8 @@ public class TianshuWirelessPatternEncodingTermMenuHost extends WirelessTerminal
     public void markForSave() {
         CompoundTag data = getItemStack().getOrCreateTagElement(TAG_PATTERN_LOGIC);
         logic.writeToNBT(data);
+        if (omniversalDraft.isEmpty()) data.remove("OmniversalDraft");
+        else data.put("OmniversalDraft", omniversalDraft.write());
         viewCells.writeToNBT(data, TAG_VIEW_CELLS);
         terminalState.write(data, TianshuTerminalState.NbtFormat.WIRELESS);
     }
@@ -100,6 +104,18 @@ public class TianshuWirelessPatternEncodingTermMenuHost extends WirelessTerminal
     @Override
     public TianshuEncodingMode getTianshuEncodingMode() {
         return terminalState.getEncodingMode();
+}
+
+    @Override
+    public OmniversalPatternDraft getOmniversalPatternDraft() {
+        return omniversalDraft;
+}
+
+    @Override
+    public void setOmniversalPatternDraft(OmniversalPatternDraft draft) {
+        if (omniversalDraft.equals(draft)) return;
+        omniversalDraft = draft;
+            markForSave();
     }
 
     @Override

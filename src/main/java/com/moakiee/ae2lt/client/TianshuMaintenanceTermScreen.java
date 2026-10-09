@@ -2,12 +2,12 @@ package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.client.TextureToggleButton;
 
-
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
+import net.minecraft.client.gui.components.Button;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.SettingToggleButton;
@@ -23,6 +23,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
 import appeng.core.definitions.AEItems;
+import appeng.core.sync.BasePacket;
 import appeng.core.sync.packets.InventoryActionPacket;
 import appeng.helpers.InventoryAction;
 import appeng.menu.SlotSemantics;
@@ -61,7 +62,7 @@ import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import com.moakiee.ae2lt.network.PacketSender;
+import net.minecraftforge.network.PacketDistributor;
 import com.moakiee.ae2lt.logic.AdvancedAECompat;
 import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.jetbrains.annotations.Nullable;
@@ -84,6 +85,8 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
 
     protected TianshuMaintenanceTermScreen(M menu, Inventory inventory, Component title, ScreenStyle style) {
         super(menu, inventory, title, style);
+        // Only network inventory updates invalidate the synthetic-entry reconciliation.
+        // Keep AE2's own Repo (and its scrollbar listener) as the screen's repository.
         menu.setClientRepo(new IClientRepo() {
             @Override
             public void handleUpdate(boolean fullUpdate, List<GridInventoryEntry> entries) {
@@ -194,6 +197,8 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
         menu.setTerminalViewMode(menu.getTerminalViewMode().next(reverse));
         syncSyntheticMaintenanceEntries();
         refreshMaintenancePartitionIfNeeded();
+        // Shift also freezes AE2's repository. Explicit filter changes must replace that
+        // frozen view immediately, then keep normal inventory updates frozen as before.
         boolean paused = repo.isPaused();
         if (paused) repo.setPaused(false);
         else repo.updateView();
@@ -307,6 +312,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
             if (previous == null || previous.getStoredAmount() != summary.storedAmount()
                     || previous.getRequestableAmount() != requestable
                     || previous.isCraftable() != summary.craftable()) {
+                // requestable=1 keeps an unavailable zero-stock entry meaningful to AE2's Repo.
                 updates.add(new GridInventoryEntry(
                         serial, summary.key(), summary.storedAmount(),
                         requestable, summary.craftable()));
@@ -330,6 +336,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
     @Nullable
     @Override
     protected IPartitionList createPartitionList(List<ItemStack> viewCells) {
+        // Filters the visible view without deleting entries from the shared item repository.
         var viewCellFilter = super.createPartitionList(viewCells);
         if (!menu.isMaintainableView()) return viewCellFilter;
 

@@ -272,9 +272,12 @@ public final class TimeWheelCraftingStatusGameTests {
             var terminal = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
             helper.assertTrue(terminal.isFullStatus(),
                     "The job boundary must still send a replacement snapshot with retained inventory");
-            helper.assertTrue(terminal.getEntries().size() == 1,
-                    "The replacement snapshot must contain exactly the retained ingredient");
-            var retained = terminal.getEntries().get(0);
+            helper.assertTrue(terminal.getEntries().size() == 2,
+                    "Full storage must retain both the ingredient and the completed physical output");
+            var retained = terminal.getEntries().stream().filter(entry -> ingredient.equals(entry.getWhat())).findFirst().orElseThrow();
+            var retainedOutput = terminal.getEntries().stream().filter(entry -> output.equals(entry.getWhat())).findFirst().orElseThrow();
+            helper.assertTrue(retainedOutput.getStoredAmount() == 1 && retainedOutput.getPendingAmount() == 0
+                    && retainedOutput.getActiveAmount() == 0, "Completed output must remain physically owned without stale progress");
             helper.assertTrue(ingredient.equals(retained.getWhat()),
                     "The replacement snapshot must identify the retained ingredient");
             helper.assertTrue(retained.getStoredAmount() == 1,
@@ -387,7 +390,9 @@ public final class TimeWheelCraftingStatusGameTests {
     }
 
     private static IGrid emptyGrid() {
-        return gridWithStorage(new RejectingStorage(new KeyCounter()));
+        return gridWithStorage(new RejectingStorage(new KeyCounter()) {
+            @Override public long insert(AEKey what, long amount, Actionable mode, IActionSource source) { return amount; }
+        });
     }
 
     private static IGrid gridWithStorage(MEStorage inventory) {
@@ -440,7 +445,7 @@ public final class TimeWheelCraftingStatusGameTests {
         }
     }
 
-    private static final class RejectingStorage implements MEStorage {
+    private static class RejectingStorage implements MEStorage {
         private final KeyCounter contents = new KeyCounter();
 
         private RejectingStorage(KeyCounter initialContents) {

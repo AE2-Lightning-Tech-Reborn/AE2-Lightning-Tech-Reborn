@@ -153,6 +153,10 @@ public final class ModDataComponents {
     /** Monotonic mirror version carried only by authoritative phase-locked armor. */
     public static final ComponentKey<Long> PHASE_LOCK_ARMOR_UPDATE = longKey(TAG_PREFIX + "phase_lock_armor_update");
 
+    public static final ComponentKey<CompoundTag> TIANSHU_WORKSTATIONS = new ComponentKey<>(
+            TAG_PREFIX + "tianshu_workstations", tag -> tag.getCompound(TAG_PREFIX + "tianshu_workstations").copy(),
+            (tag, value) -> { if (value.isEmpty()) tag.remove(TAG_PREFIX + "tianshu_workstations");
+                else tag.put(TAG_PREFIX + "tianshu_workstations", value.copy()); });
     // ---- 组件构造助手 ----
 
     /** Codec 组件：NbtOps 编解码（仅用于纯数据 record，不依赖 registry 上下文）。 */

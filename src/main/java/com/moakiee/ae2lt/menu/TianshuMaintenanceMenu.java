@@ -29,7 +29,7 @@ public interface TianshuMaintenanceMenu {
         setTerminalViewMode(enabled ? TianshuTerminalViewMode.MAINTAINABLE
                 : TianshuTerminalViewMode.from(getTerminalViewMode().viewItems(), false));
     }
-    void setMaintainableViewTemporarily(boolean enabled);
+    default void setMaintainableViewTemporarily(boolean enabled) { setMaintainableView(enabled); }
     FakeSlot getGlobalReserveMarkSlot();
 
     default void requestMaintenanceEditor(AEKey key) { getMaintenanceSession().requestMaintenanceEditor(key); }

@@ -1,0 +1,21 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "appgen"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "mode": "dust",
+  "catalyst": {
+    "id": "appgen:ember_block"
+  },
+  "catalystCount": 1,
+  "output": {
+    "count": 1,
+    "id": "appgen:ember_dust"
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

@@ -167,6 +167,8 @@ public final class ModBlocks {
     public static final RegistryObject<LightningAssemblyChamberBlock> LIGHTNING_ASSEMBLY_CHAMBER =
             registerBlock("lightning_assembly_chamber", LightningAssemblyChamberBlock::new);
 
+    public static final RegistryObject<com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock> OVERLOAD_ALLOY_ANVIL =
+            registerBlock("overload_alloy_anvil", com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock::new);
     public static final RegistryObject<OverloadProcessingFactoryBlock> OVERLOAD_PROCESSING_FACTORY =
             registerBlock("overload_processing_factory", OverloadProcessingFactoryBlock::new);
 

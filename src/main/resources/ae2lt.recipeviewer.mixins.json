@@ -6,6 +6,7 @@
   "refmap": "ae2lt.refmap.json",
   "plugin": "com.moakiee.ae2lt.mixin.recipeviewer.RecipeViewerMixinPlugin",
   "client": [
+    "useless.OmniversalPatternJeiTransferMixin",
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
     "emi.EmiEncodePatternTransferMixin",

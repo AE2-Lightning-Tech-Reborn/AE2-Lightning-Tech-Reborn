@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
+    "ae2lt:overload_alloy_anvil",
     {
       "id": "ae2lt:silicon_block",
       "required": false

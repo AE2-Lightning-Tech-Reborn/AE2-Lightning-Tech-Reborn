@@ -1,0 +1,13 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                '**/debug/TianshuCraftingGameTests.java',
+                '**/debug/TianshuWorkCraftingGameTests.java',
+                '**/debug/TianshuWirelessPortGameTests.java'])
+        minecraft.runs.interfaceIoGameTestServer {
+            workingDirectory project.layout.buildDirectory.dir('tianshu-workstation-gametest').get().asFile
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_workstations,minecraft'
+            property 'forge.logging.console.level', 'info'
+        }
+    }
+}

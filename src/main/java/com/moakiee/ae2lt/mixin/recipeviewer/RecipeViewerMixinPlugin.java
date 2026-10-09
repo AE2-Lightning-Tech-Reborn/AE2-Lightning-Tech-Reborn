@@ -15,6 +15,8 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean emiPresent;
     private boolean jeiSupplyPresent;
 
+    private boolean uselessJeiPresent;
+
     @Override
     public void onLoad(String mixinPackage) {
         var mods = LoadingModList.get();
@@ -24,6 +26,8 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         jeiPresent = mods.getModFileById("jei") != null;
         emiPresent = mods.getModFileById("emi") != null;
         jeiSupplyPresent = jeiPresent && mods.getModFileById("ae2wtlib") != null;
+        uselessJeiPresent = mods.getModFileById("useless_mod") != null
+        && mods.getModFileById("jei") != null;
     }
 
     @Override
@@ -34,6 +38,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
+        if (mixinClassName.contains(".useless.")) return uselessJeiPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;
         return false;

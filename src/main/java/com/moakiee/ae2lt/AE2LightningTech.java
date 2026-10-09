@@ -241,6 +241,9 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.TIANSHU_AMPLIFIER_UNIT);
                         acceptCreative(output, ModBlocks.CLOSED_LOOP_PATTERN_STORAGE);
                         acceptCreative(output, ModBlocks.CLOSED_LOOP_SEED_STORAGE);
+                        acceptCreative(output, ModItems.TIANSHU_CRAFTING_TERMINAL);
+                        ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.ifPresent(output::accept);
+                        acceptCreative(output, ModBlocks.OVERLOAD_ALLOY_ANVIL);
                         acceptCreative(output, ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL);
                         ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.ifPresent(output::accept);
 

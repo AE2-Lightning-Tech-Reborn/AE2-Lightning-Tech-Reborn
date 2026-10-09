@@ -35,7 +35,7 @@ public final class NetworkInit {
     // Version 3 adds the research-note screen message.
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
     // GTL 10 adds pattern migration and native interface direction synchronization.
-    private static final String PROTOCOL_VERSION = "gtl-10";
+    private static final String PROTOCOL_VERSION = "gtl-11";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -398,6 +398,10 @@ public final class NetworkInit {
                 MatrixPatternMigrationStatusPacket.class,
                 MatrixPatternMigrationStatusPacket::encode, MatrixPatternMigrationStatusPacket::decode,
                 MatrixPatternMigrationStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket.class,
+                (packet, buffer) -> packet.write(buffer), com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::read,
+                com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static ResourceLocation id(String path) {

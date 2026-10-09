@@ -17,9 +17,12 @@ public final class TianshuWirelessIngredientSource {
 
     public static List<MenuLocator> locate(Player player) {
         var result = new ArrayList<MenuLocator>();
-        var accessory = de.mari_023.ae2wtlib.Platform.findTerminalFromAccessory(
-                player, Ae2wtlibIntegration.TIANSHU_TERMINAL_NAME);
-        if (accessory != null) result.add(accessory);
+        var seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<ItemStack, Boolean>());
+        for (var name : List.of(Ae2wtlibIntegration.TIANSHU_TERMINAL_NAME,
+                Ae2wtlibIntegration.TIANSHU_CRAFTING_NAME)) {
+            var accessory = de.mari_023.ae2wtlib.Platform.findTerminalFromAccessory(player, name);
+            if (accessory != null && seen.add(WUTHandler.getItemStackFromLocator(player, accessory))) result.add(accessory);
+        }
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             if (isTianshu(player.getInventory().getItem(i))) result.add(MenuLocators.forInventorySlot(i));
         }
@@ -28,8 +31,11 @@ public final class TianshuWirelessIngredientSource {
 
     private static boolean isTianshu(ItemStack stack) {
         if (!(stack.getItem() instanceof ItemWT)) return false;
-        var name = Ae2wtlibIntegration.TIANSHU_TERMINAL_NAME;
-        return WUTHandler.wirelessTerminals.containsKey(name) && WUTHandler.hasTerminal(stack, name);
+        for (var name : List.of(Ae2wtlibIntegration.TIANSHU_TERMINAL_NAME,
+                Ae2wtlibIntegration.TIANSHU_CRAFTING_NAME)) {
+            if (WUTHandler.wirelessTerminals.containsKey(name) && WUTHandler.hasTerminal(stack, name)) return true;
+        }
+        return false;
     }
 
     @Nullable

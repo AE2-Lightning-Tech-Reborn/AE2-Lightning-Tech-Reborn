@@ -199,6 +199,15 @@ public class JEIPlugin implements IModPlugin {
         // AE2 1.20.1 ships its own EncodePatternTransferHandler for the vanilla
         // JEI plugin; its constructor takes (MenuType, Class, transfer-helper).
         var helper = registration.getTransferHelper();
+        processingTransferHelper = helper;
+        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE, helper));
+        if (TianshuWirelessTerminalFactory.isAvailable()) {
+            registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                    com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE, helper));
+            registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                    com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu.class, null, helper));
+        }
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
@@ -215,8 +224,31 @@ public class JEIPlugin implements IModPlugin {
 
     }
 
+    public static mezz.jei.api.recipe.transfer.IRecipeTransferError processingPatternFeedback(
+            TianshuPatternEncodingTermMenu menu, Object recipe, mezz.jei.api.gui.ingredient.IRecipeSlotsView slots,
+            net.minecraft.world.entity.player.Player player, boolean maxTransfer) {
+        var helper = processingTransferHelper;
+        if (helper == null) return null;
+        return new appeng.integration.modules.jei.transfer.EncodePatternTransferHandler<>(
+                TianshuPatternEncodingTermMenu.TYPE, TianshuPatternEncodingTermMenu.class,
+                helper)
+                .transferRecipe(menu, recipe, slots, player, maxTransfer, false);
+    }
+
+    private static mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper processingTransferHelper;
+    private static mezz.jei.api.runtime.IJeiRuntime jeiRuntime;
+    @Override public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
+        jeiRuntime = runtime;
+        JeiBookmarkAccessImpl.setRuntime(runtime);
+    }
+    @Override public void onRuntimeUnavailable() {
+        jeiRuntime = null;
+        JeiBookmarkAccessImpl.clearRuntime();
+    }
+
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class, new TianshuCraftingGhostHandler());
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,

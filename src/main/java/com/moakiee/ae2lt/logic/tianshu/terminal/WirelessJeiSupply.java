@@ -23,13 +23,12 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.fml.ModList;
 
 /** Supplies real backpack items; the machine's existing JEI handler still performs the transfer. */
-@EventBusSubscriber(modid = AE2LightningTech.MODID)
+@Mod.EventBusSubscriber(modid = AE2LightningTech.MODID)
 public final class WirelessJeiSupply {
     private record Ticket(AbstractContainerMenu menu, MenuLocator locator, IGrid grid,
                           int expires, Map<AEItemKey, Integer> offered) {}
@@ -38,8 +37,7 @@ public final class WirelessJeiSupply {
 
     public static WirelessJeiSupplyResultPacket handle(ServerPlayer player, WirelessJeiSupplyPacket packet) {
         var menu = player.containerMenu;
-        if (!ModList.get().isLoaded("ae2wtlib") || !player.isAlive()
-                || menu == player.inventoryMenu || menu instanceof MEStorageMenu
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("ae2wtlib") || !player.isAlive() || menu == player.inventoryMenu || menu instanceof MEStorageMenu
                 || menu.containerId != packet.containerId() || !menu.stillValid(player)
                 || packet.items().isEmpty() || packet.items().size() > WirelessJeiInventoryPlan.MAX_ENTRIES) {
             return result(packet, 0, List.of());

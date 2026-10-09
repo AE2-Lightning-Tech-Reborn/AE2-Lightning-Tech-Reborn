@@ -1,0 +1,28 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "appgen"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "appgen:budding_ember_flawless"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "appgen:ember_crystal"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "id": "appgen:budding_ember_flawless"
+  },
+  "catalystCount": 1,
+  "output": {
+    "count": 16,
+    "id": "appgen:ember_crystal"
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

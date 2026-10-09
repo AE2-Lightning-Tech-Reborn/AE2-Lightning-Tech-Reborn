@@ -29,6 +29,12 @@ public final class Ae2wtlibIntegration {
     public static final String TIANSHU_TERMINAL_DESCRIPTION_ID =
             "item.ae2lt.wireless_tianshu_pattern_encoding_terminal";
 
+    public static final String TIANSHU_CRAFTING_NAME = "tianshu_crafting";
+    private static com.moakiee.ae2lt.item.TianshuWirelessCraftingTerminalItem craftingTerminal;
+    public static synchronized com.moakiee.ae2lt.item.TianshuWirelessCraftingTerminalItem craftingTerminal() {
+        if (craftingTerminal == null) craftingTerminal = new com.moakiee.ae2lt.item.TianshuWirelessCraftingTerminalItem();
+        return craftingTerminal;
+    }
     private static TianshuWTItem tianshuTerminal;
     private static boolean terminalRegistrationRequested;
 
@@ -69,6 +75,10 @@ public final class Ae2wtlibIntegration {
                 TianshuWirelessPatternEncodingTermMenu.TYPE,
                 terminal(),
                 TIANSHU_TERMINAL_DESCRIPTION_ID);
+        WUTHandler.addTerminal(TIANSHU_CRAFTING_NAME, craftingTerminal()::tryOpen,
+                com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessCraftingTermMenuHost::new,
+                com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE, craftingTerminal(),
+                "item.ae2lt.wireless_tianshu_crafting_terminal");
         terminalRegistrationRequested = true;
     }
 
@@ -96,5 +106,8 @@ public final class Ae2wtlibIntegration {
         var terminal = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
         Upgrades.add(AE2wtlib.QUANTUM_BRIDGE_CARD, terminal, 1);
         Upgrades.add(AEItems.ENERGY_CARD, terminal, 2);
+        Upgrades.add(AE2wtlib.QUANTUM_BRIDGE_CARD, craftingTerminal(), 1);
+        Upgrades.add(AEItems.ENERGY_CARD, craftingTerminal(), 2);
+        TianshuWctIntegration.registerUpgrades();
     }
 }

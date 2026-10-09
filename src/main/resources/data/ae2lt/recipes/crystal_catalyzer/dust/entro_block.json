@@ -1,0 +1,21 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "extendedae"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "mode": "dust",
+  "catalyst": {
+    "id": "expatternprovider:entro_block"
+  },
+  "catalystCount": 1,
+  "output": {
+    "count": 1,
+    "id": "expatternprovider:entro_dust"
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

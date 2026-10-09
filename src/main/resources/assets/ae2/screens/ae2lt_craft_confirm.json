@@ -1,0 +1,54 @@
+{
+  "$schema": "schema.json",
+  "includes": ["common/common.json"],
+  "background": {
+    "texture": "ae2lt:textures/guis/ae2lt_craftingreport.png",
+    "textureWidth": 238,
+    "textureHeight": 260,
+    "srcRect": [0, 0, 238, 260]
+  },
+  "text": {
+    "dialog_title": {
+      "position": { "left": 8, "top": 7 }
+    },
+    "bytes_used": {
+      "position": { "left": 28, "top": 10 },
+      "align": "LEFT"
+    },
+    "cpu_status": {
+      "position": { "left": 109, "bottom": 40 },
+      "align": "CENTER"
+    }
+  },
+  "widgets": {
+    "scrollbar": {
+      "left": 218,
+      "top": 26,
+      "height": 161
+    },
+    "selectCpu": {
+      "left": 21,
+      "bottom": 62,
+      "width": 180,
+      "height": 20
+    },
+    "cancel": {
+      "left": 8,
+      "bottom": 28,
+      "width": 50,
+      "height": 20
+    },
+    "bookmarkMissing": {
+      "left": 62,
+      "bottom": 28,
+      "width": 98,
+      "height": 20
+    },
+    "start": {
+      "left": 164,
+      "bottom": 28,
+      "width": 50,
+      "height": 20
+    }
+  }
+}

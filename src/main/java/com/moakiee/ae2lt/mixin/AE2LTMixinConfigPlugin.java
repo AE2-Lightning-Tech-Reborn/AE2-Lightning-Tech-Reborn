@@ -36,6 +36,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         int separator = mixinClassName.lastIndexOf('.');
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
+        if (simpleName.equals("EntityConveyorPhaseLockMixin")) return isModLoaded("mob_grinding_utils");
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
     }

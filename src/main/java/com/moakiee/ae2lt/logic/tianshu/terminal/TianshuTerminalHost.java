@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 public interface TianshuTerminalHost extends IActionHost {
     default List<TianshuSupercomputerPortBlockEntity> getAvailableTianshu() {
         var node = getActionableNode();
-        var grid = com.moakiee.ae2lt.me.GridNodeAccess.getActiveGrid(node);
+        var grid = node != null ? node.getGrid() : null;
         if (grid == null) return List.of();
         return grid.getActiveMachines(TianshuSupercomputerPortBlockEntity.class).stream()
                 .filter(TianshuSupercomputerPortBlockEntity::isLinkActive)

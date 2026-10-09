@@ -29,6 +29,10 @@
     "closedLoopSeedRefill": { "left": 124, "bottom": 176, "width": 8, "height": 8 },
     "closedLoopCycleOutput": { "left": 133, "bottom": 176, "width": 8, "height": 8 },
     "closedLoopExecMultiplier": { "left": 79, "bottom": 148, "width": 26, "height": 12 },
-    "closedLoopStoredMultiplier": { "left": 79, "bottom": 123, "width": 26, "height": 12 }
+    "closedLoopStoredMultiplier": { "left": 79, "bottom": 123, "width": 26, "height": 12 },
+    "modeTabButton5": {"left": 173, "bottom": 69, "width": 22, "height": 22},
+    "omniversalPanel": {"left": 9, "bottom": 166, "width": 124, "height": 66},
+    "omniversalScrollbar": {"left": 15, "bottom": 158, "height": 52},
+    "omniversalClear": {"left": 124, "bottom": 176, "width": 8, "height": 8}
   }
 }

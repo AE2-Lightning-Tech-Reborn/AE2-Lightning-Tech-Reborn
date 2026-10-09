@@ -24,6 +24,13 @@ public interface TianshuPatternTerminalHost extends IPatternTerminalMenuHost, Ti
         return false;
     }
 
+    default OmniversalPatternDraft getOmniversalPatternDraft() {
+        return OmniversalPatternDraft.empty();
+}
+
+default void setOmniversalPatternDraft(OmniversalPatternDraft draft) {
+}
+
     @Nullable
     default ClosedLoopTerminalDraft getClosedLoopTerminalDraft() {
         return null;

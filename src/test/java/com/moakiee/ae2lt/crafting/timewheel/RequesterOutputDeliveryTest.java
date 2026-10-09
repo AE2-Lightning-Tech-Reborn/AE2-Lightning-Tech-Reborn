@@ -212,16 +212,24 @@ class RequesterOutputDeliveryTest {
     }
 
     @Test
-    void standaloneOutputStillFallsThroughToNetworkStorage() throws Exception {
+    void standaloneOutputDeliversBufferedRemaindersWithoutLoss() throws Exception {
         var fixture = new Fixture(16, true, false);
+        fixture.disk.capacity = 0;
         assertEquals(8, fixture.produce(8));
         assertEquals(8, fixture.remaining());
         assertEquals(8, fixture.waiting(OUTPUT));
-        assertEquals(8, fixture.disk.stored);
+        assertEquals(8, fixture.logic.getStored(OUTPUT));
+        assertEquals(0, fixture.disk.stored);
         assertEquals(0, fixture.pending());
+        fixture.disk.capacity = 64;
+        fixture.flushDirect();
+        assertEquals(8, fixture.disk.stored);
+        assertEquals(0, fixture.logic.getStored(OUTPUT));
         assertEquals(8, fixture.produce(8));
         assertTrue(fixture.link.completed);
+        fixture.flushDirect();
         assertEquals(16, fixture.disk.stored);
+        assertEquals(0, fixture.logic.getStored(OUTPUT));
     }
 
     private static final class Fixture {
@@ -269,6 +277,12 @@ class RequesterOutputDeliveryTest {
 
         long produce(long amount) {
             return network.insert(OUTPUT, amount, MODULATE, source);
+        }
+
+        void flushDirect() throws Exception {
+            var method = logic.getClass().getDeclaredMethod("flushDirectOutputRemainders");
+            method.setAccessible(true);
+            method.invoke(logic);
         }
 
         void flush() throws Exception {

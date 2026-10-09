@@ -10,6 +10,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ClosedLoopTerminalDraft;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternTerminalDraft;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
+import com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalState;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -31,6 +32,7 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     private static final IPartModel MODELS_HAS_CHANNEL = new PartModel(
             MODEL_BASE, MODEL_ON, MODEL_STATUS_HAS_CHANNEL);
 
+            private com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.empty();
     private final TianshuTerminalState terminalState = new TianshuTerminalState();
 
     public TianshuPatternEncodingTerminalPart(IPartItem<?> partItem) {
@@ -59,6 +61,18 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     @Override
     public TianshuEncodingMode getTianshuEncodingMode() {
         return terminalState.getEncodingMode();
+}
+
+    @Override
+    public OmniversalPatternDraft getOmniversalPatternDraft() {
+        return omniversalDraft;
+}
+
+    @Override
+    public void setOmniversalPatternDraft(OmniversalPatternDraft draft) {
+        if (omniversalDraft.equals(draft)) return;
+        omniversalDraft = draft;
+            markForSave();
     }
 
     @Override
@@ -110,12 +124,15 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     @Override
     public void readFromNBT(CompoundTag data) {
         super.readFromNBT(data);
+        omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.read(data.getCompound("OmniversalDraft"));
         terminalState.read(data, TianshuTerminalState.NbtFormat.PART);
     }
 
     @Override
     public void writeToNBT(CompoundTag data) {
         super.writeToNBT(data);
+        if (omniversalDraft.isEmpty()) data.remove("OmniversalDraft");
+        else data.put("OmniversalDraft", omniversalDraft.write());
         terminalState.write(data, TianshuTerminalState.NbtFormat.PART);
     }
 }

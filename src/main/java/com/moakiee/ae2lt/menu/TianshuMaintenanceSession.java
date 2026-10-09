@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.function.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import com.moakiee.ae2lt.network.PacketSender;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /** Shared terminal session; the bound supercomputer owns all rules and running jobs. */
@@ -68,7 +68,7 @@ public final class TianshuMaintenanceSession {
 
     public void requestMaintenanceEditor(appeng.api.stacks.AEKey key) {
         if (!isClientSide()) return;
-        PacketSender.sendToServer(new OpenMaintenanceEditorPacket(
+        com.moakiee.ae2lt.network.PacketSender.sendToServer(new OpenMaintenanceEditorPacket(
                 menu.containerId, selectionRevision.getAsInt(), key));
     }
 
@@ -154,6 +154,9 @@ public final class TianshuMaintenanceSession {
                 }
             }
         }
+        // An explicit overflow marker makes this a recovery page, rather than a
+        // silently-truncated authoritative snapshot. Deleting one of the visible
+        // entries exposes the next persisted entry on the following revision.
         var snapshot = List.copyOf(summaries.values());
         if (lastSentMaintenanceSummary != null
                 && lastSentMaintenanceSummaryOverflow == overflow
@@ -161,7 +164,7 @@ public final class TianshuMaintenanceSession {
         lastSentMaintenanceSummary = snapshot;
         lastSentMaintenanceSummaryOverflow = overflow;
         maintenanceSummaryRevision++;
-        PacketSender.sendToPlayer(player, new MaintenanceSummarySyncPacket(
+        com.moakiee.ae2lt.network.PacketSender.sendToPlayer(player, new MaintenanceSummarySyncPacket(
                 menu.containerId, selectionRevision.getAsInt(),
                 maintenanceSummaryRevision, overflow, snapshot));
     }
@@ -216,7 +219,7 @@ public final class TianshuMaintenanceSession {
 
     public void sendGlobalReserve(appeng.api.stacks.AEKey key, long amount,
                                   com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode mode) {
-        if (isClientSide() && key != null && mode != null) PacketSender.sendToServer(
+        if (isClientSide() && key != null && mode != null) com.moakiee.ae2lt.network.PacketSender.sendToServer(
                 new SaveGlobalReservePacket(
                         menu.containerId, selectionRevision.getAsInt(), key, amount, mode));
     }
@@ -252,6 +255,10 @@ public final class TianshuMaintenanceSession {
         var direct = maintenance.reservedStock().reservations().stream()
                 .filter(entry -> entry.key().equals(key))
                 .findFirst().orElse(null);
+        // Switching an exact entry to grouped matching must remove that exact override first;
+        // otherwise ReservedStockRepository correctly finds the existing group and would leave
+        // the old exact entry shadowing the edit. Deletion likewise follows the persisted mode,
+        // not a mode the player may have toggled immediately before pressing 0.
         if (direct != null && (amount == 0L || direct.mode() != mode)) {
             maintenance.setMaintenanceWideReservedStock(key, direct.mode(), 0L);
         }
@@ -296,6 +303,9 @@ public final class TianshuMaintenanceSession {
         for (var entry : topology) topologyByKey.putIfAbsent(entry.key(), entry);
         var topologyData = new LinkedHashMap<appeng.api.stacks.AEKey, MaintenanceEditorData.TopologyEntry>();
 
+        // Persisted per-rule reserves come first. This keeps old entries that are no
+        // longer part of the current crafting topology visible and lets amount=0
+        // remove them even while the legacy repository remains oversized/read-only.
         if (local != null) {
             if (local.size() > TianshuPacketLimits.MAX_LIST_ENTRIES) recoveryPage = true;
             for (var saved : local.reservations(TianshuPacketLimits.MAX_LIST_ENTRIES)) {
@@ -333,7 +343,7 @@ public final class TianshuMaintenanceSession {
                 rule == null || rule.enabled(),
                 editorStatus, currentStock, craftable,
                 recoveryPage, List.copyOf(topologyData.values()), variants);
-        PacketSender.sendToPlayer(player, new MaintenanceEditorSyncPacket(
+        com.moakiee.ae2lt.network.PacketSender.sendToPlayer(player, new MaintenanceEditorSyncPacket(
                 menu.containerId, selectionRevision.getAsInt(), data));
     }
 
@@ -380,7 +390,7 @@ public final class TianshuMaintenanceSession {
 
     public void sendMaintenanceSave(SaveMaintenanceRulePacket packet) {
         if (isClientSide() && packet != null) {
-            PacketSender.sendToServer(packet);
+            com.moakiee.ae2lt.network.PacketSender.sendToServer(packet);
         }
     }
 

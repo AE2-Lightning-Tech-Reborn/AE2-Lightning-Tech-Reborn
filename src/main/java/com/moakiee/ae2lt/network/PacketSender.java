@@ -19,6 +19,9 @@ public final class PacketSender {
         NetworkInit.sendToServer(message);
     }
 
+    public static void sendToServer(appeng.core.sync.BasePacket message) {
+        appeng.core.sync.network.NetworkHandler.instance().sendToServer(message);
+    }
     /** Server → a single player (PLAY_TO_CLIENT registered messages). */
     public static void sendToPlayer(ServerPlayer player, Object message) {
         NetworkInit.sendToPlayer(player, message);

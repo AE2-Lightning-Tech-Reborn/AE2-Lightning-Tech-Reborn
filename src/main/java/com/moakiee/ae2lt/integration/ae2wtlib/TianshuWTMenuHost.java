@@ -38,6 +38,7 @@ public final class TianshuWTMenuHost extends WTMenuHost
         implements TianshuPatternTerminalHost, IPatternTerminalLogicHost, IViewCellStorage {
     private static final String TAG_PATTERN_LOGIC = "patternEncodingLogic";
 
+    private com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.empty();
     private final PatternEncodingLogic logic = new PatternEncodingLogic(this);
     private final TianshuTerminalState terminalState = new TianshuTerminalState();
 
@@ -82,6 +83,7 @@ public final class TianshuWTMenuHost extends WTMenuHost
         CompoundTag data = getItemStack().getTagElement(TAG_PATTERN_LOGIC);
         if (data != null) {
             logic.readFromNBT(data);
+            omniversalDraft = com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft.read(data.getCompound("OmniversalDraft"));
             terminalState.read(data, TianshuTerminalState.NbtFormat.WIRELESS);
         }
     }
@@ -91,6 +93,7 @@ public final class TianshuWTMenuHost extends WTMenuHost
         super.saveChanges();
         CompoundTag data = getItemStack().getOrCreateTagElement(TAG_PATTERN_LOGIC);
         logic.writeToNBT(data);
+        data.put("OmniversalDraft", omniversalDraft.write());
         terminalState.write(data, TianshuTerminalState.NbtFormat.WIRELESS);
     }
 
@@ -135,6 +138,10 @@ public final class TianshuWTMenuHost extends WTMenuHost
         }
     }
 
+    @Override public com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft getOmniversalPatternDraft() { return omniversalDraft; }
+    @Override public void setOmniversalPatternDraft(com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft draft) {
+        if (!omniversalDraft.equals(draft)) { omniversalDraft=draft;markForSave(); }
+    }
     @Override
     public ProcessingPatternTerminalDraft getProcessingPatternTerminalDraft() {
         return terminalState.getProcessingDraft();
