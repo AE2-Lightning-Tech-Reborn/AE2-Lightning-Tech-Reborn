@@ -4,10 +4,8 @@ import appeng.menu.guisync.PacketWritable;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.GenericStack;
 
-import appeng.core.definitions.AEItems;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;

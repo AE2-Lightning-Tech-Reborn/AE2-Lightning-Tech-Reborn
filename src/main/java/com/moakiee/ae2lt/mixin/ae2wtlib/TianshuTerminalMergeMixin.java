@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.mixin.ae2wtlib;
 
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuTerminalMerge;
-import de.mari_023.ae2wtlib.wut.WTDefinition;
 import de.mari_023.ae2wtlib.wut.recipe.Common;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;

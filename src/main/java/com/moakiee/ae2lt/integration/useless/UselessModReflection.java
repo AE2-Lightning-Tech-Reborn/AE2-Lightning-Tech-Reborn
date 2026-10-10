@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.integration.useless;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 final class UselessModReflection {
     static Object call(Object owner,String name,Object... args) {
         try {

@@ -2,7 +2,6 @@ package com.moakiee.ae2lt.overload.runtime.pattern;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import net.minecraft.world.item.ItemStack;
 
@@ -10,17 +9,8 @@ import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 
 /**
- * Runtime definition object for one overload pattern.
- * <p>
- * This class intentionally stays one layer above AE2's concrete pattern
- * interfaces for now. It describes:
- * <ul>
- *   <li>which inputs and outputs exist</li>
- *   <li>how each input/output slot should be matched</li>
- *   <li>which outputs are primary vs non-primary</li>
- * </ul>
- * Later provider and CPU integration can adapt this object into the exact AE2
- * execution hooks they need.
+ * Immutable input/output matching metadata shared by provider and CPU adapters.
+ * Preserves source identity, slot indices, match modes and primary-output roles.
  */
 public final class OverloadPatternDetails implements OverloadedProviderOnlyPatternDetails {
     private final SourcePatternSnapshot sourcePattern;
@@ -79,18 +69,6 @@ public final class OverloadPatternDetails implements OverloadedProviderOnlyPatte
 
     public List<OutputSlot> outputs() {
         return outputs;
-    }
-
-    public List<OutputSlot> primaryOutputs() {
-        return outputs.stream()
-                .filter(OutputSlot::primaryOutput)
-                .collect(Collectors.toUnmodifiableList());
-    }
-
-    public List<OutputSlot> nonPrimaryOutputs() {
-        return outputs.stream()
-                .filter(output -> !output.primaryOutput())
-                .collect(Collectors.toUnmodifiableList());
     }
 
     public MatchMode inputMode(int slotIndex) {

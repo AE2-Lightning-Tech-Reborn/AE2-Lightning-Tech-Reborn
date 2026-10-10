@@ -8,7 +8,6 @@ import java.util.function.Predicate;
 import com.google.common.collect.MapMaker;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.FuzzyMode;

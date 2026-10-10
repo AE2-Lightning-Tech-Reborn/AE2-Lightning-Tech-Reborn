@@ -9,20 +9,9 @@ import net.minecraft.world.item.ItemStack;
 import appeng.api.upgrades.IUpgradeableItem;
 
 /**
- * Finds overloaded frequency cards installed as upgrades inside wireless
- * terminals the player is carrying (hotbar/inventory/offhand) or wearing in a
- * Curios slot.
- *
- * <p>This uses only AE2's {@link IUpgradeableItem} contract, so it works for
- * any terminal whose upgrade inventory can hold the card: the Tianshu
- * wireless terminal extends AE2's {@code WirelessTerminalItem} and exposes
- * the card through its native upgrade slots.</p>
- *
- * <p>The returned stacks are read-only snapshots intended for the auto-connect
- * path (which only reads the card's frequency id and auto-connect flag). Writes
- * to a terminal-installed card must go through the terminal's
- * {@link appeng.api.upgrades.IUpgradeInventory} so they persist; see the
- * frequency card menu's select/toggle packets.</p>
+ * Finds installed frequency-card upgrades in carried or Curios terminals via {@link IUpgradeableItem}.
+ * Returns read-only snapshots for auto-connect. Persist edits through the terminal's
+ * {@link appeng.api.upgrades.IUpgradeInventory}.
  */
 public final class TerminalFrequencyCardFinder {
 

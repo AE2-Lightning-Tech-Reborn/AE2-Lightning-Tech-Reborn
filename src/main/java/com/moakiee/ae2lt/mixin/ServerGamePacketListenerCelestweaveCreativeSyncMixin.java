@@ -20,23 +20,10 @@ import com.moakiee.ae2lt.celestweave.phase.PhaseLockService;
 import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
 
 /**
- * Keeps server-owned Celestweave state authoritative when the creative inventory is opened.
- *
- * <p>Vanilla's {@code CreativeInventoryListener} installs a listener each time the creative
- * inventory opens. The listener immediately broadcasts slots whose client-side snapshot changed
- * while the screen was closed. For equipment with live data components (energy, module state,
- * etc.), that broadcast sends a whole, potentially stale armor or projection stack back through
- * {@code handleSetCreativeModeSlot}. Vanilla then calls {@link Slot#setByPlayer(ItemStack)}, which
- * can both overwrite the newer server state and make an armor slot call {@code onEquipItem},
- * producing a false equip sound.</p>
- *
- * <p>This wrapper is deliberately placed at the narrow server-side mutation point instead of
- * suppressing the client listener. The server can compare the authoritative stack with the
- * uploaded stack and reject only a state echo of the same UUID-bound armor. A projection is
- * recognized from the server-owned private slot instead of its uploaded link: an older client can
- * omit or corrupt that private tag, and trusting it would reintroduce a false equip. Empty stacks,
- * another item, and another armor UUID still reach vanilla, so real creative-mode moves, equips
- * and removals retain their normal behavior.</p>
+ * Rejects stale creative-inventory echoes of UUID-bound armor at the server slot mutation.
+ * The authoritative stack supplies armor state; the server's private slot identifies projections
+ * even when an uploaded link tag is missing or corrupt. This prevents state loss and false equips.
+ * Empty stacks, different items and different armor UUIDs retain vanilla move/equip/remove behavior.
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {

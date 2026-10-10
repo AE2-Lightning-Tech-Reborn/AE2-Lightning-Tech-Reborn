@@ -27,21 +27,8 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 
 /**
- * JEI category for the Firmament Conversion Core.
- *
- * <p>Layout (no machine GUI – the block has no screen):
- * <pre>
- *   [input 0]                   [output 0] [output 1]
- *   [input 1]  →  arrow  →     [output 2] [output 3]
- *   [input 2]
- *
- *              Processing Time: Xs
- * </pre>
- *
- * <p>Inputs are vertically centred when fewer than 3 are present; outputs
- * are arranged in a 2×2 grid that is also vertically centred.
- * All slot backgrounds use {@code setStandardSlotBackground()} so they are
- * a uniform 18×18 and do not overlap in the grid.
+ * JEI layout with up to three vertically centered inputs and a centered 2×2 output grid.
+ * Standard 18×18 slot backgrounds accompany the arrow and processing-time label.
  */
 public class FirmamentConversionCategory implements IRecipeCategory<FirmamentConversionRecipe> {
     public static final RecipeType<FirmamentConversionRecipe> TYPE =

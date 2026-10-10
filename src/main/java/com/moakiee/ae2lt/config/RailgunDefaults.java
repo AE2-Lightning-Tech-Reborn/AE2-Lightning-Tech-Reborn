@@ -1,19 +1,8 @@
 package com.moakiee.ae2lt.config;
 
 /**
- * Frozen design constants for the electromagnetic railgun.
- *
- * <p>These were previously per-value entries in {@link AE2LTCommonConfig}.
- * They were demoted to compile-time constants because they describe mechanic
- * shape (chain decay, splash falloff, pulse radius, recoil curve, charge
- * cadence, etc.) rather than balance dials. Tuning them at runtime via
- * config produced too many knobs that pack authors don't want to touch and
- * that, when touched, tend to break the design rather than rebalance it.
- *
- * <p>Things that <em>are</em> still in {@link AE2LTCommonConfig} (and should
- * stay there): per-tier base damage, per-tier FE/EHV cost, beam settle
- * damage / FE / HV cost, PvP toggles, terrain drop toggle, terrain
- * blocks-per-tick budget. Those are the dials a server actually wants.
+ * Fixed railgun mechanics: chain decay, splash, recoil and charge cadence.
+ * Damage, energy costs, PvP and terrain budgets remain in {@link AE2LTCommonConfig}.
  */
 public final class RailgunDefaults {
 
