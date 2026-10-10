@@ -76,7 +76,7 @@ public abstract class CrystalScienceProcessorMixin implements OverclockPass {
         }
         int cards = ae2lt$cardCount();
         if (cards <= 0) return;
-        int operations = cards >= 2 ? 64 : 8;
+        int operations = CrystalScienceOverclockIntegration.operationMultiplier(cards);
         BlockEntity machine = (BlockEntity) (Object) this;
         if (machine.getLevel() == null || machine.getLevel().isClientSide()) {
             return;

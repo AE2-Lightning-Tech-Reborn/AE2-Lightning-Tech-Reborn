@@ -19,11 +19,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -70,39 +67,11 @@ public final class CrystalScienceOverclockGameTests {
         ((ServerTickingBlockEntity) machine).serverTick();
     }
 
-    private static IFluidHandler tanks(BlockEntity machine) {
-        try {
-            return (IFluidHandler) machine.getClass().getMethod("getFluidTanks").invoke(machine);
-        } catch (ReflectiveOperationException exception) {
-            throw new GameTestAssertException("AE2CS fluid API changed: " + exception);
-        }
-    }
-
-    private static boolean hasLatestMachine(String path) {
-        return BuiltInRegistries.BLOCK.getOptional(new ResourceLocation("ae2cs", path)).isPresent();
-    }
-
     private static void checkCraftingInput(LightningAssemblyRecipe recipe, String itemId, int count) {
         ItemStack item = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(itemId)));
         check(recipe.inputs().stream().anyMatch(input -> input.count() == count
                         && input.ingredient().test(item)),
                 "parallel card recipe is missing " + count + " x " + itemId);
-    }
-
-    private static BlockEntity latestMachine(GameTestHelper helper, String path, ItemStack input, double energy) {
-        helper.setBlock(POS, BuiltInRegistries.BLOCK.get(new ResourceLocation("ae2cs", path)));
-        BlockEntity machine = helper.getBlockEntity(POS);
-        var upgrades = ((IUpgradeableObject) machine).getUpgrades();
-        check(upgrades.getMaxInstalled(ModItems.OVERLOAD_PARALLEL_CARD.get()) == 2,
-                "LT card is not registered for " + path);
-        check(upgrades.addItems(new ItemStack(ModItems.OVERLOAD_PARALLEL_CARD.get())).isEmpty(),
-                "LT card was rejected by " + path);
-        inventory(machine, "getInputInv").setItemDirect(0, input);
-        check(((IAEPowerStorage) machine).injectAEPower(energy, Actionable.MODULATE) <= 0.001,
-                path + " refused fixture energy");
-        check(tanks(machine).fill(new FluidStack(Fluids.WATER, 8_000), IFluidHandler.FluidAction.EXECUTE) >= 4_000,
-                path + " refused water");
-        return machine;
     }
 
     @GameTest(template = "empty")
@@ -231,7 +200,7 @@ public final class CrystalScienceOverclockGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void growthChamberRunsFourPaidGrowthPasses(GameTestHelper helper) {
+    public static void growthChamberRunsEightPaidGrowthPasses(GameTestHelper helper) {
         var block = BuiltInRegistries.BLOCK.get(new ResourceLocation("ae2cs:crystal_growth_chamber"));
         helper.setBlock(POS, block);
         BlockEntity machine = helper.getBlockEntity(POS);

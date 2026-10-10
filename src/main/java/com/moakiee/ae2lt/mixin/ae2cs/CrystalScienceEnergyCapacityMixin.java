@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.mixin.ae2cs;
 
 import com.moakiee.ae2lt.integration.ae2cs.ScaledEnergyCapacity;
+import com.moakiee.ae2lt.integration.ae2cs.CrystalScienceOverclockIntegration;
 
 import appeng.me.energy.StoredEnergyAmount;
 
@@ -39,7 +40,7 @@ public abstract class CrystalScienceEnergyCapacityMixin implements ScaledEnergyC
 
     @Override
     public void ae2lt$setParallelCards(int cards) {
-        double capacity = ae2lt$baseCapacity * (cards >= 2 ? 64 : cards == 1 ? 8 : 1);
+        double capacity = ae2lt$baseCapacity * CrystalScienceOverclockIntegration.operationMultiplier(cards);
         if (storedEnergy.getMaximum() != capacity) {
             storedEnergy.setMaximum(capacity);
         }

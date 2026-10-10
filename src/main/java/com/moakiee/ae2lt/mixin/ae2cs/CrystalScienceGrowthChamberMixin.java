@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** The growth chamber has a work interval instead of a recipe energy budget. */
 @org.spongepowered.asm.mixin.Pseudo
@@ -48,9 +47,9 @@ public abstract class CrystalScienceGrowthChamberMixin implements OverclockPass 
 
     @Inject(method = "serverTick", at = @At("HEAD"))
     private void ae2lt$updateEnergyCapacity(CallbackInfo ci) {
-        if (ae2lt$cardCount() > 0) workTickCountDown = 1;
+        int cards = ae2lt$cardCount();
+        if (cards > 0) workTickCountDown = 1;
         if (!ae2lt$extraPass) {
-            int cards = ae2lt$cardCount();
             if (cards != ae2lt$lastCapacityCards && CrystalScienceOverclockIntegration.scaleEnergyCapacity(
                     (AENetworkBlockEntity) (Object) this, cards)) {
                 ae2lt$lastCapacityCards = cards;
@@ -67,13 +66,13 @@ public abstract class CrystalScienceGrowthChamberMixin implements OverclockPass 
     }
 
     @Inject(method = "serverTick", at = @At("RETURN"))
-    private void ae2lt$growFourTimes(CallbackInfo ci) {
+    private void ae2lt$runExtraGrowth(CallbackInfo ci) {
         if (ae2lt$extraPass || getInternalInventory().isEmpty()) {
             return;
         }
         int cards = ae2lt$cardCount();
         if (cards <= 0) return;
-        int operations = cards >= 2 ? 64 : 8;
+        int operations = CrystalScienceOverclockIntegration.operationMultiplier(cards);
         BlockEntity machine = (BlockEntity) (Object) this;
         if (machine.getLevel() == null || machine.getLevel().isClientSide()) {
             return;

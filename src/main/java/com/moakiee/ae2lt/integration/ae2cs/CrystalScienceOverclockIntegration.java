@@ -17,10 +17,7 @@ public final class CrystalScienceOverclockIntegration {
             "circuit_etcher",
             "crystal_pulverizer",
             "crystal_aggregator",
-            "entropy_variation_reaction_chamber",
-            // Added after AE2CS 1.2.1.
-            "crystal_infuser",
-            "pulse_centrifuge"
+            "entropy_variation_reaction_chamber"
     };
 
     private CrystalScienceOverclockIntegration() {
@@ -36,7 +33,11 @@ public final class CrystalScienceOverclockIntegration {
         }
     }
 
-    /** Called once per normal machine tick, before CS refills the expanded buffer. */
+    public static int operationMultiplier(int cards) {
+        return cards <= 0 ? 1 : cards == 1 ? 8 : 64;
+    }
+
+    /** Update capacity before CS refills the buffer. */
     public static boolean scaleEnergyCapacity(AENetworkBlockEntity machine, int cards) {
         var node = machine.getMainNode().getNode();
         if (node == null) return false;
