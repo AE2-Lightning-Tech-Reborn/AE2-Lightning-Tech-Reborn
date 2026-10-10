@@ -17,10 +17,7 @@ import net.minecraft.world.entity.LivingEntity;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 
-/**
- * Worn Celestweave armor: vanilla humanoid armor shells plus plated add-ons. Texture offsets
- * and sizes are shared with scripts/generate_celestweave_armor.py, which paints the 128x64 sheets.
- */
+/** Armor geometry shares its 128×64 UV layout with generate_celestweave_armor.py. */
 public final class CelestweaveArmorModel {
     public static final ModelLayerLocation OUTER_LAYER = new ModelLayerLocation(
             new ResourceLocation(AE2LightningTech.MODID, "celestweave_armor"), "outer");

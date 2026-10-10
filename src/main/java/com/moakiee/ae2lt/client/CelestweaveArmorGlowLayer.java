@@ -21,10 +21,7 @@ import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorMaterials;
 import com.moakiee.ae2lt.registry.ModDataComponents;
 
-/**
- * Re-draws the energy lines of worn Celestweave pieces full-bright on top of the armor layer.
- * The glow breathes slowly and drops to an ember when a piece's FE buffer is empty.
- */
+/** Full-bright armor overlay; unpowered pieces use reduced brightness. */
 public final class CelestweaveArmorGlowLayer<T extends LivingEntity, M extends HumanoidModel<T>>
         extends RenderLayer<T, M> {
     private static final ResourceLocation OUTER_GLOW = new ResourceLocation(
