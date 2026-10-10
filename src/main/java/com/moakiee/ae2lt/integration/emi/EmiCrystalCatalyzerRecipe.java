@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.integration.emi;
 import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
 
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
-import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import dev.emi.emi.api.stack.EmiStack;
@@ -16,12 +15,13 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
     private static final ResourceLocation TEXTURE =
             EmiRecipeWidgets.texture("guis/crystal_catalyzer.png");
     private static final int WIDTH = 128;
+    private static final int HEIGHT = 104;
 
     private final EmiStack fluid;
 
     EmiCrystalCatalyzerRecipe(ResourceLocation id, CrystalCatalyzerRecipe recipe) {
-        super(AE2LTEmiCategories.CRYSTAL_CATALYZER, id, recipe, WIDTH, 114);
-        fluid = EmiRecipeWidgets.fluid(CrystalCatalyzerBlockEntity.getFixedFluidPerCycle());
+        super(AE2LTEmiCategories.CRYSTAL_CATALYZER, id, recipe, WIDTH, HEIGHT);
+        fluid = EmiRecipeWidgets.fluid(recipe.fluidInput());
         inputs.add(fluid);
         recipe.catalyst().ifPresent(catalyst ->
                 inputs.add(EmiRecipeWidgets.ingredient(catalyst, recipe.catalystCount())));
@@ -31,36 +31,32 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
     @Override
     public void addWidgets(WidgetHolder widgets) {
         widgets.addTexture(TEXTURE, 0, 0, WIDTH, 62, 22, 14);
-        var fixedFluid = CrystalCatalyzerBlockEntity.getFixedFluidPerCycle();
-        widgets.addTank(fluid, 4, 4, 16, 53, Math.max(1, fixedFluid.getAmount()))
+        var fluidInput = recipe.fluidInput();
+        var fluidSlot = widgets.addTank(fluid, 4, 4, 16, 53, Math.max(1, fluidInput.getAmount()))
                 .drawBack(false)
                 .appendTooltip(Component.translatable(
                         "jei.ae2lt.crystal_catalyzer.fluid_fixed",
-                        fixedFluid.getAmount()));
+                        fluidInput.getAmount()));
+        if (!recipe.isWaterRecipe() || recipe.mode() != Mode.CRYSTAL) {
+            fluidSlot.appendTooltip(Component.translatable("jei.ae2lt.crystal_catalyzer.normal_only"));
+        }
 
         if (inputs.size() > 1) {
             int perInstance = Math.max(1, recipe.catalystCount());
             EmiRecipeWidgets.addLargeStackSlot(widgets, inputs.get(1), 34, 16)
                     .drawBack(false)
+                    .appendTooltip(Component.translatable("jei.ae2lt.crystal_catalyzer.catalyst_kept"))
                     .appendTooltip(Component.translatable(
                             "jei.ae2lt.crystal_catalyzer.catalyst_parallel",
-                            perInstance,
-                            CrystalCatalyzerInventory.CATALYST_SLOT_LIMIT));
+                            perInstance));
         }
 
-        int baseCount = recipe.getOutputTemplate().getCount();
         int matrixMultiplier = CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER;
-        int catalystPerInstance = Math.max(1, recipe.catalystCount());
         EmiRecipeWidgets.addLargeStackSlot(widgets, outputs.get(0), 95, 16)
                 .drawBack(false)
                 .recipeContext(this)
                 .appendTooltip(Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.output_base",
-                        baseCount,
-                        matrixMultiplier))
-                .appendTooltip(Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.output_parallel",
-                        catalystPerInstance));
+                        "jei.ae2lt.crystal_catalyzer.output_parallel"));
 
         widgets.addAnimatedTexture(
                 TEXTURE,
@@ -75,10 +71,8 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
                 false,
                 false);
 
-        // EMI may clamp a recipe to the available screen height. Keep the five JEI
-        // status lines together when that happens instead of letting the last lines
-        // spill below the recipe panel.
-        boolean compactText = widgets.getHeight() < 114;
+        // Keep the status lines inside the panel when EMI clamps its height.
+        boolean compactText = widgets.getHeight() < HEIGHT;
         int firstLineY = compactText ? 60 : 64;
         int lineSpacing = compactText ? 8 : 10;
 
@@ -93,6 +87,7 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.crystal_catalyzer.time",
+                        Component.translatable(recipe.mode().translationKey()),
                         recipe.mode() == Mode.CRYSTAL ? "1s" : "2s"),
                 firstLineY + lineSpacing,
                 compactText);
@@ -106,15 +101,10 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
                 compactText);
         statusText(
                 widgets,
-                Component.translatable("jei.ae2lt.crystal_catalyzer.matrix_note_line1"),
-                firstLineY + lineSpacing * 3,
-                compactText);
-        statusText(
-                widgets,
                 Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.matrix_note_line2",
+                        "jei.ae2lt.crystal_catalyzer.matrix_note",
                         matrixMultiplier),
-                firstLineY + lineSpacing * 4,
+                firstLineY + lineSpacing * 3,
                 compactText);
     }
 
