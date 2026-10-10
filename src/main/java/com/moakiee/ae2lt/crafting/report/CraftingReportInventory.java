@@ -1,41 +1,51 @@
 package com.moakiee.ae2lt.crafting.report;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import org.jetbrains.annotations.Nullable;
 
+import appeng.api.config.Actionable;
+import appeng.api.networking.security.IActionSource;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
+import appeng.api.storage.MEStorage;
 
-/** Menu-owned stock snapshot. A replan can only subtract confirmed extraction deficits. */
+/** Menu-owned stock snapshot. A replan can only lower stock to observed extractable amounts. */
 public final class CraftingReportInventory {
     private static final ThreadLocal<CraftingReportInventory> CAPTURE = new ThreadLocal<>();
 
     @Nullable
     private KeyCounter stock;
-    private final KeyCounter missing = new KeyCounter();
+    // Keep zero observations: an exhausted key must be removed on the next replan.
+    private final Map<AEKey, Long> availableLimits = new HashMap<>();
 
     public boolean isCaptured() {
         return stock != null;
     }
 
-    public void recordMissing(GenericStack deficit) {
+    public void recordMissing(GenericStack deficit, MEStorage inventory, IActionSource source) {
         if (deficit.amount() > 0) {
-            // Retrying the same plan must not count the same shortfall twice.
-            missing.set(deficit.what(), Math.max(missing.get(deficit.what()), deficit.amount()));
+            // Submission has already rolled its partial extraction back. Probe only the failed key,
+            // using the same source, without taking items or reading a new whole-network snapshot.
+            long available = Math.max(0L,
+                    inventory.extract(deficit.what(), Long.MAX_VALUE, Actionable.SIMULATE, source));
+            availableLimits.merge(deficit.what(), available, Math::min);
         }
     }
 
-    public void subtractMissing() {
+    public void clampToAvailable() {
         if (stock == null) {
             throw new IllegalStateException("No crafting inventory snapshot was captured");
         }
-        for (var entry : missing) {
+        for (var entry : availableLimits.entrySet()) {
             long available = Math.max(0L, stock.get(entry.getKey()));
-            stock.set(entry.getKey(), available - Math.min(available, entry.getLongValue()));
+            stock.set(entry.getKey(), Math.min(available, entry.getValue()));
         }
         stock.removeZeros();
-        missing.clear();
+        availableLimits.clear();
     }
 
     /** AE2 constructs its network simulation state synchronously before submitting the worker. */
@@ -53,7 +63,7 @@ public final class CraftingReportInventory {
         }
     }
 
-    /** Called at the two native snapshot-read sites; a replan never invokes the live supplier. */
+    /** Called at the two native snapshot-read sites; a replan never rereads the full inventory. */
     public static KeyCounter readAvailableStacks(Supplier<KeyCounter> liveInventory) {
         var capture = CAPTURE.get();
         if (capture == null) {
