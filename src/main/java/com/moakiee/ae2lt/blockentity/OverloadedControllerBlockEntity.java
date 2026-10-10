@@ -24,14 +24,7 @@ import appeng.api.util.AECableType;
 import appeng.blockentity.networking.ControllerBlockEntity;
 import appeng.helpers.ForgeEnergyAdapter;
 
-/**
- * Minimal custom controller node owner.
- * Extends AE2's controller block entity so future controller-scoped channel
- * changes can target this subtype without changing vanilla controller behavior.
- * <p>
- * Important: later 128-channel logic is keyed off this concrete owner type,
- * so vanilla ControllerBlockEntity instances remain untouched.
- */
+/** AE2 controller node with owner-scoped high-capacity channels and passive AE charging. */
 public class OverloadedControllerBlockEntity extends ControllerBlockEntity
         implements HighCapacityChannelOwner, PassiveAeCharger.Storage {
     private static final double INTERNAL_MAX_POWER = 16_000_000.0;
@@ -59,8 +52,6 @@ public class OverloadedControllerBlockEntity extends ControllerBlockEntity
 
     @Override
     protected IManagedGridNode createMainNode() {
-        // The tag/visual representation are AE2LT-specific, but the underlying node
-        // still follows vanilla AE2 controller behavior unless an owner-scoped mixin says otherwise.
         return super.createMainNode()
                 .setTagName("overloaded_controller")
                 .setVisualRepresentation(ModBlocks.OVERLOADED_CONTROLLER.get());

@@ -9,19 +9,13 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import appeng.api.implementations.blockentities.IWirelessAccessPoint;
 import appeng.api.networking.IGrid;
 
-/**
- * Resolves the AE2 grid bound to a railgun ItemStack via AE2's standard
- * wireless-link target component. Mirrors the host-side resolution used by
- * AE2's WirelessTerminalItem, but never exposes the held-stack-on-player
- * mechanic for that; railgun is a distinct ItemMenuHost.
- */
+/** Resolves the railgun’s AE2 wireless link stored in item NBT. */
 public final class RailgunBinding {
     // 1.20.1 has no AEComponents; the wireless link lives in the stack NBT under the same
     // "accessPoint" key AE2's WirelessTerminalItem uses (GlobalPos.CODEC via NbtOps).
@@ -91,22 +85,8 @@ public final class RailgunBinding {
         if (grid == null) {
             return Result.fail(FailReason.NO_AP);
         }
-        // Range check disabled - railgun works at any distance once bound
-        // double range = ap.getRange();
-        // double dist = distance(player, ap);
-        // if (dist > range) {
-        //     return Result.fail(FailReason.OUT_OF_RANGE);
-        // }
+        // A bound railgun can use its network across dimensions and at any distance.
         return Result.ok(grid, ap);
-    }
-
-    private static double distance(Entity player, IWirelessAccessPoint ap) {
-        var loc = ap.getLocation();
-        BlockPos bp = loc.getPos();
-        double dx = (bp.getX() + 0.5) - player.getX();
-        double dy = (bp.getY() + 0.5) - player.getY();
-        double dz = (bp.getZ() + 0.5) - player.getZ();
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     public static String failKey(FailReason r) {

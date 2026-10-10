@@ -45,16 +45,7 @@ import com.moakiee.ae2lt.integration.useless.UselessModCompat;
 import com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalTarget;
-import com.moakiee.ae2lt.logic.tianshu.terminal.MaintenanceEditorData;
 import com.moakiee.ae2lt.logic.tianshu.terminal.PatternEncodingDuplicateFilter;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceRule;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceStatus;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.MaintenanceTopologyService;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceService;
-import com.moakiee.ae2lt.network.tianshu.MaintenanceEditorSyncPacket;
-import com.moakiee.ae2lt.network.tianshu.OpenMaintenanceEditorPacket;
-import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
@@ -62,7 +53,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.overload.pattern.PatternConversionService;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -77,10 +67,8 @@ import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.helpers.patternprovider.PatternContainer;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.config.Settings;
-import appeng.api.config.ViewItems;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
-import com.moakiee.ae2lt.network.tianshu.MaintenanceSummarySyncPacket;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestUploadTargetsPacket;
@@ -88,11 +76,8 @@ import com.moakiee.ae2lt.network.tianshu.UploadPatternToTargetPacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.EnumMap;
 import java.util.Map;
-import com.moakiee.ae2lt.network.tianshu.SaveGlobalReservePacket;
-import com.moakiee.ae2lt.network.tianshu.TianshuPacketLimits;
 import com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot;
 import net.minecraft.world.entity.player.Player;
 import org.anti_ad.mc.ipn.api.IPNIgnore;
@@ -1485,20 +1470,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                     hiddenContainers, foreignGridContainers, emptyInventories);
         }
         return List.copyOf(found);
-    }
-
-    private boolean containsUploadedPattern(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
-        var level = getPlayer().level();
-        for (var target : uploadTargets) {
-            if (PatternEncodingDuplicateFilter.containsEquivalentPattern(
-                    target.getTerminalPatternInventory(), stack, level)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static int firstFreePatternSlot(
