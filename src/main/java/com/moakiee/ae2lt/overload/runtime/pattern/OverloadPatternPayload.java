@@ -4,16 +4,7 @@ import java.util.Objects;
 
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 
-/**
- * Persistent payload carried by one overload pattern item.
- * <p>
- * The payload deliberately combines:
- * <ul>
- *   <li>the source plain-pattern snapshot, for future reparsing/editing</li>
- *   <li>the overload slot-mode configuration</li>
- *   <li>the required execution host identity</li>
- * </ul>
- */
+/** Persistent source snapshot, slot matching modes and required execution host. */
 public final class OverloadPatternPayload {
     private final PatternExecutionHostKind requiredHostKind;
     private final SourcePatternSnapshot sourcePattern;

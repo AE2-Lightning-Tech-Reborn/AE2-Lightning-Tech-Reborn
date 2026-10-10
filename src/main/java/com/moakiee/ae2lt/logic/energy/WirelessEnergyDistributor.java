@@ -19,35 +19,11 @@ import appeng.api.networking.storage.IStorageService;
 import appeng.api.storage.MEStorage;
 
 /**
- * Reusable, host-agnostic NORMAL (no-disk) wireless FE distribution engine.
- *
- * <p>Originally extracted from {@code OverloadedPowerSupplyLogic} so that
- * the Overloaded ME Interface and Overloaded Pattern Provider can share the
- * same hot-path implementation:
- * <ul>
- * <li>32-slot power-of-two adaptive scheduling wheel ({@code 1..20} ticks
- *     per-target delay, halved on success / incremented on starvation)</li>
- * <li>Per-target {@link BlockEnergyTargetCache} that reuses Applied Flux's
- *     1.20.1-side capability cache wrapper and re-resolves the live energy
- *     target on demand</li>
- * <li>Single-shot {@link BufferedMEStorage#beginMemoryBatch} per tick:
- *     pre-pulls the entire NORMAL-batch demand from the ME network in one
- *     extract, then per-target {@code sendToTargetKnownDemand} consumes
- *     from the in-memory buffer; leftover returned via {@code endBatch}</li>
- * <li>O(1) cache invalidation via {@link Host#getValidTargetsVersion()}
- *     monotonic stamp — no per-tick {@code List.equals} on 64 records</li>
- * </ul>
- *
- * <p>The Overloaded Power Supply additionally drives an OVERLOAD path that
- * shares this distributor's target cache pool via
- * {@link #resolveTargetAtIndex(int, ServerLevel)} and friends, so
- * cap-invalidation listeners are registered once per target across both
- * modes.
- *
- * <p>Connection validation (BE-presence checks, periodic sweeps, removing
- * connections whose target chunk has unloaded) is intentionally
- * <b>NOT</b> handled here — each host BE owns its own validation rules and
- * passes the already-validated list via {@link Host#getValidTargets()}.
+ * Shared NORMAL-mode FE distributor with adaptive target scheduling (1–20 ticks),
+ * cached live capabilities and version-based target-list invalidation.
+ * {@link BufferedMEStorage#beginMemoryBatch} extracts demand once per tick;
+ * endBatch returns unused energy. OVERLOAD mode reuses the same target cache.
+ * Each {@link Host} owns connection validation and supplies its valid targets.
  */
 public final class WirelessEnergyDistributor {
 

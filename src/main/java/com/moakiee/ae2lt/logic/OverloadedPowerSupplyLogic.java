@@ -22,27 +22,10 @@ import com.moakiee.ae2lt.logic.energy.WirelessEnergyAPI;
 import com.moakiee.ae2lt.logic.energy.WirelessEnergyDistributor;
 
 /**
- * Wireless FE distribution logic for the Overloaded Power Supply.
- *
- * <p>NORMAL-mode dispatch is fully delegated to a shared
- * {@link WirelessEnergyDistributor} instance — the same engine used by the
- * Overloaded ME Interface and the Overloaded Pattern Provider — so all
- * three BEs share the per-target adaptive scheduling wheel, capability
- * invalidation listeners, and one-shot ME batch extract.
- *
- * <p>OVERLOAD-mode dispatch (cell-backed, ticket-rotated, up to 64 calls/tick
- * per target) lives only here, but reuses the distributor's cached target
- * resolutions ({@link WirelessEnergyDistributor#resolveTargetAtIndex}) so
- * cap listeners are registered once across both modes.
- *
- * <p>Gating by Flux Cell presence:
- * <ul>
- * <li><b>No cell installed</b>: NORMAL is the only available mode.
- *     OVERLOAD refuses to run and reports {@link Status#NO_CELL}.</li>
- * <li><b>Cell installed</b>: unlocks OVERLOAD. NORMAL still runs through the
- *     same shared distributor; the Flux Cell becomes the
- *     {@link BufferedMEStorage} backing buffer (AE2 ME Chest pattern).</li>
- * </ul>
+ * Wireless FE dispatch: NORMAL uses {@link WirelessEnergyDistributor};
+ * OVERLOAD requires a Flux Cell and makes up to 64 calls per target each tick.
+ * Both modes share cached targets and capability listeners. An installed cell
+ * backs {@link BufferedMEStorage}; no cell restricts the supply to NORMAL.
  */
 public class OverloadedPowerSupplyLogic implements IGridTickable {
 

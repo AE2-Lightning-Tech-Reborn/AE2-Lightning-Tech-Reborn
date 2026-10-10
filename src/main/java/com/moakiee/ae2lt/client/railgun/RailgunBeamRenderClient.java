@@ -28,30 +28,9 @@ import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
 
 /**
- * Renders persistent left-click beams.
- *
- * <p>Visual model: each active shooter has a {@link BeamState} carrying the
- * server-supplied eye position, the impact endpoint, and bookkeeping ticks.
- * Each frame, the renderer:
- * <ul>
- *   <li>Resolves the player's current gun-barrel position (so the beam visibly
- *       emanates from the weapon, not the screen-center).</li>
- *   <li>Subdivides the beam into several short prism segments, each with
- *       independent vertex-color alpha that animates over time. This produces a
- *       slow "energy flow" that travels along the beam.</li>
- *   <li>Stacks three rectangular-prism layers per segment (outer halo + mid +
- *       core), each rotating around the beam axis at a different rate so the
- *       beam reads as a glowing cyan-white plasma stream with real volume from
- *       any viewing angle.</li>
- *   <li>Adds a camera-facing flash quad at the impact tip that tracks the
- *       breath pulse for a "burning hot endpoint" feel.</li>
- *   <li>Periodically (every {@value #ARC_INTERVAL_TICKS} ticks per beam)
- *       branches a short electric arc off a random point along the beam via
- *       {@link RailgunArcRenderer} for crackle.</li>
- * </ul>
- *
- * <p>Stale beam states (no packet for {@value #STALE_TICKS} ticks) self-expire
- * to recover from missed stop signals.
+ * Renders persistent beams from the current gun barrel to the server impact.
+ * Layered prisms, an impact flash and periodic arcs animate each beam.
+ * States expire after {@value #STALE_TICKS} ticks without an update packet.
  */
 @Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class RailgunBeamRenderClient {
