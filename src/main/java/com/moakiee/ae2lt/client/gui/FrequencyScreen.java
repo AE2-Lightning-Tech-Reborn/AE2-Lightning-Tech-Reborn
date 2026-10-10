@@ -39,45 +39,21 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-/**
- * Multi-tab frequency management screen, modeled after Flux Networks' GUI.
- * Polls {@link ClientFrequencyCache#revision()} each frame and rebuilds
- * widgets when the server-pushed state changes.
- */
+/** Refreshes frequency tabs when the server cache revision changes. */
 public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private static final int GUI_WIDTH = 195;
     private static final int GUI_HEIGHT = 157;
 
-    /**
-     * AE2 {@link TabButton} renders at a fixed 22×22 size (see its
-     * constructor bytecode). We expose these as named constants so the
-     * rest of the screen can hit-test the same footprint.
-     */
+    /** AE2 tab sprites have a fixed 22×22 footprint. */
     private static final int TAB_WIDTH = 22;
     private static final int TAB_HEIGHT = 22;
-    /**
-     * Horizontal step between consecutive tab buttons (AE2 BOX tabs
-     * already ship with their own 1-px inner border, so tabs can sit
-     * flush — 22 px step with no extra gap looks correct, identical to
-     * the terminal-style tab strip used by AE2's Pattern Access screens).
-     */
+
     private static final int TAB_STEP = 22;
-    /**
-     * Visible row count baked into each list-style background texture.
-     * {@code wireless_overloaded_list.png} (connection / member tabs) draws
-     * five 21-px row slots in the recessed well; the search-equipped
-     * {@code wireless_overloaded_selection.png} drops the bottom slot to
-     * leave room for the search field + pagination row.
-     */
+    /** The list and search textures contain five and four rows, respectively. */
     private static final int ITEMS_PER_PAGE_LIST = 5;
     private static final int ITEMS_PER_PAGE_SEARCH = 4;
-    /**
-     * Row pitch inside the recessed list well — 21 px per slot (1-px
-     * shadow + 20-px interior). Row 0 has an extra 1-px shadow above
-     * (y=36..37) to make the well's top edge thicker; rows 1..4 share
-     * a 1-px shadow with the row above.
-     */
+
     private static final int LIST_ROW_HEIGHT = 21;
     /** Button height inside a list row — matches the sprite height (20 px). */
     private static final int LIST_ROW_BUTTON_HEIGHT = 20;
@@ -85,32 +61,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private static final int LIST_ROW_FIRST_Y = 38;
     /** Left x (local) of a row button — well interior left edge is x=9. */
     private static final int LIST_ROW_X = 9;
-    /**
-     * Width of a row button — exactly 160 px to match the row sprite
-     * baked at the bottom of the chassis PNGs (u=0, w=160). Spans the
-     * well interior x=9..168 with no gap before the scrollbar gutter.
-     */
+
     private static final int LIST_ROW_WIDTH = 160;
 
-    /**
-     * Row sprite source coordinates inside the chassis PNG (same in
-     * both BG_LIST and BG_SELECTION). The idle sprite is the
-     * lavender-gray strip directly below the chassis art; the hover
-     * sprite is the cyan-blue strip below that.
-     */
+    /** Row sprites share the list and selection texture atlases. */
     private static final int ROW_SPRITE_WIDTH = 160;
     private static final int ROW_SPRITE_HEIGHT = 20;
     private static final int ROW_SPRITE_IDLE_V = 158;
     private static final int ROW_SPRITE_HOVER_V = 180;
 
-    /**
-     * Scrollbar handle X (local). The PNG bakes a recessed track at
-     * x=178..183 (6 px). The 12-px AE2 big_scroller sprite is wider
-     * than that gutter, so we centre it on the gutter midpoint
-     * (~x=181) — the handle visually overlays the recessed track
-     * with a small overhang on each side, matching AE2's own MAC /
-     * Pattern Access screens which also use big_scroller.
-     */
+    /** Center the 12-pixel handle over the texture’s 6-pixel track. */
     private static final int SCROLLBAR_X = 175;
     /** Scrollbar track Y (local) — first row of the recessed well content. */
     private static final int SCROLLBAR_Y = 38;
@@ -119,69 +79,25 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     /** Scrollbar handle height — AE2 big_scroller sprite is 15 px tall. */
     private static final int SCROLLBAR_HANDLE_HEIGHT = 15;
 
-    /**
-     * Per-tab AE2-styled background textures. Each is a 256×256 atlas
-     * file with the actual chassis art occupying the top-left 195×157.
-     * The "list" and "selection" variants additionally have a small
-     * sprite library below the chassis (y=158+, used for selection-row
-     * highlights — currently decorative, not blitted at runtime).
-     *
-     * <ul>
-     *   <li>{@code wireless_overloaded_home.png} — single wide info shelf.</li>
-     *   <li>{@code wireless_overloaded_selection.png} — 4-row well + search/pagination space below.</li>
-     *   <li>{@code wireless_overloaded_list.png} — 5-row well, used by connection &amp; member tabs.</li>
-     *   <li>{@code wireless_overloaded_form.png} — clean panel for create / settings.</li>
-     * </ul>
-     */
+    /** Each 256×256 atlas contains a 195×157 panel and optional row sprites. */
     private static final ResourceLocation BG_HOME = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/wireless_overloaded_home.png");
     private static final ResourceLocation BG_SELECTION = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/wireless_overloaded_selection.png");
     private static final ResourceLocation BG_LIST = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/wireless_overloaded_list.png");
     private static final ResourceLocation BG_FORM = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/wireless_overloaded_form.png");
     private static final int TEXTURE_SIZE = 256;
 
-    // AE2 standard text tones — matches AE2's own screens such as
-    // terminal.png / craftingcpu.png where titles read as dark charcoal
-    // on the light-lavender panel.
-    // Default text is plain black on the lavender chassis. Hierarchy
-    // comes from {@link ChatFormatting} colours applied where they
-    // carry information (status / access / channel pressure / etc.) —
-    // labels that don't need a tint stay black.
     private static final int AE2_TEXT_TITLE = 0x000000;
     private static final int AE2_TEXT_BODY  = 0x000000;
-    /**
-     * Slightly de-emphasised tone for "label vs value" pairs (field
-     * captions like "name:" / "security:") and quiet annotations like
-     * row counts. Still a flat dark gray — no tint.
-     */
+
     private static final int AE2_TEXT_MUTED = 0x404040;
 
-    /**
-     * AETextField's native {@code guis/text_field.png} frame is a fixed 12
-     * px tall 3-slice. Creating the field at this exact height keeps the
-     * AE2 frame flush with the recessed shelf we draw behind it.
-     */
+    /** Match the native AE2 text-field frame height. */
     private static final int INPUT_HEIGHT = 12;
 
-    /**
-     * Hard upper bound for {@link AETextField}'s width. AE2's
-     * {@code text_field.png} 3-slice draws a 1-px left cap, a middle band
-     * stretched up to {@code min(126, w-2)} pixels wide, and a 1-px right
-     * cap at {@code x + w - 1}. Above 128 px the middle band caps at 126
-     * and leaves a visible gap between it and the right cap — the exact
-     * "empty bracket" artifact seen in the earlier build's Settings tab.
-     * Anything at or below this width renders flush.
-     */
+    /** AE2 caps the text-field middle slice at 126 pixels; wider fields leave a gap. */
     private static final int INPUT_MAX_WIDTH = 128;
 
-    /**
-     * Minimal {@link ScreenStyle} built once at class-load so
-     * {@link AETextField} can look up its text / selection /
-     * placeholder colours via {@link ScreenStyle#getColor(PaletteColor)}.
-     * AE2 normally loads this from a JSON file attached to the screen;
-     * we don't have one, so we seed the palette via reflection directly
-     * on the private {@code palette} EnumMap populated by the
-     * {@code ScreenStyle} no-arg constructor.
-     */
+    /** Provide the palette AETextField expects from ScreenStyle. */
     private static final ScreenStyle AE2_STYLE = buildAe2Style();
 
     @SuppressWarnings("unchecked")
@@ -211,33 +127,15 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     private FrequencyNavigationTab currentTab = FrequencyNavigationTab.TAB_HOME;
-    /**
-     * Top row index currently scrolled to within the Selection / Connection
-     * / Member tab lists. Replaces the prior {@code *Page} fields — the
-     * right-side {@link ScrollbarWidget} now drives incremental row scrolling
-     * (one row per wheel notch) instead of discrete << / >> page jumps, and
-     * the value is the offset of the first visible row rather than a page
-     * index.
-     */
+    /** Index of the first visible row, not a page number. */
     private int selectionScroll = 0;
     private int memberScroll = 0;
     private int connectionScroll = 0;
 
-    /**
-     * Currently active list-tab scrollbar widget. {@code null} on Home /
-     * Create / Settings tabs (no scrollable content). The screen-level
-     * {@link #mouseScrolled} forwards wheel events to this scrollbar so
-     * scrolling works anywhere over the GUI, not just over the handle.
-     */
+    /** The active list scrollbar receives wheel events from anywhere over the screen. */
     private ScrollbarWidget currentScrollbar;
 
-    /**
-     * Row buttons currently rendered for the active list tab. Tracked
-     * separately so scrolling can swap the row buttons without rebuilding
-     * the rest of the tab — that lets the scrollbar's {@code dragging}
-     * state survive across mouse-drag scrolls (a full {@link #clearWidgets}
-     * would replace the scrollbar mid-drag and break the gesture).
-     */
+    /** Replace only row buttons while scrolling so the scrollbar retains its drag state. */
     private final java.util.List<AbstractWidget> currentRowButtons = new java.util.ArrayList<>();
 
     private AETextField nameField;
@@ -258,25 +156,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     // buttons are greyed out since there's nothing to demote or remove.
     private boolean popupIsStranger = false;
 
-    /**
-     * Last server-sent {@link FrequencyResponsePacket} message rendered
-     * as an in-GUI toast. Minecraft's action-bar lives in the hotbar
-     * zone — which container screens cover — so a raw
-     * {@code displayClientMessage(..., true)} is invisible while this
-     * GUI is open. Stashing the component here and painting it inside
-     * {@link #renderLabels} makes the feedback actually reach the user.
-     */
+    /** Container screens hide action-bar feedback, so render responses inside the GUI. */
     private Component inlineError = null;
     private long inlineErrorExpiresAt = 0L;
     private static final long INLINE_ERROR_DURATION_MS = 4000L;
     private final List<FittedTextTooltip> fittedTextTooltips = new ArrayList<>();
 
-    /**
-     * Called by {@link FrequencyResponsePacket}'s client handler when
-     * this screen is the active one. Replaces whatever prior toast was
-     * showing (a newer error always wins — the previous one is already
-     * stale information after a fresh server round-trip).
-     */
+    /** Replace the current inline response with the latest server message. */
     public void showInlineError(Component message) {
         this.inlineError = message;
         this.inlineErrorExpiresAt = System.currentTimeMillis() + INLINE_ERROR_DURATION_MS;
@@ -326,92 +212,28 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Constructs an {@link AETextField} the same way AE2's own
-     * {@code WidgetContainer.addTextField} does: after the constructor
-     * it calls {@code setBordered(false)} so the inherited
-     * {@link net.minecraft.client.gui.components.EditBox}'s default
-     * 1-px light border and black interior fill are suppressed, leaving
-     * AE2's {@code guis/text_field.png} 3-slice sprite as the ONLY
-     * visible frame. Without this, EditBox's default black rectangle
-     * sits inside AE2's sprite and produces the bracket-with-black-fill
-     * artifact that was visible in the Settings and Create tabs.
-     */
+    /** Disable the vanilla EditBox border so only AE2’s frame is drawn. */
     private AETextField makeAe2Field(int x, int y, int width, int height) {
         AETextField field = new AETextField(AE2_STYLE, font, x, y, width, height);
         field.setBordered(false);
         return field;
     }
 
-    /**
-     * Placeholder string shown in the Settings-tab password field when
-     * the frequency already has a stored (and now hashed) password. The
-     * user can't see the real value — we only need a visual marker —
-     * and any first keystroke/backspace clears it so they can type a
-     * fresh password. Submitting without touching the field leaves the
-     * sentinel in place, and the Apply handler sends {@code ""} to the
-     * server (which preserves the stored hash).
-     *
-     * <p>Eight U+2022 bullets. Width stays under the 16-char
-     * {@code MAX_PASSWORD_LENGTH} cap so it never gets truncated when
-     * {@link AETextField#setValue} enforces the length limit.</p>
-     */
+    /** An untouched sentinel sends an empty password, preserving the stored hash. */
     private static final String PASSWORD_SENTINEL = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
 
-    /**
-     * Tracks whether the Settings-tab password field is still showing
-     * the {@link #PASSWORD_SENTINEL}. While armed, the Apply button
-     * treats the field as "unchanged" and sends an empty string; once
-     * the user types/deletes anything the flag flips off and the real
-     * field value is forwarded verbatim.
-     */
     private boolean settingsPasswordPristine = false;
 
-    /**
-     * When non-zero, a modal password prompt is active for this
-     * frequency id — all tab body content is suppressed and the user
-     * must either submit a password (triggering
-     * {@link SelectFrequencyPacket} with the entered plaintext) or
-     * cancel. Set by:
-     * <ul>
-     *   <li>{@link #checkAutoPasswordPrompt} — when the device we're
-     *       looking at is bound to an ENCRYPTED frequency we're not a
-     *       member of yet (case 1: right-click a locked device).</li>
-     *   <li>The Selection-tab row {@code onPress} — when the player
-     *       clicks an ENCRYPTED frequency they haven't unlocked yet
-     *       (case 2: browsing the frequency list).</li>
-     * </ul>
-     * Cleared automatically on rebuild once the player's cache shows
-     * them as a member (server-side {@code enrollAsUser} fires after
-     * a successful {@link SelectFrequencyPacket} round-trip).
-     */
+    /** A nonzero frequency ID enables the password modal. */
     private int passwordPromptFreqId = 0;
     private String passwordPromptFreqName = "";
-    /**
-     * When {@code true}, cancelling the password prompt closes the
-     * whole screen instead of just dismissing the popup. Used for the
-     * device-bind path (case 1) where a non-member player who chickens
-     * out has nothing else to do with the device anyway.
-     */
+    /** Cancel closes the screen when the bound device requires unlocking. */
     private boolean passwordPromptLocksScreen = false;
     private AETextField passwordPromptField;
 
-    /**
-     * Query string for the Selection-tab search field (repurposed from
-     * the old inline password input). Matches frequency names
-     * case-insensitively; empty means "show everything". Stored
-     * outside {@link #initSelectionTab} so repeated rebuilds from
-     * {@link #scheduleRebuild} don't reset it.
-     */
     private String selectionSearchQuery = "";
 
-    /**
-     * {@link AETextField} that, while {@link #settingsPasswordPristine}
-     * is true, wipes its placeholder on the first key or character
-     * event so the user's typed input replaces the sentinel instead of
-     * appending to it. Used only by the Settings tab — the Create tab's
-     * password field never arms this flag and behaves as a plain field.
-     */
+    /** Clear the stored-password sentinel on the first edit. */
     private final class PristinePasswordField extends AETextField {
         PristinePasswordField(int x, int y, int width, int height) {
             super(AE2_STYLE, font, x, y, width, height);
@@ -518,13 +340,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Builds the Confirm / Cancel buttons for the delete-frequency modal.
-     * The panel chrome is drawn in {@link #drawDeleteConfirmPanel}
-     * (from {@code renderBg}), the title/hint text in
-     * {@link #renderLabels}, and the two buttons live here so they stay
-     * on top of the panel fill.
-     */
     private void buildDeleteConfirmWidgets(int x0, int y0) {
         addRenderableWidget(new AE2Button(
                 x0 + 22, y0 + 92, 58, 16,
@@ -545,16 +360,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 }));
     }
 
-    /**
-     * Returns true when the local player has no durable access to this
-     * ENCRYPTED frequency and must type a password to unlock it.
-     * Non-ENCRYPTED frequencies always return false (PRIVATE rejects
-     * non-members outright; PUBLIC hands everyone a USER fallback).
-     * Reads membership from {@link ClientFrequencyCache} — which is
-     * synced by the server-push packets — so this check stays honest
-     * even after a successful unlock (the enroll broadcast causes a
-     * fresh rebuild, and needsPasswordUnlock flips to false).
-     */
+    /** Encrypted frequencies require a password unless the player already has durable access. */
     private boolean needsPasswordUnlock(ClientFrequencyCache.CachedFrequency freq) {
         if (freq.security() != FrequencySecurityLevel.ENCRYPTED) return false;
         var mc = Minecraft.getInstance();
@@ -566,13 +372,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         return true;
     }
 
-    /**
-     * Device-bind auto-prompt (case 1 from the password-gate UI spec):
-     * if the device we just opened is pinned to a frequency that
-     * requires password unlock for the current player, arm the popup
-     * in lock-screen mode so Cancel closes the whole GUI instead of
-     * just dismissing the modal.
-     */
+    /** Prompt when the bound device’s frequency requires unlocking. */
     private void checkAutoPasswordPrompt() {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) return;
@@ -585,13 +385,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Builds the widgets for the password prompt modal: a single
-     * {@link AETextField} centred below the freq name label plus a
-     * Submit / Cancel button pair. Panel chrome is drawn in
-     * {@link #drawPasswordPromptPanel} (from {@code renderBg}) and
-     * the title text in {@link #renderLabels}.
-     */
     private void buildPasswordPromptWidgets(int x0, int y0) {
         int fieldX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
         passwordPromptField = makeAe2Field(fieldX, y0 + 68, INPUT_MAX_WIDTH, INPUT_HEIGHT);
@@ -610,15 +403,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 btn -> submitPasswordPrompt()));
     }
 
-    /**
-     * Fires the {@link SelectFrequencyPacket} with the typed password.
-     * Does NOT clear {@link #passwordPromptFreqId} — the popup stays
-     * open until the next rebuild re-evaluates
-     * {@link #needsPasswordUnlock} against the updated cache. That
-     * way a wrong password keeps the modal visible for retry (the
-     * server's {@code NO_PERMISSION} response already renders as a
-     * toast via {@link FrequencyResponsePacket}).
-     */
+    /** Keep the prompt open until the cache confirms access, allowing password retries. */
     private void submitPasswordPrompt() {
         String pw = passwordPromptField == null ? "" : passwordPromptField.getValue();
         int freqId = passwordPromptFreqId;
@@ -627,13 +412,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 token(), freqMenu().getBlockPos(), freqId, pw));
     }
 
-    /**
-     * Cancel button. For the device-bind path (case 1, flag
-     * {@link #passwordPromptLocksScreen}) we have nothing useful to
-     * show the player, so we close the whole screen. For the
-     * selection-row path (case 2) we just dismiss the modal and
-     * return to the Selection tab.
-     */
+    /** Cancel closes a locked device screen or returns to frequency selection. */
     private void cancelPasswordPrompt() {
         boolean closeAll = passwordPromptLocksScreen;
         passwordPromptFreqId = 0;
@@ -645,15 +424,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Rebuilds the six top {@link TabButton}s. Shared between the
-     * default layout ({@link #initTabWidgets()}) and the member-edit
-     * popup overlay ({@link #rebuildMemberPopupWidgets()}) so the tab
-     * ear geometry stays identical in both views.
-     *
-     * @param popup when {@code true} the tab onPress closes the popup
-     *              before switching tabs
-     */
+    /** Popup tab clicks dismiss the modal before navigating. */
     private void buildTopTabs(int x0, int y0, boolean popup) {
         for (int i = 0; i < FrequencyNavigationTab.VALUES.length; i++) {
             FrequencyNavigationTab tab = FrequencyNavigationTab.VALUES[i];
@@ -687,23 +458,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * {@link TabButton} subclass that reports {@code isFocused() == true}
-     * whenever the mouse is hovering over it. AE2's {@code renderWidget}
-     * picks between {@code TAB_BUTTON_BACKGROUND} (default) and
-     * {@code TAB_BUTTON_BACKGROUND_FOCUS} (cyan-filled) purely on
-     * {@code isFocused()}, which vanilla MC only flips on keyboard focus.
-     * Piggy-backing on the FOCUS sprite gives us the ME-Interface style
-     * "hover fills the whole tab with light cyan" effect for free —
-     * no custom overlay drawing needed, and the selected tab's appearance
-     * is left unchanged (only the tab the mouse is over lights up).
-     *
-     * <p>Also supports a custom 16×16 icon overlay drawn on top of the
-     * AE2 icon sprite. When {@code customIcon} is non-null the base AE2
-     * {@link Icon} passed to super is treated as a placeholder — AE2 will
-     * still blit it, but we paint our own texture directly on top at the
-     * same (3, 3) offset used by the AE2 atlas icon.</p>
-     */
+    /** Use AE2’s focus sprite for hover and optionally overlay a custom tab icon. */
     private static final class HoverableTabButton extends TabButton {
         private final ResourceLocation customIcon;
 
@@ -741,14 +496,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Fallback {@link Icon} from AE2's atlas — used only when
-     * {@link #customIconFor} returns {@code null} for the same tab.
-     * TAB_SETTING is currently the sole consumer (keeps AE2's cog);
-     * the other tabs short-circuit to their custom PNG and pass
-     * {@code null} to the super constructor, so their entry here is
-     * unused at runtime.
-     */
+    /** Use the AE2 icon when no custom texture is supplied. */
     private static Icon iconFor(FrequencyNavigationTab tab) {
         return switch (tab) {
             // 1.20.1: no COG sprite; fall back to the wrench.
@@ -757,11 +505,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         };
     }
 
-    /**
-     * Custom 16×16 PNG overlay for each tab. Returns {@code null} when
-     * the AE2 {@link Icon} from {@link #iconFor} should be the visible
-     * sprite — currently only TAB_SETTING keeps the AE2 cog.
-     */
     private static ResourceLocation customIconFor(FrequencyNavigationTab tab) {
         return switch (tab) {
             case TAB_HOME       -> TAB_ICON_HOME;
@@ -789,16 +532,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         scheduleRebuild();
     }
 
-    /**
-     * Defers {@link #initTabWidgets()} to the next main-thread tick so
-     * the current click event (which is what brought us here via a
-     * button's {@code onPress}) finishes dispatching BEFORE
-     * {@link #clearWidgets} rips the clicked widget out of the screen's
-     * children list. Rebuilding inline produced duplicate
-     * {@code UI_BUTTON_CLICK} sounds on tab presses — almost certainly
-     * a vanilla side-effect of replacing the widget that's still
-     * unwinding its own {@code mouseClicked} stack frame.
-     */
+    /** Rebuild after the current click finishes to avoid replacing a widget mid-dispatch. */
     private void scheduleRebuild() {
         Minecraft.getInstance().execute(this::initTabWidgets);
     }
@@ -989,13 +723,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         rebuildMemberRows();
     }
 
-    /**
-     * Snapshot of every row that should appear in the Members tab —
-     * established members first (in server order), then online players
-     * who aren't members yet ("strangers"). The flag distinguishes the
-     * two so the row-builder picks the right onPress handler without
-     * having to re-derive membership for each visible row.
-     */
+    /** List existing members before online nonmembers. */
     private record MemberRow(boolean isMember, UUID uuid, String name, FrequencyAccessLevel access) {}
 
     private java.util.List<MemberRow> collectMemberRows() {
@@ -1098,15 +826,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         Minecraft.getInstance().execute(this::rebuildMemberPopupWidgets);
     }
 
-    /**
-     * Opens the popup for an online player who isn't a member yet.
-     * Sets {@link #popupIsStranger} so {@link #rebuildMemberPopupWidgets}
-     * knows to enable only the "Set as User" button — Set Admin / Remove
-     * / Set Owner are meaningless for someone who has no access at all.
-     * Clicking "Set as User" reuses the existing
-     * {@code MEMBERSHIP_SET_USER} packet which creates the member when
-     * none exists.
-     */
+    /** A nonmember popup offers only the action that grants user access. */
     private void openStrangerPopup(UUID uuid, String name) {
         popupMemberUUID = uuid;
         popupMemberName = name;
@@ -1423,12 +1143,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Picks the chassis texture for the given tab. List-style tabs use
-     * the 5-row well, the selection tab uses the 4-row well that leaves
-     * a search-field strip below, the home tab gets the wide info shelf,
-     * and create / settings get the blank form panel.
-     */
     private static ResourceLocation backgroundTextureForTab(FrequencyNavigationTab tab) {
         return switch (tab) {
             case TAB_HOME -> BG_HOME;
@@ -1438,12 +1152,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         };
     }
 
-    /**
-     * Same lavender chassis as {@link #drawDeleteConfirmPanel}, sized
-     * to house the password prompt: title at top, a 12-px text field
-     * just below, and a Cancel/Submit row. Kept separate so the delete
-     * modal and password modal each own their own footprint.
-     */
     private void drawPasswordPromptPanel(GuiGraphics g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
@@ -1456,12 +1164,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
-    /**
-     * Draws the smaller delete-confirm modal panel. Same lavender
-     * chassis + 1-px AE2 bevel as the member popup, sized to fit a
-     * title line, a hint line, and a single row of Confirm/Cancel
-     * buttons without crowding the Settings tab chrome above.
-     */
     private void drawDeleteConfirmPanel(GuiGraphics g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
@@ -1474,13 +1176,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
-    /**
-     * Draws the light-lavender popup panel with an AE2 1-px bevel in
-     * screen coordinates. Kept separate from the text-layer content in
-     * {@link #renderLabels} so buttons added by
-     * {@link #rebuildMemberPopupWidgets()} sit on top of this panel
-     * instead of being occluded by it.
-     */
+    /** Draw the popup panel below its labels and interactive widgets. */
     private void drawMemberPopupPanel(GuiGraphics g) {
         int px0 = leftPos + 10;
         int py0 = topPos + 26;
@@ -1496,14 +1192,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
-    /**
-     * Returns the screen-space x of a given tab button so the layout
-     * never gets out of sync between {@link #buildTopTabs(int, int, boolean)}
-     * and {@link #renderBg}. Five flush tabs span x=8..118 (22×5) and
-     * the "Create" tab is right-anchored with a 2-px gap to the panel
-     * edge at x=152..174, leaving a visible gap that reads as a small
-     * breather between the "navigate" and "author" tab clusters.
-     */
     private static int tabButtonX(int originX, FrequencyNavigationTab tab, int index) {
         if (tab == FrequencyNavigationTab.TAB_CREATE) {
             return originX + GUI_WIDTH - TAB_WIDTH - 2;
@@ -1618,15 +1306,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * AE2 draws panel-surface text flat (no drop-shadow) so the character
-     * glyphs read cleanly against the light-lavender chassis. Minecraft's
-     * default {@link GuiGraphics#drawString(net.minecraft.client.gui.Font,
-     * Component, int, int, int)} draws WITH a shadow, which on a light
-     * panel produces an unpleasant embossed look. All label rendering in
-     * this screen goes through this helper (and
-     * {@link #drawFlatCentered}) to match AE2's native visual weight.
-     */
+    /** Panel labels use AE2’s flat text rendering without shadows. */
     private void drawFlat(GuiGraphics g, Component text, int x, int y, int color) {
         g.drawString(font, text, x, y, color, false);
     }
@@ -1977,19 +1657,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private record FittedTextTooltip(Rect2i area, Component text) {}
 
-    /**
-     * List-row button that paints the row sprite baked at the bottom
-     * of the chassis PNG instead of the AE2 button background. Idle
-     * rows get the lavender-gray strip (u=0, v=158); hovered or
-     * focused rows swap in the cyan-blue strip (u=0, v=180). Disabled
-     * rows stay on the idle sprite to read as "not clickable" while
-     * keeping their access-tinted label visible.
-     *
-     * <p>Renders the message Component itself (not just its string
-     * form) so the per-row colour styles set by Selection/Members
-     * builders survive — frequency rows keep the user's stored RGB
-     * tint, member rows keep their access-level {@link ChatFormatting}.</p>
-     */
+    /** Render atlas row sprites while preserving Component colors and styles. */
     private final class RowSpriteButton extends Button {
         RowSpriteButton(int x, int y, int width, int height,
                 Component message, OnPress onPress) {
@@ -2030,15 +1698,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Lightweight vertical scrollbar reused across the Selection, Connection
-     * and Member tabs. Draws the vanilla creative-tab scroller handle on top
-     * of the chassis, and supports click-on-track paging, drag-handle, and
-     * mouse-wheel input. Each offset change is reported through
-     * {@link #onScroll} so the owning tab can refresh just the affected row
-     * buttons without rebuilding the scrollbar itself — that lets the
-     * dragging gesture survive across the row-button swap.
-     */
+    /** Refresh rows without replacing the scrollbar during a drag. */
     private final class ScrollbarWidget extends AbstractWidget {
         private final int totalItems;
         private final int visibleItems;
@@ -2074,11 +1734,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             }
         }
 
-        /**
-         * Wheel hook called from the screen-level {@link FrequencyScreen#mouseScrolled}.
-         * One row per notch — vertical sign matches vanilla (positive
-         * scrollY = wheel up = scroll towards top).
-         */
         boolean handleScroll(double scrollY) {
             if (maxOffset() == 0) return false;
             int delta = -(int) Math.signum(scrollY);

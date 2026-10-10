@@ -1067,9 +1067,7 @@ public final class WirelessLinkRegistry extends SavedData {
             if (ChannelSourceRegistry.isChannelSource(node.getOwner())) {
                 capacity += (long) HighCapacityChannelSupport.channelsPerController() * factor;
             } else {
-                // Match BorrowedCapacityCalculator: every vanilla controller
-                // face leading out of the controller multiblock is an
-                // independent 32-channel source.
+                // Each outgoing vanilla controller face contributes 32 channels.
                 for (var connection : node.getConnections()) {
                     var other = connection.getOtherSide(node);
                     if (!(other.getOwner() instanceof ControllerBlockEntity)) {

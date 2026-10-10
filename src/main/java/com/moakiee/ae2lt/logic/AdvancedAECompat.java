@@ -28,14 +28,7 @@ import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
 import com.moakiee.thunderbolt.core.crafting.pattern.IWrappedPatternDetails;
 
-/**
- * Runtime compatibility layer for AdvancedAE directional processing patterns.
- * All references to AdvancedAE classes are confined to this file so that the
- * rest of the codebase never triggers {@link ClassNotFoundException} when
- * AdvancedAE is absent. The supported Forge 1.20.1 release is optional, so
- * every AdvancedAE touchpoint goes through reflection and degrades to no-ops
- * when the mod is missing or its integration API is incompatible.
- */
+/** Optional AdvancedAE directional-pattern access through reflection; incompatible APIs fail closed. */
 public final class AdvancedAECompat {
 
     private static final @Nullable Class<?> ADV_PATTERN_DETAILS_CLASS =
