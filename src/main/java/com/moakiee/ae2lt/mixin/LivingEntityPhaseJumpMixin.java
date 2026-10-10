@@ -147,6 +147,18 @@ public abstract class LivingEntityPhaseJumpMixin {
     }
 
     @WrapOperation(
+            method = "jumpFromGround",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(Lnet/minecraft/world/phys/Vec3;)V"))
+    private void ae2lt$authorizeSprintingJumpImpulse(LivingEntity entity, Vec3 movement, Operation<Void> original) {
+        if (entity instanceof Player player) {
+            PhaseFlightMovementGuard.runAsSelfMovement(player, () -> original.call(entity, movement));
+        } else {
+            original.call(entity, movement);
+        }
+    }
+
+    @WrapOperation(
             method = "aiStep",
             at = @At(
                     value = "INVOKE", remap = false,
