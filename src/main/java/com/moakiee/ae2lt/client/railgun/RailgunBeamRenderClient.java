@@ -153,7 +153,7 @@ public final class RailgunBeamRenderClient {
         // {@code getEyePosition()}/{@code getYRot()} call snaps in 50 ms steps and the
         // beam visibly stutters during movement.
         float partialTick = mc.getFrameTime();
-        refreshLocalBeam(mc, now, partialTick);
+        refreshLocalBeam(mc);
         ACTIVE.entrySet().removeIf(en -> now - en.getValue().lastUpdateTick > STALE_TICKS);
         if (ACTIVE.isEmpty()) return;
 
@@ -212,7 +212,7 @@ public final class RailgunBeamRenderClient {
         spawnCrackleArcs(mc, now, partialTick);
     }
 
-    private static void refreshLocalBeam(Minecraft mc, long now, float partialTick) {
+    private static void refreshLocalBeam(Minecraft mc) {
         if (!localFiring || mc.player == null || mc.level == null) return;
         ItemStack stack = mc.player.getMainHandItem();
         if (!(stack.getItem() instanceof ElectromagneticRailgunItem) || mc.screen != null) {

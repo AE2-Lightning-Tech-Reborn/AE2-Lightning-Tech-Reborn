@@ -182,7 +182,7 @@ public final class OverloadExecutionService {
             // entity removal listeners that re-enter this service path.
             int idx = indexOf(targets, targetUuid);
             if (idx >= 0) targets.remove(idx);
-            saveTargets(stack, root, targets);
+            saveTargets(stack, targets);
             execute(
                     target,
                     Math.max(damage, currentHp),
@@ -210,7 +210,7 @@ public final class OverloadExecutionService {
             if (!target.isAlive()) {
                 int idx = indexOf(targets, targetUuid);
                 if (idx >= 0) targets.remove(idx);
-                saveTargets(stack, root, targets);
+                saveTargets(stack, targets);
                 return;
             }
         }
@@ -230,7 +230,7 @@ public final class OverloadExecutionService {
                 targets.remove(0);
             }
         }
-        saveTargets(stack, root, targets);
+        saveTargets(stack, targets);
     }
 
     /**
@@ -540,7 +540,7 @@ public final class OverloadExecutionService {
         return -1;
     }
 
-    private static void saveTargets(ItemStack stack, CompoundTag root, ListTag targets) {
+    private static void saveTargets(ItemStack stack, ListTag targets) {
         // 1.20.1：无 CustomData 组件，直接把列表写回栈 NBT（updateTag 在 tag 空时置 null）。
         ItemStackTagSupport.updateTag(stack, tag -> {
             if (targets.isEmpty()) {

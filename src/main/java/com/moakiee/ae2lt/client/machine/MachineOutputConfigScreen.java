@@ -20,6 +20,7 @@ import appeng.client.gui.AEBaseScreen;
 
 public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfigMenu, P extends AEBaseScreen<M>>
         extends AESubScreen<M, P> {
+    private final String outputStatusPrefix;
     private final OverloadProcessingFactoryOutputButton frontButton;
     private final OverloadProcessingFactoryOutputButton backButton;
     private final OverloadProcessingFactoryOutputButton leftButton;
@@ -28,12 +29,19 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     private final OverloadProcessingFactoryOutputButton bottomButton;
 
     public MachineOutputConfigScreen(P parent, Component label) {
-        super(parent, "/screens/overload_processing_output_config.json");
+        this(parent, label, "/screens/overload_processing_output_config.json",
+                "ae2lt.gui.overload_factory.output_side.clear", "ae2lt.gui.overload_factory.output_side.");
+    }
+
+    protected MachineOutputConfigScreen(P parent, Component label, String screenPath,
+            String clearLabelKey, String outputStatusPrefix) {
+        super(parent, screenPath);
+        this.outputStatusPrefix = outputStatusPrefix;
 
         widgets.add("return", new TabButton(Icon.ARROW_LEFT, label, btn -> returnToParent()));
 
         var clear = new OutputSidesClearButton(
-                Component.translatable("ae2lt.gui.overload_factory.output_side.clear"),
+                Component.translatable(clearLabelKey),
                 button -> menu.clientClearOutputSides());
         widgets.add("clear", clear);
 
@@ -82,7 +90,7 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     private OverloadProcessingFactoryOutputButton addSideButton(String widgetId, RelativeSide side, String labelKey) {
         var button = new OverloadProcessingFactoryOutputButton(
                 Component.translatable(labelKey),
-                press -> menu.clientToggleOutputSide(side));
+                press -> menu.clientToggleOutputSide(side), outputStatusPrefix);
         widgets.add(widgetId, button);
         return button;
     }

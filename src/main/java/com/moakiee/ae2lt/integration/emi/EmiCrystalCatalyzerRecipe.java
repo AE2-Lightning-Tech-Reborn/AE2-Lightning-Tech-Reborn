@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
@@ -78,7 +80,7 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.crystal_catalyzer.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.energyPerCycle())),
+                        compactEnergy(recipe.energyPerCycle())),
                 firstLineY,
                 compactText);
         statusText(
