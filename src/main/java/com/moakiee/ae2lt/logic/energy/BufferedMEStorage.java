@@ -11,24 +11,11 @@ import appeng.api.storage.MEStorage;
 import net.minecraft.network.chat.Component;
 
 /**
- * Single-cell FE buffer/proxy in front of an ME storage delegate.
- *
- * <p>Mirrors AE2's {@code MEChestBlockEntity} architecture: when a Flux Cell
- * is installed, the cell IS the buffer. Every {@link #extract}/{@link #insert}
- * mutates the cell directly; the cell's internal {@code storedEnergy}
- * counter is the canonical source of truth. The cell's ItemStack-data
- * persist is deferred to {@link #endTick(AEKey, IActionSource)} so that 64+ writes
- * during a single OVERLOAD tick collapse to a single ItemStack NBT
- * update.
- *
- * <p>When no cell is installed, NORMAL-mode distribution falls back to the
- * transient {@link #feBuffer}; OVERLOAD mode short-circuits since
- * {@code BufferCapacity == 0} disables it at the host level.
- *
- * <p>If a per-tick distribution would otherwise exceed what the cell holds,
- * {@link #beginMemoryBatch} (NORMAL) and {@link #refillFromDelegateInline}
- * (OVERLOAD) refill the cell from the delegate <i>once</i>, amortizing the
- * cost across {@code 20 ticks} of expected consumption.
+ * FE buffer backed by the installed cell, or transient memory in NORMAL mode.
+ * The cell's stored energy is authoritative; {@link #endTick(AEKey, IActionSource)}
+ * persists all mutations once per tick. With no cell, the host disables OVERLOAD.
+ * NORMAL and OVERLOAD refills amortize a delegate extraction over 20 ticks of
+ * expected consumption through beginMemoryBatch and refillFromDelegateInline.
  */
 public class BufferedMEStorage implements MEStorage {
 

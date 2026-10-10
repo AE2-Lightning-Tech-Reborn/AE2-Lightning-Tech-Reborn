@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.device.module;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -10,10 +9,6 @@ import com.moakiee.ae2lt.device.DeviceKind;
 import com.moakiee.ae2lt.celestweave.ArmorPart;
 
 public final class ArmorModuleStorage implements DeviceModuleStorage {
-    public static final ArmorModuleStorage HEAD = new ArmorModuleStorage(ArmorPart.HEAD);
-    public static final ArmorModuleStorage CHEST = new ArmorModuleStorage(ArmorPart.CHEST);
-    public static final ArmorModuleStorage LEGS = new ArmorModuleStorage(ArmorPart.LEGS);
-    public static final ArmorModuleStorage FEET = new ArmorModuleStorage(ArmorPart.FEET);
 
     private final ArmorPart part;
 
@@ -63,12 +58,6 @@ public final class ArmorModuleStorage implements DeviceModuleStorage {
 
     @Override
     public Stream<ItemStack> installedModuleStacks(ItemStack device) {
-        var result = new ArrayList<ItemStack>();
-        for (var stack : listEntries(device)) {
-            for (int i = 0; i < stack.getCount(); i++) {
-                result.add(stack.copyWithCount(1));
-            }
-        }
-        return result.stream();
+        return Stream.empty();
     }
 }
