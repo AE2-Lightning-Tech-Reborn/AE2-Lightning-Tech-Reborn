@@ -80,6 +80,14 @@ public final class TimeWheelInputExtractor {
                                          boolean allowSharedInputs, Map<AEKey, Long> reservedStock,
                                          Level level,
                                          @Nullable BiFunction<ICraftingInventory, Long, CraftingInputAllocation> allocator) {
+        return bulkExtract(details, inv, maxCraft, allowSharedInputs, reservedStock, level, allocator, null);
+    }
+
+    @Nullable
+    public static BulkResult bulkExtract(IPatternDetails details, ListCraftingInventory inv, long maxCraft,
+                                         boolean allowSharedInputs, Map<AEKey, Long> reservedStock, Level level,
+                                         @Nullable BiFunction<ICraftingInventory, Long, CraftingInputAllocation> allocator,
+                                         @Nullable com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper.BatchCapacityLimiter capacityLimiter) {
         if (maxCraft <= 0) return null;
 
         // Only these known empty instances prove that no live reservation view is present.
@@ -126,6 +134,22 @@ public final class TimeWheelInputExtractor {
                 additionalCopies = Math.min(additionalCopies,
                         quota.getOrDefault(entry.getKey(), 0L) / entry.getLongValue());
             }
+        }
+
+        if (capacityLimiter != null) {
+            long limitedCopies;
+            try {
+                limitedCopies = Math.min(additionalCopies + 1,
+                        capacityLimiter.limit(resolved.inputs, additionalCopies + 1));
+            } catch (RuntimeException | Error failure) {
+                CraftingCpuHelper.reinjectPatternInputs(guardedInventory, resolved.inputs);
+                throw failure;
+            }
+            if (limitedCopies <= 0) {
+                CraftingCpuHelper.reinjectPatternInputs(guardedInventory, resolved.inputs);
+                return null;
+            }
+            additionalCopies = limitedCopies - 1;
         }
 
         if (choices != null) {

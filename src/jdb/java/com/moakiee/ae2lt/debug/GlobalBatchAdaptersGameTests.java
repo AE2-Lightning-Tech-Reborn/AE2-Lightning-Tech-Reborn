@@ -37,6 +37,13 @@ public final class GlobalBatchAdaptersGameTests {
         run(helper, BatchCpuAccounting.Mode.LINEAR, false, 0, false);
         helper.succeed();
     }
+
+    @GameTest(template = "empty")
+    public static void concreteAdmissionBoundsNativeExtractionAndRefundsRejection(GameTestHelper helper) {
+        run(helper, BatchCpuAccounting.Mode.LINEAR, false, 2, false, 3);
+        run(helper, BatchCpuAccounting.Mode.SUCCESSFUL_DISPATCH, false, 0, false, 0);
+        helper.succeed();
+    }
     @GameTest(template = "empty")
     public static void throwingPushStopsWithoutRefundOrOrdinaryReplay(GameTestHelper helper) {
         run(helper, BatchCpuAccounting.Mode.SUCCESSFUL_DISPATCH, false, 8, true);
@@ -102,9 +109,15 @@ public final class GlobalBatchAdaptersGameTests {
 
     private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,
                             int accepted, boolean fail) {
+        run(helper, mode, explicitNull, accepted, fail, -1);
+    }
+
+    private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,
+                            int accepted, boolean fail, int admission) {
         var pattern = new Pattern();
         var provider = new Provider(pattern);
         var endpoint = new Endpoint(provider, accepted, fail);
+        endpoint.admission = admission;
         var id = new ResourceLocation("ae2lt_global_batch", "test");
         BatchProviderAdapters.register(id, 1000, (candidate, details, job) -> candidate == provider ? endpoint : null);
         try {
@@ -123,7 +136,7 @@ public final class GlobalBatchAdaptersGameTests {
                             () -> {}, Map.of(), 8, 8, false, schedule, null)
                     : BatchExecutor.runBatchOnly(8, mode, service, energy, job, inventory, batched,
                             () -> {}, Map.of(), 8, 8, false, schedule);
-            helper.assertTrue(endpoint.calls == 1, "exactly one real batch call");
+            helper.assertTrue(endpoint.calls == (admission == 0 ? 0 : 1), "admission controls batch submission");
             helper.assertTrue(provider.ordinaryCalls == 0, "no ordinary replay");
             helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 8 - accepted, "refund only unowned copies");
             if (fail) {
@@ -160,12 +173,23 @@ public final class GlobalBatchAdaptersGameTests {
     }
     private static final class Endpoint implements IBatchCraftingProvider {
         final Provider provider; final int accepted; final boolean fail; int calls;
+        int admission = -1;
         Endpoint(Provider provider, int accepted, boolean fail) { this.provider = provider; this.accepted = accepted; this.fail = fail; }
         @Override public List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
         @Override public boolean isBusy() { return false; }
+        @Override public PreparedBatch prepareBatch(IPatternDetails pattern, KeyCounter[] inputs,
+                                                   long count, BatchJobView job) {
+            if (admission < 0) return null;
+            var template = new KeyCounter[]{new KeyCounter()};
+            template[0].addAll(inputs[0]);
+            return new PreparedBatch() {
+                @Override public long capacity() { return admission; }
+                @Override public long push(long offered) { return pushBatch(pattern, template, offered); }
+            };
+        }
         @Override public long pushBatch(IPatternDetails p, KeyCounter[] inputs, long count) {
             calls++;
-            if (count != 8 || inputs[0].get(AEItemKey.of(Items.STONE)) != 1) throw new AssertionError("single-copy template contract");
+            if (count != (admission < 0 ? 8 : admission) || inputs[0].get(AEItemKey.of(Items.STONE)) != 1) throw new AssertionError("single-copy template contract");
             if (fail) throw new IllegalStateException("submission ownership unknown");
             return count - accepted;
         }

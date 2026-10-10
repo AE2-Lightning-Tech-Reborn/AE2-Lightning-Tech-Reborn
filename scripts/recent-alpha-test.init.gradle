@@ -1,0 +1,21 @@
+// Forge 1.20.1 regressions for the final alpha batch admission and provider fixes.
+allprojects {
+    afterEvaluate {
+        def withMgu = (findProperty('recent_alpha_mgu') ?: 'false').toBoolean()
+        sourceSets.jdb.java.setIncludes(['**/ProviderEnergyOutputGameTests.java',
+                '**/ProviderReturnFilterGameTests.java', '**/GlobalBatchAdaptersGameTests.java',
+                '**/TianshuDeferredReturnsGameTests.java', '**/PhaseLockMovementGameTests.java',
+                '**/PhaseFlightAndLockGameTests.java'] +
+                (withMgu ? ['**/PhaseLockConveyorGameTests.java'] : []))
+        if (withMgu) {
+            dependencies.add('runtimeOnly', fg.deobf('curse.maven:mob-grinding-utils-254241:5131447'))
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/recent-alpha-forge/' + (withMgu ? 'mgu' : 'default'))
+            property 'forge.enabledGameTestNamespaces',
+                    'ae2lt,ae2lt_io,ae2lt_global_batch,ae2lt_deferred,ae2lt_phase_movement,ae2lt_phase,ae2lt_mining' +
+                            (withMgu ? ',ae2lt_phase_conveyor' : '')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

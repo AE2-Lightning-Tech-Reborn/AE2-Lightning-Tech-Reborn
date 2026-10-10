@@ -2273,7 +2273,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             public boolean hasNext() {
                 while (next == null && raw.hasNext()) {
                     var candidate = raw.next();
-                    if (skipped == null || !skipped.containsKey(candidate)) {
+                    if (skipped == null || !skipped.containsKey(candidate) || !candidate.isBusy()) {
                         next = new ResolvedProvider(candidate, providerPattern);
                     }
                 }
