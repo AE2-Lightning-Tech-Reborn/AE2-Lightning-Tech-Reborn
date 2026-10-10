@@ -9,7 +9,6 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuCraftingTerminalHost;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkstationStorage;
 import com.moakiee.ae2lt.menu.TianshuCraftingTermMenu;
 import java.util.List;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;

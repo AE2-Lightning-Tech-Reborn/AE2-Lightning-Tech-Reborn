@@ -100,20 +100,6 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
         return ItemStack.EMPTY;
     }
 
-    public List<ItemStack> unitStacks(RailgunModuleType type) {
-        String typeId = type.getSerializedName();
-        var result = new ArrayList<ItemStack>();
-        for (var stack : entries) {
-            if (!typeId.equals(typeId(stack))) {
-                continue;
-            }
-            for (int i = 0; i < stack.getCount(); i++) {
-                result.add(stack.copyWithCount(1));
-            }
-        }
-        return result;
-    }
-
     public Stream<ItemStack> installedModuleStacks() {
         var result = new ArrayList<ItemStack>();
         for (var stack : entries) {
@@ -128,10 +114,6 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
         List<DeviceCapability> out = new ArrayList<>();
         installedModuleStacks().forEach(stack -> append(out, stack));
         return out;
-    }
-
-    public static RailgunModuleEntries fromSlotStacks(List<ItemStack> stacks) {
-        return new RailgunModuleEntries(stacks);
     }
 
     public static String typeId(ItemStack stack) {

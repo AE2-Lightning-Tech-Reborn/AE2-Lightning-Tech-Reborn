@@ -15,20 +15,8 @@ import appeng.client.gui.widgets.IconButton;
 import com.moakiee.ae2lt.AE2LightningTech;
 
 /**
- * 通用的多态贴图切换按钮。底层模型是"状态数组 + 当前索引",每个状态自带自己的贴图和 tooltip。
- *
- * <p>设计要点:</p>
- * <ul>
- *   <li>渲染只看 {@link #stateIndex},按 {@code states[stateIndex]} 取贴图与 tooltip。</li>
- *   <li>点击只通知 {@link Listener},由调用方决定如何推进状态(通常发包让服务端 cycle,服务端再回传索引)。</li>
- *   <li>{@link ButtonType} 描述每种按钮的所有可能状态,2 态按钮就两个贴图,3 态按钮三个,易扩展到 N 态。</li>
- *   <li>为了让旧调用方不受影响,保留了 {@link #setState(boolean)} / {@link #setTooltipOn(List)}
- *       / {@link #setTooltipOff(List)} 的 2 态 API,内部分别映射到索引 1 / 0。</li>
- * </ul>
- *
- * <p>这套设计与 AE2 的 {@code SettingToggleButton<T extends Enum<T>>} 思路一致——按枚举循环——
- * 但不依赖 AE2 的 {@code Setting<T>} 注册体系,也允许任意 mod 资源命名空间下的 PNG 作为贴图,
- * 适合我们这种"自定义 BlockEntity 字段 + 自定义贴图"的场景。</p>
+ * 按状态索引显示贴图和 tooltip。点击通知 {@link Listener}，由调用方更新状态。
+ * {@link ButtonType} 定义各状态贴图；boolean 设置映射到索引 0 和 1。
  */
 public class TextureToggleButton extends IconButton {
 
@@ -55,10 +43,6 @@ public class TextureToggleButton extends IconButton {
     private static ResourceLocation texture(String path) {
         return new ResourceLocation(
                 AE2LightningTech.MODID, "textures/gui/buttons/" + path + ".png");
-    }
-
-    public int getStateCount() {
-        return this.textures.size();
     }
 
     /** 通用状态切换入口,索引会被 clamp 到合法范围。 */
@@ -96,21 +80,6 @@ public class TextureToggleButton extends IconButton {
 
     public void setTooltipOff(List<Component> lines) {
         setTooltipAt(0, lines);
-    }
-
-    // ====== 3 态便捷 API:索引 2 = EJECT(若该 ButtonType 声明了第三贴图)======
-
-    /** 显式切到第三态(若 {@link ButtonType} 不存在该状态,会落到最后一个有效状态)。 */
-    public void setEjectState() {
-        setStateIndex(2);
-    }
-
-    public boolean isEjectState() {
-        return this.stateIndex == 2 && this.textures.size() >= 3;
-    }
-
-    public void setTooltipEject(List<Component> lines) {
-        setTooltipAt(2, lines);
     }
 
     @Override

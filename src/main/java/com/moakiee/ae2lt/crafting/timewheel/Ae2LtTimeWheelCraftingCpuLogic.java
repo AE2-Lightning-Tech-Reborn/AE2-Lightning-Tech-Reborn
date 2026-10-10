@@ -58,7 +58,6 @@ import appeng.me.service.CraftingService;
 
 import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchCpuAccounting;
-import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchTaskHandle;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapter;
 import com.moakiee.ae2lt.crafting.timewheel.allocation.TimeWheelInputExtractor;
