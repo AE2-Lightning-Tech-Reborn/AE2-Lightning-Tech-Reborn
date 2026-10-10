@@ -24,7 +24,7 @@ public final class TianshuInventoryTweaksCompat {
     public static void onMousePressed(ScreenEvent.MouseButtonPressed.Pre event) {
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
                 && ModList.get().isLoaded("invtweaks")
-                && event.getScreen() instanceof TianshuPatternEncodingTermScreen<?> screen) {
+                && event.getScreen() instanceof TianshuMaintenanceTermScreen<?> screen) {
             if (screen.mouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
                 event.setCanceled(true);
             }

@@ -38,10 +38,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.ClickType;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+@IPNIgnore
 public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extends TianshuMaintenanceTermScreen<M> {
     private static final Blitter SMITHING_BACKGROUND = Blitter.texture("guis/pattern_modes.png").src(128, 70, 124, 66);
     private static final Blitter STONE_BACKGROUND = Blitter.texture("guis/pattern_modes.png").src(0, 140, 124, 66);
