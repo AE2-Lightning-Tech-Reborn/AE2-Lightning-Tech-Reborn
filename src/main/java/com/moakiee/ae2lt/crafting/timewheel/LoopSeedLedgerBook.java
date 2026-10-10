@@ -530,8 +530,8 @@ final class LoopSeedLedgerBook {
                 var planned = GenericStack.readTag(
                         ruleTag.getCompound(TAG_PLANNED));
                 if (planned == null) continue;
-                var exact = readRuleKeys(ruleTag, TAG_RULE_EXACT, registries);
-                var fuzzy = readRuleKeys(ruleTag, TAG_RULE_FUZZY, registries);
+                var exact = readRuleKeys(ruleTag, TAG_RULE_EXACT);
+                var fuzzy = readRuleKeys(ruleTag, TAG_RULE_FUZZY);
                 variantRules
                         .computeIfAbsent(consumer, ignored -> new LinkedHashMap<>())
                         .merge(planned.what(),
@@ -612,9 +612,9 @@ final class LoopSeedLedgerBook {
                 var ruleTag = new CompoundTag();
                 ruleTag.put(TAG_PLANNED, GenericStack.writeTag(
                         new GenericStack(planned, 1L)));
-                writeRuleKeys(ruleTag, TAG_RULE_EXACT, rule.exactVariants(), registries);
+                writeRuleKeys(ruleTag, TAG_RULE_EXACT, rule.exactVariants());
                 writeRuleKeys(
-                        ruleTag, TAG_RULE_FUZZY, rule.fuzzyIdentities(), registries);
+                        ruleTag, TAG_RULE_FUZZY, rule.fuzzyIdentities());
                 long bundleUnits = consumerBundleUnits
                         .getOrDefault(consumer, Map.of()).getOrDefault(planned, 0L);
                 if (consumerBundleUnits.getOrDefault(consumer, Map.of()).containsKey(planned)) {
@@ -784,8 +784,7 @@ final class LoopSeedLedgerBook {
 
     private static Set<AEKey> readRuleKeys(
             CompoundTag owner,
-            String name,
-            HolderLookup.Provider registries) {
+            String name) {
         var result = new LinkedHashSet<AEKey>();
         var tags = owner.getList(name, Tag.TAG_COMPOUND);
         for (int i = 0; i < tags.size(); i++) {
@@ -798,8 +797,7 @@ final class LoopSeedLedgerBook {
     private static void writeRuleKeys(
             CompoundTag owner,
             String name,
-            Set<AEKey> keys,
-            HolderLookup.Provider registries) {
+            Set<AEKey> keys) {
         if (keys.isEmpty()) return;
         var tags = new ListTag();
         for (var key : keys) {

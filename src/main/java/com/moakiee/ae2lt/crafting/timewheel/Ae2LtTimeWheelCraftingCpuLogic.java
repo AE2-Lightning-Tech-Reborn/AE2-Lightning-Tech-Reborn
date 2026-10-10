@@ -558,7 +558,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             remainingCopies,
                             craftingService,
                             energyService,
-                            level,
                             dispatchSchedule);
                     if (batchResult.consumedCpuOps() > 0) {
                         usedOps += batchResult.consumedCpuOps();
@@ -590,7 +589,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
                     var outcome = pushOnePattern(
                             activeJob,
-                            task,
                             details,
                             craftingService,
                             energyService,
@@ -681,7 +679,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                                          long remainingCopies,
                                                          CraftingService craftingService,
                                                          IEnergyService energyService,
-                                                         Level level,
                                                          TickProviderDispatchSchedule dispatchSchedule) {
         var activeJob = this.job;
         if (activeJob == null) {
@@ -740,7 +737,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private DispatchOutcome pushOnePattern(TimeWheelJob activeJob,
-                                           TaskProgress task,
                                            IPatternDetails details,
                                            CraftingService craftingService,
                                            IEnergyService energyService,
@@ -1908,8 +1904,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         loopSeedLedgers.writeToNBT(data, registries);
     }
 
-    private static KeyCounter readCounter(
-            ListTag tags, HolderLookup.Provider registries) {
+    private static KeyCounter readCounter(ListTag tags) {
         var result = new KeyCounter();
         for (int i = 0; i < tags.size(); i++) {
             var stack = GenericStack.readTag(tags.getCompound(i));
@@ -1918,8 +1913,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         return result;
     }
 
-    private static ListTag writeCounter(
-            KeyCounter counter, HolderLookup.Provider registries) {
+    private static ListTag writeCounter(KeyCounter counter) {
         var result = new ListTag();
         for (var entry : counter) {
             if (entry.getLongValue() > 0) {
@@ -1931,13 +1925,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private static Map<UUID, KeyCounter> readSeedCredits(
-            ListTag tags, HolderLookup.Provider registries) {
+            ListTag tags) {
         var result = new LinkedHashMap<UUID, KeyCounter>();
         for (int i = 0; i < tags.size(); i++) {
             var creditTag = tags.getCompound(i);
             if (!creditTag.hasUUID(NBT_CREDIT_CONSUMER)) continue;
             var items = readCounter(
-                    creditTag.getList(NBT_CREDIT_ITEMS, Tag.TAG_COMPOUND), registries);
+                    creditTag.getList(NBT_CREDIT_ITEMS, Tag.TAG_COMPOUND));
             if (!items.isEmpty()) {
                 result.put(creditTag.getUUID(NBT_CREDIT_CONSUMER), items);
             }
@@ -1946,7 +1940,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private static ListTag writeSeedCredits(
-            Map<UUID, KeyCounter> credits, HolderLookup.Provider registries) {
+            Map<UUID, KeyCounter> credits) {
         var result = new ListTag();
         var consumers = new ArrayList<>(credits.keySet());
         consumers.sort(UUID::compareTo);
@@ -1955,7 +1949,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             if (items == null || items.isEmpty()) continue;
             var creditTag = new CompoundTag();
             creditTag.putUUID(NBT_CREDIT_CONSUMER, consumer);
-            creditTag.put(NBT_CREDIT_ITEMS, writeCounter(items, registries));
+            creditTag.put(NBT_CREDIT_ITEMS, writeCounter(items));
             result.add(creditTag);
         }
         return result;
@@ -2012,7 +2006,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
         if (data.contains(TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_LIST)) {
             pendingRequesterOutputs.addAll(readCounter(
-                    data.getList(TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_COMPOUND), registries));
+                    data.getList(TAG_PENDING_REQUESTER_OUTPUTS, Tag.TAG_COMPOUND)));
         }
         readLoopSeedState(data, registries);
         clearTaskWheel();
@@ -2025,7 +2019,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             if (cpu.getLevel() == null) {
                 this.pendingJobTag = jobTag.copy();
                 this.pendingOverloadTag = overloadTag != null ? overloadTag.copy() : null;
-                updatePendingDisplayedOutput(jobTag, registries);
+                updatePendingDisplayedOutput(jobTag);
             } else {
                 restoreJobFromNBT(jobTag, overloadTag, registries);
             }
@@ -2062,13 +2056,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
         if (!retainedFinalOutputs.isEmpty()) {
             data.put(TAG_RETAINED_FINAL_OUTPUTS,
-                    writeCounter(retainedFinalOutputs, registries));
+                    writeCounter(retainedFinalOutputs));
         } else {
             data.remove(TAG_RETAINED_FINAL_OUTPUTS);
         }
         if (!pendingRequesterOutputs.isEmpty()) {
             data.put(TAG_PENDING_REQUESTER_OUTPUTS,
-                    writeCounter(pendingRequesterOutputs, registries));
+                    writeCounter(pendingRequesterOutputs));
         } else {
             data.remove(TAG_PENDING_REQUESTER_OUTPUTS);
         }
@@ -2135,7 +2129,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         rebuildTaskWheel();
     }
 
-    private void updatePendingDisplayedOutput(CompoundTag jobTag, HolderLookup.Provider registries) {
+    private void updatePendingDisplayedOutput(CompoundTag jobTag) {
         var finalOutput = GenericStack.readTag(jobTag.getCompound(NBT_FINAL_OUTPUT));
         if (finalOutput == null) {
             cpu.updateOutput(null);
@@ -2721,7 +2715,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return;
         }
 
-        if (parkTaskForMissingInputs(activeJob, details, missingKeys)) {
+        if (parkTaskForMissingInputs(details, missingKeys)) {
             rescheduleIfStillPending(activeJob, details, PARKED_TASK_SAFETY_DELAY_TICKS);
         } else {
             scheduleTask(details, 0);
@@ -2783,10 +2777,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return false;
         }
 
-        return parkTaskForMissingInputs(activeJob, details, findMissingExactInputKeys(details));
+        return parkTaskForMissingInputs(details, findMissingExactInputKeys(details));
     }
 
-    private boolean parkTaskForMissingInputs(TimeWheelJob activeJob, IPatternDetails details, Set<AEKey> missingKeys) {
+    private boolean parkTaskForMissingInputs(IPatternDetails details, Set<AEKey> missingKeys) {
         if (missingKeys.isEmpty()) {
             return false;
         }
@@ -3250,19 +3244,18 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 var remaining = item.getLong(NBT_CRAFTING_PROGRESS);
                 if (details != null && remaining > 0) {
                     var inputSeed = readCounter(
-                            item.getList(NBT_INPUT_SEED, Tag.TAG_COMPOUND), registries);
+                            item.getList(NBT_INPUT_SEED, Tag.TAG_COMPOUND));
                     var initialSeed = readCounter(
-                            item.getList(NBT_INITIAL_SEED, Tag.TAG_COMPOUND), registries);
+                            item.getList(NBT_INITIAL_SEED, Tag.TAG_COMPOUND));
                     var outputSeed = readCounter(
-                            item.getList(NBT_OUTPUT_SEED, Tag.TAG_COMPOUND), registries);
+                            item.getList(NBT_OUTPUT_SEED, Tag.TAG_COMPOUND));
                     var consumerId = item.hasUUID(NBT_SEED_CONSUMER)
                             ? item.getUUID(NBT_SEED_CONSUMER) : null;
                     var outputCredits = readSeedCredits(
-                            item.getList(NBT_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND), registries);
+                            item.getList(NBT_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND));
                     var sharedOutputCredits = readSeedCredits(
                             item.getList(
-                                    NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND),
-                            registries);
+                                    NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_COMPOUND));
                     boolean hasRoutedCreditTags = item.contains(
                             NBT_OUTPUT_SEED_CREDITS, Tag.TAG_LIST)
                             || item.contains(NBT_SHARED_OUTPUT_SEED_CREDITS, Tag.TAG_LIST);
@@ -3396,21 +3389,21 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     var outputCredits = loopPattern.outputSeedCredits();
                     var sharedOutputCredits = loopPattern.sharedOutputSeedCredits();
                     if (!initialSeed.isEmpty()) {
-                        item.put(NBT_INITIAL_SEED, writeCounter(initialSeed, registries));
+                        item.put(NBT_INITIAL_SEED, writeCounter(initialSeed));
                     }
                     if (!inputSeed.isEmpty()) {
-                        item.put(NBT_INPUT_SEED, writeCounter(inputSeed, registries));
+                        item.put(NBT_INPUT_SEED, writeCounter(inputSeed));
                     }
                     if (!outputSeed.isEmpty()) {
-                        item.put(NBT_OUTPUT_SEED, writeCounter(outputSeed, registries));
+                        item.put(NBT_OUTPUT_SEED, writeCounter(outputSeed));
                     }
                     if (!outputCredits.isEmpty()) {
                         item.put(NBT_OUTPUT_SEED_CREDITS,
-                                writeSeedCredits(outputCredits, registries));
+                                writeSeedCredits(outputCredits));
                     }
                     if (!sharedOutputCredits.isEmpty()) {
                         item.put(NBT_SHARED_OUTPUT_SEED_CREDITS,
-                                writeSeedCredits(sharedOutputCredits, registries));
+                                writeSeedCredits(sharedOutputCredits));
                     }
                 }
                 list.add(item);

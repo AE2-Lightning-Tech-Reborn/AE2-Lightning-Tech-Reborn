@@ -83,7 +83,7 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
-        renderEntries(graphics, mouseX, mouseY);
+        renderEntries(graphics);
         renderScrollbar(graphics);
     }
 
@@ -142,7 +142,7 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void renderEntries(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderEntries(GuiGraphics graphics) {
         var entries = buildEntries();
         int start = Math.min(scrollOffset, Math.max(0, entries.size() - VISIBLE_ROWS));
         int end = Math.min(entries.size(), start + VISIBLE_ROWS);
