@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.block;
 
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvent;

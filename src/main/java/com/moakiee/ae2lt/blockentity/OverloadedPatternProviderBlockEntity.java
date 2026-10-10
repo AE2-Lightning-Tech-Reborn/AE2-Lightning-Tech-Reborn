@@ -46,15 +46,8 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.api.patternprovider.WirelessPatternProviderHost;
 
 /**
- * BlockEntity for the Overloaded Pattern Provider.
- * <p>
- * Extends vanilla PatternProviderBlockEntity — behaves identically in NORMAL mode.
- * Custom persisted and synced fields extend the provider with wireless behavior.
- * <p>
- * PUSH_DIRECTION (block orientation) is always kept and never repurposed:
- * in NORMAL mode it drives adjacent-machine interaction (vanilla semantics);
- * in WIRELESS mode it is purely visual / grid-connectivity and does NOT affect
- * wireless dispatch or auto-return — those use wireless connector records instead.
+ * Pattern provider with persisted wireless connections. In WIRELESS mode, targets
+ * and return faces come from connector records rather than block orientation.
  */
 public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEntity
         implements FrequencyBindingHost, WirelessPatternProviderHost {

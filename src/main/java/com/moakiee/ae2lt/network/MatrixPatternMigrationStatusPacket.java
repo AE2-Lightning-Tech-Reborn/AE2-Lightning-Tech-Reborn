@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.network;
 
 import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot;
-import com.moakiee.ae2lt.menu.MatrixMigrationMenu;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.fml.DistExecutor;

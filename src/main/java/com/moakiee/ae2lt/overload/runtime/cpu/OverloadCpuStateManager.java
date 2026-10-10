@@ -26,18 +26,8 @@ import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternDetails;
 
 /**
- * Runtime registry for overload-side CPU waiting state.
- * <p>
- * Lifecycle skeleton:
- * <ul>
- *   <li>create/get when an overload pattern copy is pushed successfully</li>
- *   <li>register only outputs whose match mode is ID_ONLY</li>
- *   <li>decrement during CPU insert-path matching when an incoming item can be
- *       recognized by item id but not by AE2's exact waitingFor key</li>
- *   <li>remove entries when remaining amount reaches zero</li>
- *   <li>clear the entire CPU state on finish, cancel, or job replacement</li>
- * </ul>
- * This manager intentionally does not change AE2's native waitingFor structure.
+ * Tracks CPU ID_ONLY claims from successful pattern dispatch until completion.
+ * Clears job state on finish, cancellation or replacement.
  */
 public final class OverloadCpuStateManager {
     public static final OverloadCpuStateManager INSTANCE = new OverloadCpuStateManager();

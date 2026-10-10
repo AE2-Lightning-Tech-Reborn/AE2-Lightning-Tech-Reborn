@@ -2,56 +2,31 @@ package com.moakiee.ae2lt.client.tianshu;
 
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
-
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
-import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.SettingToggleButton;
-import appeng.client.gui.widgets.TabButton;
-import appeng.client.gui.widgets.TabButton.Style;
-import appeng.api.behaviors.ContainerItemStrategies;
-import appeng.api.behaviors.EmptyingAction;
-import appeng.api.config.ActionItems;
 import appeng.api.config.Settings;
 import appeng.api.config.ViewItems;
 import appeng.api.client.AEKeyRendering;
-import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
-import appeng.core.definitions.AEItems;
-import appeng.core.sync.packets.InventoryActionPacket;
-import appeng.helpers.InventoryAction;
-import appeng.menu.SlotSemantics;
 import appeng.menu.me.common.GridInventoryEntry;
 import appeng.menu.me.common.IClientRepo;
-import appeng.parts.encoding.EncodingMode;
 import appeng.api.stacks.AEItemKey;
 import appeng.util.prioritylist.IPartitionList;
-import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
-import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
-import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
-import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 import com.moakiee.ae2lt.mixin.client.VerticalButtonBarAccessor;
-import com.moakiee.ae2lt.registry.ModItems;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
@@ -59,11 +34,7 @@ import appeng.client.gui.me.common.RepoSlot;
 import org.lwjgl.glfw.GLFW;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import com.moakiee.ae2lt.network.PacketSender;
-import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
-import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.jetbrains.annotations.Nullable;
 
 import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
@@ -266,6 +237,10 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
                 .toList();
     }
 
+    /**
+     * Adds client-only rows for configured keys absent from AE2's repository.
+     * These synthetic rows only allow opening the maintenance editor.
+     */
     private void syncSyntheticMaintenanceEntries() {
         if (!menu.isMaintainableView()) {
             removeSyntheticMaintenanceEntries();

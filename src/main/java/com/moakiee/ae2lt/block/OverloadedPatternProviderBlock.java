@@ -21,21 +21,9 @@ import appeng.util.InteractionUtil;
 import appeng.util.Platform;
 
 /**
- * Overloaded Pattern Provider block.
- * <p>
- * Reuses AE2's PUSH_DIRECTION blockstate, wrench rotation and redstone update
- * behavior, while binding to its own BlockEntity / Menu.
- * <p>
- * Orientation rules:
- * <ul>
- *   <li>PUSH_DIRECTION is always present and wrench-rotatable in both modes.</li>
- *   <li>In NORMAL mode, PUSH_DIRECTION controls adjacent machine interaction
- *       (same as vanilla Pattern Provider).</li>
- *   <li>In WIRELESS mode, PUSH_DIRECTION is kept for visual / grid-connectivity
- *       purposes only; wireless dispatch and auto-return targets are determined
- *       by the wireless connector's "machine + bound face" connection records,
- *       NOT by this block's orientation.</li>
- * </ul>
+ * Pattern provider with AE2 orientation and wrench behavior. PUSH_DIRECTION selects
+ * adjacent machines in NORMAL mode; WIRELESS dispatch and returns use the
+ * connector records and their bound faces.
  */
 public class OverloadedPatternProviderBlock<T extends OverloadedPatternProviderBlockEntity>
         extends AE2LTBaseEntityBlock<T> {
