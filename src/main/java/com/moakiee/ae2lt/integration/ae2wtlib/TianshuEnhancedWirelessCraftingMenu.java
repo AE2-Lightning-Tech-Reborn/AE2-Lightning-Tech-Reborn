@@ -8,7 +8,6 @@ import appeng.menu.guisync.GuiSync;
 import appeng.menu.slot.AppEngSlot;
 import appeng.util.inv.AppEngInternalInventory;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessCraftingTermMenuHost;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWorkPage;
 import com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu;
 import com.moakiee.ae2lt.mixin.ae2wtlib.CraftingTerminalHandlerAccessor;
 

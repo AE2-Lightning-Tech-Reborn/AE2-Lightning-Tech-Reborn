@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -19,17 +18,8 @@ import appeng.util.SettingsFrom;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 
 /**
- * Shared helpers for packing/unpacking custom machine configuration into
- * a dedicated child tag on AE2's memory-card CompoundTag payload. AE2's generic memory card
- * export only walks {@code IUpgradeableObject / IConfigurableObject /
- * IPriorityHost / IConfigInvHost}; fields living directly on our BEs (auto
- * export flags, per-face output enables, interface mode, etc.) stay invisible
- * unless we export them ourselves.
- *
- * Same-block copy/paste is the only supported case: on paste we rely on
- * AE2's {@code this.getName().equals(savedName)} check to route back to the
- * machine's own {@code importSettings}, which then calls {@link #readCustomTag}
- * to hydrate its fields.
+ * Stores BE-specific configuration in the AE2 memory card's AE2LTMachineConfig child tag.
+ * Same-block paste relies on AE2's saved-name check before invoking the machine import hook.
  */
 public final class MemoryCardConfigSupport {
     private static final String TAG_MACHINE_CONFIG = "AE2LTMachineConfig";
@@ -147,27 +137,6 @@ public final class MemoryCardConfigSupport {
             }
         }
         return result;
-    }
-
-    // ── Direction (nullable) serialization ────────────────────────────────
-
-    public static void writeDirection(CompoundTag tag, String key, @Nullable Direction direction) {
-        if (direction == null) {
-            return;
-        }
-        tag.putByte(key, (byte) direction.get3DDataValue());
-    }
-
-    @Nullable
-    public static Direction readDirection(CompoundTag tag, String key) {
-        if (!tag.contains(key)) {
-            return null;
-        }
-        int idx = tag.getByte(key);
-        if (idx < 0 || idx >= 6) {
-            return null;
-        }
-        return Direction.from3DDataValue(idx);
     }
 
     // ── Generic enum serialization ────────────────────────────────────────

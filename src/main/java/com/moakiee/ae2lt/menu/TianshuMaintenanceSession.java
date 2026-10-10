@@ -1,8 +1,6 @@
 package com.moakiee.ae2lt.menu;
 
 import appeng.api.stacks.AEKey;
-import appeng.api.config.Settings;
-import appeng.api.config.ViewItems;
 import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.*;
@@ -12,7 +10,6 @@ import java.util.*;
 import java.util.function.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 /** Shared terminal session; the bound supercomputer owns all rules and running jobs. */

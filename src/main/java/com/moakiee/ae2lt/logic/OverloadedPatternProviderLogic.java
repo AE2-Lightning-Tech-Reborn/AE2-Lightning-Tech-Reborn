@@ -229,10 +229,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
                 new AutoReturnEnvironment());
     }
 
-    protected OverloadedPatternProviderBlockEntity getOverloadedHost() {
-        return overloadedHost;
-    }
-
     protected IManagedGridNode getGridNode() {
         return gridNode;
     }
@@ -1553,10 +1549,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         validConnectionsCacheTick = gameTick;
         connectionsDirty = false;
         return validConnectionsCache;
-    }
-
-    protected List<WirelessConnection> getValidConnections(ServerLevel providerLevel, long gameTick) {
-        return getOrRefreshValidConnections(providerLevel, gameTick);
     }
 
     /**

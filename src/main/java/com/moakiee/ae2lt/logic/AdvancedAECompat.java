@@ -182,12 +182,6 @@ public final class AdvancedAECompat {
         return current;
     }
 
-    /** Converts a processing pattern to an AdvancedAE pattern with all inputs using any side. */
-    @Nullable
-    public static ItemStack encodeAnySide(ItemStack source, Level level) {
-        return encodeWithDirections(source, level, List.of());
-    }
-
     /**
      * Converts a processing pattern while assigning a side to each sparse input.
      * Values use {@code 0 = any side} and {@code Direction.ordinal() + 1}.

@@ -19,7 +19,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
-import java.util.List;
 
 public class OverloadedIOPortMenu extends UpgradeableMenu<OverloadedIOPortBlockEntity> {
     public static final MenuType<OverloadedIOPortMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(MenuTypeBuilder

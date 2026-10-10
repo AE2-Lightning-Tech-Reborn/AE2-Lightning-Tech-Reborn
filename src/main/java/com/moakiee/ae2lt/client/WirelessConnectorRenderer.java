@@ -41,21 +41,9 @@ import com.moakiee.ae2lt.api.patternprovider.WirelessPatternProviderHost;
 import com.moakiee.ae2lt.util.ItemStackTagSupport;
 
 /**
- * Client-side renderer for the Overloaded Wireless Connector.
- * <p>
- * When the player holds the connector, wireless-capable hosts within range are
- * highlighted with their connections. If a host is selected, only that host is rendered.
- * A preview overlay is shown for the selected host.
- * <p>
- * Performance notes (matches the optimization-report guidance):
- * <ul>
- *   <li>The chunk/BE scan is performed at most once every {@link #RESCAN_INTERVAL_TICKS}
- *       game ticks, not every frame. At 200fps this turns ~200 scans/sec into ~5 scans/sec
- *       while remaining visually instantaneous (鈮?00ms staleness).</li>
- *   <li>Hot-path objects (scratch {@link HashSet}) are reused across frames instead of
- *       re-allocated, to keep GC pressure flat under high frame rates
- *       (the report flags high-FPS as an amplifier of any per-frame leak path).</li>
- * </ul>
+ * Highlights nearby wireless hosts and connections while holding the connector.
+ * A selection limits rendering to that host and shows its preview overlay.
+ * Chunk scans run every {@link #RESCAN_INTERVAL_TICKS} ticks; frame scratch sets are reused.
  */
 @Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public class WirelessConnectorRenderer {

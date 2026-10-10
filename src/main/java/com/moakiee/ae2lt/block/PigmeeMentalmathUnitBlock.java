@@ -9,7 +9,6 @@ import appeng.block.AEBaseEntityBlock;
 import com.moakiee.ae2lt.blockentity.PigmeeMentalmathUnitBlockEntity;
 
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 

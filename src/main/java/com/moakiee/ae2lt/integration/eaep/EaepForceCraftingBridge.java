@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.integration.eaep;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import net.minecraftforge.network.simple.SimpleChannel;
 record EaepForceCraftingBridge(Class<?> menuType, Constructor<?> packetConstructor, SimpleChannel channel) {
     static EaepForceCraftingBridge resolve(Class<?> menuType,Class<?> packetType) throws ReflectiveOperationException {
