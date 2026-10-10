@@ -13,10 +13,8 @@ import com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu;
 import de.mari_023.ae2wtlib.TextConstants;
 import de.mari_023.ae2wtlib.AE2wtlibSlotSemantics;
 
-import de.mari_023.ae2wtlib.wct.magnet_card.MagnetMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.network.PacketDistributor;
 
 /** WT's settings/trash layouts bound to the current terminal container, preserving all work inputs. */
 final class TianshuWirelessToolsScreen extends AEBaseScreen<TianshuWirelessCraftingTermMenu> {

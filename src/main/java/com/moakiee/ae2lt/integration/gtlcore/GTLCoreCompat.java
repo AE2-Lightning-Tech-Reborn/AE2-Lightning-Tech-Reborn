@@ -23,21 +23,10 @@ import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ExecutingCraftingJobAccessor
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.TaskProgressAccessor;
 
 /**
- * Reflection-only bridge to GTLCore's crafting CPU internals (verified against GTLCore 1.2.3.2),
- * kept weak so AE2LT keeps working without GTLCore and without a compile-time dependency on it.
- * <p>
- * Two GTLCore behaviours change state AE2LT has to stay consistent with:
- * <ul>
- * <li><b>Pattern auto-expand.</b> GTLCore overwrites {@code CraftingCpuLogic.executeCrafting} and may
- * charge a single provider push as several crafting operations: it extracts that many input copies,
- * registers the same multiple of expected outputs and consumes the same amount of task progress.
- * The overload bookkeeping AE2LT registers from that push therefore has to scale identically.</li>
- * <li><b>Transfinite CPU selection.</b> GTLCore's menu hook cancels the {@code setCPU} head for its own
- * CPUs, exactly like the TimeWheel menu hook does, so whichever hook runs second is skipped and keeps
- * a stale selection. A stale selection leaks crafting status packets and makes {@code cancelCrafting}
- * cancel the job of a CPU that is no longer displayed.</li>
- * </ul>
- * Every entry point falls back to vanilla behaviour when GTLCore is absent or its internals moved.
+ * Optional reflection bridge verified against GTLCore 1.2.3.2; unavailable APIs fall back to vanilla.
+ * Auto-expanded pushes scale overload inputs, expected outputs and task progress together.
+ * Transfinite CPU selection bypasses competing setCPU hooks to keep status and cancellation
+ * attached to the displayed CPU.
  */
 public final class GTLCoreCompat {
     private static final Logger LOG = LogUtils.getLogger();

@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.network.PacketDistributor;
 
 
 public final class EaepForceCraftingAccess {

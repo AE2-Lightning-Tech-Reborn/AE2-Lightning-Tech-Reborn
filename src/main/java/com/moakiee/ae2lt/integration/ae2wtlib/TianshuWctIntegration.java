@@ -5,7 +5,6 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessCraftingTermMenuH
 import com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu;
 import com.moakiee.ae2lt.registry.ModItems;
 import de.mari_023.ae2wtlib.AE2wtlib;
-import de.mari_023.ae2wtlib.wut.WTDefinition;
 import de.mari_023.ae2wtlib.wut.WUTHandler;
 import de.mari_023.ae2wtlib.wct.CraftingTerminalHandler;
 import de.mari_023.ae2wtlib.wct.magnet_card.MagnetHandler;

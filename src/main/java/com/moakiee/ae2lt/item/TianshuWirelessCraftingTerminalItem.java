@@ -6,7 +6,6 @@ import com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu;
 import de.mari_023.ae2wtlib.terminal.ItemWT;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
