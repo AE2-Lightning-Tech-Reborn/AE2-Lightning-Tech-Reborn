@@ -151,12 +151,12 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         for (int visibleRow = 0; visibleRow < end - start; visibleRow++) {
             var entry = entries.get(start + visibleRow);
             int rowY = topPos + PANEL_Y + ENTRY_TOP_OFFSET + visibleRow * ENTRY_ROW_HEIGHT;
-            renderEntry(graphics, mouseX, mouseY, entry, visibleRow, rowY);
+            renderEntry(graphics, entry, rowY);
         }
         graphics.disableScissor();
     }
 
-    private void renderEntry(GuiGraphics graphics, int mouseX, int mouseY, Entry entry, int visibleRow, int rowY) {
+    private void renderEntry(GuiGraphics graphics, Entry entry, int rowY) {
         int slotX = leftPos + ENTRY_SLOT_X;
         int textX = leftPos + ENTRY_TEXT_X;
         int switchX = leftPos + ENTRY_SWITCH_X;

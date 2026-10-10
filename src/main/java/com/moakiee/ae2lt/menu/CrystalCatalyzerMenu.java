@@ -28,7 +28,7 @@ import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerLogic;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 
-public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBindingMenu {
+public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<CrystalCatalyzerMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(
             MenuTypeBuilder
                     .create(CrystalCatalyzerMenu::new, CrystalCatalyzerBlockEntity.class)
@@ -70,7 +70,6 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
     private final CrystalCatalyzerBlockEntity host;
     private final Slot catalystSlot;
     private final LargeStackAppEngSlot matrixSlot;
-    private final Slot outputSlot;
 
     public CrystalCatalyzerMenu(int id, Inventory playerInventory, CrystalCatalyzerBlockEntity host) {
         super(TYPE, id, playerInventory, host);
@@ -84,7 +83,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
         addSlot(this.matrixSlot, Ae2ltSlotSemantics.CRYSTAL_CATALYZER_MATRIX);
         this.matrixSlot.setActive(!host.isPigmeeVariant());
         Ae2ltSlotBackgrounds.withBackground(this.matrixSlot, Ae2ltSlotBackgrounds.LIGHTNING_COLLAPSE_MATRIX);
-        this.outputSlot = addSlot(
+        addSlot(
                 new LargeStackAppEngSlot(inventory, CrystalCatalyzerInventory.SLOT_OUTPUT),
                 SlotSemantics.MACHINE_OUTPUT);
 
@@ -175,7 +174,6 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
     public CrystalCatalyzerBlockEntity getHost() {
         return host;
     }
-
 
     public long getStoredEnergy() {
         return storedEnergy;

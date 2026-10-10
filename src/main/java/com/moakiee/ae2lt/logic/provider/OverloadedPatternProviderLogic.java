@@ -1708,13 +1708,13 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         if (wirelessOverflow.nextDueTick() <= gameTick) {
             return true;
         }
-        if (shouldTickWirelessEnergyNow(gameTick)) {
+        if (shouldTickWirelessEnergyNow()) {
             return true;
         }
         return shouldPollAutoReturnNow(gameTick);
     }
 
-    private boolean shouldTickWirelessEnergyNow(long gameTick) {
+    private boolean shouldTickWirelessEnergyNow() {
         if (overloadedHost.getProviderMode() != ProviderMode.WIRELESS) return false;
         if (!gridNode.isActive() || !isInductionCardInstalled()) return false;
         return CACHED_APPFLUX_FE_KEY != null && CACHED_APPFLUX_TRANSFER_RATE > 0;
@@ -1893,7 +1893,6 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
     /** Cached transfer rate from Applied Flux config. 0 if not available. */
     private static final long CACHED_APPFLUX_TRANSFER_RATE = AppFluxHelper.TRANSFER_RATE;
-
 
     public void removeSavedData() {
         storage.removeSavedData();

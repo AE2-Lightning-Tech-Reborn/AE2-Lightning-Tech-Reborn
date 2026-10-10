@@ -298,7 +298,6 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         return (unlimitedBits & (1L << slot)) != 0;
     }
 
-
     // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
     //  ME Terminal-style proxy slot interaction
     //  Storage slots are display-only; all click actions handled here.
@@ -329,7 +328,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         int idx = slot.getContainerSlot();
 
         switch (clickType) {
-            case PICKUP -> handlePickup(proxy, idx, button, player);
+            case PICKUP -> handlePickup(proxy, idx, button);
             case QUICK_MOVE -> handleQuickMove(proxy, idx, player);
             case THROW -> handleThrow(proxy, idx, button, player);
             case SWAP -> handleSwap(proxy, idx, button, player);
@@ -339,7 +338,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
     }
 
     private void handlePickup(OverloadedInterfaceLogic.ProxiedStorageInv proxy,
-                              int idx, int button, Player player) {
+                              int idx, int button) {
         var carried = getCarried();
         if (carried.isEmpty()) {
             var key = proxy.cfg().getKey(idx);

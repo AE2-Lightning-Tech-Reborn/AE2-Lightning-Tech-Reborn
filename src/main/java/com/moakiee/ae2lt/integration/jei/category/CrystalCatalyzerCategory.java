@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -171,7 +173,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
 
         var energyText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.energy",
-                formatCompactEnergy(recipe.energyPerCycle()));
+                compactEnergy(recipe.energyPerCycle()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
         guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
@@ -227,21 +229,4 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 .toList();
     }
 
-    private static String formatCompactEnergy(long energy) {
-        if (energy >= 1_000_000L) {
-            return formatCompactValue(energy / 1_000_000D, "m");
-        }
-        if (energy >= 1_000L) {
-            return formatCompactValue(energy / 1_000D, "k");
-        }
-        return Long.toString(energy);
-    }
-
-    private static String formatCompactValue(double value, String suffix) {
-        double rounded = Math.round(value * 10.0D) / 10.0D;
-        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001D) {
-            return Long.toString(Math.round(rounded)) + suffix;
-        }
-        return rounded + suffix;
-    }
 }

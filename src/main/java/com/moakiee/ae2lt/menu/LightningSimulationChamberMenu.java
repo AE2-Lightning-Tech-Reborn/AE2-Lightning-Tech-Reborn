@@ -25,7 +25,7 @@ import com.moakiee.ae2lt.machine.lightningchamber.LightningSimulationChamberInve
 import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationRecipeService;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
-public class LightningSimulationChamberMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu {
+public class LightningSimulationChamberMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<LightningSimulationChamberMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(
             MenuTypeBuilder
                     .create(LightningSimulationChamberMenu::new, LightningSimulationChamberBlockEntity.class)
@@ -358,7 +358,6 @@ public class LightningSimulationChamberMenu extends AEBaseMenu implements InputT
     public LightningSimulationChamberBlockEntity getHost() {
         return host;
     }
-
 
     public ToolboxMenu getToolbox() {
         return toolbox;

@@ -2444,7 +2444,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!hasInductionCard()) return;
         var feKey = AppFluxHelper.FE_KEY; if (feKey == null) return;
         var grid = getMainNode().getGrid(); if (grid == null) return;
-        if (interfaceMode == InterfaceMode.WIRELESS) tickWirelessEnergy(sl, feKey);
+        if (interfaceMode == InterfaceMode.WIRELESS) tickWirelessEnergy(sl);
         else if (getTargetDirection() != null)            tickNormalEnergy(sl);
     }
 
@@ -2462,14 +2462,14 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     // ── Wireless energy: timing-wheel scheduler ──────────────────────────
 
-    private void tickWirelessEnergy(ServerLevel sl, AEKey feKey) {
+    private void tickWirelessEnergy(ServerLevel sl) {
         long gt = sl.getGameTime();
         if (gt == lastEnergyTickGameTime) return;
         lastEnergyTickGameTime = gt;
-        distributeWirelessEnergy(sl, gt, feKey);
+        distributeWirelessEnergy(sl, gt);
     }
 
-    private void distributeWirelessEnergy(ServerLevel sl, long tick, AEKey feKey) {
+    private void distributeWirelessEnergy(ServerLevel sl, long tick) {
         // Refresh the validated connection list (host-owned: 20-tick sweep
         // + automatic stale-connection removal). rebuildEnergyTargets()
         // inside this call publishes the snapshot the distributor reads
