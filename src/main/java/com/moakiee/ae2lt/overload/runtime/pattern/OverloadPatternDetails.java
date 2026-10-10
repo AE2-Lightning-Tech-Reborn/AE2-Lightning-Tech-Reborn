@@ -9,19 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 
-/**
- * Runtime definition object for one overload pattern.
- * <p>
- * This class intentionally stays one layer above AE2's concrete pattern
- * interfaces for now. It describes:
- * <ul>
- *   <li>which inputs and outputs exist</li>
- *   <li>how each input/output slot should be matched</li>
- *   <li>which outputs are primary vs non-primary</li>
- * </ul>
- * Later provider and CPU integration can adapt this object into the exact AE2
- * execution hooks they need.
- */
+/** Runtime pattern definition with slot match modes and primary-output classification. */
 public final class OverloadPatternDetails implements OverloadedProviderOnlyPatternDetails {
     private final SourcePatternSnapshot sourcePattern;
     private final EncodedOverloadPattern encodedPattern;
@@ -148,13 +136,7 @@ public final class OverloadPatternDetails implements OverloadedProviderOnlyPatte
         }
     }
 
-    /**
-     * One runtime output slot with its slot-local compare semantics and
-     * primary/non-primary classification.
-     * <p>
-     * Non-primary outputs are still first-class outputs and are intentionally
-     * retained for future CPU waiting/claiming logic.
-     */
+    /** Output slot with match semantics; both primary and secondary outputs are tracked. */
     public record OutputSlot(
             int slotIndex,
             ItemStack template,

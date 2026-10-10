@@ -7,15 +7,8 @@ import net.minecraft.world.inventory.Slot;
 import com.moakiee.ae2lt.AE2LightningTech;
 
 /**
- * 集中管理所有自定义槽位的"空槽背景"贴图。
- *
- * <p>这些 sprite 来自 {@code assets/ae2lt/textures/block/slot/*.png},
- * 默认会被自动 stitch 进方块图集 ({@link InventoryMenu#BLOCK_ATLAS}),
- * 通过 vanilla {@link Slot#setBackground(ResourceLocation, ResourceLocation)} 渲染。</p>
- *
- * <p>渲染流程:AE2 的 {@code AEBaseScreen.renderSlot} 在画完 {@code AppEngSlot.setIcon(Icon)}
- * 之后会回调 {@code super.renderSlot},vanilla 会用这里设置的 sprite 作为空槽提示。
- * 因此本工具与 AE2 自带 Icon 互不冲突——但同一个槽位最好只用其中一种,避免叠加。</p>
+ * Empty-slot sprites from the block atlas, rendered through {@link Slot#setBackground}.
+ * Use one background mechanism per slot to avoid layering over AE2 icons.
  */
 public final class Ae2ltSlotBackgrounds {
 

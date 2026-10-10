@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.network.tianshu;
 import appeng.api.stacks.AEKey;
 
 import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
-import com.moakiee.ae2lt.network.NetworkInit;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReport;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -32,7 +31,6 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
             result.put(Objects.requireNonNull(AEKey.readKey(b)), ExactPlanReport.readAmount(b));
         return new BigStockPacket(id, Map.copyOf(result));
     }
-
 
     public static void handle(BigStockPacket p, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> context) {
         var c = context.get();

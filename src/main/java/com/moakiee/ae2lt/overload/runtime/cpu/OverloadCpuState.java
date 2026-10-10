@@ -28,16 +28,8 @@ import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternDetails;
 
 /**
- * Per-CPU overload-side waiting state.
- * <p>
- * Recommended structure:
- * <ul>
- *   <li>a primary map keyed by (craftingId, patternIdentity, outputSlotIndex)</li>
- *   <li>a secondary index by item id for fast ID_ONLY claim lookup</li>
- *   <li>stable registration order so repeated claims are deterministic</li>
- * </ul>
- * This leaves AE2's native {@code waitingFor} untouched and tracks only the
- * extra semantics needed for overload ID_ONLY outputs.
+ * Per-job ID_ONLY output claims, indexed by item id and ordered by registration.
+ * AE2 exact-key waiting state remains separate.
  */
 public final class OverloadCpuState {
     private static final String TAG_NEXT_SEQUENCE = "NextSequence";

@@ -7,7 +7,6 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
-
 /**
  * Server to tracking client: keepalive/update packet for an active beam owned
  * by player {@code shooterId}. {@code active=false} signals beam stop.
@@ -36,5 +35,4 @@ public void write(FriendlyByteBuf buf) {
         ctx.setPacketHandled(true);
     }
 
-    /** Compile-time guard. */
 }

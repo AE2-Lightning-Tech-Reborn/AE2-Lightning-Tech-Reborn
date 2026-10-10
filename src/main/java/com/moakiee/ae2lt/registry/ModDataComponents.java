@@ -17,18 +17,7 @@ import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
 import com.moakiee.ae2lt.item.railgun.RailgunSettings;
 import com.moakiee.ae2lt.util.ItemStackTagSupport;
 
-/**
- * AE2LT 数据组件 —— 1.20.1 Forge 移植版。
- *
- * <p>MC 1.20.1 没有 1.21 的 {@code DataComponentType} 系统（1.20.5+ 才引入），因此
- * 1.21 版的 {@code DeferredRegister.DataComponents} 被替换为 <b>ItemStack NBT 直接读写</b>
- * 方案：每个"组件"对应一个 NBT key（统一 {@code ae2lt:} 前缀），由 {@link ComponentKey}
- * 封装 {@code get/getOrDefault/set/remove} 语义，行为对齐 1.21 的
- * {@code stack.getOrDefault(...)/set(...)/remove(...)} 调用点，调用方只需把
- * {@code stack.getOrDefault(X.get(), def)} 改写为 {@code X.getOrDefault(stack, def)}。
- *
- * <p>1.20.1 的 ItemStack NBT 会随物品完整保存与同步（无需 1.21 的 networkSynchronized）。
- */
+/** Typed access to namespaced ItemStack NBT, persisted and synchronized with the stack. */
 public final class ModDataComponents {
     private ModDataComponents() {
     }
@@ -36,16 +25,7 @@ public final class ModDataComponents {
     /** NBT key 统一前缀：所有 AE2LT 私有数据都放在这里，便于投影镜像等逻辑过滤。 */
     public static final String TAG_PREFIX = "ae2lt:";
 
-    /**
-     * 组件 key：NBT tag key + 编解码函数。
-     *
-     * <p>用法（对齐 1.21 DataComponentType 调用点）：
-     * <pre>
-     * RailgunSettings s = ModDataComponents.RAILGUN_SETTINGS.getOrDefault(stack, RailgunSettings.DEFAULT);
-     * ModDataComponents.RAILGUN_SETTINGS.set(stack, s.withPvp(true));
-     * ModDataComponents.RAILGUN_SETTINGS.remove(stack);
-     * </pre>
-     */
+    /** NBT key with typed read, write and remove operations. */
     public static final class ComponentKey<T> {
         private final String nbtKey;
         private final Function<CompoundTag, T> decode;

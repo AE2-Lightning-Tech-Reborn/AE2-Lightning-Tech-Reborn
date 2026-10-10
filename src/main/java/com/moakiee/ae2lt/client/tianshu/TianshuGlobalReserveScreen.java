@@ -11,7 +11,6 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
-import appeng.menu.SlotSemantics;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceStatus;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;

@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.network.tianshu;
 
 import com.moakiee.ae2lt.crafting.big.BigAmountMenu;
-import com.moakiee.ae2lt.network.NetworkInit;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -26,7 +25,6 @@ public record ConfirmBigAmountPacket(
                 b.readBoolean(),
                 b.readBoolean());
     }
-
 
     public static void handle(ConfirmBigAmountPacket p, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> context) {
         var c = context.get();

@@ -4,7 +4,7 @@ import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalAction;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalCapabilities;
 
-/** Server-authoritative upload entry point used by the future terminal packet handler. */
+/** Validates and stores closed-loop patterns on the server. */
 public final class ClosedLoopPatternUploadService {
     public static ClosedLoopPatternRepository.PutResult upload(
             TianshuSupercomputerPortBlockEntity target,

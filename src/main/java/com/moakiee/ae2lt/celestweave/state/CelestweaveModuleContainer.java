@@ -14,13 +14,9 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Immutable per-stack persistent state for one Celestweave armor piece. Backs a
- * data component, so it is auto-synced to clients and saved with the stack.
- * Mutations return a new instance (Mekanism-style), which keeps callers from
- * aliasing the stored map and forces a {@code stack.set} to re-sync.
- *
- * <p>{@code energyModuleCapacityFe} empty means "never computed" (legacy stacks);
- * present (even 0) means the cache is valid.
+ * Per-stack armor state persisted through {@code ModDataComponents}. Mutations return
+ * a new container. Empty {@code energyModuleCapacityFe} means not computed;
+ * a present value, including zero, is valid.
  */
 public record CelestweaveModuleContainer(
         Optional<UUID> armorId,
