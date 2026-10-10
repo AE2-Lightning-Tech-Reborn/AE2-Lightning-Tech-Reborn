@@ -11,8 +11,6 @@ public interface OverloadedProviderOnlyPatternDetails extends OverloadedPatternD
 
     /**
      * Stable identity of this overload pattern within one crafting job.
-     * <p>
-     * A future IPatternDetails wrapper can expose a more precise fingerprint.
      */
     String overloadPatternIdentity();
 

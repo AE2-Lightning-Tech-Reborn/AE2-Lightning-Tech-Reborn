@@ -151,9 +151,6 @@ public final class OverloadPatternDetails implements OverloadedProviderOnlyPatte
     /**
      * One runtime output slot with its slot-local compare semantics and
      * primary/non-primary classification.
-     * <p>
-     * Non-primary outputs are still first-class outputs and are intentionally
-     * retained for future CPU waiting/claiming logic.
      */
     public record OutputSlot(
             int slotIndex,

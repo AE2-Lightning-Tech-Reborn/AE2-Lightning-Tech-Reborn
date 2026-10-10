@@ -9,13 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 
-/**
- * Immutable overload-specific configuration stored alongside a pattern.
- * <p>
- * The actual encoded recipe payload still belongs to AE2's pattern item. This
- * object only carries overload matching metadata for each logical input/output
- * slot and can be attached to a future item component or custom data payload.
- */
+/** Immutable slot matching metadata stored alongside AE2’s encoded recipe. */
 public final class EncodedOverloadPattern {
     private static final EncodedOverloadPattern EMPTY = new EncodedOverloadPattern(List.of(), List.of());
 
