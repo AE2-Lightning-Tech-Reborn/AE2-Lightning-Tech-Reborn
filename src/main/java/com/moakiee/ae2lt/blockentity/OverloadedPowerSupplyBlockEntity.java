@@ -234,22 +234,8 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
     }
 
     /**
-     * AE2 ME Chest pattern, deferred-persist variant: every cell mutation
-     * (extract/insert) routes through {@link FluxCellInventory#saveChanges()},
-     * which fires this callback. We do NOT call {@code persist()} here —
-     * doing so on every mutation would write the ItemStack NBT
-     * 64+ times per OVERLOAD tick, AND would briefly flash the post-extract
-     * value (often 0) into the ItemStack between distribution and refill.
-     *
-     * <p>Instead, the host logic invokes {@link OverloadedPowerSupplyLogic
-     * #endTick(net.minecraft.server.level.ServerLevel)} once per tick, which
-     * batches all in-tick mutations into a single {@code FluxCellInventory.persist()}
-     * call. The ItemStack therefore only ever sees the post-tick equilibrium
-     * value, exactly matching the in-memory {@code storedEnergy}.
-     *
-     * <p>The {@link #saveChanges()} call here only marks the chunk dirty so
-     * Minecraft's autosave will eventually serialise this BE to disk; it
-     * does not touch the cell's ItemStack.
+     * Mark the chunk dirty; endTick persists cell NBT once after distribution and
+     * refill, avoiding repeated writes and transient post-extraction values.
      */
     private void onCellInventoryChanged() {
         saveChanges();

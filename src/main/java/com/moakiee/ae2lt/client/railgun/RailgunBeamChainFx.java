@@ -9,22 +9,8 @@ import com.moakiee.ae2lt.network.railgun.RailgunBeamChainFxPacket;
 import com.moakiee.ae2lt.registry.ModSounds;
 
 /**
- * Client-side dispatcher for the left-beam chain-jump visual. Mirrors what
- * {@link RailgunClientFx} does for charged shots, but scaled-down for the
- * continuous-fire feel of the beam:
- *
- * <ul>
- *   <li>Real lightning arc segments along each chain pair via
- *       {@link RailgunArcRenderer#spawnHighVoltageChain}.</li>
- *   <li>A short electric-spark burst at every chained target so even glancing
- *       jumps read clearly.</li>
- *   <li>A subtle crackle sound at the first hit (positional) so the chain is
- *       audible as well as visible.</li>
- * </ul>
- *
- * Lifetimes are intentionally shorter than the charged-shot chain (~16 ticks)
- * because the beam re-fires the chain up to 4×/sec — long-lived arcs would
- * stack and wash out the screen.
+ * Beam-chain arcs, hit sparks and positional sound. Short lifetimes prevent
+ * overlapping effects when continuous fire repeats the chain four times a second.
  */
 public final class RailgunBeamChainFx {
 

@@ -31,53 +31,15 @@ import com.moakiee.ae2lt.registry.ModDamageTypes;
 import com.moakiee.ae2lt.util.ItemStackTagSupport;
 
 /**
- * Execution modules: Overload uses the "I remember you" HP-record model, while the
- * multidimensional upgrade enters the same death settlement immediately and for free.
+ * Execution modules triggered by qualifying EHv3 hits when enabled in config.
+ * Overload stores per-stack target HP in NBT, restores it over the decay window,
+ * and purges killed or expired entries. Multidimensional execution bypasses
+ * tracking and the module surcharge.
  *
- * <p><b>Activation:</b> either execution module plus the {@code overloadExecution.enabled}
- * config switch. Trigger is gated by the caller (currently only EHv3 charged shots in
- * {@code RailgunFireService.applyAll}).
- *
- * <p><b>Model:</b> per railgun ItemStack, a small list of {@code (uuid, recordedHp,
- * lastHitTick)} entries is kept in the stack's NBT under {@code OverloadExecutionTargets}.
- * On each
- * qualifying hit the basis HP is computed as:
- * <pre>
- *   elapsed = now - lastHitTick
- *   if elapsed &gt;= decayWindow:
- *       entry purged, basis = currentHp
- *   else:
- *       x = elapsed / decayWindow             ∈ [0, 1]
- *       f = x ^ decayPower                    ∈ [0, 1]   // slow start, fast end
- *       restored = min(recordedHp + (maxHp - recordedHp) * f, currentHp)
- *       basis = restored
- *
- *   finalHp = basis - damage
- *
- *   if finalHp &gt; 0:
- *       if currentHp &gt; finalHp:
- *           target.setHealth(finalHp)         // direct write, bypass i-frames
- *       record (uuid, finalHp, now)
- *   else:
- *       execute(target, configuredMode)
- *       remove entry
- * </pre>
- *
- * <p>This replaces the older "cumulative damage accumulator" model. The HP-record
- * model is self-cleaning: kills always purge the entry (force-kill path explicitly
- * removes; direct-write path purges if the target died from the shot). Other-source
- * deaths are left for the 60-second decay to wash out.
- *
- * <p>Execution has three user-selectable modes. OFF replaces execution with ordinary
- * armor-piercing electromagnetic damage: 600 for Overload Execution and
- * {@link Float#MAX_VALUE} for Multidimensional Execution. This damage stays in the
- * target's normal {@code hurt} pipeline and never enters the explicit death/removal chain.
- * Normal death completes the already-started damage flow with a lethal health write and the target's own
- * {@link LivingEntity#die(DamageSource)}, then leaves removal entirely to its death tick.
- * Forced removal runs the complete death, kill, discard and remove cleanup chain before
- * a final removal fallback. It gives normal loot settlement the first opportunity but
- * does not treat settlement success as an alternative to guaranteed removal.
- * Neither path names or depends on a specific boss implementation.
+ * <p>OFF uses ordinary armor-piercing damage (600 or {@link Float#MAX_VALUE}).
+ * Normal death calls {@link LivingEntity#die(DamageSource)} and leaves removal
+ * to the death tick. Forced removal attempts loot settlement, then completes
+ * the kill/discard/remove chain and its final fallback.
  */
 public final class OverloadExecutionService {
 

@@ -516,9 +516,8 @@ public class WirelessConnectorRenderer {
 
     /**
      * Returns the wireless-connector stack currently held by the local player, or EMPTY.
-     * Shared with {@link WirelessConnectorHostRenderer}.
      */
-    public static ItemStack getHeldConnectorStack() {
+    private static ItemStack getHeldConnectorStack() {
         var player = Minecraft.getInstance().player;
         if (player == null) {
             return ItemStack.EMPTY;
@@ -530,18 +529,6 @@ public class WirelessConnectorRenderer {
             }
         }
         return ItemStack.EMPTY;
-    }
-
-    /**
-     * True if the given host position/type is the one selected on the held connector stack.
-     * Shared with {@link WirelessConnectorHostRenderer}.
-     */
-    public static boolean isSelectedHost(ItemStack stack, Level level, BlockPos pos, String hostType) {
-        var selected = getSelectedHost(stack);
-        return selected != null
-                && selected.hostType().equals(hostType)
-                && selected.pos().equals(pos)
-                && level.dimension().equals(selected.dimension());
     }
 
     private static SelectedHost getSelectedHost(ItemStack stack) {
