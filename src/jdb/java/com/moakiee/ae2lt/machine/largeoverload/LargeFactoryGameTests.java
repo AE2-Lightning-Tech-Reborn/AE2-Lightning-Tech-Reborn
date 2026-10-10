@@ -345,11 +345,11 @@ public final class LargeFactoryGameTests {
                 case CRYSTAL_AGGREGATOR, CRYSTAL_PULVERIZER, CIRCUIT_ETCHER -> "energyCost";
                 default -> null;
             };
-            if (getter == null && recipe.process() != LargeFactoryRecipeAccess.Process.CRYSTAL_ASSEMBLER) continue;
+            if (getter == null) continue;
             try {
                 var source = h.getLevel().getRecipeManager().byKey(recipe.id()).orElseThrow();
-                double nativeAE = getter == null ? 2000 : ((Number) source.getClass().getMethod(getter).invoke(source)).doubleValue();
-                if (recipe.process() == LargeFactoryRecipeAccess.Process.INTEGRATED_WORKSTATION || getter == null)
+                double nativeAE = ((Number) source.getClass().getMethod(getter).invoke(source)).doubleValue();
+                if (recipe.process() == LargeFactoryRecipeAccess.Process.INTEGRATED_WORKSTATION)
                     nativeAE = appeng.api.config.PowerMultiplier.CONFIG.multiply(nativeAE);
                 long expectedFE = (long) Math.ceil(appeng.api.config.PowerUnits.AE.convertTo(appeng.api.config.PowerUnits.FE, nativeAE));
                 h.assertTrue(recipe.energy() == expectedFE, "native AE costs must be normalized to FE for " + recipe.id());

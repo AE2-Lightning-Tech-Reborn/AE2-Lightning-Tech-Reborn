@@ -16,13 +16,10 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-
 import net.minecraftforge.registries.RegistryObject;
-
 
 import net.minecraftforge.registries.DeferredRegister;
 
-/** First-generation factory registrations stay entirely in LT. */
 public final class LargeFactoryRegistration {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, "ae2lt");
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, "ae2lt");

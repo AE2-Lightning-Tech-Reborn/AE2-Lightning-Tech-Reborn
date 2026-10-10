@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.machine.largeoverload;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +17,7 @@ import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecip
 import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationRecipe;
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.util.RecipeManagerByTypeAccess;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -50,13 +50,13 @@ public final class LargeFactoryRecipes {
 
     public static Snapshot get(RecipeManager manager) {
         var old = CACHE.get(manager);
+        var sources = ((RecipeManagerByTypeAccess) manager).ae2lt$recipeSnapshot();
         double aeToFE = PowerUnits.AE.convertTo(PowerUnits.FE, 1);
         double nativeMultiplier = appeng.api.config.PowerMultiplier.CONFIG.multiplier;
-        if (old != null && old.sources() == ((com.moakiee.ae2lt.util.RecipeManagerByTypeAccess) manager).ae2lt$recipeSnapshot() && old.aeToFE() == aeToFE
+        if (old != null && old.sources() == sources && old.aeToFE() == aeToFE
                 && old.nativeMultiplier() == nativeMultiplier) return old;
         var result = new ArrayList<LargeFactoryRecipe>();
-        for (var holder : OverloadProcessingRecipeCatalog.recipes(manager)) {
-            var r = holder;
+        for (var r : OverloadProcessingRecipeCatalog.recipes(manager)) {
             var inputs = new ArrayList<LargeFactoryRecipe.Requirement>();
             r.itemInputs().forEach(i -> inputs.add(item(i.ingredient(), i.count())));
             if (r.inputFluidAmount() > 0) {
@@ -65,10 +65,10 @@ public final class LargeFactoryRecipes {
                         && alternatives.stream().anyMatch(f -> fluid.equals(AEFluidKey.of(f))), r.inputFluidAmount()));
             }
             var outputs = outputs(r.itemResults(), r.fluidResult());
-            var original = manager.byKey(holder.getId()).orElse(null);
-            var process = original != null && original instanceof com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe
+            var original = manager.byKey(r.getId()).orElse(null);
+            var process = original instanceof com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe
                     ? OVERLOAD : REACTION;
-            result.add(new LargeFactoryRecipe(holder.getId(), process, inputs, outputs, r.totalEnergy(),
+            result.add(new LargeFactoryRecipe(r.getId(), process, inputs, outputs, r.totalEnergy(),
                     LargeFactoryLightningCost.ordinary(r.lightningTier(), r.lightningCost()), null));
         }
         for (var holder : manager.getRecipes()) {
@@ -84,18 +84,20 @@ public final class LargeFactoryRecipes {
         for (var recipe : result) for (var key : recipe.outputs().keySet())
             byOutput.computeIfAbsent(key, ignored -> new ArrayList<>()).add(recipe);
         byOutput.replaceAll((key, candidates) -> List.copyOf(candidates));
-        var snapshot = new Snapshot(((com.moakiee.ae2lt.util.RecipeManagerByTypeAccess) manager).ae2lt$recipeSnapshot(), ++generation, aeToFE, nativeMultiplier, List.copyOf(result), Map.copyOf(byOutput),
+        var snapshot = new Snapshot(sources, ++generation, aeToFE, nativeMultiplier, List.copyOf(result), Map.copyOf(byOutput),
                 result.stream().filter(r -> r.catalyst() != null).toList());
         CACHE.put(manager, snapshot);
         return snapshot;
     }
 
-    private static LargeFactoryRecipe convert(Recipe<?> holder) throws ReflectiveOperationException {
-        var r = holder;
+    private static LargeFactoryRecipe convert(Recipe<?> r) throws ReflectiveOperationException {
         var inputs = new ArrayList<LargeFactoryRecipe.Requirement>();
         var process = java.util.Arrays.stream(LargeFactoryRecipeAccess.Process.values())
                 .filter(p -> p.type().equals(BuiltInRegistries.RECIPE_TYPE.getKey(r.getType()))).findFirst().orElse(null);
         if (process == null || process.base()) return null;
+        if (process == CRYSTAL_ASSEMBLER) {
+            throw new IllegalArgumentException("ExtendedAE 1.20.1 has no crystal assembler recipe API");
+        }
         Map<AEKey, Long> outputs;
         long energy;
         var lightning = LargeFactoryLightningCost.ordinary(LightningKey.Tier.HIGH_VOLTAGE, 0);
@@ -128,7 +130,6 @@ public final class LargeFactoryRecipes {
                 case CRYSTAL_AGGREGATOR -> "io.github.lounode.ae2cs.common.recipe.crystal_aggregator.CrystalAggregatorRecipe";
                 case CRYSTAL_PULVERIZER -> "io.github.lounode.ae2cs.common.recipe.crystal_pulverizer.CrystalPulverizerRecipe";
                 case CIRCUIT_ETCHER -> "io.github.lounode.ae2cs.common.recipe.circuit_etcher.CircuitEtcherRecipe";
-                case CRYSTAL_ASSEMBLER -> "com.glodblock.github.extendedae.recipe.CrystalAssemblerRecipe";
                 default -> "";
             };
             if (!r.getClass().getName().equals(expected)) throw new IllegalArgumentException("unrecognized recipe implementation");
@@ -138,8 +139,6 @@ public final class LargeFactoryRecipes {
                 if (fluid != null) inputs.add(fluid(fluid));
                 outputs = outputs(List.of((ItemStack) call(r, "itemOutput")), (FluidStack) call(r, "fluidOutput"));
                 energy = aeEnergyToFE(((Number) call(r, "energy")).longValue(), true);
-            } else if (process == CRYSTAL_ASSEMBLER) {
-                throw new IllegalArgumentException("ExtendedAE 1.20.1 has no crystal assembler recipe API");
             } else {
                 if (process == CRYSTAL_PULVERIZER) inputs.add(sized(call(r, "input")));
                 else for (Object value : (List<?>) call(r, "required")) inputs.add(sized(value));
@@ -147,14 +146,14 @@ public final class LargeFactoryRecipes {
                 energy = aeEnergyToFE(((Number) call(r, "energyCost")).longValue(), false);
             }
         }
-        return new LargeFactoryRecipe(holder.getId(), process, inputs, outputs, energy, lightning, catalyst);
+        return new LargeFactoryRecipe(r.getId(), process, inputs, outputs, energy, lightning, catalyst);
     }
 
     private static Object call(Object receiver, String name) throws ReflectiveOperationException {
         return receiver.getClass().getMethod(name).invoke(receiver);
     }
     private static long aeEnergyToFE(long amount, boolean nativeConfigMultiplier) {
-        // NeoECO/EAE extract with CONFIG; Crystal Science consumes unmultiplied AE from its own buffer.
+        // NeoECO applies CONFIG; Crystal Science uses its unmultiplied AE buffer.
         double ae = nativeConfigMultiplier ? appeng.api.config.PowerMultiplier.CONFIG.multiply(amount) : amount;
         double fe = PowerUnits.AE.convertTo(PowerUnits.FE, ae);
         if (amount < 0 || !Double.isFinite(fe) || fe < 0 || fe >= 0x1p63) throw new ArithmeticException("AE recipe cost exceeds finite FE range");
