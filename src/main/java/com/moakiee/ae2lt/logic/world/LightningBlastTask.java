@@ -66,7 +66,6 @@ public class LightningBlastTask {
     private final ServerLevel level;
     private final BlockPos center;
     private final int radius;
-    private final int radiusSquared;
     private final int blocksPerTick;
     private final int shellsPerTick;
 
@@ -94,7 +93,6 @@ public class LightningBlastTask {
         this.level = level;
         this.center = center.immutable();
         this.radius = Math.max(0, radius);
-        this.radiusSquared = this.radius * this.radius;
         this.blocksPerTick = Math.max(1, blocksPerTick);
         this.shellsPerTick = Math.max(1, shellsPerTick);
         this.pendingBlastBlocks = new PriorityQueue<>();

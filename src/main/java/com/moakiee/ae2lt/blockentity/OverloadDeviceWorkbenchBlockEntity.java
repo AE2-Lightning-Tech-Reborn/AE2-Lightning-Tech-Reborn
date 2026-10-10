@@ -27,7 +27,6 @@ import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapter;
 import com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters;
 import com.moakiee.ae2lt.blockentity.workbench.StructuralSlotSpec;
-import com.moakiee.ae2lt.device.DeviceItem;
 import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
