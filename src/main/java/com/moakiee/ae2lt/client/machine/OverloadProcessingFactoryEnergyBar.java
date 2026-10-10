@@ -18,16 +18,23 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
     private final LongSupplier storedEnergy;
     private final LongSupplier energyCapacity;
     private final Blitter fill;
+    private final String tooltipKey;
 
     public OverloadProcessingFactoryEnergyBar(OverloadProcessingFactoryMenu menu, Blitter fill) {
         this(menu::getStoredEnergy, menu::getEnergyCapacity, fill);
     }
 
     public OverloadProcessingFactoryEnergyBar(LongSupplier storedEnergy, LongSupplier energyCapacity, Blitter fill) {
+        this(storedEnergy, energyCapacity, fill, "ae2lt.gui.overload_factory.energy.tooltip");
+    }
+
+    protected OverloadProcessingFactoryEnergyBar(LongSupplier storedEnergy, LongSupplier energyCapacity,
+            Blitter fill, String tooltipKey) {
         super(0, 0, fill.getSrcWidth(), fill.getSrcHeight(), Component.empty());
         this.storedEnergy = storedEnergy;
         this.energyCapacity = energyCapacity;
         this.fill = fill.copy();
+        this.tooltipKey = tooltipKey;
     }
 
     @Override
@@ -52,7 +59,7 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
     @Override
     public List<Component> getTooltipMessage() {
         return List.of(Component.translatable(
-                "ae2lt.gui.overload_factory.energy.tooltip",
+                tooltipKey,
                 storedEnergy.getAsLong(),
                 energyCapacity.getAsLong()));
     }

@@ -580,7 +580,7 @@ public final class WirelessLinkRegistry extends SavedData {
             BlockPos pos,
             Direction face,
             Vec3 hitVec) {
-        var nativeFeedback = handleNativeFrequencyHost(player, frequencyId, level, pos);
+        var nativeFeedback = handleNativeFrequencyHost(frequencyId, level, pos);
         if (nativeFeedback.isPresent()) {
             return nativeFeedback.get();
         }
@@ -677,7 +677,6 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     private Optional<ActionFeedback> handleNativeFrequencyHost(
-            ServerPlayer player,
             int frequencyId,
             ServerLevel level,
             BlockPos pos) {
