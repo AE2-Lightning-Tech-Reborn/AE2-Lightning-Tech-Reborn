@@ -1,4 +1,5 @@
 {
+  "helpTopic": "ae2lt:terminals/crafting-terminal.md",
   "$schema": "../schema.json",
   "includes": [
     "crafting_terminal.json",

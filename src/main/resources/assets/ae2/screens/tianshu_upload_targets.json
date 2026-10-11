@@ -1,4 +1,5 @@
 {
+  "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md#pattern-upload",
   "$schema": "schema.json",
   "includes": ["common/common.json"],
   "text": {

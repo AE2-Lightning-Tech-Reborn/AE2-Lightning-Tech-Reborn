@@ -1,4 +1,5 @@
 {
+  "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md#global-reserves",
   "$schema": "schema.json",
   "includes": ["common/common.json"],
   "background": {

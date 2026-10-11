@@ -69,10 +69,19 @@ import org.jetbrains.annotations.Nullable;
 
 import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import appeng.menu.me.common.MEStorageMenu;
+import guideme.PageAnchor;
+import net.minecraft.resources.ResourceLocation;
 
 /** ME inventory maintenance UI shared by crafting and pattern terminal screens. */
 public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends MEStorageScreen<M> {
+    static PageAnchor terminalHelpTopic(MEStorageMenu menu, String fragment) {
+        String page = menu instanceof TianshuPatternEncodingTermMenu
+                ? "pattern-encoding-terminal" : "crafting-terminal";
+        return new PageAnchor(ResourceLocation.fromNamespaceAndPath(
+                "ae2lt", "terminals/" + page + ".md"), fragment);
+    }
+
     private boolean awaitingMaintenanceEditor;
     private int requestedMaintenanceRevision;
     private int observedTianshuSelectionRevision = Integer.MIN_VALUE;

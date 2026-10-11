@@ -21,7 +21,7 @@ The supercomputer does not force-load any chunk in its footprint. If any structu
 
 ## Tianshu Pattern Encoding Terminal
 
-The [Tianshu Pattern Encoding Terminal](pattern-encoding-terminal.md) extends the normal Pattern Encoding Terminal with enhanced processing-pattern encoding, pattern upload, closed-loop pattern authoring, and inventory-maintenance configuration. It is the entry point for authoring and managing Tianshu-specific patterns; see its dedicated page.
+The [Tianshu Pattern Encoding Terminal](../terminals/pattern-encoding-terminal.md) extends the normal Pattern Encoding Terminal with enhanced processing-pattern encoding, pattern upload, closed-loop pattern authoring, and inventory-maintenance configuration. It is the entry point for authoring and managing Tianshu-specific patterns; see its dedicated page.
 
 ## Shared Capacity and Concurrent Jobs
 
