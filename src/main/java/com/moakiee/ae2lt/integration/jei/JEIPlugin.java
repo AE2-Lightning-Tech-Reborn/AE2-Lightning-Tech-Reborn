@@ -68,6 +68,16 @@ public class JEIPlugin implements IModPlugin {
     }
 
     @Override
+    public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
+        JeiBookmarkAccessImpl.setRuntime(runtime);
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        JeiBookmarkAccessImpl.clearRuntime();
+    }
+
+    @Override
     public void registerIngredients(IModIngredientRegistration registration) {
         // 1.20.1 JEI has no ingredient codec parameter (added in 1.21).
         registration.register(

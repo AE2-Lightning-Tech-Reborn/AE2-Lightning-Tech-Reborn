@@ -16,6 +16,10 @@
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
     "ServerLevelMixin",
+    "CraftingCalculationReportMixin",
+    "CraftConfirmMenuReportMixin",
+    "CraftConfirmReplanMixin",
+    "NetworkCraftingSimulationSnapshotMixin",
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",
     "AEBaseMenuManagedSlotClickMixin",
@@ -67,6 +71,9 @@
     "big.BigCpuListEntryMixin"
   ],
   "client": [
+    "client.CraftConfirmReportRoutingMixin",
+    "client.CraftConfirmScreenAccessor",
+    "client.CraftErrorScreenReplanLabelMixin",
     "client.IpnContainerClickerMixin",
     "client.CableBusRenderStateMixin",
     "client.CableBusContainerRenderMixin",

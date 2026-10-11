@@ -26,6 +26,7 @@ run2/
 /benchmark-results/
 /run-data/
 /run-gametest/
+/run-crafting-report-probe/
 
 # Local assistant/docs
 /AGENTS.md

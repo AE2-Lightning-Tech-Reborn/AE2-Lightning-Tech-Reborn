@@ -47,6 +47,7 @@ sourceSets {
         java.srcDir 'src/jdb/java'
         java.include '**/blockentity/*Interface*GameTests.java'
         java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
+        java.include '**/client/crafting/CraftingReportClientProbe.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -78,6 +79,14 @@ minecraft {
 
         client {
             property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        craftingReportClient {
+            parent runs.client
+            workingDirectory project.file('run-crafting-report-probe')
+            property 'ae2lt.craftReportProbe', 'true'
+            args '--quickPlaySingleplayer', 'crafting-report-probe'
+            mods { "${mod_id}" { source sourceSets.jdb } }
         }
 
         server {
@@ -313,6 +322,7 @@ dependencies {
     // Keep portable resource and pure-logic regressions executable on the Forge 1.20.1 port.
     testImplementation platform("org.junit:junit-bom:5.10.2")
     testImplementation "org.junit.jupiter:junit-jupiter"
+    testImplementation fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
     testImplementation(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }
