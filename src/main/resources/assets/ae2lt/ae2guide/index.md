@@ -22,5 +22,6 @@ Main features:
 * [Materials & Items](materials/materials-index.md) — Overload Crystal, alloys, processors, and other key materials
 * [Tianshu Matter Warping Matrix](matrix/matrix-index.md) — Large-scale parallel crafting, pattern storage, and a configurable core array
 * [Tianshu Supercomputer](tianshu/tianshu-index.md) — Shared crafting storage, concurrent jobs, and configurable computing units
+* [Tianshu Pattern Encoding Terminal](terminals/pattern-encoding-terminal.md) — Pattern encoding, upload, and inventory maintenance
 * [Overloaded Network](overloaded-network/overloaded-network-index.md) — Overloaded ME Controller, Cable, Interface and Pattern Provider
 * [Overload Devices](devices-index.md) — Electromagnetic Railgun, Celestweave armor and their modules

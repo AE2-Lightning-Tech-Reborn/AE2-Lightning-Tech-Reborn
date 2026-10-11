@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.client.gui.AE2Button;
@@ -21,6 +22,11 @@ import org.jetbrains.annotations.Nullable;
 /** Popup arming the next processing encode as an overload pattern with per-slot match modes. */
 final class TianshuOverloadPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic("processing-patterns");
+    }
+
     private static final int ROW_ICON_Y_OFFSET = 4;
     private static final int ROW_TEXT_Y_OFFSET = 8;
     private static final int TOGGLE_LEFT = 120;

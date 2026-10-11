@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client.tianshu;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
@@ -29,6 +30,11 @@ import net.pedroksl.advanced_ae.common.definitions.AAEText;
  */
 final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic("processing-patterns");
+    }
+
     private static final int ROW_CONTENT_Y_OFFSET = 4;
     private static final int BUTTONS_LEFT = 34;
     private static final int BUTTONS_Y_OFFSET = 5;

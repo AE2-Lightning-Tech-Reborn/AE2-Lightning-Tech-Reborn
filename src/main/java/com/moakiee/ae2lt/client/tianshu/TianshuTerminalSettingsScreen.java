@@ -4,6 +4,7 @@ import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
 
 
 import appeng.client.gui.AESubScreen;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
 import appeng.client.gui.widgets.TabButton;
@@ -20,6 +21,11 @@ import org.lwjgl.glfw.GLFW;
 /** Tianshu-specific settings linked from AE2's terminal settings screen. */
 public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         extends AESubScreen<M, TerminalSettingsScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic("settings");
+    }
+
     private net.minecraft.client.gui.components.Button triggerButton;
     private net.minecraft.client.gui.components.Button duplicateEncodingButton;
     private net.minecraft.client.gui.components.Button wirelessSupplyButton;
