@@ -1535,5 +1535,6 @@
   "gui.ae2lt.crafting_report.bookmark_missing.tooltip": "Bookmark missing items and fluids in JEI without leaving this screen.",
   "gui.ae2lt.crafting_report.force_start": "Force start",
   "gui.ae2lt.crafting_report.force_start.tooltip": "Submit this job now and wait for missing ingredients. Crafting continues once they arrive.",
-  "gui.ae2lt.crafting_report.force_start.hint": "Hold Shift to submit this job and wait for missing ingredients."
+  "gui.ae2lt.crafting_report.force_start.hint": "Hold Shift to submit this job and wait for missing ingredients.",
+  "jei.ae2lt.crystal_catalyzer.matrix_note": "Matrix: output ×%s"
 }

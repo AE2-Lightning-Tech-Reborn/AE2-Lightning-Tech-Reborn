@@ -43,8 +43,8 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.energy.EnergyStorage;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
@@ -63,17 +63,18 @@ public final class ProviderEnergyOutputGameTests {
     @SubscribeEvent
     public static void capabilities(AttachCapabilitiesEvent<BlockEntity> event) {
         if (!(event.getObject() instanceof BarrelBlockEntity barrel)) return;
-        var fixture = machine(barrel);
-        var energy = LazyOptional.of(() -> fixture.energy);
-        var fluid = LazyOptional.of(() -> fixture.fluid);
-        event.addCapability(new ResourceLocation("ae2lt", "provider_energy_test"), new ICapabilityProvider() {
-            @Override
-            public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
-                if (capability == ForgeCapabilities.ENERGY) return energy.cast();
-                if (capability == ForgeCapabilities.FLUID_HANDLER) return fluid.cast();
-                return LazyOptional.empty();
-            }
-        });
+        var machine = machine(barrel);
+        var energy = LazyOptional.of(() -> machine.energy);
+        var fluid = LazyOptional.of(() -> machine.fluid);
+        event.addCapability(new ResourceLocation("ae2lt", "provider_energy_output_fixture"),
+                new ICapabilityProvider() {
+                    @Override
+                    public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
+                        if (capability == ForgeCapabilities.ENERGY) return energy.cast();
+                        if (capability == ForgeCapabilities.FLUID_HANDLER) return fluid.cast();
+                        return LazyOptional.empty();
+                    }
+                });
         event.addListener(energy::invalidate);
         event.addListener(fluid::invalidate);
     }
@@ -187,15 +188,18 @@ public final class ProviderEnergyOutputGameTests {
     }
 
     private static void assertRejects(GameTestHelper helper, BlockPos pos, Direction face) {
-        var input = helper.getLevel().getBlockEntity(pos).getCapability(Capabilities.GENERIC_INTERNAL_INV, face).orElse(null);
+        var blockEntity = helper.getLevel().getBlockEntity(pos);
+        helper.assertTrue(blockEntity != null, "return endpoint is missing at " + pos);
+        var input = blockEntity.getCapability(Capabilities.GENERIC_INTERNAL_INV, face).orElse(null);
         helper.assertTrue(input != null, "passive return capability is missing at " + pos);
+        // AE2 15 exposes acceptance through simulated insertion rather than isAllowedIn.
         for (var action : Actionable.values()) {
             helper.assertTrue(input.insert(0, AppFluxBridge.FE_KEY, 1_000, action) == 0, "generic input accepted FE");
         }
         var adapter = new FEGenericStackInvStorage(input);
         helper.assertTrue(adapter.receiveEnergy(1_000, true) == 0 && adapter.receiveEnergy(1_000, false) == 0,
                 "Applied Flux FE adapter accepted energy");
-        var energy = helper.getLevel().getBlockEntity(pos).getCapability(ForgeCapabilities.ENERGY, face).orElse(null);
+        var energy = blockEntity.getCapability(ForgeCapabilities.ENERGY, face).orElse(null);
         helper.assertTrue(energy == null || (energy.receiveEnergy(1_000, true) == 0
                 && energy.receiveEnergy(1_000, false) == 0), "block energy capability accepted FE");
     }

@@ -1,0 +1,17 @@
+// ./gradlew -I scripts/provider-energy-output-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/ProviderEnergyOutputGameTests.java',
+                                        'com/moakiee/ae2lt/debug/ProviderReturnFilterGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics']
+                    || dep.name in ['applied-flux-965012', 'glodium-957920'])
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file(project.findProperty('providerEnergyTestDirectory')
+                    ?: 'build/provider-energy-output-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt,ae2lt_io,minecraft'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}
