@@ -5,7 +5,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -404,30 +403,18 @@ public final class PhaseFlightMovementGuard {
         }
     }
 
-    /** Runs one executable command with its effective source bound to teleport authorization. */
-    public static void runAsCommandExecution(CommandSourceStack source, Runnable action) {
-        runAsCommandExecution(source, () -> {
-            action.run();
-            return null;
-        });
-    }
-
-    /**
-     * Forge 1.20.1 variant: {@code Commands.performPrefixedCommand} returns the result
-     * code, so the wrapper must be able to produce a value (1.21's
-     * {@code executeCommandInContext} returns void).
-     */
-    public static <T> T runAsCommandExecution(CommandSourceStack source, Supplier<T> action) {
+    /** Binds a command source without placing command execution under a guard stack frame. */
+    public static CommandSourceStack bindCommandSource(CommandSourceStack source) {
         CommandSourceStack previous = COMMAND_SOURCE.get();
         COMMAND_SOURCE.set(source);
-        try {
-            return action.get();
-        } finally {
-            if (previous == null) {
-                COMMAND_SOURCE.remove();
-            } else {
-                COMMAND_SOURCE.set(previous);
-            }
+        return previous;
+    }
+
+    public static void restoreCommandSource(CommandSourceStack previous) {
+        if (previous == null) {
+            COMMAND_SOURCE.remove();
+        } else {
+            COMMAND_SOURCE.set(previous);
         }
     }
 
