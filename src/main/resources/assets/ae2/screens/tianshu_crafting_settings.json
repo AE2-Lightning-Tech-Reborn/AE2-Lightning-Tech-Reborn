@@ -1,4 +1,5 @@
 {
+  "helpTopic": "ae2lt:terminals/crafting-terminal.md#settings",
   "$schema": "schema.json",
   "includes": ["common/common.json"],
   "generatedBackground": { "width": 200, "height": 80 },

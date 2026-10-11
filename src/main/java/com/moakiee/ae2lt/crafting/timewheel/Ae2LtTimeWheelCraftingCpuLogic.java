@@ -565,7 +565,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             remainingCopies,
                             craftingService,
                             energyService,
-                            level,
                             dispatchSchedule);
                     if (batchResult.consumedCpuOps() > 0) {
                         usedOps += batchResult.consumedCpuOps();
@@ -597,7 +596,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
                     var outcome = pushOnePattern(
                             activeJob,
-                            task,
                             details,
                             craftingService,
                             energyService,
@@ -697,7 +695,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                                          long remainingCopies,
                                                          CraftingService craftingService,
                                                          IEnergyService energyService,
-                                                         Level level,
                                                          TickProviderDispatchSchedule dispatchSchedule) {
         var activeJob = this.job;
         if (activeJob == null) {
@@ -756,7 +753,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private DispatchOutcome pushOnePattern(TimeWheelJob activeJob,
-                                           TaskProgress task,
                                            IPatternDetails details,
                                            CraftingService craftingService,
                                            IEnergyService energyService,
@@ -2759,7 +2755,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return;
         }
 
-        if (parkTaskForMissingInputs(activeJob, details, missingKeys)) {
+        if (parkTaskForMissingInputs(details, missingKeys)) {
             rescheduleIfStillPending(activeJob, details, PARKED_TASK_SAFETY_DELAY_TICKS);
         } else {
             scheduleTask(details, 0);
@@ -2821,10 +2817,10 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return false;
         }
 
-        return parkTaskForMissingInputs(activeJob, details, findMissingExactInputKeys(details));
+        return parkTaskForMissingInputs(details, findMissingExactInputKeys(details));
     }
 
-    private boolean parkTaskForMissingInputs(TimeWheelJob activeJob, IPatternDetails details, Set<AEKey> missingKeys) {
+    private boolean parkTaskForMissingInputs(IPatternDetails details, Set<AEKey> missingKeys) {
         if (missingKeys.isEmpty()) {
             return false;
         }

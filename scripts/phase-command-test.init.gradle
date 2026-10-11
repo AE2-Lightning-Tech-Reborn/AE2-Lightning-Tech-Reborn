@@ -1,0 +1,20 @@
+// ./gradlew -I scripts/phase-command-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseCommandSourceGameTests.java'])
+        tasks.named('processJdbResources', ProcessResources) {
+            from('src/jdb/resources/data/ae2lt/structure/pigmee_station_empty.nbt') {
+                into 'data/ae2lt_phase_command/structure'
+            }
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_phase_command'
+            gameDirectory = project.layout.buildDirectory.dir('phase-command-gametest').get().asFile
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+}

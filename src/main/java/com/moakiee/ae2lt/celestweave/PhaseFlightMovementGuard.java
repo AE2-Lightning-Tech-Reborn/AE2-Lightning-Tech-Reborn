@@ -313,18 +313,18 @@ public final class PhaseFlightMovementGuard {
         }
     }
 
-    /** Runs one executable command with its effective source bound to teleport authorization. */
-    public static void runAsCommandExecution(CommandSourceStack source, Runnable action) {
+    /** Binds a command source without placing the command queue under a guard stack frame. */
+    public static CommandSourceStack bindCommandSource(CommandSourceStack source) {
         CommandSourceStack previous = COMMAND_SOURCE.get();
         COMMAND_SOURCE.set(source);
-        try {
-            action.run();
-        } finally {
-            if (previous == null) {
-                COMMAND_SOURCE.remove();
-            } else {
-                COMMAND_SOURCE.set(previous);
-            }
+        return previous;
+    }
+
+    public static void restoreCommandSource(CommandSourceStack previous) {
+        if (previous == null) {
+            COMMAND_SOURCE.remove();
+        } else {
+            COMMAND_SOURCE.set(previous);
         }
     }
 

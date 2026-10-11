@@ -40,7 +40,6 @@ public final class CelestweaveArmorState {
     public static final int SLOT_CORE = 0;
     public static final int SLOT_COUNT = 1;
     private static volatile boolean CLIENT_FLIGHT_INERTIA = true;
-    private static volatile UUID CLIENT_FLIGHT_INERTIA_ARMOR_ID = null;
     private static volatile PhaseFlightMode CLIENT_PHASE_MODE = PhaseFlightMode.ALL;
     private static volatile UUID CLIENT_PHASE_LOCK_ARMOR_ID = null;
     private static volatile boolean CLIENT_PHASE_LOCK_BLOCK_EXTERNAL_FORCES = false;
@@ -551,7 +550,6 @@ public final class CelestweaveArmorState {
             CLIENT_FLIGHT_CONTROL_GENERATION.incrementAndGet();
         }
         CLIENT_FLIGHT_INERTIA = true;
-        CLIENT_FLIGHT_INERTIA_ARMOR_ID = null;
         CLIENT_PHASE_MODE = PhaseFlightMode.ALL;
         CLIENT_PHASE_LOCK_ARMOR_ID = null;
         CLIENT_PHASE_LOCK_BLOCK_EXTERNAL_FORCES = false;
@@ -667,7 +665,6 @@ public final class CelestweaveArmorState {
             boolean inertiaEnabled,
             PhaseFlightMode phaseMode) {
         CLIENT_FLIGHT_INERTIA = inertiaEnabled;
-        CLIENT_FLIGHT_INERTIA_ARMOR_ID = armorId;
         CLIENT_PHASE_MODE = phaseMode;
     }
 

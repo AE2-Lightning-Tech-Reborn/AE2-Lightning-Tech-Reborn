@@ -5,6 +5,7 @@ import appeng.api.stacks.AmountFormat;
 import appeng.api.client.AEKeyRendering;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.AESubScreen;
+import guideme.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AECheckbox;
@@ -32,6 +33,11 @@ import org.lwjgl.glfw.GLFW;
 /** Shift-middle-click inventory-maintenance rule editor, backed by the menu-bound Tianshu. */
 public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends AESubScreen<M, AEBaseScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic(menu, "inventory-maintenance");
+    }
+
     private static final int LIST_LEFT = 9;
     private static final int LIST_RIGHT = 187;
     private static final int FIRST_ROW_Y = 134;
@@ -418,6 +424,12 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
     /** Second-level editor. Values are committed to the parent draft only when Done is pressed. */
     private static final class ReserveEditorScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
             extends AESubScreen<M, TianshuMaintenanceRuleScreen<M>> {
+        @Override
+        protected PageAnchor getHelpTopic() {
+            return TianshuMaintenanceTermScreen.terminalHelpTopic(menu,
+                    global ? "global-reserves" : "inventory-maintenance");
+        }
+
         private static final int VARIANT_FIRST_ROW = 134;
         private static final int VARIANT_ROW_HEIGHT = 17;
         private static final int VISIBLE_VARIANTS = 3;

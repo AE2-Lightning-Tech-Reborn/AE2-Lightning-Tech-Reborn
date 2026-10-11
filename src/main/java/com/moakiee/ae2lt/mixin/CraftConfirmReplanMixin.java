@@ -2,11 +2,13 @@ package com.moakiee.ae2lt.mixin;
 
 import java.util.concurrent.Future;
 
+import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.CalculationStrategy;
 import appeng.api.networking.crafting.CraftingSubmitErrorCode;
 import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.networking.crafting.ICraftingSimulationRequester;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.menu.me.crafting.CraftConfirmMenu;
@@ -16,6 +18,7 @@ import com.moakiee.ae2lt.crafting.report.CraftingReportInventory;
 import com.moakiee.ae2lt.crafting.report.CraftingReportMenuState;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -24,6 +27,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Match the long-amount entry point merged by Data Energistics at priority 1000 as well.
 @Mixin(value = CraftConfirmMenu.class, remap = false, priority = 1100)
 public abstract class CraftConfirmReplanMixin {
+    @Shadow
+    private IGrid getGrid() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private IActionSource getActionSrc() {
+        throw new AssertionError();
+    }
+
     @Unique
     private CraftingReportInventory ae2lt$inventory;
 
@@ -53,7 +66,10 @@ public abstract class CraftConfirmReplanMixin {
         var failure = menu.submitError.result();
         if (failure != null && failure.errorCode() == CraftingSubmitErrorCode.MISSING_INGREDIENT
                 && failure.errorDetail() instanceof GenericStack deficit) {
-            ae2lt$inventory.recordMissing(deficit);
+            var grid = getGrid();
+            if (grid != null) {
+                ae2lt$inventory.recordMissing(deficit, grid.getStorageService().getInventory(), getActionSrc());
+            }
         }
     }
 
@@ -74,7 +90,7 @@ public abstract class CraftConfirmReplanMixin {
                 && ae2lt$inventory != null && ae2lt$inventory.isCaptured();
         try {
             if (ae2lt$reuseInventory) {
-                ae2lt$inventory.subtractMissing();
+                ae2lt$inventory.clampToAvailable();
                 menu.setPlan(null);
             }
             return original.call(menu, what, amount, strategy);

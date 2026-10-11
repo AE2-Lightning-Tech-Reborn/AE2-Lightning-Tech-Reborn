@@ -63,9 +63,11 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
+import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.jetbrains.annotations.Nullable;
 
 /** Five manual workstations whose real inputs belong to the terminal host. */
+@IPNIgnore
 public class TianshuCraftingTermMenu extends CraftingTermMenu implements TianshuMaintenanceMenu {
     public static final MenuType<TianshuCraftingTermMenu> TYPE = MenuTypeBuilder
             .create((MenuTypeBuilder.MenuFactory<TianshuCraftingTermMenu, TianshuCraftingTerminalHost>)

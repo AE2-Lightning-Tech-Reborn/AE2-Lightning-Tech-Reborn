@@ -30,6 +30,7 @@ import appeng.menu.me.common.GridInventoryEntry;
 import appeng.parts.encoding.EncodingMode;
 import appeng.api.stacks.AEItemKey;
 import appeng.util.prioritylist.IPartitionList;
+import guideme.PageAnchor;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
@@ -186,6 +187,16 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         tab.setStyle(Style.HORIZONTAL);
         widgets.add(widgetId, tab);
         modeTabs.put(mode, tab);
+    }
+
+    @Override
+    protected PageAnchor getHelpTopic() {
+        String fragment = switch (menu.tianshuMode) {
+            case PROCESSING -> "processing-patterns";
+            case CLOSED_LOOP -> "closed-loop-patterns";
+            default -> null;
+        };
+        return fragment == null ? super.getHelpTopic() : terminalHelpTopic(menu, fragment);
     }
 
     @Override
