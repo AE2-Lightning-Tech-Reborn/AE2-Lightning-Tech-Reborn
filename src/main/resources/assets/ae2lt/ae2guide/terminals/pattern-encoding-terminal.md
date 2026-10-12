@@ -129,8 +129,8 @@ When a formed Tianshu Supercomputer is available on the network, the terminal ca
 * The **Maintainable** view filters the terminal list to materials configured for inventory maintenance, making them easier to review together.
 
 * **Start below:** Starts automatic crafting when the material falls below the configured value.
-* **Stop above:** Stops automatic crafting when the material rises above the configured value.
-* **Per job:** Sets the amount requested by each automatic crafting job.
+* **Stop at:** Stops starting new automatic crafting jobs when the material reaches the configured value. Jobs already submitted continue to completion.
+* **Per job:** Each job requests the full configured amount, even when less is needed to reach the upper bound. The resulting stock may exceed that bound.
 * **Enabled:** Enables or disables this material's maintenance rule.
 * **Check now:** Immediately checks this material's stock.
 * **Cancel job:** Cancels the currently running automatic crafting job.
