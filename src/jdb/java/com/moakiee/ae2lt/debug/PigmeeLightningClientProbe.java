@@ -79,7 +79,7 @@ public final class PigmeeLightningClientProbe {
                 }
                 case 4 -> Screenshot.grab(mc.gameDirectory, "pigmee-unequipped.png", mc.getMainRenderTarget(), ignored -> {});
                 case 5 -> {
-                    report("PASS: real spawn sync; natural purple only while wearing each of four Pigmees; "
+                    report("PASS: real spawn sync; natural pink only while wearing each of four Pigmees; "
                             + "artificial vanilla; hand/ordinary helmet/unequipped vanilla; unchanged geometry and alpha; "
                             + "Curios=" + ModList.get().isLoaded("curios") + "; framebuffer screenshots saved.");
                     done = true;
@@ -153,8 +153,8 @@ public final class PigmeeLightningClientProbe {
         }
     }
 
-    private static List<Float> render(LightningBolt bolt, boolean purple) {
-        var sink = new ColorCapture(purple);
+    private static List<Float> render(LightningBolt bolt, boolean tinted) {
+        var sink = new ColorCapture(tinted);
         Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(bolt)
                 .render(bolt, 0, 0, new PoseStack(), ignored -> sink, 0xF000F0);
         require(sink.colors > 0 && sink.positions.size() == sink.colors * 3, "Renderer emitted no complete vertices");
@@ -162,16 +162,16 @@ public final class PigmeeLightningClientProbe {
     }
 
     private static final class ColorCapture implements VertexConsumer {
-        private final boolean purple;
+        private final boolean tinted;
         private final List<Float> positions = new ArrayList<>();
         private int colors;
-        private ColorCapture(boolean purple) { this.purple = purple; }
+        private ColorCapture(boolean tinted) { this.tinted = tinted; }
         public VertexConsumer addVertex(float x, float y, float z) {
             positions.add(x); positions.add(y); positions.add(z); return this;
         }
         public VertexConsumer setColor(int r, int g, int b, int a) {
-            require(r == (purple ? 198 : 114) && g == (purple ? 86 : 114) && b == (purple ? 255 : 127),
-                    "Wrong RGB: " + r + "," + g + "," + b + "; purple=" + purple);
+            require(r == (tinted ? 255 : 114) && g == (tinted ? 186 : 114) && b == (tinted ? 211 : 127),
+                    "Wrong RGB: " + r + "," + g + "," + b + "; tinted=" + tinted);
             require(a == 76, "Tint changed alpha");
             colors++; return this;
         }
