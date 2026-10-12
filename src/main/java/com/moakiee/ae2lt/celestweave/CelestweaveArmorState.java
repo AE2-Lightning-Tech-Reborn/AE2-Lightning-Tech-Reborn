@@ -406,9 +406,10 @@ public final class CelestweaveArmorState {
             } else {
                 submodule.onDeactivated(player, dist, armor);
                 if (dedicatedServer && flightModule) {
-                    // Restore the captured vanilla/attribute flight source before deciding whether
-                    // the independent chest flight lock must remain active.
-                    syncFlightSettingsToClient((ServerPlayer) player, armor, armorId);
+                    // Equipment-change events can deactivate the previous leggings after the new
+                    // flight source has already synced. Resolve the current logical equipment,
+                    // including vaulted armor, so the old source cannot reset its inertia settings.
+                    syncFlightSettingsToClient((ServerPlayer) player, armorId);
                 }
             }
         }

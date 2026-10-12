@@ -271,14 +271,48 @@ class RequesterOutputDeliveryTest {
     }
 
     @Test
-    void standaloneOutputStillFallsThroughToNetworkStorage() throws Exception {
+    void standaloneProcessingReturnStaysInCpuUntilNetworkStorageCanAcceptIt() throws Exception {
+        var fixture = new Fixture(64, true, false);
+        fixture.disk.capacity = 0;
+        assertEquals(64, fixture.network.insert(OUTPUT, 64, SIMULATE, fixture.source));
+        assertEquals(64, fixture.waiting(OUTPUT));
+        assertEquals(64, fixture.remaining());
+        assertEquals(0, fixture.directRemainder(), "simulation must not take physical ownership");
+        assertEquals(64, fixture.produce(64), "CPU must take physical ownership of the processing result");
+        fixture.flush();
+        assertTrue(fixture.link.completed);
+        assertFalse(fixture.logic.hasJob());
+        assertTrue(fixture.logic.hasPersistentState(), "storage failure must keep this CPU in the monitor");
+        assertTrue(fixture.logic.isCantStoreItems());
+        assertEquals(64, fixture.logic.getStored(OUTPUT));
+        var items = new KeyCounter();
+        fixture.logic.getAllItems(items);
+        assertEquals(64, items.get(OUTPUT));
+
+        fixture.disk.capacity = 8;
+        fixture.flushDirect();
+        assertEquals(8, fixture.disk.stored);
+        assertEquals(56, fixture.logic.getStored(OUTPUT));
+        assertTrue(fixture.logic.isCantStoreItems());
+        fixture.disk.capacity = 64;
+        fixture.flushDirect();
+        assertEquals(64, fixture.disk.stored);
+        assertFalse(fixture.logic.hasPersistentState());
+        assertFalse(fixture.logic.isCantStoreItems());
+    }
+
+    @Test
+    void standaloneOutputReturnsToNetworkWithoutRecapturingOtherCopies() throws Exception {
         var fixture = new Fixture(16, true, false);
         assertEquals(8, fixture.produce(8));
+        assertEquals(8, fixture.directRemainder());
+        fixture.flushDirect();
         assertEquals(8, fixture.remaining());
         assertEquals(8, fixture.waiting(OUTPUT));
         assertEquals(8, fixture.disk.stored);
         assertEquals(0, fixture.pending());
         assertEquals(8, fixture.produce(8));
+        fixture.flushDirect();
         assertTrue(fixture.link.completed);
         assertEquals(16, fixture.disk.stored);
     }

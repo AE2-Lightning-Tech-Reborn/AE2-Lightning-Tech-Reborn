@@ -67,6 +67,12 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
         if (this.thunderbolt$timeWheelCpu != null) {
             this.thunderbolt$timeWheelCpu.getCraftingLogic().removeListener(cpuChangeListener);
             this.thunderbolt$timeWheelCpu = null;
+            this.cantStoreItems = false;
+            if (selected == null) {
+                this.incrementalUpdateHelper.reset();
+                this.cachedSuspend = false;
+                sendPacketToClient(new CraftingStatusPacket(containerId, CraftingStatus.EMPTY));
+            }
         }
 
         ae2lt$bigCpu=null;
