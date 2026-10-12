@@ -159,6 +159,17 @@ final class PhaseWingFlightSourceContractTest {
         assertTrue(recipe.contains("\"count\": 1"));
     }
 
+    @Test
+    void deactivatingOldFlightSourceResolvesCurrentLogicalArmorBeforeSync() throws Exception {
+        String state = read("src/main/java/com/moakiee/ae2lt/celestweave/CelestweaveArmorState.java");
+        int deactivation = state.indexOf("submodule.onDeactivated(player, dist, armor);");
+        int sync = state.indexOf("syncFlightSettingsToClient((ServerPlayer) player, armorId);", deactivation);
+        assertTrue(deactivation >= 0);
+        assertTrue(sync > deactivation);
+        assertFalse(state.substring(deactivation, sync).contains(
+                "syncFlightSettingsToClient((ServerPlayer) player, armor, armorId)"));
+    }
+
     private static String read(String path) throws Exception {
         return Files.readString(Path.of(path));
     }
