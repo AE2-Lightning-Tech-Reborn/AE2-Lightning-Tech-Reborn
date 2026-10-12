@@ -1,0 +1,45 @@
+// ./gradlew -I scripts/pigmee-lightning-sense-test.init.gradle runGameTestServer
+// Add -PpigmeeSenseWithCurios=false to verify the optional-dependency boundary.
+allprojects {
+    afterEvaluate {
+        def withCurios = providers.gradleProperty('pigmeeSenseWithCurios').getOrElse('true').toBoolean()
+        sourceSets.jdb.java.setIncludes(['**/PigmeeLightningSenseGameTests.java', '**/PigmeeLightningClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'appeng']
+                    || (withCurios && dep.group == 'top.theillusivec4.curios'))
+        }
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_pigmee_lightning,ae2lt_mining,ae2lt,minecraft'
+            property 'ae2lt.pigmeeSenseWithCurios', withCurios.toString()
+            workingDirectory project.file('build/pigmee-lightning-gametest-' + withCurios)
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        minecraft.runs.client {
+            workingDirectory project.file('build/pigmee-lightning-client-' + withCurios)
+            property 'ae2lt.pigmeeLightningClientProbe', 'true'
+            property 'ae2lt.pigmeeSenseWithCurios', withCurios.toString()
+            args '--quickPlaySingleplayer', 'PigmeeLightningReview', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        def result = project.file('build/pigmee-lightning-client-' + withCurios + '/pigmee-lightning-client-probe.txt')
+        def sourceWorld = project.file('build/pigmee-lightning-gametest-' + withCurios + '/world')
+        def clientWorld = project.file('build/pigmee-lightning-client-' + withCurios + '/saves/PigmeeLightningReview')
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                result.delete()
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) {
+                        throw new GradleException('Run this script with runGameTestServer before the client probe.')
+                    }
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                if (!result.isFile() || !result.text.startsWith('PASS:')) {
+                    throw new GradleException('Pigmee lightning client probe failed: '
+                            + (result.isFile() ? result.text : 'no result'))
+                }
+            }
+        }
+    }
+}

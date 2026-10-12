@@ -35,7 +35,8 @@ class PortedMixinTargetContractTest {
         "big.BigCraftingPlanSummaryMixin", "big.BigCraftingStatusEntryMixin", "big.BigCpuListEntryMixin",
         "client.BigNumberEntryWidgetMixin", "client.BigCraftAmountScreenMixin",
         "client.BigCraftingStatusTableMixin", "client.BigTerminalAmountMixin", "client.BigCpuListMixin",
-        "CraftingCPURecordAccessor", "TimeWheelCraftingCPUCyclerMixin"
+        "CraftingCPURecordAccessor", "TimeWheelCraftingCPUCyclerMixin",
+        "LightningBoltOriginMixin", "client.LightningBoltRendererMixin"
     })
     void selectorsMatchForgeAe2Binary(String name) throws Exception {
         var mixin = read("com/moakiee/ae2lt/mixin/" + name.replace('.', '/'));
