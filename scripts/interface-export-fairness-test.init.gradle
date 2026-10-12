@@ -1,0 +1,34 @@
+// ./gradlew -I scripts/interface-export-fairness-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OverloadedInterfaceExportFairnessGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file(providers.gradleProperty('ae2ltFairnessRunDirectory')
+                    .getOrElse('build/interface-export-fairness-gametest'))
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_io'
+            mods { ae2lt { source sourceSets.jdb } }
+            jvmArgs '-Xms512m', '-Xmx2g'
+            if (project.hasProperty('ae2ltFairnessBenchmark')) {
+                property 'ae2lt.exportFairnessBenchmark', 'true'
+                property 'ae2lt.wirelessIoBenchmark', 'true'
+                property 'ae2lt.wirelessIoBenchmark.includeEligibility', 'true'
+                property 'ae2lt.wirelessIoBenchmark.worktreeDirty', 'true'
+                property 'ae2lt.wirelessIoBenchmark.scenario', providers.gradleProperty('ae2ltBenchmarkScenario').get()
+                property 'ae2lt.wirelessIoBenchmark.gitHead', providers.gradleProperty('ae2ltBenchmarkGitHead').getOrElse('unknown')
+                property 'ae2lt.wirelessIoBenchmark.warmupTicks', '200'
+                property 'ae2lt.wirelessIoBenchmark.sampleTicks', '1200'
+                property 'ae2lt.exportFairnessBenchmark.keys', providers.gradleProperty('ae2ltFairnessKeys').getOrElse('27')
+            }
+        }
+        if (project.hasProperty('ae2ltFairnessBaselineSource')) {
+            def original = project.file('src/main/java/com/moakiee/ae2lt/blockentity/OverloadedInterfaceBlockEntity.java')
+            def baseline = project.file(project.property('ae2ltFairnessBaselineSource'))
+            tasks.named('compileJava') {
+                setSource(source.filter { it != original } + project.files(baseline))
+            }
+        }
+    }
+}
