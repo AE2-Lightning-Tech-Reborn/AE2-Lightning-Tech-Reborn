@@ -5,6 +5,7 @@ import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModDataComponents;
+import com.moakiee.ae2lt.registry.ModAttachmentTypes;
 import com.moakiee.ae2lt.registry.ModEntities;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.registry.ModLootModifiers;
@@ -390,6 +391,7 @@ public class AE2LightningTech {
         ModRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
         ModRecipeTypes.RECIPE_TYPES.register(modEventBus);
         ModDataComponents.DATA_COMPONENTS.register(modEventBus);
+        ModAttachmentTypes.ATTACHMENT_TYPES.register(modEventBus);
         ModMobEffects.EFFECTS.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModStructureTypes.STRUCTURE_TYPES.register(modEventBus);

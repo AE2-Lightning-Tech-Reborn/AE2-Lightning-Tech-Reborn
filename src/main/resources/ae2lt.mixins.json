@@ -61,6 +61,7 @@
     "TianshuStonecutterMenuMixin"
   ],
   "client": [
+    "client.LightningBoltRendererMixin",
     "client.IpnContainerClickerMixin",
     "client.EncodingHelperAccessor",
     "client.CableBusRenderStateMixin",
