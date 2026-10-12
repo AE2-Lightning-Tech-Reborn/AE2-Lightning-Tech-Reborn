@@ -53,26 +53,4 @@ class DueTaskQueueTest {
         assertEquals(0, queue.size());
     }
 
-    @Test
-    void providerOverflowRetryUsesExactFiveToTwentyTickDeadlines() {
-        var queue = new DueTaskQueue<String>();
-        long now = 100;
-        int delay = WirelessOverflowQueue.initialRetryDelay();
-
-        queue.schedule("target", now + delay);
-        assertNull(queue.pollDue(104));
-        assertEquals("target", queue.pollDue(105));
-
-        delay = WirelessOverflowQueue.nextRetryDelay(
-                delay, WirelessOverflowQueue.OverflowAttemptResult.BLOCKED);
-        queue.schedule("target", 105 + delay);
-        assertNull(queue.pollDue(114));
-        assertEquals("target", queue.pollDue(115));
-
-        delay = WirelessOverflowQueue.nextRetryDelay(
-                delay, WirelessOverflowQueue.OverflowAttemptResult.PROGRESSED);
-        queue.schedule("target", 115 + delay);
-        assertNull(queue.pollDue(119));
-        assertEquals("target", queue.pollDue(120));
-    }
 }

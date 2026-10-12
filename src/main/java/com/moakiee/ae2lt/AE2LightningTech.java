@@ -425,6 +425,11 @@ public class AE2LightningTech {
         modEventBus.addListener(ModAEKeyTypes::register);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent event) ->
+                event.enqueueWork(() -> {
+                    com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.freeze();
+                    com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.freezeItems();
+                }));
         modEventBus.addListener(this::onConfigChanged);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
@@ -884,6 +889,9 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.
@@ -966,7 +974,7 @@ public class AE2LightningTech {
                     OverloadDeviceWorkbenchBlockEntity.class,
                     overloadDeviceWorkbenchBeType,
                     null,
-                    null);
+                    OverloadDeviceWorkbenchBlockEntity::serverTick);
 
             var crystalCatalyzerBlock = ModBlocks.CRYSTAL_CATALYZER.get();
             var crystalCatalyzerBeType = ModBlockEntities.CRYSTAL_CATALYZER.get();

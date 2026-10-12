@@ -92,6 +92,50 @@ class TimeWheelBatchInputAllocationTest {
     }
 
     @Test
+    void admissionSeesAllocatedInputsAndLimitsTheNativeBatchBeforeBulkExtraction() {
+        var flexible = new Pattern(new IPatternDetails.IInput[]{input(null, Q, G)}, List.of(stack(OUT)), false);
+        var exact = new Pattern(new IPatternDetails.IInput[]{input(null, Q)}, List.of(stack(OUT)), false);
+        var tasks = new LinkedHashMap<IPatternDetails, Long>();
+        tasks.put(flexible, 10_000L);
+        tasks.put(exact, 4L);
+        var allocator = new ExecutionInputAllocator(tasks, n -> n, true, true);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 10_000, Actionable.MODULATE);
+        stock.insert(Q, 4, Actionable.MODULATE);
+        var result = ParallelBatchCpuHelper.withBatchCapacityLimiter(flexible, stock, (prototype, available) -> {
+            assertEquals(1, prototype[0].get(G));
+            assertEquals(0, prototype[0].get(Q));
+            assertTrue(available >= 64);
+            assertEquals(9_999, stock.list.get(G), "Only one prototype is reserved before admission");
+            return 64;
+        }, () -> scoped(flexible, stock, allocator, 10_000, false));
+        assertNotNull(result);
+        assertEquals(64, result.actualCopies);
+        assertEquals(64, result.scaledInputs[0].get(G));
+        assertEquals(9_936, stock.list.get(G));
+        assertEquals(4, stock.list.get(Q), "Strict sibling stock must stay protected");
+        ParallelBatchCpuHelper.reinject(result, 64, stock);
+        assertEquals(10_000, stock.list.get(G));
+        assertNull(ParallelBatchCpuHelper.currentBatchCapacityLimiter(flexible, stock));
+    }
+
+    @Test
+    void zeroOrThrowingAdmissionReturnsThePrototypeAndReleasesTheScope() {
+        var pattern = new Pattern(new IPatternDetails.IInput[]{input(null, G)}, List.of(stack(OUT)), false);
+        var allocator = new ExecutionInputAllocator(Map.of(pattern, 10_000L), n -> n);
+        var stock = new ListCraftingInventory(allocator::onInventoryChange);
+        stock.insert(G, 10_000, Actionable.MODULATE);
+        assertNull(ParallelBatchCpuHelper.withBatchCapacityLimiter(pattern, stock, (prototype, copies) -> 0,
+                () -> scoped(pattern, stock, allocator, 10_000, false)));
+        assertEquals(10_000, stock.list.get(G));
+        assertThrows(IllegalStateException.class, () -> ParallelBatchCpuHelper.withBatchCapacityLimiter(pattern, stock,
+                (prototype, copies) -> { throw new IllegalStateException("admission failed"); },
+                () -> scoped(pattern, stock, allocator, 10_000, false)));
+        assertEquals(10_000, stock.list.get(G));
+        assertNull(ParallelBatchCpuHelper.currentBatchCapacityLimiter(pattern, stock));
+    }
+
+    @Test
     void scopeExcludesOtherCpusAndRestoresOuterScopeAfterFailure() {
         var pattern = new Pattern(new IPatternDetails.IInput[] {input(null, G)}, List.of(stack(OUT)), false);
         var other = new Pattern(new IPatternDetails.IInput[] {input(null, G)}, List.of(stack(OUT)), false);

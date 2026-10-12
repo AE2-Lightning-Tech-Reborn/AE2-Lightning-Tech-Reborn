@@ -147,10 +147,18 @@ public final class PigmeeBuildingGameTests {
     public static void otherPigmeeRecipesStillConsumePigmee(GameTestHelper helper) {
         var recipe = (ShapedRecipe) helper.getLevel().getRecipeManager()
                 .byKey(new ResourceLocation("ae2lt:pigmee_synthesis_station")).orElseThrow();
-        var items = recipe.getIngredients().stream()
-                .map(ingredient -> ingredient.isEmpty() ? ItemStack.EMPTY : ingredient.getItems()[0].copy()).toList();
-        var input = ForgeCraftingInput.of(recipe.getWidth(), recipe.getHeight(), items);
-        helper.assertTrue(recipe.matches(input, helper.getLevel()), "existing station fixture matches");
+        var input = ForgeCraftingInput.of(3, 3, java.util.List.of(
+                new ItemStack(Items.DIAMOND), new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()), new ItemStack(Items.DIAMOND),
+                new ItemStack(Items.CHEST), new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.CHEST),
+                new ItemStack(Items.DIAMOND), new ItemStack(Items.ANVIL), new ItemStack(Items.DIAMOND)));
+        helper.assertTrue(recipe.matches(input, helper.getLevel()), "final station recipe requires four diamonds and a vanilla anvil");
+        helper.assertTrue(recipe.assemble(input, helper.getLevel().registryAccess())
+                .is(ModBlocks.PIGMEE_SYNTHESIS_STATION.get().asItem()), "final recipe produces the station");
+        var oldInput = ForgeCraftingInput.of(3, 3, java.util.List.of(
+                new ItemStack(Items.IRON_INGOT), new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()), new ItemStack(Items.IRON_INGOT),
+                new ItemStack(Items.CHEST), new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.CHEST),
+                new ItemStack(Items.IRON_INGOT), new ItemStack(Items.IRON_INGOT), new ItemStack(Items.IRON_INGOT)));
+        helper.assertTrue(!recipe.matches(oldInput, helper.getLevel()), "old iron station recipe no longer matches");
         var remaining = recipe.getRemainingItems(input);
         for (int i = 0; i < input.getContainerSize(); i++) {
             if (input.getItem(i).is(ModFumos.PIGMEE_FUMO_ITEM.get())) {

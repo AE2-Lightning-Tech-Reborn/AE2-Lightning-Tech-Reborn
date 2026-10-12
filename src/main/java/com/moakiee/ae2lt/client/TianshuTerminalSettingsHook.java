@@ -3,6 +3,8 @@ package com.moakiee.ae2lt.client;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.IconButton;
+import appeng.client.gui.widgets.OpenGuideButton;
+import appeng.core.AppEng;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
@@ -20,6 +22,24 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class TianshuTerminalSettingsHook {
     private TianshuTerminalSettingsHook() {
+    }
+
+    @SubscribeEvent
+    public static void bindNativeSettingsGuide(ScreenEvent.Init.Post event) {
+        if (!(event.getScreen() instanceof TerminalSettingsScreen<?> settings)
+                || !(settings.getMenu() instanceof TianshuMaintenanceMenu)) return;
+        var toolbar = ((AEBaseScreenAccessor) settings).ae2lt$getVerticalToolbar();
+        var buttons = ((VerticalButtonBarAccessor) toolbar).ae2lt$getButtons();
+        for (int i = 0; i < buttons.size(); i++) {
+            var previous = buttons.get(i);
+            if (!(previous instanceof OpenGuideButton)) continue;
+            var button = new OpenGuideButton(ignored -> AppEng.instance().openGuideAtAnchor(
+                    TianshuMaintenanceTermScreen.terminalHelpTopic("settings")));
+            buttons.set(i, button);
+            event.removeListener(previous);
+            event.addListener(button);
+            return;
+        }
     }
 
     @SubscribeEvent

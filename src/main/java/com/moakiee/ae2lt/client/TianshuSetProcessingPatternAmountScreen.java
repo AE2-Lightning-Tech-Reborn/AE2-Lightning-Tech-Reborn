@@ -17,6 +17,7 @@ import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import com.google.common.primitives.Longs;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
+import appeng.client.guidebook.PageAnchor;
 import java.util.function.Consumer;
 
 final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEncodingTermMenu>
@@ -48,6 +49,11 @@ final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEnco
         amount.setOnConfirm(this::confirm);
 
         addClientSideSlot(new ClientDisplaySlot(currentStack), SlotSemantics.MACHINE_OUTPUT);
+    }
+
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return getParent().getHelpTopic();
     }
 
     @Override

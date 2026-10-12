@@ -25,6 +25,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.common.crafting.StrictNBTIngredient;
+import net.minecraftforge.common.crafting.DifferenceIngredient;
 import net.minecraftforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,15 @@ class InscriberProcessorAdapterTest {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), null);
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        if (net.minecraftforge.common.crafting.CraftingHelper.getID(
+                net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCE) == null) {
+            net.minecraftforge.common.crafting.CraftingHelper.register(new ResourceLocation("minecraft", "item"),
+                    net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCE);
+        }
+        if (net.minecraftforge.common.crafting.CraftingHelper.getID(DifferenceIngredient.Serializer.INSTANCE) == null) {
+            net.minecraftforge.common.crafting.CraftingHelper.register(new ResourceLocation("forge", "difference"),
+                    DifferenceIngredient.Serializer.INSTANCE);
+        }
     }
 
     @Test
@@ -43,6 +53,7 @@ class InscriberProcessorAdapterTest {
         compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
         compress(sources, Items.REDSTONE, Items.REDSTONE_BLOCK, 9);
         compress(sources, Items.BRICK, Items.BRICKS, 4);
+        assertEquals(1, derive(sources).size());
         var derived = derive(sources).get(0);
         var recipe = derived.value();
         assertInputs(recipe, Items.GOLD_BLOCK, 4, Items.REDSTONE_BLOCK, 4, Items.BRICKS, 9);
@@ -94,14 +105,36 @@ class InscriberProcessorAdapterTest {
     }
 
     @Test
-    void consumedTemplatesAndTwoTemplatePrintsAreNotUnfolded() {
+    void consumedTemplatesAndTwoTemplatePrintsDoNotBecomeFactoryInputs() {
         var sources = chain();
         sources.set(1, holder("gold_processor", new InscriberRecipe(new ResourceLocation("test:fixture"), Ingredient.of(Items.GOLD_INGOT), new ItemStack(Items.GOLD_NUGGET),
                 Ingredient.of(Items.PAPER), Ingredient.EMPTY, InscriberProcessType.PRESS)));
         sources.set(2, holder("silicon", new InscriberRecipe(new ResourceLocation("test:fixture"), Ingredient.of(Items.BRICK), new ItemStack(Items.CLAY_BALL),
                 Ingredient.of(Items.PAPER), Ingredient.of(Items.PAPER), InscriberProcessType.INSCRIBE)));
-        assertInputs(derive(sources).get(0).value(), Items.GOLD_NUGGET, 36, Items.REDSTONE, 36, Items.CLAY_BALL, 36);
-        assertEquals(1, derive(sources).size()); // Two-slot PRESS isn't a three-input processor either.
+        assertTrue(derive(sources).isEmpty());
+    }
+
+    @Test
+    void middleOnlyInscriptionUnfoldsCircuitBoardToBlockWithoutLooseItemVariant() {
+        var sources = chain();
+        sources.set(1, holder("stress_circuit_board", new InscriberRecipe(new ResourceLocation("test:fixture"), Ingredient.of(Items.GOLD_INGOT),
+                new ItemStack(Items.GOLD_NUGGET), Ingredient.EMPTY, Ingredient.EMPTY, InscriberProcessType.INSCRIBE)));
+        compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
+
+        var recipes = derive(sources);
+        assertEquals(1, recipes.size());
+        assertInputs(recipes.get(0).value(), Items.GOLD_BLOCK, 4, Items.REDSTONE, 36, Items.BRICK, 36);
+        assertFalse(recipes.get(0).value().itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+        assertFalse(recipes.get(0).value().itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_INGOT)));
+    }
+
+    @Test
+    void siliconBlockSelectionPrefersExtendedAeThenLt() {
+        var extended = new ResourceLocation("expatternprovider:silicon_block");
+        var lt = new ResourceLocation("ae2lt:silicon_block");
+        assertEquals(extended, InscriberProcessorAdapter.preferredSiliconBlockId(List.of(lt, extended)));
+        assertEquals(lt, InscriberProcessorAdapter.preferredSiliconBlockId(List.of(lt)));
+        assertNull(InscriberProcessorAdapter.preferredSiliconBlockId(List.of()));
     }
 
     @Test
@@ -120,6 +153,52 @@ class InscriberProcessorAdapterTest {
         assertSame(strict, recipe.itemInputs().get(0).ingredient());
         assertFalse(recipe.itemInputs().get(0).ingredient().test(new ItemStack(Items.DIAMOND)));
         assertTrue(recipe.itemInputs().get(0).ingredient().test(named));
+    }
+
+    @Test
+    void rawFallbackExcludesMaterialsAlreadyCoveredByACompressedRoute() {
+        var sources = chain();
+        sources.set(1, print("gold", Ingredient.of(Items.GOLD_INGOT, Items.IRON_INGOT),
+                new ItemStack(Items.GOLD_NUGGET), false));
+        compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
+
+        var recipes = derive(sources);
+        assertEquals(2, recipes.size());
+        var blockRoute = recipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_BLOCK)))
+                .findFirst().orElseThrow();
+        assertEquals(4, blockRoute.itemInputs().get(0).count());
+
+        var rawRoute = recipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().get(0).ingredient().test(new ItemStack(Items.IRON_INGOT)))
+                .findFirst().orElseThrow();
+        assertEquals(36, rawRoute.itemInputs().get(0).count());
+        assertFalse(rawRoute.itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_INGOT)));
+
+        var tagId = new ResourceLocation("test:mixed_ingots");
+        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, tagId);
+        var context = new net.minecraftforge.common.crafting.conditions.ICondition.IContext() {
+            @Override
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            public <T> Map<ResourceLocation, java.util.Collection<net.minecraft.core.Holder<T>>> getAllTags(
+                    net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<T>> registry) {
+                return registry.equals(net.minecraft.core.registries.Registries.ITEM)
+                        ? (Map) Map.of(tagId, List.of(Items.GOLD_INGOT.builtInRegistryHolder(),
+                                Items.IRON_INGOT.builtInRegistryHolder())) : Map.of();
+            }
+        };
+        var tagged = Ingredient.of(tag);
+        sources.set(1, print("gold", tagged, new ItemStack(Items.GOLD_NUGGET), false));
+        var taggedRecipes = InscriberProcessorAdapter.derive(sources, List.of(),
+                new ReloadIngredientLookup(context, com.mojang.serialization.JsonOps.INSTANCE));
+        assertEquals(2, taggedRecipes.size());
+        var taggedRaw = taggedRecipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().get(0).count() == 36)
+                .findFirst().orElseThrow();
+        var difference = assertInstanceOf(DifferenceIngredient.class,
+                taggedRaw.itemInputs().get(0).ingredient());
+        assertEquals(tagged.toJson(), difference.toJson().getAsJsonObject().get("base"));
+        assertTrue(Ingredient.fromJson(difference.toJson().getAsJsonObject().get("subtracted")).test(new ItemStack(Items.GOLD_INGOT)));
     }
 
     @Test
@@ -160,12 +239,10 @@ class InscriberProcessorAdapterTest {
     }
 
     @Test
-    void stopsCyclesWithoutDroppingTheRequiredInput() {
+    void stopsCyclesWithoutFeedingAnIntermediate() {
         var sources = chain();
         sources.add(print("cycle", Ingredient.of(Items.GOLD_NUGGET), new ItemStack(Items.GOLD_INGOT), false));
-        var recipe = derive(sources).get(0).value();
-        assertEquals(36, recipe.itemInputs().get(0).count());
-        assertTrue(recipe.itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+        assertTrue(derive(sources).isEmpty());
     }
 
     @Test
@@ -209,8 +286,7 @@ class InscriberProcessorAdapterTest {
         assertInputs(result.get(0).value(), Items.GOLD_BLOCK, 4, Items.REDSTONE, 36, Items.BRICK, 36);
         assertTrue(InscriberProcessorAdapter.derive(sources, List.of(), new ReloadIngredientLookup(
                 net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY,
-                com.mojang.serialization.JsonOps.INSTANCE)).get(0).value().itemInputs().get(0)
-                .ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+                com.mojang.serialization.JsonOps.INSTANCE)).isEmpty());
     }
 
     private static List<RecipeHolder<OverloadProcessingRecipe>> derive(List<RecipeHolder<?>> sources) {

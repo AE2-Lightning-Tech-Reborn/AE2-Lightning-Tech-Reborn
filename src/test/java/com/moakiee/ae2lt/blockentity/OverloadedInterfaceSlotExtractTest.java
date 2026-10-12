@@ -11,10 +11,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.SharedConstants;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.wrapper.InvWrapper;
 
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -57,6 +62,47 @@ class OverloadedInterfaceSlotExtractTest {
     }
 
     private record Sunk(AEKey key, long amount) {}
+
+    @Test
+    void nativeWholeBarrelImportPreservesTaggedKey() {
+        var barrel = new BarrelBlockEntity(BlockPos.ZERO, Blocks.BARREL.defaultBlockState());
+        var stack = new ItemStack(Items.STONE, 64);
+        stack.setHoverName(Component.literal("tagged import"));
+        var key = AEItemKey.of(stack);
+        barrel.setItem(0, stack);
+        var sunk = new ArrayList<Sunk>();
+        assertEquals(64, OverloadedInterfaceBlockEntity.extractBarrelSlotForKey(
+                barrel, new InvWrapper(barrel), 0, key, 64, (k, a) -> sunk.add(new Sunk(k, a))));
+        assertTrue(barrel.getItem(0).isEmpty());
+        assertEquals(List.of(new Sunk(key, 64)), sunk);
+    }
+
+    @Test
+    void nativePartialBarrelImportRespectsBudgetAndZeroRequest() {
+        var barrel = new BarrelBlockEntity(BlockPos.ZERO, Blocks.BARREL.defaultBlockState());
+        barrel.setItem(0, new ItemStack(Items.STONE, 64));
+        var handler = new InvWrapper(barrel);
+        var key = AEItemKey.of(Items.STONE);
+        var sunk = new ArrayList<Sunk>();
+        assertEquals(0, OverloadedInterfaceBlockEntity.extractBarrelSlotForKey(
+                barrel, handler, 0, key, 0, (k, a) -> sunk.add(new Sunk(k, a))));
+        assertEquals(7, OverloadedInterfaceBlockEntity.extractBarrelSlotForKey(
+                barrel, handler, 0, key, 7, (k, a) -> sunk.add(new Sunk(k, a))));
+        assertEquals(57, barrel.getItem(0).getCount());
+        assertEquals(List.of(new Sunk(key, 7)), sunk);
+    }
+
+    @Test
+    void nativeBarrelImportBuffersAReplacementUnderItsActualKey() {
+        var barrel = new BarrelBlockEntity(BlockPos.ZERO, Blocks.BARREL.defaultBlockState());
+        barrel.setItem(0, new ItemStack(Items.DIRT, 8));
+        var sunk = new ArrayList<Sunk>();
+        assertEquals(8, OverloadedInterfaceBlockEntity.extractBarrelSlotForKey(
+                barrel, new InvWrapper(barrel), 0, AEItemKey.of(Items.STONE), 64,
+                (k, a) -> sunk.add(new Sunk(k, a))));
+        assertEquals(List.of(new Sunk(AEItemKey.of(Items.DIRT), 8)), sunk);
+        assertTrue(barrel.getItem(0).isEmpty());
+    }
 
     @Test
     void commonCaseCostsOneExtractCall() {

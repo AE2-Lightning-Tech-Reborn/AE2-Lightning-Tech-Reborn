@@ -91,15 +91,15 @@ public final class Ae2ClosedLoopPatternDetails
         Objects.requireNonNull(availableSeedSnapshotFactory, "availableSeedSnapshotFactory");
         var allInputs = new ArrayList<GenericStack>(payload.seeds().size() + payload.externalInputs().size());
         for (var seed : payload.seeds()) {
-            allInputs.add(new GenericStack(
-                    seed.what(), Sat.mul(seed.amount(), payload.executionSeedMultiplier())));
+            allInputs.add(seed);
         }
         for (var input : payload.externalInputs()) allInputs.add(input);
         inputs = new IInput[allInputs.size()];
         int slot = 0;
         for (var seed : payload.seeds()) {
-            inputs[slot++] = new ExactInput(new GenericStack(
-                    seed.what(), Sat.mul(seed.amount(), payload.executionSeedMultiplier())), true);
+            // A complete cycle is the startup requirement. The configured multiplier is an
+            // upper limit for optional host loans, acquired by the CPU after admitting the job.
+            inputs[slot++] = new ExactInput(seed, true);
         }
         for (var input : payload.externalInputs()) inputs[slot++] = new ExactInput(input, false);
 
@@ -221,7 +221,7 @@ public final class Ae2ClosedLoopPatternDetails
                 result.put(new ExecuteLoopPattern(
                         member.details(),
                         consumer.consumerId(),
-                        scaledCounter(consumer.bootstrapSeed(), payload.executionSeedMultiplier()),
+                        counter(consumer.bootstrapSeed()),
                         counter(slice.inputSeed()),
                         counters(consumerCredits),
                         counters(sharedCredits)), count);
@@ -241,8 +241,7 @@ public final class Ae2ClosedLoopPatternDetails
     public Map<AEKey, Long> totalReusableSeedRequirements() {
         var result = new LinkedHashMap<AEKey, Long>();
         for (var seed : payload.seeds()) {
-            result.merge(seed.what(),
-                    Sat.mul(seed.amount(), payload.executionSeedMultiplier()), Sat::add);
+            result.merge(seed.what(), seed.amount(), Sat::add);
         }
         return Map.copyOf(result);
     }
@@ -555,16 +554,6 @@ public final class Ae2ClosedLoopPatternDetails
             result.put(key, Math.max(1L, bootstrap.getOrDefault(key, 1L)));
         }
         return Collections.unmodifiableMap(result);
-    }
-
-    private static appeng.api.stacks.KeyCounter scaledCounter(
-            Map<AEKey, Long> values, long scale) {
-        var result = new appeng.api.stacks.KeyCounter();
-        for (var entry : values.entrySet()) {
-            long amount = Sat.mul(entry.getValue(), scale);
-            if (amount > 0) result.add(entry.getKey(), amount);
-        }
-        return result;
     }
 
     private static Map<UUID, appeng.api.stacks.KeyCounter> counters(

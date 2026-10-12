@@ -21,6 +21,7 @@ class ToolbarButtonSourceContractTest {
         assertUsesNativeIconButton("TextureToggleButton.java");
         assertUsesNativeIconButton("TeslaCoilModeButton.java");
         assertUsesNativeIconButton("ProviderBlockingModeButton.java");
+        assertUsesNativeIconButton("widgets/PageButton.java");
     }
 
     @Test

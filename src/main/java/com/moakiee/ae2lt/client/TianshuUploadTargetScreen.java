@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client;
 import appeng.api.config.Settings;
 import appeng.api.config.TerminalStyle;
 import appeng.client.gui.AESubScreen;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.widgets.AETextField;
@@ -34,6 +35,11 @@ import org.lwjgl.glfw.GLFW;
 /** EA2-native provider picker modelled after EAEP ClientPlus' provider-list sub-screen. */
 public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic("pattern-upload");
+    }
+
     private static final String STYLE = "/screens/tianshu_upload_targets.json";
     private static final ResourceLocation TEXTURE = new ResourceLocation(AE2LightningTech.MODID, "textures/gui/tianshu_upload_targets.png");
     private static final int TEXTURE_SIZE = 256;

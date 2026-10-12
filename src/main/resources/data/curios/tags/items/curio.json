@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "ae2lt:wireless_tianshu_pattern_encoding_terminal",
+      "required": false
+    }
+  ]
+}

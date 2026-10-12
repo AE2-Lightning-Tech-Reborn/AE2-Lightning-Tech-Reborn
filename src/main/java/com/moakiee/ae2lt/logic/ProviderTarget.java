@@ -434,10 +434,10 @@ public class ProviderTarget extends TargetAddress {
             BooleanSupplier blocked,
             IntFunction<BatchChunk> pushChunk) {
         var pendingState = runtime.batchSteps.get(pattern);
-        boolean preferReservoirTransaction = pendingState != null
-                && pendingState.preferReservoirTransaction;
+        boolean preferSegmentedReservoirRefill = pendingState != null
+                && pendingState.preferSegmentedReservoirRefill;
         if (pendingState != null) {
-            pendingState.preferReservoirTransaction = false;
+            pendingState.preferSegmentedReservoirRefill = false;
         }
         if (maxCopies <= 0L || blocked.getAsBoolean()) {
             return BatchStepResult.EMPTY;
@@ -455,21 +455,18 @@ public class ProviderTarget extends TargetAddress {
         state.lastAttemptTick = gameTick;
 
         BatchStepResult result;
-        int provenTransaction = state.reservoirMode && state.reservoirTailLower > 0
+        int reservoirCapacity = state.reservoirMode && state.reservoirTailLower > 0
                 ? (int) Math.min(Integer.MAX_VALUE,
                         2L * state.provenChunk + state.reservoirTailLower)
                 : 0;
-        if (preferReservoirTransaction && provenTransaction > 0
-                && maxCopies >= provenTransaction) {
-            var chunk = pushChunk.apply(provenTransaction);
-            if (chunk.ownedCopies() > 0L) {
-                state.lastSuccessfulTick = gameTick;
-            }
-            result = BatchStepResult.from(chunk, provenTransaction, false);
+        if (preferSegmentedReservoirRefill && reservoirCapacity > 0
+                && maxCopies >= reservoirCapacity) {
+            result = pushReservoirRamp(state, reservoirCapacity, gameTick,
+                    preserveBatchHistoryOnRejection, true, blocked, pushChunk);
         } else if (!state.backingOff) {
             result = state.reservoirMode
                     ? pushReservoirRamp(state, maxCopies, gameTick,
-                            preserveBatchHistoryOnRejection, blocked, pushChunk)
+                            preserveBatchHistoryOnRejection, false, blocked, pushChunk)
                     : pushSameTickRamp(state, maxCopies, gameTick,
                             preserveBatchHistoryOnRejection, blocked, pushChunk);
         } else {
@@ -486,7 +483,7 @@ public class ProviderTarget extends TargetAddress {
         return result;
     }
 
-    final int provenReservoirTransaction(IPatternDetails pattern, long gameTick) {
+    final int reservoirRefillCapacity(IPatternDetails pattern, long gameTick) {
         var state = runtime.batchSteps.get(pattern);
         if (state == null) {
             return 0;
@@ -498,10 +495,10 @@ public class ProviderTarget extends TargetAddress {
                 : 0;
     }
 
-    final void preferReservoirTransaction(IPatternDetails pattern, boolean prefer) {
+    final void preferSegmentedReservoirRefill(IPatternDetails pattern, boolean prefer) {
         var state = runtime.batchSteps.get(pattern);
         if (state != null) {
-            state.preferReservoirTransaction = prefer;
+            state.preferSegmentedReservoirRefill = prefer;
         }
     }
 
@@ -699,6 +696,7 @@ public class ProviderTarget extends TargetAddress {
             long maxCopies,
             long gameTick,
             boolean preserveBatchHistoryOnRejection,
+            boolean refillProvenTail,
             BooleanSupplier blocked,
             IntFunction<BatchChunk> pushChunk) {
         int baseline = Math.max(1, state.provenChunk);
@@ -759,8 +757,9 @@ public class ProviderTarget extends TargetAddress {
             }
         }
 
-        boolean searchingTail = state.isReservoirTailSearching();
-        int tail = state.reservoirTailCandidate(gameTick);
+        boolean searchingTail = !refillProvenTail && state.isReservoirTailSearching();
+        int tail = refillProvenTail
+                ? state.reservoirTailLower : state.reservoirTailCandidate(gameTick);
         if (tail <= 0 || blocked.getAsBoolean() || ownedCopies >= maxCopies) {
             // Reaching the caller's allowance after the first proven H is a
             // normal bounded refill, not completion of the reservoir search.
@@ -1187,7 +1186,7 @@ public class ProviderTarget extends TargetAddress {
         private boolean growthCapped;
         private boolean backingOff;
         private boolean reservoirMode;
-        private boolean preferReservoirTransaction;
+        private boolean preferSegmentedReservoirRefill;
         private int reservoirTailLower;
         private int reservoirTailUpperExclusive;
         private boolean reservoirTailSuppressed;

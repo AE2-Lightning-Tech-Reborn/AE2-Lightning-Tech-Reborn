@@ -115,7 +115,8 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         int encodeStart = menu.indexOf("private void encodeServerWithOptions(");
         int guardOn = menu.indexOf("ae2EncodingInProgress = true;", encodeStart);
         int nativeEncode = menu.indexOf("super.encode();", guardOn);
-        int conversion = menu.indexOf("applyConfiguredProcessingConversion();", nativeEncode);
+        int conversion = menu.indexOf(
+                "applyConfiguredProcessingConversion(processingInputs, processingOutputs);", nativeEncode);
         int guardOff = menu.indexOf("ae2EncodingInProgress = false;", conversion);
         int finalBroadcast = menu.indexOf("broadcastChanges();", guardOff);
 

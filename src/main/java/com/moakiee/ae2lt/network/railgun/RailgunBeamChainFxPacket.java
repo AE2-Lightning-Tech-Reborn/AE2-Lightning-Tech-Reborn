@@ -27,7 +27,7 @@ import net.minecraft.world.phys.Vec3;
  *                   origin for the first arc and for impact sparks
  * @param soundEnabled true when railgun-specific sounds should play client-side
  */
-public record RailgunBeamChainFxPacket(UUID shooterId, Vec3 firstHit, List<Vec3> chainPath, boolean soundEnabled) {
+public record RailgunBeamChainFxPacket(UUID shooterId, Vec3 firstHit, List<Vec3> chainPath, boolean soundEnabled, boolean ehv) {
 public void write(FriendlyByteBuf buf) {
         buf.writeUUID(shooterId);
         buf.writeDouble(firstHit.x);
@@ -40,6 +40,7 @@ public void write(FriendlyByteBuf buf) {
             buf.writeDouble(v.z);
         }
         buf.writeBoolean(soundEnabled);
+        buf.writeBoolean(ehv);
     }
 
     public static RailgunBeamChainFxPacket decode(FriendlyByteBuf buf) {
@@ -51,7 +52,8 @@ public void write(FriendlyByteBuf buf) {
             path.add(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
         }
         boolean soundEnabled = buf.readBoolean();
-        return new RailgunBeamChainFxPacket(id, first, path, soundEnabled);
+        boolean ehv = buf.readBoolean();
+        return new RailgunBeamChainFxPacket(id, first, path, soundEnabled, ehv);
     }
 
     public static void handle(RailgunBeamChainFxPacket p, Supplier<NetworkEvent.Context> ctxSup) {

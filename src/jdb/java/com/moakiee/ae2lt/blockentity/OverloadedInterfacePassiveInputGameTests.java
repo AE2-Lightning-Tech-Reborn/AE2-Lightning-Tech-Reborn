@@ -553,7 +553,8 @@ public final class OverloadedInterfacePassiveInputGameTests {
                     helper.getLevel().dimension(), helper.absolutePos(targetPos), Direction.SOUTH)),
                     "wireless export target was rejected");
         } else {
-            owner.setEnergyOutputDir(Direction.NORTH);
+            helper.getLevel().setBlockAndUpdate(owner.getBlockPos(), owner.getBlockState().setValue(
+                    appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.NORTH));
         }
         Runnable exportAndVerify = () -> {
             var proxy = ((OverloadedInterfaceLogic) owner.getInterfaceLogic()).getProxiedStorage();
@@ -591,7 +592,8 @@ public final class OverloadedInterfacePassiveInputGameTests {
         helper.setBlock(targetPos, net.minecraft.world.level.block.Blocks.BARREL);
         var target = (net.minecraft.world.Container) helper.getLevel().getBlockEntity(helper.absolutePos(targetPos));
         owner.setIOSpeedMode(OverloadedInterfaceBlockEntity.IOSpeedMode.FAST);
-        owner.setEnergyOutputDir(Direction.NORTH);
+        helper.getLevel().setBlockAndUpdate(owner.getBlockPos(), owner.getBlockState().setValue(
+                    appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.NORTH));
         helper.runAfterDelay(40, () -> {
             var proxy = ((OverloadedInterfaceLogic) owner.getInterfaceLogic()).getProxiedStorage();
             var service = owner.getMainNode().getGrid().getStorageService();

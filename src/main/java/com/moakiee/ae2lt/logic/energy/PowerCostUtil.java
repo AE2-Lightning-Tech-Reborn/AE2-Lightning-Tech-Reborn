@@ -37,24 +37,81 @@ public final class PowerCostUtil {
     }
 
     public static final class EnergyAccess {
+        private static final double BATCH_RESERVATION = 512.0;
         private IGrid grid;
         private IEnergyService service;
+        private boolean batch;
+        private double storedEnergy;
+        private double batchStartEnergy;
+        private double batchMultiplier;
 
         private IEnergyService resolve(@Nullable IGrid currentGrid) {
             if (currentGrid != grid) {
                 var resolved = currentGrid != null ? currentGrid.getEnergyService() : null;
+                refundBatch();
                 service = resolved;
                 grid = currentGrid;
             }
             return service;
         }
 
+        /** Prepay bounded chunks so inventory callbacks cannot spend the transfer's energy. */
+        public void beginBatch(@Nullable IGrid currentGrid) {
+            double initial = storedEnergy;
+            endBatch();
+            resolve(currentGrid);
+            batchStartEnergy = initial;
+            batch = true;
+        }
+
+        public boolean endBatch() {
+            refundBatch();
+            boolean changed = batch && storedEnergy != batchStartEnergy;
+            batch = false;
+            return changed;
+        }
+
+        private void refundBatch() {
+            if (service != null && storedEnergy > 0.0) {
+                storedEnergy = service.injectPower(storedEnergy, Actionable.MODULATE);
+            }
+        }
+
+        /** Physical AE retained when a full grid rejects a refund. */
+        public double storedEnergy() {
+            return storedEnergy;
+        }
+
+        public void loadStoredEnergy(double energy) {
+            storedEnergy = Double.isFinite(energy) ? Math.max(0.0, energy) : 0.0;
+            batch = false;
+            service = null;
+            grid = null;
+        }
+
         public long maxAffordable(@Nullable IGrid grid, AEKey key, long requested) {
-            return maxAffordableFromService(resolve(grid), key, requested);
+            var resolved = resolve(grid);
+            if (!batch) return maxAffordableFromService(resolved, key, requested);
+            if (resolved == null || key == null || requested <= 0) return 0;
+            batchMultiplier = PowerMultiplier.CONFIG.multiplier;
+            double need = cost(key, requested);
+            double availableBudget = storedEnergy / batchMultiplier;
+            if (need > availableBudget) {
+                double reserve = idleReserveForIdlePowerUsage(resolved.getIdlePowerUsage());
+                double request = Math.max(BATCH_RESERVATION, need - availableBudget);
+                double available = resolved.extractAEPower(request + reserve,
+                        Actionable.SIMULATE, PowerMultiplier.CONFIG);
+                double prepaid = Math.max(0.0, Math.min(request, available - reserve));
+                if (prepaid > 0.0) storedEnergy += resolved.extractAEPower(prepaid,
+                        Actionable.MODULATE, PowerMultiplier.CONFIG) * batchMultiplier;
+            }
+            return maxAffordableFromBudget(resolved, key, requested, storedEnergy / batchMultiplier);
         }
 
         public void consume(@Nullable IGrid grid, AEKey key, long amount) {
-            consumeFromService(resolve(grid), key, amount);
+            // Charge the reservation that authorized this transfer, even if a callback changed grids.
+            if (batch) storedEnergy = Math.max(0.0, storedEnergy - cost(key, amount) * batchMultiplier);
+            else consumeFromService(resolve(grid), key, amount);
         }
     }
 
@@ -119,6 +176,17 @@ public final class PowerCostUtil {
             return 0;
         }
         return OverloadedIoCost.amountForOperations(requested, amountPerOperation(key), affordableOps);
+    }
+
+    private static long maxAffordableFromBudget(@Nullable IEnergyService energyService, AEKey key,
+                                                long requested, double available) {
+        if (energyService == null || key == null || requested <= 0) return 0;
+        double need = cost(key, requested);
+        if (need <= 0.0 || available + 1.0e-6 >= need) return requested;
+        long affordableOps = (long) Math.floor(available / AE_PER_OPERATION);
+        return affordableOps <= 0
+                ? 0
+                : OverloadedIoCost.amountForOperations(requested, amountPerOperation(key), affordableOps);
     }
 
     private static long amountPerOperation(AEKey key) {

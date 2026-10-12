@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client;
 
 import appeng.client.gui.Icon;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.me.common.StackSizeRenderer;
@@ -168,6 +169,16 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         tab.setStyle(Style.HORIZONTAL);
         widgets.add(widgetId, tab);
         modeTabs.put(mode, tab);
+    }
+
+    @Override
+    protected PageAnchor getHelpTopic() {
+        String fragment = switch (menu.tianshuMode) {
+            case PROCESSING -> "processing-patterns";
+            case CLOSED_LOOP -> "closed-loop-patterns";
+            default -> null;
+        };
+        return terminalHelpTopic(fragment);
     }
 
     @Override

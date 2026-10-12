@@ -1,10 +1,11 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.logic.batch.SubmissionHistory;
+import com.moakiee.ae2lt.logic.batch.BatchSnapshots;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -68,14 +69,7 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     private List<TerminalPatternSlot> terminalPatternSlots = List.of();
     private boolean terminalPatternSlotsDirty = true;
     private long nextBindingCheckTick;
-    private static final int EXTERNAL_NONCE_HISTORY = 1024;
-    private final Map<UUID, SynthesisSubmission> externalSynthesisSubmissions =
-            new LinkedHashMap<>(64, 0.75F, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<UUID, SynthesisSubmission> eldest) {
-                    return size() > EXTERNAL_NONCE_HISTORY;
-                }
-            };
+    private final SubmissionHistory<SynthesisRequest, SynthesisSubmission> externalSynthesisSubmissions = new SubmissionHistory<>(1024);
 
     public MatrixPortBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MATRIX_PORT.get(), pos, state);
@@ -288,7 +282,7 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         if (rejection != RejectionReason.NONE) return rejectedSynthesisCapability(rejection);
         var pattern = findSynthesisPattern(request);
         if (pattern == null) return rejectedSynthesisCapability(RejectionReason.UNSUPPORTED_PROCESSING);
-        long capacity = getBatchCapacity(pattern);
+        long capacity = BatchSnapshots.safeCapacity(java.util.Arrays.asList(pattern.getOutputs()), getBatchCapacity(pattern));
         if (capacity <= 0L) return rejectedSynthesisCapability(RejectionReason.BUSY);
         return new SynthesizerCapability(API_VERSION, CAPABILITY_ID,
                 Math.min(request.requestedAmount(), capacity), capacity, RejectionReason.NONE);
@@ -296,41 +290,42 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
 
     @Override
     public SynthesisSubmission submit(SynthesisRequest request) {
-        var previous = externalSynthesisSubmissions.get(request.nonce());
-        if (previous != null) return previous;
+        var reason = validateSynthesisRequest(request);
+        if (reason != RejectionReason.NONE) return rejectedSynthesis(request, reason);
+        if (externalSynthesisSubmissions.conflicts(request.nonce(), request)) {
+            reason = RejectionReason.INVALID_REQUEST;
+            return rejectedSynthesis(request, reason);
+        }
+        return externalSynthesisSubmissions.execute(request.nonce(), request, () -> dispatchExternal(request),
+                result -> result.acceptedAmount() == 0L && result.retryable());
+    }
+
+    private SynthesisSubmission dispatchExternal(SynthesisRequest request) {
         var capability = inspect(request);
         if (capability.acceptedAmount() <= 0L) {
-            return rememberSynthesis(request.nonce(), rejectedSynthesis(request, capability.rejectionReason()));
+            return rejectedSynthesis(request, capability.rejectionReason());
         }
         var pattern = findSynthesisPattern(request);
         if (pattern == null) {
-            return rememberSynthesis(request.nonce(), rejectedSynthesis(request,
-                    RejectionReason.UNSUPPORTED_PROCESSING));
+            return rejectedSynthesis(request, RejectionReason.UNSUPPORTED_PROCESSING);
         }
-        try {
-            var inputs = request.inputsPerCraft().stream().map(slot -> {
-                var counter = new KeyCounter();
-                for (var stack : slot) counter.add(stack.what(), stack.amount());
-                return counter;
-            }).toArray(KeyCounter[]::new);
-            long offered = capability.acceptedAmount();
-            long leftover = pushBatch(pattern, inputs, offered);
-            long accepted = offered - Math.max(0L, Math.min(offered, leftover));
-            long unaccepted = request.requestedAmount() - accepted;
-            var status = accepted == 0L ? Status.REJECTED
-                    : unaccepted == 0L ? Status.ACCEPTED : Status.PARTIAL;
-            var results = accepted == 0L ? List.<appeng.api.stacks.GenericStack>of()
-                    : java.util.Arrays.stream(pattern.getOutputs())
-                            .map(stack -> new appeng.api.stacks.GenericStack(stack.what(),
-                                    Math.multiplyExact(stack.amount(), accepted)))
-                            .toList();
-            return rememberSynthesis(request.nonce(), new SynthesisSubmission(status, accepted, results,
-                    unaccepted, accepted == 0L,
-                    accepted == 0L ? RejectionReason.NO_CAPACITY : RejectionReason.NONE));
-        } catch (RuntimeException failure) {
-            return rememberSynthesis(request.nonce(), new SynthesisSubmission(Status.REJECTED, 0L,
-                    List.of(), request.requestedAmount(), false, RejectionReason.SUBMISSION_FAILED));
+        var outputs = List.copyOf(java.util.Arrays.asList(pattern.getOutputs()));
+        long offered = BatchSnapshots.safeCapacity(outputs, capability.acceptedAmount());
+        var inputs = request.inputsPerCraft().stream().map(slot -> {
+            var counter = new KeyCounter();
+            for (var stack : slot) counter.add(stack.what(), stack.amount());
+            return counter;
+        }).toArray(KeyCounter[]::new);
+        long leftover = pushBatch(pattern, inputs, offered);
+        if (leftover < 0L || leftover > offered) {
+            throw new IllegalStateException("Provider returned an invalid remainder");
         }
+        long accepted = offered - leftover;
+        long unaccepted = request.requestedAmount() - accepted;
+        var status = accepted == 0L ? Status.REJECTED
+                : unaccepted == 0L ? Status.ACCEPTED : Status.PARTIAL;
+        return new SynthesisSubmission(status, accepted, BatchSnapshots.multiply(outputs, accepted),
+                unaccepted, accepted == 0L, accepted == 0L ? RejectionReason.NO_CAPACITY : RejectionReason.NONE);
     }
 
     private RejectionReason validateSynthesisRequest(SynthesisRequest request) {
@@ -355,11 +350,6 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     private static SynthesisSubmission rejectedSynthesis(SynthesisRequest request, RejectionReason reason) {
         return new SynthesisSubmission(Status.REJECTED, 0L, List.of(), request.requestedAmount(),
                 reason == RejectionReason.BUSY || reason == RejectionReason.NO_CAPACITY, reason);
-    }
-
-    private SynthesisSubmission rememberSynthesis(UUID nonce, SynthesisSubmission submission) {
-        externalSynthesisSubmissions.put(nonce, submission);
-        return submission;
     }
 
     @Override

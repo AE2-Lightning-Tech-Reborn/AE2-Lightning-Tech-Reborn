@@ -1,4 +1,4 @@
-# AE2 Lightning Tech Reborn — Forge 1.20.1 Port
+# AE2 Lightning Tech — Forge 1.20.1 GTL Port
 
 [中文文档](README_zh_CN.md)
 
@@ -6,7 +6,7 @@ An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energis
 
 > Requires AE2 and Thunderbolt Core Reborn · Built for Minecraft 1.20.1 / Forge 47.1.3+
 
-This branch is the maintained Forge 1.20.1 port. The primary project targets newer Minecraft and NeoForge versions; behavior changes are ported back where the 1.20.1 APIs support them.
+This branch is the maintained Forge 1.20.1 GTL port, including a compatibility layer enabled when GTLCore is loaded. The primary project targets newer Minecraft and NeoForge versions; behavior changes are ported back where the 1.20.1 APIs support them.
 
 ## Features
 
@@ -16,6 +16,8 @@ This branch is the maintained Forge 1.20.1 port. The primary project targets new
 - Overload crystal growth, decay and bulk-processing progression.
 - High-throughput overloaded ME controllers, interfaces, pattern providers and cables.
 - Wireless pattern routing, Tianshu supercomputer automation and configurable batch dispatch.
+- Physical pattern migration into the Lightning Collapse Matrix, with duplicate patterns returned to ME storage or the player's inventory.
+- Overloaded interface crafting deduplication and retry cooldown, with native wrench directions and protection for adjacent devices on the same network.
 - Celestweave modular armor and the electromagnetic railgun system.
 
 ## Dependencies
@@ -25,12 +27,14 @@ This branch is the maintained Forge 1.20.1 port. The primary project targets new
 | Minecraft 1.20.1 | Required |
 | Forge 47.1.3+ | Required |
 | Applied Energistics 2 15.4.10+ | Required |
-| Thunderbolt Core Reborn 2.0.0-beta.3 to `<2.1.0` | Required |
+| Thunderbolt Core Reborn GTL 2.0.0 to `<2.1.0` | Required |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |
 
 Optional integrations are isolated and are not required for normal startup.
+
+Use the matching Thunderbolt build from its `1.20.1_GTL` branch with crafting-planner injection and prepared batch admission. The Maven coordinate is `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.0`. Before a development build, publish the matching dependency to your local Maven repository; this project resolves `mavenLocal()` first.
 
 ## Build
 
@@ -40,8 +44,10 @@ Use Java 17 and run:
 .\gradlew.bat test build
 ```
 
-The distributable artifact is `build/libs/ae2lt-forge-1.20.1-2.1.0-beta.4.jar`.
+The default build's distributable artifact is `build/libs/ae2lt-forge-1.20.1-gtl-2.1.2-beta.jar`.
 The `-slim.jar` artifact is an intermediate development artifact and must not be distributed.
+
+This build uses GTL network protocol `gtl-10`; update clients and servers together.
 
 ## Public API
 

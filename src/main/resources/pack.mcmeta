@@ -2,5 +2,12 @@
     "pack": {
         "description": "${mod_description}",
         "pack_format": 15
+    },
+    "language": {
+        "zh_cn": {
+            "name": "简体中文",
+            "region": "中国",
+            "bidirectional": false
+        }
     }
 }

@@ -17,6 +17,8 @@ final class RailgunBeamRenderClientTest {
 
         assertTrue(source.contains("prev.from = p.from();"));
         assertTrue(source.contains("prev.to = p.to();"));
+        assertTrue(source.contains("prev.ehv = p.ehv();"));
+        assertTrue(source.contains("new BeamState(p.shooterId(), p.from(), p.to(), p.ehv(), tick)"));
         assertFalse(source.contains("do NOT touch from/to"));
     }
 
@@ -35,7 +37,7 @@ final class RailgunBeamRenderClientTest {
     }
 
     @Test
-    void ordinaryBeamChainsUseTheHighVoltagePalette() throws Exception {
+    void beamChainsKeepSeparateHighAndExtremeVoltagePalettes() throws Exception {
         String beamChain = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/railgun/RailgunBeamChainFx.java"));
         String charged = Files.readString(Path.of(
@@ -44,10 +46,28 @@ final class RailgunBeamRenderClientTest {
                 "src/main/java/com/moakiee/ae2lt/client/railgun/RailgunArcRenderer.java"));
 
         assertTrue(beamChain.contains("spawnHighVoltageChain(a, b, 14)"));
-        assertFalse(beamChain.contains("RailgunArcRenderer.spawnChain(a, b, 14)"));
+        assertTrue(beamChain.contains("if (p.ehv())"));
+        assertTrue(beamChain.contains("RailgunArcRenderer.spawnChain(a, b, 14)"));
         assertTrue(charged.contains("RailgunArcRenderer.spawnChain(a, b, chainLife)"));
         assertTrue(renderer.contains("public static void spawnHighVoltageChain("));
         assertTrue(renderer.contains("blue-cyan HV glow"));
+    }
+
+    @Test
+    void allBeamLayersEndpointAndCrackleKeepTheServerPalette() throws Exception {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/moakiee/ae2lt/client/railgun/RailgunBeamRenderClient.java"));
+
+        assertTrue(source.contains("addBeam(bb, matrix, g.origin, g.endpoint, pulse, smoothTime, s.ehv)"));
+        assertTrue(source.contains("addEndpointGlow(bb, matrix, g.endpoint, camPos, pulse, s.ehv)"));
+        assertTrue(source.contains("ehv ? 1.00F : 0.22F, ehv ? 0.30F : 0.58F, ehv ? 0.60F : 1.00F"));
+        assertTrue(source.contains("ehv ? 1.00F : 0.52F, ehv ? 0.50F : 0.88F, ehv ? 0.75F : 1.00F"));
+        assertTrue(source.contains("ehv ? 1.00F : 0.95F, ehv ? 0.80F : 1.00F, ehv ? 0.90F : 1.00F"));
+        assertTrue(source.contains("ehv ? 1.00F : 0.65F, ehv ? 0.65F : 0.90F, ehv ? 0.80F : 1.00F"));
+        assertTrue(source.contains("if (s.ehv)"));
+        assertTrue(source.contains("RailgunArcRenderer.spawnImpactSpark(fromArc, toArc, lifetime)"));
+        assertTrue(source.contains("RailgunArcRenderer.spawnBeamSpark(fromArc, toArc, lifetime)"));
+        assertFalse(source.contains("RailgunSettings"));
     }
 
     @Test

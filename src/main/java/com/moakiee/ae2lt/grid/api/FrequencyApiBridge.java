@@ -41,10 +41,8 @@ public final class FrequencyApiBridge implements FrequencyApiProvider {
 
     @Override
     public Optional<FrequencyInfo> getFrequencyInfo(MinecraftServer server, int frequencyId) {
-        var manager = WirelessFrequencyManager.get();
-        if (manager == null || frequencyId <= 0) {
-            return Optional.empty();
-        }
+        var manager = WirelessFrequencyManager.get(server);
+        if (manager == null || frequencyId <= 0) return Optional.empty();
         WirelessFrequency freq = manager.getFrequency(frequencyId);
         if (freq == null) {
             return Optional.empty();
@@ -59,10 +57,8 @@ public final class FrequencyApiBridge implements FrequencyApiProvider {
 
     @Override
     public Optional<TransmitterInfo> getTransmitter(MinecraftServer server, int frequencyId) {
-        var manager = WirelessFrequencyManager.get();
-        if (manager == null || frequencyId <= 0) {
-            return Optional.empty();
-        }
+        var manager = WirelessFrequencyManager.get(server);
+        if (manager == null || frequencyId <= 0) return Optional.empty();
         var entry = manager.findTransmitter(frequencyId);
         if (entry == null) {
             return Optional.empty();
@@ -72,7 +68,7 @@ public final class FrequencyApiBridge implements FrequencyApiProvider {
 
     @Override
     public boolean isValidFrequency(MinecraftServer server, int frequencyId) {
-        var manager = WirelessFrequencyManager.get();
+        var manager = WirelessFrequencyManager.get(server);
         return manager != null && manager.isFrequencyValid(frequencyId);
     }
 

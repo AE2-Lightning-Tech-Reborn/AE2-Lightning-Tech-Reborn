@@ -97,6 +97,43 @@ class OverloadedInterfaceExportPlanTest {
     }
 
     @Test
+    void nativeBarrelInsertPreservesTagsAndSplitsAcrossSlotCapacity() {
+        var barrel = new BarrelBlockEntity(BlockPos.ZERO, Blocks.BARREL.defaultBlockState());
+        var stack = new ItemStack(Items.STONE, 60);
+        stack.setHoverName(Component.literal("tagged export"));
+        var key = AEItemKey.of(stack);
+        barrel.setItem(0, stack);
+        var handler = new InvWrapper(barrel);
+        var transfer = new OverloadedInterfaceBlockEntity.ExportTransferState();
+        transfer.preferredSlot = 0;
+        assertEquals(10, OverloadedInterfaceBlockEntity.insertIntoItemHandler(transfer, handler, key, 10, true));
+        assertEquals(60, barrel.getItem(0).getCount());
+        assertTrue(barrel.getItem(1).isEmpty());
+        assertEquals(10, OverloadedInterfaceBlockEntity.insertIntoItemHandler(transfer, handler, key, 10, false));
+        assertEquals(64, barrel.getItem(0).getCount());
+        assertEquals(6, barrel.getItem(1).getCount());
+        assertTrue(key.matches(barrel.getItem(0)) && key.matches(barrel.getItem(1)));
+        assertEquals(1, transfer.preferredSlot);
+    }
+
+    @Test
+    void nativeBarrelInsertHonorsItemLimitsAndRejectsDifferentTags() {
+        var barrel = new BarrelBlockEntity(BlockPos.ZERO, Blocks.BARREL.defaultBlockState());
+        var occupied = new ItemStack(Items.STONE, 63);
+        occupied.setHoverName(Component.literal("occupied"));
+        for (int slot = 0; slot < barrel.getContainerSize(); slot++) barrel.setItem(slot, occupied.copy());
+        var handler = new InvWrapper(barrel);
+        var transfer = new OverloadedInterfaceBlockEntity.ExportTransferState();
+        assertEquals(0, OverloadedInterfaceBlockEntity.insertIntoItemHandler(
+                transfer, handler, AEItemKey.of(Items.STONE), 64, false));
+        barrel.setItem(0, ItemStack.EMPTY);
+        assertEquals(16, OverloadedInterfaceBlockEntity.insertIntoItemHandler(
+                transfer, handler, AEItemKey.of(Items.ENDER_PEARL), 64, false));
+        assertEquals(16, barrel.getItem(0).getCount());
+        assertEquals(63, barrel.getItem(1).getCount());
+    }
+
+    @Test
     void directExportUsesActualSupplyWithoutSuccessSimulation() {
         var stone = AEItemKey.of(Items.STONE);
         var supply = new Supply();
@@ -157,6 +194,34 @@ class OverloadedInterfaceExportPlanTest {
                 OverloadedInterfaceBlockEntity.IOSpeedMode.FAST, 11, -1));
         assertEquals(4, power[0]);
         assertEquals(100, supply.items + handler.getStackInSlot(0).getCount());
+    }
+
+    @Test
+    void prefetchedSupplyKeepsRejectedStockAndChargesOnlyAcceptedItems() {
+        var supply = new Supply();
+        var power = new double[] {100};
+        var grid = grid(power);
+        var overflow = new java.util.concurrent.atomic.AtomicLong();
+        var stone = AEItemKey.of(Items.STONE);
+        var target = new ItemStackHandler(1) {
+            @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+                if (simulate) return ItemStack.EMPTY;
+                super.insertItem(slot, stack.copyWithCount(10), false);
+                return stack.copyWithCount(stack.getCount() - 10);
+            }
+        };
+        try (var batch = new com.moakiee.ae2lt.logic.WirelessExportStockBatch(supply, 64,
+                (key, amount) -> overflow.addAndGet(amount))) {
+            assertEquals(10, OverloadedInterfaceBlockEntity.exportBoundedItemKey(
+                    new OverloadedInterfaceBlockEntity.ExportTransferState(),
+                    new OverloadedInterfaceBlockEntity.ExportConfigEntry(stone, 64), target, batch,
+                    IActionSource.empty(), new PowerCostUtil.EnergyAccess(), () -> grid,
+                    (key, amount) -> overflow.addAndGet(amount),
+                    OverloadedInterfaceBlockEntity.IOSpeedMode.FAST, 10, -1));
+        }
+        assertEquals(100, supply.items + target.getStackInSlot(0).getCount() + overflow.get());
+        assertEquals(90, overflow.get());
+        assertEquals(97, power[0]);
     }
 
     @Test

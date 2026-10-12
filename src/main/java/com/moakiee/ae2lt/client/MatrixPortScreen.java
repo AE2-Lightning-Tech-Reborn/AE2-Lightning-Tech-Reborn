@@ -77,6 +77,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     private int scrollRow;
     private boolean draggingScrollbar;
     private long lastPatternContentRevision;
+    private MatrixMigrationWidget migration;
 
     public MatrixPortScreen(MatrixPortMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -112,11 +113,15 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         addRenderableWidget(searchField);
         setInitialFocus(searchField);
         refreshList(true);
+        // Keep the action inside the port frame so recipe-viewer toolbars cannot cover it.
+        migration = new MatrixMigrationWidget(menu, leftPos + 173, topPos + 129);
+        addRenderableWidget(migration.button);
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
+        if (migration != null) migration.update();
         if (searchField != null && !searchField.getValue().isBlank()) {
             long revision = menu.getPatternContentRevision();
             if (revision != lastPatternContentRevision) {
@@ -143,6 +148,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (migration != null) migration.render(graphics, font, 13, 130, 156, 0x404040);
         graphics.drawString(
                 font,
                 Component.translatable("ae2lt.gui.matrix_port.title"),

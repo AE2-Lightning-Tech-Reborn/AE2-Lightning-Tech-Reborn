@@ -56,7 +56,8 @@ public final class OverloadedInterfaceModeGameTests {
         Container[] inventories;
         if (local) {
             owner.setInterfaceMode(InterfaceMode.NORMAL);
-            owner.setEnergyOutputDir(Direction.SOUTH);
+            owner.getLevel().setBlockAndUpdate(owner.getBlockPos(), owner.getBlockState().setValue(
+                appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.fromDirection(Direction.SOUTH)));
             var pos = new BlockPos(1, 1, 1).south();
             helper.setBlock(pos, Blocks.BARREL);
             inventories = new Container[] {(Container) helper.getLevel().getBlockEntity(helper.absolutePos(pos))};

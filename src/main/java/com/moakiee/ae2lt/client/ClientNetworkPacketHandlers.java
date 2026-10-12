@@ -237,4 +237,12 @@ public final class ClientNetworkPacketHandlers {
         }
         return null;
     }
+    public static void handleMatrixPatternMigrationStatus(
+            com.moakiee.ae2lt.network.MatrixPatternMigrationStatusPacket packet) {
+        var player = Minecraft.getInstance().player;
+        if (player != null && player.containerMenu.containerId == packet.token()
+                && player.containerMenu instanceof com.moakiee.ae2lt.menu.MatrixMigrationMenu menu) {
+            menu.acceptMigrationSnapshot(packet.snapshot());
+        }
+    }
 }
