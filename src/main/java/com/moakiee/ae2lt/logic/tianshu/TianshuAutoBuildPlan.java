@@ -83,7 +83,10 @@ public final class TianshuAutoBuildPlan {
         if (lower.fillsCoolingPosition() && upper == TianshuMultiblockComponent.AIR) {
             return TianshuMultiblockTemplate.UPPER_PORT;
         }
-        return TianshuMultiblockTemplate.LOWER_PORT;
+        if (upper.fillsCoolingPosition() && lower == TianshuMultiblockComponent.AIR) {
+            return TianshuMultiblockTemplate.LOWER_PORT;
+        }
+        return TianshuMultiblockTemplate.UPPER_PORT;
     }
 
     private static Target targetFor(TianshuMultiblockRole role, BlockPos local, BlockPos portTarget) {

@@ -27,8 +27,8 @@ The scene below shows one complete structure using a Tianshu Supercomputer Basel
 <GameScene zoom="2.8" background="transparent" interactive={true}>
   <ImportStructure src="../assets/assemblies/tianshu_supercomputer.snbt" />
   <DiamondAnnotation pos="6.5 0.5 3.5" color="#f2d37a">Tianshu Controller</DiamondAnnotation>
-  <DiamondAnnotation pos="3.5 0.5 3.5" color="#85f29e">Default Port Position</DiamondAnnotation>
-  <DiamondAnnotation pos="3.5 6.5 3.5" color="#80c6ff">Alternate Port Position</DiamondAnnotation>
+  <DiamondAnnotation pos="3.5 6.5 3.5" color="#85f29e">Default Port Position</DiamondAnnotation>
+  <DiamondAnnotation pos="3.5 0.5 3.5" color="#80c6ff">Alternate Port Position</DiamondAnnotation>
   <DiamondAnnotation pos="2.5 6.5 2.5" color="#ff9fd7">Example Pattern Storage Position</DiamondAnnotation>
   <DiamondAnnotation pos="4.5 6.5 2.5" color="#9fffe1">Example Seed Storage Position</DiamondAnnotation>
   <BoxAnnotation min="2 2 2" max="5 5 5" color="#d58cff" alwaysOnTop={true}>3×3×3 Core Chamber</BoxAnnotation>
@@ -44,7 +44,7 @@ These quantities assume that only the controller has been placed and every other
 | <ItemLink id="ae2lt:tianshu_supercomputer_casing" /> | 99 | Fixed casing positions |
 | <ItemLink id="ae2lt:phase_change_cooling_unit" /> | 17 | Fills the 16 fixed cooling positions and the unused port candidate by default; closed-loop storage may replace these blocks |
 | <ItemLink id="ae2lt:tianshu_supercomputer_glass" /> | 98 | Fixed core-chamber observation layer |
-| <ItemLink id="ae2lt:tianshu_supercomputer_port" /> | 1 | Placed in the lower candidate when no port already exists |
+| <ItemLink id="ae2lt:tianshu_supercomputer_port" /> | 1 | Placed at the top center by default when both candidates are empty |
 
 The controller is already present and is not consumed by the button. Auto-build also leaves the core chamber untouched. Formation requires the following units to be installed manually:
 
@@ -71,7 +71,7 @@ In total, a complete structure built from an empty site uses **243 blocks**: 1 m
 
 Auto-build reads only the player inventory; it does not extract blocks from the ME network or adjacent containers. It verifies the full material requirement before starting, then places one block per tick. Keep all required materials in the inventory until construction finishes.
 
-An existing Port may occupy either candidate. If there is no Port, one candidate already contains a Tianshu Supercomputer Cooling Unit or closed-loop storage, and the other is empty, auto-build keeps the existing block and places the Port in the empty position. If both candidates are empty, the lower position is used by default. If both contain non-Port blocks, clear one position first.
+An existing Port may occupy either candidate. If there is no Port, one candidate already contains a Tianshu Supercomputer Cooling Unit or closed-loop storage, and the other is empty, auto-build keeps the existing block and places the Port in the empty position. If both candidates are empty, the top center is used by default. If both contain non-Port blocks, clear one position first.
 
 If any casing, cooling-compatible, glass, or port position handled by auto-build contains an incorrect block, auto-build places nothing. Clear the coordinates reported by the controller and try again. If materials are removed or a target becomes obstructed after construction starts, the process stops and consumes only blocks that were placed successfully.
 
