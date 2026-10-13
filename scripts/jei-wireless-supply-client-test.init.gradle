@@ -23,12 +23,14 @@ allprojects {
             dependencies.add('jdbCompileOnly', coordinate)
             dependencies.add('runtimeOnly', coordinate)
         }
-        def probeDirectory = project.file('build/jei-extended-crafting-client-' + (project.findProperty('jeiVersion') ?: 'baseline'))
+        def table = project.findProperty('jei_supply_test_table') ?: 'advanced'
+        def probeDirectory = project.file('build/jei-extended-crafting-client-' + (project.findProperty('jeiVersion') ?: 'baseline') + '-' + table)
         def sourceWorld = project.file('build/tianshu-jei-full-wt/world')
         def clientWorld = new File(probeDirectory, 'saves/JeiWirelessSupplyQA')
         neoForge.runs.client {
             gameDirectory = probeDirectory
             systemProperty 'ae2lt.extendedCraftingSupplyProbe', 'true'
+            systemProperty 'ae2lt.extendedCraftingSupplyProbe.table', table
             programArguments.addAll '--quickPlaySingleplayer', 'JeiWirelessSupplyQA'
         }
         tasks.matching { it.name == 'runClient' }.configureEach {
