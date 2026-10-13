@@ -32,7 +32,11 @@
 
 初次重启 verify 曾失败于测试夹具未提供普通 AE 启动能量，符合产品“不冷启动”约束。修正夹具后，以新世界重新运行完整 prepare→verify 已通过。失败日志保留，不计为产品成功结果。
 
-原始证据、JUnit XML、隔离世界和产物散列位于本机 `build/verification/fe-to-ae/`；不提交原始日志。审查负控位于独立 task-7 的 `wireless-5c446e33/build/verification/independent-ae-boundary.log`。所有 GameTest 确认实际注册数后正常退出，未运行性能基准。
+最终产品代码检查点 `0030d5059dcc8af509ca5ec8f3e616b2945b8569`：完整构建 **1497 项，1493 通过、0 失败、4 既有跳过**；原无线 **35/35**、FE→AE **19/19**、Provider **11/11**、重启 prepare/verify **各 1/1**。全部使用官方发布依赖并正常保存退出。19 项包括超大有限请求、退款抛异常、访问与 FE 维护保留，以及同 tick 真实节点分合预算。随后独立正控在同一确切产品 SHA 与官方 jar 下 **3/3 通过**，两个 P2 均关闭。无扰动与拆空驱动器后维护都保持运行；访问场景前 31 次普通请求成功、第 32 次返回 0，维护后仍运行，总存储调用 32 次、总 FE 使用 2037 ≤ 65536。静态复核覆盖维护限定调用、revision、同 tick 预算归并去重和零 grant 不退款；此结论不等于默认启用或扩展实验保证。
+
+本地实验 jar 已单独保存为 `build/verification/fe-to-ae/ae2lt-0030d505-experimental.jar`，SHA-256 `de46e018d490d7e351ec4584f0f67fb7fd157258a6884559337904f5718cea31`，确认不含 GameTest 类。它是默认关闭功能的本地产物，不是发布包；通用 `build/libs/ae2lt-2.1.2-beta3.jar` 路径已被该实验构建更新，不能拿文件名判断它属于旧验收切片。
+
+原始证据、JUnit XML、隔离世界和产物散列位于本机 `build/verification/fe-to-ae/`；不提交原始日志。独立审查的 `5c446e33` 负控和 `0030d505` 正控日志均已复制至该目录的 `independent-review/`。所有 GameTest 确认实际注册数后正常退出，未运行性能基准。
 
 ## 依赖与复现
 
@@ -48,4 +52,22 @@ Java 21、Gradle 8.8。正式声明的 Thunderbolt Maven 坐标在本机启用�
 
 ## 未完成边界
 
-维护修复后的最终完整回归与独立正控仍待完成。UI 消耗/链接管理、手动解除 historyIncomplete、孤立/异常账户人工恢复、非原生 FE 自动观察桥未实现。未做客户端手工验收、长期服务器 soak、任意断电/半写盘故障注入或全可选模组组合验证。默认关闭、不冷启动和只在本地功能分支保存的边界继续有效。
+维护修复后的最终完整回归和当前两项独立正控已完成，已知本轮审查 P2 均关闭。UI 消耗/链接管理、手动解除 historyIncomplete、孤立/异常账户人工恢复、非原生 FE 自动观察桥未实现。未做客户端手工验收、长期服务器 soak、任意断电/半写盘故障注入或全可选模组组合验证。默认关闭、不冷启动和只在本地功能分支保存的边界继续有效。
+
+
+## 本地交接入口
+
+仓库：`/Users/user/Documents/Codex/2026-10-12/task-6/wireless-energy`。远端归属保持 `AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn`；共同基线为 `5269dcabdd52acd95471ab373587d0ea4758ebcb`。
+
+- 已验收、可供后续选择整合的手动/自动 FE 分支：`feature/wireless-energy-ledger-20261013`，固定 `106b052a33c450ce4c387b9fd8e28c02a27bc507`。
+- 本轮默认关闭的 FE→AE 实验分支：`feature/wireless-running-ae-experimental-20261013`，产品代码固定 `0030d5059dcc8af509ca5ec8f3e616b2945b8569`，后续仅保存验证文档。
+- 本地 bundle：`/Users/user/Documents/Codex/2026-10-12/task-6/wireless-energy-checkpoints-20261013.bundle`。包含两个分支从共同基线起的提交，接收仓库须已拥有上述共同基线；不是远端推送或合并。
+
+```sh
+git fetch /Users/user/Documents/Codex/2026-10-12/task-6/wireless-energy feature/wireless-energy-ledger-20261013:refs/remotes/wireless-local/accepted
+git fetch /Users/user/Documents/Codex/2026-10-12/task-6/wireless-energy feature/wireless-running-ae-experimental-20261013:refs/remotes/wireless-local/experimental
+# 或使用离线 bundle；先验证，再按需 fetch 指定分支
+git bundle verify /Users/user/Documents/Codex/2026-10-12/task-6/wireless-energy-checkpoints-20261013.bundle
+```
+
+收到全局重置完成与收尾指令后没有新增功能或实验；仅完成已开始的维护安全修复、回归、当前独立正控与本地交付记录。
