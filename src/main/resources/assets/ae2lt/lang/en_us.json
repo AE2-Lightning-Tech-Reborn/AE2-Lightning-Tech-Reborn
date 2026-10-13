@@ -1573,5 +1573,5 @@
   "message.ae2lt.pigmee_activation_creative_only": "Experimental activation currently requires creative mode; survival cost is not configured.",
   "screen.ae2lt.pigmee_control": "Pigmee movement preview (32 block local view)",
   "screen.ae2lt.pigmee_control_keys": "WASD / Space / Shift / Ctrl · arrows or drag to look · Esc exits",
-  "screen.ae2lt.pigmee_control_health": "Proxy HP %s · Food %s · Body remains at origin"
+  "screen.ae2lt.pigmee_control_health": "Proxy HP %s · Food %s · Body HP %s"
 }

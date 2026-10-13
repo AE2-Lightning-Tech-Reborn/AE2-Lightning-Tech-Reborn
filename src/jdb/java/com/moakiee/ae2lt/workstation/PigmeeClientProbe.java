@@ -42,6 +42,7 @@ public final class PigmeeClientProbe {
         if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null || ticks % 40 != 0) return;
         try {
             if (failure != null) throw new AssertionError(failure);
+            if (Boolean.getBoolean("ae2lt.pigmeeClientRestoreProbe")) { restore(mc); return; }
             switch (phase) {
                 case 0 -> {
                     mc.getWindow().setTitle("Pigmee P1 QA - disposable world");
@@ -50,7 +51,7 @@ public final class PigmeeClientProbe {
                     server(() -> {
                         var srv = mc.getSingleplayerServer(); var p = srv.getPlayerList().getPlayer(mc.player.getUUID()); var level = p.serverLevel();
                         require(PigmeeWorkstationRuntime.manager(srv).ids().isEmpty(), "requires a fresh actor store");
-                        for (int x = -5; x <= 12; x++) for (int z = -5; z <= 12; z++) {
+                        for (int x = -5; x <= 12; x++) for (int z = -5; z <= 40; z++) {
                             level.setBlockAndUpdate(new BlockPos(x, 99, z), Blocks.STONE.defaultBlockState());
                             for (int y = 100; y < 105; y++) level.setBlockAndUpdate(new BlockPos(x, y, z), Blocks.AIR.defaultBlockState());
                         }
@@ -167,13 +168,36 @@ public final class PigmeeClientProbe {
             phase++;
         } catch (Throwable problem) { finish(problem); }
     }
+    private static void restore(Minecraft mc) throws Exception {
+        if (phase == 0) {
+            server(() -> {
+                var p = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var manager = PigmeeWorkstationRuntime.manager(p.server);
+                require(manager.ids().size() == 3 && manager.activeCount() == 3, "three saved proxies restored before real client joined");
+                require(manager.controls().count() == 0, "no persisted control leases");
+                for (var id : manager.ids()) require(manager.activate(id) == manager.active(id), "restart identity is unique");
+                p.serverLevel().setBlockAndUpdate(new BlockPos(3, 99, 0), Blocks.STONE.defaultBlockState());
+                p.teleportTo(p.serverLevel(), 3.5, 100, .5, java.util.Set.of(), 0, 5);
+            });
+            phase = 1;
+        } else {
+            var actors = mc.level.players().stream().filter(p -> PigmeeClientIdentity.variant(p.getUUID()) != null).toList();
+            if (actors.size() != 3) return;
+            require(actors.stream().map(p -> PigmeeClientIdentity.variant(p.getUUID())).distinct().count() == 3, "late join has all three saved variants");
+            for (var actor : actors) require(mc.getConnection().getPlayerInfo(actor.getUUID()) != null, "profile precedes late join entity spawn");
+            require(mc.getConnection().getListedOnlinePlayers().size() == 1, "restarted proxies still absent from login list");
+            require(actors.stream().anyMatch(p -> p.getUUID().equals(PigmeeRemoteControlItem.bound(mc.player.getMainHandItem()))), "held binding survived client/server restart");
+            capture("pigmee-client-late-join.png");
+            finish(null);
+        }
+    }
     private static void server(Runnable task) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { task.run(); } catch (Throwable problem) { failure = problem; } }); }
     private static void shift(boolean down) { var mc = Minecraft.getInstance(); mc.player.input.shiftKeyDown = down; mc.player.connection.send(new ServerboundPlayerCommandPacket(mc.player, down ? ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY : ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY)); }
     private static void require(boolean value, String reason) { if (!value) throw new AssertionError(reason); }
     private static void capture(String name) throws Exception { var mc = Minecraft.getInstance(); try (var img = Screenshot.takeScreenshot(mc.getMainRenderTarget())) { img.writeToFile(mc.gameDirectory.toPath().resolve(name)); } }
     private static void finish(Throwable problem) {
         done = true; var mc = Minecraft.getInstance();
-        String result = problem == null ? "PIGMEE_CLIENT_PASS: P1 three rendered variants/controller/binding/stop-start/retracking; P2 real connected survival body keeps logical camera, position packets, mode/inventory; proxy moves; body falls/knockback/damage sync; exit releases lease" : "PIGMEE_CLIENT_FAIL phase=" + phase + ": " + problem;
+        String result = problem == null ? (Boolean.getBoolean("ae2lt.pigmeeClientRestoreProbe") ? "PIGMEE_CLIENT_RESTORE_PASS: real client late joins three uniquely restored identities, all variant/profile data present, binding persists and no control lease persisted" : "PIGMEE_CLIENT_PASS: P1 three rendered variants/controller/binding/stop-start/retracking; P2 real connected survival body keeps logical camera, position packets, mode/inventory; proxy moves; body falls/knockback/damage sync; exit releases lease") : "PIGMEE_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { Files.writeString(mc.gameDirectory.toPath().resolve("pigmee-client-result.txt"), result); } catch (Exception ignored) { }
         mc.stop();

@@ -74,7 +74,7 @@ public final class PigmeeControlScreen extends Screen {
         graphics.fill(0, 0, width, 46, 0xC0000000);
         graphics.drawCenteredString(font, title, width / 2, 7, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_keys"), width / 2, 20, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_health", state.health(), state.food()), width / 2, 33, 0xFFDD88);
+        graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_health", state.health(), state.food(), minecraft.player == null ? 0 : minecraft.player.getHealth()), width / 2, 33, 0xFFDD88);
         graphics.drawCenteredString(font, "+", width / 2, height / 2 - 4, 0xFFFFFF);
     }
     @Override public void onClose() { removed(); if (minecraft != null && minecraft.screen == this) minecraft.setScreen(null); }
