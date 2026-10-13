@@ -25,6 +25,7 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     private final UUID owner;
     private final PigmeeVariant variant;
     private int walkingTicks;
+    private int controlFlags;
     private boolean deathSettled;
     private long bodyTicks;
 
@@ -69,6 +70,21 @@ public final class PigmeeServerPlayer extends ServerPlayer {
         walkingTicks = ticks;
     }
 
+    void controlInput(int flags, float yaw, float pitch) {
+        walkingTicks = 0;
+        controlFlags = flags;
+        setYRot(net.minecraft.util.Mth.wrapDegrees(yaw));
+        setYHeadRot(getYRot());
+        setXRot(net.minecraft.util.Mth.clamp(pitch, -90, 90));
+    }
+
+    boolean hasControlInput() { return controlFlags != 0; }
+
+    void clearControlInput() {
+        controlFlags = 0; walkingTicks = 0; xxa = 0; zza = 0;
+        setJumping(false); setShiftKeyDown(false); setSprinting(false);
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -76,6 +92,13 @@ public final class PigmeeServerPlayer extends ServerPlayer {
         // registered with ServerConnectionListener: the world is the only tick owner here.
         zza = walkingTicks-- > 0 && isAlive() ? 1.0F : 0.0F;
         if (walkingTicks < 0) walkingTicks = 0;
+        if (controlFlags != 0 && isAlive()) {
+            zza = ((controlFlags & 1) != 0 ? 1 : 0) - ((controlFlags & 2) != 0 ? 1 : 0);
+            xxa = ((controlFlags & 4) != 0 ? 1 : 0) - ((controlFlags & 8) != 0 ? 1 : 0);
+        } else xxa = 0;
+        setJumping((controlFlags & 16) != 0 && isAlive());
+        setShiftKeyDown((controlFlags & 32) != 0);
+        setSprinting((controlFlags & 64) != 0 && zza > 0);
         doTick();
         bodyTicks++;
         serverLevel().getChunkSource().move(this);
@@ -96,7 +119,7 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     }
 
     void detach() {
-        walkFor(0);
+        clearControlInput();
         closeContainer();
         getAdvancements().stopListening();
         getTextFilter().leave();

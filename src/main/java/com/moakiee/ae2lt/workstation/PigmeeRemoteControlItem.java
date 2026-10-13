@@ -52,6 +52,9 @@ public final class PigmeeRemoteControlItem extends Item {
         try {
             if (owner.isShiftKeyDown()) {
                 if (manager.active(id) == null) manager.activate(id); else manager.deactivate(id);
+            } else {
+                var lease = manager.controls().acquire(owner, id);
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(owner, PigmeeControlStatePacket.opening(lease));
             }
             owner.displayClientMessage(Component.literal(manager.status(id)), true);
         } catch (IllegalStateException failure) { owner.displayClientMessage(Component.literal(failure.getMessage()), true); }

@@ -1570,5 +1570,8 @@
   "item.ae2lt.pigmee_remote_control": "Pigmee Remote Control (Experimental)",
   "message.ae2lt.pigmee_bound": "Bound Pigmee: %s",
   "message.ae2lt.pigmee_unbound": "Sneak-use on your Pigmee to bind this remote.",
-  "message.ae2lt.pigmee_activation_creative_only": "Experimental activation currently requires creative mode; survival cost is not configured."
+  "message.ae2lt.pigmee_activation_creative_only": "Experimental activation currently requires creative mode; survival cost is not configured.",
+  "screen.ae2lt.pigmee_control": "Pigmee movement preview (32 block local view)",
+  "screen.ae2lt.pigmee_control_keys": "WASD / Space / Shift / Ctrl · arrows or drag to look · Esc exits",
+  "screen.ae2lt.pigmee_control_health": "Proxy HP %s · Food %s · Body remains at origin"
 }

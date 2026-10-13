@@ -28,6 +28,8 @@ import net.neoforged.neoforge.common.IOUtilities;
 /** Server-thread lifecycle. Does not call PlayerList.placeNewPlayer/remove/save. */
 public final class PigmeeActorManager {
     private final MinecraftServer server;
+    private final PigmeeControlLeases controls = new PigmeeControlLeases(this);
+    public PigmeeControlLeases controls() { return controls; }
     final PigmeeActorStore store;
     private final Path savePath;
     private final Path runningMarker;
@@ -155,6 +157,7 @@ public final class PigmeeActorManager {
     }
 
     private void detach(PigmeeActorStore.Record record, PigmeeActorStore.State state) {
+        controls.releaseActor(record.id);
         PigmeeServerPlayer actor = store.live.remove(record.id);
         if (actor != null) {
             actor.closeContainer();
@@ -182,6 +185,7 @@ public final class PigmeeActorManager {
     }
 
     void afterTick() {
+        controls.tick();
         for (var actor : new ArrayList<>(store.live.values())) {
             if (actor.deathSettled()) detach(require(actor.getUUID()), PigmeeActorStore.State.DEAD);
             else if (actor.isRemoved()) {

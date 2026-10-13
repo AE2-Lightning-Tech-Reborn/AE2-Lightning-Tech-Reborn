@@ -63,6 +63,14 @@ public final class PigmeeWorkstationRuntime {
     }
 
     @SubscribeEvent
+    public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            var manager = MANAGERS.get(player.server);
+            if (manager != null) manager.controls().releaseOwner(player);
+        }
+    }
+
+    @SubscribeEvent
     public static void controller(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
         if (!enabled() || PigmeeVariant.fromBlock(event.getLevel().getBlockState(event.getPos())) == null
                 || !event.getItemStack().is(com.moakiee.ae2lt.registry.ModBlocks.OVERLOADED_CONTROLLER.get().asItem())) return;
