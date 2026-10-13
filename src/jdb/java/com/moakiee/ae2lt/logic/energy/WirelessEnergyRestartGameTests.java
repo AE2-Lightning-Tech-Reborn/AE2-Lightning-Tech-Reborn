@@ -10,7 +10,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt")
 @PrefixGameTestTemplate(false)
 public final class WirelessEnergyRestartGameTests {
-    @GameTest(template = "wireless_io_empty", timeoutTicks = 120)
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 200)
     public static void worldLedgerSurvivesProcessRestart(GameTestHelper helper) {
         var id = UUID.fromString("00fe0000-2026-1013-0000-000000007331");
         var account = WirelessEnergyLedger.get(helper.getLevel().getServer()).account(id);
@@ -45,9 +45,54 @@ public final class WirelessEnergyRestartGameTests {
                 owned.debit(991);
                 level.removeBlock(pos, false);
             }
-            level.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, false);
-            System.out.println("WIRELESS_ENERGY_RESTART_" + phase.toUpperCase() + "_PASS");
-            helper.succeed();
+            var probeControllerPos = pos.east(8);
+            var targetPos = pos.east(11);
+            var player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,
+                    new com.mojang.authlib.GameProfile(UUID.fromString("00fe0000-2026-1013-0000-000000000041"), "RestartProbe"));
+            player.setPos(targetPos.getX(), targetPos.getY(), targetPos.getZ() - 1);
+            if (phase.equals("prepare")) {
+                level.setBlockAndUpdate(probeControllerPos, com.moakiee.ae2lt.registry.ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get().defaultBlockState());
+                level.setBlockAndUpdate(probeControllerPos.east(), appeng.core.definitions.AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+                level.setBlockAndUpdate(probeControllerPos.west(), appeng.core.definitions.AEBlocks.DRIVE.block().defaultBlockState());
+                var drive = (appeng.blockentity.storage.DriveBlockEntity) level.getBlockEntity(probeControllerPos.west());
+                drive.getInternalInventory().setItemDirect(0, new net.minecraft.world.item.ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        net.minecraft.resources.ResourceLocation.parse("appflux:fe_1k_cell"))));
+                level.setBlockAndUpdate(targetPos, WirelessEnergyTestMachine.BLOCK.defaultBlockState());
+                var c = (com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(probeControllerPos);
+                var frequency = com.moakiee.ae2lt.grid.WirelessFrequencyManager.get().createFrequency(player, "Restart", 0xffffff,
+                        com.moakiee.ae2lt.grid.FrequencySecurityLevel.PRIVATE, "");
+                c.setFrequency(frequency.getId());
+                helper.runAfterDelay(35, () -> {
+                    c.getMainNode().getGrid().getStorageService().getInventory().insert(AppFluxBridge.FE_KEY, 50000,
+                            appeng.api.config.Actionable.MODULATE, appeng.api.networking.security.IActionSource.empty());
+                    var target = (WirelessEnergyTestMachine) level.getBlockEntity(targetPos);
+                    target.afterReceive = () -> {
+                        helper.assertTrue(WirelessEnergyAdmissions.get(level.getServer()).inspect(level, targetPos, player.getUUID()).state()
+                                == WirelessEnergyAdmissions.State.WAITING, "prepare did not stop during observation");
+                        target.setChanged();
+                        System.out.println("WIRELESS_ENERGY_RESTART_PREPARE_PASS pendingProbe=100");
+                        helper.succeed(); // GameTestServer saves and exits before the next machine tick.
+                    };
+                    WirelessEnergyAdmissions.get(level.getServer()).queue(player, frequency.getId(), level, targetPos, net.minecraft.core.Direction.NORTH);
+                });
+            } else {
+                var c = (com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(probeControllerPos);
+                var target = (WirelessEnergyTestMachine) level.getBlockEntity(targetPos);
+                var admissions = WirelessEnergyAdmissions.get(level.getServer());
+                var attempt = admissions.inspect(level, targetPos, player.getUUID());
+                helper.assertTrue(attempt != null && attempt.state() == WirelessEnergyAdmissions.State.UNVERIFIED
+                        && attempt.offered() == 100 && attempt.accepted() == 100, "restart replayed or approved pending probe");
+                admissions.queue(player, c.getFrequencyId(), level, targetPos, net.minecraft.core.Direction.NORTH);
+                helper.runAfterDelay(10, () -> {
+                    helper.assertTrue(target.received == 100 && !WirelessEnergyEndpoints.get(level.getServer()).isBound(level, targetPos, c.getFrequencyId()),
+                            "restart sent a second probe or continuous power");
+                    level.removeBlock(targetPos, false); level.removeBlock(probeControllerPos, false);
+                    level.removeBlock(probeControllerPos.east(), false); level.removeBlock(probeControllerPos.west(), false);
+                    level.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, false);
+                    System.out.println("WIRELESS_ENERGY_RESTART_VERIFY_PASS pendingProbeNotReplayed=100");
+                    helper.succeed();
+                });
+            }
         });
     }
 }

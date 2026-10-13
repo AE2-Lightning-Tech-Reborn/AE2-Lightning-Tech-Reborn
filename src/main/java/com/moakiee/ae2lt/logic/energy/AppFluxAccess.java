@@ -431,6 +431,7 @@ final class AppFluxAccess {
     }
 
     private record ForgeEnergyTarget(IEnergyStorage target) implements TargetAccess {
+        @Override public java.util.OptionalLong storedEnergyFe() { return new NativeFeTarget(target).storedEnergyFe(); }
         @Nullable
         static TargetAccess resolve(EnergyCapCache cache, Direction side) {
             IEnergyStorage target = cache.getEnergyCap(Capabilities.EnergyStorage.BLOCK, side);

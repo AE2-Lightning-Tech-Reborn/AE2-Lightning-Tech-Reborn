@@ -46,7 +46,7 @@ public final class WirelessEnergyGameTests {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, BlockEntityType.BARREL,
                 (be, face) -> face == Direction.NORTH ? MACHINES.computeIfAbsent(be, ignored -> new Machine()) : null);
     }
-    private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
+    private static void check(boolean value, String message) { if (!value) throw new net.minecraft.gametest.framework.GameTestAssertException(message); }
     private static final class Store implements MEStorage {
         long fe; boolean reject; Runnable onInsert = () -> {};
         Store(long fe, boolean reject) { this.fe = fe; this.reject = reject; }

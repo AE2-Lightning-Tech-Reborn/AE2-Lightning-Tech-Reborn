@@ -1197,6 +1197,7 @@ public class AE2LightningTech {
         WirelessFrequencyManager.onServerStart(event.getServer());
         WirelessLinkRegistry.onServerStart(event.getServer());
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer());
         var recipeConflicts = RecipeConflictScanner.scan(event.getServer().getRecipeManager());
         if (recipeConflicts.isEmpty()) {
             LOG.info("[AE2LT recipe conflict scan] no conflicts found");
@@ -1212,6 +1213,7 @@ public class AE2LightningTech {
         WirelessIoPerformanceProbe.finish(event.getServer());
         WirelessLinkRegistry.onServerStop();
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.stop();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.stop();
         WirelessFrequencyManager.onServerStop();
         CRAFTING_CORE_REGISTRY.clear();
         com.moakiee.ae2lt.registry.ModDamageTypes.clearCache();
@@ -1223,6 +1225,7 @@ public class AE2LightningTech {
 
     private void onServerTickPost(ServerTickEvent.Post event) {
         CRAFTING_CORE_REGISTRY.tickAll();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer()).tick(event.getServer());
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tick(event.getServer());
         WirelessFrequencyManager.flushPendingDeviceNotifications();
         var registry = WirelessLinkRegistry.get();

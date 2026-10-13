@@ -49,6 +49,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final Direction face;
         final UUID actor;
         final String block, type;
+        String source = "manual";
         State state = State.WAITING;
         boolean budgetBlocked;
         long schedulingOrder;
@@ -81,6 +82,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
     /** Called only on actual BE removal, not chunk unload: same-type replacements lose the old generation. */
     public static void onRemoved(ServerLevel level, BlockPos pos) {
         if (instance != null && owner == level.getServer()) instance.remove(new Location(level.dimension(), pos));
+        WirelessEnergyAdmissions.onRemoved(level, pos);
     }
     private void remove(Location location) {
         if (endpoints.remove(location) != null) { scheduleDirty = true; setDirty(); }
@@ -95,14 +97,30 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var e = endpoints.get(new Location(level.dimension(), pos));
         return e != null && e.frequency == frequency;
     }
+    boolean hasEndpoint(Location location) { return endpoints.containsKey(location); }
+    /** Do not refresh UNKNOWN chunk tickets while polling an already-loaded endpoint. */
+    static @Nullable BlockEntity loadedBlockEntity(ServerLevel level, BlockPos pos) {
+        if (!level.isLoaded(pos)) return null;
+        var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk == null ? null : chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
+    }
+    static @Nullable IEnergyStorage energyInput(ServerLevel level, BlockPos pos, Direction face) {
+        var be = loadedBlockEntity(level, pos);
+        return be == null ? null : level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, be.getBlockState(), be, face);
+    }
+
     public boolean isPotentialTarget(ServerLevel level, BlockPos pos, Direction face) {
-        return level.isLoaded(pos) && level.getBlockEntity(pos) != null
-                && level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, face) != null;
+        return level.isLoaded(pos) && loadedBlockEntity(level, pos) != null
+                && energyInput(level, pos, face) != null;
     }
 
     /** Idempotent desired state supports a later link-management UI without replaying card toggles. */
     public String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
                            boolean bind) {
+        return setBound(player, frequency, level, pos, face, bind, "manual");
+    }
+    String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
+                    boolean bind, String source) {
         if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
                 || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1)
                 || !level.mayInteract(player, pos)) return "no_permission";
@@ -113,33 +131,67 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var old = endpoints.get(location);
         if (old != null && old.frequency != frequency) return "other_frequency";
         if (old != null && !old.actor.equals(player.getUUID()) && !f.getPlayerAccess(player).isManager()) return "no_permission";
+        if (source.equals("manual")) WirelessEnergyAdmissions.get(level.getServer()).manualOverride(location, player.getUUID(), frequency, face);
         if (!bind) { remove(location); return "disconnected"; }
         if (old != null) return "connected";
         if (!AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return "unavailable";
         if (controller(level.getServer(), frequency) == null) return "no_controller";
         if (endpoints.size() >= WORLD_LIMIT || endpoints.values().stream()
                 .filter(e -> e.frequency == frequency).count() >= WirelessEnergySettings.endpointLimit.get()) return "limit";
-        BlockEntity be = level.getBlockEntity(pos);
-        var capability = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, face);
+        BlockEntity be = loadedBlockEntity(level, pos);
+        var capability = energyInput(level, pos, face);
         if (be == null || capability == null || !capability.canReceive()) return "unsupported";
         var controller = controller(level.getServer(), frequency);
         if (controller == null || isBackfeed(be, controller.getMainNode().getGrid())) return "backfeed";
         endpoints.put(location, new Endpoint(UUID.randomUUID(), frequency, location, face, player.getUUID(),
                 BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString(),
                 BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString()));
+        endpoints.get(location).source = source;
         scheduleDirty = true;
         setDirty();
         // Manual admission deliberately calls neither simulateReceive nor receiveEnergy.
         return "connected";
     }
 
+    /** A single automatic probe uses the same source account, reserve and grid budget as normal output. */
+    long sendProbe(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, TargetAccess target,
+                   java.util.function.BooleanSupplier current) {
+        if (!current.getAsBoolean() || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return 0;
+        var c = controller(level.getServer(), frequency);
+        if (c == null || !c.getMainNode().isActive()) return 0;
+        var node = c.getMainNode().getNode();
+        var grid = c.getMainNode().getGrid();
+        var be = loadedBlockEntity(level, pos);
+        if (node == null || grid == null || be == null || isBackfeed(be, grid)) return 0;
+        var service = grid.getService(WirelessEnergyGridService.class);
+        long limit = service.reserve(level.getServer().getTickCount(), Math.min(WirelessEnergyAdmissions.PROBE_LIMIT, WirelessEnergySettings.targetFe.get()),
+                WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
+        long demand = Math.min(limit, Math.max(0, target.simulateReceive(limit)));
+        if (demand <= 0 || !current.getAsBoolean()) return 0;
+        var inventory = new GuardedEnergyStorage(grid.getStorageService().getInventory(),
+                () -> c.getMainNode().getGrid() == grid && !c.isRemoved());
+        var source = IActionSource.ofMachine(c);
+        var escrow = service.escrow(node);
+        long available = inventory.extract(AppFluxBridge.FE_KEY, demand + WirelessEnergySettings.reserveFe.get(), Actionable.SIMULATE, source);
+        long fromNetwork = Math.max(0, available - WirelessEnergySettings.reserveFe.get());
+        demand = Math.min(demand, Math.min(Long.MAX_VALUE - fromNetwork, escrow.available()) + fromNetwork);
+        if (demand <= 0) return 0;
+        var buffer = new BufferedMEStorage(inventory, null, null, escrow);
+        try {
+            long pulled = buffer.beginMemoryBatch(AppFluxBridge.FE_KEY, demand, source);
+            if (pulled <= 0 || !current.getAsBoolean() || c.getMainNode().getGrid() != grid || c.getFrequencyId() != frequency) return 0;
+            return AppFluxBridge.sendToTargetKnownDemand(target, buffer, source, pulled);
+        } finally {
+            if (c.getMainNode().getGrid() == grid) buffer.endBatch(AppFluxBridge.FE_KEY, source);
+        }
+    }
     @Nullable private static AdvancedWirelessOverloadedControllerBlockEntity controller(MinecraftServer server, int f) {
         var manager = WirelessFrequencyManager.get(server);
         var t = manager == null ? null : manager.findTransmitter(f);
         if (t == null || !t.advanced()) return null;
         var level = server.getLevel(t.dimension());
         if (level == null || !level.isLoaded(t.pos())) return null;
-        return level.getBlockEntity(t.pos()) instanceof AdvancedWirelessOverloadedControllerBlockEntity c
+        return loadedBlockEntity(level, t.pos()) instanceof AdvancedWirelessOverloadedControllerBlockEntity c
                 && c.getFrequencyId() == f && c.isFrequencyActive() ? c : null;
     }
     private static boolean isBackfeed(BlockEntity be, @Nullable IGrid grid) {
@@ -188,7 +240,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (!f.getPlayerAccess(e.actor).canUse()) { e.state = State.NO_PERMISSION; return; }
         var level = server.getLevel(e.location.dimension());
         if (level == null || !level.isLoaded(e.location.pos())) { e.state = State.UNLOADED; return; }
-        var be = level.getBlockEntity(e.location.pos());
+        var be = loadedBlockEntity(level, e.location.pos());
         if (be == null || !e.block.equals(BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString())
                 || !e.type.equals(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString())) {
             remove(e.location); return;
@@ -207,7 +259,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             e.state = State.BLOCKED; return;
         }
         // Resolve on each bounded visit, so invalidated or unloaded capabilities are never retained.
-        IEnergyStorage target = level.getCapability(Capabilities.EnergyStorage.BLOCK, e.location.pos(), e.face);
+        IEnergyStorage target = energyInput(level, e.location.pos(), e.face);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
         long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
         if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e || c.getMainNode().getGrid() != grid) { e.state = State.BLOCKED; return; }
@@ -227,7 +279,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             if (be.isRemoved() || endpoints.get(e.location) != e || c.getMainNode().getGrid() != grid
                     || !level.isLoaded(e.location.pos()) || manager.getFrequency(e.frequency) != f
                     || !f.getPlayerAccess(e.actor).canUse() || c.getFrequencyId() != e.frequency) return;
-            var fresh = level.getCapability(Capabilities.EnergyStorage.BLOCK, e.location.pos(), e.face);
+            var fresh = energyInput(level, e.location.pos(), e.face);
             if (fresh != target) return;
             e.lastDelivered = AppFluxBridge.sendToTargetKnownDemand(new TargetAccess() {
                 public long simulateReceive(long max) { return target.receiveEnergy((int) Math.min(Integer.MAX_VALUE, max), true); }
@@ -253,6 +305,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             var e = new Endpoint(row.getUUID("id"), row.getInt("frequency"), location, face, row.getUUID("actor"),
                     row.getString("block"), row.getString("type"));
             e.totalDelivered = Math.max(0, row.getLong("delivered"));
+            e.source = row.getString("source").equals("automatic") ? "automatic" : "manual";
             if (row.getBoolean("faulted")) e.state = State.FAULTED;
             data.endpoints.putIfAbsent(location, e);
         }
@@ -265,7 +318,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             row.putUUID("id", e.id); row.putInt("frequency", e.frequency); row.putUUID("actor", e.actor);
             row.putString("dimension", e.location.dimension().location().toString()); row.putLong("pos", e.location.pos().asLong());
             row.putString("face", e.face.getName()); row.putString("block", e.block); row.putString("type", e.type);
-            row.putString("source", "manual"); row.putLong("delivered", e.totalDelivered); row.putBoolean("faulted", e.state == State.FAULTED);
+            row.putString("source", e.source); row.putLong("delivered", e.totalDelivered); row.putBoolean("faulted", e.state == State.FAULTED);
             list.add(row);
         }
         root.put("endpoints", list);

@@ -28,4 +28,7 @@ public interface TargetAccess {
      * were actually accepted. Mutates state.
      */
     long receive(long amountFe);
+
+    /** Exact, read-only FE storage observation when supported; unknown must not be represented as zero. */
+    default java.util.OptionalLong storedEnergyFe() { return java.util.OptionalLong.empty(); }
 }

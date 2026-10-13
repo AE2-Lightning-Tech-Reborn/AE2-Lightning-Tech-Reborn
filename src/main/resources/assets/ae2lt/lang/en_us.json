@@ -1575,5 +1575,7 @@
   "ae2lt.wireless_energy.no_controller": "The advanced controller must be loaded",
   "ae2lt.wireless_energy.limit": "Wireless energy endpoint limit reached",
   "ae2lt.wireless_energy.unsupported": "This face has no supported FE input",
-  "ae2lt.wireless_energy.backfeed": "Cannot feed energy back into the source network"
+  "ae2lt.wireless_energy.backfeed": "Cannot feed energy back into the source network",
+  "ae2lt.wireless_energy.auto_no_increment": "No stored energy increase after a machine tick; automatic binding skipped. You can bind manually.",
+  "ae2lt.wireless_energy.auto_unverifiable": "Stored energy could not be verified; automatic binding skipped. You can bind manually."
 }
