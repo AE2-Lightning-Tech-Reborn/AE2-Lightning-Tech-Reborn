@@ -194,7 +194,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
         long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
         if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e) { e.state = State.BLOCKED; return; }
-        var inventory = grid.getStorageService().getInventory();
+        var inventory = new GuardedEnergyStorage(grid.getStorageService().getInventory(),
+                () -> c.getMainNode().getGrid() == grid && !c.isRemoved());
         var source = IActionSource.ofMachine(c);
         var escrow = service.escrow(node);
         long available = inventory.extract(AppFluxBridge.FE_KEY, demand + WirelessEnergySettings.reserveFe.get(), Actionable.SIMULATE, source);

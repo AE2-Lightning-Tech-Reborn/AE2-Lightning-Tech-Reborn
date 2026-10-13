@@ -795,7 +795,8 @@ public final class WirelessEnergyDistributor {
                 flushBufferToNetwork();
             }
             bufferedStorage = new BufferedMEStorage(
-                    storageService.getInventory(),
+                    new GuardedEnergyStorage(storageService.getInventory(),
+                            () -> host.getMainNode().getGrid() == grid && !host.isHostRemoved()),
                     host.getCellStorageSupplier(),
                     host.getCellPersistCallback(),
                     grid.getService(WirelessEnergyGridService.class).escrow(host.getMainNode().getNode()));

@@ -22,7 +22,7 @@ import net.minecraft.network.chat.Component;
  * update.
  *
  * <p>When no cell is installed, NORMAL-mode distribution falls back to the
- * transient {@link #escrow.available()}; OVERLOAD mode short-circuits since
+ * persistent {@link #escrow}; OVERLOAD mode short-circuits since
  * {@code BufferCapacity == 0} disables it at the host level.
  *
  * <p>If a per-tick distribution would otherwise exceed what the cell holds,
@@ -51,7 +51,7 @@ public class BufferedMEStorage implements MEStorage {
     private final Runnable cellPersistCallback;
     private final long[] consumptionHistory = new long[HISTORY_SIZE];
 
-    /** Transient preload buffer, ONLY used when no cell is installed. */
+    /** Persistent ownership of preload and refunds not currently held by an installed cell. */
     private final EnergyEscrow escrow;
     private boolean batchOnly;
     private int historyPointer;
@@ -89,8 +89,8 @@ public class BufferedMEStorage implements MEStorage {
         long needed = saturatingMul(amount, costMultiplier);
 
         // NORMAL batch path: beginMemoryBatch already pre-extracted `pulled` FE
-        // from cell into escrow.available() in one shot, so the per-target modulate-pass
-        // extracts all hit escrow.available() and never trigger a per-call
+        // from cell into escrow in one shot, so the per-target modulate-pass
+        // extracts all hit escrow and never trigger a per-call
         // FluxCellInventory.saveChanges chain.
         if (batchOnly) {
             return extractFromBuffer(needed, mode) / costMultiplier;
@@ -98,13 +98,13 @@ public class BufferedMEStorage implements MEStorage {
 
         MEStorage cell = resolveCell();
         if (cell != null) {
-            return extractThroughCell(cell, feKey, needed, mode, source) / costMultiplier;
+            return creditExtraction(extractThroughCell(cell, feKey, needed, mode, source), mode);
         }
 
         if (escrow.available() > 0L) {
             return extractFromBuffer(needed, mode) / costMultiplier;
         }
-        return delegate.extract(feKey, needed, mode, source) / costMultiplier;
+        return creditExtraction(delegate.extract(feKey, needed, mode, source), mode);
     }
 
     @Override
@@ -119,7 +119,7 @@ public class BufferedMEStorage implements MEStorage {
         long accepted;
 
         // NORMAL batch path: leftover from undelivered demand goes back to
-        // escrow.available(); endBatch will flush it back to cell or delegate in a
+        // escrow; endBatch will flush it back to cell or delegate in a
         // single call. Skips a per-target cell.insert + saveChanges chain.
         // recordReturn rebalances the history bucket: extractFromBuffer
         // already recorded `extracted` as consumed in this tick, but the
@@ -255,7 +255,7 @@ public class BufferedMEStorage implements MEStorage {
      * Pre-tick refill: ensure the cell holds at least {@code demand} FE so the
      * subsequent distribution loop can extract from cell without further
      * delegate calls. With no cell installed, falls back to the transient
-     * {@link #escrow.available()} (one delegate.extract).
+     * {@link #escrow} (one delegate.extract).
      *
      * @return amount actually available for distribution this tick (might be
      *         less than {@code demand} if neither cell nor delegate can cover
@@ -290,7 +290,7 @@ public class BufferedMEStorage implements MEStorage {
             return retained + pulled;
         }
 
-        // No cell — pull straight from the ME network into escrow.available().
+        // No cell — pull straight from the ME network into escrow.
         long pulled = delegate.extract(feKey, demand, Actionable.MODULATE, source);
         if (pulled > 0L) {
             escrow.credit(pulled);
@@ -299,56 +299,28 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     public long endBatch(AEKey feKey, IActionSource source) {
-        try {
-            if (escrow.available() <= 0L) return 0L;
-
-            // Anything left in escrow.available() after the modulate pass is FE that
-            // beginMemoryBatch over-pulled (target rejected its slice mid-loop
-            // or demand shrank). Return it to the cell — or, if no cell is
-            // installed, to the delegate — in a single insert call.
-            MEStorage cell = resolveCell();
-            if (cell != null) {
-                long intoCell = cell.insert(feKey, escrow.available(), Actionable.MODULATE, source);
-                long overflow = escrow.available() - intoCell;
-                long intoDelegate = overflow > 0L
-                        ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-                long absorbed = intoCell + intoDelegate;
-                escrow.debit(absorbed);
-                // recordConsumption was called in extractFromBuffer for what
-                // actually went out; what came back never left the system, so
-                // there is nothing to unrecord here.
-                return absorbed;
-            }
-            long returned = delegate.insert(feKey, escrow.available(), Actionable.MODULATE, source);
-            escrow.debit(returned);
-            return returned;
-        } finally {
-            batchOnly = false;
-        }
+        try { return flush(feKey, source); }
+        finally { batchOnly = false; }
     }
 
     public long flush(AEKey feKey, IActionSource source) {
-        if (escrow.available() <= 0L) return 0L;
-        // Used only by lifecycle paths (endTick / flushAll). When a cell is
-        // installed we prefer to keep the FE in the cell rather than dump it
-        // back to the network so the player's installed disk reflects reality.
         MEStorage cell = resolveCell();
-        if (cell != null) {
-            long intoCell = cell.insert(feKey, escrow.available(), Actionable.MODULATE, source);
-            long overflow = escrow.available() - intoCell;
-            long intoDelegate = overflow > 0L
-                    ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-            long absorbed = intoCell + intoDelegate;
-            escrow.debit(absorbed);
-            return absorbed;
-        }
-        long returned = delegate.insert(feKey, escrow.available(), Actionable.MODULATE, source);
-        escrow.debit(returned);
+        long returned = cell == null ? 0 : refundTo(cell, feKey, source);
+        return returned + refundTo(delegate, feKey, source);
+    }
+
+    private long refundTo(MEStorage destination, AEKey feKey, IActionSource source) {
+        long offered = escrow.debit(escrow.available());
+        if (offered == 0) return 0;
+        // Debit before invoking external storage: a reentrant flush must see no spendable copy.
+        escrow.quarantine(offered);
+        long returned = Math.min(offered, Math.max(0, destination.insert(feKey, offered, Actionable.MODULATE, source)));
+        escrow.settle(offered, returned);
         return returned;
     }
 
     /**
-     * Tick-end synchronisation point. Flushes any orphan {@link #escrow.available()}
+     * Tick-end synchronisation point. Flushes any orphan {@link #escrow}
      * back to the delegate (defensive — should already be empty if
      * {@link #endBatch} ran), then invokes the persist callback so the host
      * can write the cell's storedEnergy into the ItemStack data component.
@@ -367,8 +339,7 @@ public class BufferedMEStorage implements MEStorage {
 
     /**
      * Lifecycle cleanup (cell removed, mode switched, BE removed, chunk
-     * unloaded). Identical to {@link #endTick} but also clears the transient
-     * buffer just in case.
+     * unloaded). Refused refunds remain owned by the escrow; reset only batch state.
      */
     public long flushAll(AEKey feKey, IActionSource source) {
         long flushed = endTick(feKey, source);
@@ -396,12 +367,18 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     /**
-     * Clears the transient preload buffer WITHOUT returning FE to the delegate.
-     * No-op when a cell is providing backing storage. Prefer {@link
-     * #flushAll(AEKey, IActionSource)} for lifecycle cleanup.
+     * Compatibility guard: discarding owned FE is forbidden. Lifecycle cleanup must
+     * use {@link #flushAll(AEKey, IActionSource)} and retain any refused balance.
      */
     public void clearBuffer() {
         if (escrow.available() != 0) throw new IllegalStateException("Cannot discard owned FE");
+    }
+
+    private long creditExtraction(long raw, Actionable mode) {
+        long credited = raw / costMultiplier;
+        long remainder = raw % costMultiplier;
+        if (mode == Actionable.MODULATE && remainder > 0) { escrow.credit(remainder); recordReturn(remainder); }
+        return credited;
     }
 
     public void quarantineDelivery(long amount) { escrow.quarantine(saturatingMul(amount, costMultiplier)); }
@@ -466,6 +443,7 @@ public class BufferedMEStorage implements MEStorage {
             return Math.min(needed, escrow.available());
         }
         long extracted = Math.min(needed, escrow.available());
+        extracted -= extracted % costMultiplier;
         escrow.debit(extracted);
         if (extracted > 0L) recordConsumption(extracted);
         return extracted;
