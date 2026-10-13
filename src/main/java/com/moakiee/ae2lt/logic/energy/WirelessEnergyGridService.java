@@ -40,6 +40,7 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
         return WirelessEnergyLedger.get(node.getLevel().getServer()).claim(id, node);
     }
     /** Shared, charged before callbacks. Multiple controllers cannot each get a full allowance. */
+    boolean topologyPaused(long tick) { return tick == topologyTick; }
     public long reserve(long tick, long request, long feLimit, int targetLimit) {
         // A topology change pauses output for the remainder of this server tick.
         // This prevents split/merge from resetting a spent budget into several fresh allowances.

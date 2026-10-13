@@ -350,6 +350,39 @@ public final class WirelessEnergyGameTests {
     public static void saturatedPrefixDoesNotStarveLastEndpoint(GameTestHelper h) { fairness(h, true); }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 140)
     public static void busyPrefixDoesNotStarveLastEndpoint(GameTestHelper h) { fairness(h, false); }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 160)
+    public static void sixtyFourEndpointsAllGetBudget(GameTestHelper h) { largeFairness(h, 64, false); }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 160)
+    public static void full128EndpointSweepAllGetBudget(GameTestHelper h) { largeFairness(h, 128, false); }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 160)
+    public static void full128SaturatedPrefixDoesNotStarveTail(GameTestHelper h) { largeFairness(h, 128, true); }
+    private static void largeFairness(GameTestHelper h, int count, boolean saturated) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var level = h.getLevel();
+            var registry = WirelessEnergyEndpoints.get(level.getServer());
+            var node = f.controller.getMainNode().getNode();
+            node.getGrid().getService(WirelessEnergyGridService.class).escrow(node).credit(4000000);
+            var origin = new BlockPos(3200 + count * 32, 64, saturated ? 3232 : 3200);
+            level.setChunkForced(origin.getX() >> 4, origin.getZ() >> 4, true);
+            var targets = new java.util.ArrayList<Machine>();
+            for (int i = 0; i < count; i++) {
+                var pos = origin.offset(i % 16, 0, i / 16);
+                level.setBlockAndUpdate(pos, Blocks.BARREL.defaultBlockState());
+                var machine = MACHINES.computeIfAbsent((BarrelBlockEntity) level.getBlockEntity(pos), ignored -> new Machine());
+                if (saturated && i < count - 1) machine.receiveEnergy(100000, false);
+                targets.add(machine);
+                f.player.setPos(pos.getX(), pos.getY(), pos.getZ() - 1);
+                h.assertTrue(registry.setBound(f.player, f.frequency, level, pos, Direction.NORTH, true).equals("connected"), "large fairness bind failed");
+            }
+            h.runAfterDelay(45, () -> {
+                h.assertTrue(targets.stream().allMatch(t -> t.getEnergyStored() > 0), "large sweep left an endpoint permanently budget-starved");
+                for (int i = 0; i < count; i++) level.removeBlock(origin.offset(i % 16, 0, i / 16), false);
+                level.setChunkForced(origin.getX() >> 4, origin.getZ() >> 4, false);
+                h.succeed();
+            });
+        });
+    }
     private static void fairness(GameTestHelper h, boolean saturated) {
         var f = fixture(h);
         h.runAfterDelay(35, () -> {

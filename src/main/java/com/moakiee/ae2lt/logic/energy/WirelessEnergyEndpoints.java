@@ -6,7 +6,9 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final String block, type;
         State state = State.WAITING;
         boolean budgetBlocked;
+        long schedulingOrder;
         long lastVisitedTick = Long.MIN_VALUE, lastDelivered, totalDelivered;
         Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
@@ -57,8 +60,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         View view() { return new View(id, frequency, location, face, actor, state, lastVisitedTick, lastDelivered, totalDelivered); }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
-    private final ArrayDeque<Endpoint> schedule = new ArrayDeque<>();
-    private final ArrayDeque<Endpoint> budgetDeferred = new ArrayDeque<>();
+    private final PriorityQueue<Endpoint> schedule = new PriorityQueue<>(Comparator.comparingLong(e -> e.schedulingOrder));
+    private long schedulingOrder;
     private boolean scheduleDirty = true;
     private boolean ticking;
     private static WirelessEnergyEndpoints instance;
@@ -153,18 +156,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
         ticking = true;
         try {
             if (scheduleDirty) {
-                schedule.clear(); schedule.addAll(endpoints.values()); budgetDeferred.clear(); scheduleDirty = false;
+                schedule.clear(); schedule.addAll(endpoints.values()); scheduleDirty = false;
             }
-            int visits = Math.min(schedule.size() + budgetDeferred.size(), WirelessEnergySettings.globalVisits.get());
-            int priorityVisits = Math.min(budgetDeferred.size(), Math.max(1, visits / 2));
-            int ordinaryAvailable = schedule.size(), ordinaryVisited = 0;
-            var nextDeferred = new ArrayDeque<Endpoint>();
+            int visits = Math.min(schedule.size(), WirelessEnergySettings.globalVisits.get());
+            var visited = new ArrayList<Endpoint>(visits);
             for (int i = 0; i < visits; i++) {
-                // Retry budget-starved endpoints first, but reserve at least half the
-                // traversal for the ordinary queue so one busy grid cannot monopolize it.
-                boolean priority = i < priorityVisits || ordinaryVisited >= ordinaryAvailable;
-                Endpoint e = priority ? budgetDeferred.removeFirst() : schedule.removeFirst();
-                if (!priority) ordinaryVisited++;
+                Endpoint e = schedule.remove();
                 if (endpoints.get(e.location) != e) continue;
                 e.budgetBlocked = false;
                 e.lastVisitedTick = server.getTickCount();
@@ -175,9 +172,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
                     setDirty();
                     com.mojang.logging.LogUtils.getLogger().warn("Wireless FE endpoint {} failed; ambiguous delivery is quarantined", e.id, ex);
                 }
-                if (e.budgetBlocked) nextDeferred.addLast(e); else schedule.addLast(e);
+                // Only a granted opportunity advances the endpoint's turn. Budget
+                // denial retains its age, regardless of world size or sweep boundaries.
+                if (!e.budgetBlocked) e.schedulingOrder = ++schedulingOrder;
+                visited.add(e);
             }
-            budgetDeferred.addAll(nextDeferred);
+            schedule.addAll(visited);
         } finally { ticking = false; }
     }
     private void tickEndpoint(MinecraftServer server, Endpoint e) {
@@ -202,7 +202,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         long limit = service.reserve(server.getTickCount(), WirelessEnergySettings.targetFe.get(),
                 WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
         if (limit <= 0) {
-            e.budgetBlocked = WirelessEnergySettings.networkFe.get() > 0 && WirelessEnergySettings.targetFe.get() > 0;
+            e.budgetBlocked = !service.topologyPaused(server.getTickCount())
+                    && WirelessEnergySettings.networkFe.get() > 0 && WirelessEnergySettings.targetFe.get() > 0;
             e.state = State.BLOCKED; return;
         }
         // Resolve on each bounded visit, so invalidated or unloaded capabilities are never retained.
