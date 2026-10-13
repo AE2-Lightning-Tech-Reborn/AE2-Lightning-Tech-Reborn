@@ -10,6 +10,8 @@ import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.celestweave.ArmorEnergyBuffer;
 import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
+import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
+import com.moakiee.ae2lt.registry.ModDataComponents;
 
 public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
     public static final CelestweaveArmorEnergyLevel INSTANCE = new CelestweaveArmorEnergyLevel();
@@ -42,6 +44,12 @@ public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
             if (stack.getItem() instanceof BaseCelestweaveArmorItem) {
                 capacity = addClamped(capacity, ArmorEnergyBuffer.capacity(stack));
                 stored = addClamped(stored, ArmorEnergyBuffer.read(stack));
+            } else if (stack.getItem() instanceof PhaseLockProjectionItem) {
+                var snapshot = stack.get(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get());
+                if (snapshot != null) {
+                    capacity = addClamped(capacity, snapshot.capacity());
+                    stored = addClamped(stored, snapshot.stored());
+                }
             }
         }
         if (capacity <= 0L) {

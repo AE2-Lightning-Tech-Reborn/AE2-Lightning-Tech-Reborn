@@ -16,6 +16,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
+import com.moakiee.ae2lt.celestweave.ArmorEnergyBuffer;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
 import com.moakiee.ae2lt.registry.ModDataComponents;
 
@@ -33,6 +34,7 @@ final class PhaseLockProjectionSynchronizer {
 
     static void synchronize(ServerPlayer player, ItemStack armor, ItemStack projection) {
         clearMisplacedPrivateComponents(armor, projection);
+        publishEnergySnapshot(player, armor, projection);
         UUID armorId = CelestweaveArmorState.ensureArmorId(armor);
         long armorUpdate = armor.getOrDefault(ModDataComponents.PHASE_LOCK_ARMOR_UPDATE.get(), 0L);
         PhaseLockProjectionLink link = projection.get(ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get());
@@ -79,6 +81,7 @@ final class PhaseLockProjectionSynchronizer {
             ItemStack armor,
             ItemStack projection,
             MirroredSnapshot before) {
+        publishEnergySnapshot(player, armor, projection);
         if (before.equals(armorSnapshot(armor))) {
             return;
         }
@@ -92,6 +95,15 @@ final class PhaseLockProjectionSynchronizer {
         projection.set(
                 ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get(),
                 new PhaseLockProjectionLink(armorId, nextUpdate));
+    }
+
+    private static void publishEnergySnapshot(ServerPlayer player, ItemStack armor, ItemStack projection) {
+        var snapshot = new PhaseLockEnergySnapshot(
+                ArmorEnergyBuffer.capacity(armor, player.registryAccess()),
+                ArmorEnergyBuffer.read(armor, player.registryAccess()));
+        if (!snapshot.equals(projection.get(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get()))) {
+            projection.set(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get(), snapshot);
+        }
     }
 
     private static MirroredSnapshot armorSnapshot(ItemStack armor) {
@@ -198,11 +210,13 @@ final class PhaseLockProjectionSynchronizer {
                 && type != ModDataComponents.CELESTWEAVE_MODULES.get()
                 && type != ModDataComponents.CELESTWEAVE_MODULES_POWERED.get()
                 && type != ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get()
+                && type != ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get()
                 && type != ModDataComponents.PHASE_LOCK_ARMOR_UPDATE.get();
     }
 
     private static void clearMisplacedPrivateComponents(ItemStack armor, ItemStack projection) {
         armor.remove(ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get());
+        armor.remove(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get());
         projection.remove(ModDataComponents.PHASE_LOCK_ARMOR_UPDATE.get());
         projection.remove(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.get());
         projection.remove(ModDataComponents.CELESTWEAVE_ENERGY_BUFFER.get());

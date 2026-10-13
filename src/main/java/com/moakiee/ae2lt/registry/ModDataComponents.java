@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.registry;
 import com.mojang.serialization.Codec;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.celestweave.phase.PhaseLockEnergySnapshot;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockProjectionLink;
 import com.moakiee.ae2lt.celestweave.state.CelestweaveModuleContainer;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
@@ -144,6 +145,12 @@ public final class ModDataComponents {
                     builder -> builder
                             .persistent(PhaseLockProjectionLink.CODEC)
                             .networkSynchronized(PhaseLockProjectionLink.STREAM_CODEC));
+
+    /** Server-authored HUD values, excluded from the writable projection mirror. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<PhaseLockEnergySnapshot>>
+            PHASE_LOCK_ENERGY_SNAPSHOT = DATA_COMPONENTS.registerComponentType(
+                    "phase_lock_energy_snapshot",
+                    builder -> builder.networkSynchronized(PhaseLockEnergySnapshot.STREAM_CODEC));
 
     /** Monotonic mirror version carried only by authoritative phase-locked armor. */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Long>>
