@@ -96,7 +96,7 @@ public class BufferedMEStorage implements MEStorage {
             return extractFromBuffer(needed, mode) / costMultiplier;
         }
 
-        if (escrow.available() > 0L) return extractFromBuffer(needed, mode) / costMultiplier;
+        if (escrow.available() >= costMultiplier) return extractFromBuffer(needed, mode) / costMultiplier;
         needed = Math.min(needed, escrow.room());
         MEStorage cell = resolveCell();
         if (cell != null) return creditExtraction(extractThroughCell(cell, feKey, needed, mode, source), mode);
@@ -144,7 +144,7 @@ public class BufferedMEStorage implements MEStorage {
         AEKey feKey = AppFluxBridge.FE_KEY;
         if (feKey == null || amount <= 0L) return 0L;
         long needed = saturatingMul(amount, costMultiplier);
-        if (batchOnly || escrow.available() > 0) return extractFromBuffer(needed, Actionable.MODULATE) / costMultiplier;
+        if (batchOnly || escrow.available() >= costMultiplier) return extractFromBuffer(needed, Actionable.MODULATE) / costMultiplier;
         MEStorage cell = resolveCell();
         if (cell == null) return 0;
         long raw = cell.extract(feKey, Math.min(needed, escrow.room()), Actionable.MODULATE, source);

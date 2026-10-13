@@ -331,6 +331,49 @@ public final class WirelessEnergyGameTests {
         controller.setFrequency(f.getId());
         return new Fixture(controller, player, f.getId(), target, machine);
     }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
+    public static void indivisibleRefundDoesNotStallPoweredCell(GameTestHelper h) {
+        var escrow = new EnergyEscrow(1, 0, () -> {});
+        var source = new Store(0, true);
+        var cell = new Store(100, true);
+        var buffer = new BufferedMEStorage(source, () -> cell, null, escrow);
+        buffer.setCostMultiplier(2);
+        for (int i = 0; i < 10; i++) {
+            check(buffer.extractForDirectSend(1, SOURCE) == 1, "indivisible refund stalled powered cell");
+            buffer.quarantineDelivery(1); buffer.settleDelivery(1, 1);
+            buffer.endTick(AppFluxBridge.FE_KEY, SOURCE);
+        }
+        check(cell.fe == 80 && escrow.available() == 1, "multiplier remainder lost or duplicated");
+        h.succeed();
+    }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 140)
+    public static void saturatedPrefixDoesNotStarveLastEndpoint(GameTestHelper h) { fairness(h, true); }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 140)
+    public static void busyPrefixDoesNotStarveLastEndpoint(GameTestHelper h) { fairness(h, false); }
+    private static void fairness(GameTestHelper h, boolean saturated) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var registry = WirelessEnergyEndpoints.get(h.getLevel().getServer());
+            f.controller.getMainNode().getGrid().getStorageService().getInventory()
+                    .insert(AppFluxBridge.FE_KEY, 4000000, Actionable.MODULATE, SOURCE);
+            Machine last = null;
+            for (int i = 0; i < 17; i++) {
+                var pos = h.absolutePos(new BlockPos(1 + i % 5, 2, 6 + i / 5));
+                h.getLevel().setBlockAndUpdate(pos, Blocks.BARREL.defaultBlockState());
+                var be = (BarrelBlockEntity) h.getLevel().getBlockEntity(pos);
+                var machine = MACHINES.computeIfAbsent(be, ignored -> new Machine());
+                if (saturated && i < 16) machine.receiveEnergy(100000, false);
+                f.player.setPos(pos.getX(), pos.getY(), pos.getZ() - 1);
+                check(registry.setBound(f.player, f.frequency, h.getLevel(), pos, Direction.NORTH, true).equals("connected"), "fairness bind failed");
+                last = machine;
+            }
+            var tail = last;
+            h.runAfterDelay(20, () -> {
+                check(tail.getEnergyStored() > 0, "fixed-prefix budget starvation");
+                h.succeed();
+            });
+        });
+    }
     private static final class Machine extends EnergyStorage {
         int simulations, receives;
         Machine() { super(100000); }

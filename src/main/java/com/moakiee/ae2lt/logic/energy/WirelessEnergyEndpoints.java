@@ -6,7 +6,7 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +48,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final UUID actor;
         final String block, type;
         State state = State.WAITING;
+        boolean budgetBlocked;
         long lastVisitedTick = Long.MIN_VALUE, lastDelivered, totalDelivered;
         Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
@@ -56,9 +57,9 @@ public final class WirelessEnergyEndpoints extends SavedData {
         View view() { return new View(id, frequency, location, face, actor, state, lastVisitedTick, lastDelivered, totalDelivered); }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
-    private List<Endpoint> schedule = List.of();
+    private final ArrayDeque<Endpoint> schedule = new ArrayDeque<>();
+    private final ArrayDeque<Endpoint> budgetDeferred = new ArrayDeque<>();
     private boolean scheduleDirty = true;
-    private int cursor;
     private boolean ticking;
     private static WirelessEnergyEndpoints instance;
     private static MinecraftServer owner;
@@ -151,12 +152,21 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (ticking || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return;
         ticking = true;
         try {
-            if (scheduleDirty) { schedule = new ArrayList<>(endpoints.values()); scheduleDirty = false; }
-            int visits = Math.min(schedule.size(), WirelessEnergySettings.globalVisits.get());
+            if (scheduleDirty) {
+                schedule.clear(); schedule.addAll(endpoints.values()); budgetDeferred.clear(); scheduleDirty = false;
+            }
+            int visits = Math.min(schedule.size() + budgetDeferred.size(), WirelessEnergySettings.globalVisits.get());
+            int priorityVisits = Math.min(budgetDeferred.size(), Math.max(1, visits / 2));
+            int ordinaryAvailable = schedule.size(), ordinaryVisited = 0;
+            var nextDeferred = new ArrayDeque<Endpoint>();
             for (int i = 0; i < visits; i++) {
-                if (cursor >= schedule.size()) cursor = 0;
-                Endpoint e = schedule.get(cursor++);
+                // Retry budget-starved endpoints first, but reserve at least half the
+                // traversal for the ordinary queue so one busy grid cannot monopolize it.
+                boolean priority = i < priorityVisits || ordinaryVisited >= ordinaryAvailable;
+                Endpoint e = priority ? budgetDeferred.removeFirst() : schedule.removeFirst();
+                if (!priority) ordinaryVisited++;
                 if (endpoints.get(e.location) != e) continue;
+                e.budgetBlocked = false;
                 e.lastVisitedTick = server.getTickCount();
                 e.lastDelivered = 0;
                 try { tickEndpoint(server, e); }
@@ -165,7 +175,9 @@ public final class WirelessEnergyEndpoints extends SavedData {
                     setDirty();
                     com.mojang.logging.LogUtils.getLogger().warn("Wireless FE endpoint {} failed; ambiguous delivery is quarantined", e.id, ex);
                 }
+                if (e.budgetBlocked) nextDeferred.addLast(e); else schedule.addLast(e);
             }
+            budgetDeferred.addAll(nextDeferred);
         } finally { ticking = false; }
     }
     private void tickEndpoint(MinecraftServer server, Endpoint e) {
@@ -189,7 +201,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var service = grid.getService(WirelessEnergyGridService.class);
         long limit = service.reserve(server.getTickCount(), WirelessEnergySettings.targetFe.get(),
                 WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
-        if (limit <= 0) { e.state = State.BLOCKED; return; }
+        if (limit <= 0) {
+            e.budgetBlocked = WirelessEnergySettings.networkFe.get() > 0 && WirelessEnergySettings.targetFe.get() > 0;
+            e.state = State.BLOCKED; return;
+        }
         // Resolve on each bounded visit, so invalidated or unloaded capabilities are never retained.
         IEnergyStorage target = level.getCapability(Capabilities.EnergyStorage.BLOCK, e.location.pos(), e.face);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
