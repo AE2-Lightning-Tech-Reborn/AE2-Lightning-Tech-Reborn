@@ -32,6 +32,11 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 public final class PigmeeActivationGameTests {
     private static BlockPos denied;
     private static boolean denyJoin;
+    private static BlockPos deniedUse;
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void protectUse(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        if (event.getPos().equals(deniedUse)) event.setCanceled(true);
+    }
 
     @SubscribeEvent
     public static void protect(BlockEvent.BreakEvent event) {
@@ -117,6 +122,23 @@ public final class PigmeeActivationGameTests {
         expectDenied(helper, () -> manager.activate(first), "source/actor conflict on recovery");
         helper.assertTrue(manager.status(first).contains("QUARANTINED"), "source conflict quarantines identity");
         helper.assertTrue(level.getServer().getPlayerList().getPlayerCount() == 0, "fixture does not spoof login");
+        // Actual ServerPlayerGameMode item-use chain, after every RightClickBlock protection listener.
+        owner.moveTo(target.getX() + .5, target.getY(), target.getZ() - 1.5, 0, 0);
+        level.setBlockAndUpdate(target, normal);
+        owner.getInventory().setItem(0, new ItemStack(com.moakiee.ae2lt.registry.ModBlocks.OVERLOADED_CONTROLLER.get()));
+        var hit = new BlockHitResult(Vec3.atCenterOf(target), Direction.NORTH, target, false);
+        int countBeforeUse = manager.ids().size();
+        owner.gameMode.useItemOn(owner, level, owner.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        helper.assertTrue(manager.ids().size() == countBeforeUse && level.getBlockState(target).is(normal.getBlock()), "survival cost remains undecided and no conversion occurs");
+        owner.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+        deniedUse = target;
+        try { owner.gameMode.useItemOn(owner, level, owner.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit); }
+        finally { deniedUse = null; }
+        helper.assertTrue(manager.ids().size() == countBeforeUse && level.getBlockState(target).is(normal.getBlock()), "even last-priority right-click denial precedes activation");
+        owner.gameMode.useItemOn(owner, level, owner.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        helper.assertTrue(manager.ids().size() == countBeforeUse + 1 && PigmeeVariant.fromBlock(level.getBlockState(target)) == null
+                && owner.getMainHandItem().getCount() == 1, "native creative controller use converts exactly once without cost");
+        manager.deactivate(manager.ids().getLast());
         System.out.println("PIGMEE_P1_ACTIVATION_PASS: exact three variants, native game modes, duplicate rejection, water preservation, protection/reach/space gates, join rollback and source-conflict quarantine");
         helper.succeed();
     }
@@ -131,6 +153,12 @@ public final class PigmeeActivationGameTests {
     private static final class AdminFixture extends ServerPlayer {
         AdminFixture(ServerLevel level) {
             super(level.getServer(), level, new GameProfile(UUID.randomUUID(), "P1TestAdmin"), ClientInformation.createDefault());
+            connection = new net.minecraft.server.network.ServerGamePacketListenerImpl(server,
+                    new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND), this,
+                    net.minecraft.server.network.CommonListenerCookie.createInitial(getGameProfile(), false)) {
+                @Override public void send(net.minecraft.network.protocol.Packet<?> packet) { }
+                @Override public void send(net.minecraft.network.protocol.Packet<?> packet, net.minecraft.network.PacketSendListener listener) { }
+            };
         }
         @Override protected int getPermissionLevel() { return 2; }
         @Override public BlockPos adjustSpawnLocation(ServerLevel level, BlockPos pos) { return pos; }

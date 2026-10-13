@@ -128,6 +128,29 @@ public class FumoBlock extends Block implements EntityBlock {
     }
 
     @Override
+    protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack,
+            BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand,
+            BlockHitResult hit) {
+        if (!com.moakiee.ae2lt.workstation.PigmeeWorkstationRuntime.enabled()
+                || com.moakiee.ae2lt.workstation.PigmeeVariant.fromBlock(state) == null
+                || !stack.is(com.moakiee.ae2lt.registry.ModBlocks.OVERLOADED_CONTROLLER.get().asItem())) {
+            return super.useItemOn(stack, state, level, pos, player, hand, hit);
+        }
+        // The native game mode fires and resolves RightClickBlock before calling this method.
+        if (player instanceof net.minecraft.server.level.ServerPlayer owner) {
+            if (!owner.isCreative()) {
+                owner.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.ae2lt.pigmee_activation_creative_only"), true);
+            } else {
+                try { com.moakiee.ae2lt.workstation.PigmeeFumoActivation.activateCreative(owner, pos); }
+                catch (IllegalStateException | IllegalArgumentException failed) {
+                    owner.displayClientMessage(net.minecraft.network.chat.Component.literal(failed.getMessage()), true);
+                }
+            }
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @Override
     protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, @NotNull Level level,
                                                        @NotNull BlockPos pos, @NotNull Player player,
                                                        @NotNull BlockHitResult hitResult) {

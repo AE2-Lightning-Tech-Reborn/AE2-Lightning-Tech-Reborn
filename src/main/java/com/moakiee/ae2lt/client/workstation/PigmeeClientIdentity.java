@@ -52,8 +52,10 @@ public final class PigmeeClientIdentity {
         pose.mulPose(Axis.YP.rotationDegrees(180 - Mth.rotLerp(event.getPartialTick(), player.yBodyRotO, player.yBodyRot)));
         // P1 uses the native player collision/eye contract. Fit the existing Fumo to that body,
         // including crouching/swimming height, rather than hiding a 1.8m body inside a tiny model.
-        pose.scale(player.getBbWidth() / .52F, player.getBbHeight() / .85F, player.getBbWidth() / .52F);
-        pose.translate(-.5, 0, -.5);
+        var bounds = model.getBlockState().getShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO).bounds();
+        pose.scale((float) (player.getBbWidth() / bounds.getXsize()),
+                (float) (player.getBbHeight() / bounds.getYsize()), (float) (player.getBbWidth() / bounds.getZsize()));
+        pose.translate(-bounds.getCenter().x, -bounds.minY, -bounds.getCenter().z);
         RENDERER.render(model, event.getPartialTick(), pose, event.getMultiBufferSource(), event.getPackedLight(), OverlayTexture.NO_OVERLAY);
         pose.popPose();
         RENDERED.add(player.getUUID());
