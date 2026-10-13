@@ -63,6 +63,21 @@ public final class PigmeeWorkstationRuntime {
     }
 
     @SubscribeEvent
+    public static void controller(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
+        if (!enabled() || PigmeeVariant.fromBlock(event.getLevel().getBlockState(event.getPos())) == null
+                || !event.getItemStack().is(com.moakiee.ae2lt.registry.ModBlocks.OVERLOADED_CONTROLLER.get().asItem())) return;
+        event.setCanceled(true); // Avoid default rotation and controller placement, including both hands.
+        event.setCancellationResult(net.minecraft.world.InteractionResult.sidedSuccess(event.getLevel().isClientSide));
+        if (!(event.getEntity() instanceof ServerPlayer owner)) return;
+        if (!owner.isCreative()) {
+            owner.displayClientMessage(Component.translatable("message.ae2lt.pigmee_activation_creative_only"), true);
+            return;
+        }
+        try { PigmeeFumoActivation.activateCreative(owner, event.getPos()); }
+        catch (IllegalStateException | IllegalArgumentException failure) { owner.displayClientMessage(Component.literal(failure.getMessage()), true); }
+    }
+
+    @SubscribeEvent
     public static void commands(RegisterCommandsEvent event) {
         if (!enabled()) return;
         var root = Commands.literal("pigmee_p0").requires(source -> source.hasPermission(2));

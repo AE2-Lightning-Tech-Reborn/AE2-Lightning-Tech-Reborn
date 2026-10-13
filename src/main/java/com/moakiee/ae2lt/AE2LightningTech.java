@@ -348,6 +348,7 @@ public class AE2LightningTech {
                     .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
+                        output.accept(ModItems.PIGMEE_REMOTE_CONTROL);
                         output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
                         output.accept(ModItems.DYE_BASE);
                         output.accept(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get());

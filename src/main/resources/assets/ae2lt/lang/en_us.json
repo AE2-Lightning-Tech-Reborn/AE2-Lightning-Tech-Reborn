@@ -1566,5 +1566,9 @@
   "ae2lt.gui.input_transfer.pending": "Processing…",
   "ae2lt.gui.input_transfer.result": "Moved %s · Exported %s · Input slots left %s",
   "ae2lt.gui.input_transfer.cooldown": "Please try again shortly.",
-  "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved."
+  "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved.",
+  "item.ae2lt.pigmee_remote_control": "Pigmee Remote Control (Experimental)",
+  "message.ae2lt.pigmee_bound": "Bound Pigmee: %s",
+  "message.ae2lt.pigmee_unbound": "Sneak-use on your Pigmee to bind this remote.",
+  "message.ae2lt.pigmee_activation_creative_only": "Experimental activation currently requires creative mode; survival cost is not configured."
 }

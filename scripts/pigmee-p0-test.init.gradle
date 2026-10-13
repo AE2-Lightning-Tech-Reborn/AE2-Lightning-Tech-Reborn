@@ -4,7 +4,7 @@ allprojects {
         def localRepo = providers.gradleProperty('pigmeeLocalMaven').orNull
         if (localRepo) repositories.maven { url = uri(localRepo) }
         sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/workstation/*Tests.java',
-                                        'com/moakiee/ae2lt/workstation/PigmeeRestartProbe.java'])
+                                        'com/moakiee/ae2lt/workstation/PigmeeRestartProbe.java', 'com/moakiee/ae2lt/workstation/PigmeeClientProbe.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
         }
@@ -12,6 +12,14 @@ allprojects {
             gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('pigmeeGameTestDirectory').getOrElse('pigmee-p0-gametest')).get().asFile
             systemProperty 'neoforge.enabledGameTestNamespaces', providers.gradleProperty('pigmeeTestNamespace').getOrElse('ae2lt_pigmee_p0')
             systemProperty 'ae2lt.pigmeeP0', 'true'
+            jvmArguments.add '-Xmx1536m'
+        }
+        neoForge.runs.create('pigmeeClient') {
+            client()
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-p1-client').get().asFile
+            programArguments.addAll '--username', 'PigmeeQA', '--quickPlaySingleplayer', 'PigmeeQA'
+            systemProperty 'ae2lt.pigmeeP0', 'true'
+            systemProperty 'ae2lt.pigmeeClientProbe', 'true'
             jvmArguments.add '-Xmx1536m'
         }
         neoForge.runs.server {

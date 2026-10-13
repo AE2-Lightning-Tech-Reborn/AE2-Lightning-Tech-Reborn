@@ -65,6 +65,13 @@ public final class PigmeeActivationGameTests {
             helper.assertTrue(actor.owner().equals(owner.getUUID()) && !actor.getUUID().equals(owner.getUUID()), "independent identity");
             helper.assertTrue(!actor.hasPermissions(1) && actor.isFakePlayer(), "creative body is still unprivileged automation");
             helper.assertTrue(variant != PigmeeVariant.HYPERDIMENSIONAL || level.getFluidState(pos).is(Fluids.WATER), "waterlogged conversion retains water");
+            var remote = new ItemStack(com.moakiee.ae2lt.registry.ModItems.PIGMEE_REMOTE_CONTROL.get());
+            PigmeeRemoteControlItem.bind(owner, remote, actor);
+            helper.assertTrue(actor.getUUID().equals(PigmeeRemoteControlItem.bound(remote)), "binding is a stable identity reference");
+            var outsider = new AdminFixture(level);
+            outsider.moveTo(owner.getX(), owner.getY(), owner.getZ(), 0, 0);
+            expectDenied(helper, () -> PigmeeRemoteControlItem.bind(outsider, remote, actor), "OP cannot bind another owner's Pigmee");
+            helper.assertTrue(!manager.ownedBy(actor.getUUID(), outsider.getUUID()), "copied binding NBT cannot grant ownership");
             int count = manager.ids().size();
             expectDenied(helper, () -> PigmeeFumoActivation.activate(owner, pos), "repeat conversion");
             helper.assertTrue(manager.ids().size() == count, "repeat cannot create another identity");

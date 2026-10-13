@@ -161,6 +161,7 @@ public final class PigmeeActorManager {
             store.snapshot(record, actor);
             actor.detach(); // Native tracking removal releases only this body's loading source.
             server.getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(record.id)));
+            net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(new PigmeeIdentityPacket(record.id, -1));
         }
         record.state = state;
         store.setDirty();
@@ -226,6 +227,10 @@ public final class PigmeeActorManager {
     }
 
     public PigmeeServerPlayer active(UUID id) { return store.live.get(id); }
+    public boolean ownedBy(UUID id, UUID owner) {
+        var record = store.records.get(id);
+        return record != null && record.owner.equals(owner);
+    }
     public int activeCount() { return store.live.size(); }
     public List<UUID> ids() { return List.copyOf(store.records.keySet()); }
     public String status(UUID id) {
@@ -247,7 +252,7 @@ public final class PigmeeActorManager {
         if (!store.live.isEmpty()) viewer.connection.send(profilePacket(List.copyOf(store.live.values())));
     }
 
-    private static ClientboundPlayerInfoUpdatePacket profilePacket(List<PigmeeServerPlayer> actors) {
+    public static ClientboundPlayerInfoUpdatePacket profilePacket(List<PigmeeServerPlayer> actors) {
         // ADD_PLAYER supplies tracking identity; UPDATE_LISTED is deliberately absent.
         return new ClientboundPlayerInfoUpdatePacket(EnumSet.of(
                 ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,

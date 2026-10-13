@@ -19,9 +19,17 @@ public final class PigmeeFumoActivation {
     private PigmeeFumoActivation() { }
 
     public static PigmeeServerPlayer activate(ServerPlayer owner, BlockPos pos) {
+        return activate(owner, pos, false);
+    }
+
+    public static PigmeeServerPlayer activateCreative(ServerPlayer owner, BlockPos pos) {
+        return activate(owner, pos, true);
+    }
+
+    private static PigmeeServerPlayer activate(ServerPlayer owner, BlockPos pos, boolean creativeEntry) {
         var level = owner.serverLevel();
         if (!PigmeeWorkstationRuntime.enabled() || !owner.server.isSameThread()
-                || owner.isFakePlayer() || !owner.hasPermissions(2)) {
+                || owner.isFakePlayer() || (creativeEntry ? !owner.isCreative() : !owner.hasPermissions(2))) {
             throw new IllegalStateException("Only a real administrator may use the experimental activation entry");
         }
         if (!level.hasChunkAt(pos) || !level.mayInteract(owner, pos) || !owner.canInteractWithBlock(pos, 0)) {

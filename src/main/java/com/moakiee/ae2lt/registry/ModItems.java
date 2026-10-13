@@ -72,6 +72,9 @@ import appeng.items.parts.PartModelsHelper;
 public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(AE2LightningTech.MODID);
 
+    public static final DeferredItem<com.moakiee.ae2lt.workstation.PigmeeRemoteControlItem> PIGMEE_REMOTE_CONTROL =
+            ITEMS.registerItem("pigmee_remote_control", com.moakiee.ae2lt.workstation.PigmeeRemoteControlItem::new, new Item.Properties());
+
     public static final DeferredItem<Item> OVERLOAD_CRYSTAL = ITEMS.registerItem(
             "overload_crystal",
             OverloadCrystalItem::new,
