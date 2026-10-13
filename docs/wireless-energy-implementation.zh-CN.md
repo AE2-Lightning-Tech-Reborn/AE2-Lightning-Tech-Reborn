@@ -1,5 +1,7 @@
 # 无线能源手动端点、自动准入与验收记录
 
+本文件记录保持在 `106b052a` 的已验收切片。FE→AE 的另行授权后续工作见 [实验分支说明](wireless-running-ae-experimental.zh-CN.md)，不将后续测试结果追溯计入本切片。
+
 目标：Minecraft 1.21.1 / NeoForge。独立功能分支 `feature/wireless-energy-ledger-20261013` 基线为核对后的远端 main `5269dcabdd52acd95471ab373587d0ea4758ebcb`。用户主工作区本地 main `1bda5091` 及未提交改动未带入、未修改。机制依据 docs 分支 `0e20b7caece0ddc79d0f49603ca1847aec85cdf8` 的 `无线过载控制器能源/设计方案.md`。仅在本地提交，无推送、PR、合并或发布。
 
 ## 用户澄清与本切片边界

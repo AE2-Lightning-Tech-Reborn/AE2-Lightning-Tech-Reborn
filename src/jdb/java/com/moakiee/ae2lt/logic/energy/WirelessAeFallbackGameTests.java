@@ -136,10 +136,13 @@ public final class WirelessAeFallbackGameTests {
             var store = f.mount(100000); f.emptyAe(); int old = WirelessEnergySettings.networkFe.get();
             try {
                 WirelessEnergySettings.networkFe.set(64);
+                long reserved = f.service().maintenanceReserveFe();
                 double total = f.request(1000, Actionable.MODULATE) + f.request(1000, Actionable.MODULATE);
-                close(h, total, 64 * PowerUnit.FE.convertTo(PowerUnit.AE, 1), "controllers duplicated budget");
-                h.assertTrue(store.fe == 100000 - 64, "FE extraction exceeded shared budget");
+                close(h, total, (64 - reserved) * PowerUnit.FE.convertTo(PowerUnit.AE, 1), "controllers duplicated budget");
+                h.assertTrue(store.fe == 100000 - (64 - reserved), "FE extraction exceeded shared budget");
                 h.assertTrue(f.service().reserve(h.getLevel().getServer().getTickCount(), 10, 64, 32) == 0, "external output obtained a second budget");
+                f.energy().onServerEndTick();
+                h.assertTrue(f.energy().isNetworkPowered() && store.fe >= 100000 - 64, "maintenance lost its shared allowance");
             } finally { WirelessEnergySettings.networkFe.set(old); }
             h.succeed();
         });
@@ -195,6 +198,19 @@ public final class WirelessAeFallbackGameTests {
         });
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void enormousRequestStaysWithinSharedFeLimit(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(Long.MAX_VALUE); f.emptyAe();
+            long limit = WirelessEnergySettings.networkFe.get();
+            long reserved = f.service().maintenanceReserveFe();
+            double paid = f.request(Double.MAX_VALUE, Actionable.MODULATE);
+            close(h, paid, (limit - reserved) * PowerUnit.FE.convertTo(PowerUnit.AE, 1), "large request bypassed FE limit");
+            h.assertTrue(store.fe == Long.MAX_VALUE - (limit - reserved) && f.ae().pendingFeWithdrawal() == 0,
+                    "large request overflowed ownership or withdrawal"); h.succeed();
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
     public static void refusedRefundRetainsIntegerAndFractionalOwnership(GameTestHelper h) {
         var f = fixture(h);
         ready(h, f, () -> {
@@ -205,7 +221,12 @@ public final class WirelessAeFallbackGameTests {
             close(h, paid, .1, "refused refund prevented current payment");
             double rate = PowerUnit.FE.convertTo(PowerUnit.AE, 1);
             close(h, f.fe().available() * rate + f.ae().available() + paid, 100 * rate, "refused refund lost energy");
-            h.assertTrue(f.fe().available() == 99 && store.fe == 0, "unexpected refund destination"); h.succeed();
+            h.assertTrue(f.fe().available() == 99 && store.fe == 0, "unexpected refund destination");
+            int refunds = store.insertCalls;
+            close(h, f.request(.1, Actionable.MODULATE), .1, "known fractional AE unavailable");
+            h.assertTrue(store.insertCalls == refunds, "zero-grant fractional payment retried storage IO");
+            close(h, f.fe().available() * rate + f.ae().available() + paid + .1, 100 * rate, "second fractional payment not conserved");
+            h.succeed();
         });
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
@@ -223,6 +244,25 @@ public final class WirelessAeFallbackGameTests {
             var restored = WirelessEnergyLedger.load(ledger.save(new CompoundTag(), h.getLevel().registryAccess()), h.getLevel().registryAccess());
             h.assertTrue(restored.inspect(null, true).stream().anyMatch(b -> b.unresolvedFeWithdrawal() == unknown), "unknown extraction lost on save/load");
             h.succeed();
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void throwingRefundCannotDebitUnreturnedAe(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(0); f.emptyAe(); f.fe().credit(100);
+            ((DriveBlockEntity) h.getBlockEntity(POS.west())).getInternalInventory().setItemDirect(0, ItemStack.EMPTY);
+            store.onInsert = () -> { throw new IllegalStateException("test refund receipt unavailable"); };
+            close(h, f.request(.1, Actionable.MODULATE), 0, "throwing refund returned an uncommitted payment");
+            double rate = PowerUnit.FE.convertTo(PowerUnit.AE, 1);
+            close(h, f.ae().available(), rate, "converted AE was debited before callback completed");
+            h.assertTrue(f.fe().available() == 0 && f.fe().uncertain() == 99 && store.fe == 99,
+                    "unacknowledged refund was not isolated");
+            store.onInsert = () -> {};
+            close(h, f.request(.1, Actionable.MODULATE), .1, "known AE could not resume");
+            close(h, store.fe * rate + f.ae().available() + .1, 100 * rate, "refund/payment not conserved");
+            h.assertTrue(store.fe == 99 && store.extractCalls == 0 && f.fe().uncertain() == 99,
+                    "uncertain refund was replayed"); h.succeed();
         });
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
@@ -265,9 +305,70 @@ public final class WirelessAeFallbackGameTests {
             });
         });
     }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void removingEmptyNodeDoesNotTurnOffFeSustainedGrid(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(1000000); f.controller.getMainNode().setIdlePowerUsage(1000); f.emptyAe();
+            var grid = f.grid(); h.setBlock(POS.west(), Blocks.AIR);
+            h.assertTrue(f.grid() == grid && f.service().topologyPaused(h.getLevel().getServer().getTickCount()), "expected same-grid node removal");
+            f.energy().onServerEndTick();
+            h.assertTrue(f.energy().isNetworkPowered() && store.fe < 1000000, "node removal interrupted maintenance"); h.succeed();
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void ordinaryRequestsLeaveOneMaintenanceVisit(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(1000000); f.controller.getMainNode().setIdlePowerUsage(1000); f.emptyAe();
+            int limit = WirelessEnergySettings.networkTargets.get(); double one = PowerUnit.FE.convertTo(PowerUnit.AE, 1);
+            for (int i = 0; i < limit - 1; i++) close(h, f.request(one, Actionable.MODULATE), one, "ordinary allowance lost");
+            close(h, f.request(one, Actionable.MODULATE), 0, "ordinary call took maintenance visit");
+            f.energy().onServerEndTick();
+            h.assertTrue(f.energy().isNetworkPowered() && store.extractCalls == limit, "maintenance visit was not retained");
+            h.assertTrue(1000000 - store.fe <= WirelessEnergySettings.networkFe.get(), "priority bypassed hard budget"); h.succeed();
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void ordinaryRequestsLeaveMaintenanceFe(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(1000000); f.controller.getMainNode().setIdlePowerUsage(1000); f.emptyAe();
+            double paid = f.request(Double.MAX_VALUE, Actionable.MODULATE);
+            h.assertTrue(paid > 0, "ordinary request received nothing");
+            f.energy().onServerEndTick();
+            h.assertTrue(f.energy().isNetworkPowered() && 1000000 - store.fe <= WirelessEnergySettings.networkFe.get(),
+                    "ordinary demand consumed maintenance FE or maintenance exceeded hard budget"); h.succeed();
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void physicalSplitMergeCannotRefreshSameTickBudget(GameTestHelper h) {
+        var f = fixture(h); var bridge = POS.south(); var other = POS.south(2);
+        h.setBlock(bridge, AEBlocks.CREATIVE_ENERGY_CELL.block());
+        h.setBlock(other, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get());
+        ready(h, f, () -> {
+            var left = f.controller.getMainNode().getNode();
+            var right = ((AdvancedWirelessOverloadedControllerBlockEntity) h.getBlockEntity(other)).getMainNode().getNode();
+            long tick = h.getLevel().getServer().getTickCount();
+            close(h, f.service().reserveAe(tick, 60, 100, 10, true), 60, "initial budget unavailable");
+            h.setBlock(bridge, Blocks.AIR);
+            h.assertTrue(left.getGrid() != right.getGrid(), "grid did not split synchronously");
+            var a = left.getGrid().getService(WirelessEnergyGridService.class);
+            var b = right.getGrid().getService(WirelessEnergyGridService.class);
+            close(h, a.reserveAe(tick, 20, 100, 10, true), 20, "remaining split budget missing");
+            close(h, b.reserveAe(tick, 100, 100, 10, true), 20, "split copied budget");
+            // A newly placed BE initializes its node next tick. Connect the existing
+            // real nodes directly to exercise an actual merge before the tick ends.
+            appeng.api.networking.GridHelper.createConnection(left, right);
+            h.assertTrue(left.getGrid() == right.getGrid(), "grid did not merge synchronously");
+            close(h, left.getGrid().getService(WirelessEnergyGridService.class).reserveAe(tick, 1, 100, 10, true),
+                    0, "merge refreshed exhausted budget"); h.succeed();
+        });
+    }
     private static final class Store implements MEStorage {
-        long fe, limit = Long.MAX_VALUE; int extractCalls; boolean reject;
+        long fe, limit = Long.MAX_VALUE; int extractCalls, insertCalls; boolean reject;
         Runnable onExtract = () -> {};
+        Runnable onInsert = () -> {};
         Store(long fe) { this.fe = fe; }
         public long extract(AEKey key, long amount, Actionable mode, IActionSource source) {
             if (!key.equals(AppFluxBridge.FE_KEY)) return 0;
@@ -276,8 +377,9 @@ public final class WirelessAeFallbackGameTests {
             return n;
         }
         public long insert(AEKey key, long amount, Actionable mode, IActionSource source) {
+            if (mode == Actionable.MODULATE && key.equals(AppFluxBridge.FE_KEY)) insertCalls++;
             if (reject || !key.equals(AppFluxBridge.FE_KEY)) return 0;
-            if (mode == Actionable.MODULATE) fe += amount;
+            if (mode == Actionable.MODULATE) { fe += amount; onInsert.run(); }
             return amount;
         }
         public Component getDescription() { return Component.literal("FE fallback adversarial storage"); }

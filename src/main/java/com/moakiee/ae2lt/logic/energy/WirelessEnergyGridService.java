@@ -12,23 +12,36 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 /** Node-owned claims move on split/merge; balances are never copied into either grid. */
 public final class WirelessEnergyGridService implements IGridService, IGridServiceProvider {
     private static final String CLAIM = "ae2ltEnergyClaim";
+    private static final String TICK_BUDGET = "ae2ltEnergyTickBudget";
     private final Map<IGridNode, UUID> claims = new IdentityHashMap<>();
-    private long budgetTick = Long.MIN_VALUE;
-    private long spent;
+    private EnergyTickBudget budget;
+    private appeng.api.networking.IGrid grid;
     private long topologyTick = Long.MIN_VALUE;
-    private int visited;
+    private long topologyRevision;
     private boolean supplementing;
 
     @Override public void addNode(IGridNode node, CompoundTag data) {
         topologyTick = node.getLevel().getServer().getTickCount();
+        topologyRevision++;
+        grid = node.getGrid();
+        if (data != null && data.hasUUID(TICK_BUDGET)) {
+            var inherited = WirelessEnergyLedger.get(node.getLevel().getServer())
+                    .transferredBudget(topologyTick, data.getUUID(TICK_BUDGET));
+            if (inherited != null) budget(topologyTick).merge(inherited);
+        }
         if (data != null && data.hasUUID(CLAIM)) claims.put(node, data.getUUID(CLAIM));
     }
     @Override public void saveNodeData(IGridNode node, CompoundTag data) {
         UUID id = claims.get(node);
         if (id != null) data.putUUID(CLAIM, id);
+        // AE2 calls saveNodeData before removing a migrating node from its old grid.
+        var current = budget(node.getLevel().getServer().getTickCount());
+        WirelessEnergyLedger.get(node.getLevel().getServer()).registerBudget(current);
+        data.putUUID(TICK_BUDGET, current.id);
     }
     @Override public void removeNode(IGridNode node) {
         topologyTick = node.getLevel().getServer().getTickCount();
+        topologyRevision++;
         claims.remove(node);
     }
 
@@ -53,9 +66,34 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
     }
     boolean beginSupplement() { if (supplementing) return false; supplementing = true; return true; }
     void endSupplement() { supplementing = false; }
+    long topologyRevision() { return topologyRevision; }
+    private EnergyTickBudget budget(long tick) {
+        if (budget == null || budget.tick != tick) budget = new EnergyTickBudget(tick);
+        return budget;
+    }
+    /** Conservative maintenance allowance, shared with all output and request attempts. */
+    long maintenanceReserveFe() {
+        if (grid == null || !WirelessEnergySettings.runningNetworkFeFallback.get()
+                || !grid.getEnergyService().isNetworkPowered()
+                || !grid.getActiveMachines(com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity.class)
+                        .iterator().hasNext()) return 0;
+        double rate = appeng.api.config.PowerUnit.FE.convertTo(appeng.api.config.PowerUnit.AE, 1);
+        double raw = appeng.api.config.PowerMultiplier.CONFIG.multiply(Math.max(.1, grid.getEnergyService().getIdlePowerUsage()));
+        if (!(rate > 0) || !Double.isFinite(rate) || !(raw > 0) || !Double.isFinite(raw)) return Long.MAX_VALUE;
+        return new AeEnergyBalance("0", () -> {}).neededFe(raw, rate);
+    }
     long preview(long tick, long request, long feLimit, int targetLimit) {
-        if (topologyPaused(tick) || (budgetTick == tick && visited >= targetLimit)) return 0;
-        return Math.min(Math.max(0, request), Math.max(0, feLimit - (budgetTick == tick ? spent : 0)));
+        if (topologyPaused(tick)) return 0;
+        return previewAe(tick, request, feLimit, targetLimit, false);
+    }
+    long previewAe(long tick, long request, long feLimit, int targetLimit, boolean maintenance) {
+        long reserved = maintenance ? 0 : maintenanceReserveFe();
+        var current = budget != null && budget.tick == tick ? budget : new EnergyTickBudget(tick);
+        return current.preview(request, feLimit, targetLimit, reserved, reserved > 0 ? 1 : 0);
+    }
+    long reserveAe(long tick, long request, long feLimit, int targetLimit, boolean maintenance) {
+        long reserved = maintenance ? 0 : maintenanceReserveFe();
+        return budget(tick).reserve(request, feLimit, targetLimit, reserved, reserved > 0 ? 1 : 0);
     }
     /** Shared, charged before callbacks. Multiple controllers cannot each get a full allowance. */
     boolean topologyPaused(long tick) { return tick == topologyTick; }
@@ -63,11 +101,6 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
         // A topology change pauses output for the remainder of this server tick.
         // This prevents split/merge from resetting a spent budget into several fresh allowances.
         if (tick == topologyTick) return 0;
-        if (budgetTick != tick) { budgetTick = tick; spent = 0; visited = 0; }
-        if (visited >= targetLimit) return 0;
-        visited++;
-        long allowed = Math.min(Math.max(0, request), Math.max(0, feLimit - spent));
-        spent += allowed;
-        return allowed;
+        return reserveAe(tick, request, feLimit, targetLimit, false);
     }
 }

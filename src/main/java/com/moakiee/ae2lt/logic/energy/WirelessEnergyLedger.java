@@ -17,6 +17,19 @@ public final class WirelessEnergyLedger extends SavedData {
     private final Map<UUID, Origin> origins = new LinkedHashMap<>();
     private final Map<UUID, EnergyEscrow> accounts = new LinkedHashMap<>();
     private final Map<UUID, AeEnergyBalance> convertedAe = new LinkedHashMap<>();
+    // Transient aliases are passed in AE2 node migration data, never restored from disk.
+    // They only join attempt budgets; they confer no energy ownership.
+    private final Map<UUID, EnergyTickBudget> tickBudgets = new LinkedHashMap<>();
+    private long budgetTick = Long.MIN_VALUE;
+    private void budgetTick(long tick) {
+        if (budgetTick != tick) { tickBudgets.clear(); budgetTick = tick; }
+    }
+    void registerBudget(EnergyTickBudget budget) {
+        budgetTick(budget.tick); tickBudgets.put(budget.id, budget);
+    }
+    EnergyTickBudget transferredBudget(long tick, UUID id) {
+        budgetTick(tick); return tickBudgets.get(id);
+    }
     public static WirelessEnergyLedger get(MinecraftServer server) {
         if (!server.isSameThread()) throw new IllegalStateException("Server thread required");
         return server.overworld().getDataStorage().computeIfAbsent(

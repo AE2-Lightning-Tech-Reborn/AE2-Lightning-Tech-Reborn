@@ -13,7 +13,7 @@ public final class WirelessAeFallback {
     private WirelessAeFallback() {}
 
     public static double supplement(IGrid grid, boolean alreadyRunning, double requested, double original,
-                                    Actionable mode, PowerMultiplier multiplier) {
+                                    Actionable mode, PowerMultiplier multiplier, boolean maintenance) {
         if (SUPPLEMENTING.get() || !alreadyRunning || !WirelessEnergySettings.runningNetworkFeFallback.get()
                 || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null
                 || !Double.isFinite(requested) || !Double.isFinite(original) || original < 0 || requested <= original) return original;
@@ -33,9 +33,10 @@ public final class WirelessAeFallback {
             var node = c.getMainNode().getNode();
             if (node == null || !node.getLevel().getServer().isSameThread()) return original;
             long tick = node.getLevel().getServer().getTickCount();
+            long revision = service.topologyRevision();
             java.util.function.BooleanSupplier valid = () -> !c.isRemoved() && c.getMainNode().getNode() == node
                     && node.getGrid() == grid && node.isActive() && grid.getEnergyService().isNetworkPowered()
-                    && !service.topologyPaused(tick) && PowerUnit.FE.convertTo(PowerUnit.AE, 1) == rate;
+                    && service.topologyRevision() == revision && PowerUnit.FE.convertTo(PowerUnit.AE, 1) == rate;
             if (!valid.getAsBoolean()) return original;
             var fe = mode == Actionable.SIMULATE ? service.peekEscrow(node) : service.escrow(node);
             var ae = mode == Actionable.SIMULATE ? service.peekAeBalance(node) : service.aeBalance(node);
@@ -43,8 +44,8 @@ public final class WirelessAeFallback {
             if (ae.pendingFeWithdrawal() != 0) return original;
             long needed = ae.neededFe(rawMissing, rate);
             long grant = mode == Actionable.SIMULATE
-                    ? service.preview(tick, needed, WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get())
-                    : needed == 0 ? 0 : service.reserve(tick, needed, WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
+                    ? service.previewAe(tick, needed, WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get(), maintenance)
+                    : needed == 0 ? 0 : service.reserveAe(tick, needed, WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get(), maintenance);
             var inventory = new GuardedEnergyStorage(grid.getStorageService().getInventory(), valid);
             var source = IActionSource.ofMachine(c);
             long owned = Math.min(grant, fe.available());
@@ -64,7 +65,9 @@ public final class WirelessAeFallback {
             ae.convert(fe, Math.min(grant, fe.available()), rate);
             // All external callbacks finish before committing an AE payment. Failed refunds
             // remain FE escrow/uncertain; a callback exception cannot erase paid-but-unreturned AE.
-            if (fe.available() > 0) new BufferedMEStorage(inventory, null, null, fe).endBatch(AppFluxBridge.FE_KEY, source);
+            // A payment from already converted AE needs no storage IO. Retry refunds
+            // only when this call obtained an IO visit, never through a zero-grant path.
+            if (grant > 0 && fe.available() > 0) new BufferedMEStorage(inventory, null, null, fe).endBatch(AppFluxBridge.FE_KEY, source);
             if (!valid.getAsBoolean()) return original;
             double result = combined(requested, original, Math.min(rawMissing, ae.available()), multiplier);
             double cost = multiplier.multiply(result - original);
