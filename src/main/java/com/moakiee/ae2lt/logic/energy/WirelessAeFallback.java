@@ -9,11 +9,12 @@ import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEn
 
 /** Same-call shortfall settlement. Never advertises FE as AE battery capacity. */
 public final class WirelessAeFallback {
+    private static final ThreadLocal<Boolean> SUPPLEMENTING = ThreadLocal.withInitial(() -> false);
     private WirelessAeFallback() {}
 
     public static double supplement(IGrid grid, boolean alreadyRunning, double requested, double original,
                                     Actionable mode, PowerMultiplier multiplier) {
-        if (!alreadyRunning || !WirelessEnergySettings.runningNetworkFeFallback.get()
+        if (SUPPLEMENTING.get() || !alreadyRunning || !WirelessEnergySettings.runningNetworkFeFallback.get()
                 || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null
                 || !Double.isFinite(requested) || !Double.isFinite(original) || original < 0 || requested <= original) return original;
         double rawMissing = multiplier.multiply(requested - original);
@@ -21,6 +22,7 @@ public final class WirelessAeFallback {
         if (!(rawMissing > 0) || !Double.isFinite(rawMissing) || !(rate > 0) || !Double.isFinite(rate)) return original;
         var service = grid.getService(WirelessEnergyGridService.class);
         if (!service.beginSupplement()) return original;
+        SUPPLEMENTING.set(true);
         try {
             AdvancedWirelessOverloadedControllerBlockEntity controller = null;
             for (var candidate : grid.getActiveMachines(AdvancedWirelessOverloadedControllerBlockEntity.class)) {
@@ -71,7 +73,7 @@ public final class WirelessAeFallback {
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().warn("Running-network FE supplement interrupted; retained balances are not replayed", e);
             return original;
-        } finally { service.endSupplement(); }
+        } finally { service.endSupplement(); SUPPLEMENTING.remove(); }
     }
 
     /** Round the returned total conservatively, then charge exactly its represented difference. */

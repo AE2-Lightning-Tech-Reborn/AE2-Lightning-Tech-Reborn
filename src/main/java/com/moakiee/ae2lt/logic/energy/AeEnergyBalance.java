@@ -46,6 +46,7 @@ public final class AeEnergyBalance {
     void convert(EnergyEscrow fe, long amount, double aePerFe) {
         requirePositiveFinite(aePerFe);
         if (amount < 0 || amount > fe.available()) throw new IllegalArgumentException("Unowned FE conversion");
+        if (amount == 0) return;
         var next = stored.add(BigDecimal.valueOf(aePerFe).multiply(BigDecimal.valueOf(amount)));
         if (!Double.isFinite(next.doubleValue())) throw new IllegalArgumentException("AE balance overflow");
         fe.debit(amount);
