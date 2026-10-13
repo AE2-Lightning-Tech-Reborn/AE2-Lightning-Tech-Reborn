@@ -1,11 +1,17 @@
 package com.moakiee.ae2lt.workstation;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.resources.ResourceKey;
@@ -15,15 +21,40 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.storage.LevelResource;
+import net.neoforged.neoforge.common.IOUtilities;
 
 /** Server-thread lifecycle. Does not call PlayerList.placeNewPlayer/remove/save. */
 public final class PigmeeActorManager {
     private final MinecraftServer server;
     final PigmeeActorStore store;
+    private final Path savePath;
+    private final Path runningMarker;
+    private boolean markedRunning;
+    private CompoundTag cleanSnapshot;
 
     PigmeeActorManager(MinecraftServer server) {
         this.server = server;
-        store = server.overworld().getDataStorage().computeIfAbsent(PigmeeActorStore.FACTORY, PigmeeActorStore.KEY);
+        Path data = server.getWorldPath(LevelResource.ROOT).resolve("data");
+        savePath = data.resolve(PigmeeActorStore.KEY + ".dat");
+        runningMarker = data.resolve(PigmeeActorStore.KEY + ".running");
+        var storage = server.overworld().getDataStorage();
+        var loaded = storage.get(PigmeeActorStore.FACTORY, PigmeeActorStore.KEY);
+        if (loaded == null && Files.exists(savePath)) {
+            throw new IllegalStateException("Unreadable Pigmee save; refusing to overwrite " + savePath);
+        }
+        store = loaded == null ? new PigmeeActorStore() : loaded;
+        if (loaded == null) storage.set(PigmeeActorStore.KEY, store);
+        if (Files.exists(runningMarker)) {
+            // Includes dormant records: one could have been activated since the last disk save.
+            for (var record : store.records.values()) {
+                if (record.state != PigmeeActorStore.State.DEAD) {
+                    record.state = PigmeeActorStore.State.QUARANTINED;
+                    record.diagnostic = "Previous process did not complete a verified clean save";
+                }
+            }
+            store.setDirty();
+        }
     }
 
     private void checkThread() {
@@ -47,6 +78,7 @@ public final class PigmeeActorManager {
 
     public PigmeeServerPlayer activate(UUID id) {
         checkThread();
+        markRunning();
         PigmeeServerPlayer existing = store.live.get(id);
         if (existing != null) return existing;
         var record = require(id);
@@ -131,6 +163,32 @@ public final class PigmeeActorManager {
         }
         store.cleanShutdown = true;
         store.setDirty();
+        cleanSnapshot = store.save(new CompoundTag(), server.registryAccess());
+    }
+
+    private void markRunning() {
+        if (markedRunning) return;
+        try {
+            Files.createDirectories(runningMarker.getParent());
+            // Flush a crash guard BEFORE a saved inventory can become an active body.
+            IOUtilities.atomicWrite(runningMarker, out -> out.write(new byte[] {1}));
+            markedRunning = true;
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot establish Pigmee crash guard", failure);
+        }
+    }
+
+    void finishedStopping() {
+        if (cleanSnapshot == null || !store.writable()) return;
+        IOUtilities.waitUntilIOWorkerComplete();
+        try {
+            // SavedData reports write failures only in logs. Read back before releasing the guard.
+            CompoundTag disk = NbtIo.readCompressed(savePath, NbtAccounter.unlimitedHeap());
+            if (cleanSnapshot.equals(disk.getCompound("data"))) Files.deleteIfExists(runningMarker);
+        } catch (IOException failure) {
+            // Keep the guard. Recovery remains quarantined rather than restoring stale inventory.
+            com.mojang.logging.LogUtils.getLogger().error("Pigmee clean save could not be verified", failure);
+        }
     }
 
     public PigmeeServerPlayer active(UUID id) { return store.live.get(id); }
@@ -160,6 +218,6 @@ public final class PigmeeActorManager {
         return new ClientboundPlayerInfoUpdatePacket(EnumSet.of(
                 ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
                 ClientboundPlayerInfoUpdatePacket.Action.UPDATE_GAME_MODE,
-                ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), actors);
+                ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), new ArrayList<ServerPlayer>(actors));
     }
 }

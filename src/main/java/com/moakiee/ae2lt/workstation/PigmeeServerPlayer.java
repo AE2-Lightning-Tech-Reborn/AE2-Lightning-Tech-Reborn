@@ -17,6 +17,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.portal.DimensionTransition;
 
 /** A server-owned body, not a logged-in user or NeoForge's inert FakePlayer. */
@@ -75,6 +76,12 @@ public final class PigmeeServerPlayer extends ServerPlayer {
         doTick();
         bodyTicks++;
         serverLevel().getChunkSource().move(this);
+    }
+
+    @Override
+    protected void checkFallDamage(double deltaY, boolean grounded, BlockState state, BlockPos pos) {
+        // Vanilla ServerPlayer delegates this to movement packets; this body has none.
+        doCheckFallDamage(0, deltaY, 0, grounded);
     }
 
     @Override

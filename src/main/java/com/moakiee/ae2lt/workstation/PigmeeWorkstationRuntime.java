@@ -49,7 +49,10 @@ public final class PigmeeWorkstationRuntime {
     }
 
     @SubscribeEvent
-    public static void stopped(ServerStoppedEvent event) { MANAGERS.remove(event.getServer()); }
+    public static void stopped(ServerStoppedEvent event) {
+        var manager = MANAGERS.remove(event.getServer());
+        if (manager != null) manager.finishedStopping();
+    }
 
     @SubscribeEvent
     public static void login(PlayerEvent.PlayerLoggedInEvent event) {
