@@ -1,0 +1,49 @@
+// Run the JEI suite in tianshu-workstation-test.init.gradle first to create the disposable world.
+// ./gradlew -I scripts/jei-wireless-supply-client-test.init.gradle runClient
+// JEI 19.64 requires -PjeiVersion=19.64.0.453 -Pneo_version=21.1.238 for its test runtime.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/JeiWirelessSupplyExtendedCraftingProbe.java'])
+        tasks.named('compileJdbJava').configure {
+            source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/JeiWirelessSupplyExtendedCraftingProbe.java')
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'top.theillusivec4.curios', 'de.mari_023']
+                    || dep.name in ['jei-238222', 'ae2-jei-integration-1074338'])
+        }
+        if (project.hasProperty('jeiVersion')) {
+            configurations.compileOnly.dependencies.removeIf { it.name == 'jei-238222' }
+            configurations.runtimeOnly.dependencies.removeIf { it.name == 'jei-238222' }
+            dependencies.add('compileOnly', "mezz.jei:jei-1.21.1-neoforge:${project.jeiVersion}")
+            dependencies.add('runtimeOnly', "mezz.jei:jei-1.21.1-neoforge:${project.jeiVersion}")
+        }
+        repositories { maven { url = 'https://api.modrinth.com/maven' } }
+        // Extended Crafting 7.0.9 and Cucumber 8.0.16, NeoForge 1.21.1; test-only dependencies.
+        ['maven.modrinth:extended-crafting:Oxp773uX', 'maven.modrinth:cucumber:8421rqFF'].each { coordinate ->
+            dependencies.add('jdbCompileOnly', coordinate)
+            dependencies.add('runtimeOnly', coordinate)
+        }
+        def probeDirectory = project.file('build/jei-extended-crafting-client-' + (project.findProperty('jeiVersion') ?: 'baseline'))
+        def sourceWorld = project.file('build/tianshu-jei-full-wt/world')
+        def clientWorld = new File(probeDirectory, 'saves/JeiWirelessSupplyQA')
+        neoForge.runs.client {
+            gameDirectory = probeDirectory
+            systemProperty 'ae2lt.extendedCraftingSupplyProbe', 'true'
+            programArguments.addAll '--quickPlaySingleplayer', 'JeiWirelessSupplyQA'
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(probeDirectory, 'extended-crafting-supply-result.txt').delete()
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run the JEI wireless supply GameTests first.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(probeDirectory, 'extended-crafting-supply-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Extended Crafting supply probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}
