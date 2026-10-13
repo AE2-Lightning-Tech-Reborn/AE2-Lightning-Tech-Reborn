@@ -1,0 +1,44 @@
+// Run jei-wireless-supply-test.init.gradle with runGameTestServer first to create the disposable world.
+// ./gradlew -I scripts/jei-wireless-supply-client-test.init.gradle runClient -Pjei_version=<version>
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/JeiWirelessSupplyExtendedCraftingProbe.java'])
+        tasks.named('compileJdbJava').configure {
+            source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/JeiWirelessSupplyExtendedCraftingProbe.java')
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                    'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
+                    || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
+        }
+        // Extended Crafting 6.0.10 and Cucumber 7.0.16, Forge 1.20.1; test-only dependencies.
+        ['maven.modrinth:extended-crafting:NtEZsGjO', 'maven.modrinth:cucumber:xnLznSfT'].each { coordinate ->
+            dependencies.add('jdbCompileOnly', fg.deobf(coordinate))
+            dependencies.add('runtimeOnly', fg.deobf(coordinate))
+        }
+        def probeDirectory = project.file('build/jei-extended-crafting-client-' + project.jei_version)
+        def sourceWorld = project.file('build/jei-wireless-supply-forge/world')
+        def clientWorld = new File(probeDirectory, 'saves/JeiWirelessSupplyQA')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.extendedCraftingSupplyProbe', 'true'
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'JeiWirelessSupplyQA'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(probeDirectory, 'extended-crafting-supply-result.txt').delete()
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run the wireless supply GameTests first.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(probeDirectory, 'extended-crafting-supply-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Extended Crafting supply probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

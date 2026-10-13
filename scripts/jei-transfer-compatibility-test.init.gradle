@@ -3,7 +3,9 @@ allprojects {
     afterEvaluate {
         sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
-            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei'])
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                    'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
+                    || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
         }
         def probeDir = project.layout.buildDirectory.dir('jei-transfer-client-' + project.jei_version).get().asFile
         minecraft.runs.client {

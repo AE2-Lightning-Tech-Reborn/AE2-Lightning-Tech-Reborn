@@ -1,32 +1,31 @@
 package com.moakiee.ae2lt.network.jei;
 
-import com.moakiee.ae2lt.logic.tianshu.terminal.WirelessJeiInventoryPlan;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
-public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items) {
+/** 0 = failed, 1 = offer, 2 = delivered, 3 = crafting confirmation opened. */
+public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items,
+                                           List<ItemStack> craftable) {
+    public WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items) {
+        this(containerId, requestId, status, items, List.of());
+    }
     public void write(FriendlyByteBuf buffer) {
         buffer.writeVarInt(containerId);
         buffer.writeVarInt(requestId);
         buffer.writeVarInt(status);
-        if (items.size() > WirelessJeiInventoryPlan.MAX_ENTRIES) throw new IllegalArgumentException("Too many JEI inputs");
-        buffer.writeVarInt(items.size());
-        for (var stack : items) buffer.writeItem(stack);
+        WirelessJeiSupplyPacket.writeItems(buffer, items);
+        WirelessJeiSupplyPacket.writeItems(buffer, craftable);
     }
 
     public static WirelessJeiSupplyResultPacket read(FriendlyByteBuf buffer) {
         int container = buffer.readVarInt();
         int request = buffer.readVarInt();
         int status = buffer.readVarInt();
-        int size = buffer.readVarInt();
-        if (size < 0 || size > WirelessJeiInventoryPlan.MAX_ENTRIES) throw new IllegalArgumentException("Too many JEI inputs");
-        var stacks = new ArrayList<ItemStack>(size);
-        for (int i = 0; i < size; i++) stacks.add(buffer.readItem());
-        return new WirelessJeiSupplyResultPacket(container, request, status, List.copyOf(stacks));
+        return new WirelessJeiSupplyResultPacket(container, request, status,
+                WirelessJeiSupplyPacket.readItems(buffer), WirelessJeiSupplyPacket.readItems(buffer));
     }
 
     public static void handle(WirelessJeiSupplyResultPacket packet, Supplier<NetworkEvent.Context> context) {

@@ -40,6 +40,19 @@ public final class JeiTransferCompatibilityClientProbe {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void verify() throws Exception {
+        Class<?> transferEntry;
+        try {
+            transferEntry = Class.forName("mezz.jei.common.transfer.RecipeTransferService");
+        } catch (ClassNotFoundException legacyJei) {
+            transferEntry = Class.forName("mezz.jei.common.transfer.RecipeTransferUtil");
+        }
+        boolean wirelessSupplyInjected = Arrays.stream(transferEntry.getDeclaredMethods())
+                .anyMatch(method -> method.getName().contains("ae2lt$supply"));
+        boolean wirelessLibraryPresent = net.minecraftforge.fml.ModList.get().isLoaded("ae2wtlib");
+        if (wirelessSupplyInjected != wirelessLibraryPresent) {
+            throw new AssertionError("Wireless JEI supply injection must follow AE2WTLib availability: "
+                    + "library=" + wirelessLibraryPresent + ", injected=" + wirelessSupplyInjected);
+        }
         Class<?> button = Class.forName("mezz.jei.gui.recipes.RecipeTransferButton");
         // Allocation avoids coupling this probe to JEI's version-dependent constructor.
         var unsafeClass = Class.forName("sun.misc.Unsafe");
