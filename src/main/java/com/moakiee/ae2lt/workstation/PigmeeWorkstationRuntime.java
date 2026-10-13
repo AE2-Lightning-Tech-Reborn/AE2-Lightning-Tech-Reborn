@@ -45,6 +45,19 @@ public final class PigmeeWorkstationRuntime {
         if (enabled()) manager(event.getServer()).afterTick();
     }
 
+    public static boolean drainingShutdown(MinecraftServer server) {
+        var manager = MANAGERS.get(server);
+        return manager != null && manager.drainingShutdown;
+    }
+
+    public static void noteShutdownYield(MinecraftServer server) {
+        var manager = MANAGERS.get(server);
+        if (manager != null && !manager.reportedShutdownYield) {
+            manager.reportedShutdownYield = true;
+            com.mojang.logging.LogUtils.getLogger().info("Pigmee shutdown yielded native unload queue to pending chunk tasks");
+        }
+    }
+
     @SubscribeEvent
     public static void stopping(ServerStoppingEvent event) {
         var manager = MANAGERS.get(event.getServer());
@@ -67,6 +80,14 @@ public final class PigmeeWorkstationRuntime {
     @SubscribeEvent
     public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            var manager = MANAGERS.get(player.server);
+            if (manager != null) manager.controls().releaseOwner(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void beforeDimensionTravel(net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !event.getDimension().equals(player.level().dimension())) {
             var manager = MANAGERS.get(player.server);
             if (manager != null) manager.controls().releaseOwner(player);
         }

@@ -35,6 +35,8 @@ public final class PigmeeActorManager {
     private final Path runningMarker;
     private boolean markedRunning;
     private CompoundTag cleanSnapshot;
+    boolean drainingShutdown;
+    boolean reportedShutdownYield;
 
     PigmeeActorManager(MinecraftServer server) {
         this.server = server;
@@ -219,6 +221,7 @@ public final class PigmeeActorManager {
     }
 
     void shutdown() {
+        drainingShutdown |= !store.live.isEmpty();
         for (var record : new ArrayList<>(store.records.values())) {
             var actor = store.live.get(record.id);
             if (actor != null) {

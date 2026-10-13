@@ -87,9 +87,13 @@ public final class PigmeeRemoteView {
         closed = true;
         var owner = lease.controller;
         if (owner.serverLevel() != level) {
-            // The old ClientLevel has been discarded. Remove unsent old-dimension chunks,
-            // but never send forget/data packets that could touch the new body's world.
-            for (long key : queued) if (owner.connection.chunkSender.isPending(key)) owner.connection.chunkSender.dropChunk(owner, new ChunkPos(key));
+            // Native dimension travel releases before transfer. If a third-party path
+            // skipped that hook, preserve all pending coordinates needed by the new body.
+            // Removing an actually pending entry sends no forget packet.
+            for (long key : queued) {
+                var pos = new ChunkPos(key);
+                if (!owner.getChunkTrackingView().contains(pos) && owner.connection.chunkSender.isPending(key)) owner.connection.chunkSender.dropChunk(owner, pos);
+            }
             queued.clear(); return;
         }
         for (long key : queued) {

@@ -70,6 +70,21 @@ public final class PigmeeControlGameTests {
             h.assertTrue(leases.count() == 0, "leaving supported view range releases control");
             owner.moveTo(origin.x, origin.y, origin.z, 0, 0);
             leases.acquire(owner, id);
+            String oldRemoteFlag = System.getProperty("ae2lt.pigmeeRemoteView");
+            try {
+                System.setProperty("ae2lt.pigmeeRemoteView", "true");
+                owner.moveTo(origin.x + 720, origin.y, origin.z, 0, 0);
+                h.assertTrue(PigmeeRemoteView.allowed(owner, restored), "far position would qualify for a newly acquired remote lease");
+                leases.tick();
+                h.assertTrue(leases.count() == 0 && !restored.hasControlInput(), "local lease cannot silently upgrade to remote range without a subscription");
+            } finally {
+                if (oldRemoteFlag == null) System.clearProperty("ae2lt.pigmeeRemoteView"); else System.setProperty("ae2lt.pigmeeRemoteView", oldRemoteFlag);
+            }
+            owner.moveTo(origin.x, origin.y, origin.z, 0, 0);
+            leases.acquire(owner, id);
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent(owner, net.minecraft.world.level.Level.NETHER));
+            h.assertTrue(leases.count() == 0 && !restored.hasControlInput(), "native travel event releases before world transfer (fixture event, not a connected dimension test)");
+            leases.acquire(owner, id);
             restored.hurt(level.damageSources().genericKill(), 1000);
         });
         h.runAtTickTime(50, () -> {

@@ -29,13 +29,17 @@ public final class PigmeeRemoteClientTests {
     private static final Vec3 BODY = new Vec3(3.5, 100, .5);
     private static final BlockPos MARKER = new BlockPos(723, 100, 3);
     private static int ticks, phase, loadingSamples;
-    private static boolean done;
+    private static boolean done, waitingForNativeStop;
     private static ClientLevel originalLevel;
     private static volatile UUID id, cowId;
     private static volatile ListTag inventory;
     private static volatile Throwable failure;
     private static volatile int stoppedChunkX, cowRuntimeId;
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
+        if (waitingForNativeStop) {
+            if (Minecraft.getInstance().getSingleplayerServer() == null) { waitingForNativeStop = false; Minecraft.getInstance().stop(); }
+            return;
+        }
         if (!Boolean.getBoolean("ae2lt.pigmeeRemoteClientProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
         if (++ticks > 3000) { finish(new AssertionError("timeout phase " + phase)); return; }
@@ -50,11 +54,18 @@ public final class PigmeeRemoteClientTests {
                     mc.getWindow().setWindowed(1100, 800); mc.resizeDisplay();
                     mc.options.gamma().set(1.0); mc.options.fov().set(70); mc.options.renderDistance().set(4);
                     originalLevel = mc.level;
+                    String expectedIdentity = Boolean.getBoolean("ae2lt.pigmeeRemoteRestoreProbe") ? Files.readString(mc.gameDirectory.toPath().resolve("pigmee-remote-identity.txt")) : null;
                     server(() -> {
                         var p = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                         var manager = PigmeeWorkstationRuntime.manager(p.server); var level = p.serverLevel();
                         id = PigmeeRemoteControlItem.bound(p.getMainHandItem());
                         require(id != null && manager.activeCount() == 3, "three-actor copied fixture with binding");
+                        if (expectedIdentity != null) {
+                            require(id.toString().equals(expectedIdentity) && manager.active(id).position().distanceToSqr(TARGET) < .01, "same remote identity and saved position restored across process");
+                            require(manager.controls().count() == 0 && manager.active(id).getHealth() == 20, "restore has no persisted control lease and retains health");
+                            for (UUID actorId : manager.ids()) require(manager.active(actorId) != null && level.getEntity(actorId) == manager.active(actorId), "each of three identities restored exactly once");
+                            System.out.println("PIGMEE_REMOTE_RESTORE_PASS: three unique bodies, same bound far identity/position/health, no persisted lease");
+                        }
                         level.getGameRules().getRule(GameRules.RULE_NATURAL_REGENERATION).set(false, p.server);
                         for (int x = -5; x <= 12; x++) for (int z = -5; z <= 5; z++) level.setBlockAndUpdate(new BlockPos(x, 99, z), Blocks.STONE.defaultBlockState());
                         for (int x = 712; x <= 800; x++) for (int z = -20; z <= 20; z++) {
@@ -67,7 +78,31 @@ public final class PigmeeRemoteClientTests {
                         p.getInventory().setItem(2, new ItemStack(Items.STICK, 17));
                         p.teleportTo(level, BODY.x, BODY.y, BODY.z, java.util.Set.of(), 0, 0);
                         inventory = p.getInventory().save(new ListTag());
-                        var actor = manager.active(id); actor.moveTo(TARGET.x, TARGET.y, TARGET.z, -90, 0); actor.setYHeadRot(-90); actor.setDeltaMovement(Vec3.ZERO);
+                        if (Boolean.getBoolean("ae2lt.pigmeeRemoteTerrainOnly")) {
+                            for (UUID actorId : manager.ids()) manager.deactivate(actorId);
+                            require(manager.activeCount() == 0 && manager.controls().count() == 0, "terrain-only control has no active proxy or view");
+                            if (Boolean.getBoolean("ae2lt.pigmeeRemoteRealPlayerControl")) {
+                                // Separate shutdown negative control, never remote-view acceptance evidence.
+                                p.teleportTo(level, TARGET.x, TARGET.y, TARGET.z, java.util.Set.of(), -90, 0);
+                            }
+                            return;
+                        }
+                        PigmeeServerPlayer actor;
+                        if (Boolean.getBoolean("ae2lt.pigmeeRemoteFreshActivation")) {
+                            // Alternate fixture: native admission at a dormant saved destination,
+                            // without raw long-distance relocation of a live player entity.
+                            manager.deactivate(id);
+                            var position = new ListTag();
+                            position.add(net.minecraft.nbt.DoubleTag.valueOf(TARGET.x));
+                            position.add(net.minecraft.nbt.DoubleTag.valueOf(TARGET.y));
+                            position.add(net.minecraft.nbt.DoubleTag.valueOf(TARGET.z));
+                            manager.store.records.get(id).playerData.put("Pos", position);
+                            actor = manager.activate(id);
+                            actor.setYRot(-90); actor.setXRot(0);
+                        } else {
+                            actor = manager.active(id); actor.moveTo(TARGET.x, TARGET.y, TARGET.z, -90, 0);
+                        }
+                        actor.setYHeadRot(-90); actor.setDeltaMovement(Vec3.ZERO);
                         // Fixture-only remote relocation must update native player tickets now;
                         // raw Entity.moveTo into a non-ticking section cannot wait for its next tick.
                         level.getChunkSource().move(actor);
@@ -77,15 +112,19 @@ public final class PigmeeRemoteClientTests {
                     });
                 }
                 case 1 -> {
-                    if (!mc.isWindowActive() || id == null) return;
-                    require(mc.level.getPlayerByUUID(id) == null && mc.level.getChunkSource().getChunk(45, 0, false) == null, "distant actor/chunk absent before subscription");
+                    if ((!mc.isWindowActive() && !Boolean.getBoolean("ae2lt.pigmeeRemoteShutdownControl")) || id == null) return;
+                    if (!Boolean.getBoolean("ae2lt.pigmeeRemoteRestoreProbe")) Files.writeString(mc.gameDirectory.toPath().resolve("pigmee-remote-identity.txt"), id.toString());
+                    if (!Boolean.getBoolean("ae2lt.pigmeeRemoteRealPlayerControl")) require(mc.level.getPlayerByUUID(id) == null && mc.level.getChunkSource().getChunk(45, 0, false) == null, "distant actor/chunk absent before subscription");
                     if (!Boolean.getBoolean("ae2lt.pigmeeRemoteShutdownControl")) mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
                 }
                 case 2 -> {
                     if (Boolean.getBoolean("ae2lt.pigmeeRemoteShutdownControl")) {
                         require(remoteCount() == 0 && mc.screen == null, "control has no remote view");
-                        done = true; System.out.println("PIGMEE_REMOTE_SHUTDOWN_CONTROL_READY: same remote actor relocation and terrain, no view subscription; require normal process exit");
-                        mc.stop(); return;
+                        done = true; System.out.println("PIGMEE_REMOTE_SHUTDOWN_CONTROL_READY: terrainOnly=" + Boolean.getBoolean("ae2lt.pigmeeRemoteTerrainOnly") + "; realPlayerControl=" + Boolean.getBoolean("ae2lt.pigmeeRemoteRealPlayerControl") + "; no view subscription; require normal process exit");
+                        if (Boolean.getBoolean("ae2lt.pigmeeNativeStopControl")) {
+                            waitingForNativeStop = true; server(() -> mc.getSingleplayerServer().halt(false));
+                        } else mc.stop();
+                        return;
                     }
                     server(() -> {
                         var p = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID()); var manager = PigmeeWorkstationRuntime.manager(p.server);
