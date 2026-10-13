@@ -229,6 +229,31 @@ public final class WirelessEnergyAdmissionGameTests {
             h.runAfterDelay(10, () -> { h.assertTrue(f.machine.received == 0 && !f.bound(h), "duplicate event probed a manual generation"); h.succeed(); });
         });
     }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void fullManualHistoryRemainsClosedAfterCapacityIsFreedAndReloaded(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            // An isolated SavedData table avoids saturating other concurrently running tests.
+            var data = WirelessEnergyAdmissions.load(new CompoundTag(), h.getLevel().registryAccess());
+            for (int i = 0; i < 8192; i++) data.manualOverride(
+                    new WirelessEnergyEndpoints.Location(h.getLevel().dimension(), new BlockPos(60000 + i, 64, 60000)),
+                    f.player.getUUID(), f.frequency, Direction.NORTH);
+            data.manualOverride(new WirelessEnergyEndpoints.Location(h.getLevel().dimension(), f.pos),
+                    f.player.getUUID(), f.frequency, Direction.NORTH);
+            var saved = data.save(new CompoundTag(), h.getLevel().registryAccess());
+            h.assertTrue(saved.getBoolean("historyIncomplete"), "full history silently lost a manual exclusion");
+            // Simulate removal of a different historical generation, then restart the table.
+            saved.getList("attempts", net.minecraft.nbt.Tag.TAG_COMPOUND).remove(0);
+            var restored = WirelessEnergyAdmissions.load(saved, h.getLevel().registryAccess());
+            restored.queue(f.player, f.frequency, h.getLevel(), f.pos, Direction.NORTH);
+            restored.tick(h.getLevel().getServer());
+            h.assertTrue(restored.inspect(h.getLevel(), f.pos, f.player.getUUID()) == null
+                    && f.machine.received == 0, "freed capacity allowed an unrecorded manual generation to probe");
+            h.assertTrue(restored.save(new CompoundTag(), h.getLevel().registryAccess()).getBoolean("historyIncomplete"),
+                    "overflow protection was not durable");
+            h.succeed();
+        });
+    }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 1600)
     public static void repeatedDiskChunkUnloadReloadPreservesBindingWithoutProbe(GameTestHelper h) {
         var f = fixture(h);

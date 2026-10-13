@@ -49,6 +49,9 @@ public final class WirelessEnergyAdmissions extends SavedData {
     private final Map<WirelessEnergyEndpoints.Location, Attempt> attempts = new LinkedHashMap<>();
     private final ArrayDeque<Attempt> pending = new ArrayDeque<>();
     private final Map<BlockEntity, Attempt> observing = new java.util.IdentityHashMap<>();
+    // If bounded history cannot record a manual generation, no later placement can
+    // safely be distinguished from that generation. Persistently fail closed.
+    private boolean historyIncomplete;
     private boolean ticking;
     private static MinecraftServer owner;
     private static WirelessEnergyAdmissions instance;
@@ -75,7 +78,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
     /** Package-visible so the server GameTests can use a fake player without enabling fake-player placement hooks. */
     void queue(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, @Nullable Direction preferred) {
         var location = new WirelessEnergyEndpoints.Location(level.dimension(), pos);
-        if (attempts.containsKey(location) || attempts.size() >= WORLD_LIMIT
+        if (historyIncomplete || attempts.containsKey(location) || attempts.size() >= WORLD_LIMIT
                 || WirelessEnergyEndpoints.get(level.getServer()).hasEndpoint(location)
                 || !allowed(player, frequency, level, pos)) return;
         var be = WirelessEnergyEndpoints.loadedBlockEntity(level, pos);
@@ -128,11 +131,19 @@ public final class WirelessEnergyAdmissions extends SavedData {
     }
     void manualOverride(WirelessEnergyEndpoints.Location location, UUID actor, int frequency, Direction face) {
         var a = attempts.get(location);
-        if (a == null && attempts.size() < WORLD_LIMIT) {
+        if (a == null && attempts.size() >= WORLD_LIMIT) {
+            if (!historyIncomplete) {
+                historyIncomplete = true;
+                setDirty();
+                com.mojang.logging.LogUtils.getLogger().warn("Wireless FE admission history is full; new automatic admissions are disabled to preserve manual-generation exclusions");
+            }
+            return;
+        }
+        if (a == null) {
             a = new Attempt(UUID.randomUUID(), actor, location, frequency, face);
             attempts.put(location, a);
         }
-        if (a != null) finish(a, State.MANUAL);
+        finish(a, State.MANUAL);
     }
     private void finish(Attempt a, State state) {
         observing.remove(a.expected);
@@ -202,6 +213,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
     }
     static WirelessEnergyAdmissions load(CompoundTag root, HolderLookup.Provider registries) {
         var data = new WirelessEnergyAdmissions();
+        data.historyIncomplete = root.getBoolean("historyIncomplete");
         var list = root.getList("attempts", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             var row = list.getCompound(i);
@@ -219,6 +231,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
         return data;
     }
     @Override public CompoundTag save(CompoundTag root, HolderLookup.Provider registries) {
+        root.putBoolean("historyIncomplete", historyIncomplete);
         var list = new ListTag();
         for (var a : attempts.values()) {
             var row = new CompoundTag();
