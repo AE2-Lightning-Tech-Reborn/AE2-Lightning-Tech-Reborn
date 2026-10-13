@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.UuidArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,6 +75,19 @@ public final class PigmeeWorkstationRuntime {
             source.sendSuccess(() -> Component.literal("P0 survival body: " + actor.getUUID()), false);
             return 1;
         }));
+        root.then(Commands.literal("activate_fumo").then(Commands.argument("pos", BlockPosArgument.blockPos())
+                .executes(context -> {
+                    try {
+                        var actor = PigmeeFumoActivation.activate(context.getSource().getPlayerOrException(),
+                                BlockPosArgument.getLoadedBlockPos(context, "pos"));
+                        context.getSource().sendSuccess(() -> Component.literal(
+                                "Experimental Fumo conversion (controller cost not implemented): " + actor.getUUID()), false);
+                        return 1;
+                    } catch (IllegalArgumentException | IllegalStateException failed) {
+                        context.getSource().sendFailure(Component.literal(failed.getMessage()));
+                        return 0;
+                    }
+                })));
         root.then(Commands.literal("list").executes(context -> {
             var manager = manager(context.getSource().getServer());
             for (UUID id : manager.ids()) {

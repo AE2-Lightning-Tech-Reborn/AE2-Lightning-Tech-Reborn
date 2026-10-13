@@ -36,7 +36,7 @@ public final class PigmeeP0GameTests {
         if (event.getEntity() instanceof PigmeeServerPlayer actor) PLAYER_TICKS.merge(actor.getUUID(), 1, Integer::sum);
     }
 
-    @GameTest(template = "empty", timeoutTicks = 700)
+    @GameTest(template = "empty", timeoutTicks = 900)
     public static void remoteBodyLifecycle(GameTestHelper helper) {
         var level = helper.getLevel();
         var server = level.getServer();
@@ -68,8 +68,9 @@ public final class PigmeeP0GameTests {
             helper.assertTrue(a.hurt(a.damageSources().generic(), 6), "native damage must be accepted after spawn protection");
             a.walkFor(160);
         });
-        helper.runAtTickTime(240, () -> {
-            helper.assertTrue(a.getX() > x + 16, "server physics must cross at least one chunk without client input packets: " + a.position());
+        helper.runAtTickTime(240, () -> a.walkFor(160));
+        helper.runAtTickTime(400, () -> {
+            helper.assertTrue(a.getX() > x + 48, "server physics must cross at least three chunks without client input packets: " + a.position());
             helper.assertTrue(a.bodyTicks() - start[0] == level.getGameTime() - start[1], "exactly one body tick per server tick");
             helper.assertTrue(PLAYER_TICKS.get(a.getUUID()) == a.bodyTicks(), "native PlayerTickEvent must run once per body tick");
             helper.assertTrue(a.tickCount == a.bodyTicks(), "world tickCount must not be incremented twice");
@@ -92,10 +93,15 @@ public final class PigmeeP0GameTests {
             helper.assertTrue(restored.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET) && restored.hasEffect(MobEffects.NIGHT_VISION), "restore equipment/effects");
             verifyStoreFailures(helper, manager);
             manager.deactivate(a.getUUID());
+            b.moveTo(b.getX(), b.getY() + 8, b.getZ(), b.getYRot(), b.getXRot());
+            b.setDeltaMovement(Vec3.ZERO);
+        });
+        helper.runAtTickTime(435, () -> {
+            helper.assertTrue(b.getHealth() < 20 && b.isAlive(), "native fall damage without movement packets");
             b.hurt(b.damageSources().fellOutOfWorld(), 1000);
             b.die(b.damageSources().fellOutOfWorld()); // Duplicate callback must not duplicate native drops.
         });
-        helper.runAtTickTime(245, () -> {
+        helper.runAtTickTime(440, () -> {
             helper.assertTrue(manager.activeCount() == 0, "dead actor releases runtime body");
             helper.assertTrue(manager.status(b.getUUID()).contains("state=DEAD"), "death persists a tombstone");
             int diamonds = level.getEntitiesOfClass(ItemEntity.class, new AABB(x - 5, y - 3, z - 5, x + 8, y + 4, z + 9)).stream()
@@ -105,13 +111,13 @@ public final class PigmeeP0GameTests {
             try { manager.activate(b.getUUID()); } catch (IllegalStateException expected) { rejected = true; }
             helper.assertTrue(rejected, "dead identity must not respawn with a second inventory");
         });
-        helper.runAtTickTime(440, () -> {
+        helper.runAtTickTime(640, () -> {
             helper.assertTrue(!level.getChunkSource().chunkMap.getDistanceManager().hasPlayersNearby(origin.toLong()), "all player loading sources released");
             helper.assertTrue(!level.getChunkSource().chunkMap.getDistanceManager().inEntityTickingRange(origin.toLong()), "no leaked entity-ticking ticket");
             helper.assertTrue(level.getChunkSource().getChunkNow(origin.x, origin.z) == null, "remote origin chunk actually unloads");
             helper.assertTrue(server.getPlayerList().getPlayerCount() == 0, "no login-list pollution");
             PLAYER_TICKS.clear();
-            System.out.println("PIGMEE_P0_PASS: remote movement, single tick, isolated state, native damage/death, restore, overlapping tickets and actual unload");
+            System.out.println("PIGMEE_P0_PASS: 400 ticks with no connected players, movement across three chunks, native fall damage, single tick, isolated state, native damage/death, restore, overlapping tickets and actual unload");
             helper.succeed();
         });
     }

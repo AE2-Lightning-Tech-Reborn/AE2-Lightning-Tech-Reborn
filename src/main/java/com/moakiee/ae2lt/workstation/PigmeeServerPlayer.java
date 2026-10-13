@@ -23,15 +23,17 @@ import net.minecraft.world.level.portal.DimensionTransition;
 /** A server-owned body, not a logged-in user or NeoForge's inert FakePlayer. */
 public final class PigmeeServerPlayer extends ServerPlayer {
     private final UUID owner;
+    private final PigmeeVariant variant;
     private int walkingTicks;
     private boolean deathSettled;
     private long bodyTicks;
 
-    PigmeeServerPlayer(ServerLevel level, UUID id, UUID owner) {
+    PigmeeServerPlayer(ServerLevel level, UUID id, UUID owner, PigmeeVariant variant) {
         super(level.getServer(), level,
                 new GameProfile(id, "[Pigmee_" + id.toString().substring(0, 6) + "]"),
                 ClientInformation.createDefault());
         this.owner = owner;
+        this.variant = variant;
         this.connection = new LocalListener(this);
     }
 
@@ -41,6 +43,7 @@ public final class PigmeeServerPlayer extends ServerPlayer {
         return pos;
     }
 
+    public PigmeeVariant variant() { return variant; }
     public UUID owner() { return owner; }
     public long bodyTicks() { return bodyTicks; }
     public boolean deathSettled() { return deathSettled; }

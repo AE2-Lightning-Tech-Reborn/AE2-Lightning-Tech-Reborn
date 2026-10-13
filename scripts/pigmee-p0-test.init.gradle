@@ -10,12 +10,12 @@ allprojects {
         }
         neoForge.runs.gameTestServer {
             gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('pigmeeGameTestDirectory').getOrElse('pigmee-p0-gametest')).get().asFile
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_pigmee_p0'
+            systemProperty 'neoforge.enabledGameTestNamespaces', providers.gradleProperty('pigmeeTestNamespace').getOrElse('ae2lt_pigmee_p0')
             systemProperty 'ae2lt.pigmeeP0', 'true'
             jvmArguments.add '-Xmx1536m'
         }
         neoForge.runs.server {
-            gameDirectory = project.layout.buildDirectory.dir('pigmee-p0-restart').get().asFile
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('pigmeeRestartDirectory').getOrElse('pigmee-p0-restart')).get().asFile
             systemProperty 'ae2lt.pigmeeP0', 'true'
             systemProperty 'ae2lt.pigmeeRestartPhase', providers.gradleProperty('pigmeeRestartPhase').getOrElse('')
             jvmArguments.add '-Xmx1536m'

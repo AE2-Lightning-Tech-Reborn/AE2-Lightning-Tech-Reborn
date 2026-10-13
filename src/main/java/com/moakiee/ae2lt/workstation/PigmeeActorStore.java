@@ -18,13 +18,16 @@ final class PigmeeActorStore extends SavedData {
     static final class Record {
         final UUID id;
         final UUID owner;
+        final PigmeeVariant variant;
+        CompoundTag origin;
         State state;
         CompoundTag playerData;
         String diagnostic = "";
 
-        Record(UUID id, UUID owner, State state, CompoundTag playerData) {
+        Record(UUID id, UUID owner, PigmeeVariant variant, State state, CompoundTag playerData) {
             this.id = id;
             this.owner = owner;
+            this.variant = variant;
             this.state = state;
             this.playerData = playerData;
         }
@@ -40,17 +43,19 @@ final class PigmeeActorStore extends SavedData {
     private static PigmeeActorStore load(CompoundTag tag, HolderLookup.Provider registries) {
         PigmeeActorStore store = new PigmeeActorStore();
         try {
-            if (tag.getInt("Schema") != 1) throw new IllegalArgumentException("unsupported schema");
+            if (tag.getInt("Schema") != 1 && tag.getInt("Schema") != 2) throw new IllegalArgumentException("unsupported schema");
             for (Tag entry : tag.getList("Actors", Tag.TAG_COMPOUND)) {
                 CompoundTag row = (CompoundTag) entry;
                 UUID id = row.getUUID("Id");
                 UUID owner = row.getUUID("Owner");
                 if (id.equals(owner)) throw new IllegalArgumentException("owner identity reused");
-                Record record = new Record(id, owner, State.valueOf(row.getString("State")), row.getCompound("Player").copy());
+                Record record = new Record(id, owner, tag.getInt("Schema") == 1 ? PigmeeVariant.NORMAL : PigmeeVariant.valueOf(row.getString("Variant")),
+                        State.valueOf(row.getString("State")), row.getCompound("Player").copy());
                 if (!record.playerData.hasUUID("UUID") || !id.equals(record.playerData.getUUID("UUID"))) {
                     throw new IllegalArgumentException("player identity mismatch");
                 }
                 record.diagnostic = row.getString("Diagnostic");
+                if (row.contains("Origin", Tag.TAG_COMPOUND)) record.origin = row.getCompound("Origin").copy();
                 if (record.state == State.ACTIVE && !tag.getBoolean("CleanShutdown")) {
                     record.state = State.QUARANTINED;
                     record.diagnostic = "Unclean shutdown: inspect world and inventory before administrator recovery";
@@ -80,13 +85,15 @@ final class PigmeeActorStore extends SavedData {
         if (unreadable != null) return unreadable.copy();
         // Serialize on world save, not every tick. Snapshots cannot be spent as inventories.
         live.forEach((id, player) -> snapshot(records.get(id), player));
-        tag.putInt("Schema", 1);
+        tag.putInt("Schema", 2);
         tag.putBoolean("CleanShutdown", cleanShutdown);
         ListTag actors = new ListTag();
         for (Record record : records.values()) {
             CompoundTag row = new CompoundTag();
             row.putUUID("Id", record.id);
             row.putUUID("Owner", record.owner);
+            row.putString("Variant", record.variant.name());
+            if (record.origin != null) row.put("Origin", record.origin.copy());
             row.putString("State", record.state.name());
             row.putString("Diagnostic", record.diagnostic);
             row.put("Player", record.playerData.copy());

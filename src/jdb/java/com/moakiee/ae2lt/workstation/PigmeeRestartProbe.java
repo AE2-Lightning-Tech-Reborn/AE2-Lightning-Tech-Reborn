@@ -41,7 +41,9 @@ public final class PigmeeRestartProbe {
                         level.setBlockAndUpdate(new BlockPos(x, 95, z), Blocks.STONE.defaultBlockState());
                     }
                     var a = manager.create(OWNER, level, new Vec3(12004.5, 96, 12002.5), -90);
-                    var b = manager.create(OWNER, level, new Vec3(12004.5, 96, 12005.5), -90);
+                    var b = manager.activate(manager.prepare(OWNER, level, new Vec3(12004.5, 96, 12005.5), -90, PigmeeVariant.HYPERDIMENSIONAL).id);
+                    var c = manager.activate(manager.prepare(OWNER, level, new Vec3(12008.5, 96, 12005.5), -90, PigmeeVariant.CREATIVE).id);
+                    c.getInventory().setItem(0, new ItemStack(Items.LAPIS_LAZULI, 31));
                     a.getInventory().setItem(0, new ItemStack(Items.EMERALD, 13));
                     a.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
                     a.setHealth(11);
@@ -50,17 +52,17 @@ public final class PigmeeRestartProbe {
                     a.walkFor(30);
                 }
                 if (ticks == 100) {
-                    check(manager.activeCount() == 2, "two live bodies before real save");
+                    check(manager.activeCount() == 3, "three live bodies before real save");
                     String ids = manager.ids().stream().sorted(Comparator.naturalOrder()).map(UUID::toString)
                             .reduce((a, b) -> a + "\n" + b).orElseThrow();
                     Files.writeString(server.getWorldPath(LevelResource.ROOT).resolve("pigmee-probe-ids.txt"), ids);
-                    System.out.println("PIGMEE_RESTART_PREPARE_PASS: two independent bodies; stopping for real disk save");
+                    System.out.println("PIGMEE_RESTART_PREPARE_PASS: three independent variant bodies; stopping for real disk save");
                     server.halt(false);
                 }
             } else if (phase.equals("verify")) {
                 if (ticks == 100) {
                     var ids = Files.readAllLines(server.getWorldPath(LevelResource.ROOT).resolve("pigmee-probe-ids.txt"));
-                    check(manager.ids().size() == 2 && manager.activeCount() == 2, "exactly two restored bodies");
+                    check(manager.ids().size() == 3 && manager.activeCount() == 3, "exactly three restored bodies");
                     for (String saved : ids) {
                         UUID id = UUID.fromString(saved);
                         var actor = manager.active(id);
@@ -73,14 +75,48 @@ public final class PigmeeRestartProbe {
                         if (stack.is(Items.EMERALD)) {
                             check(stack.getCount() == 13 && actor.getHealth() == 11 && actor.getFoodData().getFoodLevel() == 9, "inventory, health, hunger survive real restart");
                             check(actor.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "equipment survives real restart");
-                        } else check(stack.is(Items.REDSTONE) && stack.getCount() == 23 && actor.getHealth() == 20, "second actor state remains separate");
+                            check(actor.variant() == PigmeeVariant.NORMAL && !actor.isCreative(), "normal variant survives restart");
+                        } else if (stack.is(Items.REDSTONE)) {
+                            check(stack.getCount() == 23 && actor.getHealth() == 20, "second actor state remains separate");
+                            check(actor.variant() == PigmeeVariant.HYPERDIMENSIONAL && !actor.isCreative(), "hyper variant stays survival");
+                        } else {
+                            check(stack.is(Items.LAPIS_LAZULI) && stack.getCount() == 31, "third inventory separate");
+                            check(actor.variant() == PigmeeVariant.CREATIVE && actor.isCreative(), "creative variant survives restart");
+                        }
                         check(!Files.exists(server.getWorldPath(LevelResource.PLAYER_DATA_DIR).resolve(id + ".dat")), "no parallel vanilla playerdata save");
                     }
                     manager.ids().forEach(manager::deactivate);
                 }
                 if (ticks == 220) {
                     check(manager.activeCount() == 0, "all restored bodies deactivated");
-                    System.out.println("PIGMEE_RESTART_VERIFY_PASS: stable IDs, one body each, separate inventory/equipment/health/food, ticks, no vanilla playerdata");
+                    System.out.println("PIGMEE_RESTART_VERIFY_PASS: three variants, stable IDs, one body each, separate inventory/equipment/health/food, ticks, no vanilla playerdata");
+                    server.halt(false);
+                }
+            } else if (phase.equals("crash")) {
+                if (ticks == 1) {
+                    var ids = Files.readAllLines(server.getWorldPath(LevelResource.ROOT).resolve("pigmee-probe-ids.txt"));
+                    check(ids.size() == 3 && manager.ids().size() == 3 && manager.activeCount() == 0,
+                            "crash injection only follows the disposable three-actor restart fixture");
+                    var actor = manager.activate(UUID.fromString(ids.getFirst()));
+                    actor.getInventory().setItem(0, new ItemStack(Items.GOLD_INGOT, 64));
+                }
+                if (ticks == 30) {
+                    check(Files.exists(server.getWorldPath(LevelResource.ROOT).resolve("data/ae2lt_pigmee_p0.running")),
+                            "crash guard durable before mutable inventory exists");
+                    System.out.println("PIGMEE_CRASH_INJECTION_EXPECTED_EXIT_86: terminate only this disposable probe JVM without save hooks");
+                    System.out.flush();
+                    Runtime.getRuntime().halt(86);
+                }
+            } else if (phase.equals("verify_crash")) {
+                if (ticks == 30) {
+                    check(manager.ids().size() == 3 && manager.activeCount() == 0, "hard crash restores no spendable body");
+                    for (UUID id : manager.ids()) {
+                        check(manager.status(id).contains("QUARANTINED"), "even stale dormant snapshots remain quarantined");
+                        boolean denied = false;
+                        try { manager.activate(id); } catch (IllegalStateException expected) { denied = true; }
+                        check(denied && level.getEntity(id) == null, "quarantine cannot silently reactivate old inventory");
+                    }
+                    System.out.println("PIGMEE_CRASH_RECOVERY_PASS: real hard-stop guard blocks all stale inventories and duplicate bodies");
                     server.halt(false);
                 }
             } else throw new IllegalArgumentException("Unknown restart phase " + phase);

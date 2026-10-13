@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
@@ -19,7 +20,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.GameType;
+
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.common.IOUtilities;
@@ -63,17 +64,30 @@ public final class PigmeeActorManager {
     }
 
     public PigmeeServerPlayer create(UUID owner, ServerLevel level, Vec3 pos, float yaw) {
+        return activate(prepare(owner, level, pos, yaw, PigmeeVariant.NORMAL).id);
+    }
+
+    PigmeeActorStore.Record prepare(UUID owner, ServerLevel level, Vec3 pos, float yaw, PigmeeVariant variant) {
         checkThread();
         if (store.records.size() >= 8) throw new IllegalStateException("P0 limit: eight identities per test world");
-        UUID id = UUID.randomUUID();
-        PigmeeServerPlayer actor = new PigmeeServerPlayer(level, id, owner);
+        markRunning();
+        UUID id;
+        do { id = UUID.randomUUID(); } while (id.equals(owner) || store.records.containsKey(id));
+        PigmeeServerPlayer actor = new PigmeeServerPlayer(level, id, owner, variant);
         actor.moveTo(pos.x, pos.y, pos.z, yaw, 0);
-        actor.setGameMode(GameType.SURVIVAL);
-        store.records.put(id, new PigmeeActorStore.Record(id, owner, PigmeeActorStore.State.DORMANT,
-                actor.saveWithoutId(new CompoundTag())));
+        actor.setGameMode(variant.gameType());
+        if (actor.gameMode.getGameModeForPlayer() != variant.gameType()) {
+            actor.getAdvancements().stopListening();
+            actor.getTextFilter().leave();
+            throw new IllegalStateException("Game mode change denied by native hook");
+        }
+        var record = new PigmeeActorStore.Record(id, owner, variant, PigmeeActorStore.State.DORMANT,
+                actor.saveWithoutId(new CompoundTag()));
+        store.records.put(id, record);
         actor.getAdvancements().stopListening();
         actor.getTextFilter().leave();
-        return activate(id);
+        store.setDirty();
+        return record;
     }
 
     public PigmeeServerPlayer activate(UUID id) {
@@ -92,19 +106,39 @@ public final class PigmeeActorManager {
         ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION,
                 ResourceLocation.parse(record.playerData.getString("Dimension"))));
         if (level == null) throw new IllegalStateException("Saved dimension unavailable");
-        PigmeeServerPlayer actor = new PigmeeServerPlayer(level, id, record.owner);
+        if (record.origin != null) {
+            ServerLevel originLevel = server.getLevel(ResourceKey.create(Registries.DIMENSION,
+                    ResourceLocation.parse(record.origin.getString("Dimension"))));
+            if (originLevel == null || PigmeeVariant.fromBlock(originLevel.getBlockState(
+                    BlockPos.of(record.origin.getLong("Pos")))) != null) {
+                record.state = PigmeeActorStore.State.QUARANTINED;
+                record.diagnostic = "Activation source still present or dimension missing; inspect before recovery";
+                store.setDirty();
+                throw new IllegalStateException(record.diagnostic);
+            }
+        }
+        PigmeeServerPlayer actor = new PigmeeServerPlayer(level, id, record.owner, record.variant);
         actor.load(record.playerData.copy());
         if (!actor.isAlive()) throw new IllegalStateException("Saved actor is dead");
-        actor.setGameMode(GameType.SURVIVAL); // P0 only; three variants arrive with P1.
-        actor.setDeltaMovement(Vec3.ZERO);
-        actor.initInventoryMenu();
-        sendProfile(actor);
-        level.addNewPlayer(actor); // Entity tracking installs native DistanceManager player tickets.
-        if (level.getEntity(id) != actor) {
+        actor.setGameMode(record.variant.gameType());
+        if (actor.gameMode.getGameModeForPlayer() != record.variant.gameType()) {
             actor.getAdvancements().stopListening();
             actor.getTextFilter().leave();
+            throw new IllegalStateException("Game mode change denied by native hook");
+        }
+        actor.setDeltaMovement(Vec3.ZERO);
+        actor.initInventoryMenu();
+        try {
+            sendProfile(actor);
+            level.addNewPlayer(actor); // Tracking installs native DistanceManager player tickets.
+            if (level.getEntity(id) != actor) throw new IllegalStateException("EntityJoinLevelEvent denied actor");
+        } catch (RuntimeException | Error failed) {
+            actor.detach();
+            record.state = PigmeeActorStore.State.QUARANTINED;
+            record.diagnostic = "World admission failed: " + failed.getMessage();
+            store.setDirty();
             server.getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(id)));
-            throw new IllegalStateException("EntityJoinLevelEvent denied actor");
+            throw failed;
         }
         store.live.put(id, actor);
         record.state = PigmeeActorStore.State.ACTIVE;
@@ -196,7 +230,7 @@ public final class PigmeeActorManager {
     public List<UUID> ids() { return List.copyOf(store.records.keySet()); }
     public String status(UUID id) {
         var record = require(id);
-        return id + " owner=" + record.owner + " state=" + record.state + " " + record.diagnostic;
+        return id + " owner=" + record.owner + " variant=" + record.variant + " state=" + record.state + " " + record.diagnostic;
     }
 
     private PigmeeActorStore.Record require(UUID id) {
