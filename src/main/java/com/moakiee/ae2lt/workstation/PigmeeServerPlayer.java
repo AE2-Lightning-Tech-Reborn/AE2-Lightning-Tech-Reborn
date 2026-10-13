@@ -28,6 +28,8 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     private int walkingTicks;
     private int controlFlags;
     private boolean deathSettled;
+    private boolean processingDeath;
+    private boolean deactivationRequested;
     private net.minecraft.resources.ResourceLocation deathDimension;
     private Vec3 deathPosition;
     private Component deathReason;
@@ -54,6 +56,9 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     public UUID owner() { return owner; }
     public long bodyTicks() { return bodyTicks; }
     public boolean deathSettled() { return deathSettled; }
+    boolean processingDeath() { return processingDeath; }
+    void requestDeactivation() { deactivationRequested = true; }
+    boolean deactivationRequested() { return deactivationRequested; }
 
     @Override
     public boolean isFakePlayer() { return true; }
@@ -118,17 +123,23 @@ public final class PigmeeServerPlayer extends ServerPlayer {
 
     @Override
     public void die(DamageSource cause) {
-        if (deathSettled) return;
-        var reason = getCombatTracker().getDeathMessage().copy();
-        var name = getCustomName() == null ? getDisplayName().copy() : getCustomName().copy();
-        long time = level().getGameTime();
-        super.die(cause);
-        // Vanilla sets lastDeathLocation only after the cancellable death hook and drops.
-        deathSettled = getLastDeathLocation().isPresent() && isDeadOrDying();
-        if (deathSettled) {
-            deathDimension = getLastDeathLocation().orElseThrow().dimension().location();
-            deathPosition = position();
-            deathReason = reason; deathName = name; deathTime = time;
+        // NeoForge death/drop hooks run synchronously and may call die again.
+        if (deathSettled || processingDeath) return;
+        processingDeath = true;
+        try {
+            var reason = getCombatTracker().getDeathMessage().copy();
+            var name = getCustomName() == null ? getDisplayName().copy() : getCustomName().copy();
+            long time = level().getGameTime();
+            super.die(cause);
+            // Vanilla sets lastDeathLocation only after the cancellable death hook and drops.
+            deathSettled = getLastDeathLocation().isPresent() && isDeadOrDying();
+            if (deathSettled) {
+                deathDimension = getLastDeathLocation().orElseThrow().dimension().location();
+                deathPosition = position();
+                deathReason = reason; deathName = name; deathTime = time;
+            }
+        } finally {
+            processingDeath = false;
         }
     }
 

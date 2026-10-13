@@ -151,3 +151,12 @@ NBT `getList`/`getCompound` 的宽容读取可能把错误类型当作空值。�
 第二个真实客户端 JVM 的 `PIGMEE_DEATH_CLIENT_VERIFY_PASS` 已通过：DEAD 身体不恢复，其他两只唯一恢复；同一事件 UUID、精确/方块坐标保留；登录无历史死亡重播，实际遥控器包可查询记录且真人仍存活。
 
 `pigmee-p0-schema3-final` 的 1 个必需 GameTest 已通过：schema 3 死亡记录读写及 schema 1/2 迁移、普通停驻无死亡记录、死亡同 tick 停驻仍写 DEAD，并回归全部 640 tick P0 生命周期、无真人跨三块与最终实际卸载。随后本地 jar 打包成功。
+
+
+## 死亡原生事件重入修复
+
+独立审查以 `46aa9960` 原始代码复现两处边界：`LivingDeathEvent` 内同步再次 `die()` 会触发两次掉落/经验回调（7 钻石仍一份，但 10 级经验由应有 70 变成 140）；死亡事件内 `deactivate()` 会先保存 DORMANT，导致外层确认死亡脱离 live 跟踪而漏记录。此前客户端的“重复调用”只在第一次原生调用返回后进行，不能覆盖这两处。
+
+修复引入独立的 `processingDeath` 门槛，整个原生死亡调用期间拒绝重入；事件中的停驻记为延后请求，确认死亡优先结算 DEAD，取消且仍存活则正常停驻，异常移除保持 QUARANTINED。防止在掉落结算中途保存可再次启用的库存。
+
+`PigmeeDeathReentryTests` 基于独立审查反例扩展，在 `pigmee-death-reentry-fix2` 的 **7 个必需 GameTest 全部通过**：普通死亡、死亡 hook 重入/停驻、掉落 hook 重入/停驻、取消后停驻并恢复同一库存/生命/经验，以及取消后异常移除仍隔离。五个确认死亡场景均只有一次原生死亡/掉落/XP 回调、7 钻石、70 XP，并保留 DEAD 与死亡记录。运行命令加 `-PpigmeeTestNamespace=ae2lt_pigmee_death -PpigmeeGameTestDirectory=<新目录>`。

@@ -156,6 +156,9 @@ public final class PigmeeActorManager {
         var record = require(id);
         if (record.state != PigmeeActorStore.State.ACTIVE) return;
         var actor = store.live.get(id);
+        // A native event callback may request a stop before drop/death settlement returns.
+        // Never serialize that live inventory as a spendable dormant snapshot mid-death.
+        if (actor != null && actor.processingDeath()) { actor.requestDeactivation(); return; }
         if (actor != null && actor.deathSettled()) settleDeath(actor);
         else detach(record, PigmeeActorStore.State.DORMANT);
     }
@@ -196,7 +199,7 @@ public final class PigmeeActorManager {
                 var record = require(actor.getUUID());
                 record.diagnostic = "Unexpected removal; manual inspection required";
                 detach(record, PigmeeActorStore.State.QUARANTINED);
-            }
+            } else if (actor.deactivationRequested()) deactivate(actor.getUUID());
         }
     }
 
