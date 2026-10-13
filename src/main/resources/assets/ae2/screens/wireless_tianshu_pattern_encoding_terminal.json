@@ -1,4 +1,5 @@
 {
+  "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md",
   "$schema": "schema.json",
   "includes": [
     "terminals/tianshu_pattern_encoding_terminal.json",

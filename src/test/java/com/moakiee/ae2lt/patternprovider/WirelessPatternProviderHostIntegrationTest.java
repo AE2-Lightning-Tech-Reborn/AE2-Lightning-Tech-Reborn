@@ -23,7 +23,7 @@ class WirelessPatternProviderHostIntegrationTest {
                         + "WirelessConnectorUsePacket.java");
         var renderer = read(
                 "src/main/java/com/moakiee/ae2lt/client/"
-                        + "WirelessConnectorRenderer.java");
+                        + "render/WirelessConnectorRenderer.java");
         var mod = read(
                 "src/main/java/com/moakiee/ae2lt/AE2LightningTech.java");
 

@@ -6,6 +6,7 @@ import java.util.List;
 import appeng.core.definitions.AEParts;
 import com.moakiee.ae2lt.compat.mining.ApothicMiningLoot;
 import com.moakiee.ae2lt.compat.mining.BloodMagicMiningTool;
+import com.moakiee.ae2lt.compat.mining.SilentGearMiningTool;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
@@ -29,7 +30,9 @@ public final class MiningLoot {
 
     public static boolean isTool(ItemStack stack) {
         // Energy-only tools need an explicit cost adapter; accepting them here would permit free use.
-        return isPlane(stack) || stack.has(DataComponents.TOOL) && stack.getMaxDamage() > 0;
+        return isPlane(stack) || !stack.isEmpty() && stack.has(DataComponents.TOOL) && stack.getMaxDamage() > 0
+                && (stack.has(DataComponents.UNBREAKABLE) || stack.getDamageValue() < stack.getMaxDamage())
+                && !SilentGearMiningTool.isBroken(stack);
     }
 
     public static BlockState stateOf(ItemStack input) {
@@ -61,7 +64,8 @@ public final class MiningLoot {
     }
 
     public static boolean canHarvest(BlockState state, ItemStack installed) {
-        return !state.requiresCorrectToolForDrops() || lootTool(installed, state).isCorrectToolForDrops(state);
+        return !state.requiresCorrectToolForDrops()
+                || (isPlane(installed) ? lootTool(installed, state) : installed).isCorrectToolForDrops(state);
     }
 
     public record Drop(ItemStack stack, long count) {}
@@ -80,19 +84,22 @@ public final class MiningLoot {
                               int count, int sampleBudget) {
         ItemStack remainingTool = copyTool(installed);
         boolean plane = isPlane(installed);
+        boolean damagesTool = !plane && state.getDestroySpeed(level, origin) != 0;
         var anointments = plane ? null : BloodMagicMiningTool.read(remainingTool);
         if (anointments != null) count = anointments.limit(count);
         int groups = Math.min(count, sampleBudget);
         int processed = 0;
         int sampled = 0;
         List<Drop> drops = new ArrayList<>();
-        for (int group = 0; group < groups && !remainingTool.isEmpty(); group++) {
+        for (int group = 0; group < groups && isTool(remainingTool) && canHarvest(state, remainingTool); group++) {
             int requested = count / groups + (group < count % groups ? 1 : 0);
             ItemStack sampleTool = lootTool(remainingTool, state);
-            int actual = 0;
-            for (; actual < requested && !remainingTool.isEmpty(); actual++) {
-                if (!plane && state.getDestroySpeed(level, origin) != 0) {
-                    // Cheap per-block durability evaluation preserves Unbreaking and stops at breakage.
+            // Planes have no durability hook; their full per-block FE cost is charged at commit.
+            int actual = plane ? requested : 0;
+            for (; actual < requested && isTool(remainingTool) && canHarvest(state, remainingTool); actual++) {
+                if (damagesTool) {
+                    // Per-block evaluation preserves Unbreaking and native durability traits.
+                    // Native mod hooks may retain a broken stack or remove its TOOL component.
                     int damage = remainingTool.get(DataComponents.TOOL).damagePerBlock();
                     remainingTool.hurtAndBreak(damage, level, (ServerPlayer) null, item -> {});
                 }

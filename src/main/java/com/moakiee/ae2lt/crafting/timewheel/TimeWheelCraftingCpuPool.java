@@ -319,6 +319,11 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
 
     @Override
     public boolean canHandle(ICraftingPlan plan) {
+        var forced = com.moakiee.ae2lt.integration.eaep.EaepForcedCraftingPlanAccess.read(plan);
+        if (forced == null) {
+            return false;
+        }
+        plan = forced.original();
         if (plan instanceof com.moakiee.ae2lt.crafting.big.BigCraftingPlan) {
             var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
             return service != null && service.available() && !service.busy();

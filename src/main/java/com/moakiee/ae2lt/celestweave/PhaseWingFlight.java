@@ -5,7 +5,7 @@ import net.minecraft.util.Unit;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import com.moakiee.ae2lt.item.CelestweaveCoreItem;
-import com.moakiee.ae2lt.client.PhaseWingLayer;
+import com.moakiee.ae2lt.client.equipment.PhaseWingLayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 

@@ -139,9 +139,9 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
     public static void handle(SyncFrequencyDetailPacket pkt, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (pkt.syncType == TYPE_MEMBERS) {
-                com.moakiee.ae2lt.client.ClientFrequencyCache.updateMembers(pkt.frequencyId, pkt.data);
+                com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.updateMembers(pkt.frequencyId, pkt.data);
             } else if (pkt.syncType == TYPE_CONNECTIONS) {
-                com.moakiee.ae2lt.client.ClientFrequencyCache.updateConnections(pkt.frequencyId, pkt.data);
+                com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.updateConnections(pkt.frequencyId, pkt.data);
             }
         });
     }

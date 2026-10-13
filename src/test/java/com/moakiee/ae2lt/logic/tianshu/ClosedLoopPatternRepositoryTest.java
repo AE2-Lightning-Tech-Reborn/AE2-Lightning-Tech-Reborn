@@ -126,7 +126,7 @@ class ClosedLoopPatternRepositoryTest {
     }
 
     @Test
-    void maintenanceUsesHysteresisPerJobCapAndOneRulePerExactKey() {
+    void maintenanceUsesHysteresisFixedJobAmountAndOneRulePerExactKey() {
         var key = new TestKey("logic_processor");
         var rule = new InventoryMaintenanceRule(
                 UUID.randomUUID(), key, 80, 100, 20, true, false, null);
@@ -141,7 +141,7 @@ class ClosedLoopPatternRepositoryTest {
         assertEquals(20, starts.requestAmount());
         assertEquals(false, staysIdle.replenishing());
         assertEquals(0, staysIdle.requestAmount());
-        assertEquals(10, continues.requestAmount());
+        assertEquals(20, continues.requestAmount());
         assertEquals(0, active.requestAmount());
         assertEquals(false, stops.replenishing());
 
@@ -155,21 +155,48 @@ class ClosedLoopPatternRepositoryTest {
     }
 
     @Test
+    void maintenanceRequestsFullTenThousandItemBatchesUntilUpperThresholdIsReached() {
+        var rule = new InventoryMaintenanceRule(
+                UUID.randomUUID(), new TestKey("fixed_batch"), 10_000, 20_000, 10_000,
+                true, false, null);
+
+        var starts = InventoryMaintenanceDecision.evaluate(rule, 9_999, false);
+        assertTrue(starts.replenishing());
+        assertEquals(10_000L, starts.requestAmount());
+
+        var replenishing = rule.withRuntime(starts.replenishing(), null);
+        assertEquals(0L, InventoryMaintenanceDecision.evaluate(replenishing, 9_999, true).requestAmount());
+        var lastBatch = InventoryMaintenanceDecision.evaluate(replenishing, 19_999, false);
+        assertTrue(lastBatch.replenishing());
+        assertEquals(10_000L, lastBatch.requestAmount());
+
+        var stops = InventoryMaintenanceDecision.evaluate(replenishing, 29_999, false);
+        assertFalse(stops.replenishing());
+        assertEquals(0L, stops.requestAmount());
+        assertEquals(0L, rule.nextRequestAmount(20_000));
+        assertEquals(0L, rule.nextRequestAmount(29_999));
+
+        var smallTarget = new InventoryMaintenanceRule(
+                UUID.randomUUID(), rule.key(), 100, 100, 10_000, true, false, null);
+        assertEquals(10_000L, InventoryMaintenanceDecision.evaluate(smallTarget, 0, false).requestAmount());
+    }
+
+    @Test
     void maintenanceThresholdEdgesAreStableAndInvalidRangesAreRejected() {
         var key = new TestKey("edge");
         var id = UUID.randomUUID();
         var rule = new InventoryMaintenanceRule(id, key, 10, 20, Long.MAX_VALUE, true, false, null);
 
         assertEquals(false, InventoryMaintenanceDecision.evaluate(rule, 10, false).replenishing());
-        assertEquals(11, InventoryMaintenanceDecision.evaluate(rule, 9, false).requestAmount());
+        assertEquals(Long.MAX_VALUE, InventoryMaintenanceDecision.evaluate(rule, 9, false).requestAmount());
         assertEquals(0, InventoryMaintenanceDecision.evaluate(rule.withRuntime(true, null), 20, false).requestAmount());
-        assertEquals(20, InventoryMaintenanceDecision.evaluate(rule, -1, false).requestAmount());
+        assertEquals(Long.MAX_VALUE, InventoryMaintenanceDecision.evaluate(rule, -1, false).requestAmount());
         assertEquals(0, InventoryMaintenanceDecision.evaluate(
                 new InventoryMaintenanceRule(id, key, 10, 20, 1, false, true, null), 0, false).requestAmount());
 
         var equalThresholds = new InventoryMaintenanceRule(
                 id, key, 20, 20, 64, true, false, null);
-        assertEquals(1, InventoryMaintenanceDecision.evaluate(
+        assertEquals(64, InventoryMaintenanceDecision.evaluate(
                 equalThresholds, 19, false).requestAmount());
         assertEquals(false, InventoryMaintenanceDecision.evaluate(
                 equalThresholds, 20, false).replenishing());

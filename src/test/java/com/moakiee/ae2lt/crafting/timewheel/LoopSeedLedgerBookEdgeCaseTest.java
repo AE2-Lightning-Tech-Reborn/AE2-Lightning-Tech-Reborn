@@ -42,6 +42,49 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
 class LoopSeedLedgerBookEdgeCaseTest {
+    @Test
+    void optionalInitialLoansPreserveTheActualVariantOfTheMinimumSeed() {
+        var seed = key("adaptive_tool", "planned");
+        var actual = key("adaptive_tool", "actual");
+        var group = UUID.randomUUID();
+        var consumer = UUID.randomUUID();
+        var pattern = new ExecuteLoopPattern(new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(seed, 1), stack(actual, 1)})},
+                List.of(stack(seed, 1)), group, false), consumer,
+                counter(seed, 1), counter(seed, 1), Map.of(consumer, counter(seed, 1)));
+        var book = new LoopSeedLedgerBook();
+        book.initialize(List.of(pattern));
+        assertEquals(1, book.assignHostVariantsForGroup(group, false, seed, counter(actual, 1)).get(actual));
+        var expanded = pattern.withInitialSeedMultiplier(3);
+        book.increaseInitialSeedLoans(List.of(pattern), List.of(expanded));
+        assertEquals(1, book.balance(consumer, actual));
+        assertEquals(2, book.balance(consumer, seed));
+        assertEquals(3, expanded.initialSeed().get(seed));
+        assertEquals(1, expanded.inputSeed().get(seed), "per-dispatch consumption is unchanged");
+        assertEquals(1, expanded.outputSeed().get(seed), "per-dispatch credit is unchanged");
+    }
+
+    @Test
+    void optionalSharedLoanIsCreditedOnceAcrossGroupsAndTaskSlices() {
+        var seed = key("adaptive_shared", "");
+        var firstId = UUID.randomUUID();
+        var secondId = UUID.randomUUID();
+        var first = new ExecuteLoopPattern(new FakeSeedPattern(new IPatternDetails.IInput[] {
+                new FakeInput(new GenericStack[] {stack(seed, 1)})}, List.of(stack(seed, 2)),
+                UUID.randomUUID(), true), firstId, counter(seed, 1), counter(seed, 1),
+                Map.of(firstId, counter(seed, 1)));
+        var second = new ExecuteLoopPattern(new FakeSeedPattern(first.getInputs(), first.getOutputs(),
+                UUID.randomUUID(), true), secondId, counter(seed, 1), counter(seed, 1),
+                Map.of(secondId, counter(seed, 1)));
+        var book = new LoopSeedLedgerBook();
+        book.initialize(List.of(first, second));
+        book.increaseInitialSeedLoans(List.of(first, second), List.of(
+                first.withInitialSeedMultiplier(32), first.withInitialSeedMultiplier(32),
+                second.withInitialSeedMultiplier(32)));
+        assertEquals(32, book.totalReserved(seed));
+        assertEquals(32, book.balance(ExecuteLoopPattern.SHARED_SEED_ACCOUNT_ID, seed));
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void lastLoopMemberDoesNotBlockTheOrdinaryProducerItIsWaitingFor(boolean batch) throws Exception {

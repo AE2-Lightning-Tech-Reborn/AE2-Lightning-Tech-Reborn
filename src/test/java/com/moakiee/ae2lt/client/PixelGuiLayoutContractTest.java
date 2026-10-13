@@ -22,7 +22,7 @@ final class PixelGuiLayoutContractTest {
         assertSprite(texture, 320, 256);
 
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/OverloadDeviceWorkbenchScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/machine/OverloadDeviceWorkbenchScreen.java"));
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/OverloadDeviceWorkbenchMenu.java"));
 
@@ -141,7 +141,7 @@ final class PixelGuiLayoutContractTest {
         assertSprite(texture, 256, 256);
 
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuUploadTargetScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuUploadTargetScreen.java"));
         String style = Files.readString(Path.of(
                 "src/main/resources/assets/ae2/screens/tianshu_upload_targets.json"));
 
@@ -177,11 +177,11 @@ final class PixelGuiLayoutContractTest {
         assertSprite(texture, 256, 256);
 
         String advanced = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuAdvancedPatternConfigScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuAdvancedPatternConfigScreen.java"));
         String overload = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuOverloadPatternConfigScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuOverloadPatternConfigScreen.java"));
         String layout = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuPatternConfigLayout.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuPatternConfigLayout.java"));
         String advancedStyle = Files.readString(Path.of(
                 "src/main/resources/assets/ae2/screens/tianshu_advanced_pattern_config.json"));
         String overloadStyle = Files.readString(Path.of(
@@ -231,13 +231,13 @@ final class PixelGuiLayoutContractTest {
         assertEquals(0x00000000, image.getRGB(319, 319));
 
         String terminal = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuMaintenanceTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuMaintenanceTermScreen.java"));
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuMaintenanceSession.java"));
         String overview = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuGlobalReserveScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuGlobalReserveScreen.java"));
         String rule = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuMaintenanceRuleScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuMaintenanceRuleScreen.java"));
 
         assertTrue(terminal.contains("new MaintenanceOverviewButton()"));
         assertTrue(terminal.contains("syncSyntheticMaintenanceEntries()"));

@@ -27,11 +27,6 @@ public class LightningJeiIngredientHelper implements IIngredientHelper<Lightning
     }
 
     @Override
-    public Identifier getIdentifier(LightningKey ingredient) {
-        return ingredient.getId();
-    }
-
-    @Override
     public Object getGroupingUid(LightningKey ingredient) {
         return ingredient.getId();
     }
@@ -42,7 +37,7 @@ public class LightningJeiIngredientHelper implements IIngredientHelper<Lightning
     }
 
     @Override
-    public Identifier getResourceLocation(LightningKey ingredient) {
+    public Identifier getIdentifier(LightningKey ingredient) {
         return ingredient.getId();
     }
 

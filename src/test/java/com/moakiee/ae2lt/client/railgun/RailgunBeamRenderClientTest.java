@@ -35,7 +35,7 @@ final class RailgunBeamRenderClientTest {
     }
 
     @Test
-    void ordinaryBeamChainsUseTheHighVoltagePalette() throws Exception {
+    void beamChainsKeepSeparateHighAndExtremeVoltagePalettes() throws Exception {
         String beamChain = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/railgun/RailgunBeamChainFx.java"));
         String charged = Files.readString(Path.of(
@@ -44,7 +44,8 @@ final class RailgunBeamRenderClientTest {
                 "src/main/java/com/moakiee/ae2lt/client/railgun/RailgunArcRenderer.java"));
 
         assertTrue(beamChain.contains("spawnHighVoltageChain(a, b, 14)"));
-        assertFalse(beamChain.contains("RailgunArcRenderer.spawnChain(a, b, 14)"));
+        assertTrue(beamChain.contains("if (p.ehv())"));
+        assertTrue(beamChain.contains("RailgunArcRenderer.spawnChain(a, b, 14)"));
         assertTrue(charged.contains("RailgunArcRenderer.spawnChain(a, b, chainLife)"));
         assertTrue(renderer.contains("public static void spawnHighVoltageChain("));
         assertTrue(renderer.contains("blue-cyan HV glow"));

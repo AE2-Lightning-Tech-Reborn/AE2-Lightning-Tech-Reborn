@@ -26,7 +26,8 @@ import appeng.me.helpers.MachineSource;
 import appeng.util.SettingsFrom;
 import appeng.util.inv.*;
 import appeng.util.inv.filter.AEItemFilters;
-import com.moakiee.ae2lt.logic.OverloadedIOTransfer;
+import com.moakiee.ae2lt.logic.transfer.OverloadedIOTransfer;
+import com.moakiee.ae2lt.logic.transfer.OverloadedIOPortThroughput;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
@@ -53,8 +54,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     public static final int CELL_SLOTS = 6;
     public static final int UPGRADE_SLOTS = 5;
     public static final int SPEED_CARD_SLOTS = 4;
-    public static final int MAX_BATCHES = 16;
-    public static final int MAX_MATRICES = 16;
+    public static final int MAX_BATCHES = OverloadedIOPortThroughput.MAX_ATTEMPTS;
+    public static final int MAX_MATRICES = OverloadedIOPortThroughput.MAX_MATRICES;
     private static final String LAST_BATCH_TICK = "lastBatchTick";
     public static final double BATCH_AE = 32;
     private static final String PENDING = "pendingTransfer";
@@ -110,11 +111,9 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         return stack.is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get())
                 ? Math.min(MAX_MATRICES, stack.getCount()) : 0;
     }
-    public int getBatchLimit() { return Math.min(MAX_BATCHES, 1 + getMatrixCount()); }
+    public int getBatchLimit() { return OverloadedIOPortThroughput.attemptLimit(getMatrixCount()); }
     public long getTransferCap() {
-        int count = getMatrixCount();
-        // Guard before shifting: Java masks long shift distances modulo 64.
-        return count >= 16 ? Long.MAX_VALUE : 1L << (15 + 3 * count);
+        return OverloadedIOPortThroughput.operationCap(getMatrixCount());
     }
     public int getTransferInterval() {
         return Math.max(1, 5 - upgrades.getInstalledUpgrades(AEItems.SPEED_CARD));
@@ -242,7 +241,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 attempts++; // Rejected and missing keys also spend the work budget.
                 var from = mode == OperationMode.EMPTY ? scan.cell : grid.getStorageService().getInventory();
                 var to = mode == OperationMode.EMPTY ? grid.getStorageService().getInventory() : scan.cell;
-                var result = OverloadedIOTransfer.move(from, to, key, source, payment, transferCap);
+                long nativeCap = OverloadedIOPortThroughput.nativeAmountCap(transferCap, key.getAmountPerOperation());
+                var result = OverloadedIOTransfer.move(from, to, key, source, payment, nativeCap);
                 if (result.inserted() > 0 || result.remainder() > 0) {
                     progressed = true;
                     scan.moved = true;

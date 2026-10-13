@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import appeng.api.config.Setting;
 import appeng.api.config.YesNo;
 
-import com.moakiee.ae2lt.client.SettingToggleButtonAccess;
+import com.moakiee.ae2lt.client.widgets.SettingToggleButtonAccess;
 
 class PatternProviderToolbarButtonHiderTest {
     @Test

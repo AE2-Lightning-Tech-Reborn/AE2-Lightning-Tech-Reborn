@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.integration.useless;
 
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.ids.AEComponents;
-import com.moakiee.ae2lt.client.ProcessingPatternTransferStacks;
+import com.moakiee.ae2lt.client.compat.ProcessingPatternTransferStacks;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.sorrowmist.useless.compat.jei.OmniversalPatternJeiTransferHandler;
 import com.sorrowmist.useless.content.machines.advanced_alloy_furnace.ae.OmniversalPatternEncoding;

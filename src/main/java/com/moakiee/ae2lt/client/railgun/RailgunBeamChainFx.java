@@ -44,7 +44,11 @@ public final class RailgunBeamChainFx {
             Vec3 b = path.get(i + 1);
             // Short-lived arc: beam refreshes chains up to ~4/sec; longer
             // lifetimes would visually pile up.
-            RailgunArcRenderer.spawnHighVoltageChain(a, b, 14);
+            if (p.ehv()) {
+                RailgunArcRenderer.spawnChain(a, b, 14);
+            } else {
+                RailgunArcRenderer.spawnHighVoltageChain(a, b, 14);
+            }
             // Endpoint sparks at each chained target so the hit registers
             // clearly even when several enemies are stacked.
             for (int s = 0; s < 3; s++) {

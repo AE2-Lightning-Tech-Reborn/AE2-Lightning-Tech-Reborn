@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -111,6 +110,23 @@ final class LoopSeedLedgerBook {
         for (var seed : sharedMaximum.entrySet()) {
             adjust(ExecuteLoopPattern.SHARED_SEED_ACCOUNT_ID, seed.getKey(), seed.getValue());
         }
+    }
+
+    /** Adds optional exact seed loans before dispatch, preserving already-bound host variants. */
+    void increaseInitialSeedLoans(
+            List<ExecuteLoopPattern> previous, List<ExecuteLoopPattern> expanded) {
+        var before = new LoopSeedLedgerBook();
+        before.initialize(previous);
+        var after = new LoopSeedLedgerBook();
+        after.initialize(expanded);
+        for (var account : after.ledgers.entrySet()) {
+            for (var seed : account.getValue().entrySet()) {
+                long increase = seed.getValue() - before.balance(account.getKey(), seed.getKey());
+                if (increase > 0) adjust(account.getKey(), seed.getKey(), increase);
+            }
+        }
+        // Do not initialize this book again: the minimum loan may already have been assigned to
+        // physical tool/component variants. Additional loans use exact planned keys only.
     }
 
     /** Package-private deterministic initializer used by focused accounting tests. */

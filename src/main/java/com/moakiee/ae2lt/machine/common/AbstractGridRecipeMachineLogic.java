@@ -10,7 +10,7 @@ import appeng.api.upgrades.IUpgradeableObject;
 import appeng.blockentity.grid.AENetworkedBlockEntity;
 import appeng.core.definitions.AEItems;
 
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public abstract class AbstractGridRecipeMachineLogic<
@@ -45,10 +45,13 @@ public abstract class AbstractGridRecipeMachineLogic<
             return TickRateModulation.SLEEP;
         }
 
-        if (shouldRechargeFromAppliedFlux()) {
-            rechargeFromAppliedFlux();
-        }
+        boolean charging = shouldRechargeFromAppliedFlux() && rechargeFromAppliedFlux();
+        TickRateModulation processing = tickProcessing();
+        // Keep transferring while FE is arriving, even with no recipe or blocked output.
+        return charging ? TickRateModulation.URGENT : processing;
+    }
 
+    private TickRateModulation tickProcessing() {
         if (!host.hasLockedRecipe()) {
             tryStartProcessing();
         }
@@ -232,9 +235,9 @@ public abstract class AbstractGridRecipeMachineLogic<
         }
     }
 
-    private void rechargeFromAppliedFlux() {
+    private boolean rechargeFromAppliedFlux() {
         if (!AppFluxHelper.isAvailable()) {
-            return;
+            return false;
         }
 
         long demand = Math.min(Integer.MAX_VALUE, getCurrentMaxEnergyPerTick());
@@ -246,17 +249,18 @@ public abstract class AbstractGridRecipeMachineLogic<
         }
         if (!rechargeController.shouldRecharge(
                 host.getMachineStoredEnergy(), host.getMachineEnergyCapacity(), demand,
-                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE))) {
-            return;
+                Math.min(Integer.MAX_VALUE, AppFluxHelper.TRANSFER_RATE), host.getLevel().getGameTime())) {
+            return false;
         }
 
-        host.getMainNode().ifPresent((grid, node) -> {
-            AppFluxHelper.pullPowerFromNetwork(
-                    grid.getStorageService().getInventory(),
-                    host.getMachineEnergyStorage(),
-                    appeng.api.networking.security.IActionSource.ofMachine(host));
-            rechargeController.afterRecharge(host.getMachineStoredEnergy(), host.getMachineEnergyCapacity());
-        });
+        var grid = host.getMainNode().getGrid();
+        if (grid == null) return false;
+        int received = AppFluxHelper.pullPowerFromNetwork(
+                grid.getStorageService().getInventory(),
+                host.getMachineEnergyStorage(),
+                appeng.api.networking.security.IActionSource.ofMachine(host));
+        rechargeController.afterRecharge(host.getMachineStoredEnergy(), host.getMachineEnergyCapacity());
+        return received > 0 && host.getMachineStoredEnergy() < host.getMachineEnergyCapacity();
     }
 
     private static long divideCeil(long dividend, long divisor) {

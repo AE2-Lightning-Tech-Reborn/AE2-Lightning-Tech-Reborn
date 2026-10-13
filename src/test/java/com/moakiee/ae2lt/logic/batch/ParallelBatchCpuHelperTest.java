@@ -480,9 +480,10 @@ class ParallelBatchCpuHelperTest {
     }
 
     @Test
-    void providerFilterSkipsOnlyIdentityMatchedProviders() {
+    void providerFilterSkipsOnlyBusyIdentityMatchedProviders() {
         var first = new FakeProvider();
         var skipped = new FakeProvider();
+        skipped.busy = true;
         var second = new FakeProvider();
         var excluded = new IdentityHashMap<ICraftingProvider, Boolean>();
         excluded.put(skipped, Boolean.TRUE);
@@ -493,6 +494,14 @@ class ParallelBatchCpuHelperTest {
         }
 
         assertIterableEquals(List.of(first, second), visible);
+
+        skipped.busy = false;
+        visible.clear();
+        for (var provider : new BatchProviderFilterIterable(List.of(first, skipped, second), excluded)) {
+            visible.add(provider);
+        }
+        assertIterableEquals(List.of(first, skipped, second), visible,
+                "Partial batch success must not suppress available providers on ordinary fallback");
     }
 
     private static ListCraftingInventory inventory() {
@@ -665,6 +674,7 @@ class ParallelBatchCpuHelperTest {
     }
 
     private static final class FakeProvider implements ICraftingProvider {
+        private boolean busy;
         @Override
         public List<IPatternDetails> getAvailablePatterns() {
             return List.of();
@@ -677,7 +687,7 @@ class ParallelBatchCpuHelperTest {
 
         @Override
         public boolean isBusy() {
-            return false;
+            return busy;
         }
     }
 

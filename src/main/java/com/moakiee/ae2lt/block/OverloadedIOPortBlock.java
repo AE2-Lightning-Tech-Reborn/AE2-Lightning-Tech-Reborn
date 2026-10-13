@@ -48,8 +48,7 @@ public class OverloadedIOPortBlock extends AEBaseEntityBlock<OverloadedIOPortBlo
     @Override public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                           java.util.function.Consumer<Component> lines, TooltipFlag flag) {
         super.appendHoverText(stack, context, lines, flag);
-        lines.accept(Component.translatable("tooltip.ae2lt.overloaded_io_port.batch"));
-        lines.accept(Component.translatable("tooltip.ae2lt.overloaded_io_port.power"));
+        // Throughput details live in the guide; the tooltip only warns about carried-over data.
         if (stack.has(ModDataComponents.IO_PORT_PENDING.get()))
             lines.accept(Component.translatable("tooltip.ae2lt.overloaded_io_port.pending")
                     .withStyle(net.minecraft.ChatFormatting.YELLOW));

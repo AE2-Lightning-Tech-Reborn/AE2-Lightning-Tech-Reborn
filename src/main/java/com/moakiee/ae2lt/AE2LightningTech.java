@@ -5,6 +5,7 @@ import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModDataComponents;
+import com.moakiee.ae2lt.registry.ModAttachmentTypes;
 import com.moakiee.ae2lt.registry.ModEntities;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.registry.ModLootModifiers;
@@ -88,7 +89,7 @@ import com.moakiee.ae2lt.me.GridLightningEnergyHandler;
 import com.moakiee.ae2lt.me.cell.BulkLightningCellHandler;
 import com.moakiee.ae2lt.me.cell.FixedInfiniteCellHandler;
 
-import com.moakiee.ae2lt.logic.MachineAdapterRegistry;
+import com.moakiee.ae2lt.logic.provider.MachineAdapterRegistry;
 import com.moakiee.ae2lt.logic.craft.BatchPatternEligibility;
 import com.moakiee.thunderbolt.CoreConfig;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
@@ -389,6 +390,7 @@ public class AE2LightningTech {
         ModRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
         ModRecipeTypes.RECIPE_TYPES.register(modEventBus);
         ModDataComponents.DATA_COMPONENTS.register(modEventBus);
+        ModAttachmentTypes.ATTACHMENT_TYPES.register(modEventBus);
         ModMobEffects.EFFECTS.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModStructureTypes.STRUCTURE_TYPES.register(modEventBus);
@@ -398,6 +400,11 @@ public class AE2LightningTech {
         modEventBus.addListener(ModAEKeyTypes::register);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) ->
+                event.enqueueWork(() -> {
+                    com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.freeze();
+                    com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.freezeItems();
+                }));
         modEventBus.addListener(this::onConfigChanged);
         modContainer.registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT,
@@ -770,9 +777,9 @@ public class AE2LightningTech {
                 AECapabilities.GENERIC_INTERNAL_INV,
                 (level, pos, state, blockEntity, context) -> {
                     if (blockEntity instanceof OverloadedPatternProviderBlockEntity be) {
-                        var logic = (com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic) be.getLogic();
-                        return new com.moakiee.ae2lt.logic.InsertOnlyReturnInvWrapper(
-                                (com.moakiee.ae2lt.logic.UnlimitedReturnInventory) logic.getInternalReturnInv(),
+                        var logic = (com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic) be.getLogic();
+                        return new com.moakiee.ae2lt.logic.provider.InsertOnlyReturnInvWrapper(
+                                (com.moakiee.ae2lt.logic.provider.UnlimitedReturnInventory) logic.getInternalReturnInv(),
                                 logic);
                     }
                     return null;
@@ -810,6 +817,9 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.
@@ -892,7 +902,7 @@ public class AE2LightningTech {
                     OverloadDeviceWorkbenchBlockEntity.class,
                     overloadDeviceWorkbenchBeType,
                     null,
-                    null);
+                    OverloadDeviceWorkbenchBlockEntity::serverTick);
 
             var crystalCatalyzerBlock = ModBlocks.CRYSTAL_CATALYZER.get();
             var crystalCatalyzerBeType = ModBlockEntities.CRYSTAL_CATALYZER.get();

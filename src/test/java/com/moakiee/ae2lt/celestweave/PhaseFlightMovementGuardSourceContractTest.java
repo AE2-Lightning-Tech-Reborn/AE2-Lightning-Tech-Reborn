@@ -70,7 +70,7 @@ class PhaseFlightMovementGuardSourceContractTest {
         String phaseFlight = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/celestweave/module/PhaseFlightSubmodule.java"));
         String clientHandler = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java"));
         String packetMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/ServerGamePacketListenerPhaseMovementMixin.java"));
         String clientMixin = Files.readString(Path.of(
@@ -219,7 +219,7 @@ class PhaseFlightMovementGuardSourceContractTest {
     }
 
     @Test
-    void commandQueuesBindTheirInitiatingSourceWithFinallySafeCleanup() throws Exception {
+    void commandQueuesUseVanillaContextLifetimeWithoutWrappingQueueExecution() throws Exception {
         String commandMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/CommandsPhaseTeleportMixin.java"));
         String guard = Files.readString(Path.of(
@@ -228,7 +228,13 @@ class PhaseFlightMovementGuardSourceContractTest {
 
         assertTrue(commandMixin.contains("@Mixin(Commands.class)"));
         assertTrue(commandMixin.contains("executeCommandInContext"));
-        assertTrue(commandMixin.contains("runAsCommandExecution("));
+        assertTrue(commandMixin.contains("ThreadLocal;set(Ljava/lang/Object;)V"));
+        assertTrue(commandMixin.contains("Consumer;accept(Ljava/lang/Object;)V"));
+        assertTrue(commandMixin.contains("previousCommandSource"));
+        assertTrue(commandMixin.contains("PhaseFlightMovementGuard.bindCommandSource(source)"));
+        assertTrue(commandMixin.contains("PhaseFlightMovementGuard.restoreCommandSource(previousSource.get())"));
+        assertFalse(commandMixin.contains("@WrapMethod"));
+        assertFalse(guard.contains("runAsCommandExecution("));
         assertTrue(commandMixin.contains("CommandSourceStack source"));
         assertTrue(guard.contains("CommandSourceStack previous = COMMAND_SOURCE.get()"));
         assertTrue(guard.contains("COMMAND_SOURCE.remove()"));

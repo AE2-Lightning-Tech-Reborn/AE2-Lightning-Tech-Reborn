@@ -5,6 +5,7 @@ import appeng.api.config.CopyMode;
 import appeng.api.config.Settings;
 import appeng.api.inventories.ISegmentedInventory;
 import appeng.blockentity.misc.CellWorkbenchBlockEntity;
+import appeng.util.Icon;
 import appeng.core.definitions.AEBlocks;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.storage.StorageHelper;
@@ -62,9 +63,11 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
+import org.anti_ad.mc.ipn.api.IPNIgnore;
 import org.jetbrains.annotations.Nullable;
 
 /** Five manual workstations whose real inputs belong to the terminal host. */
+@IPNIgnore
 public class TianshuCraftingTermMenu extends CraftingTermMenu implements TianshuMaintenanceMenu {
     private static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, AnvilTransferRequest> ANVIL_TRANSFER_CODEC =
             net.minecraft.network.codec.StreamCodec.of((buf, request) -> {
@@ -163,7 +166,7 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
         addSlot(cellSlot, Ae2ltSlotSemantics.TIANSHU_CELL);
         for (int i = 0; i < 8; i++) {
             final int inventoryIndex = i;
-            addSlot(new AppEngSlot(cellProxy(true), i) {
+            var upgradeSlot = new AppEngSlot(cellProxy(true), i) {
                 @Override public ItemStack getItem() { return getInventory().getStackInSlot(inventoryIndex); }
                 @Override public void set(ItemStack stack) {
                     // A delta for a hidden row must still reach the client mirror.
@@ -173,7 +176,9 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
                 @Override public boolean isSlotEnabled() { return isCellUpgradeVisible(inventoryIndex); }
                 @Override public boolean mayPlace(ItemStack stack) { return isSlotEnabled() && super.mayPlace(stack); }
                 @Override public boolean mayPickup(Player player) { return isSlotEnabled() && super.mayPickup(player); }
-            }, Ae2ltSlotSemantics.TIANSHU_CELL_UPGRADE);
+            };
+            upgradeSlot.setIcon(Icon.BACKGROUND_UPGRADE);
+            addSlot(upgradeSlot, Ae2ltSlotSemantics.TIANSHU_CELL_UPGRADE);
         }
         // Fixed slot identities are essential: a delayed click from page 1 must never write page 2.
         for (int i = 0; i < CELL_CONFIG_SLOTS; i++) {

@@ -28,7 +28,7 @@ public record EasterEggPacket(GlobalPos source) implements CustomPacketPayload {
 
     public static void handle(EasterEggPacket payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            com.moakiee.ae2lt.client.EasterEggOverlay.trigger(payload.source());
+            com.moakiee.ae2lt.client.easteregg.EasterEggOverlay.trigger(payload.source());
         });
     }
 }

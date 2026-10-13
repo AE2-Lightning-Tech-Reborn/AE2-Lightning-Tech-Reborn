@@ -5,7 +5,7 @@ import com.moakiee.ae2lt.lightning.LightningTransformService;
 import com.moakiee.ae2lt.lightning.RainbowPigmeeTransformation;
 import com.moakiee.ae2lt.lightning.ProtectedItemEntityHelper;
 import com.moakiee.ae2lt.logic.research.ResearchRitualService;
-import com.moakiee.ae2lt.logic.EasterEggAudience;
+import com.moakiee.ae2lt.logic.world.EasterEggAudience;
 import com.moakiee.ae2lt.network.EasterEggPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;

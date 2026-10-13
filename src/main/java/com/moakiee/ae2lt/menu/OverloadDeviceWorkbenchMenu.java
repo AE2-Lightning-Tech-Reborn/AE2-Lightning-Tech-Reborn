@@ -337,7 +337,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
     }
 
     private List<Slot> getWorkbenchDestinationSlots(ItemStack stack) {
-        if (stack.getItem() instanceof DeviceItem) {
+        if (com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.get(stack).isPresent()) {
             return List.of(deviceSlot);
         }
         if (!host.hasInstalledDevice()) {

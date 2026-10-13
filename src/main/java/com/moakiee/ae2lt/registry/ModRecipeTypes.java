@@ -12,6 +12,7 @@ import com.moakiee.ae2lt.recipe.CreativePigmeeDuplicationRecipe;
 import com.moakiee.ae2lt.recipe.HyperdimensionalPigmeeConversionRecipe;
 import com.moakiee.ae2lt.recipe.PigmeeBuildingRecipe;
 import com.moakiee.ae2lt.recipe.RainbowPigmeeDyeRecipe;
+import com.moakiee.ae2lt.recipe.RainbowPigmeeColorCycleRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -130,6 +131,14 @@ public final class ModRecipeTypes {
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<RainbowPigmeeDyeRecipe>>
             RAINBOW_PIGMEE_DYE_SERIALIZER =
                     RECIPE_SERIALIZERS.register("rainbow_pigmee_dye", () -> RainbowPigmeeDyeRecipe.Serializer.INSTANCE);
+
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<RainbowPigmeeColorCycleRecipe>>
+            RAINBOW_PIGMEE_COLOR_CYCLE_SERIALIZER =
+                    RECIPE_SERIALIZERS.register("rainbow_pigmee_color_cycle",
+                            () -> new RecipeSerializer<>(
+                                    CraftingBookCategory.CODEC.optionalFieldOf("category", CraftingBookCategory.MISC)
+                                            .xmap(RainbowPigmeeColorCycleRecipe::new, RainbowPigmeeColorCycleRecipe::category),
+                                    StreamCodec.composite(CraftingBookCategory.STREAM_CODEC, RainbowPigmeeColorCycleRecipe::category, RainbowPigmeeColorCycleRecipe::new)));
 
     private ModRecipeTypes() {
     }

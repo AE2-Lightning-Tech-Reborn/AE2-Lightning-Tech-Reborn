@@ -205,11 +205,6 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
                 Component.translatable("ae2lt.celestweave.config.phase_mode." + mode.id()));
     }
 
-    private static boolean booleanOption(ItemStack armor, String key, boolean defaultValue) {
-        var options = INSTANCE.getOptions(armor);
-        return com.moakiee.ae2lt.recipe.compat.LegacyNbtTypes.contains(options, key, Tag.TAG_BYTE) ? options.getBooleanOr(key, false) : defaultValue;
-    }
-
     private FlightSpeedOption getSelectedSpeed(ItemStack armor) {
         var options = getOptions(armor);
         return FlightSpeedOption.fromTag(options.get(FlightSpeedOption.CONFIG_KEY));

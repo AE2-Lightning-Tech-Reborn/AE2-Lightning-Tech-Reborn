@@ -295,7 +295,7 @@ public final class ExecutionInputAllocator {
         }
         var incremental = conflict.incremental;
         if (incremental != null && incremental.inventory == inventory
-                && synchronize(conflict, incremental, inventory)) {
+                && synchronize(conflict, incremental)) {
             var allocation = incremental.allocation(conflict.rowsByPattern.get(selected));
             if (allocation != null) return allocation;
         }
@@ -465,7 +465,7 @@ public final class ExecutionInputAllocator {
         return Math.max(0, inventory.extract(key, Long.MAX_VALUE, Actionable.SIMULATE));
     }
 
-    private boolean synchronize(Conflict conflict, Incremental state, ICraftingInventory inventory) {
+    private boolean synchronize(Conflict conflict, Incremental state) {
         for (var entry : conflict.observedStock.entrySet()) state.graph.setStock(entry.getKey(), entry.getValue());
         for (var pattern : conflict.dirtyTasks) {
             long copies = copies(pattern);

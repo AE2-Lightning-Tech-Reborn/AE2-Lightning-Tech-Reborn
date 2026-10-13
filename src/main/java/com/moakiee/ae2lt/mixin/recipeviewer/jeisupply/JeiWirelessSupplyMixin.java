@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.mixin.recipeviewer.jeisupply;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.moakiee.ae2lt.client.JeiWirelessSupplyClient;
+import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;

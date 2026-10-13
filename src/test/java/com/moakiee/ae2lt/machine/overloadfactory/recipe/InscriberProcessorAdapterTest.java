@@ -34,6 +34,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
+import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,7 @@ class InscriberProcessorAdapterTest extends com.moakiee.ae2lt.test.MinecraftComp
         compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
         compress(sources, Items.REDSTONE, Items.REDSTONE_BLOCK, 9);
         compress(sources, Items.BRICK, Items.BRICKS, 4);
+        assertEquals(1, derive(sources).size());
         var derived = derive(sources).getFirst();
         var recipe = derived.value();
         assertInputs(recipe, Items.GOLD_BLOCK, 4, Items.REDSTONE_BLOCK, 4, Items.BRICKS, 9);
@@ -105,14 +107,35 @@ class InscriberProcessorAdapterTest extends com.moakiee.ae2lt.test.MinecraftComp
     }
 
     @Test
-    void consumedTemplatesAndTwoTemplatePrintsAreNotUnfolded() {
+    void consumedTemplatesAndTwoTemplatePrintsDoNotBecomeFactoryInputs() {
         var sources = chain();
         sources.set(1, holder("gold_processor", inscriber(Ingredient.of(Items.GOLD_INGOT), new ItemStack(Items.GOLD_NUGGET),
                 Ingredient.of(Items.PAPER), null, InscriberProcessType.PRESS)));
         sources.set(2, holder("silicon", inscriber(Ingredient.of(Items.BRICK), new ItemStack(Items.CLAY_BALL),
                 Ingredient.of(Items.PAPER), Ingredient.of(Items.PAPER), InscriberProcessType.INSCRIBE)));
-        assertInputs(derive(sources).getFirst().value(), Items.GOLD_NUGGET, 36, Items.REDSTONE, 36, Items.CLAY_BALL, 36);
-        assertEquals(1, derive(sources).size()); // Two-slot PRESS isn't a three-input processor either.
+        assertTrue(derive(sources).isEmpty()); // Neither intermediate has a safe one-input path.
+    }
+
+    @Test
+    void middleOnlyInscriptionUnfoldsCircuitBoardToBlockWithoutLooseItemVariant() {
+        var sources = chain();
+        sources.set(1, holder("stress_circuit_board", inscriber(Ingredient.of(Items.GOLD_INGOT), new ItemStack(Items.GOLD_NUGGET), null, null, InscriberProcessType.INSCRIBE)));
+        compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
+
+        var recipes = derive(sources);
+        assertEquals(1, recipes.size());
+        assertInputs(recipes.getFirst().value(), Items.GOLD_BLOCK, 4, Items.REDSTONE, 36, Items.BRICK, 36);
+        assertFalse(recipes.getFirst().value().itemInputs().getFirst().ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+        assertFalse(recipes.getFirst().value().itemInputs().getFirst().ingredient().test(new ItemStack(Items.GOLD_INGOT)));
+    }
+
+    @Test
+    void siliconBlockSelectionPrefersExtendedAeThenLt() {
+        var extended = Identifier.parse("extendedae:silicon_block");
+        var lt = Identifier.parse("ae2lt:silicon_block");
+        assertEquals(extended, InscriberProcessorAdapter.preferredSiliconBlockId(List.of(lt, extended)));
+        assertEquals(lt, InscriberProcessorAdapter.preferredSiliconBlockId(List.of(lt)));
+        assertNull(InscriberProcessorAdapter.preferredSiliconBlockId(List.of()));
     }
 
     @Test
@@ -131,6 +154,52 @@ class InscriberProcessorAdapterTest extends com.moakiee.ae2lt.test.MinecraftComp
         assertSame(strict, recipe.itemInputs().getFirst().ingredient());
         assertFalse(recipe.itemInputs().getFirst().ingredient().test(new ItemStack(Items.DIAMOND)));
         assertTrue(recipe.itemInputs().getFirst().ingredient().test(named));
+    }
+
+    @Test
+    void rawFallbackExcludesMaterialsAlreadyCoveredByACompressedRoute() {
+        var sources = chain();
+        sources.set(1, print("gold", Ingredient.of(Items.GOLD_INGOT, Items.IRON_INGOT),
+                new ItemStack(Items.GOLD_NUGGET), false));
+        compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 9);
+
+        var recipes = derive(sources);
+        assertEquals(2, recipes.size());
+        var blockRoute = recipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().getFirst().ingredient().test(new ItemStack(Items.GOLD_BLOCK)))
+                .findFirst().orElseThrow();
+        assertEquals(4, blockRoute.itemInputs().getFirst().count());
+
+        var rawRoute = recipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().getFirst().ingredient().test(new ItemStack(Items.IRON_INGOT)))
+                .findFirst().orElseThrow();
+        assertEquals(36, rawRoute.itemInputs().getFirst().count());
+        assertFalse(rawRoute.itemInputs().getFirst().ingredient().test(new ItemStack(Items.GOLD_INGOT)));
+
+        var tagId = Identifier.parse("test:mixed_ingots");
+        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, tagId);
+        var context = new net.neoforged.neoforge.common.conditions.ICondition.IContext() {
+            @Override
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            public <T> java.util.Collection<net.minecraft.core.Holder<T>> getTag(net.minecraft.tags.TagKey<T> requested) {
+                return requested.equals(tag) ? (java.util.Collection) List.of(Items.GOLD_INGOT.builtInRegistryHolder(),
+                        Items.IRON_INGOT.builtInRegistryHolder()) : List.of();
+            }
+            @Override
+            public <T> boolean isTagLoaded(net.minecraft.tags.TagKey<T> requested) { return requested.equals(tag); }
+        };
+        var tagged = Ingredient.of(net.minecraft.core.HolderSet.emptyNamed(BuiltInRegistries.ITEM, tag));
+        sources.set(1, print("gold", tagged, new ItemStack(Items.GOLD_NUGGET), false));
+        var taggedRecipes = InscriberProcessorAdapter.derive(sources, List.of(),
+                new ReloadIngredientLookup(context, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE)));
+        assertEquals(2, taggedRecipes.size());
+        var taggedRaw = taggedRecipes.stream().map(RecipeHolder::value)
+                .filter(recipe -> recipe.itemInputs().getFirst().count() == 36)
+                .findFirst().orElseThrow();
+        var difference = assertInstanceOf(DifferenceIngredient.class,
+                taggedRaw.itemInputs().getFirst().ingredient().getCustomIngredient());
+        assertSame(tagged, difference.base());
+        assertTrue(difference.subtracted().test(new ItemStack(Items.GOLD_INGOT)));
     }
 
     @Test
@@ -172,12 +241,10 @@ class InscriberProcessorAdapterTest extends com.moakiee.ae2lt.test.MinecraftComp
     }
 
     @Test
-    void stopsCyclesWithoutDroppingTheRequiredInput() {
+    void stopsCyclesWithoutFeedingAnIntermediate() {
         var sources = chain();
         sources.add(print("cycle", Ingredient.of(Items.GOLD_NUGGET), new ItemStack(Items.GOLD_INGOT), false));
-        var recipe = derive(sources).getFirst().value();
-        assertEquals(36, recipe.itemInputs().getFirst().count());
-        assertTrue(recipe.itemInputs().getFirst().ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+        assertTrue(derive(sources).isEmpty());
     }
 
     @Test
@@ -221,8 +288,7 @@ class InscriberProcessorAdapterTest extends com.moakiee.ae2lt.test.MinecraftComp
         // A second reload with that tag removed must not reuse the prior lookup/bound global tags.
         assertTrue(InscriberProcessorAdapter.derive(sources, List.of(), new ReloadIngredientLookup(
                 net.neoforged.neoforge.common.conditions.ICondition.IContext.EMPTY,
-                RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE))).getFirst().value().itemInputs().getFirst()
-                .ingredient().test(new ItemStack(Items.GOLD_NUGGET)));
+                RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE))).isEmpty());
     }
 
     private static List<RecipeHolder<OverloadProcessingRecipe>> derive(List<RecipeHolder<?>> sources) {

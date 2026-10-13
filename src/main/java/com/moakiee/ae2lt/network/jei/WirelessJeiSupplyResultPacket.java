@@ -24,7 +24,7 @@ public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int 
     public static void handle(WirelessJeiSupplyResultPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (net.neoforged.fml.ModList.get().isLoaded("jei")) {
-                com.moakiee.ae2lt.client.JeiWirelessSupplyClient.receive(packet);
+                com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient.receive(packet);
             }
         });
     }

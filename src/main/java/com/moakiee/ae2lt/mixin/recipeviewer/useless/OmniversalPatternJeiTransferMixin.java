@@ -35,7 +35,7 @@ public abstract class OmniversalPatternJeiTransferMixin {
                 return;
             }
             tianshu.selectOmniversalPattern(pattern);
-            if (Screen.hasAltDown()) tianshu.encodeAndUploadDirectly();
+            if (Minecraft.getInstance().hasAltDown()) tianshu.encodeAndUploadDirectly();
         }
         cir.setReturnValue(doTransfer ? null
                 : JEIPlugin.processingPatternFeedback(tianshu, entry, slots, player, maxTransfer));

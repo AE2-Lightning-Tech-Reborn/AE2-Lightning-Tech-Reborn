@@ -10,7 +10,7 @@
     "I": "minecraft:iron_ingot",
     "P": "minecraft:diamond_pickaxe",
     "G": "ae2:quartz_glass",
-    "M": "ae2:engineering_processor",
+    "M": "ae2lt:overload_machine_frame",
     "C": "ae2:annihilation_core"
   },
   "result": {

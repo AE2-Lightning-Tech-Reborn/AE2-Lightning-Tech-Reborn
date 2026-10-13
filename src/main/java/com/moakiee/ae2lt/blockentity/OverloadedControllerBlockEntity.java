@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.blockentity;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.thunderbolt.api.channel.HighCapacityChannelOwner;
-import com.moakiee.ae2lt.logic.PassiveAeCharger;
+import com.moakiee.ae2lt.logic.energy.PassiveAeCharger;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;

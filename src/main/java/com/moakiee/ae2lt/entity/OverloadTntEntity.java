@@ -2,8 +2,8 @@ package com.moakiee.ae2lt.entity;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.item.FixedInfiniteCellItem;
-import com.moakiee.ae2lt.logic.LightningBlastTask;
-import com.moakiee.ae2lt.logic.LightningBlastTaskManager;
+import com.moakiee.ae2lt.logic.world.LightningBlastTask;
+import com.moakiee.ae2lt.logic.world.LightningBlastTaskManager;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModEntities;
 import com.moakiee.ae2lt.registry.ModItems;

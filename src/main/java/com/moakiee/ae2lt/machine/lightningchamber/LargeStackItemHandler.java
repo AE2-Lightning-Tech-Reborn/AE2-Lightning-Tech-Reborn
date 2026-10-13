@@ -1,6 +1,9 @@
 package com.moakiee.ae2lt.machine.lightningchamber;
 
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.ToLongFunction;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -16,6 +19,7 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 import appeng.api.inventories.InternalInventory;
+import com.mojang.logging.LogUtils;
 
 /**
  * Item handler that supports slot limits larger than the carried stack's
@@ -28,6 +32,7 @@ import appeng.api.inventories.InternalInventory;
  * 1024.</p>
  */
 public abstract class LargeStackItemHandler implements IItemHandlerModifiable, InternalInventory {
+    private static final Set<String> LOGGED_EXPORT_FAILURES = ConcurrentHashMap.newKeySet();
     private static final String TAG_SLOT = "Slot";
     private static final String TAG_COUNT_INT = "CountInt";
     private static final String TAG_STACK = "Stack";
@@ -36,6 +41,10 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     private final ResourceHandler<ItemResource> resourceHandler;
     @Nullable
     private final Runnable changeListener;
+    private int batchDepth;
+    private boolean batchChanged;
+    private boolean exporting;
+    private boolean savedDuringExport;
 
     protected LargeStackItemHandler(int size, @Nullable Runnable changeListener) {
         if (size <= 0) {
@@ -82,7 +91,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     @Override
     public final ItemStack getStackInSlot(int slot) {
         validateSlotIndex(slot);
-        return stacks.get(slot);
+        return exporting ? stacks.get(slot).copy() : stacks.get(slot);
     }
 
     @Override
@@ -100,6 +109,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     private void setStackInSlotInternal(int slot, ItemStack stack, boolean validateItem) {
+        requireMutable();
         validateSlotIndex(slot);
         Objects.requireNonNull(stack, "stack");
 
@@ -130,6 +140,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     private ItemStack insertItemInternal(int slot, ItemStack stack, boolean simulate, boolean validateItem) {
         validateSlotIndex(slot);
         Objects.requireNonNull(stack, "stack");
+        if (exporting) return stack;
 
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
@@ -178,6 +189,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         validateSlotIndex(slot);
+        if (exporting) return ItemStack.EMPTY;
         if (amount <= 0) {
             return ItemStack.EMPTY;
         }
@@ -220,6 +232,10 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     protected void onContentsChanged(int slot) {
+        if (batchDepth > 0) {
+            batchChanged = true;
+            return;
+        }
         if (changeListener != null) {
             changeListener.run();
         }
@@ -232,6 +248,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     public final void clear() {
+        requireMutable();
         for (int slot = 0; slot < stacks.size(); slot++) {
             if (!stacks.get(slot).isEmpty()) {
                 stacks.set(slot, ItemStack.EMPTY);
@@ -241,6 +258,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     public final void saveToTag(CompoundTag tag, String key, HolderLookup.Provider registries) {
+        if (exporting) savedDuringExport = true;
         if (isEmpty()) {
             tag.remove(key);
             return;
@@ -264,6 +282,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
     }
 
     public final void loadFromTag(CompoundTag tag, String key, HolderLookup.Provider registries) {
+        requireMutable();
         for (int slot = 0; slot < stacks.size(); slot++) {
             stacks.set(slot, ItemStack.EMPTY);
         }
@@ -307,5 +326,87 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             }
         }
         return true;
+    }
+
+    /** Defer callbacks until every source/destination pair and recipe state is consistent. */
+    public final void batchChanges(Runnable action) {
+        requireMutable();
+        batchDepth++;
+        try {
+            action.run();
+        } finally {
+            if (--batchDepth == 0 && batchChanged) {
+                batchChanged = false;
+                if (changeListener != null) changeListener.run();
+            }
+        }
+    }
+
+    /** Machine-only move: bypass output item filters, but preserve components and slot capacity. */
+    public final int moveToOutput(int source, int destination, int maximum) {
+        requireMutable();
+        validateSlotIndex(source);
+        validateSlotIndex(destination);
+        if (source == destination || maximum <= 0) return 0;
+        ItemStack input = stacks.get(source);
+        ItemStack output = stacks.get(destination);
+        if (input.isEmpty() || (!output.isEmpty() && !ItemStack.isSameItemSameComponents(input, output))) return 0;
+        int count = Math.min(Math.min(input.getCount(), maximum), Math.max(0, getSlotLimit(destination) - output.getCount()));
+        if (count == 0) return 0;
+        stacks.set(destination, input.copyWithCount(output.getCount() + count));
+        stacks.set(source, count == input.getCount() ? ItemStack.EMPTY : input.copyWithCount(input.getCount() - count));
+        onContentsChanged(source);
+        return count;
+    }
+
+    /**
+     * Reserve an output while calling foreign storage. Reentrant automation cannot extract the
+     * offer twice or occupy its return space.
+     * Confirmed rejection stays in this exact slot. An unknown receipt must not be retried,
+     * since foreign storage may already have credited the offer before failing.
+     */
+    public final long exportOutput(int slot, ToLongFunction<ItemStack> insertion) {
+        requireMutable();
+        validateSlotIndex(slot);
+        Objects.requireNonNull(insertion, "insertion");
+        ItemStack original = stacks.get(slot);
+        if (original.isEmpty()) return 0;
+        long accepted = 0;
+        exporting = true;
+        savedDuringExport = false;
+        stacks.set(slot, ItemStack.EMPTY);
+        try {
+            try {
+                long receipt = insertion.applyAsLong(original.copy());
+                if (receipt < 0 || receipt > original.getCount()) {
+                    throw new IllegalStateException("Storage returned invalid inserted amount: " + receipt);
+                }
+                accepted = receipt;
+            } catch (RuntimeException | LinkageError uncertain) {
+                // Retire this attempt without replaying a possibly completed credit.
+                // Other output slots can still make progress after a broken receiver.
+                accepted = original.getCount();
+                logUnknownExportReceipt(insertion, uncertain);
+            }
+            return accepted;
+        } finally {
+            stacks.set(slot, accepted == original.getCount() ? ItemStack.EMPTY
+                    : original.copyWithCount(original.getCount() - (int) accepted));
+            exporting = false;
+            // A callback snapshot omitted the reserved output; persist any restored remainder.
+            if (accepted > 0 || savedDuringExport) onContentsChanged(slot);
+        }
+    }
+
+    private static void logUnknownExportReceipt(ToLongFunction<ItemStack> insertion, Throwable failure) {
+        String receiver = insertion.getClass().getName();
+        if (LOGGED_EXPORT_FAILURES.add(receiver)) {
+            LogUtils.getLogger().warn("AE2LT failed to export machine output to {} "
+                    + "(receipt unknown; attempt will not be retried).", receiver, failure);
+        }
+    }
+
+    private void requireMutable() {
+        if (exporting) throw new IllegalStateException("Inventory mutation during external export");
     }
 }

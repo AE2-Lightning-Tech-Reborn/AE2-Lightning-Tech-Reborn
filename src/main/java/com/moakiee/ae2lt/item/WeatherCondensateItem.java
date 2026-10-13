@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.moakiee.ae2lt.logic.WeatherControlHelper;
+import com.moakiee.ae2lt.logic.world.WeatherControlHelper;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client.compat;
 
 import com.illusivesoulworks.polymorph.api.client.PolymorphWidgets;
-import com.moakiee.ae2lt.client.TianshuPatternEncodingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
 
 /** Client registration kept separate so Polymorph remains a genuinely optional dependency. */
 final class TianshuPolymorphClientCompat {
