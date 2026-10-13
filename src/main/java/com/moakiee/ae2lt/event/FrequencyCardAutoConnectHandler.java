@@ -117,7 +117,9 @@ public final class FrequencyCardAutoConnectHandler {
         }
         var pos = event.getPos();
         var registry = WirelessLinkRegistry.get(level.getServer());
-        if (registry == null || !registry.isPotentialLinkTarget(level, pos)) {
+        if (registry == null || (!registry.isPotentialLinkTarget(level, pos)
+                && (event.getFace() == null || !com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer())
+                        .isPotentialTarget(level, pos, event.getFace())))) {
             return;
         }
 

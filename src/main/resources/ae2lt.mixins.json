@@ -9,6 +9,7 @@
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
+    "WirelessEnergyTargetRemovalMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",

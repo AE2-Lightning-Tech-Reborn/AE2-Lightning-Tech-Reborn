@@ -113,11 +113,12 @@ final class AppFluxAccess {
             return 0L;
         }
 
+        if (storage.getInventory() instanceof BufferedMEStorage buffered) {
+            return deliverWithReceipt(access, buffered, extracted);
+        }
         long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
         long leftover = extracted - accepted;
-        if (leftover > 0L) {
-            storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
-        }
+        if (leftover > 0L) storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
         return accepted;
     }
 
@@ -133,11 +134,12 @@ final class AppFluxAccess {
             return 0L;
         }
 
+        if (storage.getInventory() instanceof BufferedMEStorage buffered) {
+            return deliverWithReceipt(access, buffered, extracted);
+        }
         long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
         long leftover = extracted - accepted;
-        if (leftover > 0L) {
-            storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
-        }
+        if (leftover > 0L) storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
         return accepted;
     }
 
@@ -159,12 +161,7 @@ final class AppFluxAccess {
             return 0L;
         }
 
-        long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
-        long leftover = extracted - accepted;
-        if (leftover > 0L) {
-            buffer.insert(FE_KEY, leftover, Actionable.MODULATE, source);
-        }
-        return accepted;
+        return deliverWithReceipt(access, buffer, extracted);
     }
 
     static long sendToTargetRepeatedOptimistic(@Nullable TargetAccess access, BufferedMEStorage buffer,
@@ -185,7 +182,8 @@ final class AppFluxAccess {
                 }
 
                 long attempt = remaining < maxFe ? remaining : maxFe;
-                long accepted = access.receive(attempt);
+                remaining -= attempt;
+                long accepted = deliverWithReceipt(access, buffer, attempt);
                 if (accepted <= 0L) {
                     break;
                 }
@@ -193,7 +191,7 @@ final class AppFluxAccess {
                     accepted = attempt;
                 }
 
-                remaining -= accepted;
+
                 totalAccepted = saturatingAdd(totalAccepted, accepted);
             }
         } finally {
@@ -202,6 +200,14 @@ final class AppFluxAccess {
             }
         }
         return totalAccepted;
+    }
+
+    private static long deliverWithReceipt(TargetAccess access, BufferedMEStorage buffer, long offered) {
+        buffer.quarantineDelivery(offered);
+        // If the callback throws, keep this amount uncertain; retrying would risk duplication.
+        long accepted = Math.min(offered, Math.max(0, access.receive(offered)));
+        buffer.settleDelivery(offered, accepted);
+        return accepted;
     }
 
     private static long extractRepeatedBudget(TargetAccess access, BufferedMEStorage buffer,

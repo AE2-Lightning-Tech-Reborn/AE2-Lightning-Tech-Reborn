@@ -1566,5 +1566,14 @@
   "ae2lt.gui.input_transfer.pending": "Processing…",
   "ae2lt.gui.input_transfer.result": "Moved %s · Exported %s · Input slots left %s",
   "ae2lt.gui.input_transfer.cooldown": "Please try again shortly.",
-  "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved."
+  "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved.",
+  "ae2lt.wireless_energy.connected": "Wireless FE connected",
+  "ae2lt.wireless_energy.disconnected": "Wireless FE disconnected",
+  "ae2lt.wireless_energy.no_permission": "No permission to manage this energy link",
+  "ae2lt.wireless_energy.other_frequency": "Energy target belongs to another frequency",
+  "ae2lt.wireless_energy.unavailable": "Applied Flux is required for wireless FE",
+  "ae2lt.wireless_energy.no_controller": "The advanced controller must be loaded",
+  "ae2lt.wireless_energy.limit": "Wireless energy endpoint limit reached",
+  "ae2lt.wireless_energy.unsupported": "This face has no supported FE input",
+  "ae2lt.wireless_energy.backfeed": "Cannot feed energy back into the source network"
 }
