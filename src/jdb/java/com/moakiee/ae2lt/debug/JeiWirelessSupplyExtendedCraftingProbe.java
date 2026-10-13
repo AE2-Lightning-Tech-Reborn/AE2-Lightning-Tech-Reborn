@@ -9,6 +9,8 @@ import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import com.blakebr0.extendedcrafting.compat.jei.category.table.AdvancedTableCategory;
 import com.blakebr0.extendedcrafting.container.AdvancedTableContainer;
+import com.blakebr0.extendedcrafting.container.EliteTableContainer;
+import com.blakebr0.extendedcrafting.compat.jei.category.table.EliteTableCategory;
 import com.blakebr0.extendedcrafting.crafting.recipe.ShapedTableRecipe;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.integration.ae2wtlib.Ae2wtlibIntegration;
@@ -46,7 +48,12 @@ import net.minecraftforge.network.NetworkHooks;
 public final class JeiWirelessSupplyExtendedCraftingProbe {
     private static final BlockPos NETWORK = new BlockPos(0, 100, 0);
     private static final BlockPos TABLE = NETWORK.south();
+    private static final boolean ELITE = "elite".equals(System.getProperty("ae2lt.extendedCraftingSupplyProbe.table"));
+    private static final int WIDTH = ELITE ? 7 : 5;
+    private static final int INPUTS = WIDTH * WIDTH;
     private static int ticks, phase;
+    private static int stableSince;
+    private static final List<RecipeTransferButton> siblingButtons = new ArrayList<>();
     private static boolean done;
     private static volatile Throwable failure;
     private static volatile boolean verified;
@@ -54,6 +61,20 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
     private static RecipeTransferButton button;
     private static AbstractContainerScreen<?> parentScreen;
     private static Object transferService;
+
+    private static boolean tableMenu(Object menu) {
+        return ELITE ? menu instanceof EliteTableContainer : menu instanceof AdvancedTableContainer;
+    }
+
+    private static mezz.jei.api.recipe.RecipeType<com.blakebr0.extendedcrafting.api.crafting.ITableRecipe> recipeType() {
+        return ELITE ? EliteTableCategory.RECIPE_TYPE : AdvancedTableCategory.RECIPE_TYPE;
+    }
+
+    private static com.blakebr0.cucumber.inventory.BaseItemStackHandler tableInventory(net.minecraft.world.level.Level level) {
+        var table = level.getBlockEntity(TABLE);
+        return ELITE ? ((com.blakebr0.extendedcrafting.tileentity.EliteTableTileEntity) table).getInventory()
+                : ((com.blakebr0.extendedcrafting.tileentity.AdvancedTableTileEntity) table).getInventory();
+    }
 
     private static Class<?> transferEntry() throws Exception {
         try { return Class.forName("mezz.jei.common.transfer.RecipeTransferService"); }
@@ -88,8 +109,8 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
     }
 
     private static ShapedTableRecipe recipe() {
-        return new ShapedTableRecipe(new ResourceLocation("ae2lt_jei_supply", "advanced_refill"), 5, 5,
-                NonNullList.withSize(25, Ingredient.of(Items.OAK_PLANKS)), new ItemStack(Items.DIAMOND), 2);
+        return new ShapedTableRecipe(new ResourceLocation("ae2lt_jei_supply", "table_refill"), WIDTH, WIDTH,
+                NonNullList.withSize(INPUTS, Ingredient.of(Items.OAK_PLANKS)), new ItemStack(Items.DIAMOND), ELITE ? 3 : 2);
     }
 
     @SubscribeEvent
@@ -100,7 +121,7 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
         if (mc.player == null || mc.getSingleplayerServer() == null) return;
         ticks++;
         if (ticks % 100 == 0) System.out.println("EXTENDED_CRAFTING_PROBE phase=" + phase + " ticks=" + ticks);
-        if (phase != 3 && phase != 7 && phase != 9 && ticks % 20 != 0) return;
+        if (phase != 3 && phase != 7 && phase != 9 && phase != 18 && phase != 19 && ticks % 20 != 0) return;
         try {
             if (failure != null) throw new AssertionError(failure);
             require(ticks < 1800, "probe timeout at phase " + phase);
@@ -119,13 +140,14 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                         level.setBlockAndUpdate(NETWORK, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
                         level.setBlockAndUpdate(NETWORK.east(), AEBlocks.DRIVE.block().defaultBlockState());
                         level.setBlockAndUpdate(NETWORK.north(), AEBlocks.WIRELESS_ACCESS_POINT.block().defaultBlockState());
-                        level.setBlockAndUpdate(TABLE, com.blakebr0.extendedcrafting.init.ModBlocks.ADVANCED_TABLE.get().defaultBlockState());
-                        var tableInventory = ((com.blakebr0.extendedcrafting.tileentity.AdvancedTableTileEntity)
-                                level.getBlockEntity(TABLE)).getInventory();
-                        for (int i = 0; i < 25; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
+                        level.setBlockAndUpdate(TABLE, (ELITE ? com.blakebr0.extendedcrafting.init.ModBlocks.ELITE_TABLE
+                                : com.blakebr0.extendedcrafting.init.ModBlocks.ADVANCED_TABLE).get().defaultBlockState());
+                        var tableInventory = tableInventory(level);
+                        for (int i = 0; i < INPUTS; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
                         var cell = AEItems.ITEM_CELL_1K.stack();
                         var inventory = StorageCells.getCellInventory(cell, null);
                         inventory.insert(AEItemKey.of(Items.OAK_PLANKS), 256, Actionable.MODULATE, IActionSource.ofPlayer(player));
+                        inventory.insert(AEItemKey.of(Items.BIRCH_PLANKS), 128, Actionable.MODULATE, IActionSource.ofPlayer(player));
                         inventory.persist();
                         ((DriveBlockEntity) level.getBlockEntity(NETWORK.east())).getInternalInventory().setItemDirect(0, cell);
                         var universal = new ItemStack(AE2wtlib.UNIVERSAL_TERMINAL);
@@ -153,11 +175,11 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                     System.out.println("EXTENDED_CRAFTING_PROBE opening advanced table");
                 }
                 case 2 -> {
-                    if (!(mc.player.containerMenu instanceof AdvancedTableContainer)) return;
+                    if (!tableMenu(mc.player.containerMenu)) return;
                     var runtime = Internal.getJeiRuntime();
                     var manager = runtime.getRecipeManager();
-                    var category = manager.getRecipeCategory(AdvancedTableCategory.RECIPE_TYPE);
-                    manager.addRecipes(AdvancedTableCategory.RECIPE_TYPE, List.of(recipe()));
+                    var category = manager.getRecipeCategory(recipeType());
+                    manager.addRecipes(recipeType(), List.of(recipe()));
                     layout = manager.createRecipeLayoutDrawable(category, recipe(),
                             runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
                     parentScreen = (AbstractContainerScreen<?>) mc.screen;
@@ -165,13 +187,37 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                     button.update(mc.player.containerMenu, mc.player);
                     require(!active(), "disabled wireless option should leave the missing-material button inactive");
                     AE2LTClientConfig.setJeiWirelessSupply(true);
-                    runtime.getRecipesGui().showRecipes(category, List.of(recipe()), List.of());
+                    var siblings = new ArrayList<com.blakebr0.extendedcrafting.api.crafting.ITableRecipe>();
+                    siblings.add(recipe());
+                    for (int i = 0; i < 48; i++) {
+                        siblings.add(new ShapedTableRecipe(new ResourceLocation("ae2lt_jei_supply", "sibling_" + i),
+                                WIDTH, WIDTH, NonNullList.withSize(INPUTS, Ingredient.of(i % 2 == 0 ? Items.BIRCH_PLANKS : Items.OAK_PLANKS)),
+                                new ItemStack(Items.DIAMOND), ELITE ? 3 : 2));
+                    }
+                    runtime.getRecipesGui().showRecipes(category, siblings, List.of());
+                    var mainLayout = layout;
+                    for (int i = 1; i <= 2; i++) {
+                        layout = manager.createRecipeLayoutDrawable(category, siblings.get(i),
+                                runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
+                        siblingButtons.add(createButton());
+                    }
+                    layout = mainLayout;
                     phase++;
                     System.out.println("EXTENDED_CRAFTING_PROBE waiting for wireless offer");
                 }
                 case 3 -> {
                     button.update(mc.player.containerMenu, mc.player);
-                    if (!active()) return;
+                    for (var sibling : siblingButtons) sibling.update(mc.player.containerMenu, mc.player);
+                    if (stableSince == 0) {
+                        if (!active() || siblingButtons.stream().anyMatch(b -> !uncheckedActive(b))) return;
+                        stableSince = ticks;
+                    }
+                    require(active() && siblingButtons.stream().allMatch(JeiWirelessSupplyExtendedCraftingProbe::uncheckedActive),
+                            "stocked recipes became missing during asynchronous refresh");
+                    require(normalFeedback(button) && siblingButtons.stream().allMatch(JeiWirelessSupplyExtendedCraftingProbe::normalFeedback),
+                            "stocked recipes must use the normal JEI transfer button without a warning highlight");
+                    if (ticks - stableSince < 80) return;
+                    if (!refreshInFlight()) return;
                     require(mc.player.getInventory().countItem(Items.OAK_PLANKS) == 0, "preview extracted materials");
                     boolean complete = transfer();
                     require(!complete, "async refill must wait for server acknowledgement");
@@ -181,8 +227,8 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 case 4 -> {
                     server(() -> {
                         var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        require(player.containerMenu instanceof AdvancedTableContainer, "advanced menu was replaced");
-                        for (int i = 1; i <= 25; i++) {
+                        require(tableMenu(player.containerMenu), "advanced menu was replaced");
+                        for (int i = 1; i <= INPUTS; i++) {
                             var stack = player.containerMenu.getSlot(i).getItem();
                             require(stack.is(Items.OAK_PLANKS) && stack.getCount() == 1, "native transfer did not fill slot " + i);
                         }
@@ -190,7 +236,7 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                         require(player.getInventory().countItem(Items.OAK_PLANKS) == 0, "refill took excess materials");
                         var host = TianshuWirelessIngredientSource.open(player, TianshuWirelessIngredientSource.locate(player).get(0));
                         require(host.getInventory().extract(AEItemKey.of(Items.OAK_PLANKS), 999,
-                                Actionable.SIMULATE, IActionSource.ofPlayer(player)) == 231, "network stock was not conserved");
+                                Actionable.SIMULATE, IActionSource.ofPlayer(player)) == 256 - INPUTS, "network stock was not conserved");
                         require(player.getInventory().getItem(0).getOrCreateTag().getDouble("internalCurrentPower") < 1000000,
                                 "terminal did not consume energy");
                         verified = true;
@@ -200,13 +246,13 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 case 5 -> {
                     if (!verified) return;
                     verified = false;
+                    stableSince = 0;
                     com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient.clear();
                     server(() -> {
                         var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                         var level = player.serverLevel();
-                        var tableInventory = ((com.blakebr0.extendedcrafting.tileentity.AdvancedTableTileEntity)
-                                level.getBlockEntity(TABLE)).getInventory();
-                        for (int i = 0; i < 25; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
+                        var tableInventory = tableInventory(level);
+                        for (int i = 0; i < INPUTS; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
                         level.setBlockAndUpdate(NETWORK.west(), AEBlocks.PATTERN_PROVIDER.block().defaultBlockState());
                         level.setBlockAndUpdate(NETWORK.west(2), AEBlocks.MOLECULAR_ASSEMBLER.block().defaultBlockState());
                         level.setBlockAndUpdate(NETWORK.below(), AEBlocks.CRAFTING_STORAGE_4K.block().defaultBlockState());
@@ -220,7 +266,7 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                         var host = TianshuWirelessIngredientSource.open(player, TianshuWirelessIngredientSource.locate(player).get(0));
                         var storage = host.getInventory();
                         storage.extract(AEItemKey.of(Items.OAK_PLANKS), 9999, Actionable.MODULATE, IActionSource.ofPlayer(player));
-                        storage.insert(AEItemKey.of(Items.OAK_PLANKS), 23, Actionable.MODULATE, IActionSource.ofPlayer(player));
+                        storage.insert(AEItemKey.of(Items.OAK_PLANKS), INPUTS - 2, Actionable.MODULATE, IActionSource.ofPlayer(player));
                         storage.insert(AEItemKey.of(Items.OAK_LOG), 64, Actionable.MODULATE, IActionSource.ofPlayer(player));
                         player.containerMenu.broadcastChanges();
                     });
@@ -229,13 +275,23 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 }
                 case 6 -> {
                     var runtime = Internal.getJeiRuntime();
-                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(AdvancedTableCategory.RECIPE_TYPE),
+                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(recipeType()),
                             List.of(recipe()), List.of());
                     phase++;
                 }
                 case 7 -> {
                     button.update(mc.player.containerMenu, mc.player);
-                    if (!active() || !missingReady()) return;
+                    if (stableSince == 0) {
+                        if (!active() || !missingReady()) return;
+                        stableSince = ticks;
+                    }
+                    var feedbackField = RecipeTransferButton.class.getDeclaredField("recipeTransferError");
+                    feedbackField.setAccessible(true);
+                    var feedback = (mezz.jei.api.recipe.transfer.IRecipeTransferError) feedbackField.get(button);
+                    require(active() && feedback != null && feedback.getButtonHighlightColor()
+                            == appeng.integration.modules.jeirei.TransferHelper.BLUE_PLUS_BUTTON_COLOR,
+                            "craftable deficit became missing during asynchronous refresh");
+                    if (ticks - stableSince < 80) return;
                     require(!net.minecraft.client.gui.screens.Screen.hasControlDown(), "ordinary click fixture needs Ctrl released");
                     require(!transfer(), "partial refill must wait for the real server");
                     phase++;
@@ -243,15 +299,15 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 case 8 -> {
                     server(() -> {
                         var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        require(player.containerMenu instanceof AdvancedTableContainer, "ordinary + started crafting");
+                        require(tableMenu(player.containerMenu), "ordinary + started crafting");
                         int filled = 0;
-                        for (int i = 1; i <= 25; i++) if (player.containerMenu.getSlot(i).getItem().is(Items.OAK_PLANKS)) filled++;
-                        require(filled == 23 && player.containerMenu.getSlot(0).getItem().isEmpty(), "ordinary + must transfer available ingredients");
+                        for (int i = 1; i <= INPUTS; i++) if (player.containerMenu.getSlot(i).getItem().is(Items.OAK_PLANKS)) filled++;
+                        require(filled == INPUTS - 2 && player.containerMenu.getSlot(0).getItem().isEmpty(), "ordinary + must transfer available ingredients");
                         require(player.getInventory().countItem(Items.OAK_PLANKS) == 0, "partial refill must not leave extra items");
                         verified = true;
                     });
                     var runtime = Internal.getJeiRuntime();
-                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(AdvancedTableCategory.RECIPE_TYPE),
+                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(recipeType()),
                             List.of(recipe()), List.of());
                     phase++;
                 }
@@ -294,12 +350,11 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 case 12 -> {
                     server(() -> {
                         var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        var tableInventory = ((com.blakebr0.extendedcrafting.tileentity.AdvancedTableTileEntity)
-                                player.level().getBlockEntity(TABLE)).getInventory();
-                        for (int i = 0; i < 25; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
+                        var tableInventory = tableInventory(player.level());
+                        for (int i = 0; i < INPUTS; i++) tableInventory.setStackInSlot(i, ItemStack.EMPTY);
                         var host = TianshuWirelessIngredientSource.open(player, TianshuWirelessIngredientSource.locate(player).get(0));
                         host.getInventory().extract(AEItemKey.of(Items.OAK_PLANKS), 9999, Actionable.MODULATE, IActionSource.ofPlayer(player));
-                        host.getInventory().insert(AEItemKey.of(Items.OAK_PLANKS), 23, Actionable.MODULATE, IActionSource.ofPlayer(player));
+                        host.getInventory().insert(AEItemKey.of(Items.OAK_PLANKS), INPUTS - 2, Actionable.MODULATE, IActionSource.ofPlayer(player));
                         NetworkHooks.openScreen(player, (MenuProvider) player.level().getBlockEntity(TABLE), TABLE);
                     });
                     verified = false;
@@ -307,11 +362,11 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                     phase++;
                 }
                 case 13 -> {
-                    if (!(mc.player.containerMenu instanceof AdvancedTableContainer)) return;
+                    if (!tableMenu(mc.player.containerMenu)) return;
                     parentScreen = (AbstractContainerScreen<?>) mc.screen;
                     button = createButton();
                     var runtime = Internal.getJeiRuntime();
-                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(AdvancedTableCategory.RECIPE_TYPE),
+                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(recipeType()),
                             List.of(recipe()), List.of());
                     phase++;
                 }
@@ -324,11 +379,10 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                     if (!(mc.player.containerMenu instanceof appeng.menu.me.crafting.CraftConfirmMenu)) return;
                     server(() -> {
                         var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        var tableInventory = ((com.blakebr0.extendedcrafting.tileentity.AdvancedTableTileEntity)
-                                player.level().getBlockEntity(TABLE)).getInventory();
+                        var tableInventory = tableInventory(player.level());
                         int filled = 0;
-                        for (int i = 0; i < 25; i++) if (tableInventory.getStackInSlot(i).is(Items.OAK_PLANKS)) filled++;
-                        require(filled == 23 && player.getInventory().countItem(Items.OAK_PLANKS) == 0,
+                        for (int i = 0; i < INPUTS; i++) if (tableInventory.getStackInSlot(i).is(Items.OAK_PLANKS)) filled++;
+                        require(filled == INPUTS - 2 && player.getInventory().countItem(Items.OAK_PLANKS) == 0,
                                 "Ctrl must fill the available ingredients before opening confirmation");
                         try {
                             var confirm = player.containerMenu;
@@ -341,8 +395,48 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
                 }
                 case 16 -> {
                     if (!verified) return;
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        var inventory = tableInventory(player.level());
+                        for (int i = 0; i < INPUTS; i++) inventory.setStackInSlot(i, ItemStack.EMPTY);
+                        var host = TianshuWirelessIngredientSource.open(player, TianshuWirelessIngredientSource.locate(player).get(0));
+                        host.getInventory().insert(AEItemKey.of(Items.OAK_PLANKS), 256, Actionable.MODULATE, IActionSource.ofPlayer(player));
+                        NetworkHooks.openScreen(player, (MenuProvider) player.level().getBlockEntity(TABLE), TABLE);
+                    });
+                    verified = false;
+                    phase++;
+                }
+                case 17 -> {
+                    if (!tableMenu(mc.player.containerMenu)) return;
+                    parentScreen = (AbstractContainerScreen<?>) mc.screen;
+                    button = createButton();
+                    var runtime = Internal.getJeiRuntime();
+                    runtime.getRecipesGui().showRecipes(runtime.getRecipeManager().getRecipeCategory(recipeType()),
+                            List.of(recipe()), List.of());
+                    phase++;
+                }
+                case 18 -> {
+                    button.update(mc.player.containerMenu, mc.player);
+                    if (!active()) return;
+                    server(() -> mc.getSingleplayerServer().overworld().setBlockAndUpdate(NETWORK.north(),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()));
+                    stableSince = 0;
+                    phase++;
+                }
+                case 19 -> {
+                    button.update(mc.player.containerMenu, mc.player);
+                    if (stableSince == 0) {
+                        if (active()) return;
+                        stableSince = ticks;
+                    }
+                    require(!active(), "failed wireless query left a stale available/craftable snapshot");
+                    if (ticks - stableSince < 40) return;
+                    phase++;
+                }
+                case 20 -> {
                     Files.writeString(mc.gameDirectory.toPath().resolve("extended-crafting-supply-result.txt"),
-                            "PASS: real WUT, advanced table, stock/energy conservation, ordinary partial +, Ctrl prefill, native crafting queue, exact deficit, CPU and molecular assembler output\n");
+                            "PASS: real WUT, multi-recipe stock/craftable refresh stability, failed-query invalidation, "
+                                    + (ELITE ? "elite" : "advanced") + " table, stock/energy conservation, ordinary partial +, Ctrl prefill, native crafting queue, exact deficit, CPU and molecular assembler output\n");
                     System.out.println("EXTENDED_CRAFTING_WIRELESS_SUPPLY_PASS");
                     done = true;
                     mc.setScreen(null);
@@ -360,9 +454,38 @@ public final class JeiWirelessSupplyExtendedCraftingProbe {
     }
 
     private static boolean active() throws Exception {
+        return active(button);
+    }
+
+    private static boolean active(RecipeTransferButton target) throws Exception {
         var field = RecipeTransferButton.class.getSuperclass().getDeclaredField("button");
         field.setAccessible(true);
-        return ((Button) field.get(button)).active;
+        return ((Button) field.get(target)).active;
+    }
+
+    private static boolean uncheckedActive(RecipeTransferButton target) {
+        try { return active(target); }
+        catch (Exception error) { throw new AssertionError(error); }
+    }
+
+    private static boolean normalFeedback(RecipeTransferButton target) {
+        try {
+            var field = RecipeTransferButton.class.getDeclaredField("recipeTransferError");
+            field.setAccessible(true);
+            return field.get(target) == null;
+        } catch (Exception error) { throw new AssertionError(error); }
+    }
+
+    private static boolean refreshInFlight() throws Exception {
+        var type = com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient.class;
+        var offers = type.getDeclaredField("OFFERS"); offers.setAccessible(true);
+        for (var entry : ((java.util.Map<?, ?>) offers.get(null)).entrySet()) {
+            var recipe = entry.getKey().getClass().getDeclaredMethod("recipe"); recipe.setAccessible(true);
+            if (recipe.invoke(entry.getKey()) != layout.getRecipe()) continue;
+            var awaiting = entry.getValue().getClass().getDeclaredField("awaiting"); awaiting.setAccessible(true);
+            return awaiting.getBoolean(entry.getValue());
+        }
+        return false;
     }
 
     private static Object missingOffer() throws Exception {

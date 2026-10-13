@@ -43,6 +43,7 @@ public final class JeiWirelessSupplyClient {
     private static final class Offer {
         final int id;
         final long requestedAt = Util.getMillis();
+        boolean awaiting = true;
         List<ItemStack> items;
         List<ItemStack> craftable = List.of();
         long fingerprint = Long.MIN_VALUE;
@@ -56,7 +57,7 @@ public final class JeiWirelessSupplyClient {
                            NativeTransfer nativeTransfer) {}
     private record MissingPlan(List<ItemStack> stored, List<ItemStack> craft, IRecipeSlotsView slots,
                                CraftingTermMenu.MissingIngredientSlots missing, boolean hasAvailable) {}
-    private static final Map<Key, Offer> OFFERS = new LinkedHashMap<>();
+    private static final Map<Key, Offer> OFFERS = new LinkedHashMap<>(32, 0.75f, true);
     private static AbstractContainerMenu currentMenu;
     private static Pending pending;
     private static int sequence;
@@ -82,15 +83,26 @@ public final class JeiWirelessSupplyClient {
 
         var key = new Key(recipe, handler);
         var offer = OFFERS.get(key);
-        if (offer == null || Util.getMillis() - offer.requestedAt > (offer.items == null ? 3000 : 1000)) {
+        if (pending == null && (offer == null
+                || Util.getMillis() - offer.requestedAt > (offer.awaiting ? 3000 : 1000))) {
             var wanted = queryItems(slots);
             if (wanted.isEmpty()) return doTransfer && allows(nativeError)
                     ? nativeTransfer.transfer(maximum, true, null) : nativeError;
-            offer = new Offer(++sequence);
-            while (OFFERS.size() >= 32) OFFERS.remove(OFFERS.keySet().iterator().next());
+            var refreshed = new Offer(++sequence);
+            if (offer != null) {
+                // Refresh the authorization without dropping the last server snapshot. JEI updates
+                // buttons every tick, so returning the backpack-only error here makes them flicker.
+                refreshed.items = offer.items;
+                refreshed.craftable = offer.craftable;
+            }
+            offer = refreshed;
+            if (!OFFERS.containsKey(key)) {
+                while (OFFERS.size() >= 32) OFFERS.remove(OFFERS.keySet().iterator().next());
+            }
             OFFERS.put(key, offer);
             PacketSender.sendToServer(new WirelessJeiSupplyPacket(menu.containerId, offer.id, false, wanted));
         }
+        if (offer == null) return nativeError;
         var operation = new Pending(handler, menu, recipe, slots, player, maximum,
                 Minecraft.getInstance().screen, offer, false, Screen.hasControlDown(), false, nativeTransfer);
         if (offer.items == null) {
@@ -109,8 +121,11 @@ public final class JeiWirelessSupplyClient {
             }
             return doTransfer && allows(nativeError) ? nativeTransfer.transfer(maximum, true, null) : nativeError;
         }
-        if (doTransfer) beginTake(operation, plan, false);
-        return hint(!doTransfer, doTransfer ? "waiting" : "available");
+        if (doTransfer) {
+            beginTake(operation, plan, false);
+            return hint(false, "waiting");
+        }
+        return null;
     }
 
     /** Requests only item types occurring in this recipe, retaining exact returned components for JEI to compare. */
@@ -386,14 +401,19 @@ public final class JeiWirelessSupplyClient {
         if (minecraft.player == null || minecraft.player.containerMenu != currentMenu
                 || currentMenu.containerId != packet.containerId() || !AE2LTClientConfig.jeiWirelessSupply()) { clear(); return; }
         for (var offer : OFFERS.values()) {
-            if (offer.id == packet.requestId() && packet.status() == 1) {
-                offer.items = WirelessJeiInventoryPlan.copy(packet.items());
-                offer.craftable = WirelessJeiInventoryPlan.copy(packet.craftable());
+            if (offer.id == packet.requestId() && (packet.status() == 1 || packet.status() == 0)) {
+                offer.awaiting = false;
+                // A failed query must also replace the cached snapshot (e.g. a disconnected terminal).
+                offer.items = packet.status() == 1 ? WirelessJeiInventoryPlan.copy(packet.items()) : List.of();
+                offer.craftable = packet.status() == 1 ? WirelessJeiInventoryPlan.copy(packet.craftable()) : List.of();
                 offer.fingerprint = Long.MIN_VALUE;
             }
         }
         var operation = pending;
         if (operation == null || operation.offer().id != packet.requestId()) return;
+        // A click can use the cached snapshot while its refresh is still in flight. That query
+        // reply is not the extraction acknowledgement; keep waiting for the take/craft result.
+        if (operation.taking() && packet.status() == 1) return;
         pending = null;
         if (packet.status() == 3) { clear(); return; }
         if (minecraft.screen != operation.screen()) return;

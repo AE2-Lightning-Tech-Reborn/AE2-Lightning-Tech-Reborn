@@ -11,17 +11,26 @@ allprojects {
                     'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
                     || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
         }
-        // Extended Crafting 6.0.10 and Cucumber 7.0.16, Forge 1.20.1; test-only dependencies.
-        ['maven.modrinth:extended-crafting:NtEZsGjO', 'maven.modrinth:cucumber:xnLznSfT'].each { coordinate ->
+        // Optional local jars let the probe use the exact modpack versions.
+        def extendedCrafting = project.findProperty('extended_crafting_test_jar')
+        def cucumber = project.findProperty('cucumber_test_jar')
+        [extendedCrafting, cucumber].findAll { it }.each { jar ->
+            repositories.flatDir { dirs project.file(jar).parentFile }
+        }
+        def localJar = { jar -> 'ae2lt.local-test:' + project.file(jar).name.replaceFirst(/\.jar$/, '') + ':local' }
+        [extendedCrafting ? localJar(extendedCrafting) : 'maven.modrinth:extended-crafting:NtEZsGjO',
+         cucumber ? localJar(cucumber) : 'maven.modrinth:cucumber:xnLznSfT'].each { coordinate ->
             dependencies.add('jdbCompileOnly', fg.deobf(coordinate))
             dependencies.add('runtimeOnly', fg.deobf(coordinate))
         }
-        def probeDirectory = project.file('build/jei-extended-crafting-client-' + project.jei_version)
+        def table = project.findProperty('jei_supply_test_table') ?: 'advanced'
+        def probeDirectory = project.file('build/jei-extended-crafting-client-' + project.jei_version + '-' + table)
         def sourceWorld = project.file('build/jei-wireless-supply-forge/world')
         def clientWorld = new File(probeDirectory, 'saves/JeiWirelessSupplyQA')
         minecraft.runs.client {
             workingDirectory probeDirectory
             property 'ae2lt.extendedCraftingSupplyProbe', 'true'
+            property 'ae2lt.extendedCraftingSupplyProbe.table', table
             property 'forge.logging.console.level', 'info'
             args '--quickPlaySingleplayer', 'JeiWirelessSupplyQA'
             mods { ae2lt { source sourceSets.jdb } }
