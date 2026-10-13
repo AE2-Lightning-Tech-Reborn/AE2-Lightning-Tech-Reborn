@@ -32,13 +32,25 @@ public final class PigmeeControlScreen extends Screen {
             PacketDistributor.sendToServer(new PigmeeControlInputPacket(packet.token(), 0, 0, 0, 0, true));
         }
     }
+    public static net.minecraft.world.entity.Entity renderView(net.minecraft.world.entity.Entity original) {
+        var mc = Minecraft.getInstance();
+        if (original == mc.player && mc.screen instanceof PigmeeControlScreen screen && !screen.closed && mc.level != null) {
+            var actor = mc.level.getPlayerByUUID(screen.state.actor());
+            if (actor != null) return actor;
+        }
+        return original;
+    }
     @Override protected void init() {
         var actor = minecraft.level.getPlayerByUUID(state.actor());
         if (actor == null) { onClose(); return; }
         yaw = actor.getYRot(); pitch = actor.getXRot();
         if (previousCameraType == null) previousCameraType = minecraft.options.getCameraType();
         minecraft.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
-        minecraft.setCameraEntity(actor); // Client observation only; the real body stays on its native connection.
+        // Keep Minecraft.cameraEntity == the real player: LocalPlayer.sendPosition and
+        // serverAiStep depend on that identity. Only Camera.setup's render subject changes.
+        minecraft.player.xxa = 0; minecraft.player.zza = 0; minecraft.player.setJumping(false);
+        minecraft.player.input.forwardImpulse = 0; minecraft.player.input.leftImpulse = 0;
+        minecraft.player.input.jumping = false; minecraft.player.input.shiftKeyDown = false;
         net.minecraft.client.KeyMapping.releaseAll();
     }
     @Override public boolean isPauseScreen() { return false; }
@@ -69,7 +81,6 @@ public final class PigmeeControlScreen extends Screen {
     @Override public void removed() {
         if (closed) return; closed = true; held.clear();
         if (minecraft != null) {
-            if (minecraft.player != null) minecraft.setCameraEntity(minecraft.player);
             if (previousCameraType != null) minecraft.options.setCameraType(previousCameraType);
             if (minecraft.getConnection() != null) PacketDistributor.sendToServer(new PigmeeControlInputPacket(state.token(), sequence, 0, yaw, pitch, true));
             net.minecraft.client.KeyMapping.releaseAll();

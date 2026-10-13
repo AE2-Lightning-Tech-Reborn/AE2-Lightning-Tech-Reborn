@@ -138,7 +138,13 @@ public final class PigmeeActivationGameTests {
         owner.gameMode.useItemOn(owner, level, owner.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
         helper.assertTrue(manager.ids().size() == countBeforeUse + 1 && PigmeeVariant.fromBlock(level.getBlockState(target)) == null
                 && owner.getMainHandItem().getCount() == 1, "native creative controller use converts exactly once without cost");
-        manager.deactivate(manager.ids().getLast());
+        var nativeActor = manager.active(manager.ids().getLast());
+        owner.getInventory().setItem(0, new ItemStack(com.moakiee.ae2lt.registry.ModItems.PIGMEE_REMOTE_CONTROL.get()));
+        owner.setShiftKeyDown(true);
+        owner.interactOn(nativeActor, net.minecraft.world.InteractionHand.MAIN_HAND);
+        owner.setShiftKeyDown(false);
+        helper.assertTrue(nativeActor.getUUID().equals(PigmeeRemoteControlItem.bound(owner.getMainHandItem())), "creative interaction updates held remote rather than discarded item copy");
+        manager.deactivate(nativeActor.getUUID());
         System.out.println("PIGMEE_P1_ACTIVATION_PASS: exact three variants, native game modes, duplicate rejection, water preservation, protection/reach/space gates, join rollback and source-conflict quarantine");
         helper.succeed();
     }

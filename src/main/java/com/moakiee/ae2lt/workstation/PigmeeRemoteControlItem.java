@@ -23,7 +23,7 @@ public final class PigmeeRemoteControlItem extends Item {
         return tag.hasUUID(ACTOR) ? tag.getUUID(ACTOR) : null;
     }
     public static void bind(ServerPlayer owner, ItemStack stack, PigmeeServerPlayer actor) {
-        if (!PigmeeWorkstationRuntime.enabled() || owner.isFakePlayer() || actor.isRemoved()
+        if (!(stack.getItem() instanceof PigmeeRemoteControlItem) || !PigmeeWorkstationRuntime.enabled() || owner.isFakePlayer() || actor.isRemoved()
                 || PigmeeWorkstationRuntime.manager(owner.server).active(actor.getUUID()) != actor
                 || owner.level() != actor.level() || !owner.canInteractWithEntity(actor.getBoundingBox(), 0)
                 || !PigmeeWorkstationRuntime.manager(owner.server).ownedBy(actor.getUUID(), owner.getUUID())) {
@@ -35,7 +35,15 @@ public final class PigmeeRemoteControlItem extends Item {
         if (!player.isShiftKeyDown()) return InteractionResult.PASS;
         if (player.level().isClientSide) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer owner) || !(target instanceof PigmeeServerPlayer actor)) return InteractionResult.PASS;
-        try { bind(owner, stack, actor); owner.displayClientMessage(Component.translatable("message.ae2lt.pigmee_bound", actor.getUUID()), true); }
+        try {
+            // Player.interactOn passes a copy in creative mode. Update the actual held item.
+            var held = owner.getItemInHand(hand);
+            if (held.getItem() != this) return InteractionResult.FAIL;
+            bind(owner, held, actor);
+            owner.getInventory().setChanged();
+            owner.containerMenu.broadcastChanges();
+            owner.displayClientMessage(Component.translatable("message.ae2lt.pigmee_bound", actor.getUUID().toString()), true);
+        }
         catch (IllegalStateException failure) { owner.displayClientMessage(Component.literal(failure.getMessage()), true); }
         return InteractionResult.CONSUME;
     }

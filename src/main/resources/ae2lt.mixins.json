@@ -62,6 +62,7 @@
     "TianshuStonecutterMenuMixin"
   ],
   "client": [
+    "client.PigmeeRenderCameraMixin",
     "client.IpnContainerClickerMixin",
     "client.EncodingHelperAccessor",
     "client.CableBusRenderStateMixin",

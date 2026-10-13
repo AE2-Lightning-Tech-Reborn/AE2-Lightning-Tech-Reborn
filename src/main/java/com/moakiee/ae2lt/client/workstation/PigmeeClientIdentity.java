@@ -37,6 +37,12 @@ public final class PigmeeClientIdentity {
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) {
         IDENTITIES.clear(); MODELS.clear(); RENDERED.clear();
     }
+    @SubscribeEvent public static void hideBodyHand(net.neoforged.neoforge.client.event.RenderHandEvent event) {
+        if (net.minecraft.client.Minecraft.getInstance().screen instanceof PigmeeControlScreen) event.setCanceled(true);
+    }
+    @SubscribeEvent public static void hideBodyHighlight(net.neoforged.neoforge.client.event.RenderHighlightEvent.Block event) {
+        if (net.minecraft.client.Minecraft.getInstance().screen instanceof PigmeeControlScreen) event.setCanceled(true);
+    }
     @SubscribeEvent public static void hideBodyHud(net.neoforged.neoforge.client.event.RenderGuiEvent.Pre event) {
         if (net.minecraft.client.Minecraft.getInstance().screen instanceof PigmeeControlScreen) event.setCanceled(true);
     }

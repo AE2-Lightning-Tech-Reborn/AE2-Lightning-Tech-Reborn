@@ -16,7 +16,7 @@ allprojects {
         }
         neoForge.runs.create('pigmeeClient') {
             client()
-            gameDirectory = project.layout.buildDirectory.dir('pigmee-p1-client').get().asFile
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('pigmeeClientDirectory').getOrElse('pigmee-p1-client')).get().asFile
             programArguments.addAll '--username', 'PigmeeQA', '--quickPlaySingleplayer', 'PigmeeQA'
             systemProperty 'ae2lt.pigmeeP0', 'true'
             systemProperty 'ae2lt.pigmeeClientProbe', 'true'
