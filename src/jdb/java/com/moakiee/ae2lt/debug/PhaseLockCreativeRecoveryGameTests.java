@@ -6,8 +6,10 @@ import java.util.UUID;
 
 import com.moakiee.ae2lt.celestweave.ArmorEnergyBuffer;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
+import com.moakiee.ae2lt.celestweave.phase.PhaseLockEnergySnapshot;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockService;
 import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
+import com.moakiee.ae2lt.registry.ModDataComponents;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -25,6 +27,83 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 public final class PhaseLockCreativeRecoveryGameTests {
     private static final List<EquipmentSlot> SLOTS = List.of(
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
+
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test")
+    public static void lockedArmorPublishesDisplayOnlyEnergy(GameTestHelper helper) {
+        var player = player(helper);
+        var armor = equipArmor(player);
+        try {
+            var unsyncedProjection = new ItemStack(ModItems.PHASE_LOCK_PROJECTION.get());
+            require(!unsyncedProjection.isBarVisible(),
+                    "projection without an energy snapshot displayed a bar");
+            for (EquipmentSlot slot : SLOTS) {
+                ArmorEnergyBuffer.write(armor.get(slot), player.level().registryAccess(), 1_000_000L);
+            }
+            PhaseLockService.tick(player);
+            require(PhaseLockService.hasPrivateArmor(player), "energy fixture did not lock");
+            assertEnergySnapshots(player, armor);
+
+            var chest = armor.get(EquipmentSlot.CHEST);
+            require(CelestweaveArmorState.installOneModule(chest, player.level().registryAccess(),
+                    new ItemStack(ModItems.ENERGY_MODULE_T3.get())), "cannot expand locked armor capacity");
+            ArmorEnergyBuffer.write(chest, player.level().registryAccess(), 15_000_000_000L);
+            PhaseLockService.tick(player);
+            assertEnergySnapshots(player, armor);
+            require(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get(player.getItemBySlot(EquipmentSlot.CHEST)).capacity() > Integer.MAX_VALUE,
+                    "snapshot truncated expanded capacity");
+
+            // A client-edited display snapshot must not mutate the private armor or mirror clock.
+            var projection = player.getItemBySlot(EquipmentSlot.CHEST);
+            var originalLink = ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get(projection);
+            var forged = projection.copy();
+            ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.set(forged, new PhaseLockEnergySnapshot(1L, 1L));
+            upload(player, menuSlot(EquipmentSlot.CHEST), forged);
+            PhaseLockService.tick(player);
+            assertEnergySnapshots(player, armor);
+            require(ArmorEnergyBuffer.read(chest, player.level().registryAccess()) > Integer.MAX_VALUE,
+                    "client snapshot overwrote private FE");
+            require(originalLink.equals(ModDataComponents.PHASE_LOCK_PROJECTION_LINK.get(player.getItemBySlot(EquipmentSlot.CHEST))),
+                    "display-only changes advanced the writable mirror clock");
+
+            ArmorEnergyBuffer.write(chest, player.level().registryAccess(), 0L);
+            PhaseLockService.tick(player);
+            assertEnergySnapshots(player, armor);
+            PhaseLockService.release(player);
+            for (EquipmentSlot slot : SLOTS) {
+                require(player.getItemBySlot(slot) == armor.get(slot), "unlock lost original armor");
+                require(!ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.has(armor.get(slot)),
+                        "display snapshot leaked into real armor");
+            }
+        } finally {
+            PhaseLockService.release(player);
+            player.getInventory().clearContent();
+        }
+        System.out.println("PHASE_LOCK_HUD_PASS energy snapshots survive sync, update, client edits and unlock");
+        helper.succeed();
+    }
+
+    private static void assertEnergySnapshots(ServerPlayer player, EnumMap<EquipmentSlot, ItemStack> armor) {
+        for (EquipmentSlot slot : SLOTS) {
+            var projection = player.getItemBySlot(slot);
+            var expected = new PhaseLockEnergySnapshot(
+                    ArmorEnergyBuffer.capacity(armor.get(slot), player.level().registryAccess()),
+                    ArmorEnergyBuffer.read(armor.get(slot), player.level().registryAccess()));
+            require(expected.equals(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get(projection)),
+                    "projection energy differs from real armor: " + slot);
+            require(!ModDataComponents.CELESTWEAVE_ENERGY_BUFFER.has(projection),
+                    "projection acquired functional energy storage");
+            var buf = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+            try {
+                buf.writeItem(projection);
+                var received = buf.readItem();
+                require(expected.equals(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get(received)),
+                        "client stack codec lost energy snapshot: " + slot);
+                require(!received.isBarVisible(), "synced projection displayed an item bar: " + slot);
+            } finally {
+                buf.release();
+            }
+        }
+    }
 
     @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void emptyArmorSurvivesCreativeProjectionEcho(GameTestHelper helper) {

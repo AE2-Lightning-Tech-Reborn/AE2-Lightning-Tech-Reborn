@@ -118,6 +118,11 @@ public final class PhaseLockProjectionItem extends ArmorItem {
     }
 
     @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return false;
+    }
+
+    @Override
     // 1.20.1 hover text signature: the TooltipContext argument is replaced by a nullable Level.
     public void appendHoverText(
             ItemStack stack,

@@ -11,6 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.world.item.ItemStack;
 
+import com.moakiee.ae2lt.celestweave.phase.PhaseLockEnergySnapshot;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockProjectionLink;
 import com.moakiee.ae2lt.celestweave.state.CelestweaveModuleContainer;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
@@ -129,6 +130,10 @@ public final class ModDataComponents {
     /** UUID and monotonic mirror version carried only by a phase-lock projection（可空）。 */
     public static final ComponentKey<PhaseLockProjectionLink> PHASE_LOCK_PROJECTION_LINK = codecKey(
             TAG_PREFIX + "phase_lock_projection_link", PhaseLockProjectionLink.CODEC, null);
+
+    /** Server-authored HUD values, excluded from the writable projection mirror. */
+    public static final ComponentKey<PhaseLockEnergySnapshot> PHASE_LOCK_ENERGY_SNAPSHOT = codecKey(
+            TAG_PREFIX + "phase_lock_energy_snapshot", PhaseLockEnergySnapshot.CODEC, null);
 
     /** Monotonic mirror version carried only by authoritative phase-locked armor. */
     public static final ComponentKey<Long> PHASE_LOCK_ARMOR_UPDATE = longKey(TAG_PREFIX + "phase_lock_armor_update");
