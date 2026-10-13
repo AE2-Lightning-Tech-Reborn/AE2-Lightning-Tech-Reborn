@@ -1,7 +1,10 @@
 // ./gradlew -I scripts/wireless-energy-test.init.gradle runGameTestServer
 allprojects {
     afterEvaluate {
-        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/energy/WirelessEnergyGameTests.java'])
+        def restartPhase = project.findProperty('wirelessRestartPhase')
+        sourceSets.jdb.java.setIncludes(restartPhase
+                ? ['com/moakiee/ae2lt/logic/energy/WirelessEnergyRestartGameTests.java']
+                : ['com/moakiee/ae2lt/logic/energy/WirelessEnergyGameTests.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics']
                     || dep.name in ['applied-flux-965012', 'glodium-957920'])
@@ -9,6 +12,7 @@ allprojects {
         neoForge.runs.gameTestServer {
             gameDirectory = project.layout.buildDirectory.dir('wireless-energy-gametest').get().asFile
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+            if (restartPhase) systemProperty 'ae2lt.energy.restartPhase', restartPhase
         }
     }
 }

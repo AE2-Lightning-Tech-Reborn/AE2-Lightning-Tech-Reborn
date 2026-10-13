@@ -96,14 +96,10 @@ public class BufferedMEStorage implements MEStorage {
             return extractFromBuffer(needed, mode) / costMultiplier;
         }
 
+        if (escrow.available() > 0L) return extractFromBuffer(needed, mode) / costMultiplier;
+        needed = Math.min(needed, escrow.room());
         MEStorage cell = resolveCell();
-        if (cell != null) {
-            return creditExtraction(extractThroughCell(cell, feKey, needed, mode, source), mode);
-        }
-
-        if (escrow.available() > 0L) {
-            return extractFromBuffer(needed, mode) / costMultiplier;
-        }
+        if (cell != null) return creditExtraction(extractThroughCell(cell, feKey, needed, mode, source), mode);
         return creditExtraction(delegate.extract(feKey, needed, mode, source), mode);
     }
 
@@ -179,55 +175,22 @@ public class BufferedMEStorage implements MEStorage {
         AEKey feKey = AppFluxBridge.FE_KEY;
         if (feKey == null || amount <= 0L) return 0L;
         long needed = saturatingMul(amount, costMultiplier);
-
+        if (batchOnly || escrow.available() > 0) return extractFromBuffer(needed, Actionable.MODULATE) / costMultiplier;
         MEStorage cell = resolveCell();
-        if (cell != null) {
-            long extracted = cell.extract(feKey, needed, Actionable.MODULATE, source);
-            long credited = extracted / costMultiplier;
-            long consumed = credited * costMultiplier;
-            long remainder = extracted - consumed;
-            if (remainder > 0L) {
-                long returned = cell.insert(feKey, remainder, Actionable.MODULATE, source);
-                if (returned < remainder) {
-                    long refund = delegate.insert(feKey, remainder - returned, Actionable.MODULATE, source);
-                    escrow.credit(remainder - returned - refund);
-                }
-            }
-            if (consumed > 0L) recordConsumption(consumed);
-            return credited;
-        }
-        if (batchOnly || escrow.available() > 0L) {
-            long extracted = Math.min(needed, escrow.available());
-            long credited = extracted / costMultiplier;
-            long consumed = credited * costMultiplier;
-            escrow.debit(consumed);
-            if (consumed > 0L) recordConsumption(consumed);
-            return credited;
-        }
-        return 0L;
+        if (cell == null) return 0;
+        long raw = cell.extract(feKey, Math.min(needed, escrow.room()), Actionable.MODULATE, source);
+        long consumed = raw - raw % costMultiplier;
+        // Keep indivisible units owned here, without a lossy best-effort refund chain.
+        escrow.credit(raw - consumed);
+        if (consumed > 0) recordConsumption(consumed);
+        return consumed / costMultiplier;
     }
 
     public long returnFromDirectSend(long amount, IActionSource source) {
-        AEKey feKey = AppFluxBridge.FE_KEY;
-        if (feKey == null || amount <= 0L) return 0L;
+        if (amount <= 0) return 0;
         long credit = saturatingMul(amount, costMultiplier);
-        long accepted;
-
-        MEStorage cell = resolveCell();
-        if (cell != null) {
-            long intoCell = cell.insert(feKey, credit, Actionable.MODULATE, source);
-            long overflow = credit - intoCell;
-            long intoDelegate = overflow > 0L
-                    ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-            accepted = saturatingAdd(intoCell, intoDelegate);
-        } else if (batchOnly || escrow.available() > 0L) {
-            escrow.credit(credit);
-            accepted = credit;
-        } else {
-            accepted = delegate.insert(feKey, credit, Actionable.MODULATE, source);
-        }
-        if (accepted < credit) escrow.credit(credit - accepted);
-        if (credit > 0L) recordReturn(credit);
+        escrow.credit(credit);
+        recordReturn(credit);
         return credit / costMultiplier;
     }
 

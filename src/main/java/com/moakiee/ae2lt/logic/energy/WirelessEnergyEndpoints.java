@@ -39,7 +39,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     public enum State { WAITING, UNLOADED, NO_CONTROLLER, NO_PERMISSION, NO_FE, BLOCKED, ACTIVE, FAULTED }
     public record View(UUID id, int frequency, Location location, Direction face, UUID actor,
-                       State state, long lastDelivered, long totalDelivered) {}
+                       State state, long lastVisitedTick, long lastDelivered, long totalDelivered) {}
     private static final class Endpoint {
         final UUID id;
         final int frequency;
@@ -48,12 +48,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final UUID actor;
         final String block, type;
         State state = State.WAITING;
-        long lastDelivered, totalDelivered;
+        long lastVisitedTick = Long.MIN_VALUE, lastDelivered, totalDelivered;
         Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
             this.actor = actor; this.block = block; this.type = type;
         }
-        View view() { return new View(id, frequency, location, face, actor, state, lastDelivered, totalDelivered); }
+        View view() { return new View(id, frequency, location, face, actor, state, lastVisitedTick, lastDelivered, totalDelivered); }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
     private List<Endpoint> schedule = List.of();
@@ -157,6 +157,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 if (cursor >= schedule.size()) cursor = 0;
                 Endpoint e = schedule.get(cursor++);
                 if (endpoints.get(e.location) != e) continue;
+                e.lastVisitedTick = server.getTickCount();
                 e.lastDelivered = 0;
                 try { tickEndpoint(server, e); }
                 catch (RuntimeException ex) {
@@ -193,7 +194,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         IEnergyStorage target = level.getCapability(Capabilities.EnergyStorage.BLOCK, e.location.pos(), e.face);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
         long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
-        if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e) { e.state = State.BLOCKED; return; }
+        if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e || c.getMainNode().getGrid() != grid) { e.state = State.BLOCKED; return; }
         var inventory = new GuardedEnergyStorage(grid.getStorageService().getInventory(),
                 () -> c.getMainNode().getGrid() == grid && !c.isRemoved());
         var source = IActionSource.ofMachine(c);
@@ -208,7 +209,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
             if (pulled <= 0) { e.state = State.NO_FE; return; }
             // ME callbacks may replace/unload a target or move the controller into a new grid.
             if (be.isRemoved() || endpoints.get(e.location) != e || c.getMainNode().getGrid() != grid
-                    || !level.isLoaded(e.location.pos()) || !f.getPlayerAccess(e.actor).canUse()) return;
+                    || !level.isLoaded(e.location.pos()) || manager.getFrequency(e.frequency) != f
+                    || !f.getPlayerAccess(e.actor).canUse() || c.getFrequencyId() != e.frequency) return;
             var fresh = level.getCapability(Capabilities.EnergyStorage.BLOCK, e.location.pos(), e.face);
             if (fresh != target) return;
             e.lastDelivered = AppFluxBridge.sendToTargetKnownDemand(new TargetAccess() {
