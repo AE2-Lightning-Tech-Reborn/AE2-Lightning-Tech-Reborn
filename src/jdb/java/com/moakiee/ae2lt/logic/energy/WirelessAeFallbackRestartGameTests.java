@@ -35,8 +35,10 @@ public final class WirelessAeFallbackRestartGameTests {
             level.setBlockAndUpdate(pos.east(), AEBlocks.DRIVE.block().defaultBlockState());
             var drive = (DriveBlockEntity) level.getBlockEntity(pos.east());
             drive.getInternalInventory().setItemDirect(0, new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse("appflux:fe_1k_cell"))));
-            ((AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(pos)).setInternalCurrentPower(1000000);
         }
+        // A restarted, unpowered grid must not bootstrap from FE. Supply independent
+        // normal AE in both phases before testing the persisted fallback account.
+        ((AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(pos)).setInternalCurrentPower(1000000);
         h.runAfterDelay(65, () -> {
             var c = (AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(pos);
             var node = c.getMainNode().getNode(); var grid = node.getGrid();
