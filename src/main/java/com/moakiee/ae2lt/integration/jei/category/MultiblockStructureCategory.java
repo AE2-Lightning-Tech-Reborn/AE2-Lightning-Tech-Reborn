@@ -9,6 +9,7 @@ import com.moakiee.ae2lt.integration.recipeviewer.multiblock.InteractiveMultiblo
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipe;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
+import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
@@ -28,6 +29,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
     public static final int WIDTH = InteractiveMultiblockPreview.DEFAULT_WIDTH;
     public static final int HEIGHT = InteractiveMultiblockPreview.DEFAULT_HEIGHT;
 
+    private static final int RECIPE_BORDER_PADDING = 4;
     private static final int PANEL_WIDTH = 105;
     private static final int PANEL_X = WIDTH - PANEL_WIDTH - 2;
     private static final int PANEL_CONTENT_TOP = 48;
@@ -48,6 +50,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
             MultiblockStructureRecipe.class);
 
     private final IDrawable icon;
+    private int layoutHeight = HEIGHT;
 
     public MultiblockStructureCategory(IGuiHelper guiHelper) {
         this.icon = guiHelper.createDrawableItemStack(
@@ -71,7 +74,18 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
 
     @Override
     public int getHeight() {
-        return HEIGHT;
+        return layoutHeight;
+    }
+
+    /** Called before JEI creates layouts, using the actual area below its navigation bars. */
+    public boolean setAvailableHeight(int availableHeight, int minRecipePadding) {
+        int height = Math.max(HEIGHT,
+                availableHeight - 2 * (RECIPE_BORDER_PADDING + minRecipePadding));
+        if (layoutHeight == height) {
+            return false;
+        }
+        layoutHeight = height;
+        return true;
     }
 
     @Override
@@ -130,7 +144,7 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
 
         // Index 0 is the transfer button; JEI stacks the bookmark button above it.
         // Anchor both outside the lower-right corner so neither covers the page.
-        builder.moveRecipeTransferButton(WIDTH + 4, HEIGHT - 14);
+        builder.moveRecipeTransferButton(WIDTH + 4, getHeight() - 14);
     }
 
     @Override
@@ -158,10 +172,15 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
                     InteractiveMultiblockWidget.ALTERNATIVE_SLOT_PREFIX + i));
         }
 
+        // Extras can be created lazily after another layout changes the category size.
+        // Keep this widget's drawing and hit testing tied to its own layout rectangle.
+        int height = builder instanceof IRecipeLayoutDrawable<?> layout
+                ? layout.getRect().getHeight()
+                : getHeight();
         var widget = new InteractiveMultiblockWidget(
                 recipe,
                 WIDTH,
-                HEIGHT,
+                height,
                 materialSlots,
                 selectedBlockSlot,
                 alternativeSlots);
