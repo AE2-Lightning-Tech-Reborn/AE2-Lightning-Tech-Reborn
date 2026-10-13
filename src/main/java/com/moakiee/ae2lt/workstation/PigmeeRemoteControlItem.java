@@ -57,6 +57,10 @@ public final class PigmeeRemoteControlItem extends Item {
             owner.displayClientMessage(Component.translatable("message.ae2lt.pigmee_unbound"), true);
             return InteractionResultHolder.fail(stack);
         }
+        if (manager.death(id) != null) {
+            owner.displayClientMessage(manager.death(id).message(), false);
+            return InteractionResultHolder.consume(stack);
+        }
         try {
             if (owner.isShiftKeyDown()) {
                 if (manager.active(id) == null) manager.activate(id); else manager.deactivate(id);

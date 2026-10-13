@@ -93,6 +93,7 @@ public final class PigmeeP0GameTests {
             helper.assertTrue(restored.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET) && restored.hasEffect(MobEffects.NIGHT_VISION), "restore equipment/effects");
             verifyStoreFailures(helper, manager);
             manager.deactivate(a.getUUID());
+            helper.assertTrue(manager.death(a.getUUID()) == null, "ordinary deactivation creates no death record");
             b.moveTo(b.getX(), b.getY() + 8, b.getZ(), b.getYRot(), b.getXRot());
             b.setDeltaMovement(Vec3.ZERO);
         });
@@ -100,6 +101,9 @@ public final class PigmeeP0GameTests {
             helper.assertTrue(b.getHealth() < 20 && b.isAlive(), "native fall damage without movement packets");
             b.hurt(b.damageSources().fellOutOfWorld(), 1000);
             b.die(b.damageSources().fellOutOfWorld()); // Duplicate callback must not duplicate native drops.
+            // A stop request in the death tick must settle death, never save it as dormant.
+            manager.deactivate(b.getUUID());
+            helper.assertTrue(manager.death(b.getUUID()) != null && manager.status(b.getUUID()).contains("DEAD"), "same-tick stop settles confirmed death");
         });
         helper.runAtTickTime(440, () -> {
             helper.assertTrue(manager.activeCount() == 0, "dead actor releases runtime body");
@@ -110,6 +114,12 @@ public final class PigmeeP0GameTests {
             boolean rejected = false;
             try { manager.activate(b.getUUID()); } catch (IllegalStateException expected) { rejected = true; }
             helper.assertTrue(rejected, "dead identity must not respawn with a second inventory");
+            var death = manager.death(b.getUUID());
+            helper.assertTrue(death.actorId().equals(b.getUUID()) && death.ownerId().equals(owner)
+                    && death.position().equals(b.getLastDeathLocation().orElseThrow().pos()), "offline-owner death uses actor identity and native location");
+            var snapshot = manager.store.save(new CompoundTag(), level.registryAccess());
+            var loaded = PigmeeActorStore.FACTORY.deserializer().apply(snapshot, level.registryAccess());
+            helper.assertTrue(loaded.writable() && loaded.records.get(b.getUUID()).death.equals(death), "native death record round trip");
         });
         helper.runAtTickTime(640, () -> {
             helper.assertTrue(!level.getChunkSource().chunkMap.getDistanceManager().hasPlayersNearby(origin.toLong()), "all player loading sources released");
@@ -125,6 +135,16 @@ public final class PigmeeP0GameTests {
     private static void verifyStoreFailures(GameTestHelper helper, PigmeeActorManager manager) {
         var registries = helper.getLevel().registryAccess();
         CompoundTag snapshot = manager.store.save(new CompoundTag(), registries);
+        helper.assertTrue(snapshot.getInt("Schema") == 3, "death-capable snapshots use a schema old code will preserve");
+        for (int schema : new int[] {1, 2}) {
+            var legacy = snapshot.copy(); legacy.putInt("Schema", schema);
+            for (Tag entry : legacy.getList("Actors", Tag.TAG_COMPOUND)) {
+                var row = (CompoundTag) entry; row.remove("OwnerName"); row.remove("Death");
+                if (schema == 1) row.remove("Variant");
+            }
+            var migrated = PigmeeActorStore.FACTORY.deserializer().apply(legacy, registries);
+            helper.assertTrue(migrated.writable() && migrated.records.size() == manager.ids().size(), "legacy schema readable: " + schema);
+        }
         var dirty = PigmeeActorStore.FACTORY.deserializer().apply(snapshot, registries);
         helper.assertTrue(dirty.writable() && dirty.records.size() == manager.ids().size() && dirty.records.values().stream().allMatch(r -> r.state == PigmeeActorStore.State.QUARANTINED), "unclean active snapshots fail closed");
         for (String fault : new String[] {"missingActors", "wrongActors", "wrongInventory", "unknownItem", "nonFinitePos", "duplicateSlot", "invalidSlot"}) {

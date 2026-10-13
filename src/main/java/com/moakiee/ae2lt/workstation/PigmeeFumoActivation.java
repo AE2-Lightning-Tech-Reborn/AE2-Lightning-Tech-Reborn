@@ -59,6 +59,9 @@ public final class PigmeeFumoActivation {
         origin.putString("Block", variant.blockId().toString());
         origin.put("BlockEntity", sourceData.copy());
         record.origin = origin;
+        if (sourceData.contains("CustomName", net.minecraft.nbt.Tag.TAG_STRING)) {
+            record.playerData.putString("CustomName", sourceData.getString("CustomName"));
+        }
         var replacement = source.getFluidState().createLegacyBlock();
         boolean removed = false;
         try {

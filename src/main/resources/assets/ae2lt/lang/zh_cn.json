@@ -1573,5 +1573,6 @@
   "message.ae2lt.pigmee_activation_creative_only": "实验激活暂限创造模式；生存激活成本尚未配置。",
   "screen.ae2lt.pigmee_control": "猪咪移动预览（32 格本地视图）",
   "screen.ae2lt.pigmee_control_keys": "WASD / 空格 / Shift / Ctrl · 方向键或拖动转向 · Esc 退出",
-  "screen.ae2lt.pigmee_control_health": "代理生命 %s · 饱食 %s · 本体生命 %s"
+  "screen.ae2lt.pigmee_control_health": "代理生命 %s · 饱食 %s · 本体生命 %s",
+  "message.ae2lt.pigmee_death": "[猪咪工作站] %s 的 %s 已死亡。维度：%s 坐标：%s, %s, %s。%s"
 }

@@ -17,6 +17,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.portal.DimensionTransition;
 
@@ -27,6 +28,11 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     private int walkingTicks;
     private int controlFlags;
     private boolean deathSettled;
+    private net.minecraft.resources.ResourceLocation deathDimension;
+    private Vec3 deathPosition;
+    private Component deathReason;
+    private Component deathName;
+    private long deathTime;
     private long bodyTicks;
 
     PigmeeServerPlayer(ServerLevel level, UUID id, UUID owner, PigmeeVariant variant) {
@@ -113,9 +119,23 @@ public final class PigmeeServerPlayer extends ServerPlayer {
     @Override
     public void die(DamageSource cause) {
         if (deathSettled) return;
+        var reason = getCombatTracker().getDeathMessage().copy();
+        var name = getCustomName() == null ? getDisplayName().copy() : getCustomName().copy();
+        long time = level().getGameTime();
         super.die(cause);
         // Vanilla sets lastDeathLocation only after the cancellable death hook and drops.
         deathSettled = getLastDeathLocation().isPresent() && isDeadOrDying();
+        if (deathSettled) {
+            deathDimension = getLastDeathLocation().orElseThrow().dimension().location();
+            deathPosition = position();
+            deathReason = reason; deathName = name; deathTime = time;
+        }
+    }
+
+    PigmeeDeathRecord confirmedDeath(String ownerName) {
+        if (!deathSettled || deathPosition == null) throw new IllegalStateException("No confirmed native death");
+        return new PigmeeDeathRecord(UUID.randomUUID(), getUUID(), owner, variant, deathDimension,
+                deathPosition, deathName, ownerName, deathReason, deathTime);
     }
 
     void detach() {

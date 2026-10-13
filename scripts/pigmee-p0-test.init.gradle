@@ -20,6 +20,7 @@ allprojects {
             programArguments.addAll '--username', 'PigmeeQA', '--quickPlaySingleplayer', 'PigmeeQA'
             systemProperty 'ae2lt.pigmeeP0', 'true'
             systemProperty 'ae2lt.pigmeeClientProbe', 'true'
+            systemProperty 'ae2lt.pigmeeClientDeathPhase', providers.gradleProperty('pigmeeClientDeathPhase').getOrElse('')
             systemProperty 'ae2lt.pigmeeClientRestoreProbe', providers.gradleProperty('pigmeeClientRestore').getOrElse('false')
             jvmArguments.add '-Xmx1536m'
         }

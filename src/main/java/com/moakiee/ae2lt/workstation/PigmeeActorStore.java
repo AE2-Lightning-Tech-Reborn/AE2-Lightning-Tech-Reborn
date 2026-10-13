@@ -20,6 +20,8 @@ final class PigmeeActorStore extends SavedData {
         final UUID owner;
         final PigmeeVariant variant;
         CompoundTag origin;
+        PigmeeDeathRecord death;
+        String ownerName = "";
         State state;
         CompoundTag playerData;
         String diagnostic = "";
@@ -43,7 +45,7 @@ final class PigmeeActorStore extends SavedData {
     private static PigmeeActorStore load(CompoundTag tag, HolderLookup.Provider registries) {
         PigmeeActorStore store = new PigmeeActorStore();
         try {
-            if (tag.getInt("Schema") != 1 && tag.getInt("Schema") != 2) throw new IllegalArgumentException("unsupported schema");
+            if (tag.getInt("Schema") < 1 || tag.getInt("Schema") > 3) throw new IllegalArgumentException("unsupported schema");
             if (!tag.contains("CleanShutdown", Tag.TAG_BYTE)) throw new IllegalArgumentException("missing shutdown state");
             ListTag actorRows = requireList(tag, "Actors", Tag.TAG_COMPOUND);
             if (actorRows.size() > 8) throw new IllegalArgumentException("unsupported actor count");
@@ -59,6 +61,15 @@ final class PigmeeActorStore extends SavedData {
                     throw new IllegalArgumentException("player identity mismatch");
                 }
                 record.diagnostic = row.getString("Diagnostic");
+                record.ownerName = row.getString("OwnerName");
+                if (row.contains("Death")) {
+                    if (!row.contains("Death", Tag.TAG_COMPOUND)) throw new IllegalArgumentException("Malformed death record");
+                    record.death = PigmeeDeathRecord.load(row.getCompound("Death"), registries);
+                    if (record.state != State.DEAD || !record.death.actorId().equals(id)
+                            || !record.death.ownerId().equals(owner) || record.death.variant() != record.variant) {
+                        throw new IllegalArgumentException("Death record identity/state mismatch");
+                    }
+                }
                 if (row.contains("Origin", Tag.TAG_COMPOUND)) record.origin = row.getCompound("Origin").copy();
                 if (record.state == State.ACTIVE && !tag.getBoolean("CleanShutdown")) {
                     record.state = State.QUARANTINED;
@@ -124,13 +135,15 @@ final class PigmeeActorStore extends SavedData {
         if (unreadable != null) return unreadable.copy();
         // Serialize on world save, not every tick. Snapshots cannot be spent as inventories.
         live.forEach((id, player) -> snapshot(records.get(id), player));
-        tag.putInt("Schema", 2);
+        tag.putInt("Schema", 3);
         tag.putBoolean("CleanShutdown", cleanShutdown);
         ListTag actors = new ListTag();
         for (Record record : records.values()) {
             CompoundTag row = new CompoundTag();
             row.putUUID("Id", record.id);
             row.putUUID("Owner", record.owner);
+            row.putString("OwnerName", record.ownerName);
+            if (record.death != null) row.put("Death", record.death.save(registries));
             row.putString("Variant", record.variant.name());
             if (record.origin != null) row.put("Origin", record.origin.copy());
             row.putString("State", record.state.name());

@@ -85,6 +85,8 @@ public final class PigmeeActorManager {
         }
         var record = new PigmeeActorStore.Record(id, owner, variant, PigmeeActorStore.State.DORMANT,
                 actor.saveWithoutId(new CompoundTag()));
+        var principal = server.getPlayerList().getPlayer(owner);
+        record.ownerName = principal == null ? owner.toString() : principal.getGameProfile().getName();
         store.records.put(id, record);
         actor.getAdvancements().stopListening();
         actor.getTextFilter().leave();
@@ -153,7 +155,9 @@ public final class PigmeeActorManager {
         checkThread();
         var record = require(id);
         if (record.state != PigmeeActorStore.State.ACTIVE) return;
-        detach(record, PigmeeActorStore.State.DORMANT);
+        var actor = store.live.get(id);
+        if (actor != null && actor.deathSettled()) settleDeath(actor);
+        else detach(record, PigmeeActorStore.State.DORMANT);
     }
 
     private void detach(PigmeeActorStore.Record record, PigmeeActorStore.State state) {
@@ -187,7 +191,7 @@ public final class PigmeeActorManager {
     void afterTick() {
         controls.tick();
         for (var actor : new ArrayList<>(store.live.values())) {
-            if (actor.deathSettled()) detach(require(actor.getUUID()), PigmeeActorStore.State.DEAD);
+            if (actor.deathSettled()) settleDeath(actor);
             else if (actor.isRemoved()) {
                 var record = require(actor.getUUID());
                 record.diagnostic = "Unexpected removal; manual inspection required";
@@ -196,9 +200,28 @@ public final class PigmeeActorManager {
         }
     }
 
+    private void settleDeath(PigmeeServerPlayer actor) {
+        var record = require(actor.getUUID());
+        boolean first = record.death == null;
+        if (first) {
+            var owner = server.getPlayerList().getPlayer(record.owner);
+            if (owner != null) record.ownerName = owner.getGameProfile().getName();
+            record.death = actor.confirmedDeath(record.ownerName.isEmpty() ? record.owner.toString() : record.ownerName);
+        }
+        // Tombstone and release before notification; a send failure cannot repeat native drops.
+        detach(record, PigmeeActorStore.State.DEAD);
+        if (first && !Boolean.getBoolean("ae2lt.pigmeeDeathBroadcastDisabled")) {
+            server.getPlayerList().broadcastSystemMessage(record.death.message(), false);
+        }
+    }
+
     void shutdown() {
         for (var record : new ArrayList<>(store.records.values())) {
-            if (store.live.containsKey(record.id)) detach(record, PigmeeActorStore.State.ACTIVE);
+            var actor = store.live.get(record.id);
+            if (actor != null) {
+                if (actor.deathSettled()) settleDeath(actor);
+                else detach(record, PigmeeActorStore.State.ACTIVE);
+            }
         }
         store.cleanShutdown = true;
         store.setDirty();
@@ -231,6 +254,7 @@ public final class PigmeeActorManager {
     }
 
     public PigmeeServerPlayer active(UUID id) { return store.live.get(id); }
+    public PigmeeDeathRecord death(UUID id) { return require(id).death; }
     public boolean ownedBy(UUID id, UUID owner) {
         var record = store.records.get(id);
         return record != null && record.owner.equals(owner);
