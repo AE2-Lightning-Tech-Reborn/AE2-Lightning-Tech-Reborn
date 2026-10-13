@@ -9,9 +9,9 @@ import appeng.menu.locator.MenuLocators;
 import appeng.menu.SlotSemantics;
 import appeng.api.stacks.AEItemKey;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
-import com.moakiee.ae2lt.client.PigmeeSynthesisStationScreen;
-import com.moakiee.ae2lt.client.TianshuPatternEncodingTermScreen;
-import com.moakiee.ae2lt.client.TianshuRecipeTransferContext;
+import com.moakiee.ae2lt.client.machine.PigmeeSynthesisStationScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -232,8 +232,8 @@ public final class PortClientSmokeProbe {
                             MenuLocators.forBlockEntity(player.level().getBlockEntity(STATION.above(3)))));
                 }
                 case 16 -> {
-                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuSeedStorageScreen, "seed storage screen missing");
-                    var menu = ((com.moakiee.ae2lt.client.TianshuSeedStorageScreen) mc.screen).getMenu();
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.tianshu.TianshuSeedStorageScreen, "seed storage screen missing");
+                    var menu = ((com.moakiee.ae2lt.client.tianshu.TianshuSeedStorageScreen) mc.screen).getMenu();
                     var cells = menu.getSlots(SlotSemantics.STORAGE_CELL);
                     require(cells.size() == 10, "seed storage cell count changed");
                     for (var slot : cells) require(slot instanceof appeng.menu.slot.AppEngSlot aeSlot
@@ -261,7 +261,7 @@ public final class PortClientSmokeProbe {
                     });
                 }
                 case 18 -> {
-                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuSupercomputerControllerScreen,
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.tianshu.TianshuSupercomputerControllerScreen,
                             "Tianshu controller screen missing");
                     shot("tianshu-controller-text");
                     server(player -> {
@@ -282,7 +282,7 @@ public final class PortClientSmokeProbe {
                     });
                 }
                 case 19 -> {
-                    require(mc.screen instanceof com.moakiee.ae2lt.client.TianshuCraftingTermScreen<?>,
+                    require(mc.screen instanceof com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen<?>,
                             "Tianshu crafting screen missing");
                     require(craftingMenu().getLinkStatus().connected(), "wireless crafting terminal failed to connect");
                     require(java.math.BigInteger.TEN.pow(100).add(java.math.BigInteger.valueOf(12345))

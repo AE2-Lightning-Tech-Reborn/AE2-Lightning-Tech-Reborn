@@ -7,11 +7,12 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import com.moakiee.ae2lt.recipe.compat.LegacyRecipeAccess;
+import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeCatalog;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.glodblock.github.extendedae.recipe.CrystalAssemblerRecipe;
@@ -58,21 +59,20 @@ public final class AvailableAddonCompatGameTests {
         for (var path : List.of(
                 "assembler/overload_processor", "crystal_catalyzer/dust/entro_block",
                 "crystal_catalyzer/entro_block", "cutter/unoverloaded_circuit_board",
-                "lightning_assembly/overloaded_power_supply",
-                "overload_processing/aae_quantum_alloy",
-                "overload_processing/aae_quantum_alloy_plate",
-                "overload_processing/aae_quantum_infusion",
-                "overload_processing/aae_quantum_processor",
-                "overload_processing/aae_shattered_singularity",
-                "overload_processing/appflux_charged_redstone",
-                "overload_processing/appflux_energy_processor",
-                "overload_processing/appflux_harden_insulating_resin",
-                "overload_processing/appflux_redstone_crystal",
-                "overload_processing/eae_concurrent_processor",
-                "overload_processing/eae_entro_crystal",
-                "overload_processing/eae_entro_ingot")) {
+                "lightning_assembly/overloaded_power_supply")) {
             var id = Identifier.fromNamespaceAndPath("ae2lt", path);
             require(LegacyRecipeAccess.byId(recipes, id).isPresent(), "Missing addon recipe " + id);
+        }
+        var quantumAlloy = Identifier.parse("advanced_ae:quantum_alloy");
+        require(LegacyRecipeAccess.byId(recipes, quantumAlloy).isPresent(), "Missing source reaction " + quantumAlloy);
+        require(OverloadProcessingRecipeCatalog.find(recipes, quantumAlloy).isPresent(),
+                "Factory did not borrow the upstream quantum alloy reaction");
+        var catalog = OverloadProcessingRecipeCatalog.recipes(recipes);
+        for (var outputId : List.of("advanced_ae:quantum_processor", "appflux:energy_processor",
+                "extendedae:concurrent_processor")) {
+            var output = BuiltInRegistries.ITEM.getValue(Identifier.parse(outputId));
+            require(output != Items.AIR && catalog.stream().anyMatch(holder -> holder.value().itemResults().stream()
+                    .anyMatch(stack -> stack.is(output))), "Factory did not derive inscriber output " + outputId);
         }
         require(LegacyRecipeAccess.byId(recipes, Identifier.fromNamespaceAndPath("ae2lt", "silicon_block"))
                 .isEmpty(), "fallback silicon recipe should be disabled when ExtendedAE is loaded");

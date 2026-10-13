@@ -10,7 +10,7 @@ import appeng.menu.MenuOpener;
 import appeng.menu.SlotSemantics;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
-import com.moakiee.ae2lt.client.PigmeeSynthesisStationScreen;
+import com.moakiee.ae2lt.client.machine.PigmeeSynthesisStationScreen;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import java.nio.file.Files;

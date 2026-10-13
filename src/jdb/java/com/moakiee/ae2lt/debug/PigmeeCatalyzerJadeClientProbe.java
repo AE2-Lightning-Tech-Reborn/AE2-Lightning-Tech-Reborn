@@ -5,7 +5,7 @@ import appeng.integration.modules.igtooltip.TooltipIds;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
-import com.moakiee.ae2lt.client.CrystalCatalyzerScreen;
+import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
 import com.moakiee.ae2lt.menu.CrystalCatalyzerMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import java.nio.file.Files;

@@ -36,7 +36,8 @@ public final class OverloadedInterfaceImportRecoveryGameTests {
         Container[] targets;
         if (local) {
             owner.setInterfaceMode(OverloadedInterfaceBlockEntity.InterfaceMode.NORMAL);
-            owner.setEnergyOutputDir(Direction.SOUTH);
+            helper.getLevel().setBlockAndUpdate(owner.getBlockPos(), owner.getBlockState().setValue(
+                    appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.SOUTH));
             var pos = new BlockPos(1, 1, 1).south();
             helper.setBlock(pos, Blocks.BARREL);
             targets = new Container[] {(Container) helper.getLevel().getBlockEntity(helper.absolutePos(pos))};

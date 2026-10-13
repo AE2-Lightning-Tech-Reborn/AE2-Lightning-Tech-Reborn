@@ -1,4 +1,4 @@
-package com.moakiee.ae2lt.client;
+package com.moakiee.ae2lt.client.render;
 
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.moakiee.ae2lt.block.FumoBlock;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
+import com.moakiee.ae2lt.client.equipment.LightningKeyRenderHandler;
 import com.moakiee.ae2lt.mixin.client.ItemStackRenderStateAccessor;
 import com.moakiee.ae2lt.registry.ModFumos;
 import com.mojang.blaze3d.vertex.PoseStack;
