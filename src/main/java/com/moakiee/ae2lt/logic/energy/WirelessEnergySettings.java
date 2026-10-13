@@ -2,11 +2,14 @@ package com.moakiee.ae2lt.logic.energy;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-/** Provisional, server-configurable engineering limits. No FE-to-AE conversion is enabled. */
+/** Provisional, server-configurable engineering limits. */
 public final class WirelessEnergySettings {
+    public static ModConfigSpec.BooleanValue runningNetworkFeFallback;
     public static ModConfigSpec.IntValue networkFe, targetFe, networkTargets, globalVisits, endpointLimit, reserveFe;
     public static void define(ModConfigSpec.Builder builder) {
         builder.push("wirelessControllerEnergy");
+        runningNetworkFeFallback = builder.comment("Experimental: supplement AE requests from FE only while an advanced-controller network is already running. Never cold-starts a grid.")
+                .define("runningNetworkFeFallback", false);
         networkFe = builder.comment("Maximum FE offered by all advanced controllers on one grid each tick; 0 disables output.")
                 .defineInRange("networkFePerTick", 65536, 0, Integer.MAX_VALUE);
         targetFe = builder.defineInRange("targetFePerTick", 4096, 0, Integer.MAX_VALUE);

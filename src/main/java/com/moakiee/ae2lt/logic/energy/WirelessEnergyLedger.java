@@ -13,9 +13,10 @@ import net.minecraft.world.level.saveddata.SavedData;
 /** World-owned balances survive removal of their source node; node NBT stores only a claim ID. */
 public final class WirelessEnergyLedger extends SavedData {
     public record Origin(String dimension, long pos, String source, UUID player) {}
-    public record Balance(UUID id, Origin origin, long available, long uncertain) {}
+    public record Balance(UUID id, Origin origin, long available, long uncertain, String convertedAe, long unresolvedFeWithdrawal) {}
     private final Map<UUID, Origin> origins = new LinkedHashMap<>();
     private final Map<UUID, EnergyEscrow> accounts = new LinkedHashMap<>();
+    private final Map<UUID, AeEnergyBalance> convertedAe = new LinkedHashMap<>();
     public static WirelessEnergyLedger get(MinecraftServer server) {
         if (!server.isSameThread()) throw new IllegalStateException("Server thread required");
         return server.overworld().getDataStorage().computeIfAbsent(
@@ -38,7 +39,9 @@ public final class WirelessEnergyLedger extends SavedData {
     public java.util.List<Balance> inspect(UUID viewer, boolean administrator) {
         return accounts.entrySet().stream().filter(e -> administrator
                 || (origins.get(e.getKey()) != null && viewer.equals(origins.get(e.getKey()).player())))
-                .map(e -> new Balance(e.getKey(), origins.get(e.getKey()), e.getValue().available(), e.getValue().uncertain())).toList();
+                .map(e -> new Balance(e.getKey(), origins.get(e.getKey()), e.getValue().available(), e.getValue().uncertain(),
+                        convertedAe.containsKey(e.getKey()) ? convertedAe.get(e.getKey()).saved() : "0",
+                        convertedAe.containsKey(e.getKey()) ? convertedAe.get(e.getKey()).pendingFeWithdrawal() : 0)).toList();
     }
     public EnergyEscrow account(UUID id) {
         return accounts.computeIfAbsent(id, ignored -> {
@@ -46,6 +49,12 @@ public final class WirelessEnergyLedger extends SavedData {
             return new EnergyEscrow(0, 0, this::setDirty);
         });
     }
+    public AeEnergyBalance aeAccount(UUID id) {
+        account(id);
+        return convertedAe.computeIfAbsent(id, ignored -> new AeEnergyBalance("0", this::setDirty));
+    }
+    EnergyEscrow peekAccount(UUID id) { return accounts.getOrDefault(id, new EnergyEscrow(0, 0, () -> {})); }
+    AeEnergyBalance peekAeAccount(UUID id) { return convertedAe.getOrDefault(id, new AeEnergyBalance("0", () -> {})); }
     static WirelessEnergyLedger load(CompoundTag tag, HolderLookup.Provider registries) {
         var ledger = new WirelessEnergyLedger();
         var list = tag.getList("accounts", Tag.TAG_COMPOUND);
@@ -58,6 +67,8 @@ public final class WirelessEnergyLedger extends SavedData {
                     row.hasUUID("player") ? row.getUUID("player") : null));
             ledger.accounts.putIfAbsent(row.getUUID("id"), new EnergyEscrow(
                     row.getLong("available"), row.getLong("uncertain"), ledger::setDirty));
+            ledger.convertedAe.putIfAbsent(row.getUUID("id"), new AeEnergyBalance(row.getString("convertedAe"),
+                    row.getLong("unresolvedFeWithdrawal"), ledger::setDirty));
         }
         return ledger;
     }
@@ -68,6 +79,10 @@ public final class WirelessEnergyLedger extends SavedData {
             row.putUUID("id", id);
             row.putLong("available", account.available());
             row.putLong("uncertain", account.uncertain());
+            if (convertedAe.containsKey(id)) {
+                row.putString("convertedAe", convertedAe.get(id).saved());
+                row.putLong("unresolvedFeWithdrawal", convertedAe.get(id).pendingFeWithdrawal());
+            }
             var origin = origins.get(id);
             if (origin != null) {
                 row.putString("dimension", origin.dimension()); row.putLong("pos", origin.pos());

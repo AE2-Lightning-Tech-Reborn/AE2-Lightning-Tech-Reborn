@@ -17,6 +17,7 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
     private long spent;
     private long topologyTick = Long.MIN_VALUE;
     private int visited;
+    private boolean supplementing;
 
     @Override public void addNode(IGridNode node, CompoundTag data) {
         topologyTick = node.getLevel().getServer().getTickCount();
@@ -32,12 +33,29 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
     }
 
     public EnergyEscrow escrow(IGridNode node) {
-        UUID id = claims.computeIfAbsent(node, ignored -> {
+        return WirelessEnergyLedger.get(node.getLevel().getServer()).claim(claimId(node), node);
+    }
+    private UUID claimId(IGridNode node) {
+        return claims.computeIfAbsent(node, ignored -> {
             if (node.getOwner() instanceof BlockEntity be) be.setChanged();
             else if (node.getOwner() instanceof appeng.parts.AEBasePart part) part.getBlockEntity().setChanged();
             return UUID.randomUUID();
         });
-        return WirelessEnergyLedger.get(node.getLevel().getServer()).claim(id, node);
+    }
+    public AeEnergyBalance aeBalance(IGridNode node) {
+        return WirelessEnergyLedger.get(node.getLevel().getServer()).aeAccount(claimId(node));
+    }
+    EnergyEscrow peekEscrow(IGridNode node) {
+        return WirelessEnergyLedger.get(node.getLevel().getServer()).peekAccount(claims.get(node));
+    }
+    AeEnergyBalance peekAeBalance(IGridNode node) {
+        return WirelessEnergyLedger.get(node.getLevel().getServer()).peekAeAccount(claims.get(node));
+    }
+    boolean beginSupplement() { if (supplementing) return false; supplementing = true; return true; }
+    void endSupplement() { supplementing = false; }
+    long preview(long tick, long request, long feLimit, int targetLimit) {
+        if (topologyPaused(tick) || (budgetTick == tick && visited >= targetLimit)) return 0;
+        return Math.min(Math.max(0, request), Math.max(0, feLimit - (budgetTick == tick ? spent : 0)));
     }
     /** Shared, charged before callbacks. Multiple controllers cannot each get a full allowance. */
     boolean topologyPaused(long tick) { return tick == topologyTick; }
