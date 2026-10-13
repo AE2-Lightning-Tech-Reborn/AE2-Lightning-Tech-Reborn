@@ -26,6 +26,8 @@ public final class PigmeeWorkstationRuntime {
 
     private PigmeeWorkstationRuntime() { }
 
+    static PigmeeActorManager existingManager(MinecraftServer server) { return MANAGERS.get(server); }
+
     public static boolean enabled() { return Boolean.getBoolean("ae2lt.pigmeeP0"); }
 
     public static PigmeeActorManager manager(MinecraftServer server) {

@@ -20,6 +20,10 @@ allprojects {
             programArguments.addAll '--username', 'PigmeeQA', '--quickPlaySingleplayer', 'PigmeeQA'
             systemProperty 'ae2lt.pigmeeP0', 'true'
             systemProperty 'ae2lt.pigmeeClientProbe', 'true'
+            systemProperty 'ae2lt.pigmeeRemoteView', providers.gradleProperty('pigmeeRemoteView').getOrElse('false')
+            systemProperty 'ae2lt.pigmeeRemoteShutdownControl', providers.gradleProperty('pigmeeRemoteShutdownControl').getOrElse('false')
+            systemProperty 'ae2lt.pigmeeRemoteShutdownProbe', providers.gradleProperty('pigmeeRemoteShutdownProbe').getOrElse('false')
+            systemProperty 'ae2lt.pigmeeRemoteClientProbe', providers.gradleProperty('pigmeeRemoteClientProbe').getOrElse('false')
             systemProperty 'ae2lt.pigmeeClientDeathPhase', providers.gradleProperty('pigmeeClientDeathPhase').getOrElse('')
             systemProperty 'ae2lt.pigmeeClientRestoreProbe', providers.gradleProperty('pigmeeClientRestore').getOrElse('false')
             jvmArguments.add '-Xmx1536m'

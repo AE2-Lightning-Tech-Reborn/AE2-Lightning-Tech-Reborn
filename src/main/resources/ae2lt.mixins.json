@@ -6,6 +6,8 @@
   "mixins": [
     "PigmeeDeathMessageMixin",
     "PigmeePairingMixin",
+    "PigmeeRemoteChunkTrackingMixin",
+    "PigmeeRemoteEntityTrackingMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
     "OverloadAlloyAnvilFallingMixin",
@@ -64,6 +66,8 @@
   ],
   "client": [
     "client.PigmeeRenderCameraMixin",
+    "client.PigmeeRenderOriginMixin",
+    "client.PigmeeClientChunkCacheMixin",
     "client.IpnContainerClickerMixin",
     "client.EncodingHelperAccessor",
     "client.CableBusRenderStateMixin",

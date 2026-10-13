@@ -33,10 +33,13 @@ public final class NetworkInit {
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
         var registrar = event.registrar(AE2LightningTech.MODID);
+        registrar.playToClient(com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket.TYPE,
+                com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket.STREAM_CODEC,
+                com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket::handle);
         registrar.playToServer(com.moakiee.ae2lt.workstation.PigmeeControlInputPacket.TYPE,
                 com.moakiee.ae2lt.workstation.PigmeeControlInputPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.workstation.PigmeeControlInputPacket::handle);
-        registrar.playToClient(com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.TYPE,
+        registrar.versioned("pigmee-control-2").playToClient(com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.TYPE,
                 com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.STREAM_CODEC,
                 com.moakiee.ae2lt.workstation.PigmeeControlStatePacket::handle);
         registrar.playToClient(com.moakiee.ae2lt.workstation.PigmeeIdentityPacket.TYPE,
