@@ -44,13 +44,17 @@ final class PigmeeActorStore extends SavedData {
         PigmeeActorStore store = new PigmeeActorStore();
         try {
             if (tag.getInt("Schema") != 1 && tag.getInt("Schema") != 2) throw new IllegalArgumentException("unsupported schema");
-            for (Tag entry : tag.getList("Actors", Tag.TAG_COMPOUND)) {
+            if (!tag.contains("CleanShutdown", Tag.TAG_BYTE)) throw new IllegalArgumentException("missing shutdown state");
+            ListTag actorRows = requireList(tag, "Actors", Tag.TAG_COMPOUND);
+            if (actorRows.size() > 8) throw new IllegalArgumentException("unsupported actor count");
+            for (Tag entry : actorRows) {
                 CompoundTag row = (CompoundTag) entry;
                 UUID id = row.getUUID("Id");
                 UUID owner = row.getUUID("Owner");
                 if (id.equals(owner)) throw new IllegalArgumentException("owner identity reused");
                 Record record = new Record(id, owner, tag.getInt("Schema") == 1 ? PigmeeVariant.NORMAL : PigmeeVariant.valueOf(row.getString("Variant")),
                         State.valueOf(row.getString("State")), row.getCompound("Player").copy());
+                validatePlayerData(record.playerData, registries);
                 if (!record.playerData.hasUUID("UUID") || !id.equals(record.playerData.getUUID("UUID"))) {
                     throw new IllegalArgumentException("player identity mismatch");
                 }
@@ -68,6 +72,41 @@ final class PigmeeActorStore extends SavedData {
             store.unreadable = tag.copy();
         }
         return store;
+    }
+
+    private static ListTag requireList(CompoundTag tag, String key, int elementType) {
+        if (!(tag.get(key) instanceof ListTag list) || !list.isEmpty() && list.getElementType() != elementType) {
+            throw new IllegalArgumentException("malformed list " + key);
+        }
+        return list;
+    }
+
+    private static void validatePlayerData(CompoundTag player, HolderLookup.Provider registries) {
+        if (!player.contains("Dimension", Tag.TAG_STRING)
+                || net.minecraft.resources.ResourceLocation.tryParse(player.getString("Dimension")) == null) {
+            throw new IllegalArgumentException("missing or invalid dimension");
+        }
+        ListTag pos = requireList(player, "Pos", Tag.TAG_DOUBLE);
+        ListTag motion = requireList(player, "Motion", Tag.TAG_DOUBLE);
+        ListTag rotation = requireList(player, "Rotation", Tag.TAG_FLOAT);
+        if (pos.size() != 3 || motion.size() != 3 || rotation.size() != 2) throw new IllegalArgumentException("malformed pose");
+        for (int i = 0; i < 3; i++) if (!Double.isFinite(pos.getDouble(i)) || !Double.isFinite(motion.getDouble(i))) throw new IllegalArgumentException("non-finite pose");
+        for (int i = 0; i < 2; i++) if (!Float.isFinite(rotation.getFloat(i))) throw new IllegalArgumentException("non-finite rotation");
+        for (String inventory : new String[] {"Inventory", "EnderItems"}) {
+            java.util.Set<Integer> slots = new java.util.HashSet<>();
+            for (Tag item : requireList(player, inventory, Tag.TAG_COMPOUND)) {
+                CompoundTag stack = (CompoundTag) item;
+                int slot = stack.getByte("Slot") & 255;
+                boolean validSlot = inventory.equals("EnderItems") ? slot < 27
+                        : slot < 36 || slot >= 100 && slot <= 103 || slot == 150;
+                if (!stack.contains("Slot", Tag.TAG_BYTE) || !validSlot || !slots.add(slot)) {
+                    throw new IllegalArgumentException("invalid or duplicate inventory slot");
+                }
+                if (net.minecraft.world.item.ItemStack.parse(registries, item).isEmpty()) {
+                    throw new IllegalArgumentException("unreadable stack in " + inventory);
+                }
+            }
+        }
     }
 
     void snapshot(Record record, PigmeeServerPlayer player) {

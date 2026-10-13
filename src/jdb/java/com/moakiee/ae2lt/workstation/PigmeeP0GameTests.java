@@ -126,7 +126,28 @@ public final class PigmeeP0GameTests {
         var registries = helper.getLevel().registryAccess();
         CompoundTag snapshot = manager.store.save(new CompoundTag(), registries);
         var dirty = PigmeeActorStore.FACTORY.deserializer().apply(snapshot, registries);
-        helper.assertTrue(dirty.records.values().stream().allMatch(r -> r.state == PigmeeActorStore.State.QUARANTINED), "unclean active snapshots fail closed");
+        helper.assertTrue(dirty.writable() && dirty.records.size() == manager.ids().size() && dirty.records.values().stream().allMatch(r -> r.state == PigmeeActorStore.State.QUARANTINED), "unclean active snapshots fail closed");
+        for (String fault : new String[] {"missingActors", "wrongActors", "wrongInventory", "unknownItem", "nonFinitePos", "duplicateSlot", "invalidSlot"}) {
+            CompoundTag bad = snapshot.copy();
+            var player = bad.getList("Actors", Tag.TAG_COMPOUND).getCompound(0).getCompound("Player");
+            switch (fault) {
+                case "missingActors" -> bad.remove("Actors");
+                case "wrongActors" -> bad.putString("Actors", "damaged");
+                case "wrongInventory" -> player.putString("Inventory", "damaged");
+                case "unknownItem" -> {
+                    var item = new CompoundTag(); item.putString("id", "missing_mod:valuable_item"); item.putInt("count", 12); item.putByte("Slot", (byte) 0);
+                    var inventory = new net.minecraft.nbt.ListTag(); inventory.add(item); player.put("Inventory", inventory);
+                }
+                case "duplicateSlot" -> {
+                    var inventory = player.getList("Inventory", Tag.TAG_COMPOUND);
+                    inventory.add(inventory.getCompound(0).copy());
+                }
+                case "invalidSlot" -> player.getList("Inventory", Tag.TAG_COMPOUND).getCompound(0).putByte("Slot", (byte) 99);
+                case "nonFinitePos" -> player.getList("Pos", Tag.TAG_DOUBLE).set(0, net.minecraft.nbt.DoubleTag.valueOf(Double.NaN));
+            }
+            var failed = PigmeeActorStore.FACTORY.deserializer().apply(bad, registries);
+            helper.assertTrue(!failed.writable() && failed.save(new CompoundTag(), registries).equals(bad), "malformed save preserves original: " + fault);
+        }
         CompoundTag duplicate = snapshot.copy();
         var rows = duplicate.getList("Actors", Tag.TAG_COMPOUND);
         rows.add(rows.getCompound(0).copy());
