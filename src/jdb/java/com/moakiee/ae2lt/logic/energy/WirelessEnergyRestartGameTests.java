@@ -10,7 +10,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt")
 @PrefixGameTestTemplate(false)
 public final class WirelessEnergyRestartGameTests {
-    @GameTest(template = "wireless_io_empty")
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 120)
     public static void worldLedgerSurvivesProcessRestart(GameTestHelper helper) {
         var id = UUID.fromString("00fe0000-2026-1013-0000-000000007331");
         var account = WirelessEnergyLedger.get(helper.getLevel().getServer()).account(id);
@@ -22,7 +22,32 @@ public final class WirelessEnergyRestartGameTests {
             helper.assertTrue(account.available() == 7331 && account.uncertain() == 17, "world ledger failed process restart");
             account.debit(7331); account.settle(17, 17);
         } else throw new AssertionError("Run with -PwirelessRestartPhase=prepare then verify");
-        System.out.println("WIRELESS_ENERGY_RESTART_" + phase.toUpperCase() + "_PASS");
-        helper.succeed();
+        // Use a source outside the template reset area to test the real managed-node NBT as well.
+        var level = helper.getLevel();
+        var pos = new net.minecraft.core.BlockPos(1600, 64, 1600);
+        level.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, true);
+        level.getChunkAt(pos);
+        if (phase.equals("prepare")) {
+            level.setBlockAndUpdate(pos, com.moakiee.ae2lt.registry.ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get().defaultBlockState());
+        }
+        helper.runAfterDelay(30, () -> {
+            helper.assertTrue(level.getBlockEntity(pos) instanceof com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity,
+                    "persistent source block missing");
+            var controller = (com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(pos);
+            var node = controller.getMainNode().getNode();
+            helper.assertTrue(node != null, "source node not restored");
+            var owned = node.getGrid().getService(WirelessEnergyGridService.class).escrow(node);
+            if (phase.equals("prepare")) {
+                helper.assertTrue(owned.available() == 0, "source must start empty");
+                owned.credit(991);
+            } else {
+                helper.assertTrue(owned.available() == 991, "node lost its claim during process restart");
+                owned.debit(991);
+                level.removeBlock(pos, false);
+            }
+            level.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, false);
+            System.out.println("WIRELESS_ENERGY_RESTART_" + phase.toUpperCase() + "_PASS");
+            helper.succeed();
+        });
     }
 }

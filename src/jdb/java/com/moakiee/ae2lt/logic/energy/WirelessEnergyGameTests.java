@@ -167,6 +167,42 @@ public final class WirelessEnergyGameTests {
         });
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 140)
+    public static void physicalGridSplitAndMergeKeepsIndependentClaims(GameTestHelper h) {
+        var leftPos = new BlockPos(2, 2, 2);
+        var bridgePos = leftPos.south();
+        var rightPos = leftPos.south(2);
+        h.setBlock(leftPos, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get());
+        h.setBlock(bridgePos, AEBlocks.CREATIVE_ENERGY_CELL.block());
+        h.setBlock(rightPos, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get());
+        h.runAfterDelay(35, () -> {
+            var left = ((AdvancedWirelessOverloadedControllerBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(leftPos))).getMainNode().getNode();
+            var right = ((AdvancedWirelessOverloadedControllerBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(rightPos))).getMainNode().getNode();
+            check(left != null && right != null && left.getGrid() == right.getGrid(), "fixture grids did not join");
+            var leftAccount = left.getGrid().getService(WirelessEnergyGridService.class).escrow(left);
+            var rightAccount = right.getGrid().getService(WirelessEnergyGridService.class).escrow(right);
+            leftAccount.credit(31); rightAccount.credit(73);
+            h.setBlock(bridgePos, Blocks.AIR);
+            h.runAfterDelay(10, () -> {
+                check(left.getGrid() != right.getGrid(), "physical bridge removal did not split grid");
+                check(left.getGrid().getService(WirelessEnergyGridService.class).escrow(left) == leftAccount,
+                        "left account lost on physical split");
+                check(right.getGrid().getService(WirelessEnergyGridService.class).escrow(right) == rightAccount,
+                        "right account lost on physical split");
+                h.setBlock(bridgePos, AEBlocks.CREATIVE_ENERGY_CELL.block());
+                h.runAfterDelay(10, () -> {
+                    check(left.getGrid() == right.getGrid(), "physical bridge restore did not merge grid");
+                    var merged = left.getGrid().getService(WirelessEnergyGridService.class);
+                    check(merged.escrow(left) == leftAccount && merged.escrow(right) == rightAccount,
+                            "physical merge changed account identities");
+                    check(leftAccount.available() == 31 && rightAccount.available() == 73,
+                            "physical split/merge copied or lost FE");
+                    leftAccount.debit(31); rightAccount.debit(73);
+                    h.succeed();
+                });
+            });
+        });
+    }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 140)
     public static void permissionRevocationPausesAndRestorationResumes(GameTestHelper h) {
         var f = fixture(h);
         h.runAfterDelay(35, () -> {
@@ -231,6 +267,50 @@ public final class WirelessEnergyGameTests {
             check(isolated.inspect(f.frequency, f.player.getUUID()).getFirst().state() == WirelessEnergyEndpoints.State.UNLOADED, "unloaded endpoint not paused");
             check(f.machine.receives == 0, "unloaded dimension received energy");
             registry.setBound(f.player, f.frequency, h.getLevel(), f.target, Direction.NORTH, false); h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
+    public static void refillRejectionRetainsOwnershipAcrossSourceDetach(GameTestHelper h) {
+        var backing = new Store(123, false);
+        var live = new java.util.concurrent.atomic.AtomicBoolean(true);
+        var source = new GuardedEnergyStorage(backing, live::get);
+        MEStorage cell = new MEStorage() {
+            public long extract(AEKey key, long amount, Actionable mode, IActionSource src) { return 0; }
+            public long insert(AEKey key, long amount, Actionable mode, IActionSource src) {
+                return mode == Actionable.SIMULATE ? amount : 0;
+            }
+            public Component getDescription() { return Component.literal("refuses real insertion"); }
+        };
+        var e = new EnergyEscrow(0, 0, () -> {});
+        var b = new BufferedMEStorage(source, () -> cell, null, e);
+        check(b.beginMemoryBatch(AppFluxBridge.FE_KEY, 123, SOURCE) == 123, "rejected cell refill not available");
+        check(backing.fe == 0 && e.available() == 123, "refill lost FE before dispatch");
+        live.set(false); b.flushAll(AppFluxBridge.FE_KEY, SOURCE);
+        check(e.available() == 123 && backing.fe == 0, "detached source received stale refund");
+        live.set(true); b.flushAll(AppFluxBridge.FE_KEY, SOURCE);
+        check(e.available() == 0 && backing.fe == 123, "source recovery lost FE");
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void cardEntryRejectsForgedHitAndBindsClickedFace(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var registry = WirelessEnergyEndpoints.get(h.getLevel().getServer());
+            var card = new ItemStack(com.moakiee.ae2lt.registry.ModItems.OVERLOADED_FREQUENCY_CARD.get());
+            com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.bindFrequency(card, f.frequency,
+                    h.getLevel().dimension(), f.controller.getBlockPos(), f.player.getUUID());
+            var hit = new net.minecraft.world.phys.Vec3(f.target.getX() + .5, f.target.getY() + .5, f.target.getZ());
+            com.moakiee.ae2lt.network.FrequencyCardUsePacket.tryLinkWithCard(f.player, card, h.getLevel(), f.target,
+                    Direction.NORTH, new net.minecraft.world.phys.Vec3(Double.NaN, hit.y, hit.z));
+            check(!registry.isBound(h.getLevel(), f.target, f.frequency), "forged hit bound endpoint");
+            com.moakiee.ae2lt.network.FrequencyCardUsePacket.tryLinkWithCard(f.player, card, h.getLevel(), f.target, Direction.NORTH, hit);
+            check(registry.isBound(h.getLevel(), f.target, f.frequency), "card did not bind actual face");
+            check(f.machine.receives == 0 && f.machine.simulations == 0, "card admission probed FE");
+            com.moakiee.ae2lt.network.FrequencyCardUsePacket.tryLinkWithCard(f.player, card, h.getLevel(), f.target, Direction.NORTH, hit);
+            check(!registry.isBound(h.getLevel(), f.target, f.frequency), "second card use did not disconnect");
+            h.succeed();
         });
     }
 

@@ -1,6 +1,6 @@
-# 无线能源实现检查点
+# 无线能源第一切片与验收记录
 
-目标：Minecraft 1.21.1 / NeoForge。独立功能分支基线为远端 main `5269dcabdd52acd95471ab373587d0ea4758ebcb`。用户主工作区本地 main `1bda5091` 及未提交改动未带入、未修改。机制依据 docs 分支 `无线过载控制器能源/设计方案.md`。
+目标：Minecraft 1.21.1 / NeoForge。独立功能分支 `feature/wireless-energy-ledger-20261013` 基线为核对后的远端 main `5269dcabdd52acd95471ab373587d0ea4758ebcb`。用户主工作区本地 main `1bda5091` 及未提交改动未带入、未修改。机制依据 docs 分支 `0e20b7caece0ddc79d0f49603ca1847aec85cdf8` 的 `无线过载控制器能源/设计方案.md`。仅在本地提交，无推送、PR、合并或发布。
 
 ## 用户澄清与本切片边界
 
@@ -28,6 +28,40 @@
 
 ## 验证记录
 
-当前已验证检查点 `82987702`：源码编译通过，6 个 JUnit 测试（含固定种子 10000 次收据守恒）和 6 个真实 GameTest 全通过。首次 GameTest 因命名空间过滤没有注册测试，虽 Gradle 返回成功，但不计入通过；修正过滤后日志确认 “All 6 required tests passed”。新增卸载、运行撤权、跨进程重启测试待运行。
+2026-10-13 最终实现工作树的结果（测试源码位于 `src/test` 和 `src/jdb`；GameTest 不打入产品 jar）：
 
-初始离线 Gradle 因发布依赖 thunderbolt-reborn:2.0.3-beta2 未缓存失败；本地验证使用同机 TB 构建 jar 的独立副本，通过临时 init script 注入，不修改产品依赖声明。测试通过/失败/未运行会在收尾更新。
+| 验证 | 结果 | 覆盖与限制 |
+| --- | --- | --- |
+| Gradle `build` | 通过 | 编译、打包、全量 JUnit；1484 项中 1480 通过、0 失败、4 跳过。4 项为未配置 `ae2lt.eaepTestJar` 的既有 EAEP 实包契约测试。 |
+| `EnergyEscrowTest` | 6/6 通过 | 拒退/部分接收、异常回执隔离、溢出边界、NBT 规范账户、固定种子 10000 次守恒、共享预算。包含于上述 JUnit 总数。 |
+| `WirelessEnergyGameTests` | 12/12 通过 | 不探测绑定、重复绑定、权限拒绝与运行中撤权/恢复、伪造点击拒绝、真实 FE 输送、同类型替换撤销、能力失效重取、卸载回调保留绑定、维度离线、拒退/回调重入/异常回执、来源脱网、节点归属转移。实际移除和恢复连接方块后，两台控制器的 31/73 FE 各自保留，合网不复制。 |
+| `WirelessEnergyRestartGameTests` | 两个独立 JVM 各 1/1 通过 | prepare 正常保存退出，verify 从同一世界恢复 7331 FE 可用余额、17 FE 隔离余额和真实控制器节点的 991 FE 账户；账户 UUID 通过 AE 节点 NBT 恢复。 |
+| 既有 Provider 能源输出/回流过滤 GameTest | 11/11 通过 | 邻接/无线感应输出、移除后停止、既有 FE 回流缓冲、物品/流体回流过滤。 |
+| `git diff --check` | 通过 | 无空白错误。 |
+
+所有 GameTest 均核对实际注册数及 `All N required tests passed`，随后正常停服保存；没有遗留游戏或专服进程。遵守共享测量静默窗口，未开展性能基准。
+
+### 复现与依赖边界
+
+Java 21，Gradle 8.8。初始离线构建因发布依赖 `thunderbolt-reborn:2.0.3-beta2` 未缓存失败。本轮用同机 Thunderbolt 实现任务构建 jar 的独立副本，通过本地 init script 替换该依赖，**没有修改产品依赖声明**。副本 SHA-256 为 `ec766f0ce0505b8c49c3dd31cff908f99db74624b35c988b788b5b8634da62e4`。本轮结果不能替代针对最终发布版 Thunderbolt 的集成验收。
+
+本地证据保存在未提交的 `build/verification/`，含执行日志、JUnit XML、注入脚本和产物散列；原始开发日志不入库。已构建的本地验证 jar 为 `build/libs/ae2lt-2.1.2-beta3.jar`，不作为已发布版本。
+
+```sh
+# local-dependencies.init.gradle 只替换尚未缓存的 Thunderbolt 依赖。
+./gradlew -I build/verification/local-dependencies.init.gradle build --offline --no-daemon --no-configuration-cache --max-workers=2
+./gradlew -I build/verification/local-dependencies.init.gradle -I scripts/wireless-energy-test.init.gradle runGameTestServer --offline --no-daemon --no-configuration-cache --max-workers=2
+# 以下两条必须按顺序、使用同一个隔离测试世界运行。
+./gradlew -I build/verification/local-dependencies.init.gradle -I scripts/wireless-energy-test.init.gradle -PwirelessRestartPhase=prepare runGameTestServer --offline --no-daemon --no-configuration-cache --max-workers=2
+./gradlew -I build/verification/local-dependencies.init.gradle -I scripts/wireless-energy-test.init.gradle -PwirelessRestartPhase=verify runGameTestServer --offline --no-daemon --no-configuration-cache --max-workers=2
+./gradlew -I scripts/provider-energy-output-test.init.gradle -I build/verification/local-dependencies.init.gradle runGameTestServer --offline --no-daemon --no-configuration-cache --max-workers=2
+```
+
+### 已修正的失败与未验证项
+
+- 首次 GameTest 命名空间过滤错误导致 0 注册测试，虽 Gradle 成功也不计通过；修正为模板实际命名空间后运行全部测试。
+- 曾将精简 GameTest runtime 用于全量 JUnit，导致既有 JEI/AdvancedAE 集成测试无法发现；全量构建改用完整 runtime 后通过。
+- 新增远处控制器重启夹具初次因区块未 ticking 而未创建节点；测试使用临时强制加载、结束释放后，两个 JVM 均通过。该失败不被当作通过证据。
+- 精简 GameTest runtime 不含 ExtendedAE，日志有既有 `ae2lt:assembler/overload_processor` 的 `extendedae:config` recipe codec 警告；不声称整个可选模组组合无警告。
+- 卸载测试验证实际 `LevelChunk.clearAllBlockEntities` 回调及 NBT 重建；未运行完整区块管理器的磁盘卸载/重载压力测试、长时服务器测试或客户端手工交互验收。不声称任意崩溃断电下的跨模组原子交付。
+- 当前普通目标仅原生 NeoForge FE 能力。自动 FE 准入、非 FE 原生能源桥、Applied Flux 补 AE 均未实现；不提前设计冷启动或未定玩法。待讨论 UI 和孤立账户人工恢复入口见上文。

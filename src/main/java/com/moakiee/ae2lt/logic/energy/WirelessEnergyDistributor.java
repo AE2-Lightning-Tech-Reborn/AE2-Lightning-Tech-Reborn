@@ -490,7 +490,7 @@ public final class WirelessEnergyDistributor {
                 demand = sim > perCallLimit ? perCallLimit : sim;
             }
             demands[i] = demand;
-            totalDemand += demand;
+            totalDemand = demand > Long.MAX_VALUE - totalDemand ? Long.MAX_VALUE : totalDemand + demand;
         }
 
         if (totalDemand <= 0L) {
