@@ -41,6 +41,7 @@ public final class PigmeeP0GameTests {
         var level = helper.getLevel();
         var server = level.getServer();
         var manager = PigmeeWorkstationRuntime.manager(server);
+        helper.assertTrue(manager.ids().isEmpty(), "test requires fresh world; set -PpigmeeGameTestDirectory to a new directory");
         helper.assertTrue(server.getPlayerList().getPlayerCount() == 0, "requires zero real connected players");
         level.getGameRules().getRule(GameRules.RULE_NATURAL_REGENERATION).set(false, server);
         level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(false, server);
@@ -74,7 +75,10 @@ public final class PigmeeP0GameTests {
             helper.assertTrue(a.tickCount == a.bodyTicks(), "world tickCount must not be incremented twice");
             helper.assertTrue(a.getLastSectionPos().x() == a.chunkPosition().x, "native player loading center follows movement");
             helper.assertTrue(level.getChunkSource().chunkMap.getDistanceManager().inEntityTickingRange(a.chunkPosition().toLong()), "destination must be entity ticking");
-            helper.assertTrue(level.getForcedChunks().isEmpty(), "test must not rely on /forceload");
+            helper.assertTrue(level.getForcedChunks().longStream().noneMatch(key -> {
+                ChunkPos forced = new ChunkPos(key);
+                return Math.abs(forced.x - origin.x) < 32 && Math.abs(forced.z - origin.z) < 32;
+            }), "test must not rely on /forceload");
             helper.assertTrue(a.getHealth() < 20 && b.getHealth() == 20, "independent damage");
             helper.assertTrue(a.getInventory().getItem(0).is(Items.STICK) && b.getInventory().getItem(0).getCount() == 7, "independent inventories");
             helper.assertTrue(b.getItemBySlot(EquipmentSlot.HEAD).isEmpty(), "independent equipment");

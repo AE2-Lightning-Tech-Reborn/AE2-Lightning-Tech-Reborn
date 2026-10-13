@@ -9,7 +9,7 @@ allprojects {
             !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
         }
         neoForge.runs.gameTestServer {
-            gameDirectory = project.layout.buildDirectory.dir('pigmee-p0-gametest').get().asFile
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('pigmeeGameTestDirectory').getOrElse('pigmee-p0-gametest')).get().asFile
             systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_pigmee_p0'
             systemProperty 'ae2lt.pigmeeP0', 'true'
             jvmArguments.add '-Xmx1536m'
