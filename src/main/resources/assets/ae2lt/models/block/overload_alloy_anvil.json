@@ -1,8 +1,78 @@
 {
-  "parent": "minecraft:block/template_anvil",
-  "textures": {
-    "body": "ae2lt:block/overload_machine_frame",
-    "top": "#body",
-    "particle": "#body"
-  }
+	"format_version": "1.21.1",
+	"credit": "Made by xiabi with Blockbench",
+	"textures": {
+		"0": "ae2lt:block/overload_anvil",
+		"particle": "ae2lt:block/overload_anvil"
+	},
+	"elements": [
+		{
+			"from": [2, 0, 2],
+			"to": [14, 4, 14],
+			"faces": {
+				"north": {"uv": [5, 9, 11, 11], "texture": "#0"},
+				"east": {"uv": [5, 9, 11, 11], "texture": "#0"},
+				"south": {"uv": [5, 9, 11, 11], "texture": "#0"},
+				"west": {"uv": [5, 9, 11, 11], "texture": "#0"},
+				"up": {"uv": [5, 3, 11, 9], "texture": "#0"},
+				"down": {"uv": [5, 3, 11, 9], "texture": "#0"}
+			}
+		},
+		{
+			"from": [3, 10, 0],
+			"to": [13, 16, 16],
+			"faces": {
+				"north": {"uv": [0, 8, 5, 11], "texture": "#0"},
+				"east": {"uv": [5, 0, 13, 3], "texture": "#0"},
+				"south": {"uv": [0, 8, 5, 11], "texture": "#0"},
+				"west": {"uv": [5, 0, 13, 3], "texture": "#0"},
+				"up": {"uv": [5, 0, 0, 8], "rotation": 180, "texture": "#0"},
+				"down": {"uv": [0, 0, 5, 8], "texture": "#0"}
+			}
+		},
+		{
+			"from": [5, 4, 4],
+			"to": [11, 10, 12],
+			"faces": {
+				"north": {"uv": [13, 0, 16, 3], "texture": "#0"},
+				"east": {"uv": [11, 3, 15, 6], "texture": "#0"},
+				"south": {"uv": [13, 0, 16, 3], "texture": "#0"},
+				"west": {"uv": [11, 3, 15, 6], "texture": "#0"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation": [75, 45, 0],
+			"translation": [0, 2.5, 0],
+			"scale": [0.375, 0.375, 0.375]
+		},
+		"thirdperson_lefthand": {
+			"rotation": [75, 45, 0],
+			"translation": [0, 2.5, 0],
+			"scale": [0.375, 0.375, 0.375]
+		},
+		"firstperson_righthand": {
+			"rotation": [0, 45, 0],
+			"scale": [0.4, 0.4, 0.4]
+		},
+		"firstperson_lefthand": {
+			"rotation": [0, -135, 0],
+			"scale": [0.4, 0.4, 0.4]
+		},
+		"ground": {
+			"translation": [0, 2, 0],
+			"scale": [0.5, 0.5, 0.5]
+		},
+		"gui": {
+			"rotation": [30, -135, 0],
+			"scale": [0.625, 0.625, 0.625]
+		},
+		"head": {
+			"translation": [0, 14.5, 0]
+		},
+		"fixed": {
+			"scale": [0.5, 0.5, 0.5]
+		}
+	}
 }

@@ -20,7 +20,7 @@ The supercomputer calculates plans, retains job state, and schedules crafting st
 2. Connect the Tianshu Supercomputer Port to a powered ME network
 3. Use the controller to verify structure status, crafting storage, successful dispatches, and copy budget, then configure [Fast Planning](operation.md#fast-planning) if required
 4. Start a crafting job from an ME terminal; allow automatic CPU selection or select the Tianshu Supercomputer in the confirmation screen
-5. Use the [Tianshu Pattern Encoding Terminal](pattern-encoding-terminal.md) for enhanced pattern encoding, pattern upload, closed-loop patterns, and inventory maintenance
+5. Use the [Tianshu Pattern Encoding Terminal](../terminals/pattern-encoding-terminal.md) for enhanced pattern encoding, pattern upload, closed-loop patterns, and inventory maintenance
 
 ## Operating Requirements
 

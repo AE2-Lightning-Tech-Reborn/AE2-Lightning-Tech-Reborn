@@ -11,58 +11,46 @@ item_ids:
 
 <BlockImage id="ae2lt:overloaded_io_port" scale="4" />
 
-Transfers resources between storage cells and the connected ME network. Six input and six output slots use the familiar AE2 IO Port controls. Requires a channel and network power.
+Moves resources in bulk between storage cells and the ME network. It provides six input and six output slots and reuses the AE2 IO Port's empty, fill and eject settings, requiring a channel and network power.
 
-## Bulk transfer
+## Transfer rate
 
-Each attempt processes one resource type. The base budget is **1 attempt per round**. The port accepts up to **16 Lightning Collapse Matrices**. Each of the first 15 adds **1 attempt**, reaching **16 attempts per round**. The 16th matrix does not add another attempt. All six input cells share this budget in rotation. Output slots only receive completed cells.
+Each attempt moves one resource type, and all six input cells share the attempts per round in rotation. Up to 8 **Lightning Collapse Matrices** increase both the attempt count and the amount cap:
 
-Matrices also raise the per-attempt amount cap: **32,768 native units** initially, multiplied by **8 per matrix**. Items use item counts; fluids and lightning use their native storage units. The 16th matrix raises the amount cap to `Long.MAX_VALUE` (9,223,372,036,854,775,807), while the attempt budget remains 16. Source availability and destination capacity can reduce the actual amount moved.
-
-| Matrices | Maximum attempts per round | Per-type amount cap |
+| Matrices | Attempts per round | Per-type cap (transfer units) |
 | --- | ---: | ---: |
-| 0 | 1 | 32,768 |
-| 1 | 2 | 262,144 |
-| 2 | 3 | 2,097,152 |
-| 15 | 16 | 1,152,921,504,606,846,976 |
-| 16 | 16 | Long.MAX_VALUE |
+| 0 | 4 | 8,388,608 |
+| 1 | 6 | 268,435,456 |
+| 2 | 8 | 8,589,934,592 |
+| 3 | 10 | 274,877,906,944 |
+| 4 | 12 | 8,796,093,022,208 |
+| 5 | 14 | 281,474,976,710,656 |
+| 6 | 16 | 9,007,199,254,740,992 |
+| 7 | 16 | 288,230,376,151,711,744 |
+| 8 | 16 | Long.MAX_VALUE |
 
-Install matrices in the right slot below the arrow and a filter component in the left slot. Acceleration cards independently shorten the processing interval:
+Transfer units convert to native amounts using the resource type's AE2 amount per operation. Actual transfers are limited by source stock and destination capacity. `Long.MAX_VALUE` is 9,223,372,036,854,775,807.
 
-| Acceleration cards | Interval per round |
-| --- | ---: |
-| 0 | 5 ticks |
-| 1 | 4 ticks |
-| 2 | 3 ticks |
-| 3 | 2 ticks |
-| 4 | 1 tick |
+Install matrices in the right slot below the arrow. The interval starts at 5 ticks; each acceleration card removes one tick, up to four cards.
 
-Rejected types also spend attempts. Unfinished scans continue in the next round. A cell does not repeat already-scanned types just to spend unused budget, so actual attempts can be below the limit. Resources above the amount cap stay in the source for later rounds.
+## Power
 
-Repeated alerts and matrix changes cannot bypass the interval, and downtime does not accumulate catch-up batches. The maximum rate requires an active network and free destination space. Blocked ports retry less often. The attempt budget does not adapt to server processing time.
-
-Each attempt admitted for extraction costs **32 AE**, independent of quantity, plus **4 AE/t** idle power. A full round of 16 paid attempts costs **512 AE**. A destination that changes its mind after simulation may still consume that attempt's energy. If the network cannot pay, extraction waits. Power needed for the network's next idle payment is reserved.
+Each extraction costs **32 AE**, independent of the amount moved, plus **4 AE/t** idle power, adjusted by the AE2 power multiplier. Transfers pause when power is insufficient.
 
 ## Controls and automation
 
 * **Empty** sends cell contents into the network; **Fill** draws from the network into the cell.
-* Eject cells when **empty**, **full**, or after a complete scan finds **no transferable resources**, matching AE2's three fullness settings. Exhausting this tick's work budget does not finish a cell.
-* A redstone card enables ignore/high/low signal control. It uses one of the five upgrade slots, leaving room for four acceleration cards for one round per tick, with up to 16 attempts when at least 15 matrices are installed.
-* Insert cells through the port's local top/bottom; extract completed cells through the other four sides. Rotate the block to change these directions. The input is restricted to storage cells.
-* When output slots are full, completed cells wait in the input slots. Players can remove cells manually.
-
-Items, fluids and LT lightning use their native storage keys. Other cell types work through AE2's storage-cell API, subject to that implementation's permissions and capacity.
+* Eject cells when empty, when full, or when a complete scan finds no transferable resources.
+* A redstone card enables ignore, high-signal and low-signal control.
+* Insert storage cells through the port's local top and bottom and extract finished cells through the other four sides; rotating the block changes these directions.
+* When output slots are full, cells wait in the input slots and can still be removed by hand.
 
 ## Filter component
 
-Place an **Overloaded Filter Component** in the left slot below the arrow. Configure its resource list in a Cell Workbench. Both **Fill** and **Empty** only transfer matching resources. A fuzzy card enables fuzzy matching; an inverter card turns the list into a blacklist. An absent or unconfigured component allows all resources.
+The left slot below the arrow accepts an **Overloaded Filter Component** whose resource list is configured in a Cell Workbench; both filling and emptying then move only matching resources. A fuzzy card enables fuzzy matching and an inverter card turns the list into a blacklist.
 
-Excluded resources do not consume transfer attempts or batch power. They remain in their original storage. With a filter installed, empty ejection means the cell contains no permitted resources; the cell may move to the output with excluded resources still inside. Destination rejection does not make it empty while permitted resources remain. Without a component or with an empty list, the entire cell must still be empty.
-
-Full ejection continues to use the cell's overall full status. Work-done ejection still means that a complete scan cannot move any resources, including when the destination temporarily rejects them. Swapping the component applies the new rules immediately without resetting the transfer interval.
+Filtered-out resources stay in their original storage and consume no attempts or power. With a nonempty filter list, empty ejection means the cell holds no permitted resources.
 
 ## Recovery
 
-If a storage rejects resources after accepting simulation, the port first returns the remainder to its source. If that also fails, it retains the remainder and pauses new work until it can return it to the ME network. Changing the filter does not prevent recovery of resources already extracted. Saving and dismantling preserve these resources in the port. Memory cards only copy settings. Matrices persist in world saves and drop as items when the port is dismantled; memory cards do not copy matrices.
-
-Obtain the port through the Lightning Assembly Chamber; JEI displays the recipe.
+Resources that cannot be delivered return to their source first. If the source also rejects them, the port holds them and pauses transfers. Pending resources appear in the item tooltip and survive dismantling; reconnect the port to an ME network with free space to return them.

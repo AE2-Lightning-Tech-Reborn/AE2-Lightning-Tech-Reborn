@@ -17,7 +17,7 @@ item_ids:
 
 The **Crystal Catalyzer** is a specialty processing machine that uses the recipe fluid, FE, lightning from the ME network, and the item in its catalyst slot. It has two operating modes: **Crystal Mode** and **Dust Mode**.
 
-The **Pigmee Crystal Catalyzer** is a simplified variant. Put one full stack (64) of a supported crystal block in its catalyst slot; it keeps the blocks and produces the recipe base output every 5 seconds: one crystal for ordinary crystal block recipes, or eight for AE2CS mother rock recipes. It consumes only 1,000 mB of water, uses no FE at all, and never needs Lightning or a Collapse Matrix.
+The **Pigmee Crystal Catalyzer** is a simplified variant. Put one full stack (64) of a supported crystal block or mother rock in its catalyst slot; it keeps the blocks and produces the recipe base output every 5 seconds: one crystal for ordinary crystal block recipes, or sixteen for mother rock recipes. It consumes only 1,000 mB of water, uses no FE at all, and never needs Lightning or a Collapse Matrix.
 
 Both machines share the recipe set, but Pigmee only accepts water recipes. Special-fluid recipes are exclusive to the normal machine. The recipe viewer retains the standard machine's FE, Lightning, quantity and timing data. The Pigmee machine bypasses those energy costs and applies its own fixed stock, duration and base-output rules at runtime; it does not register separate zero-cost recipes.
 
@@ -62,13 +62,27 @@ These optional integrations run in Crystal Mode, with 100,000 FE and 1 High Volt
 
 These recipes load only with their corresponding mod. Pigmee cannot run them; Fluxite now requires the normal catalyzer. Existing water recipes retain their costs.
 
-## AE2 Crystal Science Mother Rocks
+## Non-degrading Mother Rocks
+
+Crystal Mode supports the following mother rocks that do not degrade while growing crystals. Each has a base output of **16 items**, and the mother rock is retained.
+
+| Mother rock | Mod | Product |
+|-------------|-----|---------|
+| Budding Amethyst | Minecraft | Amethyst Shard |
+| Flawless Budding Certus Quartz | AE2 | Certus Quartz Crystal |
+| Flawless Budding Overload Crystal | AE2LT | Overload Crystal |
+| Flawless Budding Ember | Applied Generators | Ember Crystal |
+| Flawless Budding Energized Crystal | NeoECOAE | Energized Crystal |
 
 With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.
 
-The mother rock is retained as the catalyst. Products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE. Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with a base output of eight items and the usual parallel and matrix bonuses. With a matrix, 256 mother rocks produce 16,384 crystals per second. The normal variant's output slot holds 16,384 items.
+AE2CS mother rock products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE.
 
-Pigmee also accepts these water recipes: 64 matching mother rocks produce eight crystals every 5 seconds for 1 B water, without consuming the rocks. These recipes do not load when AE2CS is absent or its installed version has no mother rocks.
+Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with the usual parallel and matrix bonuses. One mother rock produces 16 items per second without a matrix, or 128 with a matrix. With a matrix, 128 mother rocks reach 16,384 items per second. Parallelism is capped by the output slot's total capacity: inserting more mother rocks still works, with a maximum of 16,384 items per cycle.
+
+Pigmee also accepts these water recipes: 64 matching mother rocks produce sixteen crystals every 5 seconds for 1 B water, without consuming the rocks. Compatibility recipes load only when their mod and items are present.
+
+Degrading variants, ExtendedAE's Entro budding blocks, and Time Crystal budding blocks that revert to an immature stage do not qualify. AE2CS's Entro mother rock does not degrade and is supported.
 
 ## Lightning Consumption
 
@@ -80,7 +94,7 @@ If the network does not have enough lightning when the operation is ready to com
 
 Each built-in recipe consumes **1,000 mB of its specified fluid per cycle**. Parallel output and the matrix bonus do not increase this cost. With 256 catalysts and a matrix, a base-output-one recipe produces 2,048 items for the same bucket of fluid.
 
-For the normal machine, parallel count is slot amount / recipe required amount. Recipes with a base output of one item require 1 matching block each, so inserting 64 valid blocks makes the machine calculate 64 parallel outputs per operation. The Pigmee variant requires exactly one full stack (64 blocks) and produces only the recipe base output, without scaling by catalyst count.
+For the normal machine, parallel count is slot amount / recipe required amount, capped by the output slot's total capacity. Recipes with a base output of one item require 1 matching block each, so inserting 64 valid blocks makes the machine calculate 64 parallel outputs per operation. The Pigmee variant requires exactly one full stack (64 blocks) and produces only the recipe base output, without scaling by catalyst count.
 
 The parallel count is locked when processing starts. Adding or removing items from the catalyst slot during processing will not change the already locked output for that operation.
 
