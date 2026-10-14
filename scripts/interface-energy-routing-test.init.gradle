@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/InterfaceEnergyRoutingGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_machine_recharge'
+            workingDirectory project.file('build/interface-energy-routing-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

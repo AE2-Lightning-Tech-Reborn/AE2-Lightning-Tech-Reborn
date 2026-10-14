@@ -7,6 +7,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.Nullable;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
+
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -22,13 +25,9 @@ import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 
 /**
- * Pure batch crafting engine: assembles one copy of a pattern, aggregates all accepted outputs in
- * one pending buffer, and flushes that buffer on a shared five-tick cadence.
- *
- * <p>This class deliberately does NOT manage thread capacity, energy or input scaling. Those are
- * the responsibility of the caller (a rate limiter that implements
- * {@link com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider}). The engine simply assembles
- * and delivers; {@link #liveThreads()} exposes state so the limiter can budget.
+ * Assembles a single-copy template, buffers accepted outputs, and flushes every five ticks.
+ * Deferred sinks can receive outputs after CPU dispatch commits. Callers enforce capacity,
+ * energy and copy scaling; {@link #liveThreads()} reports the buffered copies.
  */
 public final class CraftingCore implements Sweepable {
     public static final int FLUSH_INTERVAL_TICKS = 5;
@@ -55,12 +54,8 @@ public final class CraftingCore implements Sweepable {
     }
 
     /**
-     * Assemble one copy of {@code details} from the single-copy input template and schedule
-     * {@code copies} of its output for delivery at the next five-tick flush boundary.
-     *
-     * <p>The engine does not enforce any capacity, energy or scaling: the caller (rate limiter)
-     * must have already decided {@code copies}. Inputs are a single-copy template (NOT multiplied
-     * by {@code copies}); materials are assumed to have been extracted upstream already.
+     * Assembles the unscaled input template and queues {@code copies} of its output.
+     * The caller has already extracted materials and checked capacity and energy.
      */
     public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long copies) {
         return pushBatch(details, oneCopyTemplate, copies, null);
@@ -120,9 +115,7 @@ public final class CraftingCore implements Sweepable {
         }
 
         boolean wasEmpty = threadsInFlight == 0;
-        for (var output : outputs) {
-            accumulate(pending, output.getKey(), output.getLongValue());
-        }
+        for (var output : outputs) accumulate(pending, output.getKey(), output.getLongValue());
         pending.copies = saturatedAdd(pending.copies, accepted);
         threadsInFlight = saturatedAdd(threadsInFlight, accepted);
         if (wasEmpty) {
@@ -205,7 +198,7 @@ public final class CraftingCore implements Sweepable {
         var pendingTag = new CompoundTag();
         pendingTag.putLong(NBT_COPIES, pending.copies);
         pendingTag.putLong(NBT_NEXT_FLUSH, nextFlushTick);
-        var outputs = writeOutputs(pending, registries);
+        var outputs = writeOutputs(pending);
         if (!outputs.isEmpty()) {
             pendingTag.put(NBT_OUTPUTS, outputs);
             tag.put(NBT_PENDING, pendingTag);
@@ -217,7 +210,7 @@ public final class CraftingCore implements Sweepable {
         reset();
         if (!tag.contains(NBT_PENDING, Tag.TAG_COMPOUND)) return;
         CompoundTag pendingTag = tag.getCompound(NBT_PENDING);
-        readBatch(pendingTag, registries);
+        readBatch(pendingTag);
         long restoredNextFlush = pendingTag.getLong(NBT_NEXT_FLUSH);
 
         if (threadsInFlight > 0) {
@@ -300,7 +293,7 @@ public final class CraftingCore implements Sweepable {
         return saturatedAdd(now, delta);
     }
 
-    private static ListTag writeOutputs(PendingBatch batch, HolderLookup.Provider registries) {
+    private static ListTag writeOutputs(PendingBatch batch) {
         var outputs = new ListTag();
         for (Object2LongMap.Entry<AEKey> entry : batch.outputs.object2LongEntrySet()) {
             if (entry.getKey() == null || entry.getLongValue() <= 0) continue;
@@ -312,7 +305,7 @@ public final class CraftingCore implements Sweepable {
         return outputs;
     }
 
-    private void readBatch(CompoundTag batchTag, HolderLookup.Provider registries) {
+    private void readBatch(CompoundTag batchTag) {
         long copies = batchTag.getLong(NBT_COPIES);
         if (copies <= 0) return;
         boolean restoredOutput = false;

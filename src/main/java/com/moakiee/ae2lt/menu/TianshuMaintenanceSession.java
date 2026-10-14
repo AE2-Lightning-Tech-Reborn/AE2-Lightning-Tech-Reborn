@@ -1,8 +1,6 @@
 package com.moakiee.ae2lt.menu;
 
 import appeng.api.stacks.AEKey;
-import appeng.api.config.Settings;
-import appeng.api.config.ViewItems;
 import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.*;
@@ -154,6 +152,9 @@ public final class TianshuMaintenanceSession {
                 }
             }
         }
+        // An explicit overflow marker makes this a recovery page, rather than a
+        // silently-truncated authoritative snapshot. Deleting one of the visible
+        // entries exposes the next persisted entry on the following revision.
         var snapshot = List.copyOf(summaries.values());
         if (lastSentMaintenanceSummary != null
                 && lastSentMaintenanceSummaryOverflow == overflow
@@ -252,6 +253,10 @@ public final class TianshuMaintenanceSession {
         var direct = maintenance.reservedStock().reservations().stream()
                 .filter(entry -> entry.key().equals(key))
                 .findFirst().orElse(null);
+        // Switching an exact entry to grouped matching must remove that exact override first;
+        // otherwise ReservedStockRepository correctly finds the existing group and would leave
+        // the old exact entry shadowing the edit. Deletion likewise follows the persisted mode,
+        // not a mode the player may have toggled immediately before pressing 0.
         if (direct != null && (amount == 0L || direct.mode() != mode)) {
             maintenance.setMaintenanceWideReservedStock(key, direct.mode(), 0L);
         }
@@ -296,6 +301,9 @@ public final class TianshuMaintenanceSession {
         for (var entry : topology) topologyByKey.putIfAbsent(entry.key(), entry);
         var topologyData = new LinkedHashMap<appeng.api.stacks.AEKey, MaintenanceEditorData.TopologyEntry>();
 
+        // Persisted per-rule reserves come first. This keeps old entries that are no
+        // longer part of the current crafting topology visible and lets amount=0
+        // remove them even while the legacy repository remains oversized/read-only.
         if (local != null) {
             if (local.size() > TianshuPacketLimits.MAX_LIST_ENTRIES) recoveryPage = true;
             for (var saved : local.reservations(TianshuPacketLimits.MAX_LIST_ENTRIES)) {

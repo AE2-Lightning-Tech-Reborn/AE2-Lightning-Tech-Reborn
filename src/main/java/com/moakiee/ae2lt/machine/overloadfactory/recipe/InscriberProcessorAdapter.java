@@ -83,6 +83,7 @@ final class InscriberProcessorAdapter {
             List<RecipeHolder<OverloadProcessingRecipe>> existing, UnaryOperator<Ingredient> lookup) {
         var inscribers = new ArrayList<RecipeHolder<InscriberRecipe>>();
         for (var holder : sources) {
+            // Subclasses may have extra matching or output rules not represented by these fields.
             if (holder.value().getClass() == InscriberRecipe.class) {
                 inscribers.add(new RecipeHolder<>(holder.id(), (InscriberRecipe) holder.value()));
             }
@@ -91,11 +92,13 @@ final class InscriberProcessorAdapter {
         var adapter = new InscriberProcessorAdapter(inscribers, sources, lookup);
         var result = new ArrayList<RecipeHolder<OverloadProcessingRecipe>>();
         for (var holder : inscribers) {
+            // Only final processor recipes opt in; intermediate print IDs need no naming convention.
             if (!holder.id().getPath().contains("processor")) continue;
             var recipe = holder.value();
             var output = recipe.getResultItem();
             if (recipe.getProcessType() != InscriberProcessType.PRESS || output.isEmpty()
                     || recipe.getIngredients().stream().anyMatch(i -> i.isEmpty() || !adapter.hasItems(i))) continue;
+            // Any explicit factory route for this exact output wins, regardless of its ID.
             if (existing.stream().flatMap(h -> h.value().itemResults().stream())
                     .anyMatch(stack -> ItemStack.isSameItemSameTags(stack, output))) continue;
             try {
@@ -128,10 +131,13 @@ final class InscriberProcessorAdapter {
                     resolved.add(new Material(material.ingredient(), material.units(), holder.id() + "/" + material.route()));
                 }
             } catch (ArithmeticException ignored) {
+                // An oversized expansion cannot safely become an intermediate input.
             } finally {
                 path.remove(holder.id());
             }
         }
+        // Never feed an inscriber product into the factory. Prefer reversible blocks
+        // for ordinary materials and keep the source predicate for unpackable ones.
         var raw = remainingIngredient(ingredient, inscriberOutputs);
         if (!raw.isEmpty()) {
             var excluded = new ArrayList<>(inscriberOutputs);
@@ -156,6 +162,7 @@ final class InscriberProcessorAdapter {
         var resolved = lookup.apply(ingredient);
         if (resolved == null || resolved.getItems().length == 0) return Ingredient.EMPTY;
         if (ingredient.getClass() != Ingredient.class) {
+            // A custom predicate cannot be partially subtracted without changing its meaning.
             return Arrays.stream(resolved.getItems())
                     .anyMatch(stack -> outputs.stream().anyMatch(output -> output.is(stack.getItem())))
                     ? Ingredient.EMPTY : ingredient;
@@ -262,6 +269,7 @@ final class InscriberProcessorAdapter {
 
     private boolean hasItems(Ingredient ingredient) {
         var resolved = lookup.apply(ingredient);
+        // An unresolved custom predicate is retained as an input, never flattened.
         return resolved == null || resolved.getItems().length > 0;
     }
 

@@ -18,7 +18,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
@@ -68,6 +67,8 @@ public class OverloadedWirelessConnectorItem extends AE2LTItem {
         boolean isHost = targetBe instanceof WirelessPatternProviderHost
                 || state.getBlock() instanceof OverloadedInterfaceBlock
                 || state.getBlock() instanceof OverloadedPowerSupplyBlock;
+        // Let the selected provider judge non-BE targets on the server. This also
+        // lets it explain a missing core instead of opening the target's own menu.
         boolean isMachine = targetBe != null
                 || (!state.isAir() && getSelectedProvider(level, context.getItemInHand()) != null);
 

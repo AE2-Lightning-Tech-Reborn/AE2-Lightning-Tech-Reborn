@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.logic.tianshu.maintenance;
 
-/** UI-independent four-state projection used by the future terminal item-list badge. */
+/** Four-state display of inventory maintenance status. */
 public enum InventoryMaintenanceBadge {
     GREEN,
     YELLOW,

@@ -24,6 +24,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
     }
 
     @WrapOperation(
+            // This overrides a vanilla method and is SRG-named in the Forge release JAR.
             method = "renderSlot(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/inventory/Slot;)V",
             remap = true,
             at =

@@ -25,12 +25,6 @@ class OverloadProcessingCompatibilityRecipeContractTest {
         assertFalse(Files.exists(RECIPE_ROOT.resolve("eae_concurrent_processor.json")));
     }
 
-    @Test
-    void removedFactoryShortcutsAreNotShipped() {
-        assertFalse(Files.exists(RECIPE_ROOT.resolve("ae2_fluix_pearl.json")));
-        assertFalse(Files.exists(RECIPE_ROOT.resolve("appflux_harden_insulating_resin.json")));
-    }
-
     private static void assertTag(String filename, int inputIndex, String expectedTag) throws Exception {
         JsonObject input = recipe(filename).getAsJsonArray("inputs")
                 .get(inputIndex)

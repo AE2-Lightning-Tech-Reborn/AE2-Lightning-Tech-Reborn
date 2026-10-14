@@ -91,7 +91,7 @@ public record OpenFrequencyMenuPacket(boolean cardMode) {
     }
 
     private static void handleCardMode(ServerPlayer player) {
-        // 15.x has no ItemMenuHostLocator type: probe the parent menu's locator
+        // 15.x has no MenuLocator type: probe the parent menu's locator
         // for an item-backed host to decide whether this is a terminal card menu.
         if (!(player.containerMenu instanceof AEBaseMenu aeMenu)
                 || aeMenu.getLocator() == null

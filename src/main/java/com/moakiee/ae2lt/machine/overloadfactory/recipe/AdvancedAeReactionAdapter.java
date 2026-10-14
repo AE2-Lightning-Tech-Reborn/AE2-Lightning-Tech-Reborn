@@ -15,6 +15,8 @@ final class AdvancedAeReactionAdapter {
     }
 
     static List<RecipeHolder<ReactionChamberRecipe>> sourceRecipes(RecipeManager manager) {
+        // Use the exact type object used by the upstream machine instead of relying
+        // on a registry ID lookup to expose that same object in every AAE version.
         return manager.getAllRecipesFor(ReactionChamberRecipe.TYPE).stream().map(RecipeHolder::of).toList();
     }
 

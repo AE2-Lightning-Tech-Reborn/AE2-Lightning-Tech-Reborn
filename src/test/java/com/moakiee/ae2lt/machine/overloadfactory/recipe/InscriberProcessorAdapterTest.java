@@ -78,6 +78,7 @@ class InscriberProcessorAdapterTest {
         var finalRecipe = sources.get(0).value();
         sources.set(0, holder("unrelated_three_input", finalRecipe));
         assertTrue(derive(sources).isEmpty());
+        // A namespace containing processor must not make all of that mod's recipes eligible.
         sources.set(0, new RecipeHolder<>(new ResourceLocation("processor_mod:unrelated_three_input"), finalRecipe));
         assertTrue(derive(sources).isEmpty());
         sources.set(0, holder("processors/unknown_kind", finalRecipe));
@@ -97,6 +98,7 @@ class InscriberProcessorAdapterTest {
         var manual = new OverloadProcessingRecipe(new ResourceLocation("test:fixture"), 0, List.of(new OverloadProcessingIngredient(Ingredient.of(Items.DIAMOND), 1)),
                 FluidStack.EMPTY, List.of(new ItemStack(Items.CLOCK, 64)), FluidStack.EMPTY, 800_000, 3, LightningKey.Tier.HIGH_VOLTAGE);
         assertTrue(InscriberProcessorAdapter.derive(chain(), List.of(holder("manual", manual))).isEmpty());
+        // A distinct component-bearing output is not the same product.
         var named = new ItemStack(Items.CLOCK);
         named.setHoverName(Component.literal("Different product"));
         var different = new OverloadProcessingRecipe(new ResourceLocation("test:fixture"), 0, manual.itemInputs(), FluidStack.EMPTY, List.of(named),
@@ -111,7 +113,7 @@ class InscriberProcessorAdapterTest {
                 Ingredient.of(Items.PAPER), Ingredient.EMPTY, InscriberProcessType.PRESS)));
         sources.set(2, holder("silicon", new InscriberRecipe(new ResourceLocation("test:fixture"), Ingredient.of(Items.BRICK), new ItemStack(Items.CLAY_BALL),
                 Ingredient.of(Items.PAPER), Ingredient.of(Items.PAPER), InscriberProcessType.INSCRIBE)));
-        assertTrue(derive(sources).isEmpty());
+        assertTrue(derive(sources).isEmpty()); // Neither intermediate has a safe one-input path.
     }
 
     @Test
@@ -219,6 +221,7 @@ class InscriberProcessorAdapterTest {
         sources.set(1, print("gold", Ingredient.of(Items.GOLD_INGOT), new ItemStack(Items.GOLD_NUGGET, 2), false));
         compress(sources, Items.GOLD_INGOT, Items.GOLD_BLOCK, 4);
         var recipe = derive(sources).get(0).value();
+        // One block -> four raw items -> eight prints; 72 is the first multiple of both 36 and 8.
         assertInputs(recipe, Items.GOLD_BLOCK, 9, Items.REDSTONE, 72, Items.BRICK, 72);
         assertEquals(72, recipe.itemResults().get(0).getCount());
         assertEquals(800_000, recipe.totalEnergy());
@@ -256,6 +259,7 @@ class InscriberProcessorAdapterTest {
         assertSame(first, OverloadProcessingRecipeCatalog.recipes(manager, generated, List.of()));
         var id = generated.get(0).id();
         assertSame(first.get(0).value(), OverloadProcessingRecipeCatalog.find(manager, id).orElseThrow());
+        // The script removes the generated entry, while every original inscriber still exists.
         assertTrue(OverloadProcessingRecipeCatalog.recipes(manager, List.of(), List.of()).isEmpty());
         assertTrue(OverloadProcessingRecipeCatalog.find(manager, id).isEmpty());
         assertTrue(OverloadProcessingRecipeCatalog.displayRecipes(manager).isEmpty());
@@ -284,6 +288,7 @@ class InscriberProcessorAdapterTest {
         var lookup = new ReloadIngredientLookup(context, com.mojang.serialization.JsonOps.INSTANCE);
         var result = InscriberProcessorAdapter.derive(sources, List.of(), lookup);
         assertInputs(result.get(0).value(), Items.GOLD_BLOCK, 4, Items.REDSTONE, 36, Items.BRICK, 36);
+        // A second reload with that tag removed must not reuse the prior lookup/bound global tags.
         assertTrue(InscriberProcessorAdapter.derive(sources, List.of(), new ReloadIngredientLookup(
                 net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY,
                 com.mojang.serialization.JsonOps.INSTANCE)).isEmpty());

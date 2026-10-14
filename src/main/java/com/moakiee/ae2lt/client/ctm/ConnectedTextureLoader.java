@@ -16,6 +16,7 @@ import net.minecraftforge.client.model.geometry.IGeometryLoader;
  * <p>Recognised fields: {@code connection} (predicate id, default
  * {@code ae2lt:same_block}), {@code render_type} (default translucent),
  * {@code ambientocclusion}, {@code gui3d}, and {@code uses_block_light}.
+ * Optional {@code slab_type} selects bottom, top or double slab geometry.
  * Textures come from the standard {@code textures} block (keys {@code base},
  * {@code ctm}, and optional transparent {@code overlay}).
  */
@@ -29,9 +30,9 @@ public class ConnectedTextureLoader implements IGeometryLoader<ConnectedTextureG
         boolean ambientOcclusion = GsonHelper.getAsBoolean(json, "ambientocclusion", true);
         boolean gui3d = GsonHelper.getAsBoolean(json, "gui3d", true);
         boolean usesBlockLight = GsonHelper.getAsBoolean(json, "uses_block_light", true);
-        SlabType slabType = json.has("slab_type")
-                ? SlabType.valueOf(GsonHelper.getAsString(json, "slab_type")
-                        .toUpperCase(java.util.Locale.ROOT)) : null;
+        var slabType = json.has("slab_type")
+                ? SlabType.valueOf(
+                        GsonHelper.getAsString(json, "slab_type").toUpperCase(java.util.Locale.ROOT)) : null;
         return new ConnectedTextureGeometry(connection, ChunkRenderTypeSet.of(renderType),
                 ambientOcclusion, gui3d, usesBlockLight, slabType);
     }

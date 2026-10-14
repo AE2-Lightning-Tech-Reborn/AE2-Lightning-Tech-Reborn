@@ -1,0 +1,11 @@
+// Native 1.20.1 equivalents of main c3189c265 regressions.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OverloadProcessingRecipeSyncGameTests.java', '**/TianshuWirelessBindingGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_main_fixes'
+            workingDirectory project.file('build/main-fixes-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

@@ -46,8 +46,6 @@ def metadata(props, tag, prerelease):
         release_type = "release"
     artifact = props.get("artifact_name", props.get("mod_id", "mod"))
     jar_base = f"{artifact}-forge-1.20.1" if loader == "forge" else artifact
-    if loader == "forge" and props.get("gtl_build") == "true":
-        jar_base += "-gtl"
     return {
         "version": version,
         "platform_version": f"{version}-forge.1.20.1" if loader == "forge" else version,
@@ -109,10 +107,6 @@ def stage_maven(jar_path, repository, group, artifact, version):
 
 
 def download_dependencies(root, props, owner):
-    # The GTL planner-attach dependency shares its GAV with older ordinary jars.
-    # Resolve the configured build from Maven rather than substituting a release asset.
-    if props.get("gtl_build") == "true":
-        return {}
     game = props["minecraft_version"]
     forge = game == "1.20.1"
     metadata_path = "META-INF/mods.toml" if forge else "META-INF/neoforge.mods.toml"

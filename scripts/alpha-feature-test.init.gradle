@@ -1,0 +1,12 @@
+// Native Forge integration coverage for the alpha backport; fixtures stay out of release jars.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/CrystalCatalyzerFluidGameTests.java',
+                '**/PigmeeCrystalCatalyzerGameTests.java', '**/RailgunCombatGameTests.java', '**/TianshuQuantumBridgeGameTests.java'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_catalyzer,ae2lt_railgun,ae2lt_quantum'
+            workingDirectory project.file('build/alpha-feature-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

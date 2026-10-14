@@ -127,7 +127,16 @@ class LootTableCompatibilityContractTest {
                 problems.add(path + ": unaudited loot type '" + type + "'");
             }
         }
-        object.asMap().values().forEach(child -> inspectForPost120Schema(path, child, problems));
+        object.entrySet().forEach(entry -> {
+            // A slab's properties.type is a block-state value, not a loot-entry discriminator.
+            if (entry.getKey().equals("properties") && object.has("condition")
+                    && object.get("condition").getAsString().equals("minecraft:block_state_property")) {
+                entry.getValue().getAsJsonObject().entrySet().forEach(property ->
+                        assertTrue(property.getValue().isJsonPrimitive(), "Block state properties must be scalar"));
+            } else {
+                inspectForPost120Schema(path, entry.getValue(), problems);
+            }
+        });
     }
 
     private static void validateDiscriminator(

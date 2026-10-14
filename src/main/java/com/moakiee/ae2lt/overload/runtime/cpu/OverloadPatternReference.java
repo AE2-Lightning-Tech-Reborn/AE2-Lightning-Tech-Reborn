@@ -4,14 +4,7 @@ import java.util.Objects;
 
 import com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot;
 
-/**
- * Stable reference to one overload pattern definition as seen by the CPU-side
- * overload tracking layer.
- * <p>
- * The exact fingerprinting strategy can be refined later. For now, the manager
- * only needs a stable per-pattern identity within one crafting job plus the
- * source plain-pattern snapshot for diagnostics and future persistence.
- */
+/** Stable pattern identity and source snapshot for CPU output tracking. */
 public record OverloadPatternReference(
         String patternIdentity,
         SourcePatternSnapshot sourcePattern

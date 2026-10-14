@@ -23,7 +23,7 @@ class MachineRechargeControllerTest {
             stored -= 10L;
         }
         assertEquals(10_000L, 1_000L + transferred - stored);
-        assertTrue(calls <= 50);
+        assertTrue(calls <= 50, "top-ups must remain batched instead of extracting every tick");
     }
 
     @Test
@@ -60,7 +60,7 @@ class MachineRechargeControllerTest {
     }
 
     @Test
-    void suddenDemandBypassesLowWatermark() {
+    void suddenDemandBypassesTheBatchInterval() {
         var controller = new MachineRechargeController();
         assertFalse(controller.shouldRecharge(1_000, 1_000, 10, Long.MAX_VALUE, 0));
         assertFalse(controller.shouldRecharge(600, 1_000, 10, Long.MAX_VALUE, 1));

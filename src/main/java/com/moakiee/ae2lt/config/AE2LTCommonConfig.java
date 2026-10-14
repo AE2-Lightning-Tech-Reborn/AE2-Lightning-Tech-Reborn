@@ -64,6 +64,7 @@ public final class AE2LTCommonConfig {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         MiningFactoryConfig.define(builder);
         VALUES = new Values(builder);
+        com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig.define(builder);
         SPEC = builder.build();
     }
 
@@ -291,6 +292,7 @@ public final class AE2LTCommonConfig {
     public static double railgunPercentageTier1() { return VALUES.railgunPercentageTier1.get(); }
     public static double railgunPercentageTier2() { return VALUES.railgunPercentageTier2.get(); }
     public static double railgunPercentageTier3() { return VALUES.railgunPercentageTier3.get(); }
+
     public static int railgunBeamDamagePerSettle() { return VALUES.railgunBeamDamagePerSettle.get(); }
     public static double railgunBeamBypass() { return VALUES.railgunBeamBypass.get(); }
     public static int railgunBaseDamageEhv1() { return VALUES.railgunBaseDamageEhv1.get(); }
@@ -706,7 +708,7 @@ public final class AE2LTCommonConfig {
                     .comment("Ticks in the linear combo window for matrix shield lightning cost scaling.")
                     .defineInRange("shieldComboWindowTicks", 200, 1, 20 * 60 * 60);
             overloadArmorUndyingComboWindowTicks = builder
-                    .comment("Ticks in the linear combo window for undying FE and EHV cost scaling.")
+                    .comment("Legacy compatibility option; unused. Overload protection now shares a fixed 20-tick billing window and capped combo tiers.")
                     .defineInRange("undyingComboWindowTicks", 200, 1, 20 * 60 * 60);
             builder.pop();
             builder.pop();

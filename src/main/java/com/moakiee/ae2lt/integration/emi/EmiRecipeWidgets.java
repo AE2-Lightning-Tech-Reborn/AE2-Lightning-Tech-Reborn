@@ -57,16 +57,6 @@ final class EmiRecipeWidgets {
                 : "ae2lt.gui.lightning_simulation.tier.high_voltage");
     }
 
-    static String compactEnergy(long energy) {
-        if (energy >= 1_000_000L) {
-            return compactValue(energy / 1_000_000D, "m");
-        }
-        if (energy >= 1_000L) {
-            return compactValue(energy / 1_000D, "k");
-        }
-        return Long.toString(energy);
-    }
-
     static String processTime(int ticks) {
         double seconds = ticks / 20.0D;
         if (seconds == Math.floor(seconds)) {
@@ -75,11 +65,4 @@ final class EmiRecipeWidgets {
         return String.format(java.util.Locale.ROOT, "%.1fs", seconds);
     }
 
-    private static String compactValue(double value, String suffix) {
-        double rounded = Math.round(value * 10.0D) / 10.0D;
-        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001D) {
-            return Long.toString(Math.round(rounded)) + suffix;
-        }
-        return rounded + suffix;
-    }
 }

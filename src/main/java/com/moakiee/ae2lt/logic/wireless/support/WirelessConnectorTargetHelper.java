@@ -18,14 +18,15 @@ public final class WirelessConnectorTargetHelper {
 
     public static Set<BlockPos> collectTargets(
             Level level, BlockPos origin, boolean contiguous, int maxTargets) {
-        return collectTargets(level, origin, contiguous, maxTargets,
-                target -> level.getBlockEntity(target) != null);
+        return collectTargets(level, origin, contiguous, maxTargets, pos -> level.getBlockEntity(pos) != null);
     }
 
     public static Set<BlockPos> collectTargets(
             Level level, BlockPos origin, boolean contiguous, int maxTargets, Predicate<BlockPos> acceptsTarget) {
         if (maxTargets <= 0 || !level.isLoaded(origin) || !acceptsTarget.test(origin)) return Set.of();
-        if (!contiguous) return Set.of(origin.immutable());
+        if (!contiguous) {
+            return Set.of(origin.immutable());
+        }
         var originState = level.getBlockState(origin);
         var originBlockEntity = level.getBlockEntity(origin);
 

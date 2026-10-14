@@ -12,9 +12,9 @@ class DeviceHubKeyMappingsSourceContractTest {
     @Test
     void forgeRuntimeHandlerHasAUniqueGeneratedListenerIdentity() throws Exception {
         String deviceHub = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/DeviceHubKeyMappings.java"));
+                "src/main/java/com/moakiee/ae2lt/client/hub/DeviceHubKeyMappings.java"));
         String frequencyCard = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/FrequencyCardKeyMappings.java"));
+                "src/main/java/com/moakiee/ae2lt/client/frequency/FrequencyCardKeyMappings.java"));
 
         assertTrue(deviceHub.contains("class DeviceHubRuntimeHandler"));
         assertFalse(deviceHub.contains("class RuntimeHandler"));
@@ -24,7 +24,7 @@ class DeviceHubKeyMappingsSourceContractTest {
     @Test
     void forgeTickPhaseMatchesMainPostTickSemantics() throws Exception {
         String deviceHub = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/DeviceHubKeyMappings.java"));
+                "src/main/java/com/moakiee/ae2lt/client/hub/DeviceHubKeyMappings.java"));
 
         assertTrue(deviceHub.contains("event.phase != TickEvent.Phase.END"));
         assertTrue(deviceHub.contains("OPEN_CONFIG.consumeClick()"));

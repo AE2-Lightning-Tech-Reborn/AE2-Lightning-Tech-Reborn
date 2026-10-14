@@ -8,14 +8,14 @@ class FrequencyBindingIdTest {
     @Test
     void legacyAndMalformedIdsNormalizeButPositiveIdsSurviveBeforeRegistryReady() {
         var binding = new FrequencyBindingHelper(null);
-        for (int identifier : new int[] {Integer.MIN_VALUE, -2, -1, 0, 1, Integer.MAX_VALUE}) {
+        for (int id : new int[] {Integer.MIN_VALUE, -2, -1, 0, 1, Integer.MAX_VALUE}) {
             var input = new CompoundTag();
-            input.putInt("FrequencyId", identifier);
+            input.putInt("FrequencyId", id);
             binding.load(input);
-            assertEquals(identifier > 0 ? identifier : -1, binding.getFrequencyId());
+            assertEquals(id > 0 ? id : -1, binding.getFrequencyId());
             var output = new CompoundTag();
             binding.save(output);
-            assertEquals(identifier > 0 ? identifier : -1, output.getInt("FrequencyId"));
+            assertEquals(id > 0 ? id : -1, output.getInt("FrequencyId"));
         }
         binding.load(new CompoundTag());
         binding.setFrequency(0);

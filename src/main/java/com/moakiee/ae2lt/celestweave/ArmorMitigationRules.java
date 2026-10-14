@@ -40,6 +40,7 @@ public final class ArmorMitigationRules {
         };
     }
 
+    /** Keep the paid absorption accurate even when subtracting 1024 rounds back to the input float. */
     public static float preventedDamage(String stage, DamageClass damageClass, float incoming) {
         return "phase_shield".equals(stage)
                 ? Math.min(Math.max(0.0F, incoming), ArmorOverloadRules.PHASE_SHIELD_MAX_DAMAGE)

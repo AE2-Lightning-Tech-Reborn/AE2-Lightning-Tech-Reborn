@@ -40,7 +40,6 @@ public final class CelestweaveArmorState {
     public static final int SLOT_CORE = 0;
     public static final int SLOT_COUNT = 1;
     private static volatile boolean CLIENT_FLIGHT_INERTIA = true;
-    private static volatile UUID CLIENT_FLIGHT_INERTIA_ARMOR_ID = null;
     private static volatile PhaseFlightMode CLIENT_PHASE_MODE = PhaseFlightMode.ALL;
     private static volatile UUID CLIENT_PHASE_LOCK_ARMOR_ID = null;
     private static volatile boolean CLIENT_PHASE_LOCK_BLOCK_EXTERNAL_FORCES = false;
@@ -407,9 +406,10 @@ public final class CelestweaveArmorState {
             } else {
                 submodule.onDeactivated(player, dist, armor);
                 if (dedicatedServer && flightModule) {
-                    // Restore the captured vanilla/attribute flight source before deciding whether
-                    // the independent chest flight lock must remain active.
-                    syncFlightSettingsToClient((ServerPlayer) player, armor, armorId);
+                    // Equipment-change events can deactivate the previous leggings after the new
+                    // flight source has already synced. Resolve the current logical equipment,
+                    // including vaulted armor, so the old source cannot reset its inertia settings.
+                    syncFlightSettingsToClient((ServerPlayer) player, armorId);
                 }
             }
         }
@@ -494,7 +494,8 @@ public final class CelestweaveArmorState {
     /**
      * Client-side active derivation. Core + toggle live on the synced stack, and the
      * server publishes its energy-based forced-off state via {@link #isModulesPowered}, so no
-     * client cache or per-submodule sync packet is required. Callers iterate equipped armor,
+     * client cache or per-submodule sync packet is required. Paid protection windows and the
+     * free multidimensional tier remain active after depletion. Callers iterate equipped armor,
      * so being in an armor slot already implies "equipped".
      */
     public static boolean isSubmoduleActiveClient(ItemStack armor, CelestweaveArmorSubmodule submodule, long gameTime) {
@@ -550,7 +551,6 @@ public final class CelestweaveArmorState {
             CLIENT_FLIGHT_CONTROL_GENERATION.incrementAndGet();
         }
         CLIENT_FLIGHT_INERTIA = true;
-        CLIENT_FLIGHT_INERTIA_ARMOR_ID = null;
         CLIENT_PHASE_MODE = PhaseFlightMode.ALL;
         CLIENT_PHASE_LOCK_ARMOR_ID = null;
         CLIENT_PHASE_LOCK_BLOCK_EXTERNAL_FORCES = false;
@@ -666,7 +666,6 @@ public final class CelestweaveArmorState {
             boolean inertiaEnabled,
             PhaseFlightMode phaseMode) {
         CLIENT_FLIGHT_INERTIA = inertiaEnabled;
-        CLIENT_FLIGHT_INERTIA_ARMOR_ID = armorId;
         CLIENT_PHASE_MODE = phaseMode;
     }
 

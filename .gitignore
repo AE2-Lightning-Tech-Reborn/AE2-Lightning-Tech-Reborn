@@ -26,16 +26,24 @@ run2/
 /benchmark-results/
 /run-data/
 /run-gametest/
+/run-crafting-report-probe/
 
 # Local assistant/docs
+/AGENTS.md
 .aiassistant/
 .docs/
 archive/
 docs/
+!docs/
+docs/*
+!docs/forge-1.20.1-alpha-20261009.md
 .claude/
 CLAUDE.local.md
 else/
 bin/
+run-passive-input-gametest/
+run-alloy-anvil-gametest/
+run-alloy-anvil-client/
 
 # OS files
 Thumbs.db
@@ -44,6 +52,7 @@ desktop.ini
 # Logs
 *.log
 logs/
+scripts/__pycache__/
 
 # Runtime / temporary files
 tmp/

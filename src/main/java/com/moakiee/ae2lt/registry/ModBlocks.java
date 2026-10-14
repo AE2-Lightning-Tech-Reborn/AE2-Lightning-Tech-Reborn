@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.block.MiningFactoryBlock;
+import com.moakiee.ae2lt.block.OverloadedIOPortBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingSlabBlock;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.block.AtmosphericIonizerBlock;
 import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
@@ -34,6 +37,8 @@ import com.moakiee.ae2lt.block.PigmeeMentalmathUnitBlock;
 import com.moakiee.ae2lt.block.PigmeeMolecularAssemblerBlock;
 import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
 import com.moakiee.ae2lt.block.PigmeeCrystalCatalyzerBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
+import com.moakiee.ae2lt.block.PigmeeBuildingPanelBlock;
 import com.moakiee.ae2lt.block.SiliconBlock;
 import com.moakiee.ae2lt.block.PigmeeSynthesisStationBlock;
 import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
@@ -53,6 +58,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
@@ -72,16 +78,36 @@ public final class ModBlocks {
 
     public static final RegistryObject<PigmeeBuildingBlock> PIGMEE_BUILDING_BLOCK =
             registerBlock("pigmee_building_block", PigmeeBuildingBlock::new);
+
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_BUILDING_PANELS =
             registerPigmeePanels(false);
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =
             registerPigmeePanels(true);
+
     public static final RegistryObject<PigmeeBuildingSlabBlock> PIGMEE_BUILDING_SLAB =
             registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MapColor.COLOR_PINK));
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_BUILDING_SLABS =
             registerPigmeeSlabs(false);
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_FRAMED_BUILDING_SLABS =
             registerPigmeeSlabs(true);
+
+    private static Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> registerPigmeeSlabs(boolean framed) {
+        var slabs = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_slab" : "_pigmee_building_slab");
+            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMapColor())));
+        }
+        return Collections.unmodifiableMap(slabs);
+    }
+
+    private static Map<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>> registerPigmeePanels(boolean framed) {
+        var panels = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingPanelBlock>>(DyeColor.class);
+        for (DyeColor color : DyeColor.values()) {
+            String name = color.getName() + (framed ? "_pigmee_framed_building_panel" : "_pigmee_building_panel");
+            panels.put(color, registerBlock(name, () -> new PigmeeBuildingPanelBlock(color, framed)));
+        }
+        return Collections.unmodifiableMap(panels);
+    }
 
     private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of()
             .mapColor(MapColor.COLOR_CYAN)
@@ -166,6 +192,12 @@ public final class ModBlocks {
 
     public static final RegistryObject<LightningAssemblyChamberBlock> LIGHTNING_ASSEMBLY_CHAMBER =
             registerBlock("lightning_assembly_chamber", LightningAssemblyChamberBlock::new);
+
+    public static final RegistryObject<OverloadedIOPortBlock> OVERLOADED_IO_PORT =
+            registerBlock("overloaded_io_port", OverloadedIOPortBlock::new);
+
+    public static final RegistryObject<MiningFactoryBlock> MINING_FACTORY =
+            registerBlock("mining_factory", MiningFactoryBlock::new);
 
     public static final RegistryObject<OverloadProcessingFactoryBlock> OVERLOAD_PROCESSING_FACTORY =
             registerBlock("overload_processing_factory", OverloadProcessingFactoryBlock::new);

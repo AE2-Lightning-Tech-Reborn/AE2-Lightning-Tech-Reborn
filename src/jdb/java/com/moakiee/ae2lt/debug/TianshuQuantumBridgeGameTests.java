@@ -67,6 +67,7 @@ public final class TianshuQuantumBridgeGameTests {
     }
 
     private static void stale(WTMenuHost host) throws Exception {
+        // AE2 destroy() clears center, while the terminal still remembers connected=true.
         var cluster = new QuantumCluster(BlockPos.ZERO, new BlockPos(2, 2, 0));
         check(cluster.getCenter() == null, "fixture must have no bridge center");
         set(host, "quantumBridge", cluster);
@@ -78,7 +79,7 @@ public final class TianshuQuantumBridgeGameTests {
         check(get(host, "quantumBridge") == null, "discard stale bridge so later discovery can reconnect");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt_quantum", template = "empty", timeoutTicks = 100)
     public static void patternMenuSurvivesStaleBridge(GameTestHelper helper) throws Exception {
         var player = player(helper, "QuantumPattern", ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());
         var host = new TianshuWTMenuHost(player, 0, player.getInventory().getItem(0), (p, menu) -> {});
@@ -86,6 +87,7 @@ public final class TianshuQuantumBridgeGameTests {
         player.containerMenu = menu;
         try {
             stale(host);
+            // In the crash, this calls Tianshu discovery before the native menu refresh.
             menu.broadcastChanges();
             disconnected(host);
         } finally {
@@ -95,7 +97,7 @@ public final class TianshuQuantumBridgeGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt_quantum", template = "empty", timeoutTicks = 100)
     public static void statusAndConnectionRefreshDiscardStaleBridge(GameTestHelper helper) throws Exception {
         var player = player(helper, "QuantumStatus", ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());
         var host = new TianshuWTMenuHost(player, 0, player.getInventory().getItem(0), (p, menu) -> {});
@@ -150,7 +152,7 @@ public final class TianshuQuantumBridgeGameTests {
         inventory.writeToNBT(stack.getOrCreateTag(), "singularity");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 140)
+    @GameTest(templateNamespace = "ae2lt_quantum", template = "empty", timeoutTicks = 140)
     public static void realBridgeLossFallsBackToLocalAccessPoint(GameTestHelper helper) {
         if (!ModList.get().isLoaded("ae2wtlib")) {
             helper.succeed();
@@ -159,6 +161,7 @@ public final class TianshuQuantumBridgeGameTests {
         var player = player(helper, "QuantumFallback", ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());
         var bridge = bridge(helper, player);
         var center = bridge.center();
+        // Default orientation exposes only its south (back) side to the energy cell.
         var wap = center.west(2).north();
         helper.getLevel().setBlockAndUpdate(wap, AEBlocks.WIRELESS_ACCESS_POINT.block().defaultBlockState());
         player.setPos(wap.getX() + .5, wap.getY() + 1, wap.getZ() + .5);
@@ -170,6 +173,7 @@ public final class TianshuQuantumBridgeGameTests {
             var menu = new TianshuWirelessPatternEncodingTermMenu(13, player.getInventory(), host);
             player.containerMenu = menu;
             helper.getLevel().setBlockAndUpdate(center.east(), Blocks.AIR.defaultBlockState());
+            // Let AE2 finish channel recalculation, keeping the terminal's old cache untouched.
             helper.runAfterDelay(30, () -> {
                 try {
                     check(host.rangeCheck() && host.getActionableNode() != null,

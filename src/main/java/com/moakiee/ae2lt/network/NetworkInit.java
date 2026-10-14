@@ -34,8 +34,10 @@ import java.util.Optional;
 public final class NetworkInit {
     // Version 3 adds the research-note screen message.
     // Version 4 encodes recipe outputs and assembler animations with separate VarInt counts.
-    // GTL 10 adds pattern migration and native interface direction synchronization.
-    private static final String PROTOCOL_VERSION = "gtl-10";
+    // Version 5 adds workstation/JEI packets, seed-return fields, scoped Easter eggs and railgun modes.
+    // Version 6 adds the frequency-card link shortcut packet.
+    // Version 11 adds wireless JEI crafting requests and craftable ingredient offers.
+    private static final String PROTOCOL_VERSION = "11";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -53,6 +55,12 @@ public final class NetworkInit {
             return;
         }
         registered = true;
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         CHANNEL.registerMessage(
                 nextPacketId++,
@@ -76,6 +84,9 @@ public final class NetworkInit {
                 ToggleFrequencyCardAutoConnectPacket::decode,
                 ToggleFrequencyCardAutoConnectPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
+                (pkt, buf) -> pkt.write(buf), FrequencyCardLinkShortcutPacket::decode,
+                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         // controller UI: C→S
         CHANNEL.registerMessage(
                 nextPacketId++,
@@ -373,21 +384,6 @@ public final class NetworkInit {
                 OpenResearchNotePacket::decode,
                 OpenResearchNotePacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.BigStockPacket.class,
-                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.BigStockPacket::read,
-                com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.class,
-                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::read,
-                com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
-                (packet, buffer) -> packet.write(buffer), FrequencyCardLinkShortcutPacket::decode,
-                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(nextPacketId++, WirelessJeiSupplyPacket.class,
-                (packet, buffer) -> packet.write(buffer), WirelessJeiSupplyPacket::read,
-                WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(nextPacketId++, WirelessJeiSupplyResultPacket.class,
-                (packet, buffer) -> packet.write(buffer), WirelessJeiSupplyResultPacket::read,
-                WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(
                 nextPacketId++,
                 MatrixPatternMigrationActionPacket.class,
@@ -398,6 +394,13 @@ public final class NetworkInit {
                 MatrixPatternMigrationStatusPacket.class,
                 MatrixPatternMigrationStatusPacket::encode, MatrixPatternMigrationStatusPacket::decode,
                 MatrixPatternMigrationStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        // Exact-quantity packets are appended so existing discriminator IDs stay stable.
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.BigStockPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.BigStockPacket::read,
+                com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::read,
+                com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static ResourceLocation id(String path) {

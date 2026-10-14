@@ -30,7 +30,7 @@ class ReviewFollowupSourceContractTest {
                 "src/main/java/com/moakiee/ae2lt/integration/ae2wtlib/Ae2wtlibIntegration.java"));
 
         assertTrue(integration.contains("WUTHandler.wirelessTerminals.get(TIANSHU_TERMINAL_NAME)"));
-        assertTrue(integration.contains("WUTHandler.terminalNames.indexOf(TIANSHU_TERMINAL_NAME)"));
+        assertTrue(integration.contains("WUTHandler.terminalNames.contains(TIANSHU_TERMINAL_NAME)"));
         assertFalse(integration.contains("\"pattern_access\""));
         assertFalse(integration.contains("\"pattern_encoding\""));
     }
@@ -40,7 +40,7 @@ class ReviewFollowupSourceContractTest {
         String integration = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/integration/ae2wtlib/Ae2wtlibIntegration.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuWirelessPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuWirelessPatternEncodingTermScreen.java"));
         String menuHost = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/integration/ae2wtlib/TianshuWTMenuHost.java"));
 

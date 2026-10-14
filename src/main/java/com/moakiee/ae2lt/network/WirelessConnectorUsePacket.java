@@ -6,7 +6,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
 import com.moakiee.ae2lt.item.OverloadedWirelessConnectorItem;
 import com.moakiee.ae2lt.logic.WirelessConnectionBatchEdit;
-import com.moakiee.ae2lt.logic.WirelessConnectionRange;
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionRange;
 import com.moakiee.ae2lt.logic.WirelessConnectorTargetHelper;
 import com.moakiee.ae2lt.api.patternprovider.WirelessPatternProviderHost;
 import com.moakiee.ae2lt.logic.wireless.support.WirelessConnectionRef;
@@ -157,8 +157,7 @@ public record WirelessConnectorUsePacket(
         }
 
         var targets = com.moakiee.ae2lt.logic.wireless.support.WirelessConnectorTargetHelper.collectTargets(
-                level, pos, contiguous, Integer.MAX_VALUE,
-                target -> provider.acceptsWirelessTarget(level, target));
+                level, pos, contiguous, Integer.MAX_VALUE, target -> provider.acceptsWirelessTarget(level, target));
         if (targets.isEmpty()) {
             player.displayClientMessage(
                     provider.getWirelessTargetRejectionMessage().copy().withStyle(ChatFormatting.GREEN), true);

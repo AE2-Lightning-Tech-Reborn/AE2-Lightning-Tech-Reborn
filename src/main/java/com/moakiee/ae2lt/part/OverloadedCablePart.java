@@ -11,14 +11,7 @@ import appeng.items.parts.ColoredPartItem;
 import appeng.parts.networking.CoveredDenseCablePart;
 import appeng.parts.networking.IUsedChannelProvider;
 
-/**
- * Minimal AE2LT-owned cable part shell.
- * We keep it as a separate part type now so future owner-scoped channel logic
- * can special-case only this cable, without touching vanilla dense cable items.
- * <p>
- * Important: this class is the only cable owner type that AE2LT's 128-channel
- * logic and extra tooltip display should apply to.
- */
+/** Covered dense cable participating in the high-capacity channel network. */
 public class OverloadedCablePart extends CoveredDenseCablePart
         implements HighCapacityChannelOwner, IUsedChannelProvider {
 
@@ -35,7 +28,6 @@ public class OverloadedCablePart extends CoveredDenseCablePart
 
     @Override
     public AECableType getCableConnectionType() {
-        // Stay on the covered dense cable path for maximum compatibility in this stage.
         return AECableType.DENSE_COVERED;
     }
 

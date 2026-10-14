@@ -8,7 +8,6 @@ import java.util.function.Predicate;
 import com.google.common.collect.MapMaker;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.FuzzyMode;
@@ -21,7 +20,7 @@ import appeng.items.contents.CellConfig;
 import appeng.util.ConfigInventory;
 
 /**
- * Filter component item for the Overloaded ME Interface.
+ * Filter component item for the Overloaded ME Interface and IO Port.
  * <p>
  * Configurable in AE2's Cell Workbench:
  * <ul>
@@ -29,7 +28,7 @@ import appeng.util.ConfigInventory;
  *   <li>2 upgrade slots (fuzzy card + inverter card)</li>
  *   <li>Supports fuzzy matching and whitelist/blacklist inversion</li>
  * </ul>
- * Placed into the interface's filter slot; only affects the input side.
+ * The interface filters incoming resources; the IO Port filters both transfer directions.
  */
 public class OverloadedFilterComponentItem extends AE2LTItem implements ICellWorkbenchItem {
 
@@ -73,14 +72,13 @@ public class OverloadedFilterComponentItem extends AE2LTItem implements ICellWor
         return UpgradeInventories.forItem(stack, UPGRADE_SLOTS);
     }
 
+    /** Snapshot of the configured rules, matching the interface's empty/fuzzy/inverted semantics. */
     public Predicate<AEKey> createMatcher(ItemStack stack) {
         var config = getConfigInventory(stack);
         var configured = new HashSet<AEKey>();
-        for (int slot = 0; slot < config.size(); slot++) {
-            var key = config.getKey(slot);
-            if (key != null) {
-                configured.add(key);
-            }
+        for (int i = 0; i < config.size(); i++) {
+            var key = config.getKey(i);
+            if (key != null) configured.add(key);
         }
         var upgrades = getUpgrades(stack);
         var fuzzy = upgrades.isInstalled(AEItems.FUZZY_CARD) ? getFuzzyMode(stack) : null;
@@ -88,18 +86,20 @@ public class OverloadedFilterComponentItem extends AE2LTItem implements ICellWor
         return createMatcher(configured, fuzzy, inverted);
     }
 
+    /**
+     * A rule snapshot with a transient AEKey -> boolean cache. Guava weak keys use
+     * identity equality: a hit never hashes or compares the key's components.
+     * Both outcomes are cached; Boolean values cannot retain their keys. Rebuild
+     * the matcher when rules change. No cache entries are written to the item.
+     */
     public static Predicate<AEKey> createMatcher(Set<AEKey> configured,
                                                  @Nullable FuzzyMode fuzzy, boolean inverted) {
-        if (configured.isEmpty()) {
-            return key -> true;
-        }
+        if (configured.isEmpty()) return key -> true;
         var keys = Set.copyOf(configured);
         Map<AEKey, Boolean> results = new MapMaker().weakKeys().concurrencyLevel(1).makeMap();
         return key -> {
             var cached = results.get(key);
-            if (cached != null) {
-                return cached;
-            }
+            if (cached != null) return cached;
             boolean matches = keys.contains(key);
             if (!matches && fuzzy != null) {
                 for (var configuredKey : keys) {

@@ -45,6 +45,7 @@ public final class SubmissionHistory<R, T> {
                 throw new IllegalStateException("Submission history requires reconciliation before new dispatch");
             }
         }
+        // A pending receipt also prevents a reentrant callback from dispatching twice.
         var entry = new Entry<R, T>(request);
         entries.put(nonce, entry);
         try {
@@ -60,6 +61,7 @@ public final class SubmissionHistory<R, T> {
     }
 
     private void trim() {
+        // Never evict an in-flight or indeterminate operation to make it replayable.
         var iterator = entries.entrySet().iterator();
         while (entries.size() > limit && iterator.hasNext()) {
             var entry = iterator.next().getValue();

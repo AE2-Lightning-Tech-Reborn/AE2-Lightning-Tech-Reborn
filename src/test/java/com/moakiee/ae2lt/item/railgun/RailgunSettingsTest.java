@@ -92,4 +92,3 @@ class RailgunSettingsTest {
         assertEquals(RailgunExecutionMode.NORMAL, disabled.executionMode());
     }
 }
-

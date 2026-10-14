@@ -29,7 +29,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.core.RegistryAccess;
 
 /**
  * Thunderbolt-backed CPU host for the Pigmee mental arithmetic unit. AE2 indexes machine owners by

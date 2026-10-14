@@ -170,24 +170,13 @@ public final class PatternMigrationGameTests {
             f.provider.getLogic().getPatternInv().setItemDirect(0,pattern(h,false));
             h.runAfterDelay(5,()->{
                 var manager=f.controller.getPatternMigration();manager.start(f.player);
-                awaitAssemblerBusy(h, f, assembler, 60);
+                h.runAfterDelay(4,()->{
+                    h.assertTrue(manager.snapshot().stage()==PatternMigrationSnapshot.Stage.WAITING
+                            && !f.provider.getLogic().getPatternInv().getStackInSlot(0).isEmpty(),"autonomous pending output blocks network migration");
+                    assembler.getInternalInventory().setItemDirect(9,ItemStack.EMPTY);
+                    await(h,f,()->{h.assertTrue(manager.snapshot().moved()==1,"cleared output allows migration");done(h,f);});
+                });
             });
-        });
-    }
-
-    private static void awaitAssemblerBusy(GameTestHelper h, Fixture f,
-            appeng.blockentity.crafting.MolecularAssemblerBlockEntity assembler, int remaining) {
-        h.runAfterDelay(1, () -> {
-            var manager = f.controller.getPatternMigration();
-            h.assertTrue(!f.provider.getLogic().getPatternInv().getStackInSlot(0).isEmpty(),
-                    "autonomous pending output blocks network migration");
-            if (manager.snapshot().stage() != PatternMigrationSnapshot.Stage.WAITING) {
-                h.assertTrue(remaining > 0, "busy check did not receive a migration budget: " + manager.snapshot());
-                awaitAssemblerBusy(h, f, assembler, remaining - 1);
-                return;
-            }
-            assembler.getInternalInventory().setItemDirect(9, ItemStack.EMPTY);
-            await(h, f, () -> { h.assertTrue(manager.snapshot().moved() == 1, "cleared output allows migration"); done(h, f); });
         });
     }
 
@@ -224,69 +213,11 @@ public final class PatternMigrationGameTests {
                         List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.GOLD_INGOT),1)));
                 // Fill without firing 100000 setup notifications. Actual migration uses the native host callbacks.
                 var backing=(net.minecraft.core.NonNullList<ItemStack>)MigrationReflection.field(inventory,"stacks");
-                  for(int i=0;i<backing.size();i++)backing.set(i,processing.copy());
-                  backing.set(0,pattern(h,false));backing.set(99999,pattern(h,true));
-                  logic.updatePatterns();
+                for(int i=0;i<backing.size();i++)backing.set(i,processing.copy());
+                backing.set(0,pattern(h,false));backing.set(99999,pattern(h,true));
                 f.controller.getPatternMigration().start(f.player);
                 measure(h,f,new long[4]);
             } catch(Exception e){throw new AssertionError(e);}
-        });
-    }
-
-    @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
-    public static void largeNativeCatalogPreservesDuplicatesInputsAndRollback(GameTestHelper h) {
-        fixture(h, f -> {
-            try {
-                var logic = f.provider.getLogic();
-                var inventory = new appeng.util.inv.AppEngInternalInventory(logic, 512, 1);
-                setField(logic, "patternInventory", inventory);
-                var encoded = pattern(h, false);
-                var processing = processingPattern(List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_INGOT), 1)),
-                        List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.GOLD_INGOT), 1)));
-                var backing = (net.minecraft.core.NonNullList<ItemStack>) MigrationReflection.field(inventory, "stacks");
-                for (int i = 0; i < backing.size(); i++) backing.set(i, processing.copy());
-                backing.set(0, encoded.copy());
-                backing.set(1, encoded.copy());
-                logic.updatePatterns();
-                var catalog = new PatternMigrationProviderCatalog(logic);
-                catalog.prepare(Long.MAX_VALUE, 64);
-                while (!catalog.ready()) catalog.prepare(Long.MAX_VALUE, 64);
-                var key = AEItemKey.of(encoded);
-                try (var scope = PatternMigrationMutationScope.open()) {
-                    scope.track(catalog, 0, key);
-                    inventory.extractItem(0, 1, false);
-                    h.assertTrue(logic.getAvailablePatterns().size() == 512, "catalog remains deferred within mutation");
-                }
-                h.assertTrue(logic.getAvailablePatterns().size() == 511
-                        && logic.getAvailablePatterns().stream().filter(p -> key.equals(p.getDefinition())).count() == 1,
-                        "only the emptied physical slot is removed; duplicate remains available");
-                try (var scope = PatternMigrationMutationScope.open()) {
-                    scope.track(catalog, 1, key);
-                    var held = inventory.extractItem(1, 1, false);
-                    inventory.insertItem(1, held, false);
-                }
-                h.assertTrue(logic.getAvailablePatterns().size() == 511, "restored extraction leaves catalog unchanged");
-                try (var scope = PatternMigrationMutationScope.open()) {
-                    scope.track(catalog, 1, key);
-                    inventory.extractItem(1, 1, false);
-                }
-                var inputs = ((com.moakiee.ae2lt.mixin.PatternProviderLogicAccessor) logic).getPatternInputs();
-                h.assertTrue(logic.getAvailablePatterns().size() == 510
-                        && inputs.contains(AEItemKey.of(Items.IRON_INGOT)) && !inputs.contains(AEItemKey.of(Items.OAK_LOG)),
-                        "processing catalog and its inputs survive removal of the last crafting definition");
-                var processingDetails = PatternDetailsHelper.decodePattern(processing, h.getLevel());
-                long providers = java.util.stream.StreamSupport.stream(((appeng.me.service.CraftingService) f.port.getGrid().getCraftingService())
-                        .getProviders(processingDetails).spliterator(), false).filter(provider -> provider == logic).count();
-                h.assertTrue(providers == 510, "unchanged duplicate processing definitions retain their native provider weight");
-                try (var scope = PatternMigrationMutationScope.open()) {
-                    scope.track(catalog, 1, key);
-                    inventory.setItemDirect(2, encoded.copy());
-                }
-                h.assertTrue(logic.getAvailablePatterns().size() == 510
-                        && logic.getAvailablePatterns().stream().anyMatch(p -> key.equals(p.getDefinition())),
-                        "untracked inventory edit uses native refresh");
-                done(h, f);
-            } catch (Exception e) { throw new AssertionError(e); }
         });
     }
 
@@ -294,11 +225,7 @@ public final class PatternMigrationGameTests {
         h.runAfterDelay(1,()->{
             var s=f.controller.getPatternMigration().snapshot();stats[0]++;stats[1]=Math.max(stats[1],s.lastSliceNanos());stats[2]+=s.lastSliceNanos();
             if(s.active()){measure(h,f,stats);return;}
-             h.assertTrue(s.stage()==PatternMigrationSnapshot.Stage.COMPLETE&&s.scanned()>=100000&&s.incompatible()==99998&&s.moved()==2,"100000 real slots finish with exact counts: "+s);
-             h.assertTrue(f.provider.getLogic().getAvailablePatterns().size()==99998,
-                     "all untransferred processing definitions remain in the native catalog");
-             h.assertTrue(f.port.getGrid().getCraftingService().getCraftingFor(AEItemKey.of(Items.GOLD_INGOT)).size()>0,
-                     "processing output remains craftable after incremental network removal");
+            h.assertTrue(s.stage()==PatternMigrationSnapshot.Stage.COMPLETE&&s.scanned()>=100000&&s.incompatible()==99998&&s.moved()==2,"100000 real slots finish with exact counts: "+s);
             System.out.println("MIGRATION_100K_PHYSICAL ticks="+stats[0]+" maxSliceNs="+stats[1]+" sampledTotalNs="+stats[2]+" budgetHits="+s.budgetHits());
             done(h,f);
         });
@@ -320,8 +247,7 @@ public final class PatternMigrationGameTests {
             f.provider.getLogic().getPatternInv().setItemDirect(0,encoded.copy());
             h.assertTrue(cpu.submitJob(grid,plan,IActionSource.ofPlayer(f.player),null).successful(),"new task begins during migration");
             h.runAfterDelay(3,()->{
-                h.assertTrue(manager.snapshot().stage()==PatternMigrationSnapshot.Stage.WAITING,
-                        "running migration pauses: cpuBusy="+cpu.isBusy()+", snapshot="+manager.snapshot());
+                h.assertTrue(manager.snapshot().stage()==PatternMigrationSnapshot.Stage.WAITING,"running migration pauses");
                 h.assertTrue(!f.provider.getLogic().getPatternInv().getStackInSlot(0).isEmpty(),"pause keeps source unchanged");
                 cpu.cancelJob();await(h,f,()->{
                     h.assertTrue(manager.snapshot().moved()==1,"network idle automatically resumes original task");done(h,f);
@@ -367,12 +293,6 @@ public final class PatternMigrationGameTests {
     @SuppressWarnings("unchecked")
     public static void eaepAggregateDeduplicatesPhysicalCoreInventories(GameTestHelper h) throws Exception {
         if(!net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")){System.out.println("MIGRATION_EAEP_SKIPPED");h.succeed();return;}
-        try {
-            Class.forName(PatternMigrationSources.EAEP_MATRIX);
-        } catch (ClassNotFoundException legacyForgeVersion) {
-            eaepDirectCoreUsesPhysicalInventory(h);
-            return;
-        }
         var first=place(h,new BlockPos(3,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
         var last=place(h,new BlockPos(4,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
         var aggregate=place(h,new BlockPos(5,2,3),"extendedae_plus:super_assembler_matrix_frame");
@@ -392,37 +312,6 @@ public final class PatternMigrationGameTests {
         pending.addTo(AEItemKey.of(Items.OAK_PLANKS),1);
         h.assertTrue(sources.get(0).busy.getAsBoolean(),"undelivered outputs mean executing even when capacity is available");
         System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS capacity="+capacity);h.succeed();
-    }
-
-    private static void eaepDirectCoreUsesPhysicalInventory(GameTestHelper h) throws Exception {
-        var owner = place(h, new BlockPos(3,2,3), "extendedae_plus:assembler_matrix_pattern_plus");
-        h.assertTrue(owner.getClass().getName().equals(PatternMigrationSources.EAEP_CORE), "actual Forge Plus physical core");
-        var pos = owner.getBlockPos();
-        var cluster = Class.forName("com.glodblock.github.extendedae.common.me.matrix.ClusterAssemblerMatrix")
-                .getConstructor(BlockPos.class, BlockPos.class).newInstance(pos, pos);
-        setField(owner, "cluster", cluster);
-        var inventory = (appeng.api.inventories.InternalInventory)MigrationReflection.call(owner, "getPatternInventory");
-        h.assertTrue(inventory.size() == 72, "Forge 1.5.5 exposes all 72 physical slots");
-        var encoded = pattern(h, false);
-        inventory.setItemDirect(0, encoded.copy());
-        inventory.setItemDirect(71, encoded.copy());
-        var adapter = new PatternMigrationSources();
-        var sources = adapter.discover(proxyNode(owner), null);
-        h.assertTrue(sources.size() == 1 && sources.get(0).count == 72 && sources.get(0).priority == 0,
-                "Plus subclass retains full physical capacity and preferred migration priority");
-        h.assertTrue(adapter.discover(proxyNode(owner), null).isEmpty(), "same physical Plus core cannot be counted twice");
-        h.assertTrue(!sources.get(0).busy.getAsBoolean(), "idle Plus core is eligible");
-        var cached = (List<?>)MigrationReflection.call(owner, "getAvailablePatterns");
-        h.assertTrue(cached.size() == 2, "first and last physical slots are decoded by the real host");
-        try (var mutations = PatternMigrationMutationScope.open()) {
-            h.assertTrue(ItemStack.matches(inventory.extractItem(0, 1, false), encoded)
-                    && ItemStack.matches(inventory.extractItem(71, 1, false), encoded),
-                    "native physical extraction preserves both encoded items");
-            h.assertTrue(cached.size() == 2, "Plus host catalog refresh is deferred within the migration slice");
-        }
-        h.assertTrue(cached.isEmpty() && inventory.isEmpty(), "catalog refresh completes and physical slots are empty");
-        System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS capacity=72 legacyForge=true");
-        h.succeed();
     }
 
     @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)

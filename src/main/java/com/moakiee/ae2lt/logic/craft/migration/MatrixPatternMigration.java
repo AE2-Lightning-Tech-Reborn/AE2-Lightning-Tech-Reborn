@@ -2,7 +2,6 @@ package com.moakiee.ae2lt.logic.craft.migration;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.security.IActionSource;
@@ -98,11 +97,6 @@ public final class MatrixPatternMigration {
         }
         if (!current.budget.isOwner(current.grid, current) || !current.ecoLease.owned()) {
             stop(PatternMigrationSnapshot.Reason.LEASE_BUSY);
-            return;
-        }
-        if (cpuBusy(current.grid) || controller.hasPendingMigrationWork()) {
-            current.waitForIdle();
-            report = current.snapshot();
             return;
         }
         long started = System.nanoTime();
@@ -246,7 +240,6 @@ public final class MatrixPatternMigration {
         long nodeCursor;
         final PatternMigrationQueue<PatternMigrationSource> queue = new PatternMigrationQueue<>(source -> source.count);
         final Map<AEItemKey, Integer> definitions = new HashMap<>();
-        final Map<AEItemKey, IPatternDetails> decodedPatterns = new HashMap<>();
         final ArrayDeque<TargetSlot> emptySlots = new ArrayDeque<>();
         final Map<MatrixPatternStorageBlockEntity, Long> revisions = new IdentityHashMap<>();
         EcoMigrationLease ecoLease;
@@ -282,7 +275,6 @@ public final class MatrixPatternMigration {
         }
 
         void slice(ServerPlayer player, long deadline) {
-            decodedPatterns.clear();
             if (cpuBusy(grid) || controller.hasPendingMigrationWork()) {
                 waitForIdle();
                 return;
@@ -377,9 +369,8 @@ public final class MatrixPatternMigration {
                     var stack = storage.getInventory().getStackInSlot(slot);
                     if (stack.isEmpty()) { emptySlots.addLast(new TargetSlot(storage, slot)); continue; }
                     decodes++;
-                    var key = AEItemKey.of(stack);
-                    if (decodeCached(key, stack, storage.getLevel()) instanceof IMolecularAssemblerSupportedPattern) {
-                        definitions.merge(key, 1, Integer::sum);
+                    if (decode(stack, storage.getLevel()) instanceof IMolecularAssemblerSupportedPattern) {
+                        definitions.merge(AEItemKey.of(stack), 1, Integer::sum);
                     }
                 }
                 if (targetStorage < storages.size()) { activityCursor = 0; return; }
@@ -407,18 +398,15 @@ public final class MatrixPatternMigration {
                         if (!pendingCounted) { scanned++; pendingCounted = true; }
                         if (!source.valid(grid)) { unavailable++; clearPending(); continue; }
                         if (source.busy.getAsBoolean()) { waitForIdle(); break; }
-                        if (source.catalog != null) {
-                            checks += source.catalog.prepare(deadline, PatternMigrationBudget.MAX_SLOTS - checks);
-                            if (!source.catalog.ready() || checks >= PatternMigrationBudget.MAX_SLOTS
-                                    || System.nanoTime() >= deadline) break;
-                        }
-                        var stack = source.inventory.getStackInSlot(source.firstSlot + pending.slot());
+                        var sourceSlot = source.slot(pending.slot(), () -> source.valid(grid) && !cpuBusy(grid)
+                                && !controller.hasPendingMigrationWork() && !targetsChanged());
+                        var stack = sourceSlot.read().copy();
                         if (stack.isEmpty()) { clearPending(); continue; }
                         if (!PatternDetailsHelper.isEncodedPattern(stack)) { disks++; clearPending(); continue; }
-                        AEItemKey key = AEItemKey.of(stack);
-                        if (!decodedPatterns.containsKey(key)) decodes++;
-                        var details = decodeCached(key, stack, PatternMigrationSource.blockEntity(source.owner).getLevel());
+                        decodes++;
+                        var details = decode(stack, PatternMigrationSource.blockEntity(source.owner).getLevel());
                         if (!(details instanceof IMolecularAssemblerSupportedPattern)) { incompatible++; clearPending(); continue; }
+                        AEItemKey key = AEItemKey.of(stack);
                         boolean duplicate = definitions.containsKey(key);
                         TargetSlot target = duplicate ? null : findEmptySlot();
                         if (!duplicate && target == null) { noSpace++; clearPending(); continue; }
@@ -430,10 +418,7 @@ public final class MatrixPatternMigration {
                         }
                         if (!source.valid(grid) || source.busy.getAsBoolean() || cpuBusy(grid) || controller.hasPendingMigrationWork()) { waitForIdle(); break; }
                         if (batched.add(source)) source.beginBatch.run();
-                        if (source.catalog != null) mutations.track(source.catalog, source.firstSlot + pending.slot(), key);
-                        var sourceSlot = source.slot(pending.slot(), () -> source.valid(grid) && !cpuBusy(grid)
-                                && !controller.hasPendingMigrationWork() && !targetsChanged());
-                        var result = PatternMigrationTransfer.move(sourceSlot, stack.copy(), destination, MatrixPatternMigration.this::custody);
+                        var result = PatternMigrationTransfer.move(sourceSlot, stack, destination, MatrixPatternMigration.this::custody);
                         switch (result) {
                             case MOVED -> {
                                 stage = PatternMigrationSnapshot.Stage.MIGRATING;
@@ -484,13 +469,6 @@ public final class MatrixPatternMigration {
         }
 
         private void clearPending() { pending = null; pendingCounted = false; }
-
-        private IPatternDetails decodeCached(AEItemKey key, ItemStack stack, net.minecraft.world.level.Level level) {
-            if (decodedPatterns.containsKey(key)) return decodedPatterns.get(key);
-            var decoded = decode(stack, level);
-            decodedPatterns.put(key, decoded);
-            return decoded;
-        }
 
         private boolean targetsChanged() {
             for (var storage : storages) if (revisions.getOrDefault(storage, -1L) != storage.getPatternContentRevision()) return true;

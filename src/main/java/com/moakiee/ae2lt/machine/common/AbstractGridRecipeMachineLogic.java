@@ -10,7 +10,7 @@ import appeng.api.upgrades.IUpgradeableObject;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.core.definitions.AEItems;
 
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public abstract class AbstractGridRecipeMachineLogic<
@@ -39,6 +39,7 @@ public abstract class AbstractGridRecipeMachineLogic<
         return tickMachine();
     }
 
+    /** One processing step, also usable by standalone variants without an AE grid node. */
     protected TickRateModulation tickMachine() {
         if (host.isRemoved() || host.getLevel() == null || host.isClientSide()) {
             return TickRateModulation.SLEEP;
@@ -46,6 +47,7 @@ public abstract class AbstractGridRecipeMachineLogic<
 
         boolean charging = shouldRechargeFromAppliedFlux() && rechargeFromAppliedFlux();
         TickRateModulation processing = tickProcessing();
+        // Keep transferring while FE is arriving, even with no recipe or blocked output.
         return charging ? TickRateModulation.URGENT : processing;
     }
 

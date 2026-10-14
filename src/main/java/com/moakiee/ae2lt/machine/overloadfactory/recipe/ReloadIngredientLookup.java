@@ -33,6 +33,8 @@ final class ReloadIngredientLookup implements UnaryOperator<Ingredient> {
         if (json == null) {
             resolved = null;
         } else if (ingredient.getClass() != Ingredient.class) {
+            // Unknown custom predicates may capture live tag holders. Keep them in the generated
+            // recipe, but don't unfold them using stale tags from the preceding reload.
             resolved = hasTagReference(json) ? null : ingredient;
         } else {
             var stacks = new ArrayList<ItemStack>();

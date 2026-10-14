@@ -28,30 +28,9 @@ import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
 
 /**
- * Renders persistent left-click beams.
- *
- * <p>Visual model: each active shooter has a {@link BeamState} carrying the
- * server-supplied eye position, the impact endpoint, and bookkeeping ticks.
- * Each frame, the renderer:
- * <ul>
- *   <li>Resolves the player's current gun-barrel position (so the beam visibly
- *       emanates from the weapon, not the screen-center).</li>
- *   <li>Subdivides the beam into several short prism segments, each with
- *       independent vertex-color alpha that animates over time. This produces a
- *       slow "energy flow" that travels along the beam.</li>
- *   <li>Stacks three rectangular-prism layers per segment (outer halo + mid +
- *       core), each rotating around the beam axis at a different rate so the
- *       beam reads as a glowing cyan-white plasma stream with real volume from
- *       any viewing angle.</li>
- *   <li>Adds a camera-facing flash quad at the impact tip that tracks the
- *       breath pulse for a "burning hot endpoint" feel.</li>
- *   <li>Periodically (every {@value #ARC_INTERVAL_TICKS} ticks per beam)
- *       branches a short electric arc off a random point along the beam via
- *       {@link RailgunArcRenderer} for crackle.</li>
- * </ul>
- *
- * <p>Stale beam states (no packet for {@value #STALE_TICKS} ticks) self-expire
- * to recover from missed stop signals.
+ * Renders sustained beams from the current gun barrel to the server impact point,
+ * with layered prisms, impact glow and periodic arcs. States expire after
+ * {@value #STALE_TICKS} ticks without an update.
  */
 @Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class RailgunBeamRenderClient {
@@ -85,10 +64,10 @@ public final class RailgunBeamRenderClient {
         public long lastUpdateTick;
         public long lastArcTick;
 
-        BeamState(UUID shooterId, Vec3 from, Vec3 to, boolean ehv, long tick) {
+        BeamState(UUID shooterId, Vec3 f, Vec3 t, boolean ehv, long tick) {
             this.shooterId = shooterId;
-            this.from = from;
-            this.to = to;
+            this.from = f;
+            this.to = t;
             this.ehv = ehv;
             this.lastUpdateTick = tick;
             this.lastArcTick = tick;
@@ -174,7 +153,7 @@ public final class RailgunBeamRenderClient {
         // {@code getEyePosition()}/{@code getYRot()} call snaps in 50 ms steps and the
         // beam visibly stutters during movement.
         float partialTick = mc.getFrameTime();
-        refreshLocalBeam(mc, now, partialTick);
+        refreshLocalBeam(mc);
         ACTIVE.entrySet().removeIf(en -> now - en.getValue().lastUpdateTick > STALE_TICKS);
         if (ACTIVE.isEmpty()) return;
 
@@ -233,7 +212,7 @@ public final class RailgunBeamRenderClient {
         spawnCrackleArcs(mc, now, partialTick);
     }
 
-    private static void refreshLocalBeam(Minecraft mc, long now, float partialTick) {
+    private static void refreshLocalBeam(Minecraft mc) {
         if (!localFiring || mc.player == null || mc.level == null) return;
         ItemStack stack = mc.player.getMainHandItem();
         if (!(stack.getItem() instanceof ElectromagneticRailgunItem) || mc.screen != null) {
@@ -307,13 +286,13 @@ public final class RailgunBeamRenderClient {
             float a0 = pulse * flow0;
             float a1 = pulse * flow1;
 
-            // Outer wide blue halo — soft and large.
+            // Keep the mode palette through HV compensation: damage is still EHV.
             addPrismSegment(bb, matrix, afx, afy, afz, atx, aty, atz,
                     oUx, oUy, oUz, oVx, oVy, oVz,
                     OUTER_RADIUS * taper0, OUTER_RADIUS * taper1,
                     ehv ? 1.00F : 0.22F, ehv ? 0.30F : 0.58F, ehv ? 0.60F : 1.00F,
                     0.18F * a0, 0.18F * a1);
-            // Mid bright cyan — most of the beam's color comes from here.
+            // Mid plasma layer supplies most of the beam's color.
             addPrismSegment(bb, matrix, afx, afy, afz, atx, aty, atz,
                     mUx, mUy, mUz, mVx, mVy, mVz,
                     MID_RADIUS * taper0, MID_RADIUS * taper1,

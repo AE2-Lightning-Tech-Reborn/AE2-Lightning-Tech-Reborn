@@ -1,0 +1,38 @@
+// Test-only settings. Every phase runs in a fresh JVM; release builds are unaffected.
+allprojects {
+    afterEvaluate {
+        def evidence = file(providers.gradleProperty('ae2ltGlobalStressOutput').get()).canonicalFile
+        def phase = providers.gradleProperty('ae2ltGlobalStressPhase').get()
+        def temporary = new File(evidence, 'tmp')
+        temporary.mkdirs()
+
+        tasks.withType(Test).configureEach {
+            if (name in ['test', 'adaptiveBatchStress']) {
+                outputs.upToDateWhen { false }
+                maxHeapSize = '2g'
+                maxParallelForks = 1
+                systemProperty 'java.io.tmpdir', temporary.absolutePath
+                testLogging { events 'failed', 'skipped'; exceptionFormat 'full' }
+            }
+        }
+
+        minecraft.runs.configureEach {
+            property 'forge.logging.console.level', 'info'
+        }
+        ['interfaceIoGameTestServer', 'wirelessIoGameTestServer'].each { runName ->
+            minecraft.runs.getByName(runName) {
+                workingDirectory new File(evidence, "worlds/${phase}-${runName}")
+                jvmArgs '-Xms512m', '-Xmx3g', "-Djava.io.tmpdir=${temporary.absolutePath}"
+                jvmArgs "-XX:StartFlightRecording=filename=${new File(evidence, phase + '.jfr').absolutePath},settings=profile,dumponexit=true,maxsize=64m"
+            }
+        }
+        if (gradle.startParameter.taskNames.any { it.tokenize(':').last() == 'runWirelessIoGameTestServer' }) {
+            sourceSets.jdb.java.setIncludes([
+                    '**/WirelessInterfaceGameTests.java',
+                    '**/WirelessInterfaceExportGameTests.java'])
+            minecraft.runs.wirelessIoGameTestServer {
+                property 'ae2lt.wirelessIoBenchmark.output', new File(evidence, 'raw-benchmarks').absolutePath
+            }
+        }
+    }
+}

@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.blockentity;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Nameable;
+import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 
 import net.minecraft.core.BlockPos;
@@ -23,6 +26,7 @@ public class FumoBlockEntity extends BlockEntity implements Nameable {
 
     @Nullable
     private Component customName;
+
     private boolean spinning;
     private float yRot;
     private float prevYRot;
@@ -45,9 +49,7 @@ public class FumoBlockEntity extends BlockEntity implements Nameable {
     public void setCustomName(@Nullable Component name) {
         customName = name;
         setChanged();
-        if (level != null) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-        }
+        if (level != null) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
     }
 
     public boolean isSpinning() {
@@ -84,12 +86,8 @@ public class FumoBlockEntity extends BlockEntity implements Nameable {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        try {
-            customName = tag.contains("CustomName", 8)
-                    ? Component.Serializer.fromJson(tag.getString("CustomName")) : null;
-        } catch (RuntimeException ignored) {
-            customName = null;
-        }
+        try { customName = tag.contains("CustomName", 8) ? Component.Serializer.fromJson(tag.getString("CustomName")) : null; }
+        catch (RuntimeException ignored) { customName = null; }
         spinning = tag.getBoolean(TAG_SPINNING);
     }
 

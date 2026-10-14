@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilMode;
 import com.moakiee.ae2lt.registry.ModItems;
 import dev.emi.emi.api.EmiRegistry;
@@ -69,7 +71,7 @@ final class EmiTeslaCoilRecipe extends BasicEmiRecipe {
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.tesla_coil.energy",
-                        EmiRecipeWidgets.compactEnergy(mode.totalEnergy())),
+                        compactEnergy(mode.totalEnergy())),
                 WIDTH / 2,
                 46);
         EmiRecipeWidgets.centeredText(

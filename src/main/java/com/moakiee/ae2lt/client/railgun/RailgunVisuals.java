@@ -17,22 +17,9 @@ import com.moakiee.ae2lt.config.RailgunDefaults;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 
 /**
- * Client-side visual utilities for railgun beams. Each frame, callers compose:
- *   origin    = {@link #computeBarrelOrigin}
- *   direction = {@link #computeBarrelDirection}
- *   endpoint  = {@link #computeBarrelEndpoint}
- *
- * <p>Third-person beam direction uses {@code yHeadRot} (not {@code yRot}). The
- * model head is driven by {@code yHeadRot}, which only syncs to {@code yRot}
- * once per tick in {@code Player#aiStep}; using {@code yRot} here would race
- * ahead of the rendered barrel by up to one tick (~50 ms) during fast camera
- * motion. Server-supplied {@code (to - from)} is also unsuitable for direction
- * since it's frozen at packet-send time.
- *
- * <p>First-person barrel tracks the hand rendering's subtle rotation offset
- * (from {@code ItemInHandRenderer.renderHandsWithItems}), which applies a
- * small lag derived from {@code xBob}/{@code yBob} smoothing. Without this
- * the beam snaps to the camera while the held gun model visibly lags behind.
+ * Resolves beam origin, direction and endpoint from the rendered gun barrel.
+ * Third-person direction uses {@code yHeadRot} to follow the model head;
+ * first-person direction includes the hand renderer's {@code xBob}/{@code yBob} lag.
  */
 public final class RailgunVisuals {
 
@@ -132,14 +119,7 @@ public final class RailgunVisuals {
 
     // ── First-person hand-rendering offset ────────────────────────────────
 
-    /**
-     * {@code ItemInHandRenderer.renderHandsWithItems} applies a subtle rotation
-     * derived from the gap between the current view rotation and the smoothed
-     * {@code xBob}/{@code yBob} values (which exponentially approach the real
-     * rotation at factor 0.5 per tick). The hand therefore lags behind the
-     * camera during fast rotation. We replicate this offset so the beam
-     * visually matches the held gun model.
-     */
+    /** Matches the hand renderer's rotation lag from smoothed {@code xBob}/{@code yBob}. */
     private static float fpHandPitchOffset(Player player, float partialTick) {
         if (!(player instanceof LocalPlayer lp)) return 0F;
         float xBobLerp = Mth.lerp(partialTick, lp.xBobO, lp.xBob);

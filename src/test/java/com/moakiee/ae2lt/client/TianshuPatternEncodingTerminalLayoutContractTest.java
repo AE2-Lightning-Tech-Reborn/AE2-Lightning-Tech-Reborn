@@ -35,13 +35,13 @@ class TianshuPatternEncodingTerminalLayoutContractTest {
 
     @Test
     void nativeModesUseTheAe2Forge120PanelGeometry() throws Exception {
-        String basePanel = Files.readString(CLIENT_ROOT.resolve("TianshuEncodingModePanel.java"));
+        String basePanel = Files.readString(CLIENT_ROOT.resolve("tianshu/TianshuEncodingModePanel.java"));
         assertTrue(basePanel.contains("new Rect2i(x, y, 126, 68)"));
 
         for (String panelName : List.of(
-                "TianshuCraftingEncodingPanel.java",
-                "TianshuProcessingEncodingPanel.java",
-                "TianshuSmithingTableEncodingPanel.java")) {
+                "tianshu/TianshuCraftingEncodingPanel.java",
+                "tianshu/TianshuProcessingEncodingPanel.java",
+                "tianshu/TianshuSmithingTableEncodingPanel.java")) {
             String panel = Files.readString(CLIENT_ROOT.resolve(panelName));
             assertTrue(panel.contains("126, 68"), panelName);
             assertTrue(panel.contains("bounds.getX() + 9"), panelName);
@@ -50,7 +50,7 @@ class TianshuPatternEncodingTerminalLayoutContractTest {
         }
 
         String stonecutting = Files.readString(
-                CLIENT_ROOT.resolve("TianshuStonecuttingEncodingPanel.java"));
+                CLIENT_ROOT.resolve("tianshu/TianshuStonecuttingEncodingPanel.java"));
         assertTrue(stonecutting.contains("src(0, 141, 126, 68)"));
         assertTrue(stonecutting.contains("src(126, 141, 16, 18)"));
         assertTrue(stonecutting.contains("private static final int ROWS = 3"));
@@ -61,18 +61,18 @@ class TianshuPatternEncodingTerminalLayoutContractTest {
     @Test
     void nativeModeTabsKeepAe2IconsAndAnUnobstructedTwentyPixelRail() throws Exception {
         String screen = Files.readString(
-                CLIENT_ROOT.resolve("TianshuPatternEncodingTermScreen.java"));
+                CLIENT_ROOT.resolve("tianshu/TianshuPatternEncodingTermScreen.java"));
         String style = Files.readString(
                 SCREEN_ROOT.resolve("tianshu_pattern_encoding_terminal.json"));
 
         assertTrue(screen.contains("panel.getTabIconItem()"));
-        assertTrue(Files.readString(CLIENT_ROOT.resolve("TianshuCraftingEncodingPanel.java"))
+        assertTrue(Files.readString(CLIENT_ROOT.resolve("tianshu/TianshuCraftingEncodingPanel.java"))
                 .contains("Items.CRAFTING_TABLE.getDefaultInstance()"));
-        assertTrue(Files.readString(CLIENT_ROOT.resolve("TianshuProcessingEncodingPanel.java"))
+        assertTrue(Files.readString(CLIENT_ROOT.resolve("tianshu/TianshuProcessingEncodingPanel.java"))
                 .contains("Items.FURNACE.getDefaultInstance()"));
-        assertTrue(Files.readString(CLIENT_ROOT.resolve("TianshuSmithingTableEncodingPanel.java"))
+        assertTrue(Files.readString(CLIENT_ROOT.resolve("tianshu/TianshuSmithingTableEncodingPanel.java"))
                 .contains("Items.SMITHING_TABLE.getDefaultInstance()"));
-        assertTrue(Files.readString(CLIENT_ROOT.resolve("TianshuStonecuttingEncodingPanel.java"))
+        assertTrue(Files.readString(CLIENT_ROOT.resolve("tianshu/TianshuStonecuttingEncodingPanel.java"))
                 .contains("Items.STONECUTTER.getDefaultInstance()"));
 
         assertFalse(style.contains("\"modeTabButton2\""));
@@ -120,7 +120,7 @@ class TianshuPatternEncodingTerminalLayoutContractTest {
     @Test
     void closedLoopSlotsAlignWithTheirBackgroundFrames() throws Exception {
         String panel = Files.readString(
-                CLIENT_ROOT.resolve("TianshuClosedLoopEncodingPanel.java"));
+                CLIENT_ROOT.resolve("tianshu/TianshuClosedLoopEncodingPanel.java"));
 
         assertTrue(panel.contains("private static final int MEMBER_X = 16"));
         assertTrue(panel.contains("private static final int SLOT_Y = 9"));

@@ -51,6 +51,7 @@ public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextu
         @Nullable TextureAtlasSprite overlay = context.hasMaterial("overlay")
                 ? spriteGetter.apply(context.getMaterial("overlay"))
                 : null;
+        // Keep inherited display transforms for inventory, held and dropped block items.
         var transforms = context.getTransforms();
         if (slabType != null) {
             return new ConnectedSlabBakedModel(base, ctm, overlay, renderTypes,

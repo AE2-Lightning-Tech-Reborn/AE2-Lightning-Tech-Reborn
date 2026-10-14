@@ -15,18 +15,22 @@ public final class MachineRechargeController {
         // A speed/configuration change or a large recipe must never wait for the low watermark.
         // When the configured transfer cannot outpace consumption, skipping even
         // one refill would needlessly drain the existing reserve sooner.
+        // Also top up on the first check and at least once per second: idle machines
+        // may never consume enough to reach that watermark, including after a reload.
         if (stored <= capacity / 4L || stored < nextTickDemand || nextTickDemand >= maxTransfer
                 || lastAttemptTick == Long.MIN_VALUE || gameTime < lastAttemptTick
                 || gameTime - lastAttemptTick >= TOP_UP_INTERVAL) {
             recharging = true;
         }
-        if (recharging) lastAttemptTick = gameTime;
+        if (recharging) {
+            lastAttemptTick = gameTime;
+        }
         return recharging;
     }
 
     public void afterRecharge(long stored, long capacity) {
-        // Observe the result before this tick consumes FE, otherwise high-throughput
-        // machines could remain in refill mode forever after reaching the high watermark.
+        // Observe the result before consumption, and finish the entire refill even
+        // when one transfer leaves the machine above 90% but below full capacity.
         if (stored >= capacity) {
             recharging = false;
         }

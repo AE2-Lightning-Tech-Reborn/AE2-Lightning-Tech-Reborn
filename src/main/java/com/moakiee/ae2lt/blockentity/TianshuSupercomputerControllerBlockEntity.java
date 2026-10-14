@@ -77,7 +77,6 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.core.RegistryAccess;
 
 public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         implements TimeWheelCraftingCpuPoolHost, TianshuInventoryMaintenanceHost,
@@ -1240,6 +1239,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         return true;
     }
 
+    /** Detached snapshot of physical seed storage, excluding loans held by active CPUs. */
     public KeyCounter reusableSeedSnapshot() {
         var result = new KeyCounter();
         var drives = seedDrives();
@@ -1451,4 +1451,3 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         persistentStateOwner = false;
     }
 }
-

@@ -383,6 +383,8 @@ public final class TianshuInventoryMaintenanceService
                     scheduleRetry(rule.id());
                     continue;
                 }
+                // submitJob can extract network stock. Drop the copy so the next plan
+                // observes what remains.
                 available.invalidate();
                 var submitted = crafting.submitJob(plan, this, null, false, host.getActionSource());
                 if (!submitted.successful() || submitted.link() == null) {
@@ -580,13 +582,14 @@ public final class TianshuInventoryMaintenanceService
         }
     }
 
+    /** One network copy shared by reserved-stock checks until a submit can extract. */
     private static final class AvailableStackSnapshot {
         private IGrid grid;
         private KeyCounter stacks;
 
         KeyCounter get(IGrid current) {
-            if (stacks == null || grid != current) {
-                grid = current;
+            if (stacks == null || this.grid != current) {
+                this.grid = current;
                 stacks = current.getStorageService().getInventory().getAvailableStacks();
             }
             return stacks;

@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -51,7 +53,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     private static final int TEXTURE_WIDTH = 256;
     private static final int TEXTURE_HEIGHT = 256;
 
-    // category 鍧愭爣 = GUI 鍧愭爣 鈭?鑳屾櫙鍋忕Щ
+    // category 坐标 = GUI 坐标 − 背景偏移
     private static final int FLUID_X = 26 - BACKGROUND_U;   // 4
     private static final int FLUID_Y = 18 - BACKGROUND_V;   // 4
     private static final int FLUID_WIDTH = 16;
@@ -119,8 +121,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 .setFluidRenderer(fluidDisplayCapacity, false, FLUID_WIDTH, FLUID_HEIGHT)
                 .addIngredient(ForgeTypes.FLUID_STACK, fluid)
                 .addRichTooltipCallback((slotView, tooltip) -> {
-                    tooltip.add(Component.translatable(
-                            "jei.ae2lt.crystal_catalyzer.fluid_fixed", fluid.getAmount()));
+                    tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.fluid_fixed", fluid.getAmount()));
                     if (!recipe.isWaterRecipe() || recipe.mode() != Mode.CRYSTAL) {
                         tooltip.add(Component.translatable("jei.ae2lt.crystal_catalyzer.normal_only"));
                     }
@@ -166,7 +167,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
 
         var energyText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.energy",
-                formatCompactEnergy(recipe.energyPerCycle()));
+                compactEnergy(recipe.energyPerCycle()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
         guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
@@ -219,21 +220,4 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 .toList();
     }
 
-    private static String formatCompactEnergy(long energy) {
-        if (energy >= 1_000_000L) {
-            return formatCompactValue(energy / 1_000_000D, "m");
-        }
-        if (energy >= 1_000L) {
-            return formatCompactValue(energy / 1_000D, "k");
-        }
-        return Long.toString(energy);
-    }
-
-    private static String formatCompactValue(double value, String suffix) {
-        double rounded = Math.round(value * 10.0D) / 10.0D;
-        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001D) {
-            return Long.toString(Math.round(rounded)) + suffix;
-        }
-        return rounded + suffix;
-    }
 }

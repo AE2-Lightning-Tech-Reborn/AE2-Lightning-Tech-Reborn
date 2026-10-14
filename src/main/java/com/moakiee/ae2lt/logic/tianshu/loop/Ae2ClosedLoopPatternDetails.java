@@ -25,7 +25,6 @@ import com.moakiee.thunderbolt.core.crafting.loop.CraftingCpuRestrictedPattern;
 import com.moakiee.thunderbolt.core.crafting.loop.ReusableSeedPattern;
 import com.moakiee.ae2lt.logic.tianshu.TianshuCraftingCpuHost;
 import java.util.UUID;
-import net.minecraft.core.RegistryAccess;
 
 public final class Ae2ClosedLoopPatternDetails
         implements TianshuClosedLoopPatternDetails, PatternFiringExpander,

@@ -75,7 +75,7 @@ public final class TianshuDeferredReturnsGameTests {
             }
         };
         var id = new ResourceLocation("ae2lt_global_batch", "timewheel");
-        com.moakiee.ae2lt.compat.BatchProviderAdapters.register(id,
+        com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapters.register(id,
                 (provider, pattern, job) -> provider == ordinary
                         ? (com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider) nativeProvider : null);
         fixture.providers.add(ordinary);
@@ -84,7 +84,7 @@ public final class TianshuDeferredReturnsGameTests {
             helper.assertTrue(fixture.run(32) == 3, "three batch calls through the global adapter");
             fixture.assertFinished(helper);
         } finally {
-            com.moakiee.ae2lt.compat.BatchProviderAdapters.unregister(id);
+            com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapters.unregister(id);
         }
         helper.succeed();
     }

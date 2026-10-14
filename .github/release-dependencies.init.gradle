@@ -1,9 +1,5 @@
 // Resolve upstream mods from the exact, validated GitHub Release JARs staged by CI.
 allprojects {
-    // GTL resolves its planner-attach build through Maven, without staged release JARs.
-    if (rootProject.fileTree('release-dependencies/maven') { include '**/*.pom' }.isEmpty()) {
-        return
-    }
     repositories {
         exclusiveContent {
             forRepository {

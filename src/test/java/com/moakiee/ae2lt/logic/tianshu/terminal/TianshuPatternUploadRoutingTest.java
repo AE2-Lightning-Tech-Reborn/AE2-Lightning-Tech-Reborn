@@ -76,7 +76,7 @@ class TianshuPatternUploadRoutingTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuPatternEncodingTermScreen.java"));
 
         assertTrue(menu.contains("isCraftingUploadGroup(group)"));
         assertTrue(menu.contains("isMatterWarpingMatrixGroup(group) != matrixTarget"));
@@ -88,7 +88,7 @@ class TianshuPatternUploadRoutingTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String screen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuPatternEncodingTermScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuPatternEncodingTermScreen.java"));
         String matrixStorage = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/blockentity/MatrixPatternStorageBlockEntity.java"));
 
@@ -129,7 +129,7 @@ class TianshuPatternUploadRoutingTest {
         String clientConfig = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/config/AE2LTClientConfig.java"));
         String settingsScreen = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/TianshuTerminalSettingsScreen.java"));
+                "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuTerminalSettingsScreen.java"));
 
         assertTrue(menu.contains(
                 "registerClientAction(\"encodeTianshu\", Boolean.class, "

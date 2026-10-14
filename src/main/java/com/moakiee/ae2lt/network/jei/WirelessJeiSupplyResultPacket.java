@@ -6,19 +6,26 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
-public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items) {
+/** 0 = failed, 1 = offer, 2 = delivered, 3 = crafting confirmation opened. */
+public record WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items,
+                                           List<ItemStack> craftable) {
+    public WirelessJeiSupplyResultPacket(int containerId, int requestId, int status, List<ItemStack> items) {
+        this(containerId, requestId, status, items, List.of());
+    }
     public void write(FriendlyByteBuf buffer) {
         buffer.writeVarInt(containerId);
         buffer.writeVarInt(requestId);
         buffer.writeVarInt(status);
-        WirelessJeiStackCodec.write(buffer, items);
+        WirelessJeiSupplyPacket.writeItems(buffer, items);
+        WirelessJeiSupplyPacket.writeItems(buffer, craftable);
     }
 
     public static WirelessJeiSupplyResultPacket read(FriendlyByteBuf buffer) {
         int container = buffer.readVarInt();
         int request = buffer.readVarInt();
         int status = buffer.readVarInt();
-        return new WirelessJeiSupplyResultPacket(container, request, status, WirelessJeiStackCodec.read(buffer));
+        return new WirelessJeiSupplyResultPacket(container, request, status,
+                WirelessJeiSupplyPacket.readItems(buffer), WirelessJeiSupplyPacket.readItems(buffer));
     }
 
     public static void handle(WirelessJeiSupplyResultPacket packet, Supplier<NetworkEvent.Context> context) {

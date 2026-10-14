@@ -6,7 +6,7 @@ import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
 
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.logic.energy.MachineRechargeController;
 
 public final class TeslaCoilLogic implements IGridTickable {
@@ -39,6 +39,8 @@ public final class TeslaCoilLogic implements IGridTickable {
 
     private TickRateModulation tickProcessing() {
         if (!host.hasLockedMode()) {
+            // 没有加工材料仍应预充电。网络 FE 恢复不会唤醒本机，
+            // 缓冲未满时保留慢速检查；充满后才可以等库存/电量回调唤醒。
             if (!host.hasLocalResourcesForMinimumOperation()) {
                 host.setWorking(false);
                 return AppFluxHelper.isAvailable()

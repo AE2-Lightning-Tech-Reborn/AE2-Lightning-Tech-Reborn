@@ -36,6 +36,7 @@ public final class PowerCostUtil {
     private PowerCostUtil() {
     }
 
+    /** Pass-local lookup cache; never retains a balance or a stale grid's service. */
     public static final class EnergyAccess {
         private static final double BATCH_RESERVATION = 512.0;
         private IGrid grid;
@@ -158,6 +159,7 @@ public final class PowerCostUtil {
         return maxAffordableFromService(grid.getEnergyService(), key, requested);
     }
 
+    /** Reuse a pass-local service reference, not a cached power balance. */
     public static long maxAffordableFromService(@Nullable IEnergyService energyService, AEKey key, long requested) {
         if (energyService == null || key == null || requested <= 0) return 0;
         double need = cost(key, requested);
@@ -212,6 +214,7 @@ public final class PowerCostUtil {
         consumeFromService(grid.getEnergyService(), key, amount);
     }
 
+    /** The caller must still check live affordability before every external transfer. */
     public static void consumeFromService(@Nullable IEnergyService energyService, AEKey key, long amount) {
         if (energyService == null || key == null || amount <= 0) return;
         double need = cost(key, amount);

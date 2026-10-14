@@ -12,8 +12,10 @@ import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -46,6 +48,7 @@ public final class ConnectionPredicates {
         }
     };
 
+    /** Half-slabs only join coplanar neighbours; separated upper/lower surfaces keep their borders. */
     public static final ConnectionPredicate SAME_SLAB = new ConnectionPredicate() {
         @Override
         public boolean isActive(BlockAndTintGetter level, BlockPos pos, BlockState self) {
@@ -59,11 +62,10 @@ public final class ConnectionPredicates {
 
         @Override
         public boolean connects(BlockAndTintGetter level, BlockPos pos, BlockState self, BlockPos neighbourPos) {
-            SlabType type = self.getValue(SlabBlock.TYPE);
-            if (type != SlabType.DOUBLE && neighbourPos.getY() != pos.getY()) {
-                return false;
-            }
-            BlockState neighbour = level.getBlockState(neighbourPos);
+            var type = self.getValue(SlabBlock.TYPE);
+            if (type != SlabType.DOUBLE
+                    && neighbourPos.getY() != pos.getY()) return false;
+            var neighbour = level.getBlockState(neighbourPos);
             return neighbour.is(self.getBlock()) && neighbour.getValue(SlabBlock.TYPE) == type;
         }
     };

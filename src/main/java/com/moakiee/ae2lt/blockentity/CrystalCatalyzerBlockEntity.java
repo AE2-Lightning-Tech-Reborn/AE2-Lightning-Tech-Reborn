@@ -36,6 +36,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.IStackWatcher;
+import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageWatcherNode;
@@ -52,14 +53,16 @@ import appeng.me.ManagedGridNode;
 import appeng.me.helpers.BlockEntityNodeListener;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
+import appeng.me.ManagedGridNode;
+import appeng.me.helpers.BlockEntityNodeListener;
 
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
 import com.moakiee.ae2lt.logic.FluidStackHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerAutomationInventory;
@@ -99,6 +102,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     public static final int ENERGY_CAPACITY = 1_000_000;
     public static final int FLUID_TANK_CAPACITY_MB = 16_000;
     public static final int MATRIX_OUTPUT_MULTIPLIER = 8;
+    /** Legacy default; explicit recipe fluids are also consumed once per cycle. */
     public static final int FIXED_FLUID_PER_CYCLE_MB = CrystalCatalyzerRecipe.DEFAULT_FLUID_PER_CYCLE_MB;
 
     public static FluidStack getFixedFluidPerCycle() {
@@ -120,6 +124,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     private final IUpgradeInventory upgrades =
             UpgradeInventories.forMachine(ModBlocks.CRYSTAL_CATALYZER.get(), 0, this::onUpgradesChanged);
     private final CrystalCatalyzerLogic logic;
+    // Only the normal registered subtype implements FrequencyBindingHost.
     protected final FrequencyBindingHelper frequencyBinding = this instanceof FrequencyBindingHost host
             ? new FrequencyBindingHelper(host) : null;
     private int legacyPigmeeFrequencyId = -1;
@@ -158,6 +163,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         if (!isPigmeeVariant()) {
             return super.createMainNode();
         }
+        // Retain the shared AE block/menu lifecycle, but never create a Pigmee grid node.
         return new ManagedGridNode(this, BlockEntityNodeListener.INSTANCE) {
             @Override
             public void create(Level level, BlockPos pos) {
@@ -165,6 +171,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
             @Override
             public void loadFromNBT(CompoundTag tag) {
+                // Old Pigmee proxy data no longer represents a network node.
             }
         };
     }
@@ -225,7 +232,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     /** GUI 流体槽交互:光标容器 → tank。成功返回 true。 */
     public boolean tryInsertFluidFromCarried(Player player) {
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.insertFromCarried(player, tank);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.insertFromCarried(player, tank);
         if (changed) {
             saveChanges();
         }
@@ -234,7 +241,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     /** GUI 流体槽交互:tank → 光标容器。成功返回 true。 */
     public boolean tryExtractFluidToCarried(Player player) {
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.extractToCarried(player, tank);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.extractToCarried(player, tank);
         if (changed) {
             saveChanges();
         }
@@ -246,7 +253,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         if (tank.getFluid().isEmpty()) {
             return;
         }
-        com.moakiee.ae2lt.logic.FluidTankInteractionHelper.clear(tank);
+        com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.clear(tank);
         saveChanges();
     }
 
@@ -391,6 +398,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     private ItemStack getLockedRecipeOutputStack(CrystalCatalyzerLockedRecipe lockedRecipe) {
         ItemStack template = lockedRecipe.output();
+        // Pigmee keeps the recipe's base yield, without parallel or matrix scaling.
         long outputCount = isPigmeeVariant() ? template.getCount()
                 : (long) template.getCount() * lockedRecipe.outputMultiplier();
         if (outputCount <= 0 || outputCount > Integer.MAX_VALUE) {
@@ -445,6 +453,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         int capacityParallel = outputPerParallel > 0
                 ? (int) (inventory.getSlotLimit(CrystalCatalyzerInventory.SLOT_OUTPUT) / outputPerParallel)
                 : 0;
+        // Bound the batch by the full slot capacity. Current contents still apply
+        // backpressure, but a high-yield recipe must be able to start when empty.
         return Math.max(1, Math.min(amount / perInstance, capacityParallel));
     }
 
@@ -836,16 +846,21 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             processingTicksSpent = 0;
         } else {
             if (isPigmeeVariant()) {
+                // Earlier versions duplicated recipes under pigmee_* IDs. Keep an in-flight cycle
+                // and its progress while resolving the retired fixed yield against the shared recipe.
                 var id = lockedRecipe.recipeId();
                 var oldPrefix = "crystal_catalyzer/pigmee_";
                 if (id.getNamespace().equals("ae2lt") && id.getPath().startsWith(oldPrefix)) {
                     var sharedId = new ResourceLocation("ae2lt",
                             "crystal_catalyzer/" + id.getPath().substring(oldPrefix.length()));
+                    // The retired pigmee_* recipes produced 16; retain their migration to one.
                     lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, lockedRecipe.output().copyWithCount(1),
                             lockedRecipe.energyPerCycle(), 1,
                             lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
                 }
                 if (!data.getBoolean(TAG_PIGMEE_BASE_YIELD)) {
+                    // Already-migrated saves may have a shared ID but still store the old 16-item
+                    // template; previous versions always clamped it to one at completion.
                     lockedRecipe = new CrystalCatalyzerLockedRecipe(lockedRecipe.recipeId(),
                             lockedRecipe.output().copyWithCount(1), lockedRecipe.energyPerCycle(), 1,
                             lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
@@ -969,6 +984,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         return isPigmeeVariant() ? Set.of() : EnumSet.allOf(Direction.class);
     }
 
+    @Override
+    public AECableType getCableConnectionType(Direction dir) {
+        return isPigmeeVariant() ? AECableType.NONE : AECableType.SMART;
+    }
+
     private void onInventoryChanged() {
         saveChanges();
         markForUpdate();
@@ -1042,8 +1062,4 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         return super.getCapability(cap, side);
     }
 
-    @Override
-    public AECableType getCableConnectionType(Direction dir) {
-        return isPigmeeVariant() ? AECableType.NONE : AECableType.SMART;
-    }
 }

@@ -7,10 +7,10 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
-
 /**
  * Server to tracking client: keepalive/update packet for an active beam owned
  * by player {@code shooterId}. {@code active=false} signals beam stop.
+ * {@code ehv} is the server's firing mode, independent of compensation ammunition.
  */
 public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolean active, boolean ehv) {
 public void write(FriendlyByteBuf buf) {
@@ -35,5 +35,4 @@ public void write(FriendlyByteBuf buf) {
         ctx.setPacketHandled(true);
     }
 
-    /** Compile-time guard. */
 }

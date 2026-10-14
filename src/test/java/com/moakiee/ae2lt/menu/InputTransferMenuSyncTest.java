@@ -1,17 +1,16 @@
 package com.moakiee.ae2lt.menu;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-import appeng.menu.guisync.GuiSync;
 import java.util.HashMap;
+import appeng.menu.guisync.GuiSync;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class InputTransferMenuSyncTest {
     @ParameterizedTest
     @ValueSource(strings = {"LightningSimulationChamberMenu", "LightningAssemblyChamberMenu",
-            "OverloadProcessingFactoryMenu"})
+            "OverloadProcessingFactoryMenu", "MiningFactoryMenu"})
     void guiFieldsHaveUniqueIdsIncludingInheritedFields(String name) throws Exception {
         Class<?> menu = Class.forName("com.moakiee.ae2lt.menu." + name, false, getClass().getClassLoader());
         assertTrue(InputTransferMenu.class.isAssignableFrom(menu));

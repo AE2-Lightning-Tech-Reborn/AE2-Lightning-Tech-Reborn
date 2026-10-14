@@ -1,4 +1,4 @@
-# AE2 闪电科技 — Forge 1.20.1 GTL 移植版
+# AE2 闪电科技 — Forge 1.20.1 移植版
 
 [English](README.md)
 

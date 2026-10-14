@@ -15,7 +15,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
@@ -84,6 +83,9 @@ public final class PhaseLockProjectionItem extends ArmorItem {
         if (level.isClientSide() || !(entity instanceof ServerPlayer player)) {
             return;
         }
+        // Forge 1.20.1 Inventory.tick uses an index local to each compartment (armor 0..3),
+        // not the menu's global 36..39 indices. Identity also rejects a copied projection in a
+        // hotbar/offhand slot with the same local index.
         if (player.getItemBySlot(equipmentSlot) != stack) {
             stack.setCount(0);
             return;
@@ -112,6 +114,11 @@ public final class PhaseLockProjectionItem extends ArmorItem {
     public boolean isFoil(ItemStack stack) {
         // The projection always carries binding and vanishing curses. Suppress their glint so the
         // empty armor material cannot leave a visible armor-shaped overlay on the player.
+        return false;
+    }
+
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
         return false;
     }
 

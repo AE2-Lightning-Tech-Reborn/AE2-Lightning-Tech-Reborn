@@ -21,17 +21,6 @@ def jar_fixture(path, mod_id, version, forge=False):
 
 
 class ReleaseContractTest(unittest.TestCase):
-    def test_gtl_artifact_and_dependency_source_preserve_the_planner_build(self):
-        props = {"minecraft_version": "1.20.1", "mod_id": "ae2lt", "gtl_build": "true",
-                 "thunderbolt_artifact_id": "thunderbolt-reborn-forge-1.20.1-gtl",
-                 "thunderbolt_version": "2.0.0"}
-        result = release.metadata(props, "1.20.1-2.1.2-beta", True)
-        self.assertEqual(result["jar_file"], "ae2lt-forge-1.20.1-gtl-2.1.2-beta.jar")
-        self.assertEqual(release.dependency_versions(props), {"thunderbolt": "2.0.0"})
-        with tempfile.TemporaryDirectory() as directory, patch("release.subprocess.run") as run:
-            self.assertEqual(release.download_dependencies(Path(directory), props, "unused"), {})
-            run.assert_not_called()
-
     def test_release_types_and_loader_targets(self):
         cases = (
             ("2.1.2", False, "release"),

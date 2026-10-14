@@ -11,6 +11,7 @@ buildscript {
 plugins {
     id 'eclipse'
     id 'idea'
+    id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
 
@@ -48,6 +49,7 @@ sourceSets {
         java.srcDir 'src/jdb/java'
         java.include '**/blockentity/*Interface*GameTests.java'
         java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
+        java.include '**/client/crafting/CraftingReportClientProbe.java'
         java.include '**/blockentity/PigmeeCrystalCatalyzerGameTests.java'
         java.include '**/blockentity/CrystalCatalyzerFluidGameTests.java'
         java.include '**/debug/JeiWirelessSupplyGameTests.java'
@@ -57,15 +59,6 @@ sourceSets {
         java.include '**/debug/ArmorProtectionGameTests.java'
         java.include '**/debug/OverloadFactoryReactionGameTests.java'
         java.include '**/debug/TianshuQuantumBridgeGameTests.java'
-        java.include '**/debug/InterfaceEnergyRoutingGameTests.java'
-        java.include '**/debug/ProviderEnergyOutputGameTests.java'
-        java.include '**/debug/MachineNetworkRechargeGameTests.java'
-        java.include '**/debug/NeoEcoCatalyzerGameTests.java'
-        java.include '**/debug/OverloadQuantityRefillGameTests.java'
-        java.include '**/debug/AddonApiGameTests.java'
-        java.include '**/logic/railgun/RailgunBeamGameTests.java'
-        java.include '**/logic/craft/migration/PatternMigrationGameTests.java'
-        java.include '**/debug/PatternMigrationClientProbe.java'
         if ((findProperty('ae2ltInscriberFixture') ?: 'false').toBoolean()) {
             resources.srcDir 'src/overloadTest/resources'
         }
@@ -82,8 +75,7 @@ configurations {
 tasks.configureEach {
     if (name == 'runInterfaceIoGameTestServer') {
         doLast {
-            def logFile = new File(minecraft.runs.getByName('interfaceIoGameTestServer').workingDirectory,
-                    'logs/latest.log')
+            def logFile = file('run-gametest/interface-io/logs/latest.log')
             if (!logFile.exists() || !(logFile.getText('UTF-8') =~ /[1-9][0-9]* tests are now running!/).find()) {
                 throw new GradleException('No GameTests ran; check source includes and template namespaces.')
             }
@@ -145,6 +137,14 @@ minecraft {
             property 'forge.enabledGameTestNamespaces', mod_id
         }
 
+        craftingReportClient {
+            parent runs.client
+            workingDirectory project.file('run-crafting-report-probe')
+            property 'ae2lt.craftReportProbe', 'true'
+            args '--quickPlaySingleplayer', 'crafting-report-probe'
+            mods { "${mod_id}" { source sourceSets.jdb } }
+        }
+
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
@@ -162,7 +162,8 @@ minecraft {
 
         wirelessIoGameTestServer {
             parent runs.gameTestServer
-            workingDirectory project.file('run-wireless-io-gametest')
+            workingDirectory project.file(providers.gradleProperty('ae2ltBenchmarkRunDirectory')
+                    .getOrElse('run-wireless-io-gametest'))
             // Isolate measurement fixtures from existing Forge gameplay tests.
             property 'forge.enabledGameTestNamespaces',
                     providers.gradleProperty('ae2ltWirelessIoTestNamespaces')
@@ -183,11 +184,7 @@ minecraft {
         interfaceIoGameTestServer {
             parent runs.gameTestServer
             workingDirectory project.file('run-gametest/interface-io')
-            property 'ae2lt.addonApiTests',
-                    providers.gradleProperty('ae2ltAddonApiTests').getOrElse('false')
-            property 'forge.enabledGameTestNamespaces',
-                    providers.gradleProperty('ae2ltInterfaceIoTestNamespaces')
-                            .getOrElse("${mod_id},minecraft,ae2lt_io,ae2lt_io_import,ae2lt_io_export")
+            property 'forge.enabledGameTestNamespaces', "${mod_id},minecraft,ae2lt_io,ae2lt_interface_input"
             mods { "${mod_id}" { source sourceSets.jdb } }
         }
 
@@ -325,7 +322,7 @@ dependencies {
     // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
     // Provided at runtime as a separate mod jar in the modpack. The GTL branch needs the Thunderbolt
     // 1.20.1_GTL planner-attach build: CPU dispatch stands down, computePlan wrapping stays on.
-    // The GTL-only Reborn Maven artifact also supplies prepared batch admission.
+    // Same GAV as earlier 2.0.0-beta.5 jars, so mavenLocal must be republished before this compile.
     compileOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }
@@ -385,6 +382,7 @@ dependencies {
     // Keep portable resource and pure-logic regressions executable on the Forge 1.20.1 port.
     testImplementation platform("org.junit:junit-bom:5.10.2")
     testImplementation "org.junit.jupiter:junit-jupiter"
+    testImplementation fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
     testImplementation(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }
@@ -940,3 +938,15 @@ tasks.register('checkWirelessIoBenchmarkRegression') {
         }
     }
 }
+
+// Use the Forge distributable for the sibling LTPP build; never publish mapped development dependencies.
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = 'ae2lt-forge-1.20.1'
+            artifact(tasks.named('jarJar')) { classifier = null }
+        }
+    }
+}
+tasks.withType(GenerateModuleMetadata).configureEach { enabled = false }
+tasks.withType(PublishToMavenLocal).configureEach { dependsOn tasks.named('reobfJarJar') }

@@ -47,7 +47,7 @@ dependencies {
 }
 tasks.register('verifyReleaseRepositories') {
     doLast {
-        [original: (project.findProperty('expectedOriginal') ?: 'release'), mapped: 'mapped'].each { configuration, expected ->
+        [original: 'release', mapped: 'mapped'].each { configuration, expected ->
             def resolved = configurations.getByName(configuration).resolve()
             assert resolved.size() == 2
             resolved.each { artifact ->
@@ -62,14 +62,10 @@ tasks.register('verifyReleaseRepositories') {
     }
 }
 """, encoding="utf-8")
-    command = [
+    subprocess.run([
         "java", "-cp", str(root / "gradle/wrapper/gradle-wrapper.jar"),
         "org.gradle.wrapper.GradleWrapperMain", "--no-daemon", "--offline",
         "--max-workers", "1", "-p", str(fixture),
         "--init-script", str(root / ".github/release-dependencies.init.gradle"),
         "verifyReleaseRepositories",
-    ]
-    subprocess.run(command, check=True)
-    # No staged JARs is the GTL path: generated/default repositories must stay available.
-    (fixture / "release-dependencies").rename(fixture / "unused-release-dependencies")
-    subprocess.run(command + ["-PexpectedOriginal=wrong-original"], check=True)
+    ], check=True)

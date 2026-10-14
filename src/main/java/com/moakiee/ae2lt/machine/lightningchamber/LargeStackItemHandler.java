@@ -371,5 +371,80 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
         }
         return true;
     }
+
+    /** Defer callbacks until every source/destination pair and recipe state is consistent. */
+    public final void batchChanges(Runnable action) {
+        requireMutable();
+        batchDepth++;
+        try {
+            action.run();
+        } finally {
+            if (--batchDepth == 0 && batchChanged) {
+                batchChanged = false;
+                if (changeListener != null) changeListener.run();
+            }
+        }
+    }
+
+    /** Machine-only move: bypass output item filters, but preserve components and slot capacity. */
+    public final int moveToOutput(int source, int destination, int maximum) {
+        requireMutable();
+        validateSlotIndex(source);
+        validateSlotIndex(destination);
+        if (source == destination || maximum <= 0) return 0;
+        ItemStack input = stacks.get(source);
+        ItemStack output = stacks.get(destination);
+        if (input.isEmpty() || (!output.isEmpty() && !ItemStack.isSameItemSameTags(input, output))) return 0;
+        int count = Math.min(Math.min(input.getCount(), maximum), Math.max(0, getSlotLimit(destination) - output.getCount()));
+        if (count == 0) return 0;
+        stacks.set(destination, input.copyWithCount(output.getCount() + count));
+        stacks.set(source, count == input.getCount() ? ItemStack.EMPTY : input.copyWithCount(input.getCount() - count));
+        onContentsChanged(source);
+        return count;
+    }
+
+    /**
+     * Reserve an output while calling foreign storage. Reentrant automation cannot extract the
+     * offer twice or occupy its return space.
+     * Confirmed rejection stays in this exact slot. An unknown receipt must not be retried,
+     * since foreign storage may already have credited the offer before failing.
+     */
+    public final long exportOutput(int slot, ToLongFunction<ItemStack> insertion) {
+        requireMutable();
+        validateSlotIndex(slot);
+        Objects.requireNonNull(insertion, "insertion");
+        ItemStack original = stacks.get(slot);
+        if (original.isEmpty()) return 0;
+        long accepted = 0;
+        exporting = true;
+        savedDuringExport = false;
+        stacks.set(slot, ItemStack.EMPTY);
+        try {
+            try {
+                long receipt = insertion.applyAsLong(original.copy());
+                if (receipt < 0 || receipt > original.getCount()) {
+                    throw new IllegalStateException("Storage returned invalid inserted amount: " + receipt);
+                }
+                accepted = receipt;
+            } catch (RuntimeException | LinkageError uncertain) {
+                // Retire this attempt without replaying a possibly completed credit.
+                // Other output slots can still make progress after a broken receiver.
+                accepted = original.getCount();
+                MixinReflectionSupport.logReflectionFailure("export machine output to "
+                        + insertion.getClass().getName() + " (receipt unknown; attempt will not be retried)", uncertain);
+            }
+            return accepted;
+        } finally {
+            stacks.set(slot, accepted == original.getCount() ? ItemStack.EMPTY
+                    : original.copyWithCount(original.getCount() - (int) accepted));
+            exporting = false;
+            // A callback snapshot omitted the reserved output; persist any restored remainder.
+            if (accepted > 0 || savedDuringExport) onContentsChanged(slot);
+        }
+    }
+
+    private void requireMutable() {
+        if (exporting) throw new IllegalStateException("Inventory mutation during external export");
+    }
 }
 

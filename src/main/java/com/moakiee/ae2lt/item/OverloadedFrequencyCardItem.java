@@ -172,7 +172,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
 
     private static String tooltipFrequencyName(int frequencyId) {
         String frequencyName = FMLEnvironment.dist == Dist.CLIENT
-                ? com.moakiee.ae2lt.client.FrequencyCardClientNames.frequencyName(frequencyId)
+                ? com.moakiee.ae2lt.client.frequency.FrequencyCardClientNames.frequencyName(frequencyId)
                 : null;
         return FrequencyDisplayName.of(frequencyId, frequencyName);
     }

@@ -9,7 +9,7 @@ import com.moakiee.ae2lt.recipe.RecipeContainerInput;
 /**
  * Snapshot of the machine state that's fed into {@link CrystalCatalyzerRecipe#matches}.
  *
- * <p>Contains the catalyst and available fluid for recipe matching.</p>
+ * <p>Both the retained catalyst and available fluid participate in recipe selection.</p>
  */
 public final class CrystalCatalyzerRecipeInput extends RecipeContainerInput {
     private final ItemStack catalyst;

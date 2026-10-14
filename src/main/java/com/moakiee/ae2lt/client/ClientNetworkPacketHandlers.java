@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.easteregg.EasterEggOverlay;
+import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
+
 import java.util.List;
 
 import appeng.client.render.crafting.AssemblerAnimationStatus;
@@ -183,14 +186,18 @@ public final class ClientNetworkPacketHandlers {
     }
 
     public static void handleMaintenanceEditorSync(MaintenanceEditorSyncPacket packet) {
-        TianshuMaintenanceMenu menu = getMaintenanceMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceEditorData(packet.selectionRevision(), packet.data());
         }
     }
 
     public static void handleMaintenanceSummarySync(MaintenanceSummarySyncPacket packet) {
-        TianshuMaintenanceMenu menu = getMaintenanceMenu(packet.containerId());
+        var player = net.minecraft.client.Minecraft.getInstance().player;
+        var menu = player != null && player.containerMenu instanceof com.moakiee.ae2lt.menu.TianshuMaintenanceMenu candidate
+                && candidate.maintenanceMenu().containerId == packet.containerId() ? candidate : null;
         if (menu != null) {
             menu.receiveMaintenanceSummary(
                     packet.selectionRevision(), packet.revision(), packet.overflow(), packet.entries());

@@ -7,7 +7,7 @@ import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import com.moakiee.ae2lt.blockentity.*;
-import com.moakiee.ae2lt.logic.AppFluxHelper;
+import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;

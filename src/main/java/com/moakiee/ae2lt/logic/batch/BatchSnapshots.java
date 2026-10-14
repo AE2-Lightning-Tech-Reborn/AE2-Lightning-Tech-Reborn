@@ -18,8 +18,6 @@ public final class BatchSnapshots {
 
     public static List<GenericStack> multiply(List<GenericStack> outputs, long accepted) {
         if (accepted == 0) return List.of();
-        return outputs.stream()
-                .map(stack -> new GenericStack(stack.what(), Math.multiplyExact(stack.amount(), accepted)))
-                .toList();
+        return outputs.stream().map(s -> new GenericStack(s.what(), Math.multiplyExact(s.amount(), accepted))).toList();
     }
 }

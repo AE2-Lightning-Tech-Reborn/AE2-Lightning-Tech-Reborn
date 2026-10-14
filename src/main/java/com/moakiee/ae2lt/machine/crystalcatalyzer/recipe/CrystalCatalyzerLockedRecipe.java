@@ -120,7 +120,7 @@ public final class CrystalCatalyzerLockedRecipe {
     }
 
     public boolean matchesFluidInput(CrystalCatalyzerRecipe recipe) {
-        FluidStack required = recipe.fluidInput();
+        var required = recipe.fluidInput();
         return fluidInput.isFluidEqual(required)
                 && fluidInput.getAmount() == required.getAmount();
     }
@@ -178,7 +178,7 @@ public final class CrystalCatalyzerLockedRecipe {
                 ? LightningKey.Tier.fromSerializedName(tag.getString(TAG_LIGHTNING_TIER))
                 : CrystalCatalyzerRecipe.DEFAULT_LIGHTNING_TIER;
 
-        FluidStack fluidInput = tag.contains(TAG_FLUID_INPUT, Tag.TAG_COMPOUND)
+        FluidStack fluidInput = tag.contains(TAG_FLUID_INPUT)
                 ? FluidStack.loadFluidStackFromNBT(tag.getCompound(TAG_FLUID_INPUT))
                 : CrystalCatalyzerRecipe.defaultFluidInput();
         if (fluidInput.isEmpty()) {

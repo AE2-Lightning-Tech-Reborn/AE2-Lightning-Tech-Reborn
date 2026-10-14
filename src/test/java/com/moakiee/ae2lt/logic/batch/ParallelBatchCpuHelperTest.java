@@ -493,6 +493,7 @@ class ParallelBatchCpuHelperTest {
         }
 
         assertIterableEquals(List.of(first, second), visible);
+
         skipped.busy = false;
         visible.clear();
         for (var provider : new BatchProviderFilterIterable(List.of(first, skipped, second), excluded)) {

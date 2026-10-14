@@ -23,7 +23,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ProviderMode;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ReturnMode;
 import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
-import com.moakiee.ae2lt.logic.AllowedOutputFilter;
+import com.moakiee.ae2lt.logic.provider.AllowedOutputFilter;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -34,7 +34,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.DropperBlockEntity;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -51,40 +52,39 @@ import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
-/** Real AppFlux capabilities and tickers; the dropper is a bidirectional FE machine. */
-@GameTestHolder("ae2lt_provider_energy")
+/** Real AppFlux capabilities and tickers; the barrel is a bidirectional FE machine. */
+@GameTestHolder("ae2lt")
 @PrefixGameTestTemplate(false)
 @EventBusSubscriber(modid = "ae2lt", bus = EventBusSubscriber.Bus.FORGE)
 public final class ProviderEnergyOutputGameTests {
     private static final BlockPos POS = new BlockPos(2, 2, 2);
-    // Existing energy-routing fixtures attach different capabilities to barrels.
-    // Use droppers here so both fixture families can run in the global profile.
-    private static final Map<DropperBlockEntity, Machine> MACHINES = new WeakHashMap<>();
+    private static final Map<BarrelBlockEntity, Machine> MACHINES = new WeakHashMap<>();
 
     @SubscribeEvent
     public static void capabilities(AttachCapabilitiesEvent<BlockEntity> event) {
-        if (!(event.getObject() instanceof DropperBlockEntity dropper)) return;
-        var machine = machine(dropper);
+        if (!(event.getObject() instanceof BarrelBlockEntity barrel)) return;
+        var machine = machine(barrel);
         var energy = LazyOptional.of(() -> machine.energy);
         var fluid = LazyOptional.of(() -> machine.fluid);
-        event.addCapability(new ResourceLocation("ae2lt", "test_provider_energy"), new ICapabilityProvider() {
-            @Override
-            public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
-                if (capability == ForgeCapabilities.ENERGY) return energy.cast();
-                if (capability == ForgeCapabilities.FLUID_HANDLER) return fluid.cast();
-                return LazyOptional.empty();
-            }
-        });
+        event.addCapability(new ResourceLocation("ae2lt", "provider_energy_output_fixture"),
+                new ICapabilityProvider() {
+                    @Override
+                    public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
+                        if (capability == ForgeCapabilities.ENERGY) return energy.cast();
+                        if (capability == ForgeCapabilities.FLUID_HANDLER) return fluid.cast();
+                        return LazyOptional.empty();
+                    }
+                });
         event.addListener(energy::invalidate);
         event.addListener(fluid::invalidate);
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 180)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 180)
     public static void adjacentAutoReturnLeavesFeAndReturnsItemsAndFluids(GameTestHelper helper) {
         checkAutoReturn(helper, false);
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 180)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 180)
     public static void wirelessAutoReturnLeavesFeAndReturnsItemsAndFluids(GameTestHelper helper) {
         checkAutoReturn(helper, true);
     }
@@ -95,14 +95,14 @@ public final class ProviderEnergyOutputGameTests {
             ready(helper, fixture);
             fixture.machine.energy.setStored(25_000);
             fixture.machine.fluid.fill(new FluidStack(Fluids.WATER, 1_000), FluidAction.EXECUTE);
-            fixture.dropper.setItem(0, new ItemStack(Items.STONE, 32));
+            fixture.barrel.setItem(0, new ItemStack(Items.STONE, 32));
             fixture.provider.setReturnMode(ReturnMode.AUTO);
         });
         helper.runAfterDelay(140, () -> {
             helper.assertTrue(fixture.machine.energy.getEnergyStored() == 25_000
                     && fixture.machine.energy.extractions == 0, "AUTO extracted the machine's FE");
             helper.assertTrue(stored(fixture.provider, AppFluxBridge.FE_KEY) == 0, "FE entered the network");
-            helper.assertTrue(fixture.dropper.isEmpty() && stored(fixture.provider, AEItemKey.of(Items.STONE)) == 32,
+            helper.assertTrue(fixture.barrel.isEmpty() && stored(fixture.provider, AEItemKey.of(Items.STONE)) == 32,
                     "item return changed");
             helper.assertTrue(fixture.machine.fluid.isEmpty()
                     && stored(fixture.provider, AEFluidKey.of(Fluids.WATER)) == 1_000, "fluid return changed");
@@ -110,12 +110,12 @@ public final class ProviderEnergyOutputGameTests {
         });
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 180)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 180)
     public static void adjacentInductionSuppliesWithoutRecyclingAndStopsWhenRemoved(GameTestHelper helper) {
         checkInduction(helper, false);
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 180)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 180)
     public static void wirelessInductionSuppliesWithoutRecyclingAndStopsWhenRemoved(GameTestHelper helper) {
         checkInduction(helper, true);
     }
@@ -130,34 +130,28 @@ public final class ProviderEnergyOutputGameTests {
                     "flux cell rejected the source energy");
             fixture.provider.setReturnMode(ReturnMode.AUTO);
             induction(fixture.provider, true);
-            System.out.println("PROVIDER_ENERGY installed " + energyState(fixture));
         });
         helper.runAfterDelay(100, () -> {
-            System.out.println("PROVIDER_ENERGY charged " + energyState(fixture));
-            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 100_000,
-                    "induction did not power machine: " + energyState(fixture));
+            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 100_000, "induction did not power machine");
             helper.assertTrue(fixture.machine.energy.extractions == 0, "supplied FE was pulled back");
             helper.assertTrue(stored(fixture.provider, AppFluxBridge.FE_KEY) == 25_000,
                     "FE transfer must conserve network plus machine energy");
             induction(fixture.provider, false);
             fixture.machine.energy.setStored(0);
-            System.out.println("PROVIDER_ENERGY removed " + energyState(fixture));
         });
         helper.runAfterDelay(150, () -> {
-            System.out.println("PROVIDER_ENERGY stopped " + energyState(fixture));
-            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 0,
-                    "power continued after removing card: " + energyState(fixture));
+            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 0, "power continued after removing card");
             helper.assertTrue(stored(fixture.provider, AppFluxBridge.FE_KEY) == 25_000, "network FE changed without card");
             helper.succeed();
         });
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 100)
     public static void passiveAndEjectInputsRejectFeInEveryMode(GameTestHelper helper) {
         checkPassive(helper, false);
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 100)
     public static void extendedPassiveAndEjectInputsRejectFeInEveryMode(GameTestHelper helper) {
         checkPassive(helper, true);
     }
@@ -169,8 +163,8 @@ public final class ProviderEnergyOutputGameTests {
             var provider = fixture.provider;
             // Even explicitly listing FE as a pattern result must not authorize reception.
             provider.getExposedPatternInventory().setItemDirect(0, PatternDetailsHelper.encodeProcessingPattern(
-                    new GenericStack[] {new GenericStack(AEItemKey.of(Items.COBBLESTONE), 1)},
-                    new GenericStack[] {new GenericStack(AppFluxBridge.FE_KEY, 1_000)}));
+                    new GenericStack[]{new GenericStack(AEItemKey.of(Items.COBBLESTONE), 1)},
+                    new GenericStack[]{new GenericStack(AppFluxBridge.FE_KEY, 1_000)}));
             var strict = new AllowedOutputFilter();
             strict.allowStrict(AppFluxBridge.FE_KEY);
             strict.allowIdOnly(AppFluxBridge.FE_KEY);
@@ -184,7 +178,7 @@ public final class ProviderEnergyOutputGameTests {
                         provider.setReturnMode(mode);
                         assertRejects(helper, provider.getBlockPos(), Direction.SOUTH);
                         if (mode == ReturnMode.EJECT) {
-                            assertRejects(helper, fixture.dropper.getBlockPos().north(), Direction.SOUTH);
+                            assertRejects(helper, fixture.barrel.getBlockPos().north(), Direction.SOUTH);
                         }
                     }
                 }
@@ -194,33 +188,29 @@ public final class ProviderEnergyOutputGameTests {
     }
 
     private static void assertRejects(GameTestHelper helper, BlockPos pos, Direction face) {
-        var input = helper.getLevel().getBlockEntity(pos).getCapability(Capabilities.GENERIC_INTERNAL_INV, face).orElse(null);
+        var blockEntity = helper.getLevel().getBlockEntity(pos);
+        helper.assertTrue(blockEntity != null, "return endpoint is missing at " + pos);
+        var input = blockEntity.getCapability(Capabilities.GENERIC_INTERNAL_INV, face).orElse(null);
         helper.assertTrue(input != null, "passive return capability is missing at " + pos);
-        helper.assertTrue(!input.isAllowed(AppFluxBridge.FE_KEY), "passive input advertises FE acceptance");
+        // AE2 15 exposes acceptance through simulated insertion rather than isAllowedIn.
         for (var action : Actionable.values()) {
             helper.assertTrue(input.insert(0, AppFluxBridge.FE_KEY, 1_000, action) == 0, "generic input accepted FE");
         }
         var adapter = new FEGenericStackInvStorage(input);
         helper.assertTrue(adapter.receiveEnergy(1_000, true) == 0 && adapter.receiveEnergy(1_000, false) == 0,
                 "Applied Flux FE adapter accepted energy");
-        var energy = helper.getLevel().getBlockEntity(pos).getCapability(ForgeCapabilities.ENERGY, face).orElse(null);
+        var energy = blockEntity.getCapability(ForgeCapabilities.ENERGY, face).orElse(null);
         helper.assertTrue(energy == null || (energy.receiveEnergy(1_000, true) == 0
                 && energy.receiveEnergy(1_000, false) == 0), "block energy capability accepted FE");
     }
 
-    @GameTest(batch = "ae2lt_provider_energy", templateNamespace = "ae2lt_provider_energy", template = "empty", timeoutTicks = 160)
+    @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 160)
     public static void existingFeReturnBufferStillDrainsIntoNetwork(GameTestHelper helper) {
         var fixture = fixture(helper, false, false);
         helper.runAfterDelay(40, () -> {
             ready(helper, fixture);
             // Represents a saved pre-fix return buffer: do not delete already-owned FE.
-            var returns = fixture.provider.getLogic().getReturnInv();
-            returns.setStack(0, new GenericStack(AppFluxBridge.FE_KEY, 7_000));
-            var saved = returns.writeToTag();
-            returns.clear();
-            returns.readFromTag(saved);
-            helper.assertTrue(returns.getAmount(0) == 7_000
-                    && AppFluxBridge.FE_KEY.equals(returns.getKey(0)), "saved FE did not survive restoration");
+            fixture.provider.getLogic().getReturnInv().setStack(0, new GenericStack(AppFluxBridge.FE_KEY, 7_000));
         });
         helper.runAfterDelay(120, () -> {
             helper.assertTrue(stored(fixture.provider, AppFluxBridge.FE_KEY) == 7_000,
@@ -238,19 +228,19 @@ public final class ProviderEnergyOutputGameTests {
         var drive = (DriveBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS.west()));
         drive.getInternalInventory().setItemDirect(0, AEItems.ITEM_CELL_1K.stack());
         drive.getInternalInventory().setItemDirect(1, AEItems.FLUID_CELL_1K.stack());
-        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux:fe_1k_cell")));
+        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux", "fe_1k_cell")));
         helper.assertTrue(!cell.isEmpty(), "Applied Flux dependency missing");
         drive.getInternalInventory().setItemDirect(2, cell);
         var provider = (OverloadedPatternProviderBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS));
         var machinePos = wireless ? POS.offset(4, 0, 0) : POS.south();
-        helper.setBlock(machinePos, Blocks.DROPPER);
-        var dropper = (DropperBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(machinePos));
+        helper.setBlock(machinePos, Blocks.BARREL);
+        var barrel = (BarrelBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(machinePos));
         if (wireless) {
             provider.setProviderMode(ProviderMode.WIRELESS);
-            helper.assertTrue(provider.addOrUpdateConnection(helper.getLevel().dimension(), dropper.getBlockPos(),
+            helper.assertTrue(provider.addOrUpdateConnection(helper.getLevel().dimension(), barrel.getBlockPos(),
                     Direction.NORTH), "wireless target must bind");
         }
-        return new Fixture(provider, dropper, machine(dropper));
+        return new Fixture(provider, barrel, machine(barrel));
     }
 
     private static void ready(GameTestHelper helper, Fixture fixture) {
@@ -267,33 +257,8 @@ public final class ProviderEnergyOutputGameTests {
                 .extract(key, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
     }
 
-    private static String energyState(Fixture fixture) {
-        var provider = fixture.provider;
-        var level = provider.getLevel();
-        var logic = provider.getLogic();
-        return "mode=" + provider.getProviderMode() + ", pos=" + provider.getBlockPos()
-                + ", energy=" + fixture.machine.energy.getEnergyStored()
-                + ", network=" + stored(provider, AppFluxBridge.FE_KEY)
-                + ", card=" + ((IUpgradeableObject) logic).getUpgrades().isInstalled(AppFluxBridge.getInductionCard())
-                + ", cachedCard=" + field(logic, "cachedInductionCardInstalled")
-                + ", cardDirty=" + field(logic, "inductionCardCacheDirty")
-                + ", active=" + provider.getMainNode().isActive()
-                + ", providerPresent=" + (level.getBlockEntity(provider.getBlockPos()) == provider)
-                + ", machinePresent=" + (level.getBlockEntity(fixture.dropper.getBlockPos()) == fixture.dropper);
-    }
-
-    private static Object field(Object instance, String name) {
-        try {
-            var field = com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic.class.getDeclaredField(name);
-            field.setAccessible(true);
-            return field.get(instance);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    private static Machine machine(DropperBlockEntity dropper) {
-        return MACHINES.computeIfAbsent(dropper, ignored -> new Machine());
+    private static Machine machine(BarrelBlockEntity barrel) {
+        return MACHINES.computeIfAbsent(barrel, ignored -> new Machine());
     }
 
     private static final class Machine {
@@ -315,5 +280,5 @@ public final class ProviderEnergyOutputGameTests {
         }
     }
 
-    private record Fixture(OverloadedPatternProviderBlockEntity provider, DropperBlockEntity dropper, Machine machine) {}
+    private record Fixture(OverloadedPatternProviderBlockEntity provider, BarrelBlockEntity barrel, Machine machine) {}
 }

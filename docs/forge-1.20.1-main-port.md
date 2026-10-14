@@ -88,7 +88,15 @@ Client-only pagination, IPN swipe behavior and beam appearance have compile/cont
 
 ## Runtime target
 
+<<<<<<< HEAD
+- Provider cache/dispatch ownership fixes, live input allocation, closed-loop seed handling and manual Tianshu CPU selection across CPU-list changes.
+- Machine energy recharge batching, standalone main-core compute budgets, updated multiblock recipes, tooltips and guides.
+- Arbitrary-precision storage/crafting integration using Thunderbolt 2.0.0, with bounded Forge SimpleChannel messages and extensions to the existing AE2 menus.
+- Guarded NeoECO integration. Forge NeoECO 20.3.0 lacks the allocated FastPath facade: ordinary dispatch remains active. The adapter links reflectively only when the complete public allocated API exists; no NeoForge dependency is required.
+- Official Useless 1.20.1 lacks the BigInteger and Smart Doubling APIs. The inactive Thunderbolt adapters and the corresponding LT protocol probe were removed after the 2026-10-04 source audit; ordinary machine execution remains in use.
+=======
 Java 17, Minecraft 1.20.1, Forge 47.1.47, AE2 15, and the project's GTL-compatible Thunderbolt dependency. Forge registry/bootstrap behavior, NBT codecs, array-based pattern outputs, optional-mod boundaries, licenses and attribution are retained. The completed port is prepared as a single summary commit for review; development evidence and scratch files remain local.
+>>>>>>> e381ebc0 (feat(forge): port upstream 1.20.1 to GTL and harden manual exports (#14))
 
 ## Included behavior
 

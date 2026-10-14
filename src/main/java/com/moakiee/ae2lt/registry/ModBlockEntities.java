@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
@@ -85,6 +87,14 @@ public final class ModBlockEntities {
                             ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get())
                             .build(null));
 
+    public static final RegistryObject<BlockEntityType<OverloadedIOPortBlockEntity>>
+            OVERLOADED_IO_PORT = BLOCK_ENTITY_TYPES.register("overloaded_io_port",
+                    () -> BlockEntityType.Builder.of(OverloadedIOPortBlockEntity::new, ModBlocks.OVERLOADED_IO_PORT.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<MiningFactoryBlockEntity>>
+            MINING_FACTORY = BLOCK_ENTITY_TYPES.register("mining_factory",
+                    () -> BlockEntityType.Builder.of(MiningFactoryBlockEntity::new, ModBlocks.MINING_FACTORY.get()).build(null));
+
     public static final RegistryObject<BlockEntityType<OverloadProcessingFactoryBlockEntity>>
             OVERLOAD_PROCESSING_FACTORY = BLOCK_ENTITY_TYPES.register(
                     "overload_processing_factory",
@@ -135,7 +145,7 @@ public final class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<CrystalCatalyzerBlockEntity>>
             PIGMEE_CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
                     "pigmee_crystal_catalyzer",
-                    () -> BlockEntityType.Builder.of(
+                    () -> BlockEntityType.Builder.<CrystalCatalyzerBlockEntity>of(
                             CrystalCatalyzerBlockEntity::new,
                             ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get())
                             .build(null));

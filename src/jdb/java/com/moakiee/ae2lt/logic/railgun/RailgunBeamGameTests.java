@@ -39,6 +39,7 @@ import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
+/** Real ME grid and beam settlement, with a mounted fault-injection store for rollback checks. */
 @GameTestHolder("ae2lt_railgun")
 @PrefixGameTestTemplate(false)
 public final class RailgunBeamGameTests {
@@ -48,52 +49,52 @@ public final class RailgunBeamGameTests {
 
     @GameTest(templateNamespace = "ae2lt_railgun", template = "empty", timeoutTicks = 120)
     public static void compensatesOnlyMissingEhvWithoutChangingDamage(GameTestHelper helper) {
-        fixture(helper, true, 10, 512, 100_000, scenario -> {
-            check(scenario.fire(), "mixed EHV/HV payment succeeds");
-            scenario.expect(0, 416, 96_000);
-            check(scenario.target.getHealth() == 824, "compensated beam keeps 200 EHV damage; health=" + scenario.target.getHealth());
-            check(scenario.fire(), "full HV compensation succeeds");
-            scenario.expect(0, 160, 92_000);
-            check(scenario.target.getHealth() == 624, "compensated beam retains EHV hurt-cooldown bypass");
-            check(!scenario.fire(), "insufficient HV stops instead of downgrading");
-            scenario.expect(0, 160, 92_000);
-            check(scenario.target.getHealth() == 624, "failed payment deals no damage");
+        fixture(helper, true, 10, 512, 100_000, f -> {
+            check(f.fire(), "mixed EHV/HV payment succeeds");
+            f.expect(0, 416, 96_000);
+            check(f.target.getHealth() == 824, "compensated beam keeps 200 EHV damage");
+            check(f.fire(), "full HV compensation succeeds");
+            f.expect(0, 160, 92_000);
+            check(f.target.getHealth() == 624, "compensated beam retains EHV hurt-cooldown bypass");
+            check(!f.fire(), "insufficient HV stops instead of downgrading");
+            f.expect(0, 160, 92_000);
+            check(f.target.getHealth() == 624, "failed payment deals no damage");
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_railgun", template = "empty", timeoutTicks = 120)
     public static void missingCoreCannotCompensate(GameTestHelper helper) {
-        fixture(helper, false, 8, 1024, 100_000, scenario -> {
-            check(!scenario.fire(), "EHV beam module alone does not grant compensation");
-            scenario.expect(8, 1024, 100_000);
-            check(RailgunModuleStorage.INSTANCE.installOne(scenario.gun, new ItemStack(ModItems.RAILGUN_MODULE_CORE.get())), "install core");
-            check(scenario.fire(), "installing core enables compensation");
-            scenario.expect(0, 896, 96_000);
+        fixture(helper, false, 8, 1024, 100_000, f -> {
+            check(!f.fire(), "EHV beam module alone does not grant compensation");
+            f.expect(8, 1024, 100_000);
+            check(RailgunModuleStorage.INSTANCE.installOne(f.gun, new ItemStack(ModItems.RAILGUN_MODULE_CORE.get())), "install core");
+            check(f.fire(), "installing core enables compensation");
+            f.expect(0, 896, 96_000);
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_railgun", template = "empty", timeoutTicks = 120)
     public static void insufficientFeLeavesBothLightningStocksIntact(GameTestHelper helper) {
-        fixture(helper, true, 8, 128, 0, scenario -> {
-            check(!scenario.fire(), "missing FE stops beam");
-            scenario.expect(8, 128, 0);
-            check(scenario.target.getHealth() == 1024, "no unpaid damage");
+        fixture(helper, true, 8, 128, 0, f -> {
+            check(!f.fire(), "missing FE stops beam");
+            f.expect(8, 128, 0);
+            check(f.target.getHealth() == 1024, "no unpaid damage");
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_railgun", template = "empty", timeoutTicks = 120)
     public static void modulationShortfallsRefundBothStocksAndFe(GameTestHelper helper) {
-        fixture(helper, true, 8, 128, 100_000, scenario -> {
-            scenario.storage.shortKey = LightningKey.EXTREME_HIGH_VOLTAGE;
-            check(!scenario.fire(), "EHV modulation shortfall rejects shot");
-            scenario.expect(8, 128, 100_000);
-            scenario.storage.shortKey = LightningKey.HIGH_VOLTAGE;
-            check(!scenario.fire(), "HV modulation shortfall rejects shot");
-            scenario.expect(8, 128, 100_000);
-            check(scenario.target.getHealth() == 1024, "rollback does not deal damage");
-            scenario.storage.shortKey = null;
-            check(scenario.fire(), "shot succeeds after storage recovers");
-            scenario.expect(0, 0, 96_000);
+        fixture(helper, true, 8, 128, 100_000, f -> {
+            f.storage.shortKey = LightningKey.EXTREME_HIGH_VOLTAGE;
+            check(!f.fire(), "EHV modulation shortfall rejects shot");
+            f.expect(8, 128, 100_000);
+            f.storage.shortKey = LightningKey.HIGH_VOLTAGE;
+            check(!f.fire(), "HV modulation shortfall rejects shot");
+            f.expect(8, 128, 100_000);
+            check(f.target.getHealth() == 1024, "rollback does not deal damage");
+            f.storage.shortKey = null;
+            check(f.fire(), "shot succeeds after storage recovers");
+            f.expect(0, 0, 96_000);
         });
     }
 
@@ -147,7 +148,6 @@ public final class RailgunBeamGameTests {
         cow.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1024);
         cow.setHealth(1024);
         cow.setPos(base.getX() + .5, base.getY() + 1, base.getZ() + 6.5);
-        level.getEntitiesOfClass(Cow.class, cow.getBoundingBox().inflate(0.5)).forEach(Cow::discard);
         level.addFreshEntity(cow);
         var storage = new FaultStorage();
         storage.contents.set(LightningKey.EXTREME_HIGH_VOLTAGE, ehv);
@@ -164,10 +164,7 @@ public final class RailgunBeamGameTests {
             } catch (Throwable failure) {
                 failure.printStackTrace();
                 helper.fail(failure.toString());
-            } finally {
-                service.removeGlobalStorageProvider(provider);
-                cow.discard();
-            }
+            } finally { service.removeGlobalStorageProvider(provider); }
         });
     }
 
@@ -179,7 +176,7 @@ public final class RailgunBeamGameTests {
                 settle.setAccessible(true);
                 return (boolean) settle.invoke(null, level, player, gun,
                         new RailgunBeamService.BeamState(InteractionHand.MAIN_HAND, player.tickCount), 5);
-            } catch (ReflectiveOperationException exception) { throw new AssertionError(exception); }
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         }
 
         void expect(long ehv, long hv, long fe) {

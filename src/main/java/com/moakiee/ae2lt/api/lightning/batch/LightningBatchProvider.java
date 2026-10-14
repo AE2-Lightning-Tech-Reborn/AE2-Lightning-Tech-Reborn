@@ -48,7 +48,7 @@ public interface LightningBatchProvider {
             inputsPerCraft = List.copyOf(Objects.requireNonNull(inputsPerCraft, "inputsPerCraft").stream()
                     .map(List::copyOf)
                     .toList());
-            if (inputsPerCraft.stream().flatMap(List::stream).anyMatch(stack -> stack.amount() <= 0L)) {
+            if (inputsPerCraft.stream().flatMap(List::stream).anyMatch(s -> s.amount() <= 0L)) {
                 throw new IllegalArgumentException("input amounts must be positive");
             }
         }

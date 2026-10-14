@@ -81,15 +81,8 @@ public record SelectFrequencyPacket(
             var manager = WirelessFrequencyManager.get();
             if (manager == null) return;
 
-            // Block-op access gate: if the device is currently bound to
-            // a frequency AND the player is trying to change that
-            // binding (disconnect OR switch-to-different), they need
-            // at least USE-level access on the CURRENT freq. Skips:
-            //   - unbound devices (currentFreqId <= 0): fresh config
-            //   - same-id re-select (pkt.frequencyId == currentFreqId):
-            //     this is how an ENCRYPTED outsider submits their
-            //     password to JOIN the current freq; the later
-            //     {@code canPlayerAccess} check does the real work.
+            // Changing a binding requires access to the current frequency.
+            // Reselecting it must remain available for encrypted password authentication.
             boolean changingBinding = pkt.frequencyId != currentFreqId;
             if (changingBinding && currentFreqId > 0) {
                 var currentFreq = manager.getFrequency(currentFreqId);
@@ -135,16 +128,7 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            // Durable auto-enroll: anyone who cleared the
-            // {@code canPlayerAccess} check above got there via one of
-            //   (a) existing member, or
-            //   (b) PUBLIC fallback USER access, or
-            //   (c) ENCRYPTED + correct password.
-            // Cases (b) and (c) leave the player with access but no
-            // persistent membership entry, so the Members tab and
-            // subsequent session re-opens would forget them. Promoting
-            // both to a real USER row makes access stable and the
-            // member list consistent with "who actually uses this freq".
+            // Persist membership after public access or successful password authentication.
             if (!freq.isMember(player) && freq.enrollAsUser(player)) {
                 manager.markModified();
                 SyncFrequencyDetailPacket.broadcastMembersTo(player.getServer(), pkt.frequencyId);

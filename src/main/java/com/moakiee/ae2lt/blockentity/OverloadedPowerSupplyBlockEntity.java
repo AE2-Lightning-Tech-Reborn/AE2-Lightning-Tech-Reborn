@@ -41,10 +41,10 @@ import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.block.OverloadedPowerSupplyBlock;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.OverloadedPowerSupplyLogic;
+import com.moakiee.ae2lt.logic.energy.OverloadedPowerSupplyLogic;
 import com.moakiee.ae2lt.logic.WirelessConnectionLists;
 import com.moakiee.ae2lt.logic.WirelessConnectionRef;
-import com.moakiee.ae2lt.logic.WirelessConnectionValidator;
+import com.moakiee.ae2lt.logic.wireless.WirelessConnectionValidator;
 import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 import com.moakiee.ae2lt.menu.OverloadedPowerSupplyMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
@@ -495,15 +495,8 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
     @Override
     public void onChangeInventory(InternalInventory inv, int slot) {
         if (inv == cellInv) {
-            // The cell slot just changed (player took out / inserted / swapped).
-            // Flush any FE BufferedMEStorage is still holding (transient buffer
-            // AND staged cell cache) BEFORE we drop the cached view, so the
-            // ItemStack the player just removed is fully up-to-date and we
-            // never carry stale FE forward to whatever cell appears next.
-            // {@code flushBufferToNetwork} ends an active overload batch which
-            // already persists the cell; the explicit persist here covers the
-            // NORMAL-mode path where no batch is active but cached delta might
-            // still be queued in the FluxCellInventory.
+            // Flush and persist before discarding the view so removed cells keep their FE.
+            // Explicit persistence also covers normal mode, where no overload batch is active.
             logic.flushBufferToNetwork();
             AppFluxBridge.persistCellStorage(cachedCellView);
             cellViewDirty = true;

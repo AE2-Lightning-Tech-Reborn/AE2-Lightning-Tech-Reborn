@@ -24,7 +24,6 @@ final class PatternMigrationSource {
     final boolean craftingHint;
     final Runnable beginBatch;
     final Runnable endBatch;
-    PatternMigrationProviderCatalog catalog;
     boolean disabled;
 
     PatternMigrationSource(Object owner, IGridNode anchor, InternalInventory inventory,

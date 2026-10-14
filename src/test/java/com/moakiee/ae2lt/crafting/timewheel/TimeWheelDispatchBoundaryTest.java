@@ -31,6 +31,7 @@ import appeng.hooks.ticking.TickHandler;
 import appeng.me.service.CraftingService;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
+import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -51,6 +52,49 @@ class TimeWheelDispatchBoundaryTest {
     @Test
     void providerRejectionDoesNotPoisonFollowingPhysicalTicks() throws Exception {
         runBoundary(true);
+    }
+
+    @Test
+    void ordinaryFallbackKeepsAnAvailableIdentityMatchedProviderAfterPartialBatchSuccess() throws Exception {
+        var pattern = new IPatternDetails() {
+            @Override public AEItemKey getDefinition() { return null; }
+            @Override public IInput[] getInputs() { return new IInput[0]; }
+            @Override public GenericStack[] getOutputs() { return new GenericStack[0]; }
+        };
+        boolean[] busy = {true};
+        var provider = new ICraftingProvider() {
+            @Override public List<IPatternDetails> getAvailablePatterns() { return List.of(pattern); }
+            @Override public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs) { return true; }
+            @Override public boolean isBusy() { return busy[0]; }
+        };
+        var energy = proxy(IEnergyService.class, Map.of());
+        var service = new CraftingService(proxy(IGrid.class, Map.of()),
+                proxy(IStorageService.class, Map.of()), energy) {
+            @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) {
+                return List.of(provider);
+            }
+        };
+        var logic = new TimeWheelCraftingCPU(null, 1, 0, 100, false).getCraftingLogic();
+        @SuppressWarnings("unchecked")
+        var batches = (Map<IPatternDetails, java.util.IdentityHashMap<ICraftingProvider, Boolean>>)
+                field(logic.getClass(), "batchedByTask").get(logic);
+        var excluded = new java.util.IdentityHashMap<ICraftingProvider, Boolean>();
+        excluded.put(provider, Boolean.TRUE);
+        batches.put(pattern, excluded);
+        var method = logic.getClass().getDeclaredMethod("providersForSinglePush", CraftingService.class,
+                IPatternDetails.class, TickProviderDispatchSchedule.class);
+        method.setAccessible(true);
+        var schedule = new TickProviderDispatchSchedule();
+        var hidden = (Iterable<?>) method.invoke(logic, service, pattern, schedule);
+        assertFalse(hidden.iterator().hasNext(), "Busy batch providers must remain excluded");
+        busy[0] = false;
+        var visible = ((Iterable<?>) method.invoke(logic, service, pattern, schedule)).iterator();
+        assertTrue(visible.hasNext(), "An available provider must remain eligible for single-copy fallback");
+        var resolved = visible.next();
+        var getter = resolved.getClass().getDeclaredMethod("provider");
+        getter.setAccessible(true);
+        assertSame(provider, getter.invoke(resolved));
+        assertFalse(visible.hasNext());
     }
 
     private void runBoundary(boolean rejectSecondTick) throws Exception {

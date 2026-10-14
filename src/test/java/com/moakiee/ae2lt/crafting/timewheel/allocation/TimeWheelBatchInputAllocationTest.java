@@ -196,7 +196,7 @@ class TimeWheelBatchInputAllocationTest {
                 }
             }, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
         }
-        assertEquals(1, matches.get(), "The LT-only Mixin must match the unmodified dependency");
+        assertEquals(1, matches.get(), "The LT-only Mixin must match the dependency's admission-aware extraction");
     }
 
     private static ParallelBatchCpuHelper.BulkResult scoped(IPatternDetails pattern,

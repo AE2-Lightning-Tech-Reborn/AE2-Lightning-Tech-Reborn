@@ -103,7 +103,7 @@ public final class ArmorProtectionGameTests {
         return event;
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void phaseCancelsWithoutZeroingAndOnlyAbsorbs1024(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD.get());
         var player = equip(h, armor);
@@ -132,7 +132,7 @@ public final class ArmorProtectionGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void ordinaryDamageHasFixedCapAndDoesNotBuildDeathCombos(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
         var player = equip(h, armor);
@@ -183,7 +183,7 @@ public final class ArmorProtectionGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void directDeathCombosPayDifferencesAndResetAtTwentyTicks(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
         var player = equip(h, armor);
@@ -224,7 +224,7 @@ public final class ArmorProtectionGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void mixedShieldDeathComboAndFailedPaymentDoNotDoubleBill(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get());
         var player = equip(h, armor);
@@ -254,7 +254,7 @@ public final class ArmorProtectionGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void failedPaymentLeavesNoCreditAndNoPartialDebit(GameTestHelper h) {
         var armor = armor(h, ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD.get());
         var player = equip(h, armor);
@@ -274,7 +274,7 @@ public final class ArmorProtectionGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void multidimensionalIsFreeAndEveryShieldPairConflicts(GameTestHelper h) {
         var tiers = List.of(ModItems.CELESTWEAVE_SUBMODULE_MATRIX_SHIELD.get(),
                 ModItems.CELESTWEAVE_SUBMODULE_PHASE_SHIELD.get(),
@@ -297,7 +297,7 @@ public final class ArmorProtectionGameTests {
         h.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void oldStackAndArmorNbtMigrateWithoutLosingSettings(GameTestHelper h) {
         var registries = h.getLevel().registryAccess();
         var oldItem = new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_OVERLOAD_PROTECTION.get(), 3);
@@ -331,7 +331,6 @@ public final class ArmorProtectionGameTests {
         component.put("submodule_data", data);
 
         var migrated = ItemStack.of(raw);
-        CelestweaveArmorState.ensureArmorId(migrated);
         var container = ModDataComponents.CELESTWEAVE_MODULES.get(migrated);
         require(container != null && container.armorId().orElseThrow().equals(armorId), "armor identity lost");
         require(container.modules().size() == 2, "phase was not absorbed or energy module was lost");
@@ -361,7 +360,7 @@ public final class ArmorProtectionGameTests {
         h.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
     public static void legacyResearchNotesStillRequestTheRenamedRitualItem(GameTestHelper h) {
         var ids = new java.util.ArrayList<net.minecraft.resources.ResourceLocation>();
         ids.add(new net.minecraft.resources.ResourceLocation("ae2lt:pigmee_core"));

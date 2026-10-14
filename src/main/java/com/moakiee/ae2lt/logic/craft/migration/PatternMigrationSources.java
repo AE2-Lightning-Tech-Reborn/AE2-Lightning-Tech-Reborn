@@ -152,14 +152,9 @@ final class PatternMigrationSources {
             var inventory = logic.getPatternInv();
             var cached = ((PatternProviderLogicAccessor) logic).getPatterns();
             boolean hint = cached.stream().limit(32).anyMatch(pattern -> pattern instanceof IMolecularAssemblerSupportedPattern);
-            var source = source(owner, node, inventory, () -> host.getLogic().getPatternInv(),
+            return List.of(source(owner, node, inventory, () -> host.getLogic().getPatternInv(),
                     () -> host.getLogic().isBusy() || !host.getLogic().getReturnInv().isEmpty(),
-                    2, 0, inventory.size(), hint, () -> {}, () -> {});
-            if (logic.getClass() == appeng.helpers.patternprovider.PatternProviderLogic.class
-                    && inventory.size() > PatternMigrationBudget.MAX_SLOTS) {
-                source.catalog = new PatternMigrationProviderCatalog(logic);
-            }
-            return List.of(source);
+                    2, 0, inventory.size(), hint, () -> {}, () -> {}));
         }
         if (owner instanceof PatternContainer container) {
             var inventory = container.getTerminalPatternInventory();

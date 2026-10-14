@@ -1,0 +1,21 @@
+// ./gradlew -I scripts/phase-command-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseCommandSourceGameTests.java'])
+        tasks.named('processJdbResources', ProcessResources) {
+            from('src/jdb/resources/data/ae2lt/structures/pigmee_station_empty.nbt') {
+                into 'data/ae2lt_phase_command/structures'
+            }
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_phase_command'
+            property 'forge.logging.console.level', 'info'
+            workingDirectory project.file('build/phase-command-gametest-forge')
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

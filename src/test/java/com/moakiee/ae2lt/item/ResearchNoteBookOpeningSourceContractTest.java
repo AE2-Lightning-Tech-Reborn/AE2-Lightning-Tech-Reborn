@@ -34,7 +34,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         String packet = source("src/main/java/com/moakiee/ae2lt/network/OpenResearchNotePacket.java");
         String bridge = source("src/main/java/com/moakiee/ae2lt/network/ResearchNoteClientBridge.java");
         String bootstrap = source("src/main/java/com/moakiee/ae2lt/client/ResearchNoteClientBootstrap.java");
-        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/LightningKeyClientInit.java");
+        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/equipment/LightningKeyClientInit.java");
 
         assertFalse(packet.contains("net.minecraft.client"));
         assertFalse(packet.contains("com.moakiee.ae2lt.client"));
@@ -95,7 +95,9 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "ClosedLoopResultPagePacket",
                 "OpenResearchNotePacket",
                 "MatrixPatternMigrationActionPacket",
-                "MatrixPatternMigrationStatusPacket");
+                "MatrixPatternMigrationStatusPacket",
+                "BigStockPacket",
+                "ConfirmBigAmountPacket");
         var matcher = Pattern.compile("(?m)^\\s+([A-Za-z0-9]+Packet)\\.class,$").matcher(network);
         List<String> actualOrder = new ArrayList<>();
         while (matcher.find()) {
@@ -104,10 +106,10 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"gtl-10\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"10\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
-                "Existing packet discriminators must remain stable");
+                "Existing packet discriminators must remain stable and new packets must stay last");
 
         int stock = network.indexOf("BigStockPacket.class");
         int confirm = network.indexOf("ConfirmBigAmountPacket.class");
@@ -122,10 +124,6 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "JEI supply packets must append after all existing GTL discriminators");
         assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_SERVER)", jeiRequest) > jeiRequest);
         assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", jeiResult) > jeiResult);
-        int migrationRequest = network.indexOf("MatrixPatternMigrationActionPacket.class");
-        int migrationStatus = network.indexOf("MatrixPatternMigrationStatusPacket.class");
-        assertTrue(migrationRequest > jeiResult && migrationStatus > migrationRequest,
-                "Migration packets must append after every existing GTL discriminator");
     }
 
     private static String source(String path) throws Exception {

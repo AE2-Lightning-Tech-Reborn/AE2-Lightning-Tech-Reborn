@@ -171,6 +171,8 @@ public final class RailgunBeamService {
                     RailgunFireService.sendFail(player, failKey);
                     return false;
                 }
+                // Plan only the EHV shortfall, then prove the actual HV payment.
+                // The shared policy rejects overflow instead of allowing a capped underpayment.
                 var payment = LightningCompensationPolicy.plan(0L, primaryNeeded, Long.MAX_VALUE, primaryAvail, ratio);
                 compensationHvNeeded = payment.highVoltageToConsume();
                 if (!payment.canPay() || grid.getStorageService().getInventory().extract(

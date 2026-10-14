@@ -16,6 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+// Derive at the vanilla reload boundary, before optional recipe-script processing.
+// Run after the default 1000 hooks but ahead of that late recipe-script hook.
+// The KJS integration GameTest checks this order on initial load and /reload.
 @Mixin(value = RecipeManager.class, priority = 1088)
 public abstract class InscriberProcessorRecipeLoaderMixin {
     @Shadow(remap = false) @Final private ICondition.IContext context;

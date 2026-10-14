@@ -18,7 +18,7 @@ import com.moakiee.thunderbolt.core.channel.HighCapacityChannelSupport;
 import com.moakiee.ae2lt.blockentity.OverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.wirelesslink.MultiblockLinkReadiness;
 import com.moakiee.ae2lt.grid.wirelesslink.WirelessLinkOps;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.me.GridNodeAccess;
 
 /**

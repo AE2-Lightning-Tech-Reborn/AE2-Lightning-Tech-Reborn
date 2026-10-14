@@ -36,32 +36,6 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt_catalyzer")
 @PrefixGameTestTemplate(false)
 public final class CrystalCatalyzerFluidGameTests {
-    @net.minecraft.gametest.framework.GameTestGenerator
-    public static List<net.minecraft.gametest.framework.TestFunction> optionalMachineTests() {
-        var tests = new ArrayList<net.minecraft.gametest.framework.TestFunction>();
-        if (ModList.get().isLoaded("oritech")) {
-            addOptionalTest(tests, "fluxite2048", CrystalCatalyzerFluidGameTests::fluxite2048);
-            addOptionalTest(tests, "uranium2048", CrystalCatalyzerFluidGameTests::uranium2048);
-        }
-        if (ModList.get().isLoaded("justdirethings")) {
-            addOptionalTest(tests, "timecrystal2048", CrystalCatalyzerFluidGameTests::timeCrystal2048);
-        }
-        if (ModList.get().isLoaded("ae2cs")
-                && BuiltInRegistries.ITEM.containsKey(new ResourceLocation("ae2cs:quantum_mother_rock"))) {
-            addOptionalTest(tests, "ae2csmotherrock16384", CrystalCatalyzerFluidGameTests::ae2csMotherRock16384);
-            addOptionalTest(tests, "ae2cssinglemotherrockproduceseight", CrystalCatalyzerFluidGameTests::ae2csSingleMotherRockProducesEight);
-            addOptionalTest(tests, "pigmeeae2csmotherrockremainsreusable", CrystalCatalyzerFluidGameTests::pigmeeAe2csMotherRockRemainsReusable);
-        }
-        return tests;
-    }
-
-    private static void addOptionalTest(List<net.minecraft.gametest.framework.TestFunction> tests,
-                                        String name, java.util.function.Consumer<GameTestHelper> test) {
-        tests.add(new net.minecraft.gametest.framework.TestFunction("defaultBatch", name,
-                "ae2lt_catalyzer:empty", net.minecraft.world.level.block.Rotation.NONE,
-                200, 0L, true, 1, 1, test));
-    }
-
     private static final BlockPos POS = new BlockPos(2, 2, 2);
     private static final int CATALYST = CrystalCatalyzerInventory.SLOT_CATALYST;
     private static final int OUTPUT = CrystalCatalyzerInventory.SLOT_OUTPUT;
@@ -79,27 +53,27 @@ public final class CrystalCatalyzerFluidGameTests {
         if (!ok) throw new net.minecraft.gametest.framework.GameTestAssertException(message);
     }
 
-    private static Optional<CrystalCatalyzerRecipeCandidate> find(GameTestHelper helper, String path) {
-        return CrystalCatalyzerRecipeService.findRecipeById(helper.getLevel(),
+    private static Optional<CrystalCatalyzerRecipeCandidate> find(GameTestHelper h, String path) {
+        return CrystalCatalyzerRecipeService.findRecipeById(h.getLevel(),
                 new ResourceLocation("ae2lt:crystal_catalyzer/" + path));
     }
 
-    private static CrystalCatalyzerBlockEntity machine(GameTestHelper helper, boolean pigmee) {
-        helper.setBlock(POS, pigmee ? ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get() : ModBlocks.CRYSTAL_CATALYZER.get());
-        return (CrystalCatalyzerBlockEntity) helper.getBlockEntity(POS);
+    private static CrystalCatalyzerBlockEntity machine(GameTestHelper h, boolean pigmee) {
+        h.setBlock(POS, pigmee ? ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get() : ModBlocks.CRYSTAL_CATALYZER.get());
+        return (CrystalCatalyzerBlockEntity) h.getBlockEntity(POS);
     }
 
-    private static CrystalCatalyzerBlockEntity powered(GameTestHelper helper, long lightning) {
-        var host = machine(helper, false);
-        helper.setBlock(POS.below(), AEBlocks.CREATIVE_ENERGY_CELL.block());
-        helper.setBlock(POS.east(), AEBlocks.DRIVE.block());
+    private static CrystalCatalyzerBlockEntity powered(GameTestHelper h, long lightning) {
+        var host = machine(h, false);
+        h.setBlock(POS.below(), AEBlocks.CREATIVE_ENERGY_CELL.block());
+        h.setBlock(POS.east(), AEBlocks.DRIVE.block());
         var cell = new ItemStack(ModItems.LIGHTNING_STORAGE_COMPONENT_I.get());
         var storage = StorageCells.getCellInventory(cell, null);
         check(storage != null, "lightning cell is not registered");
         check(storage.insert(LightningKey.HIGH_VOLTAGE, lightning, Actionable.MODULATE,
                 IActionSource.ofMachine(host)) == lightning, "could not seed lightning storage");
         storage.persist();
-        DriveBlockEntity drive = (DriveBlockEntity) helper.getBlockEntity(POS.east());
+        DriveBlockEntity drive = (DriveBlockEntity) h.getBlockEntity(POS.east());
         drive.getInternalInventory().setItemDirect(0, cell);
         return host;
     }
@@ -119,7 +93,7 @@ public final class CrystalCatalyzerFluidGameTests {
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty")
-    public static void optionalRecipeDataAndCodecs(GameTestHelper helper) {
+    public static void optionalRecipeDataAndCodecs(GameTestHelper h) {
         var serializer = new CrystalCatalyzerRecipe.Serializer();
         var legacyJson = JsonParser.parseString("""
                 {"catalyst":{"item":"ae2:quartz_block"},"catalystCount":1,
@@ -131,7 +105,7 @@ public final class CrystalCatalyzerFluidGameTests {
         var recipes = new ArrayList<CrystalCatalyzerRecipe>();
         recipes.add(legacy);
         for (var route : SPECIAL) {
-            var candidate = find(helper, route.path());
+            var candidate = find(h, route.path());
             check(candidate.isPresent() == ModList.get().isLoaded(route.mod()), "optional recipe boundary " + route.path());
             if (candidate.isEmpty()) continue;
             var recipe = candidate.get().recipe();
@@ -171,17 +145,17 @@ public final class CrystalCatalyzerFluidGameTests {
             check(CrystalCatalyzerLockedRecipe.fromTag(saved) == null,
                     "invalid saved fluid was silently changed to water");
         }
-        helper.succeed();
+        h.succeed();
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty")
-    public static void sameCatalystDifferentFluidsSelectCorrectOutput(GameTestHelper helper) {
-        var host = machine(helper, false);
-        var water = find(helper, WATER).orElseThrow().recipe();
+    public static void sameCatalystDifferentFluidsSelectCorrectOutput(GameTestHelper h) {
+        var host = machine(h, false);
+        var water = find(h, WATER).orElseThrow().recipe();
         var lava = new CrystalCatalyzerRecipe(new ResourceLocation("ae2lt_catalyzer:test_lava"), water.catalyst(), 1,
                 CrystalCatalyzerOutput.ofItem(new ItemStack(net.minecraft.world.item.Items.DIAMOND)),
                 100_000, 1, LightningKey.Tier.HIGH_VOLTAGE, Mode.CRYSTAL, new FluidStack(Fluids.LAVA, 1000));
-        var manager = helper.getLevel().getRecipeManager();
+        var manager = h.getLevel().getRecipeManager();
         var original = new ArrayList<>(manager.getRecipes());
         var modified = new ArrayList<>(original);
         var lavaId = new ResourceLocation("ae2lt_catalyzer:test_lava");
@@ -196,20 +170,20 @@ public final class CrystalCatalyzerFluidGameTests {
             host.getTank().setFluid(new FluidStack(Fluids.LAVA, 999));
             check(host.findProcessableRecipe().isEmpty(), "insufficient fluid matched");
         } finally { manager.replaceRecipes(original); }
-        helper.succeed();
+        h.succeed();
     }
 
-    private static void fullCycle(GameTestHelper helper, String path) {
-        fullCycle(helper, path, 2048);
+    private static void fullCycle(GameTestHelper h, String path) {
+        fullCycle(h, path, 2048);
     }
 
-    private static void fullCycle(GameTestHelper helper, String path, int expectedCount) {
-        var candidate = find(helper, path);
-        if (candidate.isEmpty()) { helper.succeed(); return; }
+    private static void fullCycle(GameTestHelper h, String path, int expectedCount) {
+        var candidate = find(h, path);
+        if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe();
-        var host = powered(helper, 10);
-        helper.runAfterDelay(20, () -> supply(host, recipe));
-        helper.succeedWhen(() -> {
+        var host = powered(h, 10);
+        h.runAfterDelay(20, () -> supply(host, recipe));
+        h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
             check(result.getCount() == expectedCount, "waiting for " + expectedCount + " products: " + path);
             check(ItemStack.isSameItemSameTags(result, recipe.getOutputTemplate()), "wrong product");
@@ -239,18 +213,21 @@ public final class CrystalCatalyzerFluidGameTests {
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 200)
-    public static void legacyWater2048(GameTestHelper helper) { fullCycle(helper, WATER); }
-    public static void fluxite2048(GameTestHelper helper) { fullCycle(helper, "fluxite_block"); }
-    public static void uranium2048(GameTestHelper helper) { fullCycle(helper, "uranium_crystal"); }
-    public static void timeCrystal2048(GameTestHelper helper) { fullCycle(helper, "time_crystal_block"); }
+    public static void legacyWater2048(GameTestHelper h) { fullCycle(h, WATER); }
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 200)
+    public static void fluxite2048(GameTestHelper h) { fullCycle(h, "fluxite_block"); }
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 200)
+    public static void uranium2048(GameTestHelper h) { fullCycle(h, "uranium_crystal"); }
+    @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 200)
+    public static void timeCrystal2048(GameTestHelper h) { fullCycle(h, "time_crystal_block"); }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 300)
-    public static void savedCycleWaitsForFluidAndOutput(GameTestHelper helper) {
-        var recipe = find(helper, "time_crystal_block").orElseGet(() -> find(helper, WATER).orElseThrow()).recipe();
-        var host = powered(helper, 10);
+    public static void savedCycleWaitsForFluidAndOutput(GameTestHelper h) {
+        var recipe = find(h, "time_crystal_block").orElseGet(() -> find(h, WATER).orElseThrow()).recipe();
+        var host = powered(h, 10);
         long[] paid = {-1};
-        helper.runAfterDelay(20, () -> supply(host, recipe));
-        helper.runAfterDelay(28, () -> {
+        h.runAfterDelay(20, () -> supply(host, recipe));
+        h.runAfterDelay(28, () -> {
             check(host.hasLockedRecipe() && host.getConsumedEnergy() > 0, "cycle never started");
             var tag = new CompoundTag();
             host.saveAdditional(tag);
@@ -262,31 +239,31 @@ public final class CrystalCatalyzerFluidGameTests {
             insufficient.setAmount(999);
             host.getTank().setFluid(insufficient);
         });
-        helper.runAfterDelay(65, () -> {
+        h.runAfterDelay(65, () -> {
             check(host.hasLockedRecipe() && host.getConsumedEnergy() == paid[0], "missing fluid lost/advanced progress");
             check(host.getFluid().getAmount() == 999 && lightning(host) == 10, "missing fluid spent materials");
             host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT));
             host.getTank().setFluid(recipe.fluidInput());
         });
-        helper.runAfterDelay(100, () -> {
+        h.runAfterDelay(100, () -> {
             check(host.getConsumedEnergy() == paid[0] && host.getFluid().getAmount() == 1000 && lightning(host) == 10,
                     "blocked output advanced or spent resources");
             host.getInventory().extractItem(OUTPUT, CrystalCatalyzerInventory.OUTPUT_SLOT_LIMIT, false);
         });
-        helper.succeedWhen(() -> {
-            check(helper.getTick() > 100 && host.getInventory().getStackInSlot(OUTPUT).getCount() == 2048, "waiting for recovery");
+        h.succeedWhen(() -> {
+            check(h.getTick() > 100 && host.getInventory().getStackInSlot(OUTPUT).getCount() == 2048, "waiting for recovery");
             check(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0 && lightning(host) == 9,
                     "recovered cycle did not settle once");
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 200)
-    public static void pigmeeRejectsSpecialFluidsAndLegacyFluxite(GameTestHelper helper) {
-        var host = machine(helper, true);
-        helper.runAfterDelay(15, () -> {
+    public static void pigmeeRejectsSpecialFluidsAndLegacyFluxite(GameTestHelper h) {
+        var host = machine(h, true);
+        h.runAfterDelay(15, () -> {
             var fluids = new ArrayList<FluidStack>();
             fluids.add(new FluidStack(Fluids.LAVA, 1000));
-            for (var route : SPECIAL) find(helper, route.path()).ifPresent(c -> fluids.add(c.recipe().fluidInput()));
+            for (var route : SPECIAL) find(h, route.path()).ifPresent(c -> fluids.add(c.recipe().fluidInput()));
             for (var fluid : fluids) {
                 check(!host.getTank().isFluidValid(fluid), "GUI tank accepted non-water");
                 check(host.getTank().fill(fluid, FluidAction.EXECUTE) == 0, "direct fill accepted non-water");
@@ -298,7 +275,7 @@ public final class CrystalCatalyzerFluidGameTests {
                 }
             }
             for (var route : SPECIAL) {
-                var candidate = find(helper, route.path());
+                var candidate = find(h, route.path());
                 if (candidate.isEmpty()) continue;
                 var recipe = candidate.get().recipe();
                 var catalyst = recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(64);
@@ -313,15 +290,15 @@ public final class CrystalCatalyzerFluidGameTests {
                 check(!host.completeLockedRecipe(old, candidate.get()) && host.getFluid().getAmount() == 1000,
                         "legacy water snapshot completed special-fluid recipe");
             }
-            helper.succeed();
+            h.succeed();
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 100)
-    public static void changedRecipeFluidDoesNotStrandSavedCycle(GameTestHelper helper) {
-        var host = machine(helper, false);
-        helper.runAfterDelay(15, () -> {
-            var candidate = find(helper, "fluxite_block").orElseGet(() -> find(helper, WATER).orElseThrow());
+    public static void changedRecipeFluidDoesNotStrandSavedCycle(GameTestHelper h) {
+        var host = machine(h, false);
+        h.runAfterDelay(15, () -> {
+            var candidate = find(h, "fluxite_block").orElseGet(() -> find(h, WATER).orElseThrow());
             var recipe = candidate.recipe();
             host.getInventory().setItemDirect(CATALYST, recipe.catalyst().orElseThrow().getItems()[0]);
             var staleFluid = recipe.isWaterRecipe() ? new FluidStack(Fluids.LAVA, 1000)
@@ -340,36 +317,36 @@ public final class CrystalCatalyzerFluidGameTests {
             check(host.getFluid().getAmount() == 1000 && host.getInventory().getStackInSlot(OUTPUT).isEmpty(),
                     "invalidating the stale cycle spent fluid or produced free output");
             check(host.lockCurrentRecipe().orElseThrow().matchesFluidInput(recipe), "replacement recipe did not relock");
-            helper.succeed();
+            h.succeed();
         });
     }
 
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 350)
-    public static void pigmeeStillNeeds100DistinctTicks(GameTestHelper helper) {
-        PigmeeCrystalCatalyzerGameTests.pigmeeRepeatedTicksDoNotAccelerate(helper);
+    public static void pigmeeStillNeeds100DistinctTicks(GameTestHelper h) {
+        PigmeeCrystalCatalyzerGameTests.pigmeeRepeatedTicksDoNotAccelerate(h);
     }
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 500)
-    public static void pigmeeLegacyProgressStillResumes(GameTestHelper helper) {
-        PigmeeCrystalCatalyzerGameTests.pigmeeSavedProgressAndLegacyRecipeIdResume(helper);
+    public static void pigmeeLegacyProgressStillResumes(GameTestHelper h) {
+        PigmeeCrystalCatalyzerGameTests.pigmeeSavedProgressAndLegacyRecipeIdResume(h);
     }
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 900)
-    public static void pigmeeOutputCapacityStillPausesAndResumes(GameTestHelper helper) {
-        PigmeeCrystalCatalyzerGameTests.pigmeeOutputBackpressurePausesAndResumes(helper);
+    public static void pigmeeOutputCapacityStillPausesAndResumes(GameTestHelper h) {
+        PigmeeCrystalCatalyzerGameTests.pigmeeOutputBackpressurePausesAndResumes(h);
     }
     @GameTest(templateNamespace = "ae2lt_catalyzer", template = "empty", timeoutTicks = 400)
-    public static void normalStillRequiresEnergyAndLightning(GameTestHelper helper) {
-        PigmeeCrystalCatalyzerGameTests.normalCatalyzerDoesNotGainFreeProcessing(helper);
+    public static void normalStillRequiresEnergyAndLightning(GameTestHelper h) {
+        PigmeeCrystalCatalyzerGameTests.normalCatalyzerDoesNotGainFreeProcessing(h);
     }
 
     /** Compare upstream loot definitions, before modpack global loot modifiers, including Entro. */
     @GameTest(template = "empty")
-    public static void ae2csMotherRocksMatchNaturalHarvest(GameTestHelper helper) {
-        var host = machine(helper, false);
+    public static void ae2csMotherRocksMatchNaturalHarvest(GameTestHelper h) {
+        var host = machine(h, false);
         host.getTank().setFluid(new FluidStack(Fluids.WATER, 1000));
         for (var family : List.of("nether_quartz", "energized_certus_quartz", "ender_quartz",
                 "energized_fluix", "fluix", "redstone", "resonating", "quantum", "link", "meteor", "entro")) {
             var catalystId = new ResourceLocation("ae2cs:" + family + "_mother_rock");
-            var candidate = find(helper, "ae2cs/" + family + "_mother_rock");
+            var candidate = find(h, "ae2cs/" + family + "_mother_rock");
             boolean available = BuiltInRegistries.ITEM.containsKey(catalystId)
                     && (!family.equals("entro") || ModList.get().isLoaded("extendedae"));
             check(candidate.isPresent() == available, "incorrect optional recipe presence: " + family);
@@ -380,15 +357,15 @@ public final class CrystalCatalyzerFluidGameTests {
                     ? "extendedae:entro_cluster" : "ae2cs:" + family + "_crystal_cluster");
             check(BuiltInRegistries.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + family);
             var rawDrops = new ArrayList<ItemStack>();
-            var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(helper.getLevel())
+            var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(h.getLevel())
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
-                            net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(POS)))
+                            net.minecraft.world.phys.Vec3.atCenterOf(h.absolutePos(POS)))
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
                             BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState())
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.TOOL,
                             new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE))
                     .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.BLOCK);
-            helper.getLevel().getServer().getLootData()
+            h.getLevel().getServer().getLootData()
                     .getLootTable(BuiltInRegistries.BLOCK.get(clusterId).getLootTable())
                     .getRandomItemsRaw(lootParams, rawDrops::add);
             check(rawDrops.stream().anyMatch(drop -> ItemStack.isSameItemSameTags(drop, recipe.getOutputTemplate())),
@@ -401,24 +378,26 @@ public final class CrystalCatalyzerFluidGameTests {
             check(recipe.isWaterRecipe() && recipe.fluidInput().getAmount() == 1000,
                     "mother rock must retain the standard water cost: " + family);
         }
-        helper.succeed();
+        h.succeed();
     }
 
-    public static void ae2csMotherRock16384(GameTestHelper helper) {
-        fullCycle(helper, "ae2cs/quantum_mother_rock", 16384);
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void ae2csMotherRock16384(GameTestHelper h) {
+        fullCycle(h, "ae2cs/quantum_mother_rock", 16384);
     }
 
-    public static void ae2csSingleMotherRockProducesEight(GameTestHelper helper) {
-        var candidate = find(helper, "ae2cs/quantum_mother_rock");
-        if (candidate.isEmpty()) { helper.succeed(); return; }
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void ae2csSingleMotherRockProducesEight(GameTestHelper h) {
+        var candidate = find(h, "ae2cs/quantum_mother_rock");
+        if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe();
-        var host = powered(helper, 10);
-        helper.runAfterDelay(20, () -> {
+        var host = powered(h, 10);
+        h.runAfterDelay(20, () -> {
             host.getInventory().setItemDirect(CATALYST, recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(1));
             host.getTank().setFluid(recipe.fluidInput());
             host.getEnergyStorage().receiveEnergy(100_000, false);
         });
-        helper.succeedWhen(() -> {
+        h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
             check(result.getCount() == 8 && ItemStack.isSameItemSameTags(result, recipe.getOutputTemplate()),
                     "waiting for eight purified crystals from one mother rock");
@@ -428,11 +407,12 @@ public final class CrystalCatalyzerFluidGameTests {
         });
     }
 
-    public static void pigmeeAe2csMotherRockRemainsReusable(GameTestHelper helper) {
-        var candidate = find(helper, "ae2cs/quantum_mother_rock");
-        if (candidate.isEmpty()) { helper.succeed(); return; }
+    @GameTest(template = "empty", timeoutTicks = 200)
+    public static void pigmeeAe2csMotherRockRemainsReusable(GameTestHelper h) {
+        var candidate = find(h, "ae2cs/quantum_mother_rock");
+        if (candidate.isEmpty()) { h.succeed(); return; }
         var recipe = candidate.get().recipe();
-        var host = machine(helper, true);
+        var host = machine(h, true);
         check(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output cap must be 64");
         host.getInventory().setItemDirect(OUTPUT, recipe.getOutputTemplate().copyWithCount(57));
         check(!host.getInventory().canAcceptRecipeOutput(recipe.getOutputTemplate()),
@@ -441,7 +421,7 @@ public final class CrystalCatalyzerFluidGameTests {
         var catalyst = recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(64);
         host.getInventory().setItemDirect(CATALYST, catalyst);
         host.getTank().setFluid(recipe.fluidInput());
-        helper.runAfterDelay(35, () -> {
+        h.runAfterDelay(35, () -> {
             check(host.hasLockedRecipe() && host.getProcessingTicksSpent() > 0, "Pigmee cycle did not start");
             var tag = new CompoundTag();
             host.saveAdditional(tag);
@@ -450,7 +430,7 @@ public final class CrystalCatalyzerFluidGameTests {
             host.loadTag(tag);
             check(host.getLockedRecipe().orElseThrow().output().getCount() == 8, "reload lost the base yield");
         });
-        helper.succeedWhen(() -> {
+        h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(OUTPUT);
             check(result.getCount() == 64 && ItemStack.isSameItemSameTags(result, recipe.getOutputTemplate()),
                     "waiting for eight purified crystals to fill the 64-item output");

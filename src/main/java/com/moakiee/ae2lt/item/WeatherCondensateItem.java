@@ -4,14 +4,13 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.moakiee.ae2lt.logic.WeatherControlHelper;
+import com.moakiee.ae2lt.logic.world.WeatherControlHelper;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 

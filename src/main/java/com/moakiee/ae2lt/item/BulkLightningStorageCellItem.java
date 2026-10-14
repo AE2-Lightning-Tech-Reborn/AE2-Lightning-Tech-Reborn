@@ -65,7 +65,7 @@ public final class BulkLightningStorageCellItem extends Item {
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        disassembleCell(player.getItemInHand(hand), level, player);
+        disassembleCell(player.getItemInHand(hand), player);
         return new InteractionResultHolder<>(
                 InteractionResult.sidedSuccess(level.isClientSide()),
                 player.getItemInHand(hand));
@@ -73,7 +73,7 @@ public final class BulkLightningStorageCellItem extends Item {
 
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
-        return disassembleCell(stack, context.getLevel(), context.getPlayer())
+        return disassembleCell(stack, context.getPlayer())
                 ? InteractionResult.sidedSuccess(context.getLevel().isClientSide())
                 : InteractionResult.PASS;
     }
@@ -95,7 +95,7 @@ public final class BulkLightningStorageCellItem extends Item {
                 .withStyle(ChatFormatting.GRAY));
     }
 
-    private boolean disassembleCell(ItemStack stack, Level level, Player player) {
+    private boolean disassembleCell(ItemStack stack, Player player) {
         if (player == null || !InteractionUtil.isInAlternateUseMode(player)) {
             return false;
         }
@@ -105,9 +105,6 @@ public final class BulkLightningStorageCellItem extends Item {
         var disassembledStacks = List.of(
                 new ItemStack(ModItems.LIGHTNING_ITEM_CELL_HOUSING.get()),
                 new ItemStack(ModItems.BULK_LIGHTNING_CELL_COMPONENT.get()));
-        if (disassembledStacks.isEmpty()) {
-            return false;
-        }
 
         var playerInventory = player.getInventory();
         if (playerInventory.getSelected() != stack) {

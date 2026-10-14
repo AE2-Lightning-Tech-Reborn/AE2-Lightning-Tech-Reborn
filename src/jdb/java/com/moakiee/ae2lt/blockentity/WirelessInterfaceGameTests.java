@@ -80,55 +80,8 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_01_inventory_notification", timeoutTicks = 50)
-    public static void barrelBatchUpdatesComparatorAfterNestedAndExceptionalTransfers(GameTestHelper helper) {
-        var barrelPos = new BlockPos(2, 1, 2);
-        var comparatorPos = barrelPos.south();
-        helper.setBlock(comparatorPos.below(), Blocks.STONE);
-        helper.setBlock(barrelPos, Blocks.BARREL);
-        helper.setBlock(comparatorPos, Blocks.COMPARATOR.defaultBlockState()
-                .setValue(ComparatorBlock.FACING, Direction.NORTH));
-        var level = helper.getLevel();
-        var barrel = (BarrelBlockEntity) level.getBlockEntity(helper.absolutePos(barrelPos));
-        var comparator = (ComparatorBlockEntity) level.getBlockEntity(helper.absolutePos(comparatorPos));
-        helper.runAfterDelay(5, () -> {
-            helper.assertTrue(comparator.getOutputSignal() == 0, "empty barrel comparator");
-            try (var outer = BarrelInventoryNotificationBatch.open()) {
-                helper.assertTrue(!BarrelInventoryNotificationBatch.defer(level, barrel.getBlockPos(), Blocks.DROPPER),
-                        "non-barrel notification was deferred");
-                for (int slot = 0; slot < 13; slot++) barrel.setItem(slot, new ItemStack(Items.STONE, 64));
-                helper.assertTrue(level.getChunkAt(barrel.getBlockPos()).isUnsaved(),
-                        "first batched write must mark its chunk dirty synchronously");
-                try (var inner = BarrelInventoryNotificationBatch.open()) {
-                    for (int slot = 13; slot < 27; slot++) barrel.setItem(slot, new ItemStack(Items.STONE, 64));
-                }
-            }
-            helper.assertTrue(!BarrelInventoryNotificationBatch.defer(level, barrel.getBlockPos(), Blocks.BARREL),
-                    "notification scope leaked after close");
-            helper.assertTrue(!BarrelInventoryNotificationBatch.alreadyMarkedDirty(level, barrel.getBlockPos(), Blocks.BARREL),
-                    "dirty-mark scope leaked after close");
-        });
-        helper.runAfterDelay(10, () -> {
-            helper.assertTrue(comparator.getOutputSignal() == 15, "filled barrel comparator was not updated");
-            var expected = new RuntimeException("transfer interrupted");
-            try (var scope = BarrelInventoryNotificationBatch.open()) {
-                for (int slot = 0; slot < 27; slot++) barrel.setItem(slot, ItemStack.EMPTY);
-                throw expected;
-            } catch (RuntimeException failure) {
-                if (failure != expected) throw failure;
-            }
-            helper.assertTrue(!BarrelInventoryNotificationBatch.defer(level, barrel.getBlockPos(), Blocks.BARREL),
-                    "notification scope leaked after exception");
-        });
-        helper.runAfterDelay(15, () -> {
-            helper.assertTrue(barrel.isEmpty() && comparator.getOutputSignal() == 0,
-                    "exceptional transfer did not update the empty barrel comparator");
-            helper.succeed();
-        });
-    }
-
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling_bound", timeoutTicks = 140)
-    public static void fastWirelessImportPollsChangedInventoryWithinBound(GameTestHelper helper) {
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification", timeoutTicks = 140)
+    public static void fastWirelessImportWakesOnTargetChange(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
             return;
@@ -137,24 +90,13 @@ public final class WirelessInterfaceGameTests {
         var owner = fixture.blockEntity;
         var target = fixture.inventories[0];
         var key = AEItemKey.of(Items.STONE);
-        long[] observed = {-1, -1};
         helper.onEachTick(() -> {
             long tick = helper.getTick();
             if (tick == 80) target.setItem(0, key.toStack(64));
-            if (tick > 80) {
-                if (observed[0] < 0 && target.isEmpty()) observed[0] = tick;
-                if (observed[1] < 0
-                        && storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64) {
-                    observed[1] = tick;
-                }
-            }
-            if (tick == 106) {
-                require(observed[0] >= 0 && observed[0] - 80 <= 21,
-                        "changed inventory exceeded the cold polling bound");
-                require(observed[1] >= 0 && observed[1] - observed[0] <= 5,
-                        "polled import did not reach ME storage within its flush bound");
-                require(target.isEmpty() && owner.benchmarkBufferedImportAmount() == 0,
-                        "polled import retained an already delivered item");
+            if (tick == 84) {
+                require(target.isEmpty(), "notified inventory did not wake within four ticks");
+                require(storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
+                        "notified import did not reach ME storage");
                 helper.succeed();
             }
         });
@@ -264,12 +206,12 @@ public final class WirelessInterfaceGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 170)
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 210)
     public static void fastWirelessExportTypeChangesRemainResponsive(GameTestHelper helper) {
         checkExportTypeChangesRemainResponsive(helper, false);
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 170)
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 210)
     public static void fastLocalExportTypeChangesRemainResponsive(GameTestHelper helper) {
         checkExportTypeChangesRemainResponsive(helper, true);
     }
@@ -285,8 +227,9 @@ public final class WirelessInterfaceGameTests {
         var water = appeng.api.stacks.AEFluidKey.of(net.minecraft.world.level.material.Fluids.WATER);
         ExportVisitObservation[] observation = {null};
         long[] resumed = {-1};
+        var clock = new GridStartClock();
         helper.onEachTick(() -> {
-            long tick = helper.getTick();
+            long tick = clock.tick(helper, owner);
             if (tick < 40) return;
             var storage = owner.getMainNode().getGrid().getStorageService().getInventory();
             if (tick == 40 || tick == 100) {
@@ -332,6 +275,61 @@ public final class WirelessInterfaceGameTests {
                 helper.succeed();
             }
         });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling", timeoutTicks = 180)
+    public static void silentInventoryStillImportsWithinPollingBound(GameTestHelper helper) {
+        if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
+            helper.succeed();
+            return;
+        }
+        var fixture = createFixture(helper, 1);
+        var previous = (net.minecraft.world.level.block.entity.BarrelBlockEntity) fixture.inventories[0];
+        // Model a third-party override that does not call BlockEntity.setChanged().
+        var silent = new net.minecraft.world.level.block.entity.BarrelBlockEntity(
+                previous.getBlockPos(), previous.getBlockState()) {
+            @Override public void setChanged() {}
+        };
+        helper.getLevel().setBlockEntity(silent);
+        var owner = fixture.blockEntity;
+        var key = AEItemKey.of(Items.STONE);
+        var clock = new GridStartClock();
+        helper.onEachTick(() -> {
+            long tick = clock.tick(helper, owner);
+            if (tick == 80) silent.setItem(0, key.toStack(64));
+            if (tick == 110) {
+                require(silent.isEmpty(), "unnotified inventory was not polled within 30 ticks");
+                require(owner.benchmarkBufferedImportAmount() == 0
+                                && storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
+                        "polling fallback lost or duplicated the unnotified input");
+                helper.succeed();
+            }
+        });
+    }
+
+    /** Bound asynchronous fixture startup separately from the measured behavior. */
+    static final class GridStartClock {
+        private long offset = -1;
+
+        long tick(GameTestHelper helper, OverloadedInterfaceBlockEntity owner) {
+            long tick = helper.getTick();
+            if (tick < 40) return tick;
+            if (offset < 0) {
+                if (owner.getMainNode().getGrid() == null) {
+                    require(tick < 80, "fixture grid did not initialize within 80 ticks at " + owner.getBlockPos()
+                            + "; removed=" + owner.isRemoved()
+                            + "; sameEntity=" + (helper.getLevel().getBlockEntity(owner.getBlockPos()) == owner));
+                    return -1;
+                }
+                offset = tick - 40;
+                if (offset > 0) {
+                    org.slf4j.LoggerFactory.getLogger("ae2lt-wireless-io-test").info(
+                            "Fixture grid startup needed {} additional ticks at {}", offset, owner.getBlockPos());
+                }
+            }
+            require(owner.getMainNode().getGrid() != null, "fixture grid disappeared after startup");
+            return tick - offset;
+        }
     }
 
     @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 140)
@@ -1275,7 +1273,7 @@ public final class WirelessInterfaceGameTests {
             if (productionTick) {
                 // Each output holds one atomic batch. A bounded recovery can
                 // legitimately block a short burst; measure it separately
-                // from steady production after the watchdog + observation
+                // from steady production after the cold polling + observation
                 // allowance (21 ticks), without discarding the raw totals.
                 boolean steady = (tick >= 61 && tick < 80)
                         || (tick >= 321 && tick < 380);

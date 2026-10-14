@@ -1,10 +1,14 @@
 package com.moakiee.ae2lt.mixin;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import com.google.gson.JsonParser;
+import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
 import java.util.zip.ZipFile;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -13,13 +17,30 @@ import org.objectweb.asm.tree.*;
 
 /** Read binary shapes without loading client classes on a dedicated-server test JVM. */
 class PortedMixinTargetContractTest {
+    @Test
+    void terminalSlotOverrideHasForgeReleaseMapping() throws Exception {
+        // The ordinary target tests read the development AE2 binary. Its vanilla
+        // overrides retain Mojmap names, unlike the actual Forge release JAR.
+        try (var in = getClass().getClassLoader().getResourceAsStream("ae2lt.refmap.json")) {
+            assertNotNull(in, "Generated release refmap must be present");
+            var mappings = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))
+                    .getAsJsonObject().getAsJsonObject("mappings");
+            var terminal = mappings.getAsJsonObject("com/moakiee/ae2lt/mixin/client/BigTerminalAmountMixin");
+            assertNotNull(terminal, "Terminal mixin must map its inherited vanilla override");
+            String descriptor = "(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/inventory/Slot;)V";
+            assertEquals("Lappeng/client/gui/me/common/MEStorageScreen;m_280092_" + descriptor,
+                    terminal.get("renderSlot" + descriptor).getAsString());
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
         "big.BigCraftAmountMenuMixin", "big.BigCraftConfirmMenuMixin",
         "big.BigCraftingPlanSummaryMixin", "big.BigCraftingStatusEntryMixin", "big.BigCpuListEntryMixin",
         "client.BigNumberEntryWidgetMixin", "client.BigCraftAmountScreenMixin",
         "client.BigCraftingStatusTableMixin", "client.BigTerminalAmountMixin", "client.BigCpuListMixin",
-        "CraftingCPURecordAccessor", "TimeWheelCraftingCPUCyclerMixin"
+        "CraftingCPURecordAccessor", "TimeWheelCraftingCPUCyclerMixin",
+        "LightningBoltOriginMixin", "client.LightningBoltRendererMixin"
     })
     void selectorsMatchForgeAe2Binary(String name) throws Exception {
         var mixin = read("com/moakiee/ae2lt/mixin/" + name.replace('.', '/'));
