@@ -215,7 +215,7 @@ public final class MultiblockStructureRecipes {
                                 List.of(),
                                 false));
                         case PORT_CANDIDATE -> {
-                            Block displayed = pos.equals(TianshuMultiblockTemplate.LOWER_PORT) ? port : cooling;
+                            Block displayed = pos.equals(TianshuMultiblockTemplate.UPPER_PORT) ? port : cooling;
                             cells.add(cell(
                                     pos,
                                     displayed,

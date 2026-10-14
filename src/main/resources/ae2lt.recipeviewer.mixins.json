@@ -7,6 +7,7 @@
   "client": [
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
+    "jei.JeiMultiblockLayoutMixin",
     "jeisupply.JeiWirelessSupplyMixin",
     "jeisupply.JeiWirelessSupplyContextAccessor",
     "jeisupply.JeiWirelessSupplyServiceMixin"

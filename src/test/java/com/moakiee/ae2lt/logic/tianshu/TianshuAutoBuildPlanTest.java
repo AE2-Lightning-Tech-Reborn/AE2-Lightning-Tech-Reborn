@@ -25,6 +25,12 @@ class TianshuAutoBuildPlanTest {
         assertEquals(17, counts.getOrDefault(TianshuAutoBuildPlan.Target.COOLING, 0));
         assertEquals(98, counts.getOrDefault(TianshuAutoBuildPlan.Target.GLASS, 0));
         assertEquals(1, counts.getOrDefault(TianshuAutoBuildPlan.Target.PORT, 0));
+        assertTrue(plan.placements().stream().anyMatch(placement ->
+                placement.localPos().equals(TianshuMultiblockTemplate.UPPER_PORT)
+                        && placement.target() == TianshuAutoBuildPlan.Target.PORT));
+        assertTrue(plan.placements().stream().anyMatch(placement ->
+                placement.localPos().equals(TianshuMultiblockTemplate.LOWER_PORT)
+                        && placement.target() == TianshuAutoBuildPlan.Target.COOLING));
         assertTrue(plan.placements().stream().noneMatch(placement -> {
             var role = TianshuMultiblockTemplate.roleAt(placement.localPos());
             return role == TianshuMultiblockRole.CONTROLLER
@@ -34,19 +40,38 @@ class TianshuAutoBuildPlanTest {
     }
 
     @Test
-    void existingUpperPortIsPreservedAndTheLowerCandidateBecomesCooling() {
-        var components = new HashMap<BlockPos, TianshuMultiblockComponent>();
-        components.put(TianshuMultiblockTemplate.UPPER_PORT, TianshuMultiblockComponent.PORT);
+    void existingPortIsPreservedInEitherCandidate() {
+        for (var existingPort : java.util.List.of(
+                TianshuMultiblockTemplate.LOWER_PORT, TianshuMultiblockTemplate.UPPER_PORT)) {
+            var otherCandidate = existingPort.equals(TianshuMultiblockTemplate.LOWER_PORT)
+                    ? TianshuMultiblockTemplate.UPPER_PORT : TianshuMultiblockTemplate.LOWER_PORT;
+            var plan = TianshuAutoBuildPlan.create(local -> local.equals(existingPort)
+                    ? TianshuMultiblockComponent.PORT : TianshuMultiblockComponent.AIR);
 
-        var plan = TianshuAutoBuildPlan.create(
-                local -> components.getOrDefault(local, TianshuMultiblockComponent.AIR));
+            assertTrue(plan.blocked().isEmpty());
+            assertFalse(plan.placements().stream()
+                    .anyMatch(placement -> placement.target() == TianshuAutoBuildPlan.Target.PORT));
+            assertTrue(plan.placements().stream().anyMatch(placement ->
+                    placement.localPos().equals(otherCandidate)
+                            && placement.target() == TianshuAutoBuildPlan.Target.COOLING));
+        }
+    }
 
-        assertTrue(plan.blocked().isEmpty());
-        assertFalse(plan.placements().stream()
-                .anyMatch(placement -> placement.target() == TianshuAutoBuildPlan.Target.PORT));
-        assertTrue(plan.placements().stream().anyMatch(placement ->
-                placement.localPos().equals(TianshuMultiblockTemplate.LOWER_PORT)
-                        && placement.target() == TianshuAutoBuildPlan.Target.COOLING));
+    @Test
+    void occupiedUpperCoolingPositionIsPreservedAndThePortUsesTheLowerCandidate() {
+        for (var existing : java.util.List.of(TianshuMultiblockComponent.COOLING,
+                TianshuMultiblockComponent.CLOSED_LOOP_PATTERN_STORAGE,
+                TianshuMultiblockComponent.CLOSED_LOOP_SEED_STORAGE)) {
+            var plan = TianshuAutoBuildPlan.create(local -> local.equals(TianshuMultiblockTemplate.UPPER_PORT)
+                    ? existing : TianshuMultiblockComponent.AIR);
+
+            assertTrue(plan.blocked().isEmpty(), existing.toString());
+            assertFalse(plan.placements().stream().anyMatch(placement ->
+                    placement.localPos().equals(TianshuMultiblockTemplate.UPPER_PORT)));
+            assertTrue(plan.placements().stream().anyMatch(placement ->
+                    placement.localPos().equals(TianshuMultiblockTemplate.LOWER_PORT)
+                            && placement.target() == TianshuAutoBuildPlan.Target.PORT));
+        }
     }
 
     @Test
@@ -88,6 +113,8 @@ class TianshuAutoBuildPlanTest {
                     CONTROLLER, direction,
                     pos -> world.getOrDefault(pos, TianshuMultiblockComponent.OTHER));
             assertTrue(attempt.formed(), direction + ": " + attempt.issues());
+            assertEquals(TianshuMultiblockScanner.worldPos(
+                    CONTROLLER, TianshuMultiblockTemplate.UPPER_PORT, direction), attempt.result().portPos());
         }
     }
 

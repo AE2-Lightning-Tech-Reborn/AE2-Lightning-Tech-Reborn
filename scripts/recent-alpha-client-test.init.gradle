@@ -1,0 +1,38 @@
+// First run the JEI suite in tianshu-workstation-test.init.gradle to create its disposable world.
+// ./gradlew -Pae2ltJdbClientProbe -I scripts/recent-alpha-client-test.init.gradle runClient
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/RecentAlphaClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['org.appliedenergistics', 'top.theillusivec4.curios', 'de.mari_023', 'mezz.jei'])
+        }
+        def probeDirectory = project.file('build/recent-alpha-client')
+        def result = new File(probeDirectory, 'recent-alpha-result.txt')
+        def sourceWorld = project.file('build/tianshu-jei-full-wt/gametestserver/gametestworld')
+        def clientWorld = new File(probeDirectory, 'saves/RecentAlphaQA')
+        neoForge.runs.client {
+            gameDirectory = probeDirectory
+            systemProperty 'ae2lt.recentAlphaProbe', 'true'
+            programArguments.addAll '--quickPlaySingleplayer', 'RecentAlphaQA'
+        }
+        tasks.named('runClient') {
+            doFirst {
+                result.delete()
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run the JEI wireless supply GameTests first.')
+                    java.nio.file.Files.walk(sourceWorld.toPath()).withCloseable { paths ->
+                        paths.forEach { path ->
+                            def target = clientWorld.toPath().resolve(sourceWorld.toPath().relativize(path))
+                            if (java.nio.file.Files.isDirectory(path)) java.nio.file.Files.createDirectories(target)
+                            else java.nio.file.Files.copy(path, target)
+                        }
+                    }
+                }
+            }
+            doLast {
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Recent alpha client probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

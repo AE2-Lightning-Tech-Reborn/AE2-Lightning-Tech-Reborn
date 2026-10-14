@@ -66,6 +66,8 @@ class MultiblockStructureRecipesTest {
 
         assertEquals(0, parallelUnits);
         assertTrue(attempt.formed(), attempt.issues().toString());
+        assertEquals(TianshuMultiblockScanner.worldPos(
+                CONTROLLER, TianshuMultiblockTemplate.UPPER_PORT, Direction.WEST), attempt.result().portPos());
     }
 
     private static MatrixMultiblockComponent matrixComponentFor(MatrixMultiblockTemplate.Entry entry) {
@@ -94,7 +96,7 @@ class MultiblockStructureRecipesTest {
             case COOLING -> TianshuMultiblockComponent.COOLING;
             case GLASS -> TianshuMultiblockComponent.GLASS;
             case CONTROLLER -> TianshuMultiblockComponent.CONTROLLER;
-            case PORT_CANDIDATE -> pos.equals(TianshuMultiblockTemplate.LOWER_PORT)
+            case PORT_CANDIDATE -> pos.equals(TianshuMultiblockTemplate.UPPER_PORT)
                     ? TianshuMultiblockComponent.PORT
                     : TianshuMultiblockComponent.COOLING;
             case CORE_RESERVED -> pos.equals(new BlockPos(3, 3, 3))

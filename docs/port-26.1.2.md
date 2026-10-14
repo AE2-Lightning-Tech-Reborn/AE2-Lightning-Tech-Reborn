@@ -92,3 +92,16 @@ Applied Flux 输出适配 `UniversalEnergyHandler.send`，Silent Gear 破损判�
 | `-Pae2ltWirelessPortGameTest runWirelessPortGameTestServer` | 44 项：42 通过；原冷产物 19 tick 与连续阻塞 12 次两项性能失败保留 |
 | `-Pae2ltAdaptiveBatchMode=true test` | 6 项全部通过，保持原吞吐和派发成本门槛 |
 | `-Pae2ltFumoRenderClientProbe runFumoRenderClient` | 实际客户端通过：32 个放置状态、16 个物品场景、96 个半砖状态、双闪电等级提示和世界图标、彩虹 GPU shader 与 GUI 空槽图标 |
+
+## 最新 alpha 增量核对（2026-10-14）
+
+重新获取远端 alpha `fd5d14d3`，将 `2afebd04` 之后的最终功能分为三批移植：相位锁定能量 HUD、JEI 无线补货与原生缺料合成、多方块自适应布局与天枢默认顶部端口。保留 26.1.2 的组件、客户端网络发送、背包访问与 `GuiGraphicsExtractor` 接口；JEI 布局注入改用 `ImmutableSize2i` 签名。
+
+重新核对 JEI `26.1` 的 `3f982442d1b3` 和 AE2 `26.1` 的 `4ba637f531d9` 实际远端源码，确认转移上下文及其完成回调复制、原生合成确认队列和布局缓存接口。EMI、SorrowMist/UselessMod、Mob Grinding Utils 的远端分支没有 26.1.2，继续跳过；水晶科技配方仍不移植。
+
+- Java 25 / NeoForge 26.1.2.109 / AE2 26.1.12-beta / JEI 29.47.0.109：`check jar` 共 1489 项，1485 通过，4 项外部 EAEP JAR 合约测试因未提供 JAR 跳过。
+- 相位锁定专用服务器 5 项必需 GameTest 全通过，包含能量快照同步、投影不可反写与不显示物品能量条。
+- JEI 专用服务器 3 项必需 GameTest 全通过，包含真实提取、原生缺料确认队列、数量及组件校验、能量不足与重放拒绝。
+- `-Pae2ltJdbClientProbe -I scripts/recent-alpha-client-test.init.gradle runClient` 通过：实际新版 JEI 服务向原版工作台补齐 4 块木板、预览不改真实背包、多方块高度调整及缓存重建。未将旧 Extended Crafting 客户端探针当作 26.1.2 兼容验证。
+
+此前记录的两项无线调度性能失败不属于本次增量修复范围，本次未重新运行该性能套件。
