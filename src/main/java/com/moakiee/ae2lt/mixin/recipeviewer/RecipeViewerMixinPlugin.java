@@ -34,6 +34,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin")) return jeiSupplyPresent;
         if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
         if (mixinClassName.contains(".useless.")) return uselessJeiPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
