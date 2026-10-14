@@ -72,6 +72,7 @@ public final class AlphaPortTestMod {
         add("appgen_ember_charging_preserves_upstream_reaction", "appgen", 100, helper -> { try { com.moakiee.ae2lt.debug.AppGenProcessorGameTests.emberChargingPreservesUpstreamReaction(helper); } catch (Exception e) { throw new RuntimeException(e); } });
         add("pigmeecapabilitiesandsharedrecipe", "fluid", 100, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeCapabilitiesAndSharedRecipe);
         add("pigmeerepeatedticksdonotaccelerate", "fluid", 350, com.moakiee.ae2ltcpuselection.PigmeeCrystalCatalyzerGameTests::pigmeeRepeatedTicksDoNotAccelerate);
+        add("jei_wireless_craft_missing", "jei", 200, com.moakiee.ae2lt.debug.JeiWirelessSupplyGameTests::craftMissingIngredient);
         add("jei_wireless_supply", "jei", 200, com.moakiee.ae2lt.debug.JeiWirelessSupplyGameTests::supplyAndNativeTransfer);
         add("workstation_workstations", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::workstations);
         add("cell_workbench_client_sync", "workstation", 100, com.moakiee.ae2lt.debug.TianshuCraftingGameTests::cellWorkbenchClientSync);

@@ -166,6 +166,107 @@ public final class JeiWirelessSupplyGameTests {
         });
     }
 
+    public static void craftMissingIngredient(GameTestHelper helper) {
+        var level = helper.getLevel();
+        // NeoForge's FakePlayer suppresses submenu creation; keep the native menu factory in this fixture.
+        var player = new net.neoforged.neoforge.common.util.FakePlayer(level, new GameProfile(UUID.randomUUID(), "JeiCraftQA")) {
+            @Override public java.util.OptionalInt openMenu(net.minecraft.world.MenuProvider provider,
+                    java.util.function.Consumer<net.minecraft.network.RegistryFriendlyByteBuf> data) {
+                var opened = provider.createMenu(18, getInventory(), this);
+                if (opened == null) return java.util.OptionalInt.empty();
+                containerMenu = opened;
+                return java.util.OptionalInt.of(opened.containerId);
+            }
+        };
+        player.getInventory().clearContent();
+        var base = helper.absolutePos(new BlockPos(2, 2, 2));
+        var table = base.south();
+        level.setBlockAndUpdate(base, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+        level.setBlockAndUpdate(base.east(), AEBlocks.DRIVE.block().defaultBlockState());
+        level.setBlockAndUpdate(base.north(), AEBlocks.WIRELESS_ACCESS_POINT.block().defaultBlockState());
+        level.setBlockAndUpdate(base.west(), AEBlocks.PATTERN_PROVIDER.block().defaultBlockState());
+        level.setBlockAndUpdate(table, Blocks.CRAFTING_TABLE.defaultBlockState());
+        var provider = ((appeng.blockentity.crafting.PatternProviderBlockEntity) level.getBlockEntity(base.west())).getLogic();
+        provider.getPatternInv().setItemDirect(0, appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.OAK_PLANKS), 1)),
+                List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.DIAMOND), 1))));
+        provider.getPatternInv().setItemDirect(1, appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.OAK_PLANKS), 1)),
+                List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_INGOT), 1))));
+        var cell = AEItems.ITEM_CELL_1K.stack();
+        var cellStorage = StorageCells.getCellInventory(cell, null);
+        cellStorage.insert(AEItemKey.of(Items.DIAMOND), 1, Actionable.MODULATE, IActionSource.ofPlayer(player));
+        cellStorage.insert(AEItemKey.of(Items.OAK_PLANKS), 64, Actionable.MODULATE, IActionSource.ofPlayer(player));
+        cellStorage.persist();
+        ((DriveBlockEntity) level.getBlockEntity(base.east())).getInternalInventory().setItemDirect(0, cell);
+        var terminal = new ItemStack(ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get());
+        terminal.set(AEComponents.WIRELESS_LINK_TARGET, GlobalPos.of(level.dimension(), base.north()));
+        terminal.set(AEComponents.STORED_ENERGY, 1000000.0);
+        player.getInventory().setItem(0, terminal);
+        player.setPos(table.getX() + .5, table.getY() + 1, table.getZ() + .5);
+        var menu = new CraftingMenu(17, player.getInventory(), ContainerLevelAccess.create(level, table));
+        player.containerMenu = menu;
+        helper.runAfterDelay(60, () -> {
+            var wanted = new ItemStack(Items.DIAMOND, 3);
+            var offer = WirelessJeiSupply.handle(player, packet(player, 100, false, wanted));
+            check(offer.status() == 1 && offer.items().get(0).getCount() == 1
+                    && offer.craftable().get(0).getCount() == 3, "separate stock from craftable output");
+            check(WirelessJeiSupply.handle(player, packet(player, 100, true, wanted)).status() == 0,
+                    "craftable output must never be extracted as stored items");
+            WirelessJeiSupply.handle(player, packet(player, 101, false, wanted));
+            var forged = wanted.copy();
+            forged.set(DataComponents.CUSTOM_NAME, Component.literal("not a pattern output"));
+            check(WirelessJeiSupply.handle(player, new WirelessJeiSupplyPacket(menu.containerId, 101, false, true, List.of(forged))).status() == 0,
+                    "reject forged crafting components");
+            WirelessJeiSupply.handle(player, packet(player, 102, false, wanted));
+            check(WirelessJeiSupply.handle(player, new WirelessJeiSupplyPacket(menu.containerId, 102, false, true,
+                    List.of(wanted.copyWithCount(4)))).status() == 0, "crafting cannot exceed quoted count");
+            WirelessJeiSupply.handle(player, packet(player, 103, false, wanted));
+            terminal.set(AEComponents.STORED_ENERGY, 0.0);
+            check(WirelessJeiSupply.handle(player, new WirelessJeiSupplyPacket(menu.containerId, 103, false, true, List.of(wanted))).status() == 0,
+                    "crafting rechecks terminal power");
+            terminal.set(AEComponents.STORED_ENERGY, 1000000.0);
+            WirelessJeiSupply.handle(player, packet(player, 104, false, wanted));
+            var request = new WirelessJeiSupplyPacket(menu.containerId, 104, false, true, List.of(wanted.copyWithCount(2)));
+            check(WirelessJeiSupply.handle(player, request).status() == 3, "native crafting confirmation opens");
+            check(player.containerMenu instanceof appeng.menu.me.crafting.CraftConfirmMenu, "actual native confirmation menu");
+            var confirm = (appeng.menu.me.crafting.CraftConfirmMenu) player.containerMenu;
+            try {
+                var amount = confirm.getClass().getDeclaredField("amount");
+                amount.setAccessible(true);
+                check(amount.getInt(confirm) == 2 && !confirm.autoStart, "craft only the deficit, require confirmation");
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            check(player.getInventory().countItem(Items.DIAMOND) == 0
+                    && cellStorage.extract(AEItemKey.of(Items.DIAMOND), 99, Actionable.SIMULATE, IActionSource.ofPlayer(player)) == 1,
+                    "crafting confirmation does not extract or create items");
+            player.containerMenu = menu;
+            check(WirelessJeiSupply.handle(player, request).status() == 0, "craft request is single use");
+            WirelessJeiSupply.handle(player, packet(player, 106, false, wanted, new ItemStack(Items.IRON_INGOT)));
+            check(WirelessJeiSupply.handle(player, new WirelessJeiSupplyPacket(menu.containerId, 106, false, true,
+                    List.of(wanted.copyWithCount(2), new ItemStack(Items.IRON_INGOT)))).status() == 3,
+                    "multiple missing ingredients use the native queue");
+            var queued = (appeng.menu.me.crafting.CraftConfirmMenu) player.containerMenu;
+            try {
+                var queue = queued.getClass().getDeclaredField("autoCraftingQueue"); queue.setAccessible(true);
+                check(((List<?>) queue.get(queued)).size() == 1, "remaining ingredient stays in native queue");
+                queued.goBack();
+                var next = (appeng.menu.me.crafting.CraftConfirmMenu) player.containerMenu;
+                var amount = next.getClass().getDeclaredField("amount"); amount.setAccessible(true);
+                var what = next.getClass().getDeclaredField("whatToCraft"); what.setAccessible(true);
+                check(amount.getInt(next) == 1 && AEItemKey.of(Items.IRON_INGOT).equals(what.get(next)),
+                        "native queue advances to the next ingredient");
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            player.containerMenu = menu;
+            WirelessJeiSupply.handle(player, packet(player, 105, false, wanted));
+            provider.getPatternInv().setItemDirect(0, ItemStack.EMPTY);
+            check(WirelessJeiSupply.handle(player, new WirelessJeiSupplyPacket(menu.containerId, 105, false, true, List.of(wanted))).status() == 0,
+                    "removed pattern invalidates crafting offer");
+            player.containerMenu = player.inventoryMenu;
+            System.out.println("JEI_WIRELESS_CRAFT_PASS native confirmation and queue, exact deficit, no extraction, no auto start, bounded quote, components, power, replay, removed pattern");
+            helper.succeed();
+        });
+    }
+
     private static final class Universal {
         private static void checkSupply(ServerPlayer player, ItemStack terminal, ItemStack materials) {
             var universal = new ItemStack(de.mari_023.ae2wtlib.AE2wtlibItems.UNIVERSAL_TERMINAL);

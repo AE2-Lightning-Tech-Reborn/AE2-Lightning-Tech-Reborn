@@ -3,10 +3,13 @@ package com.moakiee.ae2lt.logic.tianshu.terminal;
 import appeng.api.config.Actionable;
 import appeng.api.config.PowerMultiplier;
 import appeng.api.networking.IGrid;
+import appeng.api.networking.security.IActionHost;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.storage.StorageHelper;
 import appeng.me.helpers.PlayerSource;
 import appeng.menu.locator.ItemMenuHostLocator;
+import appeng.helpers.ICraftingGridMenu;
+import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWirelessIngredientSource;
@@ -31,7 +34,7 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 @EventBusSubscriber(modid = AE2LightningTech.MODID)
 public final class WirelessJeiSupply {
     private record Ticket(AbstractContainerMenu menu, ItemMenuHostLocator locator, IGrid grid,
-                          int expires, Map<AEItemKey, Integer> offered) {}
+                          int expires, Map<AEItemKey, Integer> offered, Map<AEItemKey, Integer> craftable) {}
     private static final Map<UUID, LinkedHashMap<Integer, Ticket>> TICKETS = new HashMap<>();
     private WirelessJeiSupply() {}
 
@@ -42,7 +45,7 @@ public final class WirelessJeiSupply {
                 || packet.items().isEmpty() || packet.items().size() > WirelessJeiInventoryPlan.MAX_ENTRIES) {
             return result(packet, 0, List.of());
         }
-        return packet.take() ? take(player, packet) : offer(player, packet);
+        return packet.take() ? take(player, packet) : packet.craft() ? craft(player, packet) : offer(player, packet);
     }
 
     private static WirelessJeiSupplyResultPacket offer(ServerPlayer player, WirelessJeiSupplyPacket packet) {
@@ -67,14 +70,56 @@ public final class WirelessJeiSupply {
                 if (available > 0) offered.put(key, available);
                 if (offered.size() >= WirelessJeiInventoryPlan.MAX_ENTRIES) break;
             }
+            var craftable = new LinkedHashMap<AEItemKey, Integer>();
+            for (var key : grid.getCraftingService().getCraftables(k -> k instanceof AEItemKey item && wanted.containsKey(item.getItem()))) {
+                if (key instanceof AEItemKey item) craftable.put(item, wanted.get(item.getItem()));
+                if (craftable.size() >= WirelessJeiInventoryPlan.MAX_ENTRIES) break;
+            }
             var tickets = TICKETS.computeIfAbsent(player.getUUID(), ignored -> new LinkedHashMap<>());
             int now = player.level().getServer().getTickCount();
             tickets.values().removeIf(ticket -> ticket.expires() < now || ticket.menu() != player.containerMenu);
             while (tickets.size() >= 32) tickets.remove(tickets.keySet().iterator().next());
-            tickets.put(packet.requestId(), new Ticket(player.containerMenu, locator, grid, now + 100, Map.copyOf(offered)));
-            return result(packet, 1, offered.entrySet().stream().map(e -> e.getKey().toStack(e.getValue())).toList());
+            tickets.put(packet.requestId(), new Ticket(player.containerMenu, locator, grid, now + 100,
+                    Map.copyOf(offered), Map.copyOf(craftable)));
+            return new WirelessJeiSupplyResultPacket(packet.containerId(), packet.requestId(), 1,
+                    offered.entrySet().stream().map(e -> e.getKey().toStack(e.getValue())).toList(),
+                    craftable.entrySet().stream().map(e -> e.getKey().toStack(e.getValue())).toList());
         }
         return result(packet, 0, List.of());
+    }
+
+    private static WirelessJeiSupplyResultPacket craft(ServerPlayer player, WirelessJeiSupplyPacket packet) {
+        var tickets = TICKETS.get(player.getUUID());
+        var ticket = tickets == null ? null : tickets.remove(packet.requestId());
+        if (ticket == null || ticket.menu() != player.containerMenu || ticket.expires() < player.level().getServer().getTickCount())
+            return result(packet, 0, List.of());
+        var host = TianshuWirelessIngredientSource.open(player, ticket.locator());
+        if (host == null || host.getActionableNode().getGrid() != ticket.grid()
+                || host.extractAEPower(1, Actionable.SIMULATE, PowerMultiplier.CONFIG) < 1)
+            return result(packet, 0, List.of());
+        var requested = new LinkedHashMap<AEItemKey, Integer>();
+        int total = 0;
+        for (var stack : packet.items()) {
+            var key = AEItemKey.of(stack);
+            int amount = key == null ? 0 : requested.getOrDefault(key, 0) + stack.getCount();
+            total += stack.getCount();
+            if (key == null || stack.getCount() <= 0 || stack.getCount() > WirelessJeiInventoryPlan.MAX_COUNT
+                    || amount > ticket.craftable().getOrDefault(key, 0)
+                    || total > WirelessJeiInventoryPlan.MAX_COUNT || !ticket.grid().getCraftingService().isCraftable(key))
+                return result(packet, 0, List.of());
+            requested.put(key, amount);
+        }
+        var queue = requested.entrySet().stream().map(e -> new ICraftingGridMenu.AutoCraftEntry(e.getKey(),
+                java.util.stream.IntStream.range(0, e.getValue()).boxed().toList())).toList();
+        // Use the same queue, calculation strategy and confirmation flow as CraftingTermMenu.
+        CraftConfirmMenu.openWithCraftingList(host, player, ticket.locator(), queue);
+        if (!(player.containerMenu instanceof CraftConfirmMenu confirm)) return result(packet, 0, List.of());
+        if (!(confirm.getTarget() instanceof IActionHost target) || target.getActionableNode() == null
+                || target.getActionableNode().getGrid() != ticket.grid()) {
+            confirm.setValidMenu(false);
+            return result(packet, 0, List.of());
+        }
+        return result(packet, 3, List.of());
     }
 
     private static WirelessJeiSupplyResultPacket take(ServerPlayer player, WirelessJeiSupplyPacket packet) {
@@ -129,6 +174,11 @@ public final class WirelessJeiSupply {
             committed = true;
             player.containerMenu.broadcastChanges();
             player.inventoryMenu.broadcastChanges();
+            if (packet.craft()) {
+                // Retain only the crafting authorization after the partial refill; extraction stays single-use.
+                tickets.put(packet.requestId(), new Ticket(ticket.menu(), ticket.locator(), ticket.grid(),
+                        ticket.expires(), Map.of(), ticket.craftable()));
+            }
             return result(packet, 2, List.of());
         } finally {
             if (!committed) {

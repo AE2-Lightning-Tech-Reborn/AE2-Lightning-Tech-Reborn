@@ -7,7 +7,9 @@
   "client": [
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
-    "jeisupply.JeiWirelessSupplyMixin"
+    "jeisupply.JeiWirelessSupplyMixin",
+    "jeisupply.JeiWirelessSupplyContextAccessor",
+    "jeisupply.JeiWirelessSupplyServiceMixin"
   ],
   "injectors": {
     "defaultRequire": 0

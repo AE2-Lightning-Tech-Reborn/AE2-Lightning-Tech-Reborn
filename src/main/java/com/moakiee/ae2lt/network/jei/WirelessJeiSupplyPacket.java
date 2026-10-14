@@ -13,13 +13,17 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record WirelessJeiSupplyPacket(int containerId, int requestId, boolean take, List<ItemStack> items)
+public record WirelessJeiSupplyPacket(int containerId, int requestId, boolean take, boolean craft, List<ItemStack> items)
         implements CustomPacketPayload {
+    public WirelessJeiSupplyPacket(int containerId, int requestId, boolean take, List<ItemStack> items) {
+        this(containerId, requestId, take, false, items);
+    }
     public static final Type<WirelessJeiSupplyPacket> TYPE = new Type<>(NetworkInit.id("wireless_jei_supply"));
     public static final StreamCodec<RegistryFriendlyByteBuf, WirelessJeiSupplyPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, WirelessJeiSupplyPacket::containerId,
             ByteBufCodecs.VAR_INT, WirelessJeiSupplyPacket::requestId,
             ByteBufCodecs.BOOL, WirelessJeiSupplyPacket::take,
+            ByteBufCodecs.BOOL, WirelessJeiSupplyPacket::craft,
             ItemStack.STREAM_CODEC.apply(ByteBufCodecs.list(WirelessJeiInventoryPlan.MAX_ENTRIES)), WirelessJeiSupplyPacket::items,
             WirelessJeiSupplyPacket::new);
     @Override public Type<WirelessJeiSupplyPacket> type() { return TYPE; }
