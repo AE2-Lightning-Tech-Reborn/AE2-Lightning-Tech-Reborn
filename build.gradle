@@ -573,6 +573,11 @@ dependencies {
     compileOnly "curse.maven:ae2-jei-integration-1074338:7727898"
     // Optional Omniversal Pattern support. The mod is never bundled or required at runtime.
     compileOnly "curse.maven:some-useless-things-1401600:8790729"
+    // MEST's public module API; optional in player installations and never bundled.
+    compileOnly "curse.maven:me-spliced-terminal-1715792:8997242"
+    if (providers.gradleProperty('ae2ltEnableMestDevRuntime').getOrElse('false').toBoolean()) {
+        runtimeOnly "curse.maven:me-spliced-terminal-1715792:8997242"
+    }
     if (providers.gradleProperty('ae2ltEnableUselessDevRuntime').getOrElse('false').toBoolean()) {
         runtimeOnly "curse.maven:some-useless-things-1401600:8790729"
     }

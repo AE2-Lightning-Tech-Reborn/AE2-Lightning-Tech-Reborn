@@ -28,7 +28,7 @@ import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
  * {@code PATTERN_ENCODING_LOGIC} component, so closing and reopening the wireless item keeps the
  * same draft as the part version.</p>
  */
-public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
+public class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
         implements TianshuPatternTerminalHost, IPatternTerminalLogicHost, IViewCellStorage {
     private static final String TAG_TIANSHU_MODE = "tianshuMode";
     private static final String TAG_CLOSED_LOOP_DRAFT = "tianshuClosedLoopDraft";
@@ -50,8 +50,7 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
             BiConsumer<Player, ISubMenu> returnToMainMenu) {
         super(item, player, locator, returnToMainMenu);
 
-        CompoundTag data = getItemStack().getOrDefault(
-                AE2wtlibComponents.PATTERN_ENCODING_LOGIC, new CompoundTag());
+        CompoundTag data = readPatternData();
         logic.readFromNBT(data, player.registryAccess());
         readTianshuState(data, player.registryAccess());
 
@@ -74,8 +73,7 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
 
     @Override
     public void markForSave() {
-        CompoundTag data = getItemStack().getOrDefault(
-                AE2wtlibComponents.PATTERN_ENCODING_LOGIC, new CompoundTag()).copy();
+        CompoundTag data = readPatternData().copy();
         HolderLookup.Provider registries = getPlayer().registryAccess();
         logic.writeToNBT(data, registries);
         if (omniversalDraft.isEmpty()) data.remove(TAG_OMNIVERSAL_DRAFT);
@@ -91,6 +89,15 @@ public final class TianshuWirelessPatternEncodingTermMenuHost extends WTMenuHost
         } else {
             data.remove(TAG_PROCESSING_DRAFT);
         }
+        writePatternData(data);
+    }
+
+    /** Allows a composite terminal to keep its two encoders' drafts and real outputs independent. */
+    protected CompoundTag readPatternData() {
+        return getItemStack().getOrDefault(AE2wtlibComponents.PATTERN_ENCODING_LOGIC, new CompoundTag());
+    }
+
+    protected void writePatternData(CompoundTag data) {
         getItemStack().set(AE2wtlibComponents.PATTERN_ENCODING_LOGIC, data);
     }
 

@@ -19,7 +19,7 @@ import net.minecraft.world.item.component.CustomData;
 import org.jetbrains.annotations.Nullable;
 
 /** Shares AE2WTLib's ordinary crafting component when installed in a universal terminal. */
-public final class TianshuWirelessCraftingTermMenuHost extends WTMenuHost
+public class TianshuWirelessCraftingTermMenuHost extends WTMenuHost
         implements TianshuCraftingTerminalHost, IViewCellStorage {
     private final InternalInventory craftingGrid;
     private final TianshuWorkstationStorage workstations;

@@ -47,7 +47,8 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
     public static void handle(BigStockPacket p, IPayloadContext c) {
         c.enqueueWork(
                 () -> {
-                    if (c.player().containerMenu instanceof TianshuMaintenanceMenu m
+                    var m = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.maintenance(c.player().containerMenu);
+                    if (m != null
                             && m.maintenanceMenu().containerId == p.containerId) m.applyBigStock(p.changed);
                 });
     }

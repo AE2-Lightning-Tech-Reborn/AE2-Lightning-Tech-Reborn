@@ -48,6 +48,9 @@ config = "${mod_id}.recipeviewer.mixins.json"
 [[mixins]]
 config = "${mod_id}.ae2wtlib.mixins.json"
 
+[[mixins]]
+config = "${mod_id}.mest.mixins.json"
+
 # Optional Mekanism armor conversion hook. The config plugin disables it when Mekanism is absent.
 [[mixins]]
 config = "${mod_id}.mekanism.mixins.json"

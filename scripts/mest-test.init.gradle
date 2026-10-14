@@ -1,0 +1,15 @@
+// ./gradlew -I scripts/mest-test.init.gradle -Pneo_version=21.1.238 -Pae2wtlib_version=19.5.1 -Pae2ltEnableMestDevRuntime=true runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MestTianshuGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'top.theillusivec4.curios', 'de.mari_023']
+                    || dep.name in ['me-spliced-terminal-1715792', 'extendedae-892005', 'glodium-957920'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt,ae2lt_mest'
+            gameDirectory = project.file('build/mest-gametest')
+        }
+    }
+}

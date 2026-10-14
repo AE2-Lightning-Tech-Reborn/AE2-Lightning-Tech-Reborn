@@ -15,4 +15,7 @@ import appeng.client.gui.widgets.VerticalButtonBar;
 public interface AEBaseScreenAccessor {
     @Accessor("verticalToolbar")
     VerticalButtonBar ae2lt$getVerticalToolbar();
+
+    @org.spongepowered.asm.mixin.gen.Invoker("renderTooltips")
+    void ae2lt$renderTooltips(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY);
 }

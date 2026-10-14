@@ -52,8 +52,9 @@ public record RequestClosedLoopResultPagePacket(
 
     public static void handle(RequestClosedLoopResultPagePacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.pattern(context.player().containerMenu);
             if (context.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
+                    && menu != null
                     && menu.containerId == packet.containerId()) {
                 menu.sendClosedLoopResultPage(player, packet.kind(), packet.offset());
             }

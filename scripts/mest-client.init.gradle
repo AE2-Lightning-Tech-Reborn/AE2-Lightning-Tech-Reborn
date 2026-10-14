@@ -1,0 +1,17 @@
+allprojects {
+    afterEvaluate {
+        def viewer = providers.gradleProperty('ae2ltMestViewer').getOrElse('both')
+        sourceSets.jdb.java.setIncludes(['**/MestTianshuClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt','org.appliedenergistics','top.theillusivec4.curios','de.mari_023']
+                || (viewer != 'jei' && dep.group == 'dev.emi')
+                || dep.name in ['me-spliced-terminal-1715792','extendedae-892005','glodium-957920']
+                || (viewer != 'emi' && dep.name in ['jei-238222','ae2-jei-integration-1074338']))
+        }
+        neoForge.runs.client {
+            gameDirectory = project.file('build/mest-client')
+            systemProperty 'ae2lt.mestClientProbe', 'true'
+            programArguments.addAll '--quickPlaySingleplayer','MestQA','--width','1440','--height','900'
+        }
+    }
+}

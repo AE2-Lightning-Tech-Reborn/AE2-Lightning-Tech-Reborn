@@ -30,7 +30,8 @@ public record OpenMaintenanceEditorPacket(
 
     public static void handle(OpenMaintenanceEditorPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().containerMenu instanceof TianshuMaintenanceMenu menu
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.maintenance(context.player().containerMenu);
+            if (menu != null
                     && menu.maintenanceMenu().containerId == packet.containerId()) {
                 menu.openMaintenanceEditor(packet.selectionRevision(), packet.key());
             }

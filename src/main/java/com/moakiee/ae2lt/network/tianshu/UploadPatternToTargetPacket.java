@@ -30,8 +30,9 @@ public record UploadPatternToTargetPacket(int containerId, PatternContainerGroup
 
     public static void handle(UploadPatternToTargetPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.pattern(context.player().containerMenu);
             if (context.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
+                    && menu != null
                     && menu.containerId == packet.containerId()) {
                 menu.uploadTianshuPatternToTarget(player, packet.group());
             }

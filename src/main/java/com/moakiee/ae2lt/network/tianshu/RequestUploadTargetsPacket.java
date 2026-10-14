@@ -26,8 +26,9 @@ public record RequestUploadTargetsPacket(int containerId) implements CustomPacke
 
     public static void handle(RequestUploadTargetsPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.pattern(context.player().containerMenu);
             if (context.player() instanceof ServerPlayer player
-                    && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
+                    && menu != null
                     && menu.containerId == packet.containerId()) {
                 menu.sendUploadTargets(player);
             }

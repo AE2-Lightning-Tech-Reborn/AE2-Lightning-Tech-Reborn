@@ -70,7 +70,8 @@ public record MaintenanceSummarySyncPacket(
 
     public static void handle(MaintenanceSummarySyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().containerMenu instanceof TianshuMaintenanceMenu menu
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.maintenance(context.player().containerMenu);
+            if (menu != null
                     && menu.maintenanceMenu().containerId == packet.containerId()) {
                 menu.receiveMaintenanceSummary(
                         packet.selectionRevision(), packet.revision(),

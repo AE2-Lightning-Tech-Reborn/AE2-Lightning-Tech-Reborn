@@ -49,7 +49,8 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
 
     public static void handle(UploadTargetsSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().containerMenu instanceof TianshuPatternEncodingTermMenu menu
+            var menu = com.moakiee.ae2lt.menu.extension.TianshuMenuContainer.pattern(context.player().containerMenu);
+            if (menu != null
                     && menu.containerId == packet.containerId()) {
                 menu.receiveUploadTargets(packet.targets());
             }

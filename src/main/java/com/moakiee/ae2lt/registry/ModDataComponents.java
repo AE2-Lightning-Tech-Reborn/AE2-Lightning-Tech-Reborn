@@ -45,6 +45,12 @@ public final class ModDataComponents {
                     "tianshu_workstations", builder -> builder
                             .persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC));
 
+    /** MEST's native encoder and the Tianshu encoder each own their physical output and draft. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<CustomData>>
+            MEST_TIANSHU_PATTERN = DATA_COMPONENTS.registerComponentType(
+                    "mest_tianshu_pattern", builder -> builder
+                            .persistent(CustomData.CODEC).networkSynchronized(CustomData.STREAM_CODEC));
+
     /**
      * A machine-specific configuration blob written by a block entity's
      * {@code exportSettings(MEMORY_CARD, ...)} and read back by

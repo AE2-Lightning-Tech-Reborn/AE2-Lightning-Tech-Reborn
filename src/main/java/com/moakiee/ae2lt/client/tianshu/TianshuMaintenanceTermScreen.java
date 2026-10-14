@@ -75,6 +75,62 @@ import net.minecraft.resources.ResourceLocation;
 /** ME inventory maintenance UI shared by crafting and pattern terminal screens. */
 public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends MEStorageScreen<M> {
+
+    /** Content-only drawing used by composite terminal hosts. It never opens another container. */
+    public final void prepareEmbeddedPanel() {
+        updateBeforeRender();
+        widgets.updateBeforeRender();
+        for (String key : getStyle().getText().keySet()) if (!key.equals("crafting_grid_title")) setTextHidden(key, true);
+    }
+
+    public final net.minecraft.client.renderer.Rect2i embeddedPanelBounds() {
+        boolean pattern = menu instanceof TianshuPatternEncodingTermMenu;
+        return new net.minecraft.client.renderer.Rect2i(leftPos + 7, topPos + imageHeight - 180,
+                pattern ? 190 : 186, pattern ? (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded() ? 136 : 114) : 94);
+    }
+
+    public final void drawEmbeddedBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        drawBG(graphics, leftPos, topPos, mouseX, mouseY, partialTick);
+        // The native terminal bottom also contains player inventory decoration. Only its work area is embedded.
+        graphics.fill(leftPos + 7, topPos + imageHeight - 96, leftPos + 172,
+                topPos + imageHeight, 0xFFC8CAD2);
+        widgets.drawBackgroundLayer(graphics,
+                new net.minecraft.client.renderer.Rect2i(leftPos, topPos, imageWidth, imageHeight),
+                new appeng.client.Point(mouseX - leftPos, mouseY - topPos));
+        for (var renderable : renderables) renderable.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    public final void drawEmbeddedForeground(GuiGraphics graphics, int mouseX, int mouseY) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(leftPos, topPos, 0);
+        renderLabels(graphics, mouseX, mouseY);
+        graphics.pose().popPose();
+    }
+
+    public final void drawEmbeddedSlot(GuiGraphics graphics, Slot slot) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(leftPos, topPos, 0);
+        renderSlot(graphics, slot);
+        graphics.pose().popPose();
+    }
+
+    public final void updateEmbeddedHover(double mouseX, double mouseY) {
+        hoveredSlot = null;
+        for (var slot : menu.slots) {
+            if (slot.isActive() && isHovering(slot, mouseX, mouseY)) { hoveredSlot = slot; break; }
+        }
+    }
+
+    public final void drawEmbeddedTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
+        ((AEBaseScreenAccessor) this).ae2lt$renderTooltips(graphics, mouseX, mouseY);
+    }
+
+    public final boolean embeddedTextFocused() {
+        return getFocused() instanceof net.minecraft.client.gui.components.EditBox field && field.isFocused();
+    }
+
+    public final int embeddedLeft() { return leftPos; }
+    public final int embeddedTop() { return topPos; }
     static PageAnchor terminalHelpTopic(MEStorageMenu menu, String fragment) {
         String page = menu instanceof TianshuPatternEncodingTermMenu
                 ? "pattern-encoding-terminal" : "crafting-terminal";

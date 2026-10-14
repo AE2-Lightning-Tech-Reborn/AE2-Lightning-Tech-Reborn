@@ -379,6 +379,9 @@ public class AE2LightningTech {
         // its built-in terminals by then, so this terminal is appended after them in the
         // universal-terminal selector instead of always occupying the first position.
         modEventBus.addListener(Ae2wtlibIntegration::onRegister);
+        if (net.neoforged.fml.ModList.get().isLoaded("mesplicedterminal")) {
+            com.moakiee.ae2lt.integration.mest.MestCompat.register(modEventBus);
+        }
         ModFumos.register();
         LegacyRegistryAliases.register();
         ModBlocks.BLOCKS.register(modEventBus);

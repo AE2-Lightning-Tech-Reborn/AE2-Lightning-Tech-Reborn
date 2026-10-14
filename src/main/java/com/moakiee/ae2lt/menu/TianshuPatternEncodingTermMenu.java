@@ -369,7 +369,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             }
         }
         broadcastParentChanges();
-        if (isServerSide()) {
+        if (isServerSide() && !(this instanceof com.moakiee.ae2lt.menu.extension.EmbeddedTerminalMenu)) {
             maintenanceSession.sendMaintenanceSummaryIfNeeded();
             bigStock.sync(this, tianshuHost);
         }
