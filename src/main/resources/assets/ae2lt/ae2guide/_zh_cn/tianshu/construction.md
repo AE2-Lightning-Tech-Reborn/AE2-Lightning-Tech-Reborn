@@ -19,8 +19,8 @@ item_ids:
 <GameScene zoom="2.8" background="transparent" interactive={true}>
   <ImportStructure src="../assets/assemblies/tianshu_supercomputer.snbt" />
   <DiamondAnnotation pos="6.5 0.5 3.5" color="#f2d37a">天枢超算控制器</DiamondAnnotation>
-  <DiamondAnnotation pos="3.5 0.5 3.5" color="#85f29e">默认端口位置</DiamondAnnotation>
-  <DiamondAnnotation pos="3.5 6.5 3.5" color="#80c6ff">另一端口候选位</DiamondAnnotation>
+  <DiamondAnnotation pos="3.5 6.5 3.5" color="#85f29e">默认端口位置</DiamondAnnotation>
+  <DiamondAnnotation pos="3.5 0.5 3.5" color="#80c6ff">另一端口候选位</DiamondAnnotation>
   <DiamondAnnotation pos="2.5 6.5 2.5" color="#ff9fd7">闭环样板仓示例位置</DiamondAnnotation>
   <DiamondAnnotation pos="4.5 6.5 2.5" color="#9fffe1">闭环种子仓示例位置</DiamondAnnotation>
   <BoxAnnotation min="2 2 2" max="5 5 5" color="#d58cff" alwaysOnTop={true}>3×3×3 核心舱</BoxAnnotation>
@@ -40,7 +40,7 @@ item_ids:
 | <ItemLink id="ae2lt:tianshu_supercomputer_casing" /> | 99 | 固定外壳 |
 | <ItemLink id="ae2lt:phase_change_cooling_unit" /> | 17 | 默认填满 16 个固定冷却位与未安装端口的候选位；闭环存储可替代这些位置 |
 | <ItemLink id="ae2lt:tianshu_supercomputer_glass" /> | 98 | 固定核心舱观察层 |
-| <ItemLink id="ae2lt:tianshu_supercomputer_port" /> | 1 | 未预先放置端口时安装在底部候选位 |
+| <ItemLink id="ae2lt:tianshu_supercomputer_port" /> | 1 | 两个候选位均为空时默认安装在顶部中央 |
 
 控制器已经放置，因此不在按钮消耗的材料中。自动搭建也不会填充核心舱；完整成形还必须手动准备并放置：
 
@@ -67,7 +67,7 @@ item_ids:
 
 自动搭建只读取玩家背包，不会从 ME 网络或相邻容器提取方块。开始前会核对完整材料，并以每 tick 一个方块的速度逐步放置；搭建期间应将所需材料保留在背包内。
 
-已有端口可以位于任一候选位。若没有端口、一个候选位已经放置天枢超算冷却单元或闭环存储且另一个为空，自动搭建会保留已有方块并把端口放入空位；两处均为空时默认将端口放在底部候选位。若两个候选位都被非端口方块占用，必须先腾出一个位置。
+已有端口可以位于任一候选位。若没有端口、一个候选位已经放置天枢超算冷却单元或闭环存储且另一个为空，自动搭建会保留已有方块并把端口放入空位；两处均为空时默认将端口放在顶部中央。若两个候选位都被非端口方块占用，必须先腾出一个位置。
 
 如果任一由自动搭建负责的外壳、冷却兼容位、玻璃或端口位置被错误方块占据，本次自动搭建不会放置任何方块。应根据提示坐标清除阻挡后重试。若搭建开始后材料被移走或目标位置受到阻挡，流程会中断，且只消耗已经成功放置的方块。
 
