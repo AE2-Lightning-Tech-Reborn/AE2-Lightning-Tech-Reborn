@@ -76,7 +76,7 @@ public final class OverloadedCableRenderHelper {
                 OVERLOAD_CABLE_LINE_TEXTURE_FOLDER + color.name().toLowerCase(Locale.ROOT)));
     }
 
-    private static boolean isStraightLine(AECableType cableType, EnumMap<Direction, AECableType> sides) {
+    private static boolean isStraightLine(AECableType cableType, com.gto.fastcollection.map.enums.Enum2ObjectMap<Direction, AECableType> sides) {
         var it = sides.entrySet().iterator();
         if (!it.hasNext()) {
             return false;

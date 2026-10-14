@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import appeng.integration.modules.jei.transfer.EncodePatternTransferHandler;
+import com.moakiee.ae2lt.compat.gto.jei.EncodePatternTransferHandler;
 import appeng.menu.me.items.PatternEncodingTermMenu;
 
 /**

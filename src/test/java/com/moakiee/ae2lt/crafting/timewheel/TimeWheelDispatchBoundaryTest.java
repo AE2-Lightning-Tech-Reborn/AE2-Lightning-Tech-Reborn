@@ -55,6 +55,30 @@ class TimeWheelDispatchBoundaryTest {
     }
 
     @Test
+    void pausedRestoredJobKeepsDueTasksUntilItsFirstSchedulerTick() throws Exception {
+        var logic = new TimeWheelCraftingCPU(null, 1, 0, 1, false).getCraftingLogic();
+        var pattern = new IPatternDetails() {
+            @Override public AEItemKey getDefinition() { return null; }
+            @Override public IInput[] getInputs() { return new IInput[0]; }
+            @Override public GenericStack[] getOutputs() { return new GenericStack[0]; }
+        };
+        @SuppressWarnings("unchecked")
+        var wheel = (java.util.ArrayDeque<IPatternDetails>[]) field(logic.getClass(), "taskWheel").get(logic);
+        wheel[0].add(pattern);
+        logic.finishPhysicalSchedulingTick();
+        assertSame(pattern, wheel[0].peek(), "Pause must not move work before scheduler initialization");
+        assertTrue(wheel[1].isEmpty());
+
+        var advance = logic.getClass().getDeclaredMethod("advanceWheel");
+        advance.setAccessible(true);
+        advance.invoke(logic);
+        assertSame(pattern, wheel[0].peek(), "First resumed tick must see the restored due task");
+        logic.finishPhysicalSchedulingTick();
+        assertTrue(wheel[0].isEmpty());
+        assertSame(pattern, wheel[1].peek(), "A scheduler visit still carries remaining work to next tick");
+    }
+
+    @Test
     void ordinaryFallbackKeepsAnAvailableIdentityMatchedProviderAfterPartialBatchSuccess() throws Exception {
         var pattern = new IPatternDetails() {
             @Override public AEItemKey getDefinition() { return null; }
@@ -135,7 +159,7 @@ class TimeWheelDispatchBoundaryTest {
             };
             var plan = proxy(ICraftingPlan.class, Map.of(
                     "finalOutput", new GenericStack(OUTPUT, amount),
-                    "emittedItems", new KeyCounter(), "patternTimes", Map.of(pattern, amount)));
+                    "emittedItems", new KeyCounter(), "patternTimes", new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(pattern, amount))));
             var linkData = new CompoundTag();
             linkData.putUUID("craftId", UUID.randomUUID());
             linkData.putBoolean("req", false);

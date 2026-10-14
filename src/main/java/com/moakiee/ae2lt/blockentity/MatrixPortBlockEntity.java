@@ -462,7 +462,7 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.MATTER_WARPING_MATRIX_PORT.get().asItem();
     }
 

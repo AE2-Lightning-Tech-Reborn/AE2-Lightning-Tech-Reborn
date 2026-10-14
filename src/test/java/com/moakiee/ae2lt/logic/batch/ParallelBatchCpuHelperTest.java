@@ -376,7 +376,10 @@ class ParallelBatchCpuHelperTest {
         var template = variantKey("mixed_item", "encoded");
         var first = variantKey("mixed_item", "first");
         var second = variantKey("mixed_item", "second");
-        var inv = inventory();
+        // Force the mixed prototype first; GTO's key-counter iteration order is unspecified.
+        var inv = new ListCraftingInventory(key -> {}) {
+            @Override public Iterable<AEKey> findFuzzyTemplates(AEKey key) { return List.of(first, second); }
+        };
         inv.insert(first, 2, Actionable.MODULATE);
         inv.insert(second, 7, Actionable.MODULATE);
         var pattern = pattern(fuzzyInput(stack(template, 1), 3, "mixed_item"));
@@ -691,6 +694,7 @@ class ParallelBatchCpuHelperTest {
     }
 
     private static final class TestKey extends AEKey {
+        @Override public int getUid() { return primaryId.hashCode(); }
         private static final TestKeyType TYPE = new TestKeyType();
         private final String primaryId;
         private final String id;

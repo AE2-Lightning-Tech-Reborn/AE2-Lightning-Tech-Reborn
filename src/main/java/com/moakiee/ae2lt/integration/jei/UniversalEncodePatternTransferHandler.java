@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.integration.jei;
 
-import appeng.integration.modules.jei.transfer.EncodePatternTransferHandler;
+import com.moakiee.ae2lt.compat.gto.jei.EncodePatternTransferHandler;
 import appeng.menu.me.items.PatternEncodingTermMenu;
 import java.util.Optional;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;

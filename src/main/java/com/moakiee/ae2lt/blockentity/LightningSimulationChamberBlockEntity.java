@@ -655,7 +655,7 @@ public class LightningSimulationChamberBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get().asItem();
     }
 

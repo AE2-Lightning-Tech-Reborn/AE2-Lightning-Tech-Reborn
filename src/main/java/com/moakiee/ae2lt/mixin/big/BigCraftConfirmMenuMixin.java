@@ -26,7 +26,7 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
     @Shadow private Future<ICraftingPlan> job;
     @Shadow private ICraftingPlan result;
     @Shadow private AEKey whatToCraft;
-    @Shadow private int amount;
+    @Shadow private long amount;
 
     @Shadow
     public abstract ISubMenuHost getHost();
@@ -68,7 +68,7 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
         setPlan(null);
         result = null;
         whatToCraft = key;
-        amount = n.min(BigInteger.valueOf(Integer.MAX_VALUE)).intValueExact();
+        amount = n.min(BigInteger.valueOf(Long.MAX_VALUE)).longValueExact();
         ae2lt$amount = n;
         ae2lt$isBig = true;
         ae2lt$failure = "";

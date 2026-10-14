@@ -144,8 +144,8 @@ public final class TimeWheelCraftingStatusGameTests {
             var updatedEntry = update.getEntries().get(0);
             helper.assertTrue(updatedEntry.getSerial() == initialEntry.getSerial(),
                     "The incremental update must retain the baseline serial");
-            helper.assertTrue(updatedEntry.getWhat() == null,
-                    "A known incremental serial must omit the repeated AE key payload");
+            helper.assertTrue(updatedEntry.getWhat().equals(output),
+                    "GTO incremental entries must retain the real key instead of becoming barriers");
             helper.assertTrue(updatedEntry.getActiveAmount() == 3,
                     "The incremental update must report the reduced waiting amount");
             helper.assertTrue(update.getRemainingItemCount() == tracker.getRemainingItemCount(),
@@ -347,7 +347,7 @@ public final class TimeWheelCraftingStatusGameTests {
                 usedItems,
                 counterOf(output, amount),
                 new KeyCounter(),
-                Map.of());
+                new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of()));
     }
 
     private static MenuHarness openMenu(GameTestHelper helper, String playerName) {

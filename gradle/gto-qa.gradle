@@ -1,0 +1,14 @@
+// Opt-in, disposable integration fixture for an unchanged GTO pack. Never included in LT's jar.
+sourceSets.create('gtoQa') {
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    runtimeClasspath += output + compileClasspath
+}
+tasks.register('gtoQaJar', Jar) {
+    group = 'verification'
+    description = 'Builds the disposable GTO server/client integration test mod.'
+    archiveFileName = 'gto-compat-qa.jar'
+    from sourceSets.gtoQa.output
+    destinationDirectory = layout.buildDirectory.dir('gto-qa')
+}
+reobf { gtoQaJar {} }
+tasks.named('gtoQaJar').configure { finalizedBy 'reobfGtoQaJar' }

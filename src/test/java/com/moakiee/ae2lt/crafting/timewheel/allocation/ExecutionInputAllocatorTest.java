@@ -702,7 +702,8 @@ class ExecutionInputAllocatorTest {
 
     @Test
     void intersectingSetReservesMustProtectTheirUnion() {
-        var selected = pattern(X, input(Q, new TestKey("spare")));
+        var spare = new TestKey("spare");
+        var selected = pattern(X, input(Q, spare));
         var left = pattern(new TestKey("left"), new Input(2, null, new GenericStack(G, 1), new GenericStack(Q, 1)));
         var right = pattern(Y, new Input(2, null, new GenericStack(Q, 1), new GenericStack(C, 1)));
         var tasks = tasks(selected, 1, left, 1, right, 1);
@@ -711,10 +712,10 @@ class ExecutionInputAllocatorTest {
         inventory.insert(G, 1, Actionable.MODULATE);
         inventory.insert(Q, 2, Actionable.MODULATE);
         inventory.insert(C, 1, Actionable.MODULATE);
-        inventory.insert(new TestKey("spare"), 1, Actionable.MODULATE);
+        inventory.insert(spare, 1, Actionable.MODULATE);
         var choices = allocator.allocate(selected, inventory, null, 1).openChoices();
         assertEquals(0, choices.available(0, Q, 1), "both individual sets have slack, but their union has none");
-        assertEquals(1, choices.available(0, new TestKey("spare"), 1));
+        assertEquals(1, choices.available(0, spare, 1));
     }
 
     @Test
@@ -978,6 +979,7 @@ class ExecutionInputAllocatorTest {
     }
 
     static final class TestKey extends AEKey {
+        @Override public int getUid() { return primary.hashCode(); }
         private static final TestKeyType TYPE = new TestKeyType();
         private final String id;
         private final String primary;

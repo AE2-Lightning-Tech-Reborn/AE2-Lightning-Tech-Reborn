@@ -49,3 +49,17 @@ AE2 Lightning Tech bundles MixinExtras for its mixin injection extensions.
 
 The complete AE2 Lightning Tech GNU LGPL 3.0 license text, asset license notice, and this
 third-party notice are distributed in `META-INF` inside the mod JAR and in the repository root.
+
+## Applied Energistics 2 — GTO JEI compatibility
+
+The classes `compat/gto/jei/AbstractTransferHandler`, `EncodePatternTransferHandler`, and
+`UseCraftingRecipeTransfer` are adapted from Applied Energistics 2 Forge 15.4.10, revision
+`b4b08d9941e3faecb520d76be617629bb56661e1`. Their original copyright notices are retained.
+They use LT-owned packages because the GTO AE2 fork no longer includes the JEI handlers.
+
+- Upstream: https://github.com/AppliedEnergistics/Applied-Energistics-2
+- License: GNU Lesser General Public License version 3 or later
+- Modifications: LT-local recipe overlay access, GTO collection types, and item/fluid/lightning conversion.
+
+GTOCore is a compile-only dependency for its public CPU superclass. Its classes and GTOLib
+implementation are not redistributed in this mod. The installed GTOCore supplies them.

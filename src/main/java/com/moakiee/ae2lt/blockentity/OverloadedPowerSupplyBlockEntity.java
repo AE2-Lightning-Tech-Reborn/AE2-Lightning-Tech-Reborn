@@ -184,7 +184,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.OVERLOADED_POWER_SUPPLY.get().asItem();
     }
 

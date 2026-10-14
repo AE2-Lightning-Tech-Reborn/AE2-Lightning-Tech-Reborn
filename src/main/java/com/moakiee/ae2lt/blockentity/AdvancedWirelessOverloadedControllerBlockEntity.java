@@ -32,7 +32,7 @@ public class AdvancedWirelessOverloadedControllerBlockEntity extends WirelessOve
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get().asItem();
     }
 

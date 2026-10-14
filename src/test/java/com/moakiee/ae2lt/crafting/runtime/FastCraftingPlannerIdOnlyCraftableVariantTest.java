@@ -38,7 +38,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
 import appeng.api.storage.AEKeyFilter;
-import appeng.crafting.inv.ChildCraftingSimulationState;
+import com.moakiee.thunderbolt.compat.gto.inv.ChildCraftingSimulationState;
 import appeng.crafting.inv.ICraftingInventory;
 
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternDetails;
@@ -231,6 +231,9 @@ class FastCraftingPlannerIdOnlyCraftableVariantTest {
     }
 
     private static final class FakeCraftingService implements ICraftingService {
+        @Override public appeng.me.service.helpers.NetworkCraftingProviders getCraftingProviders() {
+            throw new UnsupportedOperationException("Test uses its explicit pattern catalog");
+        }
         private final Map<AEKey, List<IPatternDetails>> patterns = new LinkedHashMap<>();
         private final Set<AEKey> craftables = new java.util.LinkedHashSet<>();
 
@@ -330,6 +333,7 @@ class FastCraftingPlannerIdOnlyCraftableVariantTest {
             this.variant = variant;
         }
 
+        @Override public int getUid() { return id.hashCode(); }
         @Override public AEKeyType getType() { return TYPE; }
         @Override public AEKey dropSecondary() { return new VariantKey(id, null); }
         @Override public CompoundTag toTag() {

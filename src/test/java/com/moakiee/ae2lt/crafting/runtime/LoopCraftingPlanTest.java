@@ -44,7 +44,7 @@ class LoopCraftingPlanTest {
         patternTimes.put(right, 1L);
         var delegate = new CraftingPlan(
                 new GenericStack(seed, 1L), 0L, false, false,
-                new KeyCounter(), new KeyCounter(), new KeyCounter(), patternTimes);
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(patternTimes));
 
         var fallback = (LoopCraftingPlan) LoopCraftingPlan.wrapIfNeeded(delegate);
         assertTrue(fallback.hostReusableSeeds().isEmpty(),
@@ -81,7 +81,7 @@ class LoopCraftingPlanTest {
         patternTimes.put(second, 1L);
         var delegate = new CraftingPlan(
                 new GenericStack(planned, 1L), 0L, false, false,
-                new KeyCounter(), new KeyCounter(), new KeyCounter(), patternTimes);
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(patternTimes));
         var firstSource = first.reusableStockSource();
         var secondSource = second.reusableStockSource();
         Map<ReusableStockUsageKey<AEKey>, Long> usage = Map.of(
@@ -115,7 +115,7 @@ class LoopCraftingPlanTest {
                 planned, UUID.randomUUID(), true, Set.of(planned, actualX, actualY));
         var delegate = new CraftingPlan(
                 new GenericStack(planned, 1L), 0L, false, false,
-                new KeyCounter(), new KeyCounter(), new KeyCounter(), Map.of(pattern, 1L));
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(pattern, 1L)));
         var source = pattern.reusableStockSource();
         Map<ReusableStockUsageKey<AEKey>, Long> usage = Map.of(
                 new ReusableStockUsageKey<>(
@@ -136,7 +136,7 @@ class LoopCraftingPlanTest {
         var pattern = new TestLoopPattern(returnedDust, UUID.randomUUID(), true);
         var delegate = new CraftingPlan(
                 new GenericStack(borrowedCrystal, 1L), 0L, false, false,
-                new KeyCounter(), new KeyCounter(), new KeyCounter(), Map.of(pattern, 1L));
+                new KeyCounter(), new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(pattern, 1L)));
         var source = pattern.reusableStockSource();
         var route = new ReusableBootstrapRoute<>(
                 source.routingScope(), returnedDust);

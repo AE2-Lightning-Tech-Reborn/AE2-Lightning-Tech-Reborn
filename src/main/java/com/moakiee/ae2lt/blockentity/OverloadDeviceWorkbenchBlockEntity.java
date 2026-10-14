@@ -252,7 +252,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.OVERLOAD_DEVICE_WORKBENCH.get().asItem();
     }
 

@@ -213,7 +213,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
                 usedItems,
                 new KeyCounter(),
                 new KeyCounter(),
-                Map.of(macro, copies));
+                new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(macro, copies)));
         var source = macro.reusableStockSource();
         var allocation = new LoopCraftingPlan.HostReusableSeedAllocation(
                 source.storageScope(),

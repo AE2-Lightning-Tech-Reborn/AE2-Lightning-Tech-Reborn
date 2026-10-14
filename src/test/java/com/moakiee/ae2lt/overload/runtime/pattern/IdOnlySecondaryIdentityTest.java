@@ -39,8 +39,8 @@ class IdOnlySecondaryIdentityTest {
         capturedInput.setCount(4);
         capturedOutput.setCount(3);
 
-        assertFalse(AEItemKey.of(capturedInput).equals(AEItemKey.of(capturedInput).dropSecondary()),
-                "fixture must carry a distinct Forge capability identity");
+        // AE2-GTO deliberately keys items by item/NBT, excluding Forge capability payloads.
+        assertEquals(AEItemKey.of(capturedInput), AEItemKey.of(capturedInput).dropSecondary());
 
         var details = new OverloadPatternDetails(
                 parsed(capturedInput, capturedOutput), idOnlyMetadata());

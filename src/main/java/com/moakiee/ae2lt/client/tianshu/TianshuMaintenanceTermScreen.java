@@ -72,6 +72,16 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
             }
 
             @Override
+            public Set<appeng.api.stacks.AEKey> getCraftableKeys() {
+                return repo.getCraftableKeys();
+            }
+
+            @Override
+            public GridInventoryEntry getByKey(appeng.api.stacks.AEKey key) {
+                return repo.getByKey(key);
+            }
+
+            @Override
             public Set<GridInventoryEntry> getAllEntries() {
                 return repo.getAllEntries();
             }
@@ -188,11 +198,11 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
     }
 
     @Override
-    protected void renderGridInventoryEntryTooltip(
-            GuiGraphics graphics, GridInventoryEntry entry, int x, int y) {
+    protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        var entry = getSlotUnderMouse() instanceof gto_ae.hooks.gui.menu.IRepoSlot slot ? slot.getEntry() : null;
         var summary = entry != null ? menu.getMaintenanceSummaryEntry(entry.getWhat()) : null;
         if (summary == null || !summary.ruleConfigured()) {
-            super.renderGridInventoryEntryTooltip(graphics, entry, x, y);
+            super.renderTooltip(graphics, x, y);
             return;
         }
 

@@ -780,7 +780,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.OVERLOAD_PROCESSING_FACTORY.get().asItem();
     }
 

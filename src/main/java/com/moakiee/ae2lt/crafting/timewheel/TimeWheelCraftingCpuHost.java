@@ -15,6 +15,11 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 
 public interface TimeWheelCraftingCpuHost {
+    /** The registered network CPU owning this execution; physical adapters must retain its identity. */
+    default appeng.api.networking.crafting.ICraftingCPU getCraftingLinkOwner(TimeWheelCraftingCPU cpu) {
+        return cpu;
+    }
+
     boolean isCpuActive();
 
     @Nullable

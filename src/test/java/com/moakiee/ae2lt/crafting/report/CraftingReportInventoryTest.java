@@ -205,7 +205,7 @@ class CraftingReportInventoryTest {
         var used = stock(amount, 0);
         used.removeZeros();
         var plan = new CraftingPlan(new GenericStack(GOLD, 1), 8, false, false,
-                used, new KeyCounter(), new KeyCounter(), Map.of());
+                used, new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of()));
         var cpuInventory = new ListCraftingInventory(key -> {});
         var deficit = CraftingCpuHelper.tryExtractInitialItems(plan, grid, cpuInventory, source);
         assertEquals(deficit == null ? amount : 0L, cpuInventory.list.get(IRON));

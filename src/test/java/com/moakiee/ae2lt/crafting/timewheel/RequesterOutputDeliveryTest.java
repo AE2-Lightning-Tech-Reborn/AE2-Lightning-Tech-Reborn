@@ -323,7 +323,7 @@ class RequesterOutputDeliveryTest {
             if (withOtherInput) emitted.add(OTHER, 1);
             var plan = proxy(ICraftingPlan.class, Map.of(
                     "finalOutput", new GenericStack(OUTPUT, demand), "emittedItems", emitted,
-                    "patternTimes", Map.of()));
+                    "patternTimes", new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of())));
             var jobClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TimeWheelJob");
             var constructor = jobClass.getDeclaredConstructor(ICraftingPlan.class, Consumer.class,
                     CraftingLink.class, Integer.class, ElapsedTimeTracker.class);

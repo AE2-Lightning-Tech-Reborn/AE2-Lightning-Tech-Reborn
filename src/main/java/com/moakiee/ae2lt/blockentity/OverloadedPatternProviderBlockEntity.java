@@ -843,7 +843,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         // Mirror the overloaded controller fix: the grid node's visual representation
         // defaults to this representative item, and the controller network-status UI
         // groups machines by that representation.

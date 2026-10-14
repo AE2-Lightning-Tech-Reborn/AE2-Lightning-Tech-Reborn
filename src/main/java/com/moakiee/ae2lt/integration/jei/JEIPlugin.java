@@ -20,7 +20,6 @@ import com.moakiee.ae2lt.integration.jei.category.MultiblockStructureCategory;
 import com.moakiee.ae2lt.integration.jei.category.OverloadGrowthCategory;
 import com.moakiee.ae2lt.integration.jei.category.OverloadProcessingCategory;
 import com.moakiee.ae2lt.integration.jei.category.TeslaCoilCategory;
-import com.moakiee.ae2lt.integration.jei.compat.ae2jeiintegration.AE2JeiIntegrationCompat;
 import com.moakiee.ae2lt.integration.jei.compat.AdvancedAeFactoryJeiCompat;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -41,7 +40,7 @@ import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
-import appeng.integration.modules.jei.transfer.UseCraftingRecipeTransfer;
+import com.moakiee.ae2lt.compat.gto.jei.UseCraftingRecipeTransfer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -59,7 +58,6 @@ public class JEIPlugin implements IModPlugin {
         // 1.20.1: AE2's IngredientConverters extension point lives in the AE2 main jar;
         // the 1.21 standalone AE2JEIIntegration mod does not exist for 1.20.1, so this
         // plugin class is itself proof that JEI is loaded.
-        AE2JeiIntegrationCompat.registerConverter();
     }
 
     @Override
@@ -70,11 +68,13 @@ public class JEIPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
         JeiBookmarkAccessImpl.setRuntime(runtime);
+        com.moakiee.ae2lt.compat.gto.jei.GtoJeiRuntime.set(runtime);
     }
 
     @Override
     public void onRuntimeUnavailable() {
         JeiBookmarkAccessImpl.clearRuntime();
+        com.moakiee.ae2lt.compat.gto.jei.GtoJeiRuntime.set(null);
     }
 
     @Override

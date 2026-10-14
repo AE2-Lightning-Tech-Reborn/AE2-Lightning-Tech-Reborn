@@ -425,9 +425,13 @@ class LoopSeedAllocationLivenessTest {
         counter.add(key, n);
         return counter;
     }
-    private static TestKey key(String id, String variant) { return new TestKey(id, variant); }
+    private static final java.util.Map<String, TestKey> KEYS = new java.util.HashMap<>();
+    private static TestKey key(String id, String variant) {
+        return KEYS.computeIfAbsent(id + ":" + variant, ignored -> new TestKey(id, variant));
+    }
 
     private static final class TestKey extends AEKey {
+        @Override public int getUid() { return id.hashCode(); }
         private static final AEKeyType TYPE = new AEKeyType(
                 new ResourceLocation("ae2lt_test", "liveness"),
                 TestKey.class, Component.literal("liveness key")) {

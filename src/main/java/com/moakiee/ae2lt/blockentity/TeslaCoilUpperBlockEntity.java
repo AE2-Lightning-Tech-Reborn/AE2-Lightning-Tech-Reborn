@@ -47,7 +47,7 @@ public class TeslaCoilUpperBlockEntity extends AEBaseBlockEntity {
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.TESLA_COIL.get().asItem();
     }
 

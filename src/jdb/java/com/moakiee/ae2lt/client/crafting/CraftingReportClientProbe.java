@@ -25,7 +25,7 @@ import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.core.AEConfig;
 import appeng.crafting.CraftingPlan;
 import appeng.crafting.execution.CraftingSubmitResult;
-import appeng.crafting.inv.NetworkCraftingSimulationState;
+import com.moakiee.thunderbolt.compat.gto.inv.NetworkCraftingSimulationState;
 import appeng.menu.ISubMenu;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;

@@ -211,7 +211,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 .orElse(null);
         var craftId = UUID.randomUUID();
         var linkCpu = new CraftingLink(
-                CraftingCpuHelper.generateLinkData(craftId, requester == null, false), cpu);
+                CraftingCpuHelper.generateLinkData(craftId, requester == null, false), cpu.getCraftingLinkOwner());
         var candidateJob = new TimeWheelJob(forced.original(), this::postChange, linkCpu, playerId);
         candidateJob.addManualWaiting(forced.manualMissing());
         loopSeedLedgers.initialize(candidateJob.loopPatterns());
@@ -2922,7 +2922,11 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
      * discovery dispatch incorrectly limits the virtual CPU to one ordinary push per tick.</p>
      */
     void finishPhysicalSchedulingTick() {
-        carryOverDueTasks();
+        // A restored or paused job can return before prepareScheduler. Moving its due bucket
+        // then would put work ahead of an uninitialized/stale cursor on the first resumed tick.
+        if (schedulerTick == TickHandler.instance().getCurrentTick()) {
+            carryOverDueTasks();
+        }
     }
 
     private void carryOverDueTasks() {
@@ -3203,7 +3207,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 return null;
             }
 
-            var link = new CraftingLink(data.getCompound(NBT_LINK), cpu);
+            var link = new CraftingLink(data.getCompound(NBT_LINK), cpu.getCraftingLinkOwner());
             var emptyPlan = new TimeWheelPlan(finalOutput);
             var job = new TimeWheelJob(
                     emptyPlan,
@@ -3492,8 +3496,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
 
         @Override
-        public Map<IPatternDetails, Long> patternTimes() {
-            return Map.of();
+        public it.unimi.dsi.fastutil.objects.Object2LongMap<IPatternDetails> patternTimes() {
+            return it.unimi.dsi.fastutil.objects.Object2LongMaps.emptyMap();
         }
     }
 
@@ -3505,7 +3509,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         @Override public boolean multiplePaths() { return delegate.multiplePaths(); }
         @Override public KeyCounter emittedItems() { return delegate.emittedItems(); }
         @Override public KeyCounter missingItems() { return delegate.missingItems(); }
-        @Override public Map<IPatternDetails, Long> patternTimes() { return delegate.patternTimes(); }
+        @Override public it.unimi.dsi.fastutil.objects.Object2LongMap<IPatternDetails> patternTimes() { return delegate.patternTimes(); }
     }
 
     private final class SingleTaskBatchJobView implements DeferredCraftingProvider.Job, BatchTaskHandle, Iterator<BatchTaskHandle> {

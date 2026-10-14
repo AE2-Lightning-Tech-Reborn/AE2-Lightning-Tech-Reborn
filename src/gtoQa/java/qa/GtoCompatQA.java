@@ -1,0 +1,171 @@
+package qa;
+
+import java.lang.reflect.*;
+import java.math.BigInteger;
+import java.util.*;
+import java.util.concurrent.*;
+import appeng.api.config.Actionable;
+import appeng.api.networking.*;
+import appeng.api.networking.crafting.*;
+import appeng.api.networking.energy.IEnergyService;
+import appeng.api.networking.security.IActionSource;
+import appeng.api.networking.storage.IStorageService;
+import appeng.api.stacks.*;
+import appeng.api.storage.MEStorage;
+import appeng.crafting.*;
+import appeng.crafting.inv.ListCraftingInventory;
+import appeng.me.cluster.implementations.CraftingCPUCluster;
+import appeng.me.service.CraftingService;
+import appeng.me.storage.NetworkStorage;
+import appeng.me.storage.DelegatingMEInventory;
+import com.google.common.collect.ImmutableSet;
+import com.moakiee.ae2lt.compat.gto.GtoCpuJobAccess;
+import com.moakiee.ae2lt.gametest.*;
+import com.moakiee.thunderbolt.api.crafting.*;
+import com.moakiee.thunderbolt.api.storage.BigMEStorage;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.*;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.fml.common.Mod;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+
+@Mod("gto_compat_qa")
+public final class GtoCompatQA {
+    static { org.apache.logging.log4j.core.config.Configurator.setLevel("qa",org.apache.logging.log4j.Level.INFO); }
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+    private final GameTestTicker ticker = new GameTestTicker();
+    private Collection<GameTestInfo> tests;
+    private boolean reported;
+    private int startupFailures;
+    private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
+    private static final java.util.concurrent.atomic.AtomicInteger ENGINE_CALLS = new java.util.concurrent.atomic.AtomicInteger();
+    public GtoCompatQA() {
+        CraftingPlanningEngines.register(new CraftingPlanningEngine() {
+            public net.minecraft.resources.ResourceLocation id(){return QA_ENGINE_ID;}
+            public boolean check(IGrid grid,PlanningRequest request){return true;}
+            public PlanningEngineSession createSession(PlanningRequest request,Object captured,PlanningAttemptContext context){
+                return new PlanningEngineSession(){
+                    public PlanningAttempt attempt(long amount,boolean simulate,PlanningAttemptContext ctx){ENGINE_CALLS.incrementAndGet();return PlanningAttempt.handled(plan(request.output(),amount));}
+                };
+            }
+        },0,false);
+        MinecraftForge.EVENT_BUS.addListener(this::start);
+        MinecraftForge.EVENT_BUS.addListener(this::tick);
+    }
+    private void start(ServerStartedEvent e) {
+        try {
+            try { checkCpu(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA CPU FAIL",failure); }
+            try { checkStorage(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA STORAGE FAIL",failure); }
+            try { checkPlanner(e.getServer()); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA PLANNER FAIL",failure); }
+            GameTestRegistry.register(GtoCpuGameTests.class);
+            GameTestRegistry.register(TimeWheelCraftingStatusGameTests.class);
+            GameTestRegistry.register(ClosedLoopSharedSeedBatchGameTests.class);
+            tests = GameTestRunner.runTests(GameTestRegistry.getAllTestFunctions(), new BlockPos(0,100,0),
+                    Rotation.NONE,e.getServer().overworld(),ticker,4);
+            LOGGER.info("GTO_COMPAT_QA START tests="+tests.size());
+        } catch(Throwable failure) { LOGGER.error("QA failure",failure); LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure); }
+    }
+    private void tick(TickEvent.ServerTickEvent e) {
+        if(e.phase!=TickEvent.Phase.END || tests==null || reported) return;
+        ticker.tick();
+        if(tests.stream().allMatch(GameTestInfo::isDone)) {
+            reported=true;
+            long failed=tests.stream().filter(GameTestInfo::hasFailed).count();
+            for(var test:tests) {
+                LOGGER.info("GTO_COMPAT_QA TEST "+test.getTestName()+" "+(test.hasSucceeded()?"PASS":"FAIL "+test.getError()));
+                if(test.getError()!=null) LOGGER.error("Game test failure",test.getError());
+            }
+            LOGGER.info("GTO_COMPAT_QA "+(failed==0 && startupFailures==0?"PASS":"FAIL")+" total="+tests.size()+" failed="+failed+" startupFailures="+startupFailures);
+        }
+    }
+    private static void check(boolean condition,String message) {if(!condition)throw new AssertionError(message);}
+    @SuppressWarnings("unchecked")
+    private static <T> T proxy(Class<T> type, java.util.function.Function<Method,Object> function) {
+        return (T)Proxy.newProxyInstance(type.getClassLoader(),new Class<?>[]{type},(p,m,a)->function.apply(m));
+    }
+    private static CraftingPlan plan(AEKey key,long count) {
+        return new CraftingPlan(new GenericStack(key,count),1,false,false,new KeyCounter(),new KeyCounter(),new KeyCounter(),new Object2LongOpenHashMap<>());
+    }
+    private static void checkCpu() throws Exception {
+        var key=AEItemKey.of(Items.DIAMOND);
+        var cpu=new CraftingCPUCluster(BlockPos.ZERO,BlockPos.ZERO);
+        check(cpu.craftingLogic instanceof com.moakiee.ae2lt.compat.gto.GtoCompatibleCraftingCpuLogic,"compatible GTO CPU not installed");
+        var jobType=Class.forName("com.gtocore.api.ae2.crafting.ExecutingCraftingJob");
+        var ctor=Arrays.stream(jobType.getDeclaredConstructors()).filter(c->c.getParameterCount()==4).findFirst().orElseThrow();
+        ctor.setAccessible(true);
+        var job=ctor.newInstance(plan(key,100),(ListCraftingInventory.ChangeListener)changed->{},null,null);
+        var field=Class.forName("com.gtocore.api.ae2.crafting.OptimizedCraftingCpuLogic").getDeclaredField("job");field.setAccessible(true);field.set(cpu.craftingLogic,job);
+        var remaining=jobType.getDeclaredField("remainingAmount");remaining.setAccessible(true);remaining.setLong(job,30);
+        check(GtoCpuJobAccess.remaining(cpu.craftingLogic)==30,"remaining output bridge failed");
+        var service=proxy(ICraftingService.class,m->m.getName().equals("getCpus")?ImmutableSet.of(cpu):null);
+        var inflight=Class.forName("com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceCrafting").getDeclaredMethod("inFlightAmounts",ICraftingService.class);
+        inflight.setAccessible(true);
+        check(((KeyCounter)inflight.invoke(null,service)).get(key)==30,"stocking used original total instead of remaining output");
+        LOGGER.info("GTO_COMPAT_QA CPU PASS native job/remaining-output bridge");
+    }
+    private static void checkStorage() {
+        var key=AEItemKey.of(Items.DIAMOND);var source=IActionSource.empty();
+        var leaf=new MEStorage(){
+            long amount=19;
+            public Component getDescription(){return Component.literal("QA stock");}
+            public long extract(AEKey k,long n,Actionable mode,IActionSource src){long got=k==key?Math.min(n,amount):0;if(mode==Actionable.MODULATE)amount-=got;return got;}
+            public void getAvailableStacks(KeyCounter out){out.add(key,amount);}
+            public Object getResourceIdentity(){return this;}
+        };
+        var base=new NetworkStorage();base.mount(0,leaf);
+        var left=new NetworkStorage();left.mount(0,new DelegatingMEInventory(base));
+        var right=new NetworkStorage();right.mount(0,new DelegatingMEInventory(base));
+        var root=new NetworkStorage();root.mount(0,new DelegatingMEInventory(left));root.mount(0,new DelegatingMEInventory(right));
+        var big=(BigMEStorage)(Object)root;
+        check(big.extractBig(key,BigInteger.valueOf(100),Actionable.SIMULATE,source).longValueExact()==19,"shared simulation double counted");
+        check(big.snapshotBig(source).get(key).longValueExact()==19,"shared snapshot double counted");
+        check(big.extractBig(key,BigInteger.valueOf(100),Actionable.MODULATE,source).longValueExact()==19,"shared extraction mismatch");
+        check(big.snapshotBig(source).isEmpty(),"extraction did not drain shared storage");
+        var first=new BigCell(key);var second=new BigCell(key);
+        var direct=new NetworkStorage();direct.mount(0,first);direct.mount(0,second);
+        var directBig=(BigMEStorage)(Object)direct;var huge=BigInteger.TEN.pow(30);
+        check(directBig.snapshotBig(source).get(key).equals(huge.multiply(BigInteger.TWO)),"direct exact storage was truncated");
+        check(directBig.extractBig(key,BigInteger.ONE,Actionable.MODULATE,source).equals(BigInteger.ONE),"direct extraction failed");
+        check(first.amount.equals(huge) && second.amount.equals(huge.subtract(BigInteger.ONE)),"equal-priority extraction order differs from GTO");
+        check(directBig.insertBig(key,BigInteger.ONE,Actionable.MODULATE,source).equals(BigInteger.ONE),"direct insertion failed");
+        check(first.amount.equals(huge.add(BigInteger.ONE)),"equal-priority insertion order differs from GTO");
+        LOGGER.info("GTO_COMPAT_QA STORAGE PASS shared graph deduplication, direct exact amounts, and native mount order");
+    }
+    private static final class BigCell implements MEStorage,BigMEStorage {
+        final AEKey key;BigInteger amount=BigInteger.TEN.pow(30);
+        BigCell(AEKey key){this.key=key;}
+        public Component getDescription(){return Component.literal("QA exact storage");}
+        public BigInteger insertBig(AEKey key,BigInteger count,Actionable mode,IActionSource source){if(key!=this.key)return BigInteger.ZERO;if(mode==Actionable.MODULATE)amount=amount.add(count);return count;}
+        public BigInteger extractBig(AEKey key,BigInteger count,Actionable mode,IActionSource source){if(key!=this.key)return BigInteger.ZERO;var taken=count.min(amount);if(mode==Actionable.MODULATE)amount=amount.subtract(taken);return taken;}
+        public Map<AEKey,BigInteger> snapshotBig(IActionSource source){return Map.of(key,amount);}
+    }
+    private static void checkPlanner(MinecraftServer server) throws Exception {
+        var storage=proxy(IStorageService.class,m->m.getName().equals("getCachedInventory")?new KeyCounter():m.getName().equals("getInventory")?new NetworkStorage():null);
+        var energy=proxy(IEnergyService.class,m->null);
+        var resolutions=new java.util.concurrent.atomic.AtomicInteger();
+        var selected=new java.util.concurrent.atomic.AtomicReference<List<PlanningChoice>>(List.of(PlanningChoice.VANILLA));
+        var choices=proxy(ICraftingPlanningService.class,m->{resolutions.incrementAndGet();return selected.get();});
+        var service=new CraftingService[1];
+        var grid=(IGrid)Proxy.newProxyInstance(IGrid.class.getClassLoader(),new Class<?>[]{IGrid.class},(p,m,a)->switch(m.getName()){
+            case "getStorageService"->storage;case "getEnergyService"->energy;case "getCraftingService"->service[0];
+            case "getService"->a[0]==ICraftingPlanningService.class?choices:null;
+            case "getMachines"->List.of();case "getPivot"->proxy(IGridNode.class,m2->m2.getName().equals("getLevel")?server.overworld():null);default->null;});
+        service[0]=new CraftingService(grid,storage,energy);
+        var future=service[0].beginCraftingCalculation(server.overworld(),()->null,AEItemKey.of(Items.DIAMOND),1,CalculationStrategy.REPORT_MISSING_ITEMS);
+        var result=future.get(10,TimeUnit.SECONDS);
+        check(result!=null,"native fallback returned no plan");
+        check(resolutions.get()==1,"TB calculation wrapper did not run");
+        check(result.simulation(),"empty network should report native missing-items simulation");
+        selected.set(List.of(PlanningChoice.engine(QA_ENGINE_ID),PlanningChoice.VANILLA));
+        var engineResult=service[0].beginCraftingCalculation(server.overworld(),()->null,AEItemKey.of(Items.DIAMOND),7,CalculationStrategy.REPORT_MISSING_ITEMS).get(10,TimeUnit.SECONDS);
+        check(!engineResult.simulation() && engineResult.finalOutput().amount()==7 && ENGINE_CALLS.get()==1,"TB candidate was not selected through GTO service");
+        check(engineResult.patternTimes() instanceof Object2LongOpenHashMap,"native CPU needs concrete fastutil map");
+        LOGGER.info("GTO_COMPAT_QA PLANNER PASS transformed service, selected TB candidate, and native GTO fallback");
+    }
+}

@@ -19,7 +19,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.crafting.execution.CraftingCpuHelper;
-import appeng.crafting.execution.InputTemplate;
+import appeng.api.stacks.GenericStack;
 import appeng.crafting.inv.ICraftingInventory;
 import appeng.crafting.inv.ListCraftingInventory;
 
@@ -205,33 +205,33 @@ public final class TimeWheelInputExtractor {
             for (int pass = preferred ? 0 : 1; pass < 2 && remainingMultiplier > 0; pass++) {
                 // Native discovery eagerly enumerates all fuzzy alternatives. Open it only when
                 // positive proof edges cannot fill this slot; it remains the substitution fallback.
-                Iterable<InputTemplate> templates;
+                Iterable<GenericStack> templates;
                 if (pass == 0) {
                     var candidates = choices.preferredInputs(slot);
                     templates = () -> new java.util.Iterator<>() {
                         final java.util.Iterator<appeng.api.stacks.GenericStack> keys = candidates.iterator();
                         public boolean hasNext() { return keys.hasNext(); }
-                        public InputTemplate next() {
+                        public GenericStack next() {
                             var candidate = keys.next();
-                            return new InputTemplate(candidate.what(), candidate.amount());
+                            return new GenericStack(candidate.what(), candidate.amount());
                         }
                     };
                 } else templates = CraftingCpuHelper.getValidItemTemplates(slotInventory, input, level);
                 for (var template : templates) {
                     long wanted = remainingMultiplier;
                     if (pass == 0) {
-                        if (!input.isValid(template.key(), level)) continue;
-                        wanted = Math.min(wanted, choices.assigned(slot, template.key()) / template.amount());
+                        if (!input.isValid(template.what(), level)) continue;
+                        wanted = Math.min(wanted, choices.assigned(slot, template.what()) / template.amount());
                     }
                     if (wanted <= 0) continue;
                     long extracted = CraftingCpuHelper.extractTemplates(slotInventory, template, wanted);
                     if (extracted <= 0) continue;
 
-                    holder.add(template.key(), saturatingMultiply(extracted, template.amount()));
-                    var remaining = input.getRemainingKey(template.key());
+                    holder.add(template.what(), saturatingMultiply(extracted, template.amount()));
+                    var remaining = input.getRemainingKey(template.what());
                     if (remaining != null) {
                         boolean shared = allowSharedInputs
-                                && SharedBatchInputs.isSharedInput(details, slot, template.key());
+                                && SharedBatchInputs.isSharedInput(details, slot, template.what());
                         remainders.add(new RemainderSpec(remaining, extracted, shared));
                     }
                     remainingMultiplier -= extracted;

@@ -270,7 +270,7 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
                 // for AE2's standard adapters, including when it becomes null.
                 // The wrapper and the deduplication identity must be the same
                 // handler, not a cached wrapper paired with a fresh identity.
-                if (entry.getValue() instanceof ForgeExternalStorageStrategy<?, ?>
+                if (entry.getValue() instanceof ForgeExternalStorageStrategy
                         && entry.getKey() == AEKeyType.items()) {
                     var handler = target == null ? null : target.getCapability(
                             ForgeCapabilities.ITEM_HANDLER, side.getOpposite()).orElse(null);
@@ -281,7 +281,7 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
                         facade.setExtractableOnly(false);
                     }
                     wrapper = facade;
-                } else if (entry.getValue() instanceof ForgeExternalStorageStrategy<?, ?>
+                } else if (entry.getValue() instanceof ForgeExternalStorageStrategy
                         && entry.getKey() == AEKeyType.fluids()) {
                     var handler = target == null ? null : target.getCapability(
                             ForgeCapabilities.FLUID_HANDLER, side.getOpposite()).orElse(null);

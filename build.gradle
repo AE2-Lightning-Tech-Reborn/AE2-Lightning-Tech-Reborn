@@ -38,7 +38,7 @@ tasks.register('printProjectVersion') {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 // Development-only upstream I/O fixtures; excluded from the published jar.
@@ -144,6 +144,11 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    maven { url = uri(project.findProperty("thunderbolt_local_repository") ?: "../Thunderbolt-Core-Reborn/repo") }
+    maven {
+        url = 'https://gtodyssey.com/maven/releases'
+        content { includeGroup 'appeng'; includeGroup 'com.gto.fastcollection' }
+    }
     mavenLocal()
     if (githubPackagesUser && githubPackagesToken) {
         maven {
@@ -218,7 +223,8 @@ repositories {
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    implementation fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
+    implementation fg.deobf("appeng:appliedenergistics2-forge-1.20.1:${ae2_version}")
+    implementation "com.gto.fastcollection:FastCollection:26.8.7"
 
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
@@ -345,7 +351,7 @@ tasks.named('processResources', ProcessResources).configure {
     // MixinGradle 0.7.x writes the annotation-processor output as compileJava-refmap.json.
     // Rename it to the name declared by every AE2LT mixin config before it enters resources;
     // otherwise the published jar contains the mixin classes but no usable refmap.
-    def generatedRefmap = layout.buildDirectory.file("tmp/compileJava/compileJava-refmap.json")
+    def generatedRefmap = layout.buildDirectory.file("generated/mixin/ae2lt.refmap.json")
     from(generatedRefmap) {
         rename { "${mod_id}.refmap.json" }
     }
@@ -922,4 +928,57 @@ dependencies {
     compileOnly files(remapAdvancedAeRecipeApi.flatMap { it.output })
     testImplementation files(remapAdvancedAeRecipeApi.flatMap { it.output })
     testImplementation(fg.deobf("maven.modrinth:advancedae:${advancedae_version}")) { transitive = false }
+}
+
+// JUnit has no ModLauncher: apply the actual AE2-GTO identity mixins to its test JVM only.
+// This fixture is not included in either production artifact.
+def gtoTestAgent = tasks.register('gtoTestAgent', Jar) {
+    dependsOn tasks.named('testClasses')
+    archiveClassifier = 'gto-test-agent'
+    from(sourceSets.test.output) { include 'com/moakiee/gtotest/GtoTestMixinAgent*.class' }
+    manifest { attributes 'Premain-Class': 'com.moakiee.gtotest.GtoTestMixinAgent' }
+}
+tasks.withType(Test).configureEach {
+    dependsOn gtoTestAgent
+    doFirst { jvmArgs "-javaagent:${gtoTestAgent.get().archiveFile.get().asFile}" }
+}
+
+compileJava {
+    // The Mixin processor must see all mixins whenever this output is regenerated.
+    options.incremental = false
+    def stableRefmap = layout.buildDirectory.file("generated/mixin/ae2lt.refmap.json")
+    outputs.file(stableRefmap)
+    doLast {
+        // MixinGradle moves its temporary map when adding it to an archive. Preserve a
+        // separate compiler output for processResources and subsequent no-op builds.
+        def generated = layout.buildDirectory.file("tmp/compileJava/compileJava-refmap.json").get().asFile
+        if (!generated.isFile()) throw new GradleException("Mixin processor did not produce ${generated}")
+        stableRefmap.get().asFile.parentFile.mkdirs()
+        stableRefmap.get().asFile.bytes = generated.bytes
+    }
+}
+
+// Only the public GTO CPU superclass is referenced. This compile-only dependency is never
+// bundled; the installed, unmodified GTOCore provides it at runtime.
+def gtoCoreApi = layout.buildDirectory.file('compile-only/gtocore-26.10.5.jar')
+def prepareGtoCoreApi = tasks.register('prepareGtoCoreApi') {
+    def suppliedJar = providers.gradleProperty('gto_core_jar')
+    inputs.property('sha256', '8e6260ac596091ca876506e70b7715249b7198ddbd5d833059c3609ac751e465')
+    if (suppliedJar.isPresent()) inputs.file(suppliedJar)
+    outputs.file(gtoCoreApi)
+    doLast {
+        def target = gtoCoreApi.get().asFile
+        target.parentFile.mkdirs()
+        if (suppliedJar.isPresent()) target.bytes = file(suppliedJar.get()).bytes
+        else new URL('https://raw.githubusercontent.com/GregTech-Odyssey/GregTech-Odyssey/3650c7d330ade1b744ade0bc303fe5111eac98fa/mods/gtocore-forge-1.20.1-26.10.5.jar').withInputStream { input ->
+            target.withOutputStream { output -> output << input }
+        }
+        def actual = java.security.MessageDigest.getInstance('SHA-256').digest(target.bytes).encodeHex().toString()
+        if (actual != inputs.properties.sha256) throw new GradleException('GTOCore API JAR checksum mismatch')
+    }
+}
+dependencies { compileOnly files(gtoCoreApi).builtBy(prepareGtoCoreApi) }
+
+if (providers.gradleProperty('gtoQa').isPresent()) {
+    apply from: 'gradle/gto-qa.gradle'
 }

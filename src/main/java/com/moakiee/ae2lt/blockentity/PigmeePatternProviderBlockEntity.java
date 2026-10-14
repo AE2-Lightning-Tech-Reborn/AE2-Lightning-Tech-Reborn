@@ -405,7 +405,7 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.PIGMEE_PATTERN_PROVIDER.get().asItem();
     }
 }

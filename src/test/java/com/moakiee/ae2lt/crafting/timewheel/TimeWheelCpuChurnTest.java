@@ -206,7 +206,7 @@ class TimeWheelCpuChurnTest {
             var plan = proxy(ICraftingPlan.class, (name, args) -> switch (name) {
                 case "finalOutput" -> new GenericStack(OUTPUT, amount);
                 case "emittedItems" -> new KeyCounter();
-                case "patternTimes" -> Map.of(pattern, amount);
+                case "patternTimes" -> new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(pattern, amount));
                 default -> null;
             });
             var tag = new CompoundTag();
@@ -256,7 +256,7 @@ class TimeWheelCpuChurnTest {
             if (pool.consumeCpuListChanged()) index.replaceProviders(List.of(node));
             refreshIndex();
             // Exercise AE2's real per-tick CraftingLinkNexus membership/death checks as well.
-            service.onServerEndTick();
+            service.onServerEndTick(null);
             long before = acceptedTotal;
             for (var cluster : index.clusters()) cluster.tickCraftingLogic(energy, service);
             assertTrue(acceptedTotal - before <= budget);

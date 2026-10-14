@@ -475,7 +475,7 @@ public class TianshuSupercomputerPortBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.TIANSHU_SUPERCOMPUTER_PORT.get().asItem();
     }
 

@@ -19,7 +19,7 @@ public abstract class PatternMigrationStorageMountMixin {
             target = "Lappeng/me/storage/NetworkStorage;mount(ILappeng/api/storage/MEStorage;)V"))
     private void ae2lt$recordStorageOrigin(NetworkStorage network, int priority, MEStorage inventory,
             Operation<Void> original) {
-        ((PatternMigrationStorageOrigins) network).ae2lt$registerMigrationStorage(inventory, provider);
+        ((PatternMigrationStorageOrigins) (Object) network).ae2lt$registerMigrationStorage(inventory, provider);
         original.call(network, priority, inventory);
     }
 }

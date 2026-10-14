@@ -47,6 +47,10 @@ public final class TimeWheelCraftingCPU implements ICraftingCPU {
         return craftingLogic;
     }
 
+    public ICraftingCPU getCraftingLinkOwner() {
+        return host != null ? host.getCraftingLinkOwner(this) : this;
+    }
+
     public TimeWheelCraftingCpuHost getHost() {
         return host;
     }

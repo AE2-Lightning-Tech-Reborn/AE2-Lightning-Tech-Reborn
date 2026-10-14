@@ -377,7 +377,7 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.LIGHTNING_COLLECTOR.get().asItem();
     }
 

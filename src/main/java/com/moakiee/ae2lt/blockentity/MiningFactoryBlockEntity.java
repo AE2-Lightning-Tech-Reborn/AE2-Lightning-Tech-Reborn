@@ -350,7 +350,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
                 });
     }
 
-    @Override protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    @Override public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.MINING_FACTORY.get().asItem();
     }
 

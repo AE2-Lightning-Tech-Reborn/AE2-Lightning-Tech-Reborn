@@ -108,8 +108,8 @@ public final class WirelessJeiSupply {
                 return result(packet, 0, List.of());
             requested.put(key, amount);
         }
-        var queue = requested.entrySet().stream().map(e -> new IMenuCraftingPacket.AutoCraftEntry(e.getKey(),
-                java.util.stream.IntStream.range(0, e.getValue()).boxed().toList())).toList();
+        var queue = requested.entrySet().stream().map(e -> new appeng.api.stacks.GenericStack(e.getKey(),
+                e.getValue().longValue())).toList();
         // Use the same queue, calculation strategy and confirmation flow as CraftingTermMenu.
         CraftConfirmMenu.openWithCraftingList(host, player, ticket.locator(), queue);
         if (!(player.containerMenu instanceof CraftConfirmMenu confirm)) return result(packet, 0, List.of());

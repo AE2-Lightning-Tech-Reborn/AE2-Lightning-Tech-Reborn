@@ -73,7 +73,7 @@ public class OverloadedControllerBlockEntity extends ControllerBlockEntity
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.OVERLOADED_CONTROLLER.get().asItem();
     }
 }

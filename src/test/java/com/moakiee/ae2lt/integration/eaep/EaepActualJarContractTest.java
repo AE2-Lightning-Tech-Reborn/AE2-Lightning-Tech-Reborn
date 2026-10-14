@@ -83,7 +83,7 @@ class EaepActualJarContractTest {
             var missing = new KeyCounter();
             missing.add(key, 3);
             var delegate = new CraftingPlan(new GenericStack(AEItemKey.of(Items.IRON_INGOT), 1),
-                    8, true, false, new KeyCounter(), new KeyCounter(), missing, Map.of());
+                    8, true, false, new KeyCounter(), new KeyCounter(), missing, new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of()));
             var allowed = new LoopCraftingPlan(delegate, List.of(host -> true), Map.of(key, 3L),
                     Map.of(), List.of());
             var denied = new LoopCraftingPlan(delegate, List.of(host -> false), Map.of(key, 3L),
@@ -128,7 +128,7 @@ class EaepActualJarContractTest {
                     case "multiplePaths" -> false;
                     case "missingItems" -> missing;
                     case "usedItems", "emittedItems" -> new KeyCounter();
-                    case "patternTimes" -> Map.of();
+                    case "patternTimes" -> new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of());
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }

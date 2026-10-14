@@ -25,7 +25,7 @@ public final class PigmeeSynthesisStationMenu extends CraftingTermMenu {
     }
 
     @Override
-    public void startAutoCrafting(List<IMenuCraftingPacket.AutoCraftEntry> toCraft) {
+    public void startAutoCrafting(List<appeng.api.stacks.GenericStack> toCraft) {
         // This standalone station has no ME crafting service.
     }
 

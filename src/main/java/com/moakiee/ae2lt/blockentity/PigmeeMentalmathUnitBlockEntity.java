@@ -158,7 +158,7 @@ public final class PigmeeMentalmathUnitBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.PIGMEE_MENTALMATH_UNIT.get().asItem();
     }
 }

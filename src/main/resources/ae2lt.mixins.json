@@ -51,12 +51,11 @@
     "SimpleChannelMessageBuilderPhaseTeleportMixin",
     "ServerGamePacketListenerCelestweaveCreativeSyncMixin",
     "thunderbolt.accessor.ElapsedTimeTrackerAccessor",
-    "thunderbolt.accessor.ExecutingCraftingJobAccessor",
-    "thunderbolt.accessor.CraftingCpuLogicAccessor",
+    "GtoCraftingCpuClusterMixin",
+    "GtoCraftingStatusMixin",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
-    "thunderbolt.CraftingCpuLogicMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
     "thunderbolt.ECOCraftingCpuLogicMixin",
     "ControllerValidatorMixin",
@@ -94,6 +93,7 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
+    "client.GtoTerminalKeyAmountMixin",
     "client.BigCpuListMixin"
   ],
   "injectors": {

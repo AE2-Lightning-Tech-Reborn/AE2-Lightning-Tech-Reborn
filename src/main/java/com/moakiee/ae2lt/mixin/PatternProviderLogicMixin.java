@@ -24,20 +24,21 @@ import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternD
  * OverloadedPatternProviderLogic rebuilds its pattern list separately and still
  * accepts these patterns.
  */
-@Mixin(PatternProviderLogic.class)
+@Mixin(value = PatternProviderLogic.class, priority = 1001)
 public abstract class PatternProviderLogicMixin {
 
     @WrapOperation(
             method = "updatePatterns",
             at = @At(
                     value = "INVOKE",
-                    target = "Lappeng/api/crafting/PatternDetailsHelper;decodePattern(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;)Lappeng/api/crafting/IPatternDetails;"
+                    target = "Lcom/gtolib/api/ae2/MyPatternDetailsHelper;decodePattern(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/block/entity/BlockEntity;Lappeng/api/networking/IGrid;)Lappeng/api/crafting/IPatternDetails;"
             ),
             remap = false
     )
     private @Nullable IPatternDetails ae2lt$rejectOverloadPatternsInNormalProviders(
-            ItemStack stack, Level level, Operation<IPatternDetails> original) {
-        var details = original.call(stack, level);
+            ItemStack stack, net.minecraft.world.level.block.entity.BlockEntity host,
+            appeng.api.networking.IGrid grid, Operation<IPatternDetails> original) {
+        var details = original.call(stack, host, grid);
         return details instanceof OverloadedProviderOnlyPatternDetails ? null : details;
     }
 

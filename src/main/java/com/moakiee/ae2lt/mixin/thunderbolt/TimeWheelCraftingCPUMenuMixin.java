@@ -168,9 +168,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
             long pendingCount = logic.getPendingOutputs(what);
 
             var sentStack = what;
-            if (!full && changes.getSerial(what) != null) {
-                sentStack = null;
-            }
+            // GTO returns a barrier key for omitted keys; preserve the actual key in updates.
 
             var entry = new CraftingStatusEntry(
                     changes.getOrAssignSerial(what),

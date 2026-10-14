@@ -24,7 +24,6 @@ import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.helpers.MultiCraftingTracker;
 import appeng.crafting.execution.CraftingCpuLogic;
-import appeng.crafting.execution.ExecutingCraftingJob;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
 import net.minecraft.world.level.Level;
@@ -39,8 +38,6 @@ final class OverloadedInterfaceCrafting {
     private static final Method SET_JOB = trackerMethod("setJob", int.class, Future.class);
     private static final Method GET_LINK = trackerMethod("getLink", int.class);
     private static final Method SET_LINK = trackerMethod("setLink", int.class, ICraftingLink.class);
-    private static final Field CPU_JOB = accessibleField(CraftingCpuLogic.class, "job");
-    private static final Field REMAINING_OUTPUT = accessibleField(ExecutingCraftingJob.class, "remainingAmount");
 
     private final MultiCraftingTracker tracker;
     private final ICraftingRequester requester;
@@ -194,12 +191,9 @@ final class OverloadedInterfaceCrafting {
                 if (cpu instanceof CraftingCPUCluster cluster) {
                     // CraftingJobStatus reports the original output, not what
                     // remains after partial deliveries to the network.
-                    try {
-                        var job = CPU_JOB.get(cluster.craftingLogic);
-                        remaining = job != null ? REMAINING_OUTPUT.getLong(job) : 0;
-                    } catch (IllegalAccessException e) {
-                        throw new IllegalStateException("Failed to read AE2 remaining crafting output", e);
-                    }
+                    remaining = cluster.craftingLogic instanceof com.moakiee.ae2lt.compat.gto.GtoCompatibleCraftingCpuLogic compatible
+                            ? compatible.getRemainingOutputAmount()
+                            : com.moakiee.ae2lt.compat.gto.GtoCpuJobAccess.remaining(cluster.craftingLogic);
                 } else if (cpu instanceof TimeWheelCraftingCPU timeWheel) {
                     remaining = timeWheel.getCraftingLogic().getRemainingOutputAmount();
                 }

@@ -6,7 +6,7 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
-import appeng.crafting.inv.NetworkCraftingSimulationState;
+import com.moakiee.thunderbolt.compat.gto.inv.NetworkCraftingSimulationState;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moakiee.ae2lt.crafting.report.CraftingReportInventory;

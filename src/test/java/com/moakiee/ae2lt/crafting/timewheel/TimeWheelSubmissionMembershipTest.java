@@ -90,7 +90,7 @@ class TimeWheelSubmissionMembershipTest {
             // Minimal admission fixture: no execution/tracker Mixin is needed to prove whether
             // an obsolete menu reference can remove initial materials and create a virtual CPU.
             var plan = new CraftingPlan(new GenericStack(LightningKey.EXTREME_HIGH_VOLTAGE, 1),
-                    8, false, false, used, new KeyCounter(), new KeyCounter(), Map.of());
+                    8, false, false, used, new KeyCounter(), new KeyCounter(), new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of()));
             // Invoke the actual dependency's submission callbacks, retaining its candidate index
             // and selection behavior. This is not a full Mixin-transformed game startup test.
             var hook = new SubmissionHooks();

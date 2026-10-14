@@ -19,7 +19,7 @@ import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import appeng.core.definitions.AEParts;
-import appeng.crafting.inv.ChildCraftingSimulationState;
+import com.moakiee.thunderbolt.compat.gto.inv.ChildCraftingSimulationState;
 import appeng.crafting.inv.ListCraftingInventory;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.item.OverloadPatternItem;

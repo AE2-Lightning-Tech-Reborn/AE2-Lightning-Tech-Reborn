@@ -82,8 +82,8 @@ public abstract class CraftConfirmReplanMixin {
 
     @WrapOperation(method = "replan", at = @At(value = "INVOKE",
             target = "Lappeng/menu/me/crafting/CraftConfirmMenu;planJob("
-                    + "Lappeng/api/stacks/AEKey;ILappeng/api/networking/crafting/CalculationStrategy;)Z"))
-    private boolean ae2lt$replanFromReducedSnapshot(CraftConfirmMenu menu, AEKey what, int amount,
+                    + "Lappeng/api/stacks/AEKey;JLappeng/api/networking/crafting/CalculationStrategy;)Z"))
+    private boolean ae2lt$replanFromReducedSnapshot(CraftConfirmMenu menu, AEKey what, long amount,
             CalculationStrategy strategy, Operation<Boolean> original) {
         ae2lt$reuseInventory = ((CraftingReportMenuState) menu).ae2lt$shouldShowReport()
                 && ae2lt$inventory != null && ae2lt$inventory.isCaptured();

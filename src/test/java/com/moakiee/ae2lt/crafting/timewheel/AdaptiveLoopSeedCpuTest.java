@@ -116,7 +116,7 @@ class AdaptiveLoopSeedCpuTest {
             var raw = fixture.raw();
             var macro = fixture.macro();
             var plan = proxy(ICraftingPlan.class, Map.of("finalOutput", new GenericStack(POWDER, 80),
-                    "emittedItems", new KeyCounter(), "patternTimes", Map.of(macro, 10L)));
+                    "emittedItems", new KeyCounter(), "patternTimes", new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(macro, 10L))));
             var tag = new CompoundTag(); tag.putUUID("craftId", UUID.randomUUID());
             tag.putBoolean("req", false); tag.putBoolean("standalone", true);
             var link = new CraftingLink(tag, cpu);

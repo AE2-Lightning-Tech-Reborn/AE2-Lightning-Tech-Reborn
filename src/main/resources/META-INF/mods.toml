@@ -131,3 +131,11 @@ mandatory = false
 versionRange = "${veil_version_range}"
 ordering = "AFTER"
 side = "CLIENT"
+
+# This distribution integrates with the GTO-owned crafting service and CPU.
+[[dependencies."${mod_id}"]]
+modId = "gtocore"
+mandatory = true
+versionRange = "[26.10.5,26.10.6)"
+ordering = "AFTER"
+side = "BOTH"

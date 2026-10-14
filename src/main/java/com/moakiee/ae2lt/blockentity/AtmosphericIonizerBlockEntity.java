@@ -439,7 +439,7 @@ public class AtmosphericIonizerBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.ATMOSPHERIC_IONIZER.get().asItem();
     }
 

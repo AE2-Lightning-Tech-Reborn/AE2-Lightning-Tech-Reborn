@@ -496,7 +496,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkInvBlock
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get().asItem();
     }
 

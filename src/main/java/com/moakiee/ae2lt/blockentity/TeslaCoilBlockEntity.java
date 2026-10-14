@@ -491,7 +491,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.TESLA_COIL.get().asItem();
     }
 

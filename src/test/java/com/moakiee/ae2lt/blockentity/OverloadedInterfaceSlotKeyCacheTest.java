@@ -70,14 +70,14 @@ class OverloadedInterfaceSlotKeyCacheTest {
         var first = cache.keyForSlot(0, stack);
         cache.prepareSlots(1);
         var resized = cache.keyForSlot(0, stack);
-        assertNotSame(first, resized);
+        assertEquals(first, resized); // GTO interns AEItemKey globally.
         cache.clear();
         cache.prepareSlots(1);
-        assertNotSame(resized, cache.keyForSlot(0, stack));
+        assertEquals(resized, cache.keyForSlot(0, stack));
         cache.prepareSlots(100_000);
         var tail = cache.keyForSlot(99_999, stack);
         var tailAgain = cache.keyForSlot(99_999, stack);
-        assertNotSame(tail, tailAgain);
+        assertSame(tail, tailAgain); // Slot cache bypass still receives the globally interned key.
         assertEquals(tail, tailAgain);
     }
 }

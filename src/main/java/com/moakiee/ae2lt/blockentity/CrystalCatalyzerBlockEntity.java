@@ -967,7 +967,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return (isPigmeeVariant() ? ModBlocks.PIGMEE_CRYSTAL_CATALYZER : ModBlocks.CRYSTAL_CATALYZER)
                 .get().asItem();
     }

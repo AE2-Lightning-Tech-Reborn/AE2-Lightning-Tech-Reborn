@@ -47,7 +47,7 @@ public class ExtendedOverloadedPatternProviderBlockEntity extends OverloadedPatt
     }
 
     @Override
-    protected Item getItemFromBlockEntity() {
+    public Item getItemFromBlockEntity() {
         return ModBlocks.EXTENDED_OVERLOADED_PATTERN_PROVIDER.get().asItem();
     }
 }

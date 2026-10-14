@@ -40,8 +40,8 @@ public record BigCraftingPlan(
         return new KeyCounter();
     }
 
-    public Map<IPatternDetails, Long> patternTimes() {
-        return Map.of();
+    public it.unimi.dsi.fastutil.objects.Object2LongMap<IPatternDetails> patternTimes() {
+        return it.unimi.dsi.fastutil.objects.Object2LongMaps.emptyMap();
     }
 
     public KeyCounter usedItems() {

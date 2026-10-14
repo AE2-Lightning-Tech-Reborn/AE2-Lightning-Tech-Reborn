@@ -42,7 +42,7 @@ import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternD
 /**
  * Pseudo mixin that grafts the AE2LT overload pattern ID-only claim logic onto
  * NeoECOAEExtension's {@code ECOCraftingCPULogic}. Mirrors the seven injection
- * points used by {@link CraftingCpuLogicMixin} and {@link AdvCraftingCpuLogicMixin}.
+ * points used by {@link AdvCraftingCpuLogicMixin}.
  * <p>
  * NeoECO 1.3.4 owns distinct {@code ExecutingCraftingJob} and
  * {@code ElapsedTimeTracker} classes. All access to those optional types is therefore reflective;

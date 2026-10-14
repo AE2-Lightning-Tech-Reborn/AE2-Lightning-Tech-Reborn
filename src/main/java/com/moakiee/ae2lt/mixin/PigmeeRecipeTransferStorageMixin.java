@@ -30,9 +30,17 @@ public abstract class PigmeeRecipeTransferStorageMixin {
     protected abstract List<AEItemKey> findBestMatchingItemStack(
             Ingredient ingredient, IPartitionList filter, KeyCounter storage);
 
-    @Shadow
-    protected abstract ItemStack takeIngredientFromPlayer(
-            IMenuCraftingPacket menu, ServerPlayer player, Ingredient ingredient);
+    @org.spongepowered.asm.mixin.Unique
+    private static ItemStack ae2lt$takeIngredientFromPlayer(
+            IMenuCraftingPacket menu, ServerPlayer player, Ingredient ingredient) {
+        var inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
+            if (!menu.isPlayerInventorySlotLocked(slot) && ingredient.test(inventory.getItem(slot))) {
+                return inventory.removeItem(slot, 1);
+            }
+        }
+        return ItemStack.EMPTY;
+    }
 
     @Inject(method = "serverPacketData", at = @At("HEAD"), cancellable = true, require = 1)
     private void ae2lt$fillFromAdjacentStorage(ServerPlayer player, CallbackInfo ci) {
@@ -67,7 +75,7 @@ public abstract class PigmeeRecipeTransferStorageMixin {
                     }
                 }
             }
-            if (current.isEmpty()) current = takeIngredientFromPlayer(menu, player, ingredient);
+            if (current.isEmpty()) current = ae2lt$takeIngredientFromPlayer(menu, player, ingredient);
             matrix.setItemDirect(slot, current);
         }
         menu.slotsChanged(matrix.toContainer());

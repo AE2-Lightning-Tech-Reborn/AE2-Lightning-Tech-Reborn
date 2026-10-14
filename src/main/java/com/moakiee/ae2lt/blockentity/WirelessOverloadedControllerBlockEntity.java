@@ -267,7 +267,7 @@ public class WirelessOverloadedControllerBlockEntity extends OverloadedControlle
     }
 
     @Override
-    protected net.minecraft.world.item.Item getItemFromBlockEntity() {
+    public net.minecraft.world.item.Item getItemFromBlockEntity() {
         return ModBlocks.WIRELESS_OVERLOADED_CONTROLLER.get().asItem();
     }
 

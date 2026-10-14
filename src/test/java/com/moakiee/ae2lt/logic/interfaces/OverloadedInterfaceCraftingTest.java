@@ -32,7 +32,7 @@ import appeng.api.stacks.KeyCounter;
 import appeng.crafting.CraftingLink;
 import appeng.crafting.execution.CraftingCpuLogic;
 import appeng.crafting.execution.CraftingSubmitResult;
-import appeng.crafting.execution.ExecutingCraftingJob;
+
 import appeng.helpers.MultiCraftingTracker;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
@@ -295,21 +295,23 @@ class OverloadedInterfaceCraftingTest {
     }
 
     @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "ae2lt.gtoRuntimeTests", matches = "true")
     void nativeCpuCountsRemainingOutputInsteadOfItsOriginalJobTotal() throws Exception {
         var h = new Harness();
         var key = AEItemKey.of(Items.DIAMOND);
         var cpu = new CraftingCPUCluster(BlockPos.ZERO, BlockPos.ZERO);
-        var constructor = Arrays.stream(ExecutingCraftingJob.class.getDeclaredConstructors())
+        var jobType = Class.forName("com.gtocore.api.ae2.crafting.ExecutingCraftingJob");
+        var constructor = Arrays.stream(jobType.getDeclaredConstructors())
                 .filter(c -> c.getParameterCount() == 4).findFirst().orElseThrow();
         constructor.setAccessible(true);
         var listenerType = constructor.getParameterTypes()[1];
         var listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[] {listenerType},
                 (proxy, method, args) -> null);
         var job = constructor.newInstance(plan(new GenericStack(key, 100), false), listener, link(h.requester), null);
-        var jobField = CraftingCpuLogic.class.getDeclaredField("job");
+        var jobField = cpu.craftingLogic.getClass().getDeclaredField("job");
         jobField.setAccessible(true);
         jobField.set(cpu.craftingLogic, job);
-        var remaining = ExecutingCraftingJob.class.getDeclaredField("remainingAmount");
+        var remaining = jobType.getDeclaredField("remainingAmount");
         remaining.setAccessible(true);
         remaining.setLong(job, 30L);
         h.cpus.add(cpu);
@@ -353,7 +355,7 @@ class OverloadedInterfaceCraftingTest {
                     case "finalOutput" -> output;
                     case "simulation" -> simulation;
                     case "emittedItems", "usedItems", "missingItems" -> new KeyCounter();
-                    case "patternTimes" -> Map.of();
+                    case "patternTimes" -> new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of());
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
     }
