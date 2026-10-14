@@ -83,6 +83,11 @@ public final class PhaseLockProjectionItem extends Item {
     }
 
     @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return false;
+    }
+
+    @Override
     public void appendHoverText(
             ItemStack stack,
             TooltipContext context,

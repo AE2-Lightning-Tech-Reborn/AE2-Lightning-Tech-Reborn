@@ -18,6 +18,8 @@ public final class AlphaPortTestMod {
     private static final DeferredRegister<Consumer<GameTestHelper>> FUNCTIONS = DeferredRegister.create(BuiltInRegistries.TEST_FUNCTION, MODID);
     private static final List<Spec> TESTS = new ArrayList<>();
     static {
+        add("phase_lock_energy_snapshot", "phase_lock", 100,
+                com.moakiee.ae2lt.debug.PhaseLockCreativeRecoveryGameTests::lockedArmorPublishesDisplayOnlyEnergy);
         add("phase_lock_allows_swimming_input", "phase_lock", 100,
                 com.moakiee.ae2lt.debug.PhaseLockCreativeRecoveryGameTests::phaseLockAllowsSwimmingInput);
         add("phase_lock_empty_armor_survives_creative_projection_echo", "phase_lock", 100,
