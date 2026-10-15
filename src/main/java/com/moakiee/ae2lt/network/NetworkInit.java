@@ -33,6 +33,8 @@ public final class NetworkInit {
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
         var registrar = event.registrar(AE2LightningTech.MODID);
+        registrar.playToServer(WirelessEnergyMenuPacket.TYPE, WirelessEnergyMenuPacket.STREAM_CODEC, WirelessEnergyMenuPacket::handle);
+        registrar.playToClient(WirelessEnergyMenuSyncPacket.TYPE, WirelessEnergyMenuSyncPacket.STREAM_CODEC, WirelessEnergyMenuSyncPacket::handle);
         registrar.playToClient(com.moakiee.ae2lt.network.tianshu.BigStockPacket.TYPE,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle);

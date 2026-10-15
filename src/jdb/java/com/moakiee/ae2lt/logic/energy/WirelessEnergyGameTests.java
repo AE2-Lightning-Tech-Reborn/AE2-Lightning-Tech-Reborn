@@ -314,6 +314,41 @@ public final class WirelessEnergyGameTests {
         });
     }
 
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void managementDisconnectRejectsStaleGenerationsAndMenus(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var registry = WirelessEnergyEndpoints.get(h.getLevel().getServer());
+            check(registry.setBound(f.player, f.frequency, h.getLevel(), f.target, Direction.NORTH, true).equals("connected"), "bind failed");
+            var old = registry.inspect(f.frequency, f.player.getUUID()).getFirst();
+            var outsider = FakePlayerFactory.get(h.getLevel(), new GameProfile(UUID.randomUUID(), "EnergyManagerOutsider"));
+            check(registry.inspect(f.frequency, outsider.getUUID()).isEmpty(), "endpoint list exposed to outsider");
+            check(registry.disconnect(outsider, f.frequency, old.id()).equals("no_permission"), "outsider removed endpoint");
+            var menu = new com.moakiee.ae2lt.menu.FrequencyMenu(123, f.player.getInventory(), f.controller);
+            f.player.containerMenu = menu;
+            f.player.moveTo(f.controller.getBlockPos().getCenter());
+            check(menu.acceptEnergyRequest(f.player, f.frequency), "valid controller menu rejected");
+            check(!menu.acceptEnergyRequest(f.player, f.frequency), "unbounded same-tick page requests");
+            check(menu.acceptEnergyRequest(f.player, f.frequency, true), "poll consumed the same-tick edit allowance");
+            check(!menu.acceptEnergyRequest(f.player, f.frequency, true), "unbounded same-tick edits");
+            check(!menu.acceptEnergyRequest(f.player, f.frequency + 1), "wrong live frequency accepted");
+            f.player.containerMenu = f.player.inventoryMenu;
+            check(!menu.acceptEnergyRequest(f.player, f.frequency), "closed menu accepted");
+            // Management works from the controller; the remote target need not be in reach.
+            f.player.moveTo(f.target.getX() + 100, f.target.getY(), f.target.getZ());
+            check(registry.disconnect(f.player, f.frequency, old.id()).equals("disconnected"), "manager could not disconnect distant target");
+            f.player.moveTo(f.target.getX() + .5, f.target.getY(), f.target.getZ() - 2);
+            check(registry.setBound(f.player, f.frequency, h.getLevel(), f.target, Direction.NORTH, true).equals("connected"), "rebind failed");
+            var replacement = registry.inspect(f.frequency, f.player.getUUID()).getFirst();
+            check(!replacement.id().equals(old.id()), "rebind did not rotate generation");
+            registry.disconnect(f.player, f.frequency, old.id());
+            check(registry.isBound(h.getLevel(), f.target, f.frequency), "stale disconnect deleted replacement");
+            check(f.machine.simulations == 0 && f.machine.receives == 0, "management triggered target probe");
+            registry.disconnect(f.player, f.frequency, replacement.id());
+            h.succeed();
+        });
+    }
+
     private static Fixture fixture(GameTestHelper h) {
         BlockPos c = new BlockPos(2, 2, 2), target = h.absolutePos(c.south(3));
         h.setBlock(c, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get());

@@ -518,6 +518,23 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         return isController;
     }
 
+    private int lastEnergyRequestTick = Integer.MIN_VALUE, lastEnergyEditTick = Integer.MIN_VALUE;
+
+    /** Validate the live backing controller, not the last client-synchronized frequency slot. */
+    public boolean acceptEnergyRequest(ServerPlayer player, int frequency) {
+        return acceptEnergyRequest(player, frequency, false);
+    }
+
+    public boolean acceptEnergyRequest(ServerPlayer player, int frequency, boolean edit) {
+        if (!isAdvanced || cardMode || player.containerMenu != this || !stillValid(player)
+                || readFreqIdFromBE() != frequency || frequency <= 0) return false;
+        int now = player.server.getTickCount();
+        if ((edit ? lastEnergyEditTick : lastEnergyRequestTick) == now) return false;
+        if (edit) lastEnergyEditTick = now;
+        else lastEnergyRequestTick = now;
+        return true;
+    }
+
     public boolean isAdvanced() {
         return isAdvanced;
     }

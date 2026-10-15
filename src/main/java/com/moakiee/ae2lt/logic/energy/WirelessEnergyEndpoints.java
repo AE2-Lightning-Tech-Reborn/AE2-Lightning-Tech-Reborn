@@ -93,6 +93,22 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (f == null || !f.getPlayerAccess(viewer).canUse()) return List.of();
         return endpoints.values().stream().filter(e -> e.frequency == frequency).map(Endpoint::view).toList();
     }
+    /** Removes exactly the displayed generation, including unloaded targets, without touching FE accounts. */
+    public String disconnect(ServerPlayer player, int frequency, UUID endpointId) {
+        var manager = WirelessFrequencyManager.get(player.server);
+        var f = manager == null ? null : manager.getFrequency(frequency);
+        if (player.isSpectator() || !player.mayBuild() || f == null
+                || !f.getPlayerAccess(player).canUse()) return "no_permission";
+        var endpoint = endpoints.values().stream()
+                .filter(e -> e.frequency == frequency && e.id.equals(endpointId)).findFirst().orElse(null);
+        if (endpoint == null) return "disconnected"; // A stale ID must never remove a replacement.
+        if (!endpoint.actor.equals(player.getUUID()) && !f.getPlayerAccess(player).isManager()) return "no_permission";
+        WirelessEnergyAdmissions.get(player.server).manualOverride(endpoint.location, endpoint.actor,
+                frequency, endpoint.face);
+        remove(endpoint.location);
+        return "disconnected";
+    }
+
     public boolean isBound(ServerLevel level, BlockPos pos, int frequency) {
         var e = endpoints.get(new Location(level.dimension(), pos));
         return e != null && e.frequency == frequency;

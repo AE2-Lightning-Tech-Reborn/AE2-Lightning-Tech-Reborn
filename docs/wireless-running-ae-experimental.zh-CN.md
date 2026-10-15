@@ -1,5 +1,25 @@
 # 已运行网络 FE→AE 实验分支与验证
 
+## 2026-10-15：高级控制器的 FE 管理页
+
+本节是继续开发后的当前状态；后文保留 10 月 13 日的验收快照。功能分支为 `feature/wireless-running-ae-experimental-20261013`，目标仓库为 `AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn`。
+
+- 高级无线超载控制器首页新增“无线供能”入口，每页显示 3 个目标的位置、当前状态、上次访问投递 FE；悬停显示维度、接入面、累计投递与距上次访问 tick。显示的是每次访问量，不冒充 FE/t。
+- 页面每 20 个客户端 tick 请求一次，只在已打开且仍有效的高级控制器菜单中响应。服务端读取控制器当前频率，重新检查访问权限；每菜单每 tick 最多一次查询、一次断开，自动刷新不会占掉操作额度。
+- 断开按端点 UUID 精确匹配连接代次。目标可在远处或未加载区块；该操作不获取目标方块、不加载区块、不探测 FE，也不修改托管或不确定收据账户。仅绑定者或该频率管理者可断开；同类型重绑产生新 ID，旧页面请求不能删除新连接。手动断开会保留自动准入排除记录。
+- 删除末页唯一目标后自动回到有效页。权限被撤销时列表清空并显示无权限，不保留旧的可操作行。
+
+当前验证（Minecraft 1.21.1 / NeoForge 21.1.220 / 官方 Thunderbolt 2.0.3-beta2）：
+
+- `build` 成功；JUnit 共 1497 项，1493 通过、4 项既有跳过。
+- 无线能源 GameTest **36/36**：新增菜单有效性、查询/编辑限流、越权、远程断开、旧 UUID 重放与无探测检查，其余记账、拓扑、调度和自动准入回归全部通过。
+- 真实集成客户端通过原生控制器右键打开、3+1 分页、单目标断开、末页回退和服务端数量核对；截图已实际查看，无文字与按钮重叠。客户端测试机为注册 FE capability 的桶，截图刻意没有 FE 来源，显示“FE 不足”。
+- 测试入口：`scripts/wireless-energy-test.init.gradle`；客户端在其后叠加 `scripts/wireless-energy-client-test.init.gradle`，任务 `runWirelessEnergyClient`，仅使用独立 `WirelessEnergyQA` 存档。可通过 `-PwirelessEnergyClientDirectory=...` 更换测试目录。
+- 本机日志与截图保留在忽略目录 `build/verification/`、`build/wireless-energy-client-final/`，不进入提交；验证仍使用已校验的官方 TB jar 本地依赖注入。
+
+仍未实现：供能历史曲线/平均 FE/t、孤立与异常账户恢复、手动解除 `historyIncomplete`、非原生 FE 自动观察桥。FE→AE 运行补能继续默认关闭，冷启动禁令保持；本轮未重新做长期负载或断电恢复测试。
+
+
 基于已验收的手动能源与自动准入切片 `106b052a33c450ce4c387b9fd8e28c02a27bc507`，本次继续工作只在 `feature/wireless-running-ae-experimental-20261013`。原 `feature/wireless-energy-ledger-20261013` 保持不动；未修改大型工厂主工作区或猪咪工作区，无推送、PR、合并或发布。
 
 2026-10-13，用户明确授权功能分支上的改动，只要不影响其他工作。此前自动审批曾因新增 FE→AE 范围拒绝测试；补充该授权后，同一测试正常获准执行，不再是当前阻塞。服务端实验配置 `wirelessControllerEnergy.runningNetworkFeFallback` 默认 **false**，本次不决定最终 UI、玩法默认值或新增冷启动机制。
