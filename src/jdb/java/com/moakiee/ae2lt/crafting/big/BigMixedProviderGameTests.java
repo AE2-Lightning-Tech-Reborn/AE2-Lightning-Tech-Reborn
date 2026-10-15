@@ -97,6 +97,54 @@ public final class BigMixedProviderGameTests {
     }
 
     @GameTest(template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 20)
+    public static void neoEcoNativeReceiptsSettleHugeOrdersWithoutRefundingUncertainInputs(GameTestHelper h) throws Exception {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) { h.succeed(); return; }
+        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider");
+        Class<?> admission;
+        try { admission = Class.forName("cn.dancingsnow.neoecoae.crafting.execution.batch.ECOBatchAdmission"); }
+        catch (ClassNotFoundException atomic) { admission = null; }
+        final var receiptType = admission;
+        var details = details(h); var recipe = recipe(h, details); var job = job(recipe, N);
+        boolean[] uncertain = {false}; int[] calls = {0};
+        var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[] {ICraftingProvider.class, type}, (p, m, args) -> switch (m.getName()) {
+                    case "getAvailablePatterns" -> List.of(details);
+                    case "isBusy" -> false;
+                    case "hashCode" -> System.identityHashCode(p);
+                    case "equals" -> p == args[0];
+                    case "eco$getBatchCapacity" -> uncertain[0] || receiptType != null ? 8L : 3L;
+                    case "eco$pushBatch", "eco$pushBatchAdmission" -> {
+                        calls[0]++;
+                        var context = args[0];
+                        var contextType = context.getClass();
+                        require(job.id.equals(contextType.getMethod("craftingJobId").invoke(context)), "lost exact order identity");
+                        var inputs = (KeyCounter[]) contextType.getMethod("inputCounters").invoke(context);
+                        require(inputs[0].get(raw()) == 2, "NeoECO received scaled context inputs");
+                        if (uncertain[0]) {
+                            if (receiptType == null) throw new IllegalStateException("uncertain exact batch");
+                            yield receiptType.getMethod("indeterminate").invoke(null);
+                        }
+                        yield receiptType == null ? true
+                                : receiptType.getMethod("accepted", long.class, boolean.class).invoke(null, 3L, false);
+                    }
+                    default -> throw new AssertionError("Unexpected NeoECO call " + m);
+                });
+        var dispatcher = new BigProviderDispatcher();
+        require(dispatcher.dispatch(job, recipe, details, provider, h.getLevel(), power(Double.MAX_VALUE), 1, () -> {}) == 3,
+                "NeoECO partial exact dispatch failed");
+        require(job.remainingStepCopies().equals(N.subtract(BigInteger.valueOf(3))), "exact remaining copies narrowed");
+        require(job.escrow.get(raw()).equals(N.multiply(BigInteger.TWO).subtract(BigInteger.valueOf(6))), "partial exact inputs not refunded");
+        require(job.waiting.get(output()).equals(BigInteger.valueOf(9)), "partial expected output mismatch");
+        uncertain[0] = true;
+        dispatcher.dispatch(job, recipe, details, provider, h.getLevel(), power(Double.MAX_VALUE), 2, () -> {});
+        require(job.dispatchFailed, "indeterminate NeoECO exact receipt did not halt");
+        require(job.escrow.get(raw()).equals(N.multiply(BigInteger.TWO).subtract(BigInteger.valueOf(22))), "uncertain exact input refunded");
+        dispatcher.dispatch(job, recipe, details, provider, h.getLevel(), power(Double.MAX_VALUE), 3, () -> {});
+        require(calls[0] == 2, "uncertain NeoECO exact batch retried");
+        h.succeed();
+    }
+
+    @GameTest(template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 20)
     public static void longBatchPartialAcceptanceAndSynchronousReturnsAreExact(GameTestHelper h) {
         var details = details(h); var recipe = recipe(h, details); var job = job(recipe, N);
         var batch = new Batch(details); batch.synchronous = job;
