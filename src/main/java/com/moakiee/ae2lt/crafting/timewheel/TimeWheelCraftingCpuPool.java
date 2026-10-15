@@ -182,6 +182,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         }
         rotateSchedulingOrder();
         removeDrainedCpus();
+        var bigService = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (bigService != null) latestChange[0] = Math.max(latestChange[0], bigService.waitingChangedAt());
         return latestChange[0];
     }
 
@@ -220,6 +222,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         for (var entry : activeCpus.values()) {
             entry.cpu().getCraftingLogic().getAllWaitingFor(waitingKeys);
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null) service.addWaitingKeys(waitingKeys);
     }
 
     @Override
@@ -231,6 +235,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
             }
             inserted += entry.cpu().getCraftingLogic().insert(what, amount - inserted, mode);
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null && inserted < amount) inserted += service.insert(what, amount - inserted, mode);
         return inserted;
     }
 
@@ -240,6 +246,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         for (var entry : activeCpus.values()) {
             requested = saturatingAdd(requested, entry.cpu().getCraftingLogic().getWaitingFor(what));
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null) requested = saturatingAdd(requested, service.requested(what));
         return requested;
     }
 

@@ -36,6 +36,8 @@ public final class BigCraftingService {
     private BigCraftingJob job;
     private BigCraftingCpu cpu;
     private boolean cpuListChanged;
+    private final BigProviderDispatcher providerDispatcher = new BigProviderDispatcher();
+    private long waitingChangedAt = Long.MIN_VALUE;
 
     public BigCraftingCpu cpu() {
         if (job == null) return null;
@@ -54,7 +56,7 @@ public final class BigCraftingService {
     }
 
     public void toggleSuspended() {
-        if (job != null) {
+        if (job != null && !job.dispatchFailed) {
             job.suspended = !job.suspended;
             host.markCpuDirty();
         }
@@ -86,6 +88,13 @@ public final class BigCraftingService {
     public CompletableFuture<BigCraftingPlanner.Result<AEKey>> preview(
             AEKey target, BigInteger amount, IActionSource source) {
         if (!available()) throw new IllegalStateException("unavailable");
+        return preview(host.getGrid(), host.getLevel(), target, amount, source);
+    }
+
+    /** Calculation/display remains available even when no exact CPU is currently online. */
+    public static CompletableFuture<BigCraftingPlanner.Result<AEKey>> preview(
+            appeng.api.networking.IGrid grid, net.minecraft.world.level.Level level,
+            AEKey target, BigInteger amount, IActionSource source) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
         var context =
                 new PlanningAttemptContext() {
@@ -103,7 +112,7 @@ public final class BigCraftingService {
                 };
         BigGraphExport export;
         try (var ignored = PlanningCancellation.bind(context)) {
-            export = BigGraphExport.capture(host.getGrid(), host.getLevel(), target, source);
+            export = BigGraphExport.capture(grid, level, target, source);
         }
         return CompletableFuture.supplyAsync(
                 () -> {
@@ -124,9 +133,10 @@ public final class BigCraftingService {
         var matrices = BigGraphExport.matrices(host.getGrid());
         for (var block : plan.program().blocks())
             for (var step : block.steps()) {
-                if (!(step.recipe().source() instanceof BigMatrixRecipe recipe)
-                        || matrices.stream().noneMatch(m -> m.validateBigRecipe(recipe)))
-                    return false;
+                if (step.recipe().source() instanceof BigMatrixRecipe recipe) {
+                    if (matrices.stream().noneMatch(m -> m.validateBigRecipe(recipe))) return false;
+                } else if (!(step.recipe().source() instanceof BigCraftingRecipe recipe)
+                        || recipe.resolve(host.getGrid().getCraftingService(), host.getLevel()) == null) return false;
             }
         var storage = host.getGrid().getStorageService().getInventory();
         for (var e : plan.program().required().entrySet())
@@ -161,14 +171,14 @@ public final class BigCraftingService {
     public void cancel() {
         if (job != null) {
             job.cancel();
-            host.markCpuDirty();
+            changed();
             tick();
         }
     }
 
     public void tick() {
         if (job == null || host.getLevel() == null) return;
-        if (!job.returning && job.suspended) return;
+        if (!job.returning && (job.suspended || job.dispatchFailed)) return;
         job.elapsedTicks++;
         long now = host.getLevel().getGameTime();
         if (job.returning) {
@@ -184,13 +194,20 @@ public final class BigCraftingService {
         }
         if (job.readyAt >= 0) {
             if (now >= job.readyAt) {
-                job.commitBlock();
-                host.markCpuDirty();
+                if (job.streamingBlock) job.commitMatrixStep();
+                else job.commitBlock();
+                changed();
             }
             return;
         }
         var matrices = BigGraphExport.matrices(host.getGrid());
         var block = job.current();
+        if (job.streamingBlock || block.steps().stream()
+                .anyMatch(step -> !(step.recipe().source() instanceof BigMatrixRecipe))) {
+            job.beginStreaming();
+            tickStreaming(matrices, now);
+            return;
+        }
         // One certificate can represent arbitrarily many alternating firings. Validation/dispatch
         // work is bounded by recipe steps and provider-call quotas, never by the quantity.
         int calls = 0;
@@ -235,6 +252,85 @@ public final class BigCraftingService {
             job.status = "running";
             host.markCpuDirty();
         }
+    }
+
+    private void tickStreaming(List<com.moakiee.ae2lt.blockentity.MatrixControllerBlockEntity> matrices, long now) {
+        int work = 0;
+        while (!job.returning && !job.dispatchFailed && work++ < 128) {
+            if (job.advanceStreaming()) {
+                changed();
+                if (job.returning || !job.streamingBlock) return;
+                continue;
+            }
+            if (job.remainingStepCopies().signum() == 0) {
+                job.status = "waiting";
+                return;
+            }
+            var step = job.currentStep();
+            if (step.recipe().source() instanceof BigMatrixRecipe recipe) {
+                var matrix = matrices.stream().filter(m -> m.validateBigRecipe(recipe)).findFirst().orElse(null);
+                if (matrix == null) {
+                    job.status = "recipe_unavailable";
+                    return;
+                }
+                var required = BigExecutionProgram.repeat(BigExecutionProgram.arcs(step.recipe()), step.copies()).required();
+                if (required.entrySet().stream().anyMatch(e ->
+                        job.escrow.getOrDefault(e.getKey(), BigInteger.ZERO).compareTo(e.getValue()) < 0)) {
+                    job.status = "waiting";
+                    return;
+                }
+                var accepted = matrix.acceptBigCrafting(recipe, job.remainingStepCopies());
+                if (accepted.signum() > 0) {
+                    job.acceptedCopies = job.acceptedCopies.add(accepted);
+                    if (job.remainingStepCopies().signum() == 0) job.readyAt = now + 5;
+                    changed();
+                }
+                return;
+            }
+            var recipe = (BigProviderRecipe) step.recipe().source();
+            var crafting = host.getGrid().getCraftingService();
+            var details = recipe.resolve(crafting, host.getLevel());
+            if (details == null || !(crafting instanceof appeng.me.service.CraftingService nativeCrafting)) {
+                job.status = "recipe_unavailable";
+                return;
+            }
+            boolean progress = false;
+            for (var provider : nativeCrafting.getProviders(details)) {
+                if (work++ >= 128) break;
+                long received = providerDispatcher.dispatch(job, recipe, details, provider,
+                        host.getLevel(), host.getGrid().getEnergyService(), now, this::changed);
+                if (job.dispatchFailed) return;
+                if (received > 0) {
+                    progress = true;
+                    break;
+                }
+            }
+            job.status = job.waiting.isEmpty() ? "dispatch" : "waiting";
+            if (!progress) return;
+        }
+    }
+
+    public void addWaitingKeys(Set<AEKey> keys) {
+        if (job != null && !job.returning) keys.addAll(job.waiting.keySet());
+    }
+
+    public long requested(AEKey key) {
+        return job == null || job.returning ? 0
+                : BigAmounts.project(job.waiting.getOrDefault(key, BigInteger.ZERO));
+    }
+
+    public long insert(AEKey key, long amount, Actionable mode) {
+        if (job == null) return 0;
+        long accepted = job.receive(key, amount, mode);
+        if (accepted > 0 && mode == Actionable.MODULATE) changed();
+        return accepted;
+    }
+
+    public long waitingChangedAt() { return waitingChangedAt; }
+
+    private void changed() {
+        waitingChangedAt = appeng.hooks.ticking.TickHandler.instance().getCurrentTick();
+        host.markCpuDirty();
     }
 
     private void returnEscrow() {
@@ -282,5 +378,6 @@ public final class BigCraftingService {
         status = "idle";
         cpuListChanged = true;
         nextReturn = 0;
+        waitingChangedAt = appeng.hooks.ticking.TickHandler.instance().getCurrentTick();
     }
 }
