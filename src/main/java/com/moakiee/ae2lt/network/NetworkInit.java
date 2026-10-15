@@ -36,10 +36,13 @@ public final class NetworkInit {
         registrar.playToClient(com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket.TYPE,
                 com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.workstation.PigmeeRemoteViewPacket::handle);
+        registrar.playToServer(com.moakiee.ae2lt.workstation.PigmeeControlActionPacket.TYPE,
+                com.moakiee.ae2lt.workstation.PigmeeControlActionPacket.STREAM_CODEC,
+                com.moakiee.ae2lt.workstation.PigmeeControlActionPacket::handle);
         registrar.playToServer(com.moakiee.ae2lt.workstation.PigmeeControlInputPacket.TYPE,
                 com.moakiee.ae2lt.workstation.PigmeeControlInputPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.workstation.PigmeeControlInputPacket::handle);
-        registrar.versioned("pigmee-control-2").playToClient(com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.TYPE,
+        registrar.versioned("pigmee-control-3").playToClient(com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.TYPE,
                 com.moakiee.ae2lt.workstation.PigmeeControlStatePacket.STREAM_CODEC,
                 com.moakiee.ae2lt.workstation.PigmeeControlStatePacket::handle);
         registrar.playToClient(com.moakiee.ae2lt.workstation.PigmeeIdentityPacket.TYPE,

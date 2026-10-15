@@ -19,6 +19,8 @@ public final class PigmeeControlLeases {
         public final ServerPlayer controller;
         public final PigmeeServerPlayer actor;
         private PigmeeRemoteView remote;
+        private int actionSequence = -1, lastActionTick = -1, lastReleaseTick = -1;
+        String actionResult = "ready";
         private int deadline, sequence = -1, lastInputTick = -1;
         private Lease(ServerPlayer controller, PigmeeServerPlayer actor) { this.controller = controller; this.actor = actor; deadline = controller.server.getTickCount() + 40; }
     }
@@ -26,7 +28,7 @@ public final class PigmeeControlLeases {
         if (!PigmeeWorkstationRuntime.enabled() || !player.server.isSameThread()) throw new IllegalStateException("Control requires the enabled server thread");
     }
     private boolean authorized(ServerPlayer owner, PigmeeServerPlayer actor) {
-        return !owner.isFakePlayer() && owner.isAlive() && !owner.isRemoved() && actor.isAlive() && !actor.isRemoved()
+        return !owner.isFakePlayer() && !owner.isSpectator() && owner.isAlive() && !owner.isRemoved() && actor.isAlive() && !actor.isRemoved()
                 && manager.active(actor.getUUID()) == actor && manager.ownedBy(actor.getUUID(), owner.getUUID())
                 && actor.level() == owner.level() && (owner.distanceToSqr(actor) <= LOCAL_VIEW_LIMIT * LOCAL_VIEW_LIMIT || PigmeeRemoteView.allowed(owner, actor))
                 && (bound(owner.getMainHandItem(), actor.getUUID()) || bound(owner.getOffhandItem(), actor.getUUID()));
@@ -65,6 +67,32 @@ public final class PigmeeControlLeases {
         lease.actor.controlInput(flags, yaw, pitch);
         return true;
     }
+    /** Actions have a separate replay counter and never renew a movement heartbeat lease. */
+    public boolean action(ServerPlayer owner, UUID token, int sequence, int action, int slot, float yaw, float pitch) {
+        checkThread(owner);
+        var lease = owners.get(owner.getUUID());
+        if (lease == null || lease.controller != owner || !lease.token.equals(token)) return false;
+        int now = owner.server.getTickCount();
+        if (!authorized(owner, lease.actor) || !validRange(lease) || now > lease.deadline) { release(lease); return false; }
+        if (sequence < 0 || sequence <= lease.actionSequence || action < 0 || action > PigmeeNativeActions.ATTACK
+                || slot < 0 || slot > 8 || !Float.isFinite(yaw) || !Float.isFinite(pitch)) return false;
+        // An explicit release must not get lost behind another action in the same tick.
+        if (action == PigmeeNativeActions.RELEASE_USE) {
+            if (lease.lastReleaseTick == now) return false;
+            lease.lastReleaseTick = now;
+        } else if (lease.lastActionTick == now) return false;
+        lease.actionSequence = sequence;
+        lease.lastActionTick = now;
+        lease.actor.setYRot(net.minecraft.util.Mth.wrapDegrees(yaw));
+        lease.actor.setYHeadRot(lease.actor.getYRot());
+        lease.actor.setXRot(net.minecraft.util.Mth.clamp(pitch, -90, 90));
+        lease.actionResult = PigmeeNativeActions.perform(lease.actor, action, slot,
+                () -> owners.get(owner.getUUID()) == lease && authorized(owner, lease.actor) && validRange(lease));
+        if (owners.get(owner.getUUID()) == lease && owner.connection != null)
+            PacketDistributor.sendToPlayer(owner, PigmeeControlStatePacket.of(lease, true));
+        return true;
+    }
+
     public void release(ServerPlayer owner, UUID token) {
         checkThread(owner); var lease = owners.get(owner.getUUID());
         if (lease != null && lease.controller == owner && lease.token.equals(token)) release(lease);
@@ -77,6 +105,8 @@ public final class PigmeeControlLeases {
     private void release(Lease lease) {
         actors.remove(lease.actor.getUUID(), lease); owners.remove(lease.controller.getUUID(), lease);
         lease.actor.clearControlInput();
+        lease.actor.stopUsingItem();
+        lease.actor.closeContainer();
         if (lease.remote != null) lease.remote.close();
         if (lease.controller.connection != null) PacketDistributor.sendToPlayer(lease.controller, PigmeeControlStatePacket.of(lease, false));
     }
@@ -86,7 +116,7 @@ public final class PigmeeControlLeases {
             if (!authorized(lease.controller, lease.actor) || !validRange(lease) || now > lease.deadline) { release(lease); continue; }
             if (lease.remote != null) lease.remote.tick();
             // Missing heartbeat stops intent promptly, while native gravity/hunger/damage continue.
-            if (now - lease.lastInputTick > 5) lease.actor.clearControlInput();
+            if (now - lease.lastInputTick > 5) { lease.actor.clearControlInput(); lease.actor.stopUsingItem(); }
             if (now % 10 == 0 && lease.controller.connection != null) PacketDistributor.sendToPlayer(lease.controller, PigmeeControlStatePacket.of(lease, true));
         }
     }

@@ -17,7 +17,7 @@ import org.lwjgl.glfw.GLFW;
 public final class PigmeeControlScreen extends Screen {
     private PigmeeControlStatePacket state;
     private final Set<Integer> held = new HashSet<>();
-    private int sequence;
+    private int sequence, actionSequence;
     private float yaw, pitch;
     private boolean closed;
     private boolean ready;
@@ -73,16 +73,53 @@ public final class PigmeeControlScreen extends Screen {
         PacketDistributor.sendToServer(new PigmeeControlInputPacket(state.token(), sequence++, flags, yaw, pitch, false));
     }
     private int bit(int key, int value) { return held.contains(key) ? value : 0; }
-    @Override public boolean keyPressed(int key, int scan, int modifiers) { if (key == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; } held.add(key); return true; }
-    @Override public boolean keyReleased(int key, int scan, int modifiers) { held.remove(key); return true; }
+    private void action(int action, int slot) {
+        if (closed || !ready) return;
+        PacketDistributor.sendToServer(new com.moakiee.ae2lt.workstation.PigmeeControlActionPacket(
+                state.token(), actionSequence++, action, slot, yaw, pitch));
+    }
+    @Override public boolean keyPressed(int key, int scan, int modifiers) {
+        if (key == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
+        if (!held.add(key)) return true;
+        if (key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_9) action(0, key - GLFW.GLFW_KEY_1);
+        if (key == GLFW.GLFW_KEY_E) action(1, 0);
+        if (key == GLFW.GLFW_KEY_R) action(2, 0);
+        return true;
+    }
+    @Override public boolean keyReleased(int key, int scan, int modifiers) {
+        held.remove(key);
+        if (key == GLFW.GLFW_KEY_E || key == GLFW.GLFW_KEY_R) action(3, 0);
+        return true;
+    }
+    @Override public boolean mouseClicked(double x, double y, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) action(4, 0);
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) action(1, 0);
+        return true;
+    }
+    @Override public boolean mouseReleased(double x, double y, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) action(3, 0);
+        return true;
+    }
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (button != GLFW.GLFW_MOUSE_BUTTON_MIDDLE) return true;
         yaw += (float) dx * .25F; pitch = Mth.clamp(pitch + (float) dy * .25F, -90, 90); return true;
     }
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(0, 0, width, 46, 0xC0000000);
+        graphics.fill(0, 0, width, 61, 0xC0000000);
         graphics.drawCenteredString(font, title, width / 2, 7, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_keys"), width / 2, 20, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_health", state.health(), state.food(), minecraft.player == null ? 0 : minecraft.player.getHealth()), width / 2, 33, 0xFFDD88);
+        graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_control_actions"), width / 2, 46, 0xFFFFFF);
+        int left = width / 2 - 90, bottom = height - 25;
+        graphics.fill(left - 6, bottom - 21, left + 186, height, 0xE0000000);
+        graphics.drawCenteredString(font, Component.translatable("screen.ae2lt.pigmee_action." + state.actionResult()), width / 2, bottom - 16, 0xFFDD88);
+        for (int slot = 0; slot < 9; slot++) {
+            int x = left + slot * 20;
+            graphics.renderOutline(x - 2, bottom - 2, 20, 20, slot == state.selected() ? 0xFFFFFF55 : 0xFF666666);
+            var stack = state.hotbar().get(slot);
+            graphics.renderItem(stack, x, bottom);
+            graphics.renderItemDecorations(font, stack, x, bottom);
+        }
         graphics.drawCenteredString(font, ready ? Component.literal("+") : Component.translatable("screen.ae2lt.pigmee_loading"), width / 2, height / 2 - 4, 0xFFFFFF);
     }
     @Override public void onClose() { removed(); if (minecraft != null && minecraft.screen == this) minecraft.setScreen(null); }

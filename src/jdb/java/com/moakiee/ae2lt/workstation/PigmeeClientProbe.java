@@ -35,7 +35,7 @@ public final class PigmeeClientProbe {
     private static volatile Throwable failure;
     private static final BlockPos BASE = new BlockPos(1, 100, 3);
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
-        if (Boolean.getBoolean("ae2lt.pigmeeRemoteClientProbe") || !Boolean.getBoolean("ae2lt.pigmeeClientProbe") || done || !System.getProperty("ae2lt.pigmeeClientDeathPhase", "").isEmpty()) return;
+        if (Boolean.getBoolean("ae2lt.pigmeeActionClientProbe") || Boolean.getBoolean("ae2lt.pigmeeRemoteClientProbe") || !Boolean.getBoolean("ae2lt.pigmeeClientProbe") || done || !System.getProperty("ae2lt.pigmeeClientDeathPhase", "").isEmpty()) return;
         var mc = Minecraft.getInstance();
         mc.options.pauseOnLostFocus = false;
         if (++ticks > 3000) { finish(new AssertionError("Client probe timeout, phase " + phase)); return; }

@@ -1,5 +1,28 @@
 # 猪咪工作站 P0 玩家代理
 
+## 2026-10-15：接管快捷栏与有限原生交互
+
+本节是继续开发后的当前状态；后文保留原阶段验收记录。功能分支为 `feat/pigmee-workstation-p0-20261013`，目标仓库为 `AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn`。
+
+接管界面现在显示猪咪自己的九格快捷栏、选中格和操作反馈，`1–9` 切换快捷栏；右键或 `E` 使用主手，`R` 使用副手，松开停止使用；左键攻击视线内可触及的生物。方向键或中键拖动转向，移动/跳跃/潜行/疾跑保持原逻辑，Esc 退出。页面名称由“移动预览”改为“猪咪接管”。
+
+客户端只提交租约 token、递增序号、有限动作、快捷栏索引与朝向。目标位置、命中、手中物品与数量均由服务端读取。方块与物品调用 `ServerPlayerGameMode.useItemOn/useItem`，攻击调用原生 `Player.attack`；保留原生保护事件、扣料、耐久及攻击冷却，不提供任意物品/NBT/能量写入接口。瞄准查询限制在原生触及范围内且最多 6 格，先检查查询区域的区块已加载；不为瞄准主动加载区块。第三方物品自身的行为仍由对应原生 Mod 实现负责。
+
+租约沿用所有者、绑定遥控器、存活、维度与视野范围校验，并新增旁观者拒绝。动作有独立防重放序号，每 tick 最多一个动作及一个松手请求，动作不会续期移动心跳。显式松手可在使用开始的同一 tick 生效；失去心跳、退出、死亡或停驻会中止持续使用。原生方块 hook 同步撤销租约后，不再继续物品使用 fallback；fallback 重新读取当前手中物品。控制状态网络版本升为 `pigmee-control-3`。
+
+原生交互如果打开容器，会立即关闭并提示“暂未开放容器接管”，避免留下无人可见的活动容器。持续挖掘、容器转发、背包编辑和自动装配工具不在本轮范围。
+
+当前验证（Minecraft 1.21.1 / NeoForge 21.1.220 / 官方 Thunderbolt 2.0.3-beta2）：
+
+- 完整 `build` 成功；JUnit 共 1478 项，1474 通过、4 项既有跳过。
+- 五个隔离世界分别运行动作、P0 身体、P1 激活、P2 租约、死亡 GameTest，共 **11/11** 必需用例通过。动作用例实测保护事件拒绝后无扣料、正常放置只消耗一块自身石头、序号/限流/非法朝向与格号拒绝、断心跳停止进食、同 tick 松手、墙体遮挡攻击、原生伤害、hook 内撤销及旁观者退出。
+- 真实客户端通过原生遥控器打开接管界面，键盘选格后收到服务端九格库存快照，鼠标放置石头后客户端方块与库存同步减少一件；本体库存及逻辑相机身份保持独立。截图实际检查操作提示与快捷栏。
+- 测试入口：`scripts/pigmee-p0-test.init.gradle`；GameTest 的 `pigmeeTestNamespace` 分别取 `ae2lt_pigmee_actions`、`ae2lt_pigmee_p0`、`ae2lt_pigmee_p1`、`ae2lt_pigmee_p2`、`ae2lt_pigmee_death`，各自使用新的 `pigmeeGameTestDirectory`。客户端用 `-PpigmeeActionClientProbe=true -PpigmeeClientDirectory=... runPigmeeClient`，只对可丢弃的 `PigmeeQA` 存档运行。
+- 本机日志/截图位于忽略目录 `build/verification/`、`build/pigmee-action-client-final/`，不进入提交；测试源与最小结构模板已随代码保存，产品 jar 不包含测试探针。
+
+基础工作站仍需 `-Dae2lt.pigmeeP0=true`，远端视野仍需另开 `-Dae2lt.pigmeeRemoteView=true`。本轮客户端验收是近距离接管，未重复远端长时间测试，也未新增双真人、真实重连或第三方保护模组兼容性结论。AI/HTTP/MCP、生存激活成本、完整工具和容器流程继续留在后续阶段。
+
+
 独立功能分支上的实验实现。设计基线为 docs 分支 `0e20b7ca` 的「猪咪远程工作站/实现设计.md」；代码基线为 main `5269dcab`，Minecraft 1.21.1 / NeoForge 21.1.220 / AE2 19.2.17 / Thunderbolt 2.0.3-beta2。
 
 ## 当前边界
