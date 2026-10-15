@@ -92,7 +92,8 @@
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
     "client.BigCpuListMixin",
-    "client.RemoteDeviceClientMenuMixin"
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin"
   ],
   "injectors": {
     "defaultRequire": 1
