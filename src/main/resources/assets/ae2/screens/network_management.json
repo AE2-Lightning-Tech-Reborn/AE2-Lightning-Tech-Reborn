@@ -1,0 +1,115 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 304,
+    "height": 252
+  },
+  "text": {
+    "dialog_title": {
+      "position": {
+        "left": 8,
+        "top": 7
+      }
+    }
+  },
+  "widgets": {
+    "devices": {
+      "left": 8,
+      "top": -23
+    },
+    "energy": {
+      "left": 34,
+      "top": -23
+    },
+    "back": {
+      "left": 278,
+      "top": -5
+    },
+    "search": {
+      "left": 8,
+      "top": 23,
+      "width": 288,
+      "height": 14
+    },
+    "sort": {
+      "left": 8,
+      "top": 42,
+      "width": 98,
+      "height": 18
+    },
+    "direction": {
+      "left": 108,
+      "top": 42,
+      "width": 18,
+      "height": 18
+    },
+    "group": {
+      "left": 130,
+      "top": 42,
+      "width": 166,
+      "height": 18
+    },
+    "window": {
+      "left": 130,
+      "top": 42,
+      "width": 166,
+      "height": 18
+    },
+    "scrollbar": {
+      "left": 284,
+      "top": 66,
+      "height": 140
+    },
+    "row0": {
+      "left": 8,
+      "top": 66,
+      "width": 270,
+      "height": 27
+    },
+    "row1": {
+      "left": 8,
+      "top": 94,
+      "width": 270,
+      "height": 27
+    },
+    "row2": {
+      "left": 8,
+      "top": 122,
+      "width": 270,
+      "height": 27
+    },
+    "row3": {
+      "left": 8,
+      "top": 150,
+      "width": 270,
+      "height": 27
+    },
+    "row4": {
+      "left": 8,
+      "top": 178,
+      "width": 270,
+      "height": 27
+    },
+    "locate": {
+      "left": 8,
+      "top": 230,
+      "width": 84,
+      "height": 16
+    },
+    "copy": {
+      "left": 96,
+      "top": 230,
+      "width": 98,
+      "height": 16
+    },
+    "disconnect": {
+      "left": 198,
+      "top": 230,
+      "width": 98,
+      "height": 16
+    }
+  }
+}

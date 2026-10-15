@@ -74,7 +74,20 @@ final class AppFluxAccess {
         if (!(energyCapCache instanceof EnergyCapCache cache)) {
             return null;
         }
+        TargetAccess delegate = resolveUnmeasuredTarget(cache, side);
+        if (delegate == null) return null;
+        var location = (com.moakiee.ae2lt.mixin.appflux.EnergyCapCacheAccessor) cache;
+        var targetLocation = new com.moakiee.ae2lt.logic.management.PowerTelemetry.Target(
+                location.ae2lt$world().dimension().location().toString(), location.ae2lt$pos().relative(side), side.getOpposite().ordinal());
+        return new TargetAccess() {
+            public long simulateReceive(long max) { return delegate.simulateReceive(max); }
+            public long receive(long amount) { return delegate.receive(amount); }
+            public java.util.OptionalLong storedEnergyFe() { return delegate.storedEnergyFe(); }
+            public com.moakiee.ae2lt.logic.management.PowerTelemetry.Target telemetryTarget() { return targetLocation; }
+        };
+    }
 
+    private static TargetAccess resolveUnmeasuredTarget(EnergyCapCache cache, Direction side) {
         TargetAccess target = resolveGrandPowerTarget(cache, side);
         if (target != null) {
             return target;

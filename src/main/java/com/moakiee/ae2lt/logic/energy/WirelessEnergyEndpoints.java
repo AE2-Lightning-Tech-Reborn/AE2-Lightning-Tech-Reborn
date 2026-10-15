@@ -41,7 +41,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     public enum State { WAITING, UNLOADED, NO_CONTROLLER, NO_PERMISSION, NO_FE, BLOCKED, ACTIVE, FAULTED }
     public record View(UUID id, int frequency, Location location, Direction face, UUID actor,
-                       State state, long lastVisitedTick, long lastDelivered, long totalDelivered) {}
+                       State state, long lastVisitedTick, long lastDelivered, long totalDelivered, String block) {}
     private static final class Endpoint {
         final UUID id;
         final int frequency;
@@ -58,7 +58,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
             this.actor = actor; this.block = block; this.type = type;
         }
-        View view() { return new View(id, frequency, location, face, actor, state, lastVisitedTick, lastDelivered, totalDelivered); }
+        View view() { return new View(id, frequency, location, face, actor, state, lastVisitedTick, lastDelivered, totalDelivered, block); }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
     private final PriorityQueue<Endpoint> schedule = new PriorityQueue<>(Comparator.comparingLong(e -> e.schedulingOrder));
@@ -170,7 +170,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
 
     /** A single automatic probe uses the same source account, reserve and grid budget as normal output. */
-    long sendProbe(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, TargetAccess target,
+    long sendProbe(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face, TargetAccess target,
                    java.util.function.BooleanSupplier current) {
         if (!current.getAsBoolean() || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return 0;
         var c = controller(level.getServer(), frequency);
@@ -196,7 +196,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
         try {
             long pulled = buffer.beginMemoryBatch(AppFluxBridge.FE_KEY, demand, source);
             if (pulled <= 0 || !current.getAsBoolean() || c.getMainNode().getGrid() != grid || c.getFrequencyId() != frequency) return 0;
-            return AppFluxBridge.sendToTargetKnownDemand(target, buffer, source, pulled);
+            long accepted = AppFluxBridge.sendToTargetKnownDemand(target, buffer, source, pulled);
+            com.moakiee.ae2lt.logic.management.PowerTelemetry.record(node,
+                    com.moakiee.ae2lt.logic.management.PowerTelemetry.Kind.WIRELESS,
+                    new com.moakiee.ae2lt.logic.management.PowerTelemetry.Target(level.dimension().location().toString(), pos, face.ordinal()),
+                    null, accepted);
+            return accepted;
         } finally {
             if (c.getMainNode().getGrid() == grid) buffer.endBatch(AppFluxBridge.FE_KEY, source);
         }
@@ -301,6 +306,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 public long simulateReceive(long max) { return target.receiveEnergy((int) Math.min(Integer.MAX_VALUE, max), true); }
                 public long receive(long amount) { return target.receiveEnergy((int) amount, false); }
             }, buffer, source, pulled);
+            com.moakiee.ae2lt.logic.management.PowerTelemetry.record(node,
+                    com.moakiee.ae2lt.logic.management.PowerTelemetry.Kind.WIRELESS,
+                    new com.moakiee.ae2lt.logic.management.PowerTelemetry.Target(e.location.dimension().location().toString(),
+                            e.location.pos(), e.face.ordinal()), e.id, e.lastDelivered);
             e.totalDelivered = Math.min(Long.MAX_VALUE - e.lastDelivered, e.totalDelivered) + e.lastDelivered;
             e.state = e.lastDelivered > 0 ? State.ACTIVE : State.BLOCKED;
             if (e.lastDelivered > 0) setDirty();

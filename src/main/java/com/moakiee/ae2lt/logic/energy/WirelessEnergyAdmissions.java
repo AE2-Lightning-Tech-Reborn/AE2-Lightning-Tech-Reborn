@@ -204,7 +204,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
                 return a.accepted;
             }
         };
-        long sent = WirelessEnergyEndpoints.get(server).sendProbe(a.player, a.frequency, level, a.location.pos(), receipt,
+        long sent = WirelessEnergyEndpoints.get(server).sendProbe(a.player, a.frequency, level, a.location.pos(), a.face, receipt,
                 () -> current(server, a));
         if (sent <= 0) finish(a, State.NO_INPUT);
     }

@@ -16,6 +16,8 @@ package com.moakiee.ae2lt.logic.energy;
  */
 public interface TargetAccess {
 
+    default com.moakiee.ae2lt.logic.management.PowerTelemetry.Target telemetryTarget() { return null; }
+
     /**
      * Returns how many FE this target would accept right now if asked for
      * {@code maxFe}. Must not mutate state. Implementations may clamp the

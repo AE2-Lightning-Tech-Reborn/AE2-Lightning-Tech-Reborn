@@ -1,5 +1,7 @@
 # 已运行网络 FE→AE 实验分支与验证
 
+当前管理界面已拆为 ME 网络设备与供电管理，统一采用 AE2 原版控件；详细统计语义、权限与验证见 [无线能源实现说明](wireless-energy-implementation.zh-CN.md)。这项界面改动不启用 FE→AE 实验。
+
 ## 2026-10-15：高级控制器的 FE 管理页
 
 本节是继续开发后的当前状态；后文保留 10 月 13 日的验收快照。功能分支为 `feature/wireless-running-ae-experimental-20261013`，目标仓库为 `AE2-Lightning-Tech-Reborn/AE2-Lightning-Tech-Reborn`。

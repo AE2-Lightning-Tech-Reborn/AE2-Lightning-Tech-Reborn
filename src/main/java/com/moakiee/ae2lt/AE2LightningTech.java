@@ -817,6 +817,9 @@ public class AE2LightningTech {
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
             appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);
+            appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
             appeng.api.networking.GridServices.register(
@@ -1210,6 +1213,7 @@ public class AE2LightningTech {
     }
 
     private void onServerStopped(ServerStoppedEvent event) {
+        com.moakiee.ae2lt.logic.management.PowerTelemetry.clear();
         WirelessIoPerformanceProbe.finish(event.getServer());
         WirelessLinkRegistry.onServerStop();
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.stop();

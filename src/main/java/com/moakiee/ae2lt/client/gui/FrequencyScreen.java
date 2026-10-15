@@ -298,67 +298,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private FrequencyMenu freqMenu() { return getMenu(); }
 
-    private Component energyTooltip;
-    private int energyHoverX, energyHoverY;
-    private boolean energyPageOpen;
-    private int energyPage, energyRefresh;
-    private com.moakiee.ae2lt.network.WirelessEnergyMenuSyncPacket energySnapshot;
-
-    private void requestEnergyPage(java.util.UUID disconnect) {
-        PacketDistributor.sendToServer(new com.moakiee.ae2lt.network.WirelessEnergyMenuPacket(
-                token(), freqMenu().getCurrentFrequencyId(), energyPage, disconnect));
-        energyRefresh = 20;
-    }
-
-    public void receiveEnergyPage(com.moakiee.ae2lt.network.WirelessEnergyMenuSyncPacket packet) {
-        if (!energyPageOpen || packet.menuId() != token() || packet.frequency() != freqMenu().getCurrentFrequencyId()
-                || packet.requestedPage() != energyPage) return;
-        energySnapshot = packet;
-        energyPage = packet.page();
-        scheduleRebuild();
-    }
-
-    private void initEnergyPage(int x0, int y0) {
-        addRenderableWidget(new AE2Button(x0 + 8, y0 + 133, 38, 18, Component.literal("<"), btn -> {
-            energyPage = Math.max(0, energyPage - 1); energySnapshot = null; requestEnergyPage(null); scheduleRebuild();
-        })).active = energyPage > 0;
-        addRenderableWidget(new AE2Button(x0 + 149, y0 + 133, 38, 18, Component.literal(">"), btn -> {
-            energyPage++; energySnapshot = null; requestEnergyPage(null); scheduleRebuild();
-        })).active = energySnapshot != null && (energyPage + 1) * 3 < energySnapshot.total();
-        if (energySnapshot == null) return;
-        for (int i = 0; i < energySnapshot.entries().size(); i++) {
-            var entry = energySnapshot.entries().get(i);
-            var button = addRenderableWidget(new AE2Button(x0 + 159, y0 + 36 + i * 31, 26, 20,
-                    Component.literal("×"), btn -> { btn.active = false; requestEnergyPage(entry.id()); }));
-            button.active = entry.canDisconnect();
-            button.setTooltip(Tooltip.create(Component.translatable("ae2lt.gui.energy.disconnect")));
-        }
-    }
-
-    private void renderEnergyLabels(GuiGraphics g) {
-        drawFlatCentered(g, Component.translatable("ae2lt.gui.energy.title"), imageWidth / 2, 6, AE2_TEXT_TITLE);
-        if (energySnapshot == null) {
-            drawFlatCentered(g, Component.translatable("ae2lt.gui.energy.loading"), imageWidth / 2, 60, AE2_TEXT_MUTED);
-            return;
-        }
-        boolean denied = energySnapshot.result().equals("no_permission");
-        drawFlatCenteredFitted(g, Component.translatable(denied ? "ae2lt.gui.error.no_access" : "ae2lt.gui.energy.count",
-                energySnapshot.total()), imageWidth / 2, 22, 175, denied ? 0xAA0000 : AE2_TEXT_BODY);
-        if (energySnapshot.total() == 0) drawFlatCentered(g, Component.translatable("ae2lt.gui.energy.empty"), imageWidth / 2, 65, AE2_TEXT_MUTED);
-        for (int i = 0; i < energySnapshot.entries().size(); i++) {
-            var e = energySnapshot.entries().get(i);
-            int y = 35 + i * 31;
-            String pos = e.pos().getX() + ", " + e.pos().getY() + ", " + e.pos().getZ();
-            Component status = Component.translatable("ae2lt.gui.energy.state." + e.state().name().toLowerCase(java.util.Locale.ROOT));
-            g.drawString(font, font.plainSubstrByWidth(pos, 145), 9, y, AE2_TEXT_BODY, false);
-            g.drawString(font, font.plainSubstrByWidth(status.getString(), 145), 9, y + 10, AE2_TEXT_MUTED, false);
-            g.drawString(font, font.plainSubstrByWidth(Component.translatable("ae2lt.gui.energy.last", e.lastDelivered()).getString(), 145), 9, y + 20, AE2_TEXT_MUTED, false);
-            if (energyHoverX >= 9 && energyHoverX < 154 && energyHoverY >= y && energyHoverY < y + 30)
-                energyTooltip = Component.translatable("ae2lt.gui.energy.detail", e.dimension(), e.face().getSerializedName(), e.totalDelivered(), e.age());
-        }
-        drawFlatCentered(g, Component.literal((energyPage + 1) + " / " + Math.max(1, (energySnapshot.total() + 2) / 3)), imageWidth / 2, 138, AE2_TEXT_BODY);
-    }
-
     private int token() { return getMenu().containerId; }
 
     public FrequencyScreen(FrequencyMenu menu, Inventory playerInv, Component title) {
@@ -379,12 +318,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     @Override
     public void containerTick() {
         super.containerTick();
-        if (energyPageOpen && --energyRefresh <= 0) requestEnergyPage(null);
         int rev = ClientFrequencyCache.revision();
         int fid = freqMenu().getCurrentFrequencyId();
         boolean auto = freqMenu().isAutoConnect();
         if (rev != lastCacheRevision || fid != lastFreqId || auto != lastAutoConnect) {
-            if (fid != lastFreqId) { energySnapshot = null; energyPage = 0; energyRefresh = 0; }
             lastCacheRevision = rev;
             lastFreqId = fid;
             lastAutoConnect = auto;
@@ -573,7 +510,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             return;
         }
 
-        if (energyPageOpen) { initEnergyPage(x0, y0); return; }
         switch (currentTab) {
             case TAB_HOME -> initHomeTab(x0, y0);
             case TAB_SELECTION -> initSelectionTab(x0, y0);
@@ -850,8 +786,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             AE2LightningTech.MODID, "textures/gui/buttons/frequency_add.png");
 
     private void switchTab(FrequencyNavigationTab tab) {
-        energyPageOpen = false;
-        energySnapshot = null;
         currentTab = tab;
         selectionScroll = 0;
         memberScroll = 0;
@@ -899,17 +833,17 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                             new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
             return;
         }
-        if (freqMenu().isAdvanced()) {
-            addRenderableWidget(new AE2Button(x0 + 8, y0 + 124, 88, 18,
-                    Component.translatable("ae2lt.gui.energy.title"), btn -> {
-                energyPageOpen = true; energyPage = 0; energySnapshot = null; requestEnergyPage(null); scheduleRebuild();
-            })).active = freqMenu().getCurrentFrequencyId() > 0;
+        if (freqMenu().isController()) {
+            addRenderableWidget(new AE2Button(x0 + 8, y0 + 116, 88, 16,
+                    Component.translatable("ae2lt.management.devices"), btn -> freqMenu().clientOpenManagement(false)))
+                    .active = freqMenu().getCurrentFrequencyId() > 0;
+            addRenderableWidget(new AE2Button(x0 + 99, y0 + 116, 88, 16,
+                    Component.translatable("ae2lt.management.energy"), btn -> freqMenu().clientOpenManagement(true)))
+                    .active = freqMenu().getCurrentFrequencyId() > 0;
         }
-        addRenderableWidget(new AE2Button(
-                x0 + (freqMenu().isAdvanced() ? 99 : (GUI_WIDTH - 96) / 2), y0 + 124, freqMenu().isAdvanced() ? 88 : 96, 18,
-                Component.translatable("ae2lt.gui.button.disconnect"),
-                btn -> PacketDistributor.sendToServer(
-                        new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
+        addRenderableWidget(new AE2Button(x0 + (GUI_WIDTH - 96) / 2, y0 + (freqMenu().isController() ? 136 : 124),
+                96, freqMenu().isController() ? 14 : 18, Component.translatable("ae2lt.gui.button.disconnect"),
+                btn -> PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
     }
 
     // Tab: Selection
@@ -1475,7 +1409,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // The six top tab ears are still rendered by TabButton widgets
         // themselves (AE2's ``TAB_BUTTON_BACKGROUND`` sprite).
         g.blit(
-                energyPageOpen ? BG_FORM : backgroundTextureForTab(currentTab),
+                backgroundTextureForTab(currentTab),
                 leftPos,
                 topPos,
                 0, 0,
@@ -1592,12 +1526,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         fittedTextTooltips.clear();
-        energyTooltip = null;
-        if (energyPageOpen && passwordPromptFreqId == 0 && !deleteConfirmOpen && popupMemberUUID == null) {
-            energyHoverX = mouseX - leftPos; energyHoverY = mouseY - topPos;
-            renderEnergyLabels(g);
-            return;
-        }
 
         drawFlatCentered(g,
                 Component.translatable(currentTab.getTranslationKey()),
@@ -2003,7 +1931,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         renderBackground(g, mouseX, mouseY, partialTick);
         super.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
-        if (energyTooltip != null) g.renderTooltip(font, font.split(energyTooltip, 240), mouseX, mouseY);
         renderFittedTextTooltip(g, mouseX, mouseY);
     }
 

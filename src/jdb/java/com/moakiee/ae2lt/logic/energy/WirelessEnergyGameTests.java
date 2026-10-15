@@ -324,16 +324,19 @@ public final class WirelessEnergyGameTests {
             var outsider = FakePlayerFactory.get(h.getLevel(), new GameProfile(UUID.randomUUID(), "EnergyManagerOutsider"));
             check(registry.inspect(f.frequency, outsider.getUUID()).isEmpty(), "endpoint list exposed to outsider");
             check(registry.disconnect(outsider, f.frequency, old.id()).equals("no_permission"), "outsider removed endpoint");
-            var menu = new com.moakiee.ae2lt.menu.FrequencyMenu(123, f.player.getInventory(), f.controller);
+            var menu = new com.moakiee.ae2lt.menu.NetworkManagementMenu(123, f.player.getInventory(), f.controller, true);
             f.player.containerMenu = menu;
             f.player.moveTo(f.controller.getBlockPos().getCenter());
-            check(menu.acceptEnergyRequest(f.player, f.frequency), "valid controller menu rejected");
-            check(!menu.acceptEnergyRequest(f.player, f.frequency), "unbounded same-tick page requests");
-            check(menu.acceptEnergyRequest(f.player, f.frequency, true), "poll consumed the same-tick edit allowance");
-            check(!menu.acceptEnergyRequest(f.player, f.frequency, true), "unbounded same-tick edits");
-            check(!menu.acceptEnergyRequest(f.player, f.frequency + 1), "wrong live frequency accepted");
+            check(menu.acceptRequest(f.player, false), "valid controller menu rejected");
+            check(!menu.acceptRequest(f.player, false), "unbounded same-tick page requests");
+            check(menu.acceptRequest(f.player, true), "poll consumed the same-tick edit allowance");
+            check(!menu.acceptRequest(f.player, true), "unbounded same-tick edits");
+            var oldFrequency = f.controller.getFrequencyId();
+            f.controller.setFrequency(-1);
+            check(!menu.stillValid(f.player), "changed live frequency accepted");
+            f.controller.setFrequency(oldFrequency);
             f.player.containerMenu = f.player.inventoryMenu;
-            check(!menu.acceptEnergyRequest(f.player, f.frequency), "closed menu accepted");
+            check(!menu.acceptRequest(f.player, false), "closed menu accepted");
             // Management works from the controller; the remote target need not be in reach.
             f.player.moveTo(f.target.getX() + 100, f.target.getY(), f.target.getZ());
             check(registry.disconnect(f.player, f.frequency, old.id()).equals("disconnected"), "manager could not disconnect distant target");
