@@ -148,9 +148,24 @@ public final class WirelessEnergyMenuClientProbe {
                         require(WirelessEnergyEndpoints.get(p.server).inspect(frequency, p.getUUID()).size() == 7, "server removed exactly one target"); });
                 }
                 case 18 -> clickButton((Button)field("deviceTab"));
-                case 19 -> { require(snapshot().devices() >= 5 && snapshot().rows().stream().allMatch(r -> r.group()), "device tab switch"); clickButton((Button)field("powerTab")); }
-                case 20 -> { require(snapshot().total() == 9, "power tab switch"); click(tr("back")); }
-                case 21 -> { require(mc.screen instanceof FrequencyScreen, "return to frequency menu"); capture("network-management-entry.png"); finish(null); return; }
+                case 19 -> {
+                    require(snapshot().devices() >= 5 && snapshot().rows().stream().allMatch(r -> r.group()), "device tab switch");
+                    focusSearch();
+                }
+                case 20 -> {
+                    assertSelectedTab(false); capture("network-devices-selected.png");
+                    clickButton((Button)field("powerTab"));
+                }
+                case 21 -> { require(snapshot().total() == 9, "power tab switch"); focusSearch(); }
+                case 22 -> {
+                    assertSelectedTab(true); capture("network-power-selected.png");
+                    clickButton((Button)field("sortButton"));
+                }
+                case 23 -> {
+                    assertSelectedTab(true); capture("network-power-selected-after-sort.png");
+                    click(tr("back"));
+                }
+                case 24 -> { require(mc.screen instanceof FrequencyScreen, "return to frequency menu"); capture("network-management-entry.png"); finish(null); return; }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
@@ -167,6 +182,20 @@ public final class WirelessEnergyMenuClientProbe {
         var value = (ManagementSnapshot)field("snapshot"); require(value != null, "management snapshot arrived"); return value;
     }
     private static void search(String text) throws Exception { ((AETextField)field("search")).setValue(text); }
+    private static void focusSearch() throws Exception {
+        var screen = Minecraft.getInstance().screen;
+        var bounds = ((AETextField)field("search")).getTooltipArea();
+        double x = bounds.getX() + 10, y = bounds.getY() + 6;
+        require(screen.mouseClicked(x, y, 0), "native search focus click"); screen.mouseReleased(x, y, 0);
+    }
+    private static void assertSelectedTab(boolean power) throws Exception {
+        var device = (appeng.client.gui.widgets.TabButton)field("deviceTab");
+        var energy = (appeng.client.gui.widgets.TabButton)field("powerTab");
+        require(!device.isFocused() && !energy.isFocused(), "page tabs lost focus");
+        require(device.isSelected() == !power && energy.isSelected() == power, "selected page survives focus change");
+        require(device.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL
+                && energy.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL, "native style renders selected state");
+    }
     private static void row(int index) throws Exception { clickButton(((Button[])field("rowButtons"))[index]); }
     private static String tr(String key) { return Component.translatable("ae2lt.management." + key).getString(); }
     private static void click(String label) {
@@ -186,7 +215,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, copy, locate, power windows/sorting, induction/accessor paths, scrollbar and exact disconnect"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, copy, locate, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect and selected tabs after focus changes"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}

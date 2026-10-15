@@ -76,6 +76,9 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         scrollbar.setRange(0, 0, 1);
         deviceTab = new TabButton(new ItemStack(appeng.core.definitions.AEBlocks.DRIVE.block()), tr("devices"), button -> switchMode(false));
         powerTab = new TabButton(new ItemStack(appeng.core.definitions.AEBlocks.ENERGY_CELL.block()), tr("energy"), button -> switchMode(true));
+        // BOX only paints keyboard focus; HORIZONTAL also paints the persistent selected page.
+        deviceTab.setStyle(TabButton.Style.HORIZONTAL);
+        powerTab.setStyle(TabButton.Style.HORIZONTAL);
         widgets.add("devices", deviceTab); widgets.add("energy", powerTab);
         widgets.add("back", new TabButton(Icon.BACK, tr("back"), button -> menu.clientBack()));
         sortButton = widgets.addButton("sort", Component.empty(), () -> { sort = (sort + 1) % (energy ? 5 : 4); changed(0); });
