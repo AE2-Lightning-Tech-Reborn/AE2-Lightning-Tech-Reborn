@@ -38,7 +38,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 @PrefixGameTestTemplate(false)
 public final class RemoteDeviceGameTests {
     private static final BlockPos C = new BlockPos(2, 2, 2), TARGET = C.east(5);
-    private static final ManagementQuery VIEW = new ManagementQuery(9, false, false, "", "interface",
+    private static final ManagementQuery VIEW = new ManagementQuery(9, false, true, List.of("ae2:interface"), "interface",
             List.of(new ManagementQuery.Token("interface", List.of())), 2, false, 1, 0);
 
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
@@ -58,7 +58,9 @@ public final class RemoteDeviceGameTests {
             h.assertTrue(!old.equals(settings.getSetting(setting)), "native configuration did not reach real device");
             RemoteDeviceSession.locator(f.player).session().returnToDevices(f.player);
             h.assertTrue(f.player.containerMenu instanceof NetworkManagementMenu returned
-                    && returned.initialQuery().search().equals("interface") && row.id().equals(returned.initialSelection()), "return lost view state");
+                    && returned.initialQuery().search().equals("interface") && row.id().equals(returned.initialSelection())
+                    && returned.initialQuery().expandedTypes().equals(VIEW.expandedTypes())
+                    && returned.initialSnapshot().rows().stream().anyMatch(ManagementRow::group), "return lost expanded tree or initial snapshot");
             h.succeed();
         });
     }
@@ -117,9 +119,10 @@ public final class RemoteDeviceGameTests {
         var part = appeng.api.parts.PartHelper.setPart(h.getLevel(), pos, Direction.SOUTH, f.player, appeng.core.definitions.AEParts.INTERFACE.asItem());
         h.runAfterDelay(20, () -> GridHelper.createConnection(f.host.getActionableNode(), part.getGridNode()));
         h.runAfterDelay(40, () -> {
-            var rows = ManagementSnapshot.build(f.player, f.host, VIEW).rows();
+            var query = new ManagementQuery(VIEW.serial(), false, false, List.of(), VIEW.search(), VIEW.tokens(), 2, false, 1, 0);
+            var rows = ManagementSnapshot.build(f.player, f.host, query).rows();
             var row = rows.stream().filter(r -> r.target().face() == Direction.SOUTH.ordinal()).findFirst().orElseThrow();
-            f.menu.query(f.player, VIEW); f.menu.openConfiguration(row.id());
+            f.menu.query(f.player, query); f.menu.openConfiguration(row.id());
             h.assertTrue(f.player.containerMenu instanceof InterfaceMenu menu && menu.getTarget() == part,
                     "panel did not open its native menu");
             h.succeed();
@@ -143,7 +146,7 @@ public final class RemoteDeviceGameTests {
                 .thenExecute(() -> GridHelper.createConnection(f.host.getActionableNode(), remote.getActionableNode()))
                 .thenIdle(20)
                 .thenExecute(() -> {
-            var query = new ManagementQuery(11, false, false, "", "wireless_receiver",
+            var query = new ManagementQuery(11, false, false, List.of(), "wireless_receiver",
                     List.of(new ManagementQuery.Token("wireless_receiver", List.of())), 2, false, 1, 0);
             var rows = ManagementSnapshot.build(f.player, f.host, query).rows();
             h.assertTrue(rows.size() == 1 && rows.getFirst().target().dimension().equals("minecraft:the_nether"), "wrong receiver indexed");
@@ -159,7 +162,7 @@ public final class RemoteDeviceGameTests {
         }).thenSucceed();
     }
 
-    private static ManagementRow row(Fixture f) { return ManagementSnapshot.build(f.player, f.host, VIEW).rows().getFirst(); }
+    private static ManagementRow row(Fixture f) { return ManagementSnapshot.build(f.player, f.host, VIEW).rows().stream().filter(r -> !r.group()).findFirst().orElseThrow(); }
     private static void fixture(GameTestHelper h, Consumer<Fixture> test) {
         var f = base(h); h.setBlock(TARGET, AEBlocks.INTERFACE.block());
         InterfaceBlockEntity target = h.getBlockEntity(TARGET);

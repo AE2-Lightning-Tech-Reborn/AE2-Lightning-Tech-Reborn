@@ -15,6 +15,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,19 +27,10 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
         var grid = host.getMainNode().getGrid();
         var devices = grid == null ? List.<NetworkDeviceIndex.Device>of() : grid.getService(NetworkDeviceIndex.class).devices(now);
         var result = query.energy() ? power(player, host, devices, now) : devices(devices);
-        result.removeIf(row -> !query.type().isEmpty() && !row.target().type().equals(query.type())
-                || !query.matches(row.target(), row.source(), row.kind()));
+        result.removeIf(row -> !query.matches(row.target(), row.source(), row.kind()));
         int deviceCount = result.size();
         double[] totals = new double[5];
         for (var row : result) for (int i = 0; i < 5; i++) totals[i] += row.rates()[i];
-        if (!query.energy() && query.grouped() && query.type().isEmpty()) {
-            Map<String, Integer> counts = new HashMap<>();
-            for (var row : result) counts.merge(row.target().type(), 1, Integer::sum);
-            result.clear();
-            counts.forEach((type, count) -> result.add(new ManagementRow(
-                    UUID.nameUUIDFromBytes(type.getBytes(StandardCharsets.UTF_8)),
-                    new DeviceLocation("", BlockPos.ZERO, -1, type, ""), null, "device", count, "group", true, false, new double[5])));
-        }
         Comparator<ManagementRow> comparator = switch (query.sort()) {
             case 1 -> Comparator.comparing(r -> r.target().dimension());
             case 2 -> Comparator.comparing(r -> r.target().type());
@@ -49,9 +41,39 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
         };
         if (query.descending()) comparator = comparator.reversed();
         result.sort(comparator.thenComparing(r -> r.id().toString()));
+        if (!query.energy() && query.grouped()) {
+            // Flatten the tree before paging so every header keeps its children together.
+            // Group order follows the first matching device in the selected sort order.
+            Map<String, List<ManagementRow>> groups = new java.util.LinkedHashMap<>();
+            for (var row : result) groups.computeIfAbsent(row.target().type(), ignored -> new ArrayList<>()).add(row);
+            var expanded = new java.util.HashSet<>(query.expandedTypes());
+            result.clear();
+            groups.forEach((type, children) -> {
+                boolean open = expanded.contains(type);
+                result.add(new ManagementRow(UUID.nameUUIDFromBytes(type.getBytes(StandardCharsets.UTF_8)),
+                        new DeviceLocation("", BlockPos.ZERO, -1, type, ""), null, "device", children.size(),
+                        open ? "expanded" : "group", true, false, new double[5]));
+                if (open) result.addAll(children);
+            });
+        }
         int offset = Math.min(query.offset(), Math.max(0, result.size() - ManagementQuery.PAGE_SIZE));
         return new ManagementSnapshot(result.size(), deviceCount, offset, totals, query.energy() && PowerTelemetry.limited(now),
                 List.copyOf(result.subList(offset, Math.min(result.size(), offset + ManagementQuery.PAGE_SIZE))));
+    }
+
+    public void write(FriendlyByteBuf b) {
+        b.writeVarInt(total); b.writeVarInt(devices); b.writeVarInt(offset);
+        for (double rate : totals) b.writeDouble(rate);
+        b.writeBoolean(limited); b.writeVarInt(rows.size());
+        for (var row : rows) row.write(b);
+    }
+    public static ManagementSnapshot read(FriendlyByteBuf b) {
+        int total = b.readVarInt(), devices = b.readVarInt(), offset = b.readVarInt();
+        double[] totals = new double[5]; for (int i = 0; i < 5; i++) totals[i] = b.readDouble();
+        boolean limited = b.readBoolean(); int size = ManagementQuery.bounded(b.readVarInt(), ManagementQuery.PAGE_SIZE);
+        var rows = new ArrayList<ManagementRow>(size);
+        for (int i = 0; i < size; i++) rows.add(ManagementRow.read(b));
+        return new ManagementSnapshot(total, devices, offset, totals, limited, List.copyOf(rows));
     }
 
     private static ArrayList<ManagementRow> devices(List<NetworkDeviceIndex.Device> devices) {

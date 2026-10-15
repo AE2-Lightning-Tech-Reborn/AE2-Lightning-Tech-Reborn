@@ -45,7 +45,8 @@ public final class RemoteDeviceClientProbe {
     private static int ticks, phase;
     private static boolean done;
     private static volatile Throwable failure;
-    private static String panelSearch;
+    private static String panelSearch, treeType;
+    private static int treeTotal, treeCount;
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.remoteDeviceClientProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
@@ -102,7 +103,7 @@ public final class RemoteDeviceClientProbe {
                 case 3 -> { require(mc.screen instanceof FrequencyScreen, "controller menu"); click(tr("devices")); }
                 case 4 -> { require(snapshot().devices() >= 6, "remote devices indexed"); search("远端接口"); }
                 case 5 -> { require(snapshot().devices() == 1, "named remote search"); row(0); }
-                case 6 -> { row(0); capture("remote-config-entry.png"); click(tr("configure")); }
+                case 6 -> { row(1); capture("remote-config-entry.png"); click(tr("configure")); }
                 case 7 -> {
                     require(nativeMenu() instanceof InterfaceMenu, "native interface configuration");
                     require(mc.level.getBlockEntity(FAR) == null, "far client chunk must remain unloaded");
@@ -119,11 +120,11 @@ public final class RemoteDeviceClientProbe {
                 }
                 case 10 -> { require(nativeMenu() instanceof InterfaceMenu, "native submenu return"); click(tr("return_devices")); }
                 case 11 -> {
-                    require(searchValue().equals("远端接口") && snapshot().total() == 1, "restored search and expanded type");
+                    require(searchValue().equals("远端接口") && snapshot().total() == 2, "restored search and expanded tree");
                     capture("remote-config-return.png"); search("异维接口");
                 }
-                case 12 -> { require(snapshot().devices() == 1, "cross-dimension search"); row(0); }
-                case 13 -> { row(0); click(tr("configure")); }
+                case 12 -> { require(snapshot().devices() == 1 && snapshot().total() == 2, "cross-dimension search retains expanded type"); }
+                case 13 -> { row(1); click(tr("configure")); }
                 case 14 -> { require(nativeMenu() instanceof InterfaceMenu, "cross-dimension native menu"); capture("remote-nether-interface.png"); click(GuiText.Priority.text().getString()); }
                 case 15 -> { require(mc.screen instanceof PriorityScreen, "cross-dimension priority submenu"); ((NumberEntryWidget)field(PriorityScreen.class, "priority")).setLongValue(654); }
                 case 16 -> {
@@ -133,28 +134,52 @@ public final class RemoteDeviceClientProbe {
                     });
                     click(tr("return_devices"));
                 }
-                case 17 -> { require(searchValue().equals("异维接口"), "cross-dimension return view"); click(tr("all_types")); search(panelSearch); }
+                case 17 -> { require(searchValue().equals("异维接口"), "cross-dimension return view"); search(panelSearch); }
                 case 18 -> { require(snapshot().devices() == 1, "part face search"); row(0); }
-                case 19 -> { row(0); click(tr("configure")); }
+                case 19 -> { row(1); click(tr("configure")); }
                 case 20 -> {
                     require(nativeMenu() instanceof InterfaceMenu && nativeMenu().getTarget() instanceof AEBasePart part && part.getSide() == Direction.SOUTH,
                             "remote part snapshot and side"); capture("remote-panel.png"); click(tr("return_devices"));
                 }
-                case 21 -> { require(searchValue().equals(panelSearch), "part return view"); click(tr("all_types")); search("ae2lt:overloaded_pattern_provider"); }
+                case 21 -> { require(searchValue().equals(panelSearch), "part return view"); search("ae2lt:overloaded_pattern_provider"); }
                 case 22 -> { require(snapshot().devices() == 1, "LT provider search"); row(0); }
-                case 23 -> { row(0); click(tr("configure")); }
+                case 23 -> { row(1); click(tr("configure")); }
                 case 24 -> { require(nativeMenu() instanceof OverloadedPatternProviderMenu, "native LT provider menu"); capture("remote-lt-provider.png"); click(tr("return_devices")); }
-                case 25 -> { require(searchValue().contains("overloaded_pattern_provider"), "LT provider return view"); click(tr("all_types")); search("ae2lt:advanced_wireless_overloaded_controller"); }
+                case 25 -> { require(searchValue().contains("overloaded_pattern_provider"), "LT provider return view"); search("ae2lt:advanced_wireless_overloaded_controller"); }
                 case 26 -> { require(snapshot().devices() == 1, "controller search"); row(0); }
-                case 27 -> { row(0); click(tr("configure")); }
+                case 27 -> { row(1); click(tr("configure")); }
                 case 28 -> {
                     require(mc.screen instanceof FrequencyScreen frequency && frequency.getMenu().hasParentMenu(), "frequency controller as submenu");
                     capture("remote-controller.png"); net.neoforged.neoforge.network.PacketDistributor.sendToServer(appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu());
                 }
                 case 29 -> {
                     require(snapshot().devices() == 1 && searchValue().contains("advanced_wireless_overloaded_controller"), "controller returned to device view");
-                    finish(null); return;
+                    search("");
                 }
+                case 30 -> {
+                    require(snapshot().rows().stream().anyMatch(r -> r.group()) && snapshot().rows().stream().anyMatch(r -> !r.group()), "tree contains both headers and children");
+                    capture("network-tree-expanded.png");
+                    int index = java.util.stream.IntStream.range(0, snapshot().rows().size())
+                            .filter(i -> snapshotUnchecked().rows().get(i).group() && snapshotUnchecked().rows().get(i).state().equals("expanded"))
+                            .findFirst().orElseThrow();
+                    var header = snapshot().rows().get(index); treeType = header.target().type(); treeCount = header.count(); treeTotal = snapshot().total();
+                    row(index); require(snapshot() != null, "collapsing cleared the visible page");
+                }
+                case 31 -> {
+                    require(snapshot().total() == treeTotal - treeCount, "collapse removed wrong rows");
+                    require(snapshot().rows().stream().filter(r -> r.group()).count() >= 2, "other groups disappeared");
+                    capture("network-tree-collapsed.png");
+                    int index = java.util.stream.IntStream.range(0, snapshot().rows().size())
+                            .filter(i -> snapshotUnchecked().rows().get(i).group() && snapshotUnchecked().rows().get(i).target().type().equals(treeType))
+                            .findFirst().orElseThrow();
+                    row(index); require(snapshot() != null, "expanding cleared the visible page");
+                }
+                case 32 -> {
+                    require(snapshot().total() == treeTotal, "expand did not restore child rows");
+                    capture("network-tree-expanded.png");
+                    ((appeng.client.gui.widgets.Scrollbar)field(NetworkManagementScreen.class, "scrollbar")).setCurrentScroll(2);
+                }
+                case 33 -> { require(snapshot().offset() == 2, "tree scroll did not settle"); capture("network-tree-scrolled.png"); finish(null); return; }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
@@ -170,7 +195,18 @@ public final class RemoteDeviceClientProbe {
         require(Minecraft.getInstance().screen instanceof NetworkManagementScreen, "management screen open");
         var snapshot = (ManagementSnapshot) field(NetworkManagementScreen.class, "snapshot"); require(snapshot != null, "snapshot ready"); return snapshot;
     }
-    private static void search(String value) throws Exception { ((AETextField)field(NetworkManagementScreen.class, "search")).setValue(value); }
+    private static ManagementSnapshot snapshotUnchecked() {
+        try { return snapshot(); } catch (Exception e) { throw new AssertionError(e); }
+    }
+    private static void search(String value) throws Exception {
+        ((AETextField)field(NetworkManagementScreen.class, "search")).setValue(value);
+        var retained = snapshot();
+        int serial = (int)field(NetworkManagementScreen.class, "serial");
+        var screen = (NetworkManagementScreen)Minecraft.getInstance().screen;
+        screen.receive(new com.moakiee.ae2lt.network.NetworkManagementSyncPacket(screen.getMenu().containerId, serial - 1,
+                "", new ManagementSnapshot(999, 999, 0, new double[5], false, java.util.List.of())));
+        require(snapshot() == retained, "stale response replaced the current visible page");
+    }
     private static String searchValue() throws Exception { return ((AETextField)field(NetworkManagementScreen.class, "search")).getValue(); }
     private static void row(int index) throws Exception { clickButton(((Button[])field(NetworkManagementScreen.class, "rowButtons"))[index]); }
     private static String tr(String key) { return Component.translatable("ae2lt.management." + key).getString(); }
@@ -192,7 +228,7 @@ public final class RemoteDeviceClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "REMOTE_DEVICE_CLIENT_PASS: native remote and cross-dimension configuration, priority edits, panel face, LT provider, controller submenu, return state"
+        done = true; String result = problem == null ? "REMOTE_DEVICE_CLIENT_PASS: native remote and cross-dimension configuration, priority edits, panel face, LT provider, controller submenu, inline tree expansion/collapse, retained pages and stale response rejection"
                 : "REMOTE_DEVICE_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("remote-device-result.txt"), result); } catch (Exception ignored) {}

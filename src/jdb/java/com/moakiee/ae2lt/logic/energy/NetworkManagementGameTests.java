@@ -43,6 +43,54 @@ public final class NetworkManagementGameTests {
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 120)
     public static void fluxAccessorReceiptsAreIncludedExactlyOnce(GameTestHelper h) { nativeOutput(h, true); }
 
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void expandingGroupsRetainsOtherTypesAndPagesChildrenInPlace(GameTestHelper h) {
+        var f = fixture(h);
+        h.setBlock(C.south(), AEBlocks.INTERFACE.block());
+        h.setBlock(C.south(2), AEBlocks.INTERFACE.block());
+        ((InterfaceBlockEntity) h.getBlockEntity(C.south())).setName("Tree Child One");
+        h.runAfterDelay(40, () -> {
+            var closed = query(false, true, List.of());
+            var baseline = ManagementSnapshot.build(f.player, f.host, closed);
+            h.assertTrue(baseline.total() == 4 && baseline.devices() == 5, "four types with five devices expected");
+            var open = new ManagementQuery(2, false, true, List.of("ae2:interface"), "", List.of(), 2, false, 1, 0);
+            var first = ManagementSnapshot.build(f.player, f.host, open);
+            h.assertTrue(first.total() == 6 && first.devices() == baseline.devices(), "expansion filtered other types");
+            var all = new java.util.LinkedHashMap<UUID, ManagementRow>();
+            for (int offset = 0; offset < first.total(); offset += ManagementQuery.PAGE_SIZE) {
+                var page = ManagementSnapshot.build(f.player, f.host, open.atOffset(offset));
+                h.assertTrue(page.rows().size() <= ManagementQuery.PAGE_SIZE, "unbounded tree packet");
+                for (var row : page.rows()) all.put(row.id(), row);
+            }
+            var rows = List.copyOf(all.values());
+            h.assertTrue(rows.stream().filter(ManagementRow::group).map(ManagementRow::id).toList()
+                    .equals(baseline.rows().stream().map(ManagementRow::id).toList()), "group headers disappeared or reordered");
+            int header = java.util.stream.IntStream.range(0, rows.size()).filter(i -> rows.get(i).group()
+                    && rows.get(i).target().type().equals("ae2:interface")).findFirst().orElseThrow();
+            h.assertTrue(rows.get(header).state().equals("expanded") && rows.get(header).count() == 2
+                    && !rows.get(header + 1).group() && !rows.get(header + 2).group(), "children are not below their header");
+            var two = new ManagementQuery(3, false, true, List.of("ae2:interface", "ae2:drive"), "", List.of(), 2, false, 1, 0);
+            h.assertTrue(ManagementSnapshot.build(f.player, f.host, two).total() == 7, "only one type can stay expanded");
+            var collapse = new ManagementQuery(4, false, true, List.of("ae2:drive"), "", List.of(), 2, false, 1, 0);
+            var collapsed = ManagementSnapshot.build(f.player, f.host, collapse);
+            h.assertTrue(collapsed.total() == 5 && collapsed.rows().stream().filter(ManagementRow::group).count() == 4
+                    && collapsed.rows().stream().anyMatch(r -> !r.group() && r.target().type().equals("ae2:drive")), "collapse affected another group");
+            var searched = new ManagementQuery(5, false, true, open.expandedTypes(), "Tree Child One",
+                    List.of(new ManagementQuery.Token("Tree Child One", List.of())), 2, false, 1, 0);
+            var match = ManagementSnapshot.build(f.player, f.host, searched);
+            h.assertTrue(match.total() == 2 && match.devices() == 1 && match.rows().getFirst().count() == 1, "search lost group/child relationship");
+            var buffer = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+            try {
+                two.write(buffer); first.write(buffer);
+                h.assertTrue(ManagementQuery.read(buffer).equals(two), "expanded view codec lost state");
+                var decoded = ManagementSnapshot.read(buffer);
+                h.assertTrue(decoded.total() == first.total() && decoded.rows().stream().map(ManagementRow::id).toList()
+                        .equals(first.rows().stream().map(ManagementRow::id).toList()), "initial tree snapshot codec lost rows");
+            } finally { buffer.release(); }
+            h.succeed();
+        });
+    }
+
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 120)
     public static void partAccessorRetainsItsFaceAndActualReceipts(GameTestHelper h) {
         var f = fixture(h);
@@ -168,7 +216,7 @@ public final class NetworkManagementGameTests {
         });
     }
     private static ManagementQuery query(boolean power, boolean group, List<ManagementQuery.Token> tokens) {
-        return new ManagementQuery(1, power, group, "", "", tokens, power ? 4 : 2, power, 4, 0);
+        return new ManagementQuery(1, power, group, List.of(), "", tokens, power ? 4 : 2, power, 4, 0);
     }
     private static Fixture fixture(GameTestHelper h) {
         h.setBlock(C, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get());

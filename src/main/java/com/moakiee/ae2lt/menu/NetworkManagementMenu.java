@@ -37,12 +37,17 @@ public final class NetworkManagementMenu extends AEBaseMenu {
     private List<ManagementRow> displayed = List.of();
     private ManagementQuery lastView;
     private ManagementQuery initialQuery;
+    private ManagementSnapshot initialSnapshot;
+    private ManagementQuery cachedQuery;
+    private ManagementSnapshot cachedSnapshot;
+    private long cachedBucket = Long.MIN_VALUE;
     private UUID initialSelection;
 
     private NetworkManagementMenu(int id, Inventory inventory, FriendlyByteBuf buffer) {
         this(id, inventory, null, buffer.readBlockPos(), buffer.readVarInt(), buffer.readBoolean());
         initialQuery = buffer.readNullable(ManagementQuery::read);
         initialSelection = buffer.readNullable(b -> b.readUUID());
+        initialSnapshot = ManagementSnapshot.read(buffer);
     }
     public NetworkManagementMenu(int id, Inventory inventory, WirelessOverloadedControllerBlockEntity host, boolean energy) {
         this(id, inventory, host, host.getBlockPos(), host.getFrequencyId(), energy);
@@ -62,18 +67,24 @@ public final class NetworkManagementMenu extends AEBaseMenu {
             ManagementQuery query, UUID selection) {
         var f = WirelessFrequencyManager.get(player.server).getFrequency(host.getFrequencyId());
         if (f == null || !f.getPlayerAccess(player).canUse()) return;
+        var view = query == null ? ManagementQuery.initial(energy) : query;
+        var snapshot = ManagementSnapshot.build(player, host, view);
+        var initialView = view.atOffset(snapshot.offset());
         player.openMenu(new MenuProvider() {
             public Component getDisplayName() { return Component.translatable("ae2lt.management." + (energy ? "energy" : "devices")); }
             public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
                 var menu = new NetworkManagementMenu(id, inv, host, host.getBlockPos(), host.getFrequencyId(), energy);
-                menu.initialQuery = query; menu.initialSelection = selection;
+                menu.initialQuery = initialView; menu.initialSelection = selection; menu.initialSnapshot = snapshot;
+                menu.lastView = initialView; menu.displayed = snapshot.rows();
+                menu.cachedQuery = initialView; menu.cachedSnapshot = snapshot; menu.cachedBucket = player.server.getTickCount() / 20;
                 return menu;
             }
             public boolean shouldTriggerClientSideContainerClosingOnOpen() { return false; }
         }, b -> {
             b.writeBlockPos(host.getBlockPos()); b.writeVarInt(host.getFrequencyId()); b.writeBoolean(energy);
-            b.writeNullable(query, (buffer, view) -> view.write(buffer));
+            b.writeNullable(initialView, (buffer, state) -> state.write(buffer));
             b.writeNullable(selection, (buffer, id) -> buffer.writeUUID(id));
+            snapshot.write(b);
         });
     }
     public boolean initialEnergy() { return initialEnergy; }
@@ -82,6 +93,7 @@ public final class NetworkManagementMenu extends AEBaseMenu {
     public void clientDisconnect(UUID id) { sendClientAction("disconnect", id); }
     public void clientConfigure(UUID id) { sendClientAction("configureDevice", id); }
     public ManagementQuery initialQuery() { return initialQuery; }
+    public ManagementSnapshot initialSnapshot() { return initialSnapshot; }
     public UUID initialSelection() { return initialSelection; }
     public void reopen(ServerPlayer player, ManagementQuery query, UUID selection) { open(player, host, false, query, selection); }
     public boolean containsDevice(appeng.api.networking.IGridNode node) {
@@ -118,13 +130,16 @@ public final class NetworkManagementMenu extends AEBaseMenu {
         if (!acceptRate(now, false)) return;
         if (!canRead(player)) {
             displayed = List.of();
+            cachedQuery = null; cachedSnapshot = null;
             PacketDistributor.sendToPlayer(player, new NetworkManagementSyncPacket(containerId, query.serial(),
                     "no_permission", new ManagementSnapshot(0, 0, 0, new double[5], false, List.of())));
             return;
         }
-        var snapshot = ManagementSnapshot.build(player, host, query);
-        lastView = new ManagementQuery(query.serial(), query.energy(), query.grouped(), query.type(), query.search(),
-                query.tokens(), query.sort(), query.descending(), query.window(), snapshot.offset());
+        long bucket = now / 20;
+        var snapshot = query.equals(cachedQuery) && cachedSnapshot != null && cachedBucket == bucket
+                ? cachedSnapshot : ManagementSnapshot.build(player, host, query);
+        cachedQuery = query; cachedSnapshot = snapshot; cachedBucket = bucket;
+        lastView = query.atOffset(snapshot.offset());
         displayed = snapshot.rows();
         PacketDistributor.sendToPlayer(player, new NetworkManagementSyncPacket(containerId, query.serial(), "", snapshot));
     }
@@ -144,6 +159,7 @@ public final class NetworkManagementMenu extends AEBaseMenu {
         String result = WirelessEnergyEndpoints.get(player.server).disconnect(player, frequency, id);
         player.displayClientMessage(Component.translatable("ae2lt.wireless_energy." + result), true);
         displayed = List.of();
+        cachedQuery = null; cachedSnapshot = null;
     }
     private void back() {
         if (!(getPlayerInventory().player instanceof ServerPlayer player) || !stillValid(player)) return;

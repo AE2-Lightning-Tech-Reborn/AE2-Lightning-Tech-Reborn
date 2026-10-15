@@ -108,8 +108,8 @@ public final class WirelessEnergyMenuClientProbe {
                     require(snapshot().devices() == 1, "localized device-name search"); row(0);
                 }
                 case 6 -> {
-                    require(snapshot().total() == 1 && !snapshot().rows().getFirst().group(), "type drill-down");
-                    capture("network-devices-search.png"); row(0); click(tr("copy"));
+                    require(snapshot().total() == 2 && snapshot().rows().getFirst().group() && !snapshot().rows().get(1).group(), "inline type expansion");
+                    capture("network-devices-search.png"); row(1); click(tr("copy"));
                     require(mc.keyboardHandler.getClipboard().contains("minecraft:overworld 0 100 1"), "copy real coordinates");
                     click(tr("locate")); require(mc.screen == null, "locate closes menu");
                     mc.player.setXRot(15);
@@ -186,7 +186,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, drill-down, copy, locate, power windows/sorting, induction/accessor paths, scrollbar and exact disconnect"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, copy, locate, power windows/sorting, induction/accessor paths, scrollbar and exact disconnect"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}

@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.logic.management;
 
 import java.util.UUID;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 public record ManagementRow(UUID id, DeviceLocation target, DeviceLocation source, String kind, int count,
         String state, boolean group, boolean canDisconnect, double[] rates, boolean canConfigure) {
@@ -9,13 +9,13 @@ public record ManagementRow(UUID id, DeviceLocation target, DeviceLocation sourc
             String state, boolean group, boolean canDisconnect, double[] rates) {
         this(id, target, source, kind, count, state, group, canDisconnect, rates, false);
     }
-    public void write(RegistryFriendlyByteBuf b) {
+    public void write(FriendlyByteBuf b) {
         b.writeUUID(id); writeLocation(b, target); b.writeNullable(source, ManagementRow::writeLocation);
         b.writeUtf(kind, 32); b.writeVarInt(count); b.writeUtf(state, 32); b.writeBoolean(group); b.writeBoolean(canDisconnect);
         for (double rate : rates) b.writeDouble(rate);
         b.writeBoolean(canConfigure);
     }
-    public static ManagementRow read(RegistryFriendlyByteBuf b) {
+    public static ManagementRow read(FriendlyByteBuf b) {
         var id = b.readUUID(); var target = readLocation(b); var source = b.readNullable(ManagementRow::readLocation);
         String kind = b.readUtf(32); int count = b.readVarInt(); String state = b.readUtf(32);
         boolean group = b.readBoolean(), disconnect = b.readBoolean(); double[] rates = new double[5];
