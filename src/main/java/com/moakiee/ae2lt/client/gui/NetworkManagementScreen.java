@@ -40,9 +40,10 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private static final DecimalFormat RATE = new DecimalFormat("#,##0.##");
     private final AETextField search;
     private final Scrollbar scrollbar;
-    private final AE2Button sortButton, directionButton, groupButton, windowButton, locateButton, copyButton, disconnectButton, configureButton;
+    private final AE2Button sortButton, directionButton, groupButton, windowButton, disconnectButton, configureButton;
     private final TabButton deviceTab, powerTab;
     private final RowButton[] rowButtons = new RowButton[ManagementQuery.PAGE_SIZE];
+    private final LocateButton[] locateButtons = new LocateButton[ManagementQuery.PAGE_SIZE];
     private final List<ItemName> itemNames = new ArrayList<>();
     private record ItemName(String id, String name) {}
     private boolean energy, grouped = true, descending;
@@ -89,14 +90,6 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         });
         windowButton = widgets.addButton("window", Component.empty(), () -> { window = (window + 1) % 5; changed(0); });
         windowButton.setTooltip(Tooltip.create(tr("window_help")));
-        locateButton = widgets.addButton("locate", tr("locate"), () -> {
-            var row = selection();
-            if (row != null && !row.group() && NetworkDeviceHighlight.locate(row.target())) onClose();
-        });
-        copyButton = widgets.addButton("copy", tr("copy"), () -> {
-            var row = selection();
-            if (row != null) minecraft.keyboardHandler.setClipboard(address(row.target()));
-        });
         disconnectButton = widgets.addButton("disconnect", tr("disconnect"), () -> {
             var row = selection();
             if (row != null && row.canDisconnect()) {
@@ -113,6 +106,8 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             final int index = i;
             rowButtons[i] = new RowButton(() -> select(index));
             widgets.add("row" + i, rowButtons[i]);
+            locateButtons[i] = new LocateButton();
+            widgets.add("locate" + i, locateButtons[i]);
         }
         if (menu.initialQuery() != null) {
             var view = menu.initialQuery();
@@ -220,7 +215,6 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         }
         else {
             selected = row.id();
-            locateButton.active = copyButton.active = !awaitingResponse;
             disconnectButton.active = !awaitingResponse && row.canDisconnect();
             configureButton.active = !awaitingResponse && !energy && row.canConfigure();
         }
@@ -240,7 +234,6 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         windowButton.visible = energy;
         windowButton.setMessage(Component.literal(WINDOWS[window] + " · FE/t"));
         var selectedRow = selection();
-        locateButton.active = copyButton.active = !awaitingResponse && selectedRow != null && !selectedRow.group();
         disconnectButton.visible = energy;
         disconnectButton.active = !awaitingResponse && selectedRow != null && selectedRow.canDisconnect();
         configureButton.visible = !energy;
@@ -250,8 +243,13 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             rowButtons[i].row = row;
             rowButtons[i].visible = row != null;
             rowButtons[i].active = row != null && !awaitingResponse;
+            rowButtons[i].setWidth(row != null && row.group() ? 270 : 248);
             rowButtons[i].setMessage(row == null ? Component.empty() : displayName(row.target()));
             rowButtons[i].setTooltip(row == null ? null : Tooltip.create(tooltip(row)));
+            locateButtons[i].row = row;
+            locateButtons[i].visible = row != null && !row.group();
+            locateButtons[i].active = row != null && !row.group() && !awaitingResponse;
+            locateButtons[i].setTooltip(row == null ? null : Tooltip.create(tr("locate_help").append("\n").append(address(row.target()))));
         }
     }
     @Override public void drawBG(GuiGraphics graphics, int ox, int oy, int mx, int my, float partialTick) {
@@ -291,6 +289,32 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             for (int i = 0; i < 5; i++) text.append("\n" + WINDOWS[i] + ": " + rate(row.rates()[i]) + " FE/t");
         }
         return text;
+    }
+    private final class LocateButton extends AE2Button {
+        private ManagementRow row;
+        private LocateButton() {
+            super(tr("locate"), button -> {
+                var target = ((LocateButton) button).row;
+                if (target != null && !target.group() && !awaitingResponse) NetworkDeviceHighlight.locate(target.target());
+            });
+        }
+        @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            int x = getX(), y = getY(), cx = x + width / 2, cy = y + height / 2;
+            appeng.client.gui.style.BackgroundGenerator.draw(width, height, graphics, x, y);
+            if (active && isHoveredOrFocused())
+                graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
+            int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+            // Small locator reticle, drawn with the same palette as AE2's other controls.
+            graphics.fill(cx - 3, cy - 3, cx + 4, cy - 2, color);
+            graphics.fill(cx - 3, cy + 3, cx + 4, cy + 4, color);
+            graphics.fill(cx - 3, cy - 2, cx - 2, cy + 3, color);
+            graphics.fill(cx + 3, cy - 2, cx + 4, cy + 3, color);
+            graphics.fill(cx, cy - 5, cx + 1, cy - 2, color);
+            graphics.fill(cx, cy + 3, cx + 1, cy + 6, color);
+            graphics.fill(cx - 5, cy, cx - 2, cy + 1, color);
+            graphics.fill(cx + 3, cy, cx + 6, cy + 1, color);
+            graphics.fill(cx, cy, cx + 1, cy + 1, color);
+        }
     }
     private final class RowButton extends AE2Button {
         private ManagementRow row;

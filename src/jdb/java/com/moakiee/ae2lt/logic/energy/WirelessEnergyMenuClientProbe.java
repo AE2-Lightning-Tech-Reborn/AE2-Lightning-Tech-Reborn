@@ -45,6 +45,13 @@ public final class WirelessEnergyMenuClientProbe {
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
         if (++ticks > 2400) { finish(new AssertionError("timeout phase " + phase)); return; }
         if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
+        if (mc.screen != null) {
+            org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 10, 10);
+            try {
+                var move = net.minecraft.client.MouseHandler.class.getDeclaredMethod("onMove", long.class, double.class, double.class);
+                move.setAccessible(true); move.invoke(mc.mouseHandler, mc.getWindow().getWindow(), 10., 10.);
+            } catch (ReflectiveOperationException problem) { finish(problem); return; }
+        }
         if (phase >= 2 && ticks % 20 == 0) server(() -> {
             var level = mc.getSingleplayerServer().overworld();
             for (int i = 0; i < 10; i++) {
@@ -109,63 +116,72 @@ public final class WirelessEnergyMenuClientProbe {
                 }
                 case 6 -> {
                     require(snapshot().total() == 2 && snapshot().rows().getFirst().group() && !snapshot().rows().get(1).group(), "inline type expansion");
-                    capture("network-devices-search.png"); row(1); click(tr("copy"));
-                    require(mc.keyboardHandler.getClipboard().contains("minecraft:overworld 0 100 1"), "copy real coordinates");
-                    click(tr("locate")); require(mc.screen == null, "locate closes menu");
-                    mc.player.setXRot(15);
+                    require(!((Button[])field("locateButtons"))[0].visible, "group header has no location action");
+                    require(field("selected") == null, "location does not require selecting a row");
+                    locate(1); capture("network-devices-search.png");
+                    mc.screen.onClose(); mc.player.setXRot(15);
                 }
-                case 7 -> { capture("network-device-highlight.png"); openController(); }
-                case 8 -> click(tr("energy"));
-                case 9 -> {
+                case 7 -> { capture("network-device-highlight.png"); mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen("")); }
+                case 8 -> { capture("network-device-coordinates.png"); mc.screen.onClose(); openController(); }
+                case 9 -> click(tr("energy"));
+                case 10 -> {
                     require(snapshot().total() == 10 && snapshot().rows().size() == 5, "all native and wireless power paths, bounded page");
                     click("1s · FE/t");
                 }
-                case 10 -> { require(snapshot() != null, "5s refresh"); click("5s · FE/t"); }
-                case 11 -> { require(snapshot() != null, "30s refresh"); click("30s · FE/t"); }
-                case 12 -> {
+                case 11 -> { require(snapshot() != null, "5s refresh"); click("5s · FE/t"); }
+                case 12 -> { require(snapshot() != null, "30s refresh"); click("30s · FE/t"); }
+                case 13 -> {
                     require(snapshot().totals()[4] > 0, "1min average is nonzero FE/t");
                     double last = Double.POSITIVE_INFINITY;
                     for (var r : snapshot().rows()) { require(r.rates()[4] <= last, "power sorting uses selected window"); last = r.rates()[4]; }
-                    capture("network-power.png"); search(tr("kind.induction"));
+                    locate(0); capture("network-power.png"); search(tr("kind.induction"));
                 }
-                case 13 -> {
+                case 14 -> {
                     require(snapshot().total() == 1 && snapshot().rows().getFirst().kind().equals("induction"), "native induction source filter");
                     capture("network-power-induction.png"); search(tr("kind.accessor"));
                 }
-                case 14 -> {
+                case 15 -> {
                     require(snapshot().total() == 1 && snapshot().rows().getFirst().kind().equals("accessor"), "accessor source filter");
                     search("");
                 }
-                case 15 -> { require(snapshot().total() == 10, "clear search"); ((Scrollbar)field("scrollbar")).setCurrentScroll(5); }
-                case 16 -> {
+                case 16 -> { require(snapshot().total() == 10, "clear search"); ((Scrollbar)field("scrollbar")).setCurrentScroll(5); }
+                case 17 -> {
                     require(snapshot().offset() == 5 && snapshot().rows().size() == 5, "native scrollbar page");
                     int index = 0; while (!snapshot().rows().get(index).canDisconnect()) index++;
                     row(index); click(tr("disconnect"));
                 }
-                case 17 -> {
+                case 18 -> {
                     require(snapshot().total() == 9, "unbind refresh"); capture("network-power-after-disconnect.png");
                     server(() -> { var p = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                         require(WirelessEnergyEndpoints.get(p.server).inspect(frequency, p.getUUID()).size() == 7, "server removed exactly one target"); });
                 }
-                case 18 -> clickButton((Button)field("deviceTab"));
-                case 19 -> {
+                case 19 -> clickButton((Button)field("deviceTab"));
+                case 20 -> {
                     require(snapshot().devices() >= 5 && snapshot().rows().stream().allMatch(r -> r.group()), "device tab switch");
                     focusSearch();
                 }
-                case 20 -> {
+                case 21 -> {
                     assertSelectedTab(false); capture("network-devices-selected.png");
                     clickButton((Button)field("powerTab"));
                 }
-                case 21 -> { require(snapshot().total() == 9, "power tab switch"); focusSearch(); }
-                case 22 -> {
+                case 22 -> { require(snapshot().total() == 9, "power tab switch"); focusSearch(); }
+                case 23 -> {
                     assertSelectedTab(true); capture("network-power-selected.png");
                     clickButton((Button)field("sortButton"));
                 }
-                case 23 -> {
+                case 24 -> {
                     assertSelectedTab(true); capture("network-power-selected-after-sort.png");
                     click(tr("back"));
                 }
-                case 24 -> { require(mc.screen instanceof FrequencyScreen, "return to frequency menu"); capture("network-management-entry.png"); finish(null); return; }
+                case 25 -> {
+                    require(mc.screen instanceof FrequencyScreen, "return to frequency menu");
+                    var foreign = new com.moakiee.ae2lt.logic.management.DeviceLocation("minecraft:the_nether", new BlockPos(8, 80, -12), -1, "minecraft:barrel", "");
+                    require(!com.moakiee.ae2lt.client.render.NetworkDeviceHighlight.locate(foreign), "cross-dimension location reports without highlighting wrong world");
+                    verifyChatCopy(NetworkManagementScreen.address(foreign));
+                    var target = com.moakiee.ae2lt.client.render.NetworkDeviceHighlight.class.getDeclaredField("target"); target.setAccessible(true);
+                    require(target.get(null) == null, "cross-dimension locate clears previous world highlight");
+                    capture("network-management-entry.png"); finish(null); return;
+                }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
@@ -196,6 +212,25 @@ public final class WirelessEnergyMenuClientProbe {
         require(device.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL
                 && energy.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL, "native style renders selected state");
     }
+    private static void locate(int index) throws Exception {
+        var mc = Minecraft.getInstance(); var screen = mc.screen;
+        String address = NetworkManagementScreen.address(snapshot().rows().get(index).target());
+        mc.keyboardHandler.setClipboard("not copied yet");
+        clickButton(((Button[])field("locateButtons"))[index]);
+        require(mc.screen == screen, "row location keeps management open like EAE");
+        require(mc.keyboardHandler.getClipboard().equals("not copied yet"), "locating does not silently overwrite clipboard");
+        verifyChatCopy(address);
+    }
+    private static void verifyChatCopy(String address) throws Exception {
+        var mc = Minecraft.getInstance();
+        var messages = net.minecraft.client.gui.components.ChatComponent.class.getDeclaredField("allMessages"); messages.setAccessible(true);
+        var latest = ((java.util.List<net.minecraft.client.GuiMessage>) messages.get(mc.gui.getChat())).getFirst().content();
+        var clickable = latest.visit((net.minecraft.network.chat.Style style, String text) ->
+                style.getClickEvent() != null ? java.util.Optional.of(style) : java.util.Optional.empty(), net.minecraft.network.chat.Style.EMPTY).orElseThrow();
+        require(clickable.getClickEvent().getAction() == net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD, "chat coordinates use native clipboard action");
+        require(mc.screen.handleComponentClicked(clickable), "native chat link handler accepts copy");
+        require(mc.keyboardHandler.getClipboard().equals(address), "chat copies complete dimension and coordinates");
+    }
     private static void row(int index) throws Exception { clickButton(((Button[])field("rowButtons"))[index]); }
     private static String tr(String key) { return Component.translatable("ae2lt.management." + key).getString(); }
     private static void click(String label) {
@@ -215,7 +250,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, copy, locate, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect and selected tabs after focus changes"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect and selected tabs after focus changes"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}
