@@ -15,7 +15,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 /** One concrete physical recipe, checked by the real molecular assembler before bulk scaling. */
-public final class BigMatrixRecipe {
+public final class BigMatrixRecipe implements BigCraftingRecipe {
     private final AEItemKey definition;
     private final List<Map<AEKey, Long>> slots;
     private final CraftPattern<AEKey> pattern;
@@ -34,6 +34,10 @@ public final class BigMatrixRecipe {
 
     public AEItemKey definition() {
         return definition;
+    }
+
+    public List<Map<AEKey, Long>> slots() {
+        return slots;
     }
 
     public CraftPattern<AEKey> pattern() {

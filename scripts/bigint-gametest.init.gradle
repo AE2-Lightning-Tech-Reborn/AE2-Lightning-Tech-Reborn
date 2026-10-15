@@ -1,6 +1,12 @@
 // Isolated real NeoForge/AE2 tests; experimental dependencies remain out of release artifacts.
 allprojects {
     afterEvaluate {
+        // Namespace filtering happens after reflective class loading, so also exclude tests
+        // whose signatures require optional mods removed from this isolated runtime.
+        sourceSets.jdb.java.setIncludes([
+            'com/moakiee/ae2lt/debug/BigIntegerPipelineGameTests.java',
+            'com/moakiee/ae2lt/crafting/big/BigMixedProviderGameTests.java'
+        ])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')
         }

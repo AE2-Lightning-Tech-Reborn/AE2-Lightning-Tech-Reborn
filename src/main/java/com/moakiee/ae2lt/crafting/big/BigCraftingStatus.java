@@ -16,12 +16,25 @@ public final class BigCraftingStatus {
         var job = cpu.job();
         var active = new LinkedHashMap<AEKey, BigInteger>();
         var pending = new LinkedHashMap<AEKey, BigInteger>();
+        active.putAll(job.waiting);
         for (int i = job.blockIndex; i < job.program.blocks().size() && !job.returning; i++) {
             var block = job.program.blocks().get(i);
-            var into = i == job.blockIndex && job.readyAt >= 0 ? active : pending;
-            for (var step : block.steps()) {
+            var into = i == job.blockIndex && job.readyAt >= 0 && !job.streamingBlock ? active : pending;
+            for (int j = 0; j < block.steps().size(); j++) {
+                var step = block.steps().get(j);
                 var p = step.recipe();
                 var n = step.copies().multiply(block.repetitions());
+                if (i == job.blockIndex && job.streamingBlock) {
+                    var repetitions = block.repetitions().subtract(job.completedRepetitions);
+                    if (j < job.acceptedStep) repetitions = repetitions.subtract(BigInteger.ONE);
+                    n = step.copies().multiply(repetitions);
+                    if (j == job.acceptedStep) n = n.subtract(job.acceptedCopies);
+                    if (j == job.acceptedStep && job.readyAt >= 0) {
+                        active.merge(p.output(), p.exactOutputAmount().multiply(job.acceptedCopies), BigInteger::add);
+                        for (var o : p.byproducts())
+                            active.merge(o.key(), o.exactAmount().multiply(job.acceptedCopies), BigInteger::add);
+                    }
+                }
                 into.merge(p.output(), p.exactOutputAmount().multiply(n), BigInteger::add);
                 for (var o : p.byproducts())
                     into.merge(o.key(), o.exactAmount().multiply(n), BigInteger::add);
