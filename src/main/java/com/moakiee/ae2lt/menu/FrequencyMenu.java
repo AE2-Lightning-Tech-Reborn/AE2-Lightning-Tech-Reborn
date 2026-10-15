@@ -102,6 +102,12 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     // back button can reopen it through AE2's native returnToMainMenu contract.
     public FrequencyMenu(int containerId, Inventory playerInv, BlockEntity be,
                          @Nullable MenuType<?> parentType, @Nullable MenuHostLocator parentLocator) {
+        this(containerId, playerInv, be, parentType, parentLocator, null);
+    }
+
+    private FrequencyMenu(int containerId, Inventory playerInv, BlockEntity be,
+                         @Nullable MenuType<?> parentType, @Nullable MenuHostLocator parentLocator,
+                         @Nullable ISubMenuHost returnHost) {
         super(TYPE, containerId, playerInv, be);
         this.blockPos = be.getBlockPos();
         this.backingBlockEntity = be;
@@ -109,7 +115,9 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         this.terminalLocator = null;
         this.cardPlayer = null;
 
-        if (parentType != null && parentLocator != null) {
+        if (returnHost != null) {
+            this.cachedSubMenuHost = returnHost;
+        } else if (parentType != null && parentLocator != null) {
             this.cachedSubMenuHost = new DeviceMenuReturnHost(
                     new ItemStack(be.getBlockState().getBlock()), parentType, parentLocator);
         }
@@ -153,6 +161,16 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
             SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(sp, freqIdSlot.get());
             SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(sp, freqIdSlot.get());
         }
+    }
+
+    public static void openRemote(ServerPlayer player, BlockEntity be,
+            com.moakiee.ae2lt.logic.management.RemoteDeviceLocator locator) {
+        if (!locator.valid(player)) return;
+        player.openMenu(new Ae2StyleFrequencyMenuProvider(be.getBlockState().getBlock().getName(), (id, inv) -> {
+            var menu = new FrequencyMenu(id, inv, be, null, null, locator.session());
+            menu.setLocator(locator);
+            return menu;
+        }, true), buffer -> writeExtraData(buffer, be, true));
     }
 
     // server constructor (card mode: targets a frequency card in a terminal upgrade slot)
@@ -488,6 +506,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     @Override
     public boolean stillValid(@Nonnull Player player) {
+        if (getLocator() instanceof com.moakiee.ae2lt.logic.management.RemoteDeviceLocator remote) return remote.valid(player);
         if (cardMode) {
             return TerminalCardAccess.hasCard(resolveTerminalStack());
         }
@@ -517,6 +536,11 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     public BlockPos getBlockPos() {
         return blockPos;
+    }
+
+    @Nullable
+    public BlockEntity getConfiguredBlockEntity(ServerPlayer player) {
+        return !cardMode && stillValid(player) ? backingBlockEntity : null;
     }
 
     public void clientOpenManagement(boolean energy) { sendClientAction("openManagement", energy); }

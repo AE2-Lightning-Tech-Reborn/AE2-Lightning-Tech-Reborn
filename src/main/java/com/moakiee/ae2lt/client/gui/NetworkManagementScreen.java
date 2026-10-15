@@ -38,7 +38,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private static final DecimalFormat RATE = new DecimalFormat("#,##0.##");
     private final AETextField search;
     private final Scrollbar scrollbar;
-    private final AE2Button sortButton, directionButton, groupButton, windowButton, locateButton, copyButton, disconnectButton;
+    private final AE2Button sortButton, directionButton, groupButton, windowButton, locateButton, copyButton, disconnectButton, configureButton;
     private final TabButton deviceTab, powerTab;
     private final RowButton[] rowButtons = new RowButton[ManagementQuery.PAGE_SIZE];
     private final List<ItemName> itemNames = new ArrayList<>();
@@ -90,10 +90,22 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             }
         });
         disconnectButton.setTooltip(Tooltip.create(tr("disconnect_help")));
+        configureButton = widgets.addButton("configure", tr("configure"), () -> {
+            var row = selection();
+            if (!energy && row != null && row.canConfigure()) menu.clientConfigure(row.id());
+        });
+        configureButton.setTooltip(Tooltip.create(tr("configure_help")));
         for (int i = 0; i < rowButtons.length; i++) {
             final int index = i;
             rowButtons[i] = new RowButton(() -> select(index));
             widgets.add("row" + i, rowButtons[i]);
+        }
+        if (menu.initialQuery() != null) {
+            var view = menu.initialQuery();
+            search.setValue(view.search());
+            energy = view.energy(); grouped = view.grouped(); type = view.type(); sort = view.sort();
+            descending = view.descending(); window = view.window(); requestedOffset = view.offset();
+            selected = menu.initialSelection();
         }
     }
     private void switchMode(boolean power) {
@@ -160,6 +172,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             selected = row.id();
             locateButton.active = copyButton.active = true;
             disconnectButton.active = row.canDisconnect();
+            configureButton.active = !energy && row.canConfigure();
         }
     }
     private ManagementRow selection() {
@@ -180,6 +193,8 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         locateButton.active = copyButton.active = selectedRow != null && !selectedRow.group();
         disconnectButton.visible = energy;
         disconnectButton.active = selectedRow != null && selectedRow.canDisconnect();
+        configureButton.visible = !energy;
+        configureButton.active = !energy && selectedRow != null && !selectedRow.group() && selectedRow.canConfigure();
         for (int i = 0; i < rowButtons.length; i++) {
             var row = snapshot != null && i < snapshot.rows().size() ? snapshot.rows().get(i) : null;
             rowButtons[i].row = row;

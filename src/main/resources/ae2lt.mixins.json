@@ -62,7 +62,10 @@
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
     "big.BigCpuListEntryMixin",
-    "TianshuStonecutterMenuMixin"
+    "TianshuStonecutterMenuMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.IpnContainerClickerMixin",
@@ -88,7 +91,8 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.RemoteDeviceClientMenuMixin"
   ],
   "injectors": {
     "defaultRequire": 1

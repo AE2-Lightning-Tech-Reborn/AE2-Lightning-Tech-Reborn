@@ -816,6 +816,7 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);

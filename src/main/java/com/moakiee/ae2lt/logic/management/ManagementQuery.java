@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.logic.management;
 
 import java.util.List;
 import java.util.Locale;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 public record ManagementQuery(int serial, boolean energy, boolean grouped, String type, String search,
         List<Token> tokens, int sort, boolean descending, int window, int offset) {
@@ -31,7 +31,7 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, Strin
                 + d.pos().getX() + " " + d.pos().getY() + " " + d.pos().getZ() + " "
                 + d.pos().getX() + "," + d.pos().getY() + "," + d.pos().getZ()).toLowerCase(Locale.ROOT);
     }
-    public void write(RegistryFriendlyByteBuf b) {
+    public void write(FriendlyByteBuf b) {
         b.writeVarInt(serial); b.writeBoolean(energy); b.writeBoolean(grouped); b.writeUtf(type, 256); b.writeUtf(search, 128);
         b.writeVarInt(tokens.size());
         for (var t : tokens) {
@@ -40,7 +40,7 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, Strin
         }
         b.writeVarInt(sort); b.writeBoolean(descending); b.writeVarInt(window); b.writeVarInt(offset);
     }
-    public static ManagementQuery read(RegistryFriendlyByteBuf b) {
+    public static ManagementQuery read(FriendlyByteBuf b) {
         int serial = b.readVarInt(); boolean energy = b.readBoolean(), grouped = b.readBoolean();
         String type = b.readUtf(256), search = b.readUtf(128);
         int size = bounded(b.readVarInt(), 8);

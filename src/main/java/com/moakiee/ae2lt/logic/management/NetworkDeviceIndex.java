@@ -41,4 +41,8 @@ public final class NetworkDeviceIndex implements IGridService, IGridServiceProvi
         return snapshot;
     }
     public boolean contains(IGridNode node) { return nodes.containsKey(node); }
+    public IGridNode resolve(UUID id) {
+        for (var entry : nodes.entrySet()) if (entry.getValue().equals(id)) return entry.getKey();
+        return null;
+    }
 }

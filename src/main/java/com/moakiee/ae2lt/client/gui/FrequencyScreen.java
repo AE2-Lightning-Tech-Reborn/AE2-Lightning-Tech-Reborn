@@ -833,7 +833,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                             new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
             return;
         }
-        if (freqMenu().isController()) {
+        if (freqMenu().isController() && !freqMenu().hasParentMenu()) {
             addRenderableWidget(new AE2Button(x0 + 8, y0 + 116, 88, 16,
                     Component.translatable("ae2lt.management.devices"), btn -> freqMenu().clientOpenManagement(false)))
                     .active = freqMenu().getCurrentFrequencyId() > 0;

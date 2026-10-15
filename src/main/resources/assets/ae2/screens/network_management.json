@@ -110,6 +110,12 @@
       "top": 230,
       "width": 98,
       "height": 16
+    },
+    "configure": {
+      "left": 198,
+      "top": 230,
+      "width": 98,
+      "height": 16
     }
   }
 }

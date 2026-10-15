@@ -71,8 +71,8 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            var level = player.serverLevel();
-            var be = level.getBlockEntity(pkt.blockPos);
+            var be = menu.getConfiguredBlockEntity(player);
+            if (be == null || !(be.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
 
             // Resolve the device's CURRENT frequency so the block-op
             // access gate below knows what permission to verify. Any

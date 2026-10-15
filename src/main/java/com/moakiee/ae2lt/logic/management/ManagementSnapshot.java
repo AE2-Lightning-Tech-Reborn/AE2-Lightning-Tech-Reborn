@@ -57,7 +57,7 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
     private static ArrayList<ManagementRow> devices(List<NetworkDeviceIndex.Device> devices) {
         var rows = new ArrayList<ManagementRow>(devices.size());
         for (var d : devices) rows.add(new ManagementRow(d.id(), d.location(), null, "device", 1,
-                d.active() ? "active" : "offline", false, false, new double[5]));
+                d.active() ? "active" : "offline", false, false, new double[5], RemoteDeviceSession.supports(d.node().getOwner())));
         return rows;
     }
 

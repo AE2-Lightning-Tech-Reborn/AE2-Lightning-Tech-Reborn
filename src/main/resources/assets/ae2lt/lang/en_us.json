@@ -1643,5 +1643,9 @@
   "ae2lt.management.state.blocked": "Full / Output Paused",
   "ae2lt.management.state.faulted": "Output Fault",
   "ae2lt.management.search_too_broad": "Search too broad; use more specific terms",
-  "ae2lt.management.incomplete": "Partial history · "
+  "ae2lt.management.incomplete": "Partial history · ",
+  "ae2lt.management.configure": "Remote Config",
+  "ae2lt.management.configure_help": "Open the device’s native configuration and return to this device list",
+  "ae2lt.management.configure_unavailable": "Cannot configure: unavailable device, insufficient access or unsupported remote menu",
+  "ae2lt.management.return_devices": "Back to ME Devices"
 }

@@ -7,6 +7,8 @@ import com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints;
 import com.moakiee.ae2lt.logic.management.ManagementQuery;
 import com.moakiee.ae2lt.logic.management.ManagementRow;
 import com.moakiee.ae2lt.logic.management.ManagementSnapshot;
+import com.moakiee.ae2lt.logic.management.NetworkDeviceIndex;
+import com.moakiee.ae2lt.logic.management.RemoteDeviceSession;
 import com.moakiee.ae2lt.network.NetworkManagementSyncPacket;
 import java.util.List;
 import java.util.UUID;
@@ -33,9 +35,14 @@ public final class NetworkManagementMenu extends AEBaseMenu {
     private final boolean initialEnergy;
     private long lastQuery = Long.MIN_VALUE, lastEdit = Long.MIN_VALUE;
     private List<ManagementRow> displayed = List.of();
+    private ManagementQuery lastView;
+    private ManagementQuery initialQuery;
+    private UUID initialSelection;
 
     private NetworkManagementMenu(int id, Inventory inventory, FriendlyByteBuf buffer) {
         this(id, inventory, null, buffer.readBlockPos(), buffer.readVarInt(), buffer.readBoolean());
+        initialQuery = buffer.readNullable(ManagementQuery::read);
+        initialSelection = buffer.readNullable(b -> b.readUUID());
     }
     public NetworkManagementMenu(int id, Inventory inventory, WirelessOverloadedControllerBlockEntity host, boolean energy) {
         this(id, inventory, host, host.getBlockPos(), host.getFrequencyId(), energy);
@@ -46,22 +53,41 @@ public final class NetworkManagementMenu extends AEBaseMenu {
         this.host = host; this.pos = pos; this.frequency = frequency; this.initialEnergy = energy;
         registerClientAction("disconnect", UUID.class, this::disconnect);
         registerClientAction("back", this::back);
+        registerClientAction("configureDevice", UUID.class, this::openConfiguration);
     }
     public static void open(ServerPlayer player, WirelessOverloadedControllerBlockEntity host, boolean energy) {
+        open(player, host, energy, null, null);
+    }
+    private static void open(ServerPlayer player, WirelessOverloadedControllerBlockEntity host, boolean energy,
+            ManagementQuery query, UUID selection) {
         var f = WirelessFrequencyManager.get(player.server).getFrequency(host.getFrequencyId());
         if (f == null || !f.getPlayerAccess(player).canUse()) return;
         player.openMenu(new MenuProvider() {
             public Component getDisplayName() { return Component.translatable("ae2lt.management." + (energy ? "energy" : "devices")); }
             public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
-                return new NetworkManagementMenu(id, inv, host, host.getBlockPos(), host.getFrequencyId(), energy);
+                var menu = new NetworkManagementMenu(id, inv, host, host.getBlockPos(), host.getFrequencyId(), energy);
+                menu.initialQuery = query; menu.initialSelection = selection;
+                return menu;
             }
             public boolean shouldTriggerClientSideContainerClosingOnOpen() { return false; }
-        }, b -> { b.writeBlockPos(host.getBlockPos()); b.writeVarInt(host.getFrequencyId()); b.writeBoolean(energy); });
+        }, b -> {
+            b.writeBlockPos(host.getBlockPos()); b.writeVarInt(host.getFrequencyId()); b.writeBoolean(energy);
+            b.writeNullable(query, (buffer, view) -> view.write(buffer));
+            b.writeNullable(selection, (buffer, id) -> buffer.writeUUID(id));
+        });
     }
     public boolean initialEnergy() { return initialEnergy; }
     public BlockPos controllerPos() { return pos; }
     public void clientBack() { sendClientAction("back"); }
     public void clientDisconnect(UUID id) { sendClientAction("disconnect", id); }
+    public void clientConfigure(UUID id) { sendClientAction("configureDevice", id); }
+    public ManagementQuery initialQuery() { return initialQuery; }
+    public UUID initialSelection() { return initialSelection; }
+    public void reopen(ServerPlayer player, ManagementQuery query, UUID selection) { open(player, host, false, query, selection); }
+    public boolean containsDevice(appeng.api.networking.IGridNode node) {
+        var grid = host == null ? null : host.getMainNode().getGrid();
+        return grid != null && grid.getService(NetworkDeviceIndex.class).contains(node) && grid == node.getGrid();
+    }
 
     @Override public boolean stillValid(Player player) {
         if (isClientSide()) return true;
@@ -70,7 +96,10 @@ public final class NetworkManagementMenu extends AEBaseMenu {
                 && player.distanceToSqr(pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5) <= 64;
     }
     private boolean canRead(ServerPlayer player) {
-        if (player.containerMenu != this || !stillValid(player)) return false;
+        return player.containerMenu == this && canAccessFromSubMenu(player);
+    }
+    public boolean canAccessFromSubMenu(ServerPlayer player) {
+        if (getPlayerInventory().player != player || !stillValid(player)) return false;
         var f = WirelessFrequencyManager.get(player.server).getFrequency(frequency);
         return f != null && f.getPlayerAccess(player).canUse();
     }
@@ -94,8 +123,19 @@ public final class NetworkManagementMenu extends AEBaseMenu {
             return;
         }
         var snapshot = ManagementSnapshot.build(player, host, query);
+        lastView = new ManagementQuery(query.serial(), query.energy(), query.grouped(), query.type(), query.search(),
+                query.tokens(), query.sort(), query.descending(), query.window(), snapshot.offset());
         displayed = snapshot.rows();
         PacketDistributor.sendToPlayer(player, new NetworkManagementSyncPacket(containerId, query.serial(), "", snapshot));
+    }
+    public void openConfiguration(UUID id) {
+        if (!(getPlayerInventory().player instanceof ServerPlayer player) || !acceptRequest(player, true)
+                || lastView == null || lastView.energy() || displayed.stream().noneMatch(r -> r.id().equals(id)
+                && !r.group() && r.canConfigure() && r.kind().equals("device"))) return;
+        var grid = host.getMainNode().getGrid();
+        var node = grid == null ? null : grid.getService(NetworkDeviceIndex.class).resolve(id);
+        if (node == null || !new RemoteDeviceSession(this, node, id, lastView).open(player))
+            player.displayClientMessage(Component.translatable("ae2lt.management.configure_unavailable"), true);
     }
     private void disconnect(UUID id) {
         if (!(getPlayerInventory().player instanceof ServerPlayer player) || !acceptRequest(player, true)) return;
