@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.network.tianshu;
 
 import appeng.api.stacks.AEKey;
 
-import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
+import com.moakiee.ae2lt.crafting.big.BigTerminalMenu;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReport;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -37,8 +37,8 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
         c.enqueueWork(
                 () -> {
                     if (net.minecraft.client.Minecraft.getInstance().player == null) return;
-                    if (net.minecraft.client.Minecraft.getInstance().player.containerMenu instanceof TianshuMaintenanceMenu m
-                            && m.maintenanceMenu().containerId == p.containerId) m.applyBigStock(p.changed);
+                    if (net.minecraft.client.Minecraft.getInstance().player.containerMenu instanceof BigTerminalMenu m
+                            && net.minecraft.client.Minecraft.getInstance().player.containerMenu.containerId == p.containerId) m.ae2lt$applyBigStock(p.changed);
                 });
         c.setPacketHandled(true);
     }
