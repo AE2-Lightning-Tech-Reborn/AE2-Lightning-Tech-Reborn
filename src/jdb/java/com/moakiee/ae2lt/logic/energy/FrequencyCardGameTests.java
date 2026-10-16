@@ -137,6 +137,13 @@ public final class FrequencyCardGameTests {
                 h.runAfterDelay(5, () -> {
                     aim(f.player, seed); var result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
                     h.assertTrue(result.changed() == 1 && result.skipped() == 1 && endpoints.isBound(level, seed.east(), other.getId()), "foreign binding overwritten");
+                    h.assertTrue(result.skippedReasons().equals(Map.of("other_frequency", 1)), "foreign binding reason lost");
+                    use(f, seed, true);
+                    assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.YELLOW,
+                            "ae2lt.wireless_energy.bulk_reason.other_frequency");
+                    use(f, seed, true);
+                    assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.YELLOW,
+                            "ae2lt.wireless_energy.bulk_reason.other_frequency");
                     aim(f.player, seed.north(20)); result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
                     h.assertTrue(result.error().equals("no_permission") && endpoints.isBound(level, seed, f.frequency), "remote seed accepted");
                     h.succeed();
@@ -155,6 +162,12 @@ public final class FrequencyCardGameTests {
             use(f, target, false);
             h.assertTrue(endpoints.isBound(h.getLevel(), target, f.frequency), "normal card did not bind ME+FE target");
             var node = GridHelper.getNodeHost(h.getLevel(), target).getGridNode(Direction.UP); var grid = node.getGrid();
+            use(f, target, false);
+            h.assertTrue(!endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid,
+                    "second ordinary click must disable FE without changing the physical ME grid");
+            use(f, target, false);
+            h.assertTrue(endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid,
+                    "third ordinary click must restore FE without changing the physical ME grid");
             use(f, target, true);
             h.assertTrue(!endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid, "Ctrl changed ME connection");
             use(f, target, true);
@@ -162,6 +175,53 @@ public final class FrequencyCardGameTests {
             grid.getStorageService().getInventory().insert(AppFluxBridge.FE_KEY, 50000, Actionable.MODULATE, IActionSource.empty());
         });
         h.runAfterDelay(65, () -> { h.assertTrue(ME_ENERGY.get(be).getEnergyStored() > 0, "same-grid ME machine received no FE"); h.succeed(); });
+    }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void bulkReportsAllFailureReasonsAndNeverShowsFalseSuccess(GameTestHelper h) {
+        var f = fixture(h); var level = h.getLevel(); var seed = h.absolutePos(TARGET);
+        for (int i = 0; i < 3; i++) h.setBlock(TARGET.east(i), WirelessEnergyTestMachine.BLOCK);
+        WirelessEnergyTestMachine unsupported = h.getBlockEntity(TARGET.east(2)); unsupported.inputFace = null;
+        h.runAfterDelay(35, () -> {
+            f.controller.setFrequency(-1);
+            h.runAfterDelay(5, () -> {
+                var endpoints = WirelessEnergyEndpoints.get(level.getServer());
+                var result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
+                h.assertTrue(result.changed() == 0 && result.skipped() == 3
+                        && result.skippedReasons().equals(Map.of("no_controller", 2, "unsupported", 1)),
+                        "all-failed reasons/counts lost: " + result);
+                use(f, seed, true);
+                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.RED,
+                        "ae2lt.wireless_energy.bulk_reason.no_controller", "ae2lt.wireless_energy.bulk_reason.unsupported");
+                h.assertTrue(endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "failed group created endpoints");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void bulkReportsLimitAndPerDevicePermissionWithoutChangingForeignOwnership(GameTestHelper h) {
+        var f = fixture(h); var level = h.getLevel(); var seed = h.absolutePos(TARGET);
+        h.setBlock(TARGET, WirelessEnergyTestMachine.BLOCK); h.setBlock(TARGET.east(), WirelessEnergyTestMachine.BLOCK);
+        h.runAfterDelay(35, () -> {
+            int limit = WirelessEnergySettings.endpointLimit.get();
+            try {
+                WirelessEnergySettings.endpointLimit.set(1);
+                use(f, seed, true);
+                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.YELLOW,
+                        "ae2lt.wireless_energy.bulk_reason.limit");
+            } finally { WirelessEnergySettings.endpointLimit.set(limit); }
+            var endpoints = WirelessEnergyEndpoints.get(level.getServer());
+            h.assertTrue(endpoints.isBound(level, seed, f.frequency) && !endpoints.isBound(level, seed.east(), f.frequency),
+                    "limit must retain the successful subset only");
+            var member = new MenuPlayer(level); aim(member, seed);
+            WirelessFrequencyManager.get().getFrequency(f.frequency).enrollAsUser(member);
+            var result = endpoints.toggleConnected(member, f.frequency, level, seed, Direction.NORTH);
+            h.assertTrue(result.changed() == 0 && result.unchanged() == 1
+                    && result.skippedReasons().equals(Map.of("no_permission", 1)) && endpoints.isBound(level, seed, f.frequency),
+                    "member disconnected owner's endpoint or lost permission reason: " + result);
+            use(f, seed, true);
+            assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.GREEN);
+            h.succeed();
+        });
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
     public static void interfacesAndProvidersCannotReceiveManuallyOrAutomatically(GameTestHelper h) {
@@ -233,9 +293,28 @@ public final class FrequencyCardGameTests {
                 pos.getX() + .5, pos.getY() + .5, pos.getZ(), false, bulk), context(f.player));
     }
     private record Fixture(AdvancedWirelessOverloadedControllerBlockEntity controller, MenuPlayer player, int frequency) {}
+    private static void assertFeedback(GameTestHelper h, MenuPlayer player, String outcome,
+            net.minecraft.ChatFormatting color, String... reasons) {
+        var summary = findTranslation(player.feedback, "ae2lt.wireless_energy." + outcome);
+        h.assertTrue(summary != null && net.minecraft.network.chat.TextColor.fromLegacyFormat(color).equals(summary.getStyle().getColor()),
+                "wrong result/color: " + player.feedback);
+        for (String reason : reasons) h.assertTrue(findTranslation(player.feedback, reason) != null, "missing feedback reason " + reason);
+    }
+    private static net.minecraft.network.chat.Component findTranslation(net.minecraft.network.chat.Component text, String key) {
+        if (text.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translated) {
+            if (translated.getKey().equals(key)) return text;
+            for (var arg : translated.getArgs()) if (arg instanceof net.minecraft.network.chat.Component nested) {
+                var match = findTranslation(nested, key); if (match != null) return match;
+            }
+        }
+        for (var child : text.getSiblings()) { var match = findTranslation(child, key); if (match != null) return match; }
+        return null;
+    }
     private static final class MenuPlayer extends FakePlayer {
         private int nextId = 30; boolean encodedParent;
+        net.minecraft.network.chat.Component feedback = net.minecraft.network.chat.Component.empty();
         MenuPlayer(ServerLevel level) { super(level, new GameProfile(UUID.randomUUID(), "FrequencyCardQA")); }
+        @Override public void displayClientMessage(net.minecraft.network.chat.Component message, boolean actionBar) { feedback = message; }
         @Override public OptionalInt openMenu(MenuProvider provider, Consumer<RegistryFriendlyByteBuf> writer) {
             int id = ++nextId; containerMenu = provider.createMenu(id, getInventory(), this);
             var b = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess());

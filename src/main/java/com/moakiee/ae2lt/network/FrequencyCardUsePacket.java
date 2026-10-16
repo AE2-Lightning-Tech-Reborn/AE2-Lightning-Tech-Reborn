@@ -144,10 +144,21 @@ public record FrequencyCardUsePacket(
         var energy = com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer());
         if (bulkPower) {
             var result = energy.toggleConnected(player, data.frequencyId(), level, pos, face);
+            var style = result.skipped() > 0 && result.changed() + result.unchanged() == 0 ? ChatFormatting.RED
+                    : result.skipped() > 0 || result.unloaded() ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
             Component feedback = result.error().isEmpty()
                     ? Component.translatable("ae2lt.wireless_energy.bulk_" + (result.bind() ? "connected" : "disconnected"),
-                            result.changed(), result.unchanged(), result.skipped()).withStyle(ChatFormatting.GREEN)
+                            result.changed(), result.unchanged(), result.skipped()).withStyle(style)
                     : Component.translatable("ae2lt.wireless_energy." + result.error()).withStyle(ChatFormatting.RED);
+            if (!result.skippedReasons().isEmpty()) {
+                var reasons = Component.empty();
+                result.skippedReasons().forEach((reason, count) -> {
+                    if (!reasons.getSiblings().isEmpty()) reasons.append(", ");
+                    reasons.append(Component.translatable("ae2lt.wireless_energy.bulk_reason_count",
+                            Component.translatable("ae2lt.wireless_energy.bulk_reason." + reason), count));
+                });
+                feedback = Component.empty().append(feedback).append(" | ").append(reasons.withStyle(style));
+            }
             if (result.unloaded()) feedback = Component.empty().append(feedback).append(" ")
                     .append(Component.translatable("ae2lt.wireless_energy.bulk_unloaded").withStyle(ChatFormatting.YELLOW));
             player.displayClientMessage(feedback, true);
@@ -171,8 +182,10 @@ public record FrequencyCardUsePacket(
                 player.displayClientMessage(aeFeedback, true);
                 return;
             }
-            // A combined action follows the AE result; an already-connected physical grid means bind FE.
-            bind = !feedback.translationKey().startsWith("ae2lt.frequency_card.disconnected");
+            // A physical grid already on this frequency has no ME link to toggle; toggle its FE independently.
+            if (!feedback.translationKey().equals("ae2lt.frequency_card.already_in_frequency")) {
+                bind = !feedback.translationKey().startsWith("ae2lt.frequency_card.disconnected");
+            }
         }
         String result = energy.setBound(player, data.frequencyId(), level, pos, inputFace == null ? face : inputFace, bind);
         Component feFeedback = Component.translatable("ae2lt.wireless_energy." + result)

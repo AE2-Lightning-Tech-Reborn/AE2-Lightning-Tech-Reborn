@@ -32,10 +32,11 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 public final class FrequencyCardClientProbe {
     private static final BlockPos C = new BlockPos(0, 100, 0), TARGET = new BlockPos(0, 100, 5);
     private static final String NAME = "Card QA " + java.util.UUID.randomUUID().toString().substring(0, 6);
+    private static final String OTHER_NAME = "频率列表长名称选中标记布局测试" + NAME.substring(NAME.length() - 6);
     private static int ticks, phase;
     private static boolean done;
     private static volatile Throwable failure;
-    private static volatile int frequency;
+    private static volatile int frequency, otherFrequency;
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.frequencyCardClientProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
@@ -59,6 +60,7 @@ public final class FrequencyCardClientProbe {
                         level.setBlockAndUpdate(C, ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get().defaultBlockState());
                         level.setBlockAndUpdate(C.east(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
                         frequency = WirelessFrequencyManager.get().createFrequency(p, NAME, 0xffffff, FrequencySecurityLevel.PRIVATE, "").getId();
+                        otherFrequency = WirelessFrequencyManager.get().createFrequency(p, OTHER_NAME, 0x66ffcc, FrequencySecurityLevel.PRIVATE, "").getId();
                         ((AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(C)).setFrequency(frequency);
                         p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get()));
                     });
@@ -73,27 +75,45 @@ public final class FrequencyCardClientProbe {
                     server(() -> require(OverloadedFrequencyCardItem.getData(player().getMainHandItem()).autoConnect(), "auto switch not persisted"));
                     clickKey(FrequencyPage.TAB_SELECTION.navigationTranslationKey());
                 }
-                case 4 -> clickContaining(NAME);
+                case 4 -> { assertBoundRow(null); clickContaining(NAME); }
                 case 5 -> {
                     require(menu().getCurrentFrequencyId() == frequency, "selected frequency did not sync");
-                    capture("held-card-frequency.png"); mc.screen.onClose();
+                    assertBoundRow(NAME);
+                    mc.screen.setFocused(button(OTHER_NAME, true));
+                }
+                case 6 -> {
+                    assertBoundRow(NAME); capture("held-card-frequency-focused-other.png"); clickContaining(OTHER_NAME);
+                }
+                case 7 -> {
+                    require(menu().getCurrentFrequencyId() == otherFrequency, "second frequency did not sync");
+                    assertBoundRow(OTHER_NAME); capture("held-card-frequency-long-bound.png");
+                    clickContaining(NAME);
+                }
+                case 8 -> {
+                    require(menu().getCurrentFrequencyId() == frequency, "original frequency did not restore");
+                    assertBoundRow(NAME); search(NAME.substring(0, NAME.length() - 1));
+                }
+                case 9 -> { assertBoundRow(NAME); search(""); }
+                case 10 -> {
+                    assertBoundRow(NAME); capture("held-card-frequency.png"); mc.screen.onClose();
                     server(() -> {
                         var p = player(); require(OverloadedFrequencyCardItem.getData(p.getMainHandItem()).frequencyId() == frequency, "frequency did not persist");
                         var card = p.getMainHandItem(); p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); p.setItemInHand(InteractionHand.OFF_HAND, card);
                     });
                 }
-                case 6 -> mc.gameMode.useItem(mc.player, InteractionHand.OFF_HAND);
-                case 7 -> {
+                case 11 -> mc.gameMode.useItem(mc.player, InteractionHand.OFF_HAND);
+                case 12 -> {
                     require(menu().getCurrentFrequencyId() == frequency && menu().isAutoConnect() && !menu().hasParentMenu(), "offhand reopen lost data");
                     capture("held-card-offhand.png"); clickKey(FrequencyPage.TAB_SELECTION.navigationTranslationKey());
                 }
-                case 8 -> clickKey("ae2lt.gui.button.disconnect");
-                case 9 -> {
+                case 13 -> { assertBoundRow(NAME); clickKey("ae2lt.gui.button.disconnect"); }
+                case 14 -> {
                     require(menu().getCurrentFrequencyId() <= 0 && menu().isAutoConnect(), "disconnect did not preserve auto");
+                    assertBoundRow(null);
                     clickContaining(NAME);
                 }
-                case 10 -> {
-                    require(menu().getCurrentFrequencyId() == frequency, "offhand reconnect"); mc.screen.onClose();
+                case 15 -> {
+                    require(menu().getCurrentFrequencyId() == frequency, "offhand reconnect"); assertBoundRow(NAME); mc.screen.onClose();
                     server(() -> {
                         var p = player(); var level = p.serverLevel(); var card = p.getOffhandItem();
                         p.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY); p.setItemInHand(InteractionHand.MAIN_HAND, card);
@@ -104,9 +124,9 @@ public final class FrequencyCardClientProbe {
                         p.teleportTo(level, .5, 99, 3, java.util.Set.of(), 0, 0);
                     });
                 }
-                case 11 -> { /* Wait for the held card and fixtures to synchronize. */ }
-                case 12 -> { useTarget(); }
-                case 13 -> {
+                case 16 -> { /* Wait for the held card and fixtures to synchronize. */ }
+                case 17 -> { useTarget(); }
+                case 18 -> {
                     server(() -> {
                         var p = player(); require(WirelessEnergyEndpoints.get(p.server).inspect(frequency, p.getUUID()).size() == 2, "held-card Ctrl failed");
                         var terminal = new ItemStack(AEItems.WIRELESS_TERMINAL.asItem());
@@ -115,23 +135,24 @@ public final class FrequencyCardClientProbe {
                         p.setItemInHand(InteractionHand.MAIN_HAND, terminal);
                     });
                 }
-                case 14 -> { /* Wait for the installed terminal card to synchronize. */ }
-                case 15 -> { useTarget(); }
-                case 16 -> {
+                case 19 -> { /* Wait for the installed terminal card to synchronize. */ }
+                case 20 -> { useTarget(); }
+                case 21 -> {
                     server(() -> {
                         var p = player(); require(WirelessEnergyEndpoints.get(p.server).inspect(frequency, p.getUUID()).isEmpty(), "terminal Ctrl duplicate toggle or failed disconnect");
                         appeng.menu.MenuOpener.open(FrequencyMenu.TYPE, p, appeng.menu.locator.MenuLocators.forInventorySlot(p.getInventory().selected));
                     });
                 }
-                case 17 -> {
+                case 22 -> {
                     require(menu().isCardMode() && menu().hasParentMenu() && menu().getCurrentFrequencyId() == frequency, "terminal card menu regression");
                     clickKey("ae2lt.gui.button.auto_connect_on");
                 }
-                case 18 -> {
+                case 23 -> {
                     require(!menu().isAutoConnect(), "terminal switch did not synchronize");
                     server(() -> require(!TerminalCardAccess.readCardData(player().getMainHandItem()).autoConnect(), "terminal switch not persisted"));
                 }
-                case 19 -> { capture("terminal-card-regression.png"); finish(null); return; }
+                case 24 -> { capture("terminal-card-regression.png"); clickKey(FrequencyPage.TAB_SELECTION.navigationTranslationKey()); }
+                case 25 -> { assertBoundRow(NAME); capture("terminal-card-frequency.png"); finish(null); return; }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
@@ -147,20 +168,40 @@ public final class FrequencyCardClientProbe {
     private static net.minecraft.server.level.ServerPlayer player() { var mc = Minecraft.getInstance(); return mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID()); }
     private static void clickKey(String key) { click(Component.translatable(key).getString(), false); }
     private static void clickContaining(String name) { click(name, true); }
-    private static void click(String text, boolean contains) {
+    private static Button button(String text, boolean contains) {
         var screen = Minecraft.getInstance().screen;
-        var button = screen.children().stream().filter(e -> e instanceof Button b && b.visible && b.active
+        return screen.children().stream().filter(e -> e instanceof Button b && b.visible && b.active
                 && (contains ? b.getMessage().getString().contains(text) : b.getMessage().getString().equals(text)))
                 .map(e -> (Button)e).findFirst().orElseThrow(() -> new AssertionError("missing button " + text));
+    }
+    private static void click(String text, boolean contains) {
+        var screen = Minecraft.getInstance().screen; var button = button(text, contains);
         double x = button.getX() + button.getWidth() / 2., y = button.getY() + button.getHeight() / 2.;
         require(screen.mouseClicked(x, y, 0), "mouse click failed"); screen.mouseReleased(x, y, 0);
+    }
+    private static void search(String query) throws Exception {
+        var screen = Minecraft.getInstance().screen; var field = FrequencyScreen.class.getDeclaredField("selectionSearchField");
+        field.setAccessible(true); ((appeng.client.gui.widgets.AETextField) field.get(screen)).setValue(query);
+    }
+    private static void assertBoundRow(String name) throws Exception {
+        int marked = 0;
+        for (var child : Minecraft.getInstance().screen.children()) {
+            if (!child.getClass().getSimpleName().equals("RowSpriteButton")) continue;
+            var bound = child.getClass().getDeclaredField("bound"); bound.setAccessible(true);
+            if (bound.getBoolean(child)) {
+                marked++;
+                var label = ((Button) child).getMessage().getString();
+                require(name != null && (label.equals(name) || label.startsWith(name + " [")), "wrong bound marker: " + label);
+            }
+        }
+        require(marked == (name == null ? 0 : 1), "missing or duplicate bound marker: " + marked);
     }
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void capture(String name) throws Exception { var mc = Minecraft.getInstance(); try (var image = Screenshot.takeScreenshot(mc.getMainRenderTarget())) { image.writeToFile(mc.gameDirectory.toPath().resolve(name)); } }
     private static void require(boolean condition, String text) { if (!condition) throw new AssertionError(text); }
     private static void finish(Throwable problem) {
         done = true;
-        String result = problem == null ? "FREQUENCY_CARD_CLIENT_PASS: main/offhand air GUI, mouse auto switch, frequency selection/disconnect/reconnect, persisted card data, Ctrl payload held-card and terminal group toggle, terminal GUI regression"
+        String result = problem == null ? "FREQUENCY_CARD_CLIENT_PASS: main/offhand air GUI, mouse auto switch, current frequency badge persists across other-row focus/search/reopen; badge moves on selection and clears on disconnect; long-name layout; persisted card data, Ctrl payload held-card and terminal group toggle, terminal GUI regression"
                 : "FREQUENCY_CARD_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("frequency-card-result.txt"), result); } catch (Exception ignored) {}

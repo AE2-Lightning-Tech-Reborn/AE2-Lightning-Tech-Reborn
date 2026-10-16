@@ -744,7 +744,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(f.color() & 0xFFFFFF)));
             RowSpriteButton btn = new RowSpriteButton(
                     x0 + LIST_ROW_X, by, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT,
-                    display,
+                    display, f.id() == freqMenu().getCurrentFrequencyId(),
                     b -> {
                         // ENCRYPTED rows that the player can't unlock pop
                         // the password modal instead of firing a guaranteed-
@@ -1482,26 +1482,32 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private record FittedTextTooltip(Rect2i area, Component text) {}
 
-    /**
-     * List-row button that paints the row sprite baked at the bottom
-     * of the chassis PNG instead of the AE2 button background. Idle
-     * rows get the lavender-gray strip (u=0, v=158); hovered or
-     * focused rows swap in the cyan-blue strip (u=0, v=180). Disabled
-     * rows stay on the idle sprite to read as "not clickable" while
-     * keeping their access-tinted label visible.
-     *
-     * <p>Renders the message Component itself (not just its string
-     * form) so the per-row colour styles set by Selection/Members
-     * builders survive — frequency rows keep the user's stored RGB
-     * tint, member rows keep their access-level {@link ChatFormatting}.</p>
-     */
+    /** AE2 list row with a persistent binding badge independent of hover/focus, preserving label colours. */
     private final class RowSpriteButton extends Button {
+        private final boolean bound;
+        private final Component boundLabel = Component.translatable("ae2lt.gui.frequency.bound");
         RowSpriteButton(int x, int y, int width, int height,
                 Component message, OnPress onPress) {
+            this(x, y, width, height, message, false, onPress);
+        }
+
+        RowSpriteButton(int x, int y, int width, int height,
+                Component message, boolean bound, OnPress onPress) {
             super(Button.builder(message, onPress).bounds(x, y, width, height));
-            if (!message.getString().equals(FittingText.fit(message.getString(), width - 8, font::width))) {
+            this.bound = bound;
+            if (bound) {
+                setTooltip(Tooltip.create(Component.empty().append(message).append(" — ").append(boundLabel)));
+            } else if (!message.getString().equals(FittingText.fit(message.getString(), labelWidth(), font::width))) {
                 setTooltip(Tooltip.create(message));
             }
+        }
+
+        private int labelWidth() { return getWidth() - 12 - (bound ? font.width(boundLabel) + 12 : 0); }
+
+        @Override
+        protected net.minecraft.network.chat.MutableComponent createNarrationMessage() {
+            return bound ? Component.empty().append(super.createNarrationMessage()).append(". ").append(boundLabel)
+                    : super.createNarrationMessage();
         }
 
         @Override
@@ -1509,6 +1515,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             boolean hover = active && (isHoveredOrFocused());
             BackgroundGenerator.draw(getWidth(), getHeight(), g, getX(), getY());
             if (hover) g.fill(getX() + 3, getY() + 3, getX() + getWidth() - 3, getY() + getHeight() - 3,
+                    AE2_STYLE.getColor(PaletteColor.SELECTION_COLOR).toARGB());
+            if (bound) g.fill(getX() + 2, getY() + 3, getX() + 4, getY() + getHeight() - 3,
                     AE2_STYLE.getColor(PaletteColor.SELECTION_COLOR).toARGB());
 
             // Vanilla MC's drawString honours the Component's per-style
@@ -1518,13 +1526,15 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             // light idle sprite, dark blue-gray on the disabled sprite.
             int fallback = active ? 0x000000 : 0x404040;
             String full = getMessage().getString();
-            String fitted = FittingText.fit(full, getWidth() - 8, font::width);
+            String fitted = FittingText.fit(full, labelWidth(), font::width);
             Component display = full.equals(fitted)
                     ? getMessage()
                     : Component.literal(fitted).setStyle(getMessage().getStyle());
             int textY = getY() + (getHeight() - 8) / 2;
             int textX = getX() + 6;
             g.drawString(font, display, textX, textY, fallback, false);
+            if (bound) g.drawString(font, boundLabel, getX() + getWidth() - 6 - font.width(boundLabel), textY,
+                    0x303030, false);
         }
     }
 

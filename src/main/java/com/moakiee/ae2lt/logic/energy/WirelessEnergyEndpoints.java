@@ -37,7 +37,13 @@ import org.jetbrains.annotations.Nullable;
 public final class WirelessEnergyEndpoints extends SavedData {
     private static final int WORLD_LIMIT = 8192;
     private static final int CLUSTER_LIMIT = 8192;
-    public record BulkResult(boolean bind, int changed, int unchanged, int skipped, boolean unloaded, String error) {}
+    public record BulkResult(boolean bind, int changed, int unchanged, Map<String, Integer> skippedReasons,
+                             boolean unloaded, String error) {
+        public BulkResult {
+            skippedReasons = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(skippedReasons));
+        }
+        public int skipped() { return skippedReasons.values().stream().mapToInt(Integer::intValue).sum(); }
+    }
     public record Location(ResourceKey<Level> dimension, BlockPos pos) {
         public Location { pos = pos.immutable(); }
     }
@@ -158,13 +164,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
                 || !player.canInteractWithBlock(seed, 1) || !level.mayInteract(player, seed)
                 || level.getChunkSource().getChunkNow(seed.getX() >> 4, seed.getZ() >> 4) == null)
-            return new BulkResult(bind, 0, 0, 0, false, "no_permission");
+            return new BulkResult(bind, 0, 0, Map.of(), false, "no_permission");
         var manager = WirelessFrequencyManager.get(level.getServer());
         var f = manager == null ? null : manager.getFrequency(frequency);
         if (f == null || !f.getPlayerAccess(player).canUse())
-            return new BulkResult(bind, 0, 0, 0, false, "no_permission");
+            return new BulkResult(bind, 0, 0, Map.of(), false, "no_permission");
         if (bind && findInputFace(level, seed, preferred) == null)
-            return new BulkResult(true, 0, 0, 0, false, "unsupported");
+            return new BulkResult(true, 0, 0, Map.of(), false, "unsupported");
         var block = level.getBlockState(seed).getBlock();
         var queue = new java.util.ArrayDeque<BlockPos>();
         var seen = new java.util.HashSet<BlockPos>();
@@ -177,28 +183,33 @@ public final class WirelessEnergyEndpoints extends SavedData {
             if (chunk == null) { unloaded = true; continue; }
             if (!chunk.getBlockState(pos).is(block)) continue;
             if (cluster.size() == CLUSTER_LIMIT)
-                return new BulkResult(bind, 0, 0, 0, unloaded, "cluster_limit");
+                return new BulkResult(bind, 0, 0, Map.of(), unloaded, "cluster_limit");
             cluster.add(pos);
             for (var direction : Direction.values()) {
                 var next = pos.relative(direction);
                 if (!level.isOutsideBuildHeight(next) && seen.add(next)) queue.addLast(next);
             }
         }
-        int changed = 0, unchanged = 0, skipped = 0;
+        int changed = 0, unchanged = 0;
+        var skippedReasons = new LinkedHashMap<String, Integer>();
         long count = endpoints.values().stream().filter(e -> e.frequency == frequency).count();
         for (var pos : cluster) {
             // Capability callbacks from an earlier target may have changed this position.
             var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
-            if (chunk == null || !chunk.getBlockState(pos).is(block)) { skipped++; continue; }
+            if (chunk == null || !chunk.getBlockState(pos).is(block)) {
+                skippedReasons.merge("target_changed", 1, Integer::sum); continue;
+            }
             boolean before = isBound(level, pos, frequency);
             var face = bind ? findInputFace(level, pos, preferred) : preferred;
-            if (face == null) { skipped++; continue; }
+            if (face == null) { skippedReasons.merge("unsupported", 1, Integer::sum); continue; }
             String result = setBound(player, frequency, level, pos, face, bind, "manual", false, count);
-            if (!result.equals(bind ? "connected" : "disconnected")) { skipped++; continue; }
+            if (!result.equals(bind ? "connected" : "disconnected")) {
+                skippedReasons.merge(result, 1, Integer::sum); continue;
+            }
             if (before == bind) unchanged++;
             else { changed++; count += bind ? 1 : -1; }
         }
-        return new BulkResult(bind, changed, unchanged, skipped, unloaded, "");
+        return new BulkResult(bind, changed, unchanged, skippedReasons, unloaded, "");
     }
 
     /** Idempotent desired state supports a later link-management UI without replaying card toggles. */
