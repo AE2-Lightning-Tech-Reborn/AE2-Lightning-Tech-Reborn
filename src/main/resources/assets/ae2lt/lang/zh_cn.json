@@ -643,9 +643,9 @@
   "ae2lt.gui.security.public": "公开",
   "ae2lt.gui.tab.connection": "频率连接",
   "ae2lt.gui.tab.create": "创建新频率",
-  "ae2lt.gui.tab.home": "主页",
-  "ae2lt.gui.tab.member": "频率成员",
-  "ae2lt.gui.tab.selection": "频率选择",
+  "ae2lt.gui.tab.home": "概览",
+  "ae2lt.gui.tab.member": "成员管理",
+  "ae2lt.gui.tab.selection": "频率",
   "ae2lt.gui.tab.setting": "频率设置",
   "block.ae2lt.advanced_wireless_overloaded_controller": "高级无线过载控制器",
   "block.ae2lt.wireless_overloaded_controller": "无线过载控制器",
@@ -1652,5 +1652,10 @@
   "ae2lt.management.configure": "无线配置",
   "ae2lt.management.configure_help": "远程打开设备原有配置界面，可返回当前设备列表",
   "ae2lt.management.configure_unavailable": "无法配置：设备不可用、权限不足或不支持远程菜单",
-  "ae2lt.management.return_devices": "返回 ME 设备管理"
+  "ae2lt.management.return_devices": "返回网络管理",
+  "ae2lt.management.network": "网络管理",
+  "ae2lt.management.connections": "频率链接点",
+  "ae2lt.management.switch_mode_help": "切换列表：ME 设备 → 供电 → 频率链接点",
+  "ae2lt.management.summary_connections": "%s 个链接点 · %s 行",
+  "ae2lt.management.state.loaded": "已加载"
 }

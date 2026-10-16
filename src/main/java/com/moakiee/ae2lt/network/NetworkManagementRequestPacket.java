@@ -16,8 +16,10 @@ public record NetworkManagementRequestPacket(int menuId, ManagementQuery query) 
     @Override public Type<NetworkManagementRequestPacket> type() { return TYPE; }
     public static void handle(NetworkManagementRequestPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player() instanceof ServerPlayer player && player.containerMenu instanceof NetworkManagementMenu menu
-                    && menu.containerId == packet.menuId) menu.query(player, packet.query);
+            if (!(context.player() instanceof ServerPlayer player) || player.containerMenu.containerId != packet.menuId) return;
+            if (player.containerMenu instanceof NetworkManagementMenu menu) menu.query(player, packet.query);
+            else if (player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu menu)
+                menu.openManagement(player, packet.query);
         });
     }
 }

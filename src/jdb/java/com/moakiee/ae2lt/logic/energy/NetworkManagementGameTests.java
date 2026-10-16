@@ -38,6 +38,38 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class NetworkManagementGameTests {
     private static final BlockPos C = new BlockPos(2, 2, 2);
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void frequencyLinksUseTheirRegistryAndNeverLoadRemoteChunks(GameTestHelper h) {
+        var f = fixture(h);
+        h.setBlock(C.south(), com.moakiee.ae2lt.registry.ModBlocks.WIRELESS_RECEIVER.get());
+        var receiver = (com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity) h.getBlockEntity(C.south());
+        receiver.setFrequency(f.host.getFrequencyId());
+        var remote = new BlockPos(2_000_000, 80, -2_000_000);
+        WirelessFrequencyManager.get().registerDevice(f.host.getFrequencyId(), new WirelessFrequencyManager.DeviceEntry(
+                h.getLevel().dimension(), remote, false, false));
+        h.runAfterDelay(40, () -> {
+            var view = ManagementQuery.initial(ManagementMode.CONNECTIONS);
+            var snapshot = ManagementSnapshot.build(f.player, f.host, view);
+            h.assertTrue(snapshot.total() == 3 && snapshot.rows().stream().allMatch(r -> r.kind().equals("connection") && !r.group()),
+                    "frequency links mixed with ordinary ME devices");
+            var unloaded = snapshot.rows().stream().filter(r -> r.target().pos().equals(remote)).findFirst().orElseThrow();
+            h.assertTrue(unloaded.state().equals("unloaded") && !unloaded.canConfigure() && !unloaded.canDisconnect(),
+                    "unloaded link acquired an unsafe operation");
+            h.assertTrue(h.getLevel().getChunkSource().getChunkNow(remote.getX() >> 4, remote.getZ() >> 4) == null,
+                    "reading frequency links loaded a remote chunk");
+            var filter = new ManagementQuery(5, ManagementMode.CONNECTIONS, false, List.of(), "2000000",
+                    List.of(new ManagementQuery.Token("2000000", List.of())), 1, false, 1, 0);
+            h.assertTrue(ManagementSnapshot.build(f.player, f.host, filter).total() == 1, "link coordinates search");
+            var buffer = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+            try {
+                filter.write(buffer);
+                h.assertTrue(ManagementQuery.read(buffer).equals(filter), "link mode lost in query codec");
+            } finally { buffer.release(); }
+            WirelessFrequencyManager.get().unregisterDevice(f.host.getFrequencyId(), h.getLevel().dimension(), remote);
+            h.succeed();
+        });
+    }
+
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 120)
     public static void nativeInductionReceiptsAndLocalizedDeviceSearch(GameTestHelper h) { nativeOutput(h, false); }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 120)

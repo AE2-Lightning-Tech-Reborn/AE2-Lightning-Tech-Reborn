@@ -26,7 +26,11 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
         long now = player.server.getTickCount();
         var grid = host.getMainNode().getGrid();
         var devices = grid == null ? List.<NetworkDeviceIndex.Device>of() : grid.getService(NetworkDeviceIndex.class).devices(now);
-        var result = query.energy() ? power(player, host, devices, now) : devices(devices);
+        var result = switch (query.mode()) {
+            case DEVICES -> devices(devices);
+            case ENERGY -> power(player, host, devices, now);
+            case CONNECTIONS -> connections(player, host, devices);
+        };
         result.removeIf(row -> !query.matches(row.target(), row.source(), row.kind()));
         int deviceCount = result.size();
         double[] totals = new double[5];
@@ -51,7 +55,7 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
             groups.forEach((type, children) -> {
                 boolean open = expanded.contains(type);
                 result.add(new ManagementRow(UUID.nameUUIDFromBytes(type.getBytes(StandardCharsets.UTF_8)),
-                        new DeviceLocation("", BlockPos.ZERO, -1, type, ""), null, "device", children.size(),
+                        new DeviceLocation("", BlockPos.ZERO, -1, type, ""), null, query.connections() ? "connection" : "device", children.size(),
                         open ? "expanded" : "group", true, false, new double[5]));
                 if (open) result.addAll(children);
             });
@@ -80,6 +84,37 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
         var rows = new ArrayList<ManagementRow>(devices.size());
         for (var d : devices) rows.add(new ManagementRow(d.id(), d.location(), null, "device", 1,
                 d.active() ? "active" : "offline", false, false, new double[5], RemoteDeviceSession.supports(d.node().getOwner())));
+        return rows;
+    }
+
+    private static ArrayList<ManagementRow> connections(ServerPlayer player, WirelessOverloadedControllerBlockEntity host,
+            List<NetworkDeviceIndex.Device> devices) {
+        var inGrid = new HashMap<String, NetworkDeviceIndex.Device>();
+        for (var device : devices) if (device.location().face() < 0)
+            inGrid.put(device.location().dimension() + ":" + device.location().pos().asLong(), device);
+        var rows = new ArrayList<ManagementRow>();
+        for (var entry : WirelessFrequencyManager.get(player.server).getDevices(host.getFrequencyId())) {
+            String dimension = entry.dimension().location().toString();
+            String locationKey = dimension + ":" + entry.pos().asLong();
+            var level = player.server.getLevel(entry.dimension());
+            var chunk = level == null ? null : level.getChunkSource().getChunkNow(entry.pos().getX() >> 4, entry.pos().getZ() >> 4);
+            var be = chunk == null ? null : chunk.getBlockEntity(entry.pos(), net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
+            String fallback = entry.isController() ? entry.advanced() ? "ae2lt:advanced_wireless_overloaded_controller"
+                    : "ae2lt:wireless_overloaded_controller" : "ae2lt:wireless_receiver";
+            String[] description = entry.deviceName().split("\\.", 3);
+            if (description.length == 3) {
+                var type = ResourceLocation.tryParse(description[1] + ":" + description[2]);
+                if (type != null && BuiltInRegistries.ITEM.containsKey(type)) fallback = type.toString();
+            }
+            String type = be == null ? fallback : BuiltInRegistries.ITEM.getKey(be.getBlockState().getBlock().asItem()).toString();
+            String name = be instanceof Nameable named && named.hasCustomName() ? named.getCustomName().getString() : "";
+            var device = inGrid.get(locationKey);
+            var id = device == null ? UUID.nameUUIDFromBytes(("connection:" + host.getFrequencyId() + ":" + locationKey)
+                    .getBytes(StandardCharsets.UTF_8)) : device.id();
+            rows.add(new ManagementRow(id, new DeviceLocation(dimension, entry.pos(), -1, type, name), null,
+                    "connection", 1, chunk == null ? "unloaded" : "loaded", false, false, new double[5],
+                    device != null && RemoteDeviceSession.supports(device.node().getOwner())));
+        }
         return rows;
     }
 

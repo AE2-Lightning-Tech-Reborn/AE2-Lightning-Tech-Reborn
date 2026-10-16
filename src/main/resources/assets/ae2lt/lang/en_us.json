@@ -643,9 +643,9 @@
   "ae2lt.gui.security.public": "Public",
   "ae2lt.gui.tab.connection": "Connections",
   "ae2lt.gui.tab.create": "Create",
-  "ae2lt.gui.tab.home": "Home",
+  "ae2lt.gui.tab.home": "Overview",
   "ae2lt.gui.tab.member": "Members",
-  "ae2lt.gui.tab.selection": "Frequency",
+  "ae2lt.gui.tab.selection": "Frequencies",
   "ae2lt.gui.tab.setting": "Settings",
   "block.ae2lt.advanced_wireless_overloaded_controller": "Advanced Wireless Overloaded Controller",
   "block.ae2lt.wireless_overloaded_controller": "Wireless Overloaded Controller",
@@ -1652,5 +1652,10 @@
   "ae2lt.management.configure": "Remote Config",
   "ae2lt.management.configure_help": "Open the device’s native configuration and return to this device list",
   "ae2lt.management.configure_unavailable": "Cannot configure: unavailable device, insufficient access or unsupported remote menu",
-  "ae2lt.management.return_devices": "Back to ME Devices"
+  "ae2lt.management.return_devices": "Back to Network Management",
+  "ae2lt.management.network": "Network Management",
+  "ae2lt.management.connections": "Frequency Links",
+  "ae2lt.management.switch_mode_help": "Switch view: ME devices → Power → Frequency links",
+  "ae2lt.management.summary_connections": "%s links · %s rows",
+  "ae2lt.management.state.loaded": "Loaded"
 }

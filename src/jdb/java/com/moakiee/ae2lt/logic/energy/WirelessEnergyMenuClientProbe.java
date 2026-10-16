@@ -39,6 +39,9 @@ public final class WirelessEnergyMenuClientProbe {
     private static boolean done;
     private static volatile Throwable failure;
     private static volatile int frequency;
+    private static com.moakiee.ae2lt.menu.FrequencyPage pendingPage;
+    private static java.util.UUID savedSelection;
+    private static int frameLeft, frameTop;
     private static final BlockPos CONTROLLER = new BlockPos(0, 100, 0);
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.wirelessEnergyMenuProbe") || done) return;
@@ -63,6 +66,10 @@ public final class WirelessEnergyMenuClientProbe {
         if (ticks % 30 != 0) return;
         try {
             if (failure != null) throw new AssertionError(failure);
+            if (pendingPage != null) {
+                if (!advanceNavigation()) return;
+                pendingPage = null;
+            }
             switch (phase) {
                 case 0 -> {
                     mc.getWindow().setTitle("ME / Power management QA - disposable world");
@@ -91,6 +98,11 @@ public final class WirelessEnergyMenuClientProbe {
                         var controller = (AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(CONTROLLER);
                         frequency = WirelessFrequencyManager.get(p.server).createFrequency(p, "ME & Power QA", 0xffffff, FrequencySecurityLevel.PRIVATE, "").getId();
                         controller.setFrequency(frequency);
+                        var friend = new net.neoforged.neoforge.common.util.FakePlayer(level,
+                                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "FrequencyFriend"));
+                        WirelessFrequencyManager.get(p.server).getFrequency(frequency).enrollAsUser(friend);
+                        WirelessFrequencyManager.get(p.server).createFrequency(friend, "Locked QA", 0x00abff,
+                                FrequencySecurityLevel.ENCRYPTED, "test-password");
                         for (int i = 0; i < 8; i++) level.setBlockAndUpdate(CONTROLLER.offset(i - 3, 0, 5), Blocks.BARREL.defaultBlockState());
                     });
                 }
@@ -106,7 +118,11 @@ public final class WirelessEnergyMenuClientProbe {
                     p.teleportTo(level, .5, 100, -2.5, java.util.Set.of(), 0, 0);
                 });
                 case 2 -> openController();
-                case 3 -> { require(mc.screen instanceof FrequencyScreen, "native controller opens frequency menu"); click(tr("devices")); }
+                case 3 -> {
+                    require(mc.screen instanceof FrequencyScreen, "native controller opens frequency menu");
+                    frameLeft = integerField("leftPos"); frameTop = integerField("topPos");
+                    assertFrame(); capture("frequency-home.png"); click(tr("network"));
+                }
                 case 4 -> {
                     require(snapshot().devices() >= 5 && snapshot().rows().stream().allMatch(r -> r.group()), "ME type aggregation");
                     capture("network-devices.png"); search(Component.translatable("block.ae2.interface").getString());
@@ -122,8 +138,11 @@ public final class WirelessEnergyMenuClientProbe {
                     mc.screen.onClose(); mc.player.setXRot(15);
                 }
                 case 7 -> { capture("network-device-highlight.png"); mc.setScreen(new net.minecraft.client.gui.screens.ChatScreen("")); }
-                case 8 -> { capture("network-device-coordinates.png"); mc.screen.onClose(); openController(); }
-                case 9 -> click(tr("energy"));
+                case 8 -> { capture("network-device-coordinates.png"); mc.screen.onClose(); }
+                case 9 -> {
+                    if (mc.screen == null) { openController(); return; }
+                    require(mc.screen instanceof FrequencyScreen, "reopen controller after chat"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY);
+                }
                 case 10 -> {
                     require(snapshot().total() == 10 && snapshot().rows().size() == 5, "all native and wireless power paths, bounded page");
                     click("1s · FE/t");
@@ -155,14 +174,15 @@ public final class WirelessEnergyMenuClientProbe {
                     server(() -> { var p = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                         require(WirelessEnergyEndpoints.get(p.server).inspect(frequency, p.getUUID()).size() == 7, "server removed exactly one target"); });
                 }
-                case 19 -> clickButton((Button)field("deviceTab"));
+                case 19 -> nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_DEVICES);
                 case 20 -> {
-                    require(snapshot().devices() >= 5 && snapshot().rows().stream().allMatch(r -> r.group()), "device tab switch");
+                    require(snapshot().devices() == 1 && snapshot().total() == 2 && snapshot().rows().getFirst().group(), "device tab restores search and inline expansion");
+                    assertFrame();
                     focusSearch();
                 }
                 case 21 -> {
                     assertSelectedTab(false); capture("network-devices-selected.png");
-                    clickButton((Button)field("powerTab"));
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY);
                 }
                 case 22 -> { require(snapshot().total() == 9, "power tab switch"); focusSearch(); }
                 case 23 -> {
@@ -171,7 +191,7 @@ public final class WirelessEnergyMenuClientProbe {
                 }
                 case 24 -> {
                     assertSelectedTab(true); capture("network-power-selected-after-sort.png");
-                    click(tr("back"));
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME);
                 }
                 case 25 -> {
                     require(mc.screen instanceof FrequencyScreen, "return to frequency menu");
@@ -180,11 +200,125 @@ public final class WirelessEnergyMenuClientProbe {
                     verifyChatCopy(NetworkManagementScreen.address(foreign));
                     var target = com.moakiee.ae2lt.client.render.NetworkDeviceHighlight.class.getDeclaredField("target"); target.setAccessible(true);
                     require(target.get(null) == null, "cross-dimension locate clears previous world highlight");
-                    capture("network-management-entry.png"); finish(null); return;
+                    assertFrame(); capture("network-management-entry.png");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION);
+                }
+                case 26 -> {
+                    assertFrame(); var input = (AETextField)frequencyField("selectionSearchField");
+                    if (input.getValue().isEmpty()) {
+                        var bounds = input.getTooltipArea();
+                        mc.screen.mouseClicked(bounds.getX() + 10, bounds.getY() + 6, 0);
+                        mc.screen.mouseReleased(bounds.getX() + 10, bounds.getY() + 6, 0);
+                        for (char c : "Locked".toCharArray()) require(mc.screen.charTyped(c, 0), "frequency search character accepted");
+                        return;
+                    }
+                    require(input.getValue().equals("Locked") && input.isFocused(), "frequency search survives list rebuilds while typing");
+                    capture("frequency-selection.png"); clickContaining("Locked QA");
+                }
+                case 27 -> {
+                    require((int)frequencyField("passwordPromptFreqId") > 0, "encrypted row opens password modal");
+                    capture("frequency-password-prompt.png"); clickKey("ae2lt.gui.button.cancel");
+                }
+                case 28 -> { require((int)frequencyField("passwordPromptFreqId") == 0, "password cancel"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_CONNECTION); }
+                case 29 -> {
+                    assertFrame(); require(snapshot().total() == 1 && snapshot().rows().getFirst().kind().equals("connection")
+                            && snapshot().rows().getFirst().state().equals("loaded"), "frequency links share the network page");
+                    locate(0); capture("frequency-connections.png"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_MEMBER);
+                }
+                case 30 -> { assertFrame(); capture("frequency-members.png"); clickContaining("FrequencyFriend"); }
+                case 31 -> { require(frequencyField("popupMemberUUID") != null, "member popup"); capture("frequency-member-popup.png"); clickKey("ae2lt.gui.button.cancel"); }
+                case 32 -> nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE);
+                case 33 -> {
+                    assertFrame();
+                    if (((AETextField)frequencyField("nameField")).getValue().isEmpty()) {
+                        ((AETextField)frequencyField("nameField")).setValue("Created QA");
+                        for (int i = 0; frequencyField("editSecurity") != FrequencySecurityLevel.ENCRYPTED && i < 3; i++)
+                            clickKey("ae2lt.gui.security." + ((FrequencySecurityLevel)frequencyField("editSecurity")).name().toLowerCase(java.util.Locale.ROOT));
+                        ((AETextField)frequencyField("passwordField")).setValue("created-password"); return;
+                    }
+                    capture("frequency-create.png"); clickKey("ae2lt.gui.button.create");
+                }
+                case 34 -> {
+                    require(com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.getAllFrequenciesSorted().stream().anyMatch(f -> f.name().equals("Created QA") && f.security() == FrequencySecurityLevel.ENCRYPTED), "encrypted create round-trip");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING);
+                }
+                case 35 -> {
+                    assertFrame(); capture("frequency-settings.png");
+                    ((AETextField)frequencyField("nameField")).setValue("Renamed QA");
+                    require(mc.screen.mouseClicked(frameLeft + 129, frameTop + 162, 0), "edit color swatch click");
+                    mc.screen.mouseReleased(frameLeft + 129, frameTop + 162, 0); clickKey("ae2lt.gui.button.apply");
+                }
+                case 36 -> {
+                    require(com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.getFrequency(frequency).name().equals("Renamed QA")
+                            && com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.getFrequency(frequency).color() == 0x0033FF,
+                            "settings name/color apply round-trip");
+                    ((AETextField)frequencyField("nameField")).setValue("Unapplied draft");
+                    clickKey("ae2lt.gui.button.delete");
+                }
+                case 37 -> { require((boolean)frequencyField("deleteConfirmOpen"), "delete confirmation"); capture("frequency-delete-confirm.png"); clickKey("ae2lt.gui.button.cancel"); }
+                case 38 -> { require(!(boolean)frequencyField("deleteConfirmOpen")
+                        && ((AETextField)frequencyField("nameField")).getValue().equals("Unapplied draft"), "delete cancel preserves form draft"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY); }
+                case 39 -> {
+                    assertFrame(); require((int)field("window") == 4 && (int)field("sort") == 0, "frequency-to-power restores time window and sort");
+                    search("barrel");
+                }
+                case 40 -> { require(snapshot().total() == 9, "power filter after reopen"); ((Scrollbar)field("scrollbar")).setCurrentScroll(2); }
+                case 41 -> {
+                    require(snapshot().offset() == 2, "power scroll after reopen"); row(0); savedSelection = (java.util.UUID)field("selected");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING);
+                }
+                case 42 -> {
+                    assertFrame(); require(frequencyField("currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING, "direct management-to-settings route");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_DEVICES);
+                }
+                case 43 -> {
+                    assertFrame(); require(snapshot().devices() == 1 && snapshot().total() == 2, "frequency-to-devices restores expanded search");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY);
+                }
+                case 44 -> {
+                    assertFrame(); require(snapshot().offset() == 2 && savedSelection.equals(field("selected"))
+                            && ((AETextField)field("search")).getValue().equals("barrel"), "independent power search, scroll and selection retained");
+                    capture("frequency-power-restored.png"); finish(null); return;
                 }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
+    }
+    private static Object frequencyField(String name) throws Exception {
+        var field = FrequencyScreen.class.getDeclaredField(name); field.setAccessible(true); return field.get(Minecraft.getInstance().screen);
+    }
+    private static int integerField(String name) throws Exception {
+        var field = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class.getDeclaredField(name);
+        field.setAccessible(true); return field.getInt(Minecraft.getInstance().screen);
+    }
+    private static void assertFrame() throws Exception {
+        require(integerField("imageWidth") == 304 && integerField("imageHeight") == 252
+                && integerField("leftPos") == frameLeft && integerField("topPos") == frameTop, "identical centered frame across all subpages");
+        var buttons = Minecraft.getInstance().screen.children().stream().filter(e -> e instanceof com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton).toList();
+        require(buttons.size() == 5, "five navigation buttons including standalone settings");
+        require(buttons.stream().filter(e -> ((com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton)e).isSelected()).count() == 1, "exactly one selected navigation page");
+    }
+    private static void nav(com.moakiee.ae2lt.menu.FrequencyPage page) throws Exception {
+        pendingPage = page; if (advanceNavigation()) pendingPage = null;
+    }
+    private static boolean advanceNavigation() throws Exception {
+        var target = pendingPage; var screen = Minecraft.getInstance().screen;
+        if (target.isManagement()) {
+            if (screen instanceof FrequencyScreen) { click(tr("network")); return false; }
+            if (field("mode") != target.managementMode()) { clickButton((Button)field("modeButton")); return false; }
+            return true;
+        }
+        if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target) return true;
+        if (target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE || target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING) {
+            if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target.navigationPage()) clickKey(target.getTranslationKey());
+            else clickKey(target.navigationPage().navigationTranslationKey());
+        } else clickKey(target.navigationTranslationKey());
+        return false;
+    }
+    private static void clickKey(String key) { click(Component.translatable(key).getString()); }
+    private static void clickContaining(String text) {
+        clickButton(Minecraft.getInstance().screen.children().stream().filter(e -> e instanceof Button b && b.active && b.visible
+                && b.getMessage().getString().contains(text)).map(e -> (Button)e).findFirst().orElseThrow());
     }
     private static void openController() {
         var mc = Minecraft.getInstance(); mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
@@ -205,13 +339,13 @@ public final class WirelessEnergyMenuClientProbe {
         require(screen.mouseClicked(x, y, 0), "native search focus click"); screen.mouseReleased(x, y, 0);
     }
     private static void assertSelectedTab(boolean power) throws Exception {
-        var device = (appeng.client.gui.widgets.TabButton)field("deviceTab");
-        var energy = (appeng.client.gui.widgets.TabButton)field("powerTab");
-        require(!device.isFocused() && !energy.isFocused(), "page tabs lost focus");
-        require(device.isSelected() == !power && energy.isSelected() == power, "selected page survives focus change");
-        require(device.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL
-                && energy.getStyle() == appeng.client.gui.widgets.TabButton.Style.HORIZONTAL, "native style renders selected state");
+        var tab = (appeng.client.gui.widgets.TabButton)field("managementTab");
+        require(!tab.isFocused() && tab.isSelected(), "network tab remains selected after focus change");
+        require(field("mode") == (power ? com.moakiee.ae2lt.logic.management.ManagementMode.ENERGY
+                : com.moakiee.ae2lt.logic.management.ManagementMode.DEVICES), "mode remains selected");
+        require(tab.getStyle() == appeng.client.gui.widgets.TabButton.Style.BOX, "shared navigation style");
     }
+
     private static void locate(int index) throws Exception {
         var mc = Minecraft.getInstance(); var screen = mc.screen;
         String address = NetworkManagementScreen.address(snapshot().rows().get(index).target());
@@ -250,7 +384,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect and selected tabs after focus changes"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, five-page navigation with standalone settings and three network modes and one frame, all frequency forms and modals, create/edit round-trips and per-page state restoration"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}

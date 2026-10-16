@@ -30,6 +30,7 @@ import appeng.menu.locator.MenuHostLocator;
 import com.moakiee.ae2lt.api.frequency.FrequencyBindingHost;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
+import com.moakiee.ae2lt.logic.management.ManagementQuery;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardData;
 import com.moakiee.ae2lt.item.TerminalCardAccess;
 import com.moakiee.ae2lt.network.SyncFrequencyDetailPacket;
@@ -81,6 +82,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     // Whether this menu has a parent to return to (drives the back button on the
     // client). Server side it tracks cachedSubMenuHost; client side it is synced.
     private final boolean hasParentMenu;
+    private FrequencyPage initialPage = FrequencyPage.TAB_HOME;
 
     private final DataSlot freqIdSlot = DataSlot.standalone();
     private final DataSlot linkActiveSlot = DataSlot.standalone();
@@ -159,7 +161,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         if (playerInv.player instanceof ServerPlayer sp) {
             PacketDistributor.sendToPlayer(sp, SyncFrequencyListPacket.fromServer());
             SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(sp, freqIdSlot.get());
-            SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(sp, freqIdSlot.get());
+            if (usesLocalConnectionList()) SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(sp, freqIdSlot.get());
         }
     }
 
@@ -205,7 +207,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         if (cardPlayer != null) {
             PacketDistributor.sendToPlayer(cardPlayer, SyncFrequencyListPacket.fromServer());
             SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(cardPlayer, freqId);
-            SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(cardPlayer, freqId);
+            if (usesLocalConnectionList()) SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(cardPlayer, freqId);
         }
     }
 
@@ -222,8 +224,11 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         int max = buf.readInt();
         boolean autoConnect = buf.readBoolean();
         boolean hasParentMenu = buf.readBoolean();
-        return new FrequencyMenu(containerId, playerInv, cardMode, pos, controller, advanced, deviceName,
+        FrequencyPage page = buf.readEnum(FrequencyPage.class);
+        var menu = new FrequencyMenu(containerId, playerInv, cardMode, pos, controller, advanced, deviceName,
                 freqId, linkActive, used, max, autoConnect, hasParentMenu);
+        menu.initialPage = page.isManagement() ? FrequencyPage.TAB_HOME : page;
+        return menu;
     }
 
     // client-side constructor
@@ -259,11 +264,22 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     private void registerClientActions() {
         registerClientAction(ACTION_TOGGLE_AUTO_CONNECT, this::toggleAutoConnect);
-        registerClientAction("openManagement", Boolean.class, energy -> {
-            if (getPlayerInventory().player instanceof ServerPlayer player && stillValid(player)
-                    && player.containerMenu == this && backingBlockEntity instanceof WirelessOverloadedControllerBlockEntity controller)
-                NetworkManagementMenu.open(player, controller, energy);
-        });
+    }
+
+    public void openManagement(ServerPlayer player, ManagementQuery view) {
+        if (view != null && view.valid() && !hasParentMenu && getPlayerInventory().player == player
+                && player.containerMenu == this && stillValid(player)
+                && backingBlockEntity instanceof WirelessOverloadedControllerBlockEntity controller)
+            NetworkManagementMenu.open(player, controller, view.mode(), view, null);
+    }
+
+    public static void openPage(ServerPlayer player, WirelessOverloadedControllerBlockEntity host, FrequencyPage page) {
+        if (page.isManagement()) return;
+        player.openMenu(new Ae2StyleFrequencyMenuProvider(host.getBlockState().getBlock().getName(), (id, inv) -> {
+            var menu = new FrequencyMenu(id, inv, host);
+            menu.initialPage = page;
+            return menu;
+        }, true), buffer -> writeExtraData(buffer, host, false, page));
     }
 
     private static boolean openWithAe2MenuOpener(Player player, MenuHostLocator locator, boolean returning) {
@@ -348,6 +364,10 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     }
 
     public static void writeExtraData(FriendlyByteBuf buf, BlockEntity be, boolean hasParentMenu) {
+        writeExtraData(buf, be, hasParentMenu, FrequencyPage.TAB_HOME);
+    }
+
+    private static void writeExtraData(FriendlyByteBuf buf, BlockEntity be, boolean hasParentMenu, FrequencyPage page) {
         buf.writeBoolean(false);
         buf.writeBlockPos(be.getBlockPos());
         if (be instanceof WirelessOverloadedControllerBlockEntity ctrl) {
@@ -379,6 +399,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         }
         buf.writeBoolean(false);
         buf.writeBoolean(hasParentMenu);
+        buf.writeEnum(page);
     }
 
     /**
@@ -400,6 +421,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         buf.writeInt(0);
         buf.writeBoolean(cardData.autoConnect());
         buf.writeBoolean(true);
+        buf.writeEnum(FrequencyPage.TAB_HOME);
     }
 
     @Override
@@ -411,7 +433,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
                 freqIdSlot.set(real);
                 if (cardPlayer != null && cardPlayer.containerMenu == this) {
                     SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(cardPlayer, real);
-                    SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(cardPlayer, real);
+                    if (usesLocalConnectionList()) SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(cardPlayer, real);
                 }
             }
             int autoConnect = cardData.autoConnect() ? 1 : 0;
@@ -438,7 +460,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
                     for (var p : lvl.players()) {
                         if (p instanceof ServerPlayer sp && sp.containerMenu == this) {
                             SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(sp, real);
-                            SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(sp, real);
+                            if (usesLocalConnectionList()) SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(sp, real);
                         }
                     }
                 }
@@ -543,7 +565,13 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         return !cardMode && stillValid(player) ? backingBlockEntity : null;
     }
 
-    public void clientOpenManagement(boolean energy) { sendClientAction("openManagement", energy); }
+    public boolean usesLocalConnectionList() { return !isController || hasParentMenu; }
+    public FrequencyPage initialPage() { return initialPage; }
+    public void clientOpenManagement(boolean energy) { clientOpenManagement(ManagementQuery.initial(energy)); }
+    public void clientOpenManagement(ManagementQuery view) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                new com.moakiee.ae2lt.network.NetworkManagementRequestPacket(containerId, view));
+    }
 
     public boolean isController() {
         return isController;

@@ -4,15 +4,22 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.network.FriendlyByteBuf;
 
-public record ManagementQuery(int serial, boolean energy, boolean grouped, List<String> expandedTypes, String search,
+public record ManagementQuery(int serial, ManagementMode mode, boolean grouped, List<String> expandedTypes, String search,
         List<Token> tokens, int sort, boolean descending, int window, int offset) {
+    public ManagementQuery(int serial, boolean energy, boolean grouped, List<String> expandedTypes, String search,
+            List<Token> tokens, int sort, boolean descending, int window, int offset) {
+        this(serial, energy ? ManagementMode.ENERGY : ManagementMode.DEVICES, grouped, expandedTypes, search,
+                tokens, sort, descending, window, offset);
+    }
+    public boolean energy() { return mode == ManagementMode.ENERGY; }
+    public boolean connections() { return mode == ManagementMode.CONNECTIONS; }
     public static final int PAGE_SIZE = 5;
     public static final int MAX_EXPANDED_TYPES = 128;
     public static final int MAX_EXPANSION_BYTES = 8192;
     /** Localized item names are resolved to registry IDs on the client. The server still chooses all rows. */
     public record Token(String text, List<String> types) {}
     public boolean valid() {
-        return serial >= 0 && validExpandedTypes(expandedTypes) && search != null && search.length() <= 128
+        return mode != null && serial >= 0 && validExpandedTypes(expandedTypes) && search != null && search.length() <= 128
                 && tokens != null && tokens.size() <= 8 && tokens.stream().allMatch(t -> t != null
                 && t.text != null && t.text.length() <= 128 && t.types != null && t.types.size() <= 256
                 && t.types.stream().allMatch(s -> s != null && s.length() <= 256))
@@ -25,10 +32,14 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, List<
                 && types.stream().mapToInt(s -> s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 3).sum() <= MAX_EXPANSION_BYTES;
     }
     public static ManagementQuery initial(boolean energy) {
-        return new ManagementQuery(0, energy, true, List.of(), "", List.of(), energy ? 4 : 2, energy, 1, 0);
+        return initial(energy ? ManagementMode.ENERGY : ManagementMode.DEVICES);
+    }
+    public static ManagementQuery initial(ManagementMode mode) {
+        boolean energy = mode == ManagementMode.ENERGY;
+        return new ManagementQuery(0, mode, mode == ManagementMode.DEVICES, List.of(), "", List.of(), energy ? 4 : 2, energy, 1, 0);
     }
     public ManagementQuery atOffset(int offset) {
-        return new ManagementQuery(serial, energy, grouped, expandedTypes, search, tokens, sort, descending, window, offset);
+        return new ManagementQuery(serial, mode, grouped, expandedTypes, search, tokens, sort, descending, window, offset);
     }
     public boolean matches(DeviceLocation target, DeviceLocation source, String kind) {
         String haystack = searchable(target) + " " + searchable(source) + " " + kind;
@@ -46,7 +57,7 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, List<
                 + d.pos().getX() + "," + d.pos().getY() + "," + d.pos().getZ()).toLowerCase(Locale.ROOT);
     }
     public void write(FriendlyByteBuf b) {
-        b.writeVarInt(serial); b.writeBoolean(energy); b.writeBoolean(grouped);
+        b.writeVarInt(serial); b.writeEnum(mode); b.writeBoolean(grouped);
         b.writeVarInt(expandedTypes.size());
         for (String type : expandedTypes) b.writeUtf(type, 256);
         b.writeUtf(search, 128);
@@ -58,7 +69,7 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, List<
         b.writeVarInt(sort); b.writeBoolean(descending); b.writeVarInt(window); b.writeVarInt(offset);
     }
     public static ManagementQuery read(FriendlyByteBuf b) {
-        int serial = b.readVarInt(); boolean energy = b.readBoolean(), grouped = b.readBoolean();
+        int serial = b.readVarInt(); ManagementMode mode = b.readEnum(ManagementMode.class); boolean grouped = b.readBoolean();
         int expandedCount = bounded(b.readVarInt(), MAX_EXPANDED_TYPES);
         var expanded = new java.util.ArrayList<String>(expandedCount);
         for (int i = 0; i < expandedCount; i++) expanded.add(b.readUtf(256));
@@ -72,7 +83,7 @@ public record ManagementQuery(int serial, boolean energy, boolean grouped, List<
             for (int j = 0; j < count; j++) types.add(b.readUtf(256));
             tokens.add(new Token(text, List.copyOf(types)));
         }
-        return new ManagementQuery(serial, energy, grouped, List.copyOf(expanded), search, List.copyOf(tokens),
+        return new ManagementQuery(serial, mode, grouped, List.copyOf(expanded), search, List.copyOf(tokens),
                 b.readVarInt(), b.readBoolean(), b.readVarInt(), b.readVarInt());
     }
     public static int bounded(int n, int max) {

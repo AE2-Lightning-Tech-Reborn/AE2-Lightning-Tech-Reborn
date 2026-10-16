@@ -100,7 +100,7 @@ public final class RemoteDeviceClientProbe {
                 });
                 case 2 -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
                         new BlockHitResult(Vec3.atCenterOf(C), Direction.NORTH, C, false));
-                case 3 -> { require(mc.screen instanceof FrequencyScreen, "controller menu"); click(tr("devices")); }
+                case 3 -> { require(mc.screen instanceof FrequencyScreen, "controller menu"); click(tr("network")); }
                 case 4 -> { require(snapshot().devices() >= 6, "remote devices indexed"); search("远端接口"); }
                 case 5 -> { require(snapshot().devices() == 1, "named remote search"); row(0); }
                 case 6 -> { row(1); capture("remote-config-entry.png"); click(tr("configure")); }
@@ -150,7 +150,15 @@ public final class RemoteDeviceClientProbe {
                 case 27 -> { row(1); click(tr("configure")); }
                 case 28 -> {
                     require(mc.screen instanceof FrequencyScreen frequency && frequency.getMenu().hasParentMenu(), "frequency controller as submenu");
-                    capture("remote-controller.png"); net.neoforged.neoforge.network.PacketDistributor.sendToServer(appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu());
+                    var pageField = FrequencyScreen.class.getDeclaredField("currentTab"); pageField.setAccessible(true);
+                    if (pageField.get(mc.screen) == com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME) {
+                        capture("remote-controller.png"); click(tr("connections")); return;
+                    }
+                    require(pageField.get(mc.screen) == com.moakiee.ae2lt.menu.FrequencyPage.TAB_CONNECTION,
+                            "remote frequency submenu retains its connection list");
+                    require(mc.screen.children().stream().noneMatch(e -> e instanceof com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton button
+                            && button.page().isManagement()), "remote submenu exposed recursive management entry");
+                    capture("remote-controller-links.png"); net.neoforged.neoforge.network.PacketDistributor.sendToServer(appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu());
                 }
                 case 29 -> {
                     require(snapshot().devices() == 1 && searchValue().contains("advanced_wireless_overloaded_controller"), "controller returned to device view");
@@ -179,7 +187,14 @@ public final class RemoteDeviceClientProbe {
                     capture("network-tree-expanded.png");
                     ((appeng.client.gui.widgets.Scrollbar)field(NetworkManagementScreen.class, "scrollbar")).setCurrentScroll(2);
                 }
-                case 33 -> { require(snapshot().offset() == 2, "tree scroll did not settle"); capture("network-tree-scrolled.png"); finish(null); return; }
+                case 33 -> {
+                    require(snapshot().offset() == 2, "tree scroll did not settle"); capture("network-tree-scrolled.png");
+                    click(Component.translatable("ae2lt.gui.tab.selection").getString());
+                }
+                case 34 -> {
+                    require(mc.screen instanceof FrequencyScreen, "network management returns directly to frequency list");
+                    capture("frequency-list-final.png"); finish(null); return;
+                }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }

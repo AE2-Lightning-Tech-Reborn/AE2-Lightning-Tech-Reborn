@@ -9,12 +9,15 @@ import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
 import com.moakiee.ae2lt.client.render.NetworkDeviceHighlight;
+import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
 import com.moakiee.ae2lt.logic.management.DeviceLocation;
 import com.moakiee.ae2lt.logic.management.ManagementQuery;
+import com.moakiee.ae2lt.logic.management.ManagementMode;
 import com.moakiee.ae2lt.logic.management.ManagementRow;
 import com.moakiee.ae2lt.logic.management.ManagementSnapshot;
 import com.moakiee.ae2lt.logic.management.PowerTelemetry;
 import com.moakiee.ae2lt.menu.NetworkManagementMenu;
+import com.moakiee.ae2lt.menu.FrequencyPage;
 import com.moakiee.ae2lt.network.NetworkManagementRequestPacket;
 import com.moakiee.ae2lt.network.NetworkManagementSyncPacket;
 import java.text.DecimalFormat;
@@ -41,12 +44,14 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private final AETextField search;
     private final Scrollbar scrollbar;
     private final AE2Button sortButton, directionButton, groupButton, windowButton, disconnectButton, configureButton;
-    private final TabButton deviceTab, powerTab;
+    private final TabButton managementTab;
+    private final AE2Button modeButton;
     private final RowButton[] rowButtons = new RowButton[ManagementQuery.PAGE_SIZE];
     private final LocateButton[] locateButtons = new LocateButton[ManagementQuery.PAGE_SIZE];
     private final List<ItemName> itemNames = new ArrayList<>();
     private record ItemName(String id, String name) {}
-    private boolean energy, grouped = true, descending;
+    private ManagementMode mode;
+    private boolean grouped = true, descending;
     private int sort, window = 1, serial, refresh, debounce;
     private int requestedOffset;
     private String error = "";
@@ -57,7 +62,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private List<ManagementQuery.Token> parsedTokens = List.of();
     private ManagementSnapshot snapshot;
     private ViewKey displayedView;
-    private record ViewKey(boolean energy, boolean grouped, List<String> expandedTypes, String search,
+    private record ViewKey(ManagementMode mode, boolean grouped, List<String> expandedTypes, String search,
             int sort, boolean descending, int window, int offset) {}
     private final LinkedHashMap<ViewKey, ManagementSnapshot> pages = new LinkedHashMap<>(32, .75f, true) {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<ViewKey, ManagementSnapshot> entry) { return size() > 32; }
@@ -65,7 +70,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
 
     public NetworkManagementScreen(NetworkManagementMenu menu, Inventory inventory, Component title, ScreenStyle style) {
         super(menu, inventory, title, style);
-        energy = menu.initialEnergy(); sort = energy ? 4 : 2; descending = energy;
+        mode = menu.initialMode(); sort = energy() ? 4 : 2; descending = energy();
         for (var item : BuiltInRegistries.ITEM) itemNames.add(new ItemName(BuiltInRegistries.ITEM.getKey(item).toString(),
                 item.getName(new ItemStack(item)).getString().toLowerCase(Locale.ROOT)));
         search = widgets.addTextField("search");
@@ -75,14 +80,14 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         search.setResponder(value -> changed(5));
         scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.BIG);
         scrollbar.setRange(0, 0, 1);
-        deviceTab = new TabButton(new ItemStack(appeng.core.definitions.AEBlocks.DRIVE.block()), tr("devices"), button -> switchMode(false));
-        powerTab = new TabButton(new ItemStack(appeng.core.definitions.AEBlocks.ENERGY_CELL.block()), tr("energy"), button -> switchMode(true));
-        // BOX only paints keyboard focus; HORIZONTAL also paints the persistent selected page.
-        deviceTab.setStyle(TabButton.Style.HORIZONTAL);
-        powerTab.setStyle(TabButton.Style.HORIZONTAL);
-        widgets.add("devices", deviceTab); widgets.add("energy", powerTab);
-        widgets.add("back", new TabButton(Icon.BACK, tr("back"), button -> menu.clientBack()));
-        sortButton = widgets.addButton("sort", Component.empty(), () -> { sort = (sort + 1) % (energy ? 5 : 4); changed(0); });
+        var navigation = FrequencyNavigation.create(0, 0, FrequencyPage.TAB_DEVICES, true, true, page -> {
+            if (!page.isManagement()) { rememberView(); menu.clientFrequencyPage(page); }
+        });
+        for (var button : navigation) widgets.add(button.page().widgetId(), button);
+        managementTab = navigation.stream().filter(b -> b.page() == FrequencyPage.TAB_DEVICES).findFirst().orElseThrow();
+        modeButton = widgets.addButton("mode", Component.empty(), () -> switchMode(mode.next()));
+        modeButton.setTooltip(Tooltip.create(tr("switch_mode_help")));
+        sortButton = widgets.addButton("sort", Component.empty(), () -> { sort = (sort + 1) % (energy() ? 5 : 4); changed(0); });
         directionButton = widgets.addButton("direction", Component.empty(), () -> { descending = !descending; changed(0); });
         groupButton = widgets.addButton("group", Component.empty(), () -> {
             grouped = !grouped;
@@ -99,7 +104,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         disconnectButton.setTooltip(Tooltip.create(tr("disconnect_help")));
         configureButton = widgets.addButton("configure", tr("configure"), () -> {
             var row = selection();
-            if (!energy && row != null && row.canConfigure()) menu.clientConfigure(row.id());
+            if (!energy() && row != null && row.canConfigure()) menu.clientConfigure(row.id());
         });
         configureButton.setTooltip(Tooltip.create(tr("configure_help")));
         for (int i = 0; i < rowButtons.length; i++) {
@@ -112,9 +117,10 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         if (menu.initialQuery() != null) {
             var view = menu.initialQuery();
             search.setValue(view.search());
-            energy = view.energy(); grouped = view.grouped(); expandedTypes.addAll(view.expandedTypes()); sort = view.sort();
+            mode = view.mode(); grouped = view.grouped(); expandedTypes.addAll(view.expandedTypes()); sort = view.sort();
             descending = view.descending(); window = view.window(); requestedOffset = view.offset();
-            serial = view.serial(); selected = menu.initialSelection();
+            serial = view.serial(); selected = menu.initialSelection() != null ? menu.initialSelection()
+                    : ManagementViewCache.get(menu.controllerPos(), menu.frequency(), mode).selection();
         }
         if (menu.initialSnapshot() != null) {
             showSnapshot(menu.initialSnapshot(), viewKey());
@@ -122,11 +128,24 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             awaitingResponse = false; debounce = 0; refresh = 20;
         }
     }
-    private void switchMode(boolean power) {
-        if (energy == power) return;
-        energy = power; sort = energy ? 4 : 2; descending = energy;
-        changed(0);
+    private boolean energy() { return mode == ManagementMode.ENERGY; }
+    private void switchMode(ManagementMode next) {
+        if (mode == next) return;
+        rememberView();
+        var saved = ManagementViewCache.get(menu.controllerPos(), menu.frequency(), next);
+        var view = saved.query();
+        mode = next; grouped = view.grouped(); expandedTypes.clear(); expandedTypes.addAll(view.expandedTypes());
+        search.setValue(view.search()); sort = view.sort(); descending = view.descending(); window = view.window();
+        requestedOffset = view.offset(); selected = saved.selection();
+        changed(0, false);
     }
+    private void rememberView() {
+        var terms = tokens();
+        if (!searchTooBroad) ManagementViewCache.remember(menu.controllerPos(), menu.frequency(),
+                new ManagementQuery(serial, mode, grouped, List.copyOf(expandedTypes), search.getValue(), terms,
+                        sort, descending, window, requestedOffset), selected);
+    }
+    @Override public void removed() { rememberView(); super.removed(); }
     private void changed(int delay) {
         changed(delay, true);
     }
@@ -139,12 +158,12 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         var key = viewKey();
         var cached = pages.get(key);
         if (cached != null) showSnapshot(cached, key);
-        else if (displayedView != null && displayedView.energy() != energy) { snapshot = null; displayedView = null; }
+        else if (displayedView != null && displayedView.mode() != mode) { snapshot = null; displayedView = null; }
         // Keep the last visible page during edits within this view until a complete response replaces it.
         awaitingResponse = true; debounce = delay; refresh = 0;
     }
     private ViewKey viewKey() {
-        return new ViewKey(energy, grouped, List.copyOf(expandedTypes), search.getValue(), sort, descending, window, requestedOffset);
+        return new ViewKey(mode, grouped, List.copyOf(expandedTypes), search.getValue(), sort, descending, window, requestedOffset);
     }
     private void showSnapshot(ManagementSnapshot next, ViewKey key) {
         snapshot = next; displayedView = key;
@@ -188,7 +207,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             var terms = tokens();
             if (searchTooBroad) return;
             PacketDistributor.sendToServer(new NetworkManagementRequestPacket(menu.containerId,
-                    new ManagementQuery(serial, energy, grouped, List.copyOf(expandedTypes), search.getValue(), terms, sort, descending, window, requestedOffset)));
+                    new ManagementQuery(serial, mode, grouped, List.copyOf(expandedTypes), search.getValue(), terms, sort, descending, window, requestedOffset)));
         }
     }
     public void receive(NetworkManagementSyncPacket packet) {
@@ -216,7 +235,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         else {
             selected = row.id();
             disconnectButton.active = !awaitingResponse && row.canDisconnect();
-            configureButton.active = !awaitingResponse && !energy && row.canConfigure();
+            configureButton.active = !awaitingResponse && !energy() && row.canConfigure();
         }
     }
     private ManagementRow selection() {
@@ -224,20 +243,21 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     @Override protected void updateBeforeRender() {
         super.updateBeforeRender();
-        deviceTab.setSelected(!energy); powerTab.setSelected(energy);
-        setTextContent("dialog_title", tr(energy ? "energy" : "devices"));
+        managementTab.setSelected(true);
+        setTextContent("dialog_title", tr("network"));
+        modeButton.setMessage(Component.translatable(mode.translationKey()).append(" ›"));
         sortButton.setMessage(tr("sort." + SORTS[sort]));
         directionButton.setMessage(Component.literal(descending ? "v" : "^"));
         directionButton.setTooltip(Tooltip.create(tr(descending ? "descending" : "ascending")));
-        groupButton.visible = !energy;
+        groupButton.visible = !energy();
         groupButton.setMessage(tr(grouped ? "grouped" : "individual"));
-        windowButton.visible = energy;
+        windowButton.visible = energy();
         windowButton.setMessage(Component.literal(WINDOWS[window] + " · FE/t"));
         var selectedRow = selection();
-        disconnectButton.visible = energy;
+        disconnectButton.visible = energy();
         disconnectButton.active = !awaitingResponse && selectedRow != null && selectedRow.canDisconnect();
-        configureButton.visible = !energy;
-        configureButton.active = !awaitingResponse && !energy && selectedRow != null && !selectedRow.group() && selectedRow.canConfigure();
+        configureButton.visible = !energy();
+        configureButton.active = !awaitingResponse && !energy() && selectedRow != null && !selectedRow.group() && selectedRow.canConfigure();
         for (int i = 0; i < rowButtons.length; i++) {
             var row = snapshot != null && i < snapshot.rows().size() ? snapshot.rows().get(i) : null;
             rowButtons[i].row = row;
@@ -269,8 +289,8 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, 76, color, false);
         else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, 76, color, false);
         if (snapshot != null) {
-            Component summary = energy ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
-                    : tr("summary_devices", snapshot.devices(), snapshot.total());
+            Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
+                    : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
             if (snapshot.limited()) summary = tr("incomplete").append(summary);
             graphics.drawString(font, fit(summary, 284), 9, 215, color, false);
             if (snapshot.limited() && isHovering(8, 212, 286, 12, mx, my))
@@ -283,7 +303,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         text.append("\n").append(address(row.target()));
         if (row.target().face() >= 0) text.append("\n").append(tr("face", net.minecraft.core.Direction.values()[row.target().face()].getName()));
         text.append("\n").append(tr("state." + row.state()));
-        if (energy) {
+        if (energy()) {
             text.append("\n").append(tr("kind." + row.kind()));
             if (row.source() != null) text.append("\n").append(tr("source", displayName(row.source()), address(row.source())));
             for (int i = 0; i < 5; i++) text.append("\n" + WINDOWS[i] + ": " + rate(row.rates()[i]) + " FE/t");
@@ -325,7 +345,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             appeng.client.gui.style.BackgroundGenerator.draw(width, height, graphics, x, y);
             if (isHoveredOrFocused() || row.id().equals(selected))
                 graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
-            boolean tree = displayedView != null && !displayedView.energy() && displayedView.grouped();
+            boolean tree = displayedView != null && displayedView.mode() != ManagementMode.ENERGY && displayedView.grouped();
             int iconX = x + (tree ? row.group() ? 20 : 36 : 4);
             int textX = iconX + 20;
             int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
@@ -338,8 +358,9 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 6);
             else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 6).blit(graphics);
             Component name = displayName(row.target());
-            boolean power = displayedView != null && displayedView.energy();
-            String right = row.group() ? "×" + row.count() : power ? rate(row.rates()[window]) + " FE/t" : "";
+            boolean power = displayedView != null && displayedView.mode() == ManagementMode.ENERGY;
+            String right = row.group() ? "×" + row.count() : power ? rate(row.rates()[window]) + " FE/t"
+                    : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
             int nameWidth = x + width - textX - 6 - font.width(right);
             graphics.drawString(font, fit(name, nameWidth), textX, y + 4, color, false);
             graphics.drawString(font, right, x + width - 5 - font.width(right), y + 4, color, false);

@@ -15,12 +15,14 @@ import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.TabButton;
 import appeng.core.network.serverbound.SwitchGuisPacket;
 
-import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
 import com.moakiee.ae2lt.grid.FrequencyAccessLevel;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
+import com.moakiee.ae2lt.menu.FrequencyPage;
+import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
+import appeng.client.gui.style.BackgroundGenerator;
 import com.moakiee.ae2lt.network.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -39,108 +41,25 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Multi-tab frequency management screen, modeled after Flux Networks' GUI.
+ * Frequency subpages sharing the same AE2 frame and navigation as device and power management.
  * Polls {@link ClientFrequencyCache#revision()} each frame and rebuilds
  * widgets when the server-pushed state changes.
  */
 public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
-    private static final int GUI_WIDTH = 195;
-    private static final int GUI_HEIGHT = 157;
-
-    /**
-     * AE2 {@link TabButton} renders at a fixed 22×22 size (see its
-     * constructor bytecode). We expose these as named constants so the
-     * rest of the screen can hit-test the same footprint.
-     */
-    private static final int TAB_WIDTH = 22;
-    private static final int TAB_HEIGHT = 22;
-    /**
-     * Horizontal step between consecutive tab buttons (AE2 BOX tabs
-     * already ship with their own 1-px inner border, so tabs can sit
-     * flush — 22 px step with no extra gap looks correct, identical to
-     * the terminal-style tab strip used by AE2's Pattern Access screens).
-     */
-    private static final int TAB_STEP = 22;
-    /**
-     * Visible row count baked into each list-style background texture.
-     * {@code wireless_overloaded_list.png} (connection / member tabs) draws
-     * five 21-px row slots in the recessed well; the search-equipped
-     * {@code wireless_overloaded_selection.png} drops the bottom slot to
-     * leave room for the search field + pagination row.
-     */
+    private static final int GUI_WIDTH = FrequencyNavigation.WIDTH;
+    private static final int GUI_HEIGHT = FrequencyNavigation.HEIGHT;
     private static final int ITEMS_PER_PAGE_LIST = 5;
-    private static final int ITEMS_PER_PAGE_SEARCH = 4;
-    /**
-     * Row pitch inside the recessed list well — 21 px per slot (1-px
-     * shadow + 20-px interior). Row 0 has an extra 1-px shadow above
-     * (y=36..37) to make the well's top edge thicker; rows 1..4 share
-     * a 1-px shadow with the row above.
-     */
-    private static final int LIST_ROW_HEIGHT = 21;
-    /** Button height inside a list row — matches the sprite height (20 px). */
-    private static final int LIST_ROW_BUTTON_HEIGHT = 20;
-    /** First row's top y (local) — slot 0 interior starts at y=38. */
-    private static final int LIST_ROW_FIRST_Y = 38;
-    /** Left x (local) of a row button — well interior left edge is x=9. */
-    private static final int LIST_ROW_X = 9;
-    /**
-     * Width of a row button — exactly 160 px to match the row sprite
-     * baked at the bottom of the chassis PNGs (u=0, w=160). Spans the
-     * well interior x=9..168 with no gap before the scrollbar gutter.
-     */
-    private static final int LIST_ROW_WIDTH = 160;
-
-    /**
-     * Row sprite source coordinates inside the chassis PNG (same in
-     * both BG_LIST and BG_SELECTION). The idle sprite is the
-     * lavender-gray strip directly below the chassis art; the hover
-     * sprite is the cyan-blue strip below that.
-     */
-    private static final int ROW_SPRITE_WIDTH = 160;
-    private static final int ROW_SPRITE_HEIGHT = 20;
-    private static final int ROW_SPRITE_IDLE_V = 158;
-    private static final int ROW_SPRITE_HOVER_V = 180;
-
-    /**
-     * Scrollbar handle X (local). The PNG bakes a recessed track at
-     * x=178..183 (6 px). The 12-px AE2 big_scroller sprite is wider
-     * than that gutter, so we centre it on the gutter midpoint
-     * (~x=181) — the handle visually overlays the recessed track
-     * with a small overhang on each side, matching AE2's own MAC /
-     * Pattern Access screens which also use big_scroller.
-     */
-    private static final int SCROLLBAR_X = 175;
-    /** Scrollbar track Y (local) — first row of the recessed well content. */
-    private static final int SCROLLBAR_Y = 38;
-    /** Scrollbar handle width — AE2 big_scroller sprite is 12 px wide. */
+    private static final int ITEMS_PER_PAGE_SEARCH = 5;
+    private static final int LIST_ROW_HEIGHT = 28;
+    private static final int LIST_ROW_BUTTON_HEIGHT = 27;
+    private static final int LIST_ROW_FIRST_Y = 66;
+    private static final int LIST_ROW_X = 8;
+    private static final int LIST_ROW_WIDTH = 270;
+    private static final int SCROLLBAR_X = 284;
+    private static final int SCROLLBAR_Y = LIST_ROW_FIRST_Y;
     private static final int SCROLLBAR_WIDTH = 12;
-    /** Scrollbar handle height — AE2 big_scroller sprite is 15 px tall. */
     private static final int SCROLLBAR_HANDLE_HEIGHT = 15;
-
-    /**
-     * Per-tab AE2-styled background textures. Each is a 256×256 atlas
-     * file with the actual chassis art occupying the top-left 195×157.
-     * The "list" and "selection" variants additionally have a small
-     * sprite library below the chassis (y=158+, used for selection-row
-     * highlights — currently decorative, not blitted at runtime).
-     *
-     * <ul>
-     *   <li>{@code wireless_overloaded_home.png} — single wide info shelf.</li>
-     *   <li>{@code wireless_overloaded_selection.png} — 4-row well + search/pagination space below.</li>
-     *   <li>{@code wireless_overloaded_list.png} — 5-row well, used by connection &amp; member tabs.</li>
-     *   <li>{@code wireless_overloaded_form.png} — clean panel for create / settings.</li>
-     * </ul>
-     */
-    private static final ResourceLocation BG_HOME = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/wireless_overloaded_home.png");
-    private static final ResourceLocation BG_SELECTION = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/wireless_overloaded_selection.png");
-    private static final ResourceLocation BG_LIST = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/wireless_overloaded_list.png");
-    private static final ResourceLocation BG_FORM = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/wireless_overloaded_form.png");
-    private static final int TEXTURE_SIZE = 256;
 
     // AE2 standard text tones — matches AE2's own screens such as
     // terminal.png / craftingcpu.png where titles read as dark charcoal
@@ -165,16 +84,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      */
     private static final int INPUT_HEIGHT = 12;
 
-    /**
-     * Hard upper bound for {@link AETextField}'s width. AE2's
-     * {@code text_field.png} 3-slice draws a 1-px left cap, a middle band
-     * stretched up to {@code min(126, w-2)} pixels wide, and a 1-px right
-     * cap at {@code x + w - 1}. Above 128 px the middle band caps at 126
-     * and leaves a visible gap between it and the right cap — the exact
-     * "empty bracket" artifact seen in the earlier build's Settings tab.
-     * Anything at or below this width renders flush.
-     */
-    private static final int INPUT_MAX_WIDTH = 128;
+    private static final int INPUT_MAX_WIDTH = GUI_WIDTH - 32;
 
     /**
      * Minimal {@link ScreenStyle} built once at class-load so
@@ -213,10 +123,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         return style;
     }
 
-    private FrequencyNavigationTab currentTab = FrequencyNavigationTab.TAB_HOME;
+    private FrequencyPage currentTab = FrequencyPage.TAB_HOME;
     /**
-     * Top row index currently scrolled to within the Selection / Connection
-     * / Member tab lists. Replaces the prior {@code *Page} fields — the
+     * Top row index currently scrolled to within the Selection / Member tab lists. Replaces the prior {@code *Page} fields — the
      * right-side {@link ScrollbarWidget} now drives incremental row scrolling
      * (one row per wheel notch) instead of discrete << / >> page jumps, and
      * the value is the offset of the first visible row rather than a page
@@ -244,6 +153,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private final java.util.List<AbstractWidget> currentRowButtons = new java.util.ArrayList<>();
 
     private AETextField nameField;
+    private AETextField selectionSearchField;
+    private FrequencyPage formPage;
+    private int formFrequency;
     private AETextField passwordField;
     private FrequencySecurityLevel editSecurity = FrequencySecurityLevel.PRIVATE;
     private int editColor = 0x1E90FF;
@@ -304,6 +216,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         super(menu, playerInv, title);
         this.imageWidth = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
+        this.currentTab = menu.initialPage();
     }
 
     @Override
@@ -341,9 +254,28 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * artifact that was visible in the Settings and Create tabs.
      */
     private AETextField makeAe2Field(int x, int y, int width, int height) {
-        AETextField field = new AETextField(AE2_STYLE, font, x, y, width, height);
+        AETextField field = new WideTextField(x, y, width, height);
         field.setBordered(false);
         return field;
+    }
+
+    /** Tiles AE2's native text-field middle beyond its 126-pixel default limit. */
+    private class WideTextField extends AETextField {
+        private boolean editable = true;
+        @Override public void setEditable(boolean editable) { this.editable = editable; super.setEditable(editable); }
+        WideTextField(int x, int y, int width, int height) { super(AE2_STYLE, FrequencyScreen.this.font, x, y, width, height); }
+        @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            if (isVisible()) {
+                var bounds = getTooltipArea();
+                int variant = !editable ? 12 : isFocused() ? 24 : 0;
+                for (int x = 127; x < bounds.getWidth() - 1; x += 126) {
+                    int width = Math.min(126, bounds.getWidth() - 1 - x);
+                    appeng.client.gui.style.Blitter.texture("guis/text_field.png", 128, 128)
+                            .src(1, variant, width, 12).dest(bounds.getX() + x, bounds.getY()).blit(graphics);
+                }
+            }
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        }
     }
 
     /**
@@ -415,9 +347,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * appending to it. Used only by the Settings tab — the Create tab's
      * password field never arms this flag and behaves as a plain field.
      */
-    private final class PristinePasswordField extends AETextField {
+    private final class PristinePasswordField extends WideTextField {
         PristinePasswordField(int x, int y, int width, int height) {
-            super(AE2_STYLE, font, x, y, width, height);
+            super(x, y, width, height);
             setBordered(false);
         }
 
@@ -441,6 +373,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     private void initTabWidgets() {
+        boolean restoreSearchFocus = currentTab == FrequencyPage.TAB_SELECTION
+                && selectionSearchField != null && selectionSearchField.isFocused();
+        int searchCursor = restoreSearchFocus ? selectionSearchField.getCursorPosition() : 0;
         clearWidgets();
         // clearWidgets removed our row buttons + scrollbar from the screen,
         // but our cached references still point at the discarded instances.
@@ -452,29 +387,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         int x0 = leftPos;
         int y0 = topPos;
 
-        buildTopTabs(x0, y0, false);
-
-        // A back button is shown whenever this screen was opened as a sub-menu of
-        // a parent GUI: card mode (from a wireless terminal) or device mode opened
-        // from a machine's frequency config button. It reopens the parent via
-        // AE2's native SwitchGuisPacket instead of forcing the player to close the
-        // whole GUI. Controller/receiver blocks opened directly have no parent, so
-        // no back button is shown (ESC closes). Styled like AE2's native sub-menu
-        // back button: a BOX-style TabButton carrying the engine's BACK glyph.
-        if (freqMenu().hasParentMenu()) {
-            Component backTooltip = Component.translatable(
-                    freqMenu().isCardMode()
-                            ? "ae2lt.gui.button.return_to_terminal"
-                            : "ae2lt.gui.button.back");
-            HoverableTabButton backButton = new HoverableTabButton(
-                    Icon.BACK, null, backTooltip,
-                    btn -> PacketDistributor.sendToServer(SwitchGuisPacket.returnToParentMenu()));
-            backButton.setStyle(TabButton.Style.BOX);
-            backButton.setX(x0 - TAB_WIDTH + 6);
-            backButton.setY(y0 - TAB_HEIGHT);
-            backButton.setTooltip(Tooltip.create(backTooltip));
-            addRenderableWidget(backButton);
-        }
+        buildTopTabs(x0, y0);
 
         // Password prompt re-evaluation: if the target frequency now
         // grants us membership (server accepted our password and
@@ -513,10 +426,15 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         switch (currentTab) {
             case TAB_HOME -> initHomeTab(x0, y0);
             case TAB_SELECTION -> initSelectionTab(x0, y0);
-            case TAB_CONNECTION -> initConnectionsTab(x0, y0);
             case TAB_MEMBER -> initMembersTab(x0, y0);
-            case TAB_CREATE -> initCreateTab(x0, y0);
-            case TAB_SETTING -> initSettingsTab(x0, y0);
+            case TAB_CREATE -> initFrequencyForm(x0, y0, true);
+            case TAB_SETTING -> initFrequencyForm(x0, y0, false);
+            case TAB_CONNECTION -> initLocalConnections(x0, y0);
+            case TAB_DEVICES, TAB_ENERGY -> throw new IllegalStateException("Management pages use their native menu");
+        }
+        if (restoreSearchFocus && selectionSearchField != null) {
+            setFocused(selectionSearchField); selectionSearchField.setFocused(true);
+            selectionSearchField.moveCursorTo(searchCursor, false);
         }
     }
 
@@ -529,12 +447,12 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      */
     private void buildDeleteConfirmWidgets(int x0, int y0) {
         addRenderableWidget(new AE2Button(
-                x0 + 22, y0 + 92, 58, 16,
+                x0 + 48, y0 + 146, 96, 18,
                 Component.translatable("ae2lt.gui.button.cancel"),
                 btn -> { deleteConfirmOpen = false; scheduleRebuild(); }));
 
         addRenderableWidget(new AE2Button(
-                x0 + 96, y0 + 92, 58, 16,
+                x0 + 160, y0 + 146, 96, 18,
                 Component.translatable("ae2lt.gui.button.confirm")
                         .copy().withStyle(ChatFormatting.DARK_RED),
                 btn -> {
@@ -543,7 +461,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         PacketDistributor.sendToServer(new DeleteFrequencyPacket(token(), freqId));
                     }
                     deleteConfirmOpen = false;
-                    switchTab(FrequencyNavigationTab.TAB_SELECTION);
+                    switchTab(FrequencyPage.TAB_SELECTION);
                 }));
     }
 
@@ -595,19 +513,18 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * the title text in {@link #renderLabels}.
      */
     private void buildPasswordPromptWidgets(int x0, int y0) {
-        int fieldX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
-        passwordPromptField = makeAe2Field(fieldX, y0 + 68, INPUT_MAX_WIDTH, INPUT_HEIGHT);
+        passwordPromptField = makeAe2Field(x0 + 48, y0 + 112, 208, INPUT_HEIGHT);
         passwordPromptField.setMaxLength(WirelessFrequency.MAX_PASSWORD_LENGTH);
         passwordPromptField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.password"));
         addRenderableWidget(passwordPromptField);
 
         addRenderableWidget(new AE2Button(
-                x0 + 22, y0 + 92, 58, 16,
+                x0 + 48, y0 + 146, 96, 18,
                 Component.translatable("ae2lt.gui.button.cancel"),
                 btn -> cancelPasswordPrompt()));
 
         addRenderableWidget(new AE2Button(
-                x0 + 96, y0 + 92, 58, 16,
+                x0 + 160, y0 + 146, 96, 18,
                 Component.translatable("ae2lt.gui.button.submit"),
                 btn -> submitPasswordPrompt()));
     }
@@ -647,145 +564,28 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Rebuilds the six top {@link TabButton}s. Shared between the
-     * default layout ({@link #initTabWidgets()}) and the member-edit
-     * popup overlay ({@link #rebuildMemberPopupWidgets()}) so the tab
-     * ear geometry stays identical in both views.
-     *
-     * @param popup when {@code true} the tab onPress closes the popup
-     *              before switching tabs
-     */
-    private void buildTopTabs(int x0, int y0, boolean popup) {
-        for (int i = 0; i < FrequencyNavigationTab.VALUES.length; i++) {
-            FrequencyNavigationTab tab = FrequencyNavigationTab.VALUES[i];
-            int bx = tabButtonX(x0, tab, i);
-            int by = y0 - TAB_HEIGHT;
-
-            // customIcon takes priority: we hand AE2 {@code null} for the
-            // base Icon so its renderWidget skips the icon blit entirely
-            // (short-circuits on `icon == null`), leaving the surface clean
-            // for our PNG overlay. Only TAB_SETTING has customIcon == null
-            // and falls back to the AE2 sprite.
-            ResourceLocation customIcon = customIconFor(tab);
-            Icon baseIcon = customIcon != null ? null : iconFor(tab);
-            Component tooltip = Component.translatable(tab.getTranslationKey());
-            Button.OnPress onPress = popup
-                    ? btn -> { closePopup(); switchTab(tab); }
-                    : btn -> switchTab(tab);
-
-            HoverableTabButton button = new HoverableTabButton(baseIcon, customIcon, tooltip, onPress);
-            // BOX renders TAB_BUTTON_BACKGROUND — a fully-framed 22×22
-            // sprite with a 1-px border on all four sides, matching AE2's
-            // ME Interface / Pattern Access tab style. CORNER uses the
-            // BORDERLESS variant which has no side frames, so adjacent
-            // tabs read as one continuous strip rather than discrete
-            // buttons (the effect reported as "tabs look like a long bar").
-            button.setStyle(TabButton.Style.BOX);
-            button.setX(bx);
-            button.setY(by);
-            button.setTooltip(Tooltip.create(tooltip));
-            addRenderableWidget(button);
+    private void buildTopTabs(int x0, int y0) {
+        boolean showManagement = freqMenu().isController() && !freqMenu().hasParentMenu();
+        for (var button : FrequencyNavigation.create(x0, y0, currentTab, showManagement,
+                freqMenu().getCurrentFrequencyId() > 0, tab -> { closePopup(); switchTab(tab); })) addRenderableWidget(button);
+        if (freqMenu().hasParentMenu()) {
+            var back = new TabButton(Icon.BACK, Component.translatable(freqMenu().isCardMode()
+                    ? "ae2lt.gui.button.return_to_terminal" : "ae2lt.gui.button.back"),
+                    button -> PacketDistributor.sendToServer(SwitchGuisPacket.returnToParentMenu()));
+            back.setPosition(x0 - 18, y0 + FrequencyNavigation.TAB_TOP);
+            addRenderableWidget(back);
         }
     }
 
-    /**
-     * {@link TabButton} subclass that reports {@code isFocused() == true}
-     * whenever the mouse is hovering over it. AE2's {@code renderWidget}
-     * picks between {@code TAB_BUTTON_BACKGROUND} (default) and
-     * {@code TAB_BUTTON_BACKGROUND_FOCUS} (cyan-filled) purely on
-     * {@code isFocused()}, which vanilla MC only flips on keyboard focus.
-     * Piggy-backing on the FOCUS sprite gives us the ME-Interface style
-     * "hover fills the whole tab with light cyan" effect for free —
-     * no custom overlay drawing needed, and the selected tab's appearance
-     * is left unchanged (only the tab the mouse is over lights up).
-     *
-     * <p>Also supports a custom 16×16 icon overlay drawn on top of the
-     * AE2 icon sprite. When {@code customIcon} is non-null the base AE2
-     * {@link Icon} passed to super is treated as a placeholder — AE2 will
-     * still blit it, but we paint our own texture directly on top at the
-     * same (3, 3) offset used by the AE2 atlas icon.</p>
-     */
-    private static final class HoverableTabButton extends TabButton {
-        private final ResourceLocation customIcon;
-
-        HoverableTabButton(Icon icon, ResourceLocation customIcon,
-                Component tooltip, Button.OnPress onPress) {
-            super(icon, tooltip, onPress);
-            this.customIcon = customIcon;
+    private void switchTab(FrequencyPage tab) {
+        if (tab.isManagement() && !(tab == FrequencyPage.TAB_CONNECTION && freqMenu().usesLocalConnectionList())) {
+            if (freqMenu().isController() && !freqMenu().hasParentMenu())
+                freqMenu().clientOpenManagement((tab == FrequencyPage.TAB_DEVICES
+                        ? ManagementViewCache.latest(freqMenu().getBlockPos(), freqMenu().getCurrentFrequencyId())
+                        : ManagementViewCache.get(freqMenu().getBlockPos(), freqMenu().getCurrentFrequencyId(), tab.managementMode())).query());
+            return;
         }
-
-        @Override
-        public boolean isFocused() {
-            return super.isFocused() || this.isHovered();
-        }
-
-        @Override
-        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            // Super paints the BOX background sprite and — only when
-            // the super icon field is non-null — the AE2 glyph. Passing
-            // {@code null} for tabs that have a custom PNG means super
-            // leaves the icon surface untouched, so we can overlay our
-            // own 16×16 without the AE2 glyph bleeding through the
-            // transparent pixels of the overlay.
-            super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
-            if (customIcon != null) {
-                // Match AE2's own (+2, +1) icon offset used by
-                // TabButton for the BOX style — see its renderWidget
-                // bytecode: it draws the Icon at (getX()+offset, getY()+offset-1)
-                // where offset=2 for BOX. Using the same position keeps
-                // our custom PNG visually aligned with the AE2 COG that
-                // TAB_SETTING still renders through the base class.
-                guiGraphics.blit(customIcon,
-                        getX() + 2, getY() + 1,
-                        0, 0, 16, 16, 16, 16);
-            }
-        }
-    }
-
-    /**
-     * Fallback {@link Icon} from AE2's atlas — used only when
-     * {@link #customIconFor} returns {@code null} for the same tab.
-     * TAB_SETTING is currently the sole consumer (keeps AE2's cog);
-     * the other tabs short-circuit to their custom PNG and pass
-     * {@code null} to the super constructor, so their entry here is
-     * unused at runtime.
-     */
-    private static Icon iconFor(FrequencyNavigationTab tab) {
-        return switch (tab) {
-            case TAB_SETTING -> Icon.COG;
-            default -> null;
-        };
-    }
-
-    /**
-     * Custom 16×16 PNG overlay for each tab. Returns {@code null} when
-     * the AE2 {@link Icon} from {@link #iconFor} should be the visible
-     * sprite — currently only TAB_SETTING keeps the AE2 cog.
-     */
-    private static ResourceLocation customIconFor(FrequencyNavigationTab tab) {
-        return switch (tab) {
-            case TAB_HOME       -> TAB_ICON_HOME;
-            case TAB_SELECTION  -> TAB_ICON_SELECTION;
-            case TAB_CONNECTION -> TAB_ICON_CONNECTION;
-            case TAB_MEMBER     -> TAB_ICON_MEMBER;
-            case TAB_CREATE     -> TAB_ICON_CREATE;
-            case TAB_SETTING    -> null;
-        };
-    }
-
-    private static final ResourceLocation TAB_ICON_HOME = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/buttons/menu.png");
-    private static final ResourceLocation TAB_ICON_SELECTION = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/buttons/frequency_select.png");
-    private static final ResourceLocation TAB_ICON_CONNECTION = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/buttons/frequency_connect.png");
-    private static final ResourceLocation TAB_ICON_MEMBER = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/buttons/frequency_member.png");
-    private static final ResourceLocation TAB_ICON_CREATE = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/gui/buttons/frequency_add.png");
-
-    private void switchTab(FrequencyNavigationTab tab) {
+        if (tab != currentTab) formPage = null;
         currentTab = tab;
         selectionScroll = 0;
         memberScroll = 0;
@@ -812,38 +612,48 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     // Tab: Home
 
     private void initHomeTab(int x0, int y0) {
-        // Disconnect button sits in the panel strip below the info shelf
-        // (shelf y=39..111, chassis bottom y=156). Centring vertically
-        // around y=132 keeps it clear of both the shelf bevel above and
-        // the chassis bottom bevel below.
-        if (freqMenu().isCardMode()) {
-            // Card mode adds an auto-link toggle alongside disconnect, so the
-            // two share the strip side by side instead of one centred button.
+        boolean card = freqMenu().isCardMode();
+        int width = card ? 140 : 96;
+        if (card) {
             boolean auto = freqMenu().isAutoConnect();
-            addRenderableWidget(new AE2Button(
-                    x0 + 8, y0 + 124, 88, 18,
-                    Component.translatable(auto
-                            ? "ae2lt.gui.button.auto_connect_on"
-                            : "ae2lt.gui.button.auto_connect_off"),
+            addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, width, 16,
+                    Component.translatable(auto ? "ae2lt.gui.button.auto_connect_on" : "ae2lt.gui.button.auto_connect_off"),
                     btn -> freqMenu().clientToggleAutoConnect()));
-            addRenderableWidget(new AE2Button(
-                    x0 + 99, y0 + 124, 88, 18,
-                    Component.translatable("ae2lt.gui.button.disconnect"),
-                    btn -> PacketDistributor.sendToServer(
-                            new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
-            return;
         }
-        if (freqMenu().isController() && !freqMenu().hasParentMenu()) {
-            addRenderableWidget(new AE2Button(x0 + 8, y0 + 116, 88, 16,
-                    Component.translatable("ae2lt.management.devices"), btn -> freqMenu().clientOpenManagement(false)))
-                    .active = freqMenu().getCurrentFrequencyId() > 0;
-            addRenderableWidget(new AE2Button(x0 + 99, y0 + 116, 88, 16,
-                    Component.translatable("ae2lt.management.energy"), btn -> freqMenu().clientOpenManagement(true)))
-                    .active = freqMenu().getCurrentFrequencyId() > 0;
-        }
-        addRenderableWidget(new AE2Button(x0 + (GUI_WIDTH - 96) / 2, y0 + (freqMenu().isController() ? 136 : 124),
-                96, freqMenu().isController() ? 14 : 18, Component.translatable("ae2lt.gui.button.disconnect"),
+        var disconnect = addRenderableWidget(new AE2Button(x0 + (card ? 156 : 104), y0 + 230, width, 16,
+                Component.translatable("ae2lt.gui.button.disconnect"),
                 btn -> PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
+        disconnect.active = freqMenu().getCurrentFrequencyId() > 0;
+        if (freqMenu().usesLocalConnectionList()) {
+            var links = addRenderableWidget(new AE2Button(x0 + 104, y0 + 210, 96, 16,
+                    Component.translatable("ae2lt.management.connections"), btn -> switchTab(FrequencyPage.TAB_CONNECTION)));
+            links.active = freqMenu().getCurrentFrequencyId() > 0;
+        }
+    }
+
+    /** Cards and remote submenus retain their read-only connection view without opening a nested controller session. */
+    private void initLocalConnections(int x0, int y0) {
+        int total = ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size();
+        connectionScroll = clampScroll(connectionScroll, total, ITEMS_PER_PAGE_LIST);
+        currentScrollbar = new ScrollbarWidget(x0 + SCROLLBAR_X, y0 + SCROLLBAR_Y,
+                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT, total, ITEMS_PER_PAGE_LIST, connectionScroll,
+                offset -> connectionScroll = offset);
+        addRenderableWidget(currentScrollbar);
+        addRenderableWidget(new AE2Button(x0 + 104, y0 + 230, 96, 16,
+                Component.translatable("ae2lt.gui.button.back"), btn -> switchTab(FrequencyPage.TAB_HOME)));
+    }
+    private void renderLocalConnections(GuiGraphics g) {
+        var rows = ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId());
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.total").append(": " + rows.size()), 10, 46, AE2_TEXT_MUTED);
+        if (rows.isEmpty()) drawFlatCentered(g, Component.translatable("ae2lt.gui.connection.none"), imageWidth / 2, 76, AE2_TEXT_MUTED);
+        for (int i = connectionScroll; i < Math.min(rows.size(), connectionScroll + ITEMS_PER_PAGE_LIST); i++) {
+            var row = rows.get(i); int y = LIST_ROW_FIRST_Y + (i - connectionScroll) * LIST_ROW_HEIGHT;
+            var state = Component.translatable("ae2lt.management.state." + (row.loaded() ? "loaded" : "unloaded"));
+            drawFlatFitted(g, Component.translatable(row.deviceName()), 12, y + 4, LIST_ROW_WIDTH - 16 - font.width(state), AE2_TEXT_BODY);
+            drawFlat(g, state, LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(state), y + 4, AE2_TEXT_MUTED);
+            drawFlatFitted(g, row.dimension() + " · " + row.pos().getX() + " " + row.pos().getY() + " " + row.pos().getZ(),
+                    12, y + 15, LIST_ROW_WIDTH - 8, AE2_TEXT_MUTED);
+        }
     }
 
     // Tab: Selection
@@ -855,10 +665,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // scroll to the top and rebuild only the row buttons (the
         // scrollbar widget itself is replaced by initTabWidgets via
         // scheduleRebuild because the total count may have changed).
-        // Search field sits in the panel strip below the 4-row well
-        // baked into wireless_overloaded_selection.png (well y=36..120).
-        int searchX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
-        AETextField searchField = makeAe2Field(searchX, y0 + 124, INPUT_MAX_WIDTH, INPUT_HEIGHT);
+        int searchX = x0 + 8;
+        AETextField searchField = selectionSearchField = makeAe2Field(searchX, y0 + 23, GUI_WIDTH - 16, INPUT_HEIGHT);
         searchField.setMaxLength(32);
         searchField.setValue(selectionSearchQuery);
         searchField.setResponder(value -> {
@@ -883,6 +691,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         addRenderableWidget(currentScrollbar);
 
         rebuildSelectionRows();
+        addRenderableWidget(new AE2Button(x0 + 156, y0 + 230, 140, 16,
+                Component.translatable("ae2lt.gui.tab.create"), btn -> switchTab(FrequencyPage.TAB_CREATE)));
         // NOTE: no extra "Disconnect" button here — the Home tab already
         // owns the disconnect action. Duplicating it across tabs gives the
         // impression of the same widget being created twice.
@@ -958,27 +768,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             removeWidget(b);
         }
         currentRowButtons.clear();
-    }
-
-    // Tab: Connections
-
-    private void initConnectionsTab(int x0, int y0) {
-        int currentId = freqMenu().getCurrentFrequencyId();
-        if (currentId <= 0) return;
-
-        int total = ClientFrequencyCache.getConnections(currentId).size();
-        connectionScroll = clampScroll(connectionScroll, total, ITEMS_PER_PAGE_LIST);
-
-        currentScrollbar = new ScrollbarWidget(
-                x0 + SCROLLBAR_X, y0 + SCROLLBAR_Y,
-                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT,
-                total, ITEMS_PER_PAGE_LIST,
-                connectionScroll,
-                offset -> connectionScroll = offset);
-        addRenderableWidget(currentScrollbar);
-        // Connection rows are drawn text-only in renderConnectionLabels,
-        // so there are no row buttons to rebuild — the next frame's
-        // renderLabels will read connectionScroll directly.
     }
 
     // Tab: Members
@@ -1136,11 +925,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         clearWidgets();
         int x0 = leftPos;
         int y0 = topPos;
-        buildTopTabs(x0, y0, true);
+        buildTopTabs(x0, y0);
 
-        int px = x0 + 20;
-        int py = y0 + 40;
-        int pw = 136;
+        int px = x0 + 56;
+        int py = y0 + 80;
+        int pw = 192;
 
         FrequencyAccessLevel myAccess = selfAccess();
         FrequencyAccessLevel targetLevel = popupIsStranger
@@ -1168,7 +957,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         boolean canUser = !ownerActingOnSelf
                 && targetLevel != FrequencyAccessLevel.USER
                 && myAccess.canActOnLevel(FrequencyAccessLevel.higher(targetLevel, FrequencyAccessLevel.USER));
-        AE2Button btnUser = new AE2Button(px, py, pw, 16,
+        AE2Button btnUser = new AE2Button(px, py, pw, 18,
                 Component.translatable("ae2lt.gui.member.set_user"),
                 btn -> sendMember(WirelessFrequency.MEMBERSHIP_SET_USER));
         btnUser.active = canUser;
@@ -1177,7 +966,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         boolean canAdmin = !ownerActingOnSelf
                 && targetLevel != FrequencyAccessLevel.ADMIN
                 && myAccess.canActOnLevel(FrequencyAccessLevel.higher(targetLevel, FrequencyAccessLevel.ADMIN));
-        AE2Button btnAdmin = new AE2Button(px, py + 20, pw, 16,
+        AE2Button btnAdmin = new AE2Button(px, py + 24, pw, 18,
                 Component.translatable("ae2lt.gui.member.set_admin"),
                 btn -> sendMember(WirelessFrequency.MEMBERSHIP_SET_ADMIN));
         btnAdmin.active = canAdmin;
@@ -1192,7 +981,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (canRemove) {
             removeLabel = removeLabel.copy().withStyle(ChatFormatting.DARK_RED);
         }
-        AE2Button btnRemove = new AE2Button(px, py + 40, pw, 16,
+        AE2Button btnRemove = new AE2Button(px, py + 48, pw, 18,
                 removeLabel,
                 btn -> sendMember(WirelessFrequency.MEMBERSHIP_CANCEL));
         btnRemove.active = canRemove;
@@ -1208,13 +997,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (canSetOwner) {
             setOwnerLabel = setOwnerLabel.copy().withStyle(ChatFormatting.GOLD);
         }
-        AE2Button btnSetOwner = new AE2Button(px, py + 60, pw, 16,
+        AE2Button btnSetOwner = new AE2Button(px, py + 72, pw, 18,
                 setOwnerLabel,
                 btn -> sendMember(WirelessFrequency.MEMBERSHIP_TRANSFER_OWNERSHIP));
         btnSetOwner.active = canSetOwner;
         addRenderableWidget(btnSetOwner);
 
-        addRenderableWidget(new AE2Button(px + 36, py + 84, 64, 16,
+        addRenderableWidget(new AE2Button(px + 48, py + 102, 96, 18,
                 Component.translatable("ae2lt.gui.button.cancel"),
                 btn -> { closePopup(); scheduleRebuild(); }));
     }
@@ -1227,175 +1016,70 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         scheduleRebuild();
     }
 
-    // Tab: Create
-
-    private void initCreateTab(int x0, int y0) {
-        int fieldX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
-        nameField = makeAe2Field(fieldX, y0 + 30, INPUT_MAX_WIDTH, INPUT_HEIGHT);
-        nameField.setMaxLength(WirelessFrequency.MAX_NAME_LENGTH);
-        nameField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.name"));
-        addRenderableWidget(nameField);
-
-        passwordField = makeAe2Field(fieldX, y0 + 68, INPUT_MAX_WIDTH, INPUT_HEIGHT);
-        passwordField.setMaxLength(WirelessFrequency.MAX_PASSWORD_LENGTH);
-        passwordField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.password"));
-        passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED);
-        addRenderableWidget(passwordField);
-
-        // Security selector — right-aligned with the security label so
-        // the button sits to the right of the "安全等级:" caption rather
-        // than centred on the 195-px chassis.
-        addRenderableWidget(new AE2Button(
-                x0 + 80, y0 + 50, 96, 14,
-                getSecurityLabel(editSecurity),
-                btn -> {
-                    editSecurity = FrequencySecurityLevel.VALUES[
-                            (editSecurity.ordinal() + 1) % FrequencySecurityLevel.VALUES.length];
-                    passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED);
-                    btn.setMessage(getSecurityLabel(editSecurity));
-                }));
-
-        // Colour swatches — 7×2 grid of 14-px cells centred on the
-        // chassis. Total width = 7*16 = 112 px → x_start = (195-112)/2 = 42.
-        for (int i = 0; i < PRESET_COLORS.length; i++) {
-            final int c = PRESET_COLORS[i];
-            int cx = x0 + 42 + (i % 7) * 16;
-            int cy = y0 + 90 + (i / 7) * 16;
-            addRenderableWidget(Button.builder(Component.literal(" "),
-                            btn -> editColor = c)
-                    .bounds(cx, cy, 14, 14).build());
-        }
-
-        addRenderableWidget(new AE2Button(
-                x0 + (GUI_WIDTH - 60) / 2, y0 + 138, 60, 16,
-                Component.translatable("ae2lt.gui.button.create"),
-                btn -> {
-                    if (nameField.getValue().isBlank()) return;
-                    PacketDistributor.sendToServer(new CreateFrequencyPacket(
-                            token(),
-                            nameField.getValue(), editColor, editSecurity,
-                            passwordField.getValue()));
-                    switchTab(FrequencyNavigationTab.TAB_SELECTION);
-                }));
-    }
-
-    // Tab: Settings
-
-    private void initSettingsTab(int x0, int y0) {
+    /** Creation and editing use one layout; server-side access checks remain authoritative. */
+    private void initFrequencyForm(int x0, int y0, boolean creating) {
         var freq = ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId());
-        if (freq == null) return;
+        boolean resume = formPage == currentTab && (creating || freq != null && formFrequency == freq.id());
+        String savedName = resume && nameField != null ? nameField.getValue() : creating || freq == null ? "" : freq.name();
+        String savedPassword = resume && passwordField != null ? passwordField.getValue() : "";
+        if (!resume) {
+            editSecurity = creating || freq == null ? FrequencySecurityLevel.PRIVATE : freq.security();
+            editColor = creating || freq == null ? 0x1E90FF : freq.color();
+            settingsPasswordPristine = !creating && editSecurity == FrequencySecurityLevel.ENCRYPTED;
+            if (settingsPasswordPristine) savedPassword = PASSWORD_SENTINEL;
+        }
+        formPage = currentTab; formFrequency = freq == null ? -1 : freq.id();
+        if (creating) addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+                Component.translatable("ae2lt.gui.button.back"), btn -> switchTab(FrequencyPage.TAB_SELECTION)));
+        if (!creating && freq == null) return;
+        boolean canEdit = creating || hasManagerAccess();
+        boolean canSecure = creating || hasOwnerAccess();
 
-        // Per-access-level layout: OWNERs see Delete+Apply, ADMINs see
-        // Leave+Apply (they can edit but not destroy the frequency),
-        // USERs see Leave only and all inputs render view-only. The
-        // server-side self-leave branch (MEMBERSHIP_CANCEL) is how
-        // non-editors bail out of a frequency they joined via
-        // enrollAsUser or an admin-added USER slot.
-        boolean isManager = hasManagerAccess();
-        boolean isOwner = hasOwnerAccess();
-
-        editSecurity = freq.security();
-        editColor = freq.color();
-
-        int fieldX = x0 + (imageWidth - INPUT_MAX_WIDTH) / 2;
-        nameField = makeAe2Field(fieldX, y0 + 30, INPUT_MAX_WIDTH, INPUT_HEIGHT);
+        nameField = makeAe2Field(x0 + 16, y0 + 49, INPUT_MAX_WIDTH, INPUT_HEIGHT);
         nameField.setMaxLength(WirelessFrequency.MAX_NAME_LENGTH);
         nameField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.name"));
-        nameField.setValue(freq.name());
-        nameField.setEditable(isManager);
-        addRenderableWidget(nameField);
-
-        // Settings tab uses the pristine-clearing subclass: when the
-        // frequency is already ENCRYPTED we pre-fill the sentinel dots
-        // so the user sees "a password is set here" without us leaking
-        // the hash, and any keystroke wipes the sentinel so typed input
-        // replaces it rather than appending. See
-        // {@link #PASSWORD_SENTINEL}.
-        passwordField = new PristinePasswordField(fieldX, y0 + 68, INPUT_MAX_WIDTH, INPUT_HEIGHT);
+        nameField.setValue(savedName); nameField.setEditable(canEdit); addRenderableWidget(nameField);
+        passwordField = new PristinePasswordField(x0 + 16, y0 + 117, INPUT_MAX_WIDTH, INPUT_HEIGHT);
         passwordField.setMaxLength(WirelessFrequency.MAX_PASSWORD_LENGTH);
         passwordField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.password"));
-        passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED);
-        if (editSecurity == FrequencySecurityLevel.ENCRYPTED) {
-            passwordField.setValue(PASSWORD_SENTINEL);
-            settingsPasswordPristine = true;
-        } else {
-            settingsPasswordPristine = false;
+        passwordField.setValue(savedPassword); passwordField.setEditable(canSecure);
+        passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED); addRenderableWidget(passwordField);
+        var security = addRenderableWidget(new AE2Button(x0 + 168, y0 + 74, 120, 18, getSecurityLabel(editSecurity), btn -> {
+            editSecurity = FrequencySecurityLevel.VALUES[(editSecurity.ordinal() + 1) % FrequencySecurityLevel.VALUES.length];
+            passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED);
+            passwordField.setValue(""); settingsPasswordPristine = false; btn.setMessage(getSecurityLabel(editSecurity));
+        }));
+        security.active = canSecure;
+        for (int i = 0; i < PRESET_COLORS.length; i++) {
+            final int color = PRESET_COLORS[i];
+            var swatch = addRenderableWidget(Button.builder(Component.literal(" "), btn -> editColor = color)
+                    .bounds(x0 + 82 + (i % 7) * 20, y0 + 155 + (i / 7) * 20, 14, 14).build());
+            swatch.active = canEdit;
         }
-        // Password and security are OWNER-gated on the server
-        // (EditFrequencyPacket bounces ADMIN with NO_PERMISSION when
-        // either changes). Mirror that here so ADMIN doesn't hit a
-        // "silent" Apply-failure by cycling the security button —
-        // only isOwner gets to flip these.
-        passwordField.setEditable(isOwner);
-        addRenderableWidget(passwordField);
-
-        AE2Button securityBtn = new AE2Button(
-                x0 + 80, y0 + 50, 96, 14,
-                getSecurityLabel(editSecurity),
-                btn -> {
-                    editSecurity = FrequencySecurityLevel.VALUES[
-                            (editSecurity.ordinal() + 1) % FrequencySecurityLevel.VALUES.length];
-                    passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED);
-                    // Cycling the security mode restarts password entry —
-                    // the sentinel only makes sense on the very first
-                    // render for an already-ENCRYPTED frequency, never
-                    // after the user touches the security toggle.
-                    passwordField.setValue("");
-                    settingsPasswordPristine = false;
-                    btn.setMessage(getSecurityLabel(editSecurity));
-                });
-        securityBtn.active = isOwner;
-        addRenderableWidget(securityBtn);
-
-        // Apply / Delete-or-Leave action row, centred on the chassis as
-        // a 60+12+60 button pair (132 px → x_start=(195-132)/2=31).
-        AE2Button applyBtn = new AE2Button(
-                x0 + 103, y0 + 138, 60, 16,
-                Component.translatable("ae2lt.gui.button.apply"),
-                btn -> {
-                    // If the sentinel is still in the field, the user
-                    // didn't touch the password — forward an empty
-                    // string so the server preserves the stored hash
-                    // (see EditFrequencyPacket's "only overwrite when
-                    // the payload is non-empty" branch).
-                    String pw = settingsPasswordPristine ? "" : passwordField.getValue();
-                    PacketDistributor.sendToServer(new EditFrequencyPacket(
-                            token(),
-                            freq.id(), nameField.getValue(), editColor,
-                            editSecurity, pw));
-                });
-        applyBtn.active = isManager;
-        addRenderableWidget(applyBtn);
-
-        if (isOwner) {
-            addRenderableWidget(new AE2Button(
-                    x0 + 31, y0 + 138, 60, 16,
-                    Component.translatable("ae2lt.gui.button.delete")
-                            .copy().withStyle(ChatFormatting.DARK_RED),
+        var submit = addRenderableWidget(new AE2Button(x0 + 156, y0 + 230, 140, 16,
+                Component.translatable(creating ? "ae2lt.gui.button.create" : "ae2lt.gui.button.apply"), btn -> {
+            if (nameField.getValue().isBlank()) return;
+            String password = settingsPasswordPristine ? "" : passwordField.getValue();
+            if (creating) {
+                PacketDistributor.sendToServer(new CreateFrequencyPacket(token(), nameField.getValue(), editColor, editSecurity, password));
+                switchTab(FrequencyPage.TAB_SELECTION);
+            } else PacketDistributor.sendToServer(new EditFrequencyPacket(token(), freq.id(), nameField.getValue(), editColor, editSecurity, password));
+        }));
+        submit.active = canEdit && !savedName.isBlank();
+        nameField.setResponder(value -> submit.active = canEdit && !value.isBlank());
+        if (!creating) {
+            if (hasOwnerAccess()) addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+                    Component.translatable("ae2lt.gui.button.delete").copy().withStyle(ChatFormatting.DARK_RED),
                     btn -> { deleteConfirmOpen = true; scheduleRebuild(); }));
-        } else {
-            // Leave button: self-cancel via the membership packet.
-            // Works for both ADMIN and USER because the server-side
-            // MEMBERSHIP_CANCEL case allows self-targets regardless
-            // of canEdit (only the self-lock on the last OWNER still
-            // blocks). We disconnect the device FIRST (while we
-            // still have member-level access on the current freq)
-            // and then leave — once we're out of the members map
-            // the server's disconnect access gate would reject us.
-            addRenderableWidget(new AE2Button(
-                    x0 + 31, y0 + 138, 60, 16,
-                    Component.translatable("ae2lt.gui.button.leave")
-                            .copy().withStyle(ChatFormatting.DARK_GRAY),
-                    btn -> {
-                        var mc = Minecraft.getInstance();
-                        if (mc.player == null) return;
-                        PacketDistributor.sendToServer(new SelectFrequencyPacket(
-                                token(), freqMenu().getBlockPos(), -1, ""));
-                        PacketDistributor.sendToServer(new ChangeMemberPacket(
-                                token(), freq.id(), mc.player.getUUID(),
-                                WirelessFrequency.MEMBERSHIP_CANCEL));
-                        switchTab(FrequencyNavigationTab.TAB_SELECTION);
-                    }));
+            else addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+                    Component.translatable("ae2lt.gui.button.leave"), btn -> {
+                var player = Minecraft.getInstance().player;
+                if (player == null) return;
+                // Disconnect while access still exists, then leave the frequency.
+                PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""));
+                PacketDistributor.sendToServer(new ChangeMemberPacket(token(), freq.id(), player.getUUID(), WirelessFrequency.MEMBERSHIP_CANCEL));
+                switchTab(FrequencyPage.TAB_SELECTION);
+            }));
         }
     }
 
@@ -1403,20 +1087,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        // Per-tab AE2 chassis. Each tab uses a different 195×157 texture
-        // so the recessed wells (list rows / info shelf / blank panel) are
-        // baked into the art instead of redrawn with {@code g.fill} on top.
-        // The six top tab ears are still rendered by TabButton widgets
-        // themselves (AE2's ``TAB_BUTTON_BACKGROUND`` sprite).
-        g.blit(
-                backgroundTextureForTab(currentTab),
-                leftPos,
-                topPos,
-                0, 0,
-                GUI_WIDTH,
-                GUI_HEIGHT,
-                TEXTURE_SIZE,
-                TEXTURE_SIZE);
+        BackgroundGenerator.draw(GUI_WIDTH, GUI_HEIGHT, g, leftPos, topPos);
+        if (popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
+            if (currentTab == FrequencyPage.TAB_HOME) drawInset(g, leftPos + 8, topPos + 30, GUI_WIDTH - 16, 168);
+            else if (currentTab == FrequencyPage.TAB_CONNECTION) {
+                int visible = Math.min(ITEMS_PER_PAGE_LIST,
+                        ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size() - connectionScroll);
+                for (int i = 0; i < visible; i++) BackgroundGenerator.draw(LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT,
+                        g, leftPos + LIST_ROW_X, topPos + LIST_ROW_FIRST_Y + i * LIST_ROW_HEIGHT);
+            }
+        }
 
         // Member-edit popup panel background. This MUST be drawn from
         // {@link #renderBg} (before widgets render) — if drawn from
@@ -1435,101 +1115,22 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Picks the chassis texture for the given tab. List-style tabs use
-     * the 5-row well, the selection tab uses the 4-row well that leaves
-     * a search-field strip below, the home tab gets the wide info shelf,
-     * and create / settings get the blank form panel.
-     */
-    private static ResourceLocation backgroundTextureForTab(FrequencyNavigationTab tab) {
-        return switch (tab) {
-            case TAB_HOME -> BG_HOME;
-            case TAB_SELECTION -> BG_SELECTION;
-            case TAB_CONNECTION, TAB_MEMBER -> BG_LIST;
-            case TAB_CREATE, TAB_SETTING -> BG_FORM;
-        };
-    }
-
-    /**
-     * Same lavender chassis as {@link #drawDeleteConfirmPanel}, sized
-     * to house the password prompt: title at top, a 12-px text field
-     * just below, and a Cancel/Submit row. Kept separate so the delete
-     * modal and password modal each own their own footprint.
-     */
-    private void drawPasswordPromptPanel(GuiGraphics g) {
-        int px0 = leftPos + 16;
-        int py0 = topPos + 50;
-        int pw = 144;
-        int ph = 66;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
-    }
-
-    /**
-     * Draws the smaller delete-confirm modal panel. Same lavender
-     * chassis + 1-px AE2 bevel as the member popup, sized to fit a
-     * title line, a hint line, and a single row of Confirm/Cancel
-     * buttons without crowding the Settings tab chrome above.
-     */
-    private void drawDeleteConfirmPanel(GuiGraphics g) {
-        int px0 = leftPos + 16;
-        int py0 = topPos + 50;
-        int pw = 144;
-        int ph = 66;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
-    }
-
-    /**
-     * Draws the light-lavender popup panel with an AE2 1-px bevel in
-     * screen coordinates. Kept separate from the text-layer content in
-     * {@link #renderLabels} so buttons added by
-     * {@link #rebuildMemberPopupWidgets()} sit on top of this panel
-     * instead of being occluded by it.
-     */
-    private void drawMemberPopupPanel(GuiGraphics g) {
-        int px0 = leftPos + 10;
-        int py0 = topPos + 26;
-        int pw = 156;
-        // 120 rather than 110 so the Cancel button (local y=124..140)
-        // sits inside the panel — at 110 it poked 4 px below the
-        // bottom bevel.
-        int ph = 120;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
-    }
-
-    /**
-     * Returns the screen-space x of a given tab button so the layout
-     * never gets out of sync between {@link #buildTopTabs(int, int, boolean)}
-     * and {@link #renderBg}. Five flush tabs span x=8..118 (22×5) and
-     * the "Create" tab is right-anchored with a 2-px gap to the panel
-     * edge at x=152..174, leaving a visible gap that reads as a small
-     * breather between the "navigate" and "author" tab clusters.
-     */
-    private static int tabButtonX(int originX, FrequencyNavigationTab tab, int index) {
-        if (tab == FrequencyNavigationTab.TAB_CREATE) {
-            return originX + GUI_WIDTH - TAB_WIDTH - 2;
-        }
-        return originX + 8 + index * TAB_STEP;
+    private void drawPasswordPromptPanel(GuiGraphics g) { BackgroundGenerator.draw(240, 98, g, leftPos + 32, topPos + 80); }
+    private void drawDeleteConfirmPanel(GuiGraphics g) { BackgroundGenerator.draw(240, 98, g, leftPos + 32, topPos + 80); }
+    private void drawMemberPopupPanel(GuiGraphics g) { BackgroundGenerator.draw(224, 152, g, leftPos + 40, topPos + 56); }
+    private static void drawInset(GuiGraphics g, int x, int y, int width, int height) {
+        g.fill(x, y, x + width, y + height, 0xFF999BAD);
+        g.fill(x, y, x + width, y + 1, 0xFF5A5A6B);
+        g.fill(x, y, x + 1, y + height, 0xFF5A5A6B);
+        g.fill(x + width - 1, y, x + width, y + height, 0xFFFFFFFF);
+        g.fill(x, y + height - 1, x + width, y + height, 0xFFFFFFFF);
     }
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         fittedTextTooltips.clear();
 
-        drawFlatCentered(g,
-                Component.translatable(currentTab.getTranslationKey()),
-                imageWidth / 2, 6, AE2_TEXT_TITLE);
+        drawFlat(g, Component.translatable(currentTab.getTranslationKey()), 8, 7, AE2_TEXT_TITLE);
 
         // When the member-edit popup or delete-confirm modal is open it
         // covers the tab body — rendering the tab's labels underneath
@@ -1541,40 +1142,33 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             switch (currentTab) {
                 case TAB_HOME -> renderHomeLabels(g);
                 case TAB_SELECTION -> renderSelectionLabels(g);
-                case TAB_CONNECTION -> renderConnectionLabels(g);
                 case TAB_MEMBER -> renderMemberLabels(g);
-                case TAB_CREATE -> renderCreateLabels(g);
-                case TAB_SETTING -> renderSettingLabels(g);
+                case TAB_CREATE, TAB_SETTING -> renderFormLabels(g);
+                case TAB_CONNECTION -> renderLocalConnections(g);
+                case TAB_DEVICES, TAB_ENERGY -> {}
             }
         }
 
         if (deleteConfirmOpen) {
-            // Delete-confirm modal contents. Panel sits at local y=50..116
-            // (from {@link #drawDeleteConfirmPanel}); title + hint go in
-            // the 42 px head area above the Confirm/Cancel row (y=92..108).
             drawFlatCentered(g,
                     Component.translatable("ae2lt.gui.delete_confirm.title")
                             .copy().withStyle(ChatFormatting.DARK_RED),
-                    imageWidth / 2, 60, AE2_TEXT_TITLE);
+                    imageWidth / 2, 90, AE2_TEXT_TITLE);
             drawFlatCentered(g,
                     Component.translatable("ae2lt.gui.delete_confirm.hint"),
-                    imageWidth / 2, 74, AE2_TEXT_MUTED);
+                    imageWidth / 2, 110, AE2_TEXT_MUTED);
         }
 
         if (passwordPromptFreqId > 0) {
-            // Password prompt modal contents. Panel sits at local y=50..116
-            // (same footprint as the delete modal); header above the
-            // text field at y=68 and Cancel/Submit at y=92.
             drawFlatCenteredFitted(g,
                     Component.translatable("ae2lt.gui.password_prompt.title", passwordPromptFreqName),
-                    imageWidth / 2, 58, 136, AE2_TEXT_TITLE);
+                    imageWidth / 2, 90, 224, AE2_TEXT_TITLE);
         }
 
         if (popupMemberUUID != null) {
             // Header inside the popup panel: target member's name with
             // their access code tacked on as a single line, positioned
-            // in the 14 px strip between the panel top (y=26) and the
-            // first action button (y=40) so it never overlaps the
+            // above the first action button so it never overlaps the
             // {@code 设为用户} row.
             // Stranger popup shows the target dimmed (they have no
             // access yet) with the localised "stranger" code tagged on
@@ -1592,14 +1186,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         .append(Component.literal(" [" + accessLabel(popupMemberAccess) + "]")
                                 .withStyle(ChatFormatting.DARK_GRAY));
             }
-            drawFlatCenteredFitted(g, header, imageWidth / 2, 30, 148, AE2_TEXT_TITLE);
+            drawFlatCenteredFitted(g, header, imageWidth / 2, 65, 208, AE2_TEXT_TITLE);
         }
-
-        // Hover feedback for the tab strip is handled natively by
-        // {@link HoverableTabButton}, which flips AE2's BOX TabButton to
-        // its FOCUS sprite whenever the mouse is over it. Nothing to
-        // overlay here — the selected tab is identified by the GUI body
-        // it opens, not by a border accent.
 
         // Inline error toast (server-pushed). Painted last so it sits
         // on top of every modal + tab body, near the bottom edge of
@@ -1617,7 +1205,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 int textW = font.width(display);
                 int bgW = Math.min(imageWidth - 8, textW + 8);
                 int bgX = (imageWidth - bgW) / 2;
-                int bgY = imageHeight - 14;
+                int bgY = imageHeight - 40;
                 g.fill(bgX, bgY, bgX + bgW, bgY + 12, 0xD0202028);
                 g.fill(bgX, bgY, bgX + bgW, bgY + 1, 0xFFD04848);   // top accent
                 drawFlatCentered(g, display, imageWidth / 2, bgY + 2, 0xFFFFB4B4);
@@ -1706,17 +1294,17 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(freq.color() & 0xFFFFFF)));
             Component line = Component.translatable("ae2lt.gui.frequency.current")
                     .append(": ").append(name);
-            drawFlatFitted(g, line, 10, y, imageWidth - 20, AE2_TEXT_BODY);
+            drawFlatFitted(g, line, 16, y, imageWidth - 32, AE2_TEXT_BODY);
         } else {
             drawFlatFitted(g, Component.translatable("ae2lt.gui.frequency.none"),
-                    10, y, imageWidth - 20, AE2_TEXT_MUTED);
+                    16, y, imageWidth - 32, AE2_TEXT_MUTED);
         }
-        y += 14;
+        y += 32;
 
         drawFlatFitted(g, Component.translatable("ae2lt.gui.home.device_type")
                 .append(": ").append(Component.translatable(freqMenu().getDeviceName())),
-                10, y, imageWidth - 20, AE2_TEXT_BODY);
-        y += 14;
+                16, y, imageWidth - 32, AE2_TEXT_BODY);
+        y += 32;
 
         boolean connected = freqMenu().isLinkActive();
         drawFlatFitted(g, Component.translatable("ae2lt.gui.home.status")
@@ -1724,8 +1312,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         .append(connected
                                 ? Component.translatable("ae2lt.gui.home.connected")
                                 : Component.translatable("ae2lt.gui.home.disconnected")),
-                10, y, imageWidth - 20, AE2_TEXT_BODY);
-        y += 14;
+                16, y, imageWidth - 32, AE2_TEXT_BODY);
+        y += 32;
 
         int used = freqMenu().getUsedChannels();
         int max = freqMenu().getMaxChannels();
@@ -1741,23 +1329,20 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         drawFlatFitted(g, Component.translatable("ae2lt.gui.home.grid_channels")
                         .append(": ")
                         .append(channelsValue),
-                10, y, imageWidth - 20, AE2_TEXT_BODY);
-        y += 14;
+                16, y, imageWidth - 32, AE2_TEXT_BODY);
+        y += 32;
 
         if (freqMenu().isController()) {
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.cross_dimension")
                     .append(": ").append(freqMenu().isAdvanced()
                             ? Component.translatable("ae2lt.gui.home.cross_dimension.yes")
                             : Component.translatable("ae2lt.gui.home.cross_dimension.no")),
-                    10, y, imageWidth - 20, AE2_TEXT_BODY);
+                    16, y, imageWidth - 32, AE2_TEXT_BODY);
         }
     }
 
     private void renderSelectionLabels(GuiGraphics g) {
-        // Single subtitle row between title (y=6) and shelf (y=28).
-        // Text at y=18 renders glyphs on y=18..26, keeping a 2-px gap
-        // above the shelf and well clear of the title descenders — the
-        // two-row layout used previously overlapped the title at y=12.
+        // Current frequency and count share the strip below search.
         var freqs = ClientFrequencyCache.getAllFrequenciesSorted();
         var current = ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId());
 
@@ -1769,71 +1354,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         : Component.translatable("ae2lt.gui.frequency.none").withStyle(ChatFormatting.DARK_GRAY));
         Component right = Component.translatable("ae2lt.gui.frequency.total").append(": " + freqs.size());
         int rightX = imageWidth - 10 - font.width(right);
-        drawFlatFitted(g, left, 10, 18, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 18, AE2_TEXT_MUTED);
-        // No "password:" label here — the AETextField placeholder
-        // communicates that already, and keeping the label out of the
-        // shelf's bottom bevel avoids the prior clipping/overlap.
-    }
-
-    private void renderConnectionLabels(GuiGraphics g) {
-        int currentId = freqMenu().getCurrentFrequencyId();
-        if (currentId <= 0) {
-            drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
-                    imageWidth / 2, 40, AE2_TEXT_MUTED);
-            return;
-        }
-
-        var conns = ClientFrequencyCache.getConnections(currentId);
-        Component right = Component.translatable("ae2lt.gui.frequency.total")
-                .append(": " + conns.size());
-        drawFlat(g, right, imageWidth - 10 - font.width(right), 18, AE2_TEXT_MUTED);
-
-        if (conns.isEmpty()) {
-            drawFlatCentered(g, Component.translatable("ae2lt.gui.connection.none"),
-                    imageWidth / 2, 70, AE2_TEXT_MUTED);
-            return;
-        }
-
-        int start = connectionScroll;
-        int end = Math.min(start + ITEMS_PER_PAGE_LIST, conns.size());
-        for (int i = start; i < end; i++) {
-            var c = conns.get(i);
-            int row = i - start;
-            // Two-line layout per 21-px well row: type on top, coords below.
-            // Row 0 well content area is y=38..57; centring two 9-px text
-            // lines puts the type at y=39 and the coords at y=49.
-            int yTop = LIST_ROW_FIRST_Y + 1 + row * LIST_ROW_HEIGHT;
-            int yBot = yTop + 10;
-
-            String typeKey = c.deviceName();
-            ChatFormatting typeColor = c.controller() ? ChatFormatting.DARK_AQUA : ChatFormatting.DARK_GREEN;
-
-            drawFlatFitted(g, Component.translatable(typeKey).withStyle(typeColor),
-                    LIST_ROW_X, yTop, 145, AE2_TEXT_BODY);
-
-            String posStr = "(" + c.pos().getX() + "," + c.pos().getY() + "," + c.pos().getZ() + ")";
-
-            String dim = c.dimension();
-            int slash = dim.indexOf(':');
-            String shortDim = slash >= 0 ? dim.substring(slash + 1) : dim;
-            if (shortDim.length() > 8) shortDim = shortDim.substring(0, 8);
-            int dimX = 168 - font.width(shortDim);
-            drawFlatFitted(g, posStr, LIST_ROW_X, yBot,
-                    Math.max(20, dimX - LIST_ROW_X - 6), AE2_TEXT_MUTED);
-
-            int dotColor = c.loaded() ? 0xFF3AA55A : 0xFF7F7F7F;
-            // Centre the 6-px loaded/unloaded dot vertically between the
-            // two text lines so it reads as a row-level status badge
-            // rather than a glyph clinging to either line.
-            int dotY = yTop + 5;
-            g.fill(160, dotY, 166, dotY + 6, dotColor);
-
-            // Right-align inside the well (right edge at x=168) rather
-            // than against the chassis edge so it doesn't poke past
-            // the recessed shelf.
-            drawFlat(g, shortDim, dimX, yBot, AE2_TEXT_MUTED);
-        }
+        drawFlatFitted(g, left, 10, 46, Math.max(20, rightX - 24), AE2_TEXT_BODY);
+        drawFlat(g, right, rightX, 46, AE2_TEXT_MUTED);
     }
 
     private void renderMemberLabels(GuiGraphics g) {
@@ -1844,7 +1366,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             return;
         }
 
-        // Subtitle row — access on the left, count on the right, both at y=18.
+        // Access on the left, count on the right.
         FrequencyAccessLevel myAccess = selfAccess();
         Component left = Component.translatable("ae2lt.gui.member.your_access",
                 Component.translatable("ae2lt.gui.access." + myAccess.name().toLowerCase())
@@ -1853,69 +1375,36 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         Component right = Component.translatable("ae2lt.gui.frequency.total")
                 .append(": " + members.size());
         int rightX = imageWidth - 10 - font.width(right);
-        drawFlatFitted(g, left, 10, 18, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 18, AE2_TEXT_MUTED);
+        drawFlatFitted(g, left, 10, 46, Math.max(20, rightX - 24), AE2_TEXT_BODY);
+        drawFlat(g, right, rightX, 46, AE2_TEXT_MUTED);
 
         if (members.isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.member.none"),
                     imageWidth / 2, 70, AE2_TEXT_MUTED);
         }
-        // No "click a row to manage" hint here — the row buttons read
-        // as clickable on their own, and the chassis bottom (y=143..156)
-        // is already taken by pagination.
     }
 
-    private void renderCreateLabels(GuiGraphics g) {
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"),
-                16, 22, AE2_TEXT_MUTED);
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"),
-                16, 52, AE2_TEXT_MUTED);
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.color").append(":"),
-                16, 82, AE2_TEXT_MUTED);
-
-        // Paint each preset-colour swatch on top of its vanilla Button.
-        // The buttons are plain 14×14 gray cells registered in
-        // {@link #initCreateTab}; this loop fills the 12×12 interior with
-        // the actual preset colour so the user can tell them apart.
-        // Coordinates here are LOCAL to the GUI (renderLabels' pose is
-        // already translated to leftPos/topPos), which matches the local
-        // offsets used when the buttons were positioned (x=42 base).
-        for (int i = 0; i < PRESET_COLORS.length; i++) {
-            int cx = 42 + (i % 7) * 16;
-            int cy = 90 + (i / 7) * 16;
-            int fill = PRESET_COLORS[i] | 0xFF000000;
-            g.fill(cx + 1, cy + 1, cx + 13, cy + 13, fill);
-            if (PRESET_COLORS[i] == editColor) {
-                // Highlight the selected swatch with a 1-px white frame
-                // so the user can see which colour they've picked.
-                int accent = 0xFFFFFFFF;
-                g.fill(cx,       cy,       cx + 14, cy + 1,  accent); // top
-                g.fill(cx,       cy + 13,  cx + 14, cy + 14, accent); // bottom
-                g.fill(cx,       cy,       cx + 1,  cy + 14, accent); // left
-                g.fill(cx + 13,  cy,       cx + 14, cy + 14, accent); // right
-            }
-        }
-
-        // Live preview swatch + name in the user's chosen colour, sat
-        // between the colour grid (ending y=120) and the Create button
-        // row at y=138 — inset 2 px so it visually nests under the grid.
-        g.fill(16, 124, 28, 134, editColor | 0xFF000000);
-        if (nameField != null && !nameField.getValue().isBlank()) {
-            drawFlatFitted(g, nameField.getValue(), 32, 125,
-                    imageWidth - 42, editColor | 0xFF000000);
-        }
-    }
-
-    private void renderSettingLabels(GuiGraphics g) {
-        if (ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) == null) {
-            drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
-                    imageWidth / 2, 40, AE2_TEXT_MUTED);
+    private void renderFormLabels(GuiGraphics g) {
+        if (currentTab == FrequencyPage.TAB_SETTING && ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) == null) {
+            drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"), imageWidth / 2, 40, AE2_TEXT_MUTED);
             return;
         }
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"),
-                16, 22, AE2_TEXT_MUTED);
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"),
-                16, 52, AE2_TEXT_MUTED);
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"), 16, 35, AE2_TEXT_MUTED);
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"), 16, 78, AE2_TEXT_MUTED);
+        if (editSecurity == FrequencySecurityLevel.ENCRYPTED)
+            drawFlat(g, Component.translatable("ae2lt.gui.frequency.password").append(":"), 16, 103, AE2_TEXT_MUTED);
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.color").append(":"), 16, 142, AE2_TEXT_MUTED);
+        for (int i = 0; i < PRESET_COLORS.length; i++) {
+            int x = 82 + (i % 7) * 20, y = 155 + (i / 7) * 20;
+            g.fill(x + 1, y + 1, x + 13, y + 13, PRESET_COLORS[i] | 0xFF000000);
+            if (PRESET_COLORS[i] == editColor) {
+                g.fill(x, y, x + 14, y + 1, 0xFFFFFFFF); g.fill(x, y + 13, x + 14, y + 14, 0xFFFFFFFF);
+                g.fill(x, y, x + 1, y + 14, 0xFFFFFFFF); g.fill(x + 13, y, x + 14, y + 14, 0xFFFFFFFF);
+            }
+        }
+        g.fill(16, 204, 28, 214, editColor | 0xFF000000);
+        if (nameField != null && !nameField.getValue().isBlank())
+            drawFlatFitted(g, nameField.getValue(), 32, 205, imageWidth - 48, editColor | 0xFF000000);
     }
 
     private static Component getSecurityLabel(FrequencySecurityLevel level) {
@@ -1928,7 +1417,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // AbstractContainerScreen already renders the background once.
         super.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
         renderFittedTextTooltip(g, mouseX, mouseY);
@@ -2014,16 +1503,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         @Override
         protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             boolean hover = active && (isHoveredOrFocused());
-            int srcV = hover ? ROW_SPRITE_HOVER_V : ROW_SPRITE_IDLE_V;
-            // BG_LIST and BG_SELECTION carry an identical sprite library
-            // below the chassis, so sourcing from BG_LIST works for every
-            // tab that uses this widget regardless of which chassis is
-            // currently bound for the panel itself.
-            g.blit(BG_LIST,
-                    getX(), getY(),
-                    0, srcV,
-                    ROW_SPRITE_WIDTH, ROW_SPRITE_HEIGHT,
-                    TEXTURE_SIZE, TEXTURE_SIZE);
+            BackgroundGenerator.draw(getWidth(), getHeight(), g, getX(), getY());
+            if (hover) g.fill(getX() + 3, getY() + 3, getX() + getWidth() - 3, getY() + getHeight() - 3,
+                    AE2_STYLE.getColor(PaletteColor.SELECTION_COLOR).toARGB());
 
             // Vanilla MC's drawString honours the Component's per-style
             // colour, so the access tint / frequency RGB baked into
@@ -2037,14 +1519,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     ? getMessage()
                     : Component.literal(fitted).setStyle(getMessage().getStyle());
             int textY = getY() + (getHeight() - 8) / 2;
-            int textX = getX() + 4 + (getWidth() - 8 - font.width(display)) / 2;
+            int textX = getX() + 6;
             g.drawString(font, display, textX, textY, fallback, false);
         }
     }
 
     /**
-     * Lightweight vertical scrollbar reused across the Selection, Connection
-     * and Member tabs. Draws the vanilla creative-tab scroller handle on top
+     * Lightweight vertical scrollbar reused across the Selection and Member tabs. Draws the vanilla creative-tab scroller handle on top
      * of the chassis, and supports click-on-track paging, drag-handle, and
      * mouse-wheel input. Each offset change is reported through
      * {@link #onScroll} so the owning tab can refresh just the affected row

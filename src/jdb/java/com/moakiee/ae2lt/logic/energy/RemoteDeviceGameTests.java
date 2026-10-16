@@ -162,6 +162,41 @@ public final class RemoteDeviceGameTests {
         }).thenSucceed();
     }
 
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void sharedNavigationPreservesHostAndRejectsStaleMenus(GameTestHelper h) {
+        fixture(h, f -> {
+            f.menu.openFrequencyPage(-1);
+            f.menu.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY.ordinal());
+            h.assertTrue(f.player.containerMenu == f.menu, "invalid native page changed menu");
+            f.menu.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING.ordinal());
+            h.assertTrue(f.player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu menu
+                    && menu.initialPage() == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING
+                    && menu.getCurrentFrequencyId() == f.frequency.getId() && menu.stillValid(f.player), "wrong native page or controller");
+            var opened = f.player.containerMenu;
+            f.menu.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME.ordinal());
+            h.assertTrue(f.player.containerMenu == opened, "stale management menu replaced current screen");
+            com.moakiee.ae2lt.network.NetworkManagementRequestPacket.handle(
+                    new com.moakiee.ae2lt.network.NetworkManagementRequestPacket(opened.containerId, VIEW), context(f.player));
+            h.assertTrue(f.player.containerMenu instanceof NetworkManagementMenu restored
+                    && restored.initialQuery().search().equals(VIEW.search())
+                    && restored.initialQuery().expandedTypes().equals(VIEW.expandedTypes())
+                    && restored.initialSnapshot().rows().stream().anyMatch(r -> !r.group()), "restored view has no fresh server snapshot");
+            var links = ManagementQuery.initial(ManagementMode.CONNECTIONS);
+            NetworkManagementMenu.open(f.player, f.host, ManagementMode.CONNECTIONS, links, null);
+            var linkMenu = (NetworkManagementMenu) f.player.containerMenu;
+            var controllerRow = linkMenu.initialSnapshot().rows().stream().filter(ManagementRow::canConfigure).findFirst().orElseThrow();
+            linkMenu.openConfiguration(controllerRow.id());
+            h.assertTrue(f.player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu, "link did not open native configuration");
+            RemoteDeviceSession.locator(f.player).session().returnToDevices(f.player);
+            var restored = (NetworkManagementMenu) f.player.containerMenu;
+            h.assertTrue(restored.initialMode() == ManagementMode.CONNECTIONS, "native return lost frequency-link mode");
+            f.player.setPos(f.player.getX() - 20, f.player.getY(), f.player.getZ());
+            restored.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME.ordinal());
+            h.assertTrue(f.player.containerMenu == restored, "out-of-range controller still navigated");
+            h.succeed();
+        });
+    }
+
     private static ManagementRow row(Fixture f) { return ManagementSnapshot.build(f.player, f.host, VIEW).rows().stream().filter(r -> !r.group()).findFirst().orElseThrow(); }
     private static void fixture(GameTestHelper h, Consumer<Fixture> test) {
         var f = base(h); h.setBlock(TARGET, AEBlocks.INTERFACE.block());
