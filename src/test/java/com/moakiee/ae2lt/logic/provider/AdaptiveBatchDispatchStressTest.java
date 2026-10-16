@@ -274,8 +274,7 @@ class AdaptiveBatchDispatchStressTest extends com.moakiee.ae2lt.test.MinecraftCo
             dispatch.prepare(
                     connections,
                     tick,
-                    false,
-                    WirelessDispatchMode.EVEN_DISTRIBUTION);
+                    false);
             int currentTick = tick;
             int[] pushesThisTick = {0};
             remaining = dispatch.dispatchBatch(
@@ -392,8 +391,7 @@ class AdaptiveBatchDispatchStressTest extends com.moakiee.ae2lt.test.MinecraftCo
             dispatch.prepare(
                     connections,
                     tick,
-                    false,
-                    WirelessDispatchMode.EVEN_DISTRIBUTION);
+                    false);
             int currentTick = tick;
             dispatch.dispatchBatch(
                     WirelessDispatchMode.EVEN_DISTRIBUTION,

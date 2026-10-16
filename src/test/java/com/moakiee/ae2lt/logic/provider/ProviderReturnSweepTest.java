@@ -15,6 +15,31 @@ import net.minecraft.world.level.Level;
 
 class ProviderReturnSweepTest extends com.moakiee.ae2lt.test.MinecraftComponentsTestBase {
     @Test
+    void repeatedSnapshotQueriesDoNotTraverseTargetsOrRestartTheRound() {
+        var entries = List.of(target(0), target(1));
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        var snapshot = new java.util.AbstractList<ProviderTarget>() {
+            @Override public ProviderTarget get(int index) { reads.incrementAndGet(); return entries.get(index); }
+            @Override public int size() { return entries.size(); }
+        };
+        var sweep = new ProviderReturnSweep();
+        sweep.synchronize(snapshot, 0);
+        reads.set(0);
+        for (int i = 0; i < 1000; i++) {
+            sweep.synchronize(snapshot, i);
+            assertEquals(9L, sweep.nextDueTick());
+        }
+        assertEquals(0, reads.get());
+        assertSame(entries.getFirst(), sweep.pollDue(9));
+        sweep.recordPeriodic(entries.getFirst(), 9, OutputReturnResult.EMPTY);
+        sweep.synchronize(List.copyOf(entries), 10);
+        assertEquals(19L, sweep.nextDueTick(), "equivalent snapshots preserve progress");
+        sweep.clear();
+        sweep.synchronize(snapshot, 100);
+        assertEquals(109L, sweep.nextDueTick(), "clear must release the snapshot too");
+    }
+
+    @Test
     void emptyRoundsBackOffProviderTo128Ticks() {
         var sweep = new ProviderReturnSweep();
         var target = target(0);

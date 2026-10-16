@@ -42,7 +42,7 @@ class ReconfiguringBatchCadenceRegressionTest {
                 totalProcessed += processed[tick];
                 stored[0] -= processed[tick];
             }
-            dispatch.prepare(List.of(target), tick, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+            dispatch.prepare(List.of(target), tick, false);
             int currentTick = tick;
             dispatch.dispatchBatch(WirelessDispatchMode.EVEN_DISTRIBUTION, pattern,
                     Long.MAX_VALUE / 4, tick, false,

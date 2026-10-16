@@ -50,7 +50,7 @@ class DispatchCostBenchmarkTest extends com.moakiee.ae2lt.test.MinecraftComponen
 
     private static void dispatchTick(ProviderWirelessDispatch dispatch, List<WirelessConnection> targets,
             IPatternDetails pattern, ProviderWirelessDispatch.BatchAttempt attempt, int tick) {
-        dispatch.prepare(targets, tick, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(targets, tick, false);
         long supplied = Long.MAX_VALUE / 4;
         long remaining = dispatch.dispatchBatch(WirelessDispatchMode.EVEN_DISTRIBUTION,
                 pattern, supplied, tick, false, attempt, ignored -> true, ignored -> {

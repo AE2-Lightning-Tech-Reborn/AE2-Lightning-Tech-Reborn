@@ -34,7 +34,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         var healthyCopies = new AtomicInteger();
         for (long tick = 0; tick < 240; tick++) {
             long now = tick;
-            dispatch.prepare(connections, now, fast, WirelessDispatchMode.EVEN_DISTRIBUTION);
+            dispatch.prepare(connections, now, fast);
             ProviderWirelessDispatch.SingleAttempt attempt = target -> {
                 if (target.equals(connections.getFirst())) {
                     if (now < 200) {
@@ -117,7 +117,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
             boolean measured = tick % 2000 >= 200;
             if (finishAt[0] == tick && measured) completed[stage]++;
             long now = tick;
-            dispatch.prepare(targets, now, fast, WirelessDispatchMode.EVEN_DISTRIBUTION);
+            dispatch.prepare(targets, now, fast);
             ProviderWirelessDispatch.SingleAttempt attempt = target -> {
                 if (measured) calls[stage]++;
                 if (finishAt[0] > now) return WirelessPushOutcome.SOFT_FAIL;
@@ -159,7 +159,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
                 .mapToObj(ProviderDispatchTest::connection).toList();
         var owned = new ArrayList<Long>();
         var chunks = new ArrayList<List<Integer>>();
-        dispatch.prepare(connections, 0L, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(connections, 0L, false);
 
         long remaining = dispatch.dispatchBatch(
                 WirelessDispatchMode.EVEN_DISTRIBUTION, pattern, copies, 0L, false, 256,
@@ -205,7 +205,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         var pattern = new ExplosiveEqualityPattern();
         var connections = java.util.stream.IntStream.range(0, 16)
                 .mapToObj(ProviderDispatchTest::connection).toList();
-        dispatch.prepare(connections, 0L, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(connections, 0L, false);
         var visits = new AtomicInteger();
         var shares = new ArrayList<Long>();
         long remaining = dispatch.dispatchBatch(
@@ -226,7 +226,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         var pattern = new ExplosiveEqualityPattern();
         var connections = java.util.stream.IntStream.range(0, 16)
                 .mapToObj(ProviderDispatchTest::connection).toList();
-        dispatch.prepare(connections, 0L, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(connections, 0L, false);
         var visits = new AtomicInteger();
         long remaining = dispatch.dispatchBatch(
                 WirelessDispatchMode.EVEN_DISTRIBUTION, pattern, 16L, 0L, false, 256,
@@ -244,8 +244,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         for (int owned : new int[] {0, 3}) {
             var dispatch = new ProviderWirelessDispatch();
             var pattern = new ExplosiveEqualityPattern();
-            dispatch.prepare(List.of(connection(0), connection(1)), 0L, false,
-                    WirelessDispatchMode.EVEN_DISTRIBUTION);
+            dispatch.prepare(List.of(connection(0), connection(1)), 0L, false);
             var visits = new AtomicInteger();
             long remaining = dispatch.dispatchBatch(
                     WirelessDispatchMode.EVEN_DISTRIBUTION, pattern, 257L, 0L, false, 256,
@@ -263,8 +262,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
     void singleTargetBatchIgnoresMachineParallelism() {
         var dispatch = new ProviderWirelessDispatch();
         var pattern = new ExplosiveEqualityPattern();
-        dispatch.prepare(List.of(connection(0), connection(1)), 0L, false,
-                WirelessDispatchMode.SINGLE_TARGET);
+        dispatch.prepare(List.of(connection(0), connection(1)), 0L, false);
         var shares = new ArrayList<Long>();
         long remaining = dispatch.dispatchBatch(
                 WirelessDispatchMode.SINGLE_TARGET, pattern, 2000L, 0L, false, 256,
@@ -346,8 +344,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 List.of(first, second),
                 200L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
         var visited = new ArrayList<WirelessConnection>();
 
         boolean accepted = dispatch.dispatchSingleCopy(
@@ -379,8 +376,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 unchangedTopology,
                 200L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
 
         boolean acceptedWhileOffline = dispatch.dispatchSingleCopy(
                 WirelessDispatchMode.EVEN_DISTRIBUTION,
@@ -401,8 +397,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 unchangedTopology,
                 201L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
         boolean acceptedAfterReload = dispatch.dispatchSingleCopy(
                 WirelessDispatchMode.EVEN_DISTRIBUTION,
                 null,
@@ -424,8 +419,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 List.of(connection),
                 300L,
-                false,
-                WirelessDispatchMode.SINGLE_TARGET);
+                false);
 
         boolean accepted = dispatch.dispatchSingleCopy(
                 WirelessDispatchMode.SINGLE_TARGET,
@@ -453,8 +447,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 connections,
                 0L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
         var visited = new ArrayList<WirelessConnection>();
 
         long remaining = dispatch.dispatchBatch(
@@ -490,8 +483,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
         dispatch.prepare(
                 connections,
                 0L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
 
         long remaining = dispatch.dispatchBatch(
                 WirelessDispatchMode.EVEN_DISTRIBUTION,
@@ -712,8 +704,7 @@ class ProviderDispatchTest extends com.moakiee.ae2lt.test.MinecraftComponentsTes
             dispatch.prepare(
                     connections,
                     tick,
-                    false,
-                    WirelessDispatchMode.EVEN_DISTRIBUTION);
+                    false);
             var visits = new AtomicInteger();
             var failures = new AtomicInteger();
             long currentTick = tick;
