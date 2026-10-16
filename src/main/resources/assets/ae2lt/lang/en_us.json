@@ -1657,5 +1657,6 @@
   "ae2lt.management.connections": "Frequency Links",
   "ae2lt.management.switch_mode_help": "Switch view: ME devices → Power → Frequency links",
   "ae2lt.management.summary_connections": "%s links · %s rows",
-  "ae2lt.management.state.loaded": "Loaded"
+  "ae2lt.management.state.loaded": "Loaded",
+  "ae2lt.gui.button.current_frequency_settings": "Current Settings"
 }

@@ -268,7 +268,7 @@ public final class WirelessEnergyMenuClientProbe {
                     nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING);
                 }
                 case 42 -> {
-                    assertFrame(); require(frequencyField("currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING, "direct management-to-settings route");
+                    assertFrame(); require(frequencyField("currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING, "management-to-frequency-settings route");
                     nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_DEVICES);
                 }
                 case 43 -> {
@@ -278,7 +278,44 @@ public final class WirelessEnergyMenuClientProbe {
                 case 44 -> {
                     assertFrame(); require(snapshot().offset() == 2 && savedSelection.equals(field("selected"))
                             && ((AETextField)field("search")).getValue().equals("barrel"), "independent power search, scroll and selection retained");
-                    capture("frequency-power-restored.png"); finish(null); return;
+                    capture("frequency-power-restored.png"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME);
+                }
+                case 45 -> {
+                    require(mc.screen.children().stream().noneMatch(e -> e instanceof Button button && button.visible
+                            && button.getMessage().getString().equals(Component.translatable("ae2lt.gui.button.disconnect").getString())), "overview has no duplicate disconnect");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION);
+                }
+                case 46 -> {
+                    ((AETextField)frequencyField("selectionSearchField")).setValue("Renamed");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING);
+                }
+                case 47 -> {
+                    assertFrame(); capture("frequency-merged-settings.png"); clickKey("ae2lt.gui.button.back");
+                }
+                case 48 -> {
+                    require(frequencyField("currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION
+                            && ((AETextField)frequencyField("selectionSearchField")).getValue().equals("Renamed"), "settings returns to frequency list with search retained");
+                    capture("frequency-merged-return.png"); clickKey("ae2lt.gui.button.disconnect");
+                }
+                case 49 -> {
+                    require(((FrequencyScreen)mc.screen).getMenu().getCurrentFrequencyId() <= 0, "disconnect from frequency page updates live menu");
+                    require(!buttonByKey("ae2lt.gui.button.disconnect").active
+                            && !buttonByKey("ae2lt.gui.button.current_frequency_settings").active
+                            && buttonByKey("ae2lt.gui.tab.create").active, "unbound device can create but cannot disconnect or edit a nonexistent frequency");
+                    server(() -> require(((AdvancedWirelessOverloadedControllerBlockEntity)mc.getSingleplayerServer().overworld()
+                            .getBlockEntity(CONTROLLER)).getFrequencyId() <= 0, "server controller disconnected"));
+                    capture("frequency-merged-disconnected.png"); clickContaining("Renamed QA");
+                }
+                case 50 -> {
+                    require(((FrequencyScreen)mc.screen).getMenu().getCurrentFrequencyId() == frequency, "frequency list reconnects the same controller");
+                    require(buttonByKey("ae2lt.gui.button.disconnect").active && buttonByKey("ae2lt.gui.button.current_frequency_settings").active,
+                            "connection actions restored after reconnect");
+                    server(() -> require(((AdvancedWirelessOverloadedControllerBlockEntity)mc.getSingleplayerServer().overworld()
+                            .getBlockEntity(CONTROLLER)).getFrequencyId() == frequency, "server controller reconnected"));
+                    ((AETextField)frequencyField("selectionSearchField")).setValue("");
+                }
+                case 51 -> {
+                    assertFrame(); capture("frequency-merged-list.png"); finish(null); return;
                 }
             }
             phase++;
@@ -295,7 +332,7 @@ public final class WirelessEnergyMenuClientProbe {
         require(integerField("imageWidth") == 304 && integerField("imageHeight") == 252
                 && integerField("leftPos") == frameLeft && integerField("topPos") == frameTop, "identical centered frame across all subpages");
         var buttons = Minecraft.getInstance().screen.children().stream().filter(e -> e instanceof com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton).toList();
-        require(buttons.size() == 5, "five navigation buttons including standalone settings");
+        require(buttons.size() == 4, "four navigation buttons with frequency settings nested");
         require(buttons.stream().filter(e -> ((com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton)e).isSelected()).count() == 1, "exactly one selected navigation page");
     }
     private static void nav(com.moakiee.ae2lt.menu.FrequencyPage page) throws Exception {
@@ -310,10 +347,17 @@ public final class WirelessEnergyMenuClientProbe {
         }
         if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target) return true;
         if (target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE || target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING) {
-            if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target.navigationPage()) clickKey(target.getTranslationKey());
+            if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target.navigationPage()) clickKey(target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING
+                    ? "ae2lt.gui.button.current_frequency_settings" : target.getTranslationKey());
             else clickKey(target.navigationPage().navigationTranslationKey());
         } else clickKey(target.navigationTranslationKey());
         return false;
+    }
+    private static Button buttonByKey(String key) {
+        var label = Component.translatable(key).getString();
+        return Minecraft.getInstance().screen.children().stream()
+                .filter(e -> e instanceof Button button && button.visible && button.getMessage().getString().equals(label))
+                .map(e -> (Button)e).findFirst().orElseThrow();
     }
     private static void clickKey(String key) { click(Component.translatable(key).getString()); }
     private static void clickContaining(String text) {
@@ -384,7 +428,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, five-page navigation with standalone settings and three network modes and one frame, all frequency forms and modals, create/edit round-trips and per-page state restoration"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, four-page navigation with nested frequency settings, live disconnect/reconnect from the frequency list, three network modes and one frame, all frequency forms and modals, create/edit round-trips and per-page state restoration"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}

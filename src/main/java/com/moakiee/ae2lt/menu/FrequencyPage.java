@@ -13,13 +13,13 @@ public enum FrequencyPage {
 
     public static final FrequencyPage[] VALUES = values();
     public static final java.util.List<FrequencyPage> NAVIGATION = java.util.List.of(
-            TAB_HOME, TAB_SELECTION, TAB_MEMBER, TAB_DEVICES, TAB_SETTING);
+            TAB_HOME, TAB_SELECTION, TAB_MEMBER, TAB_DEVICES);
     private final String translationKey;
     FrequencyPage(String translationKey) { this.translationKey = translationKey; }
     public String getTranslationKey() { return translationKey; }
     public boolean isManagement() { return this == TAB_DEVICES || this == TAB_ENERGY || this == TAB_CONNECTION; }
     public FrequencyPage navigationPage() {
-        return this == TAB_CREATE ? TAB_SELECTION : isManagement() ? TAB_DEVICES : this;
+        return this == TAB_CREATE || this == TAB_SETTING ? TAB_SELECTION : isManagement() ? TAB_DEVICES : this;
     }
     public String navigationTranslationKey() {
         return this == TAB_DEVICES ? "ae2lt.management.network" : getTranslationKey();

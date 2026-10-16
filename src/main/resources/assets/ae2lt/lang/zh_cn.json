@@ -1657,5 +1657,6 @@
   "ae2lt.management.connections": "频率链接点",
   "ae2lt.management.switch_mode_help": "切换列表：ME 设备 → 供电 → 频率链接点",
   "ae2lt.management.summary_connections": "%s 个链接点 · %s 行",
-  "ae2lt.management.state.loaded": "已加载"
+  "ae2lt.management.state.loaded": "已加载",
+  "ae2lt.gui.button.current_frequency_settings": "当前频率设置"
 }

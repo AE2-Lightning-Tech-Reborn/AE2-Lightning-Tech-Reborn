@@ -585,12 +585,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         : ManagementViewCache.get(freqMenu().getBlockPos(), freqMenu().getCurrentFrequencyId(), tab.managementMode())).query());
             return;
         }
+        boolean withinFrequency = currentTab.navigationPage() == FrequencyPage.TAB_SELECTION
+                && tab.navigationPage() == FrequencyPage.TAB_SELECTION;
         if (tab != currentTab) formPage = null;
         currentTab = tab;
-        selectionScroll = 0;
+        if (!withinFrequency) {
+            selectionScroll = 0;
+            selectionSearchQuery = "";
+        }
         memberScroll = 0;
         connectionScroll = 0;
-        selectionSearchQuery = "";
         deleteConfirmOpen = false;
         scheduleRebuild();
     }
@@ -613,19 +617,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private void initHomeTab(int x0, int y0) {
         boolean card = freqMenu().isCardMode();
-        int width = card ? 140 : 96;
         if (card) {
             boolean auto = freqMenu().isAutoConnect();
-            addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, width, 16,
+            addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
                     Component.translatable(auto ? "ae2lt.gui.button.auto_connect_on" : "ae2lt.gui.button.auto_connect_off"),
                     btn -> freqMenu().clientToggleAutoConnect()));
         }
-        var disconnect = addRenderableWidget(new AE2Button(x0 + (card ? 156 : 104), y0 + 230, width, 16,
-                Component.translatable("ae2lt.gui.button.disconnect"),
-                btn -> PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
-        disconnect.active = freqMenu().getCurrentFrequencyId() > 0;
         if (freqMenu().usesLocalConnectionList()) {
-            var links = addRenderableWidget(new AE2Button(x0 + 104, y0 + 210, 96, 16,
+            var links = addRenderableWidget(new AE2Button(x0 + (card ? 156 : 104), y0 + 230, card ? 140 : 96, 16,
                     Component.translatable("ae2lt.management.connections"), btn -> switchTab(FrequencyPage.TAB_CONNECTION)));
             links.active = freqMenu().getCurrentFrequencyId() > 0;
         }
@@ -691,11 +690,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         addRenderableWidget(currentScrollbar);
 
         rebuildSelectionRows();
-        addRenderableWidget(new AE2Button(x0 + 156, y0 + 230, 140, 16,
+        boolean connected = freqMenu().getCurrentFrequencyId() > 0;
+        var disconnect = addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 92, 16,
+                Component.translatable("ae2lt.gui.button.disconnect"),
+                btn -> PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
+        disconnect.active = connected;
+        var settings = addRenderableWidget(new AE2Button(x0 + 106, y0 + 230, 92, 16,
+                Component.translatable("ae2lt.gui.button.current_frequency_settings"), btn -> switchTab(FrequencyPage.TAB_SETTING)));
+        settings.active = connected && ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) != null;
+        addRenderableWidget(new AE2Button(x0 + 204, y0 + 230, 92, 16,
                 Component.translatable("ae2lt.gui.tab.create"), btn -> switchTab(FrequencyPage.TAB_CREATE)));
-        // NOTE: no extra "Disconnect" button here — the Home tab already
-        // owns the disconnect action. Duplicating it across tabs gives the
-        // impression of the same widget being created twice.
     }
 
     private java.util.List<com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.CachedFrequency> filteredFrequencies() {
@@ -1029,7 +1033,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             if (settingsPasswordPristine) savedPassword = PASSWORD_SENTINEL;
         }
         formPage = currentTab; formFrequency = freq == null ? -1 : freq.id();
-        if (creating) addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+        addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, creating ? 140 : 92, 16,
                 Component.translatable("ae2lt.gui.button.back"), btn -> switchTab(FrequencyPage.TAB_SELECTION)));
         if (!creating && freq == null) return;
         boolean canEdit = creating || hasManagerAccess();
@@ -1056,7 +1060,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     .bounds(x0 + 82 + (i % 7) * 20, y0 + 155 + (i / 7) * 20, 14, 14).build());
             swatch.active = canEdit;
         }
-        var submit = addRenderableWidget(new AE2Button(x0 + 156, y0 + 230, 140, 16,
+        var submit = addRenderableWidget(new AE2Button(x0 + (creating ? 156 : 204), y0 + 230, creating ? 140 : 92, 16,
                 Component.translatable(creating ? "ae2lt.gui.button.create" : "ae2lt.gui.button.apply"), btn -> {
             if (nameField.getValue().isBlank()) return;
             String password = settingsPasswordPristine ? "" : passwordField.getValue();
@@ -1068,10 +1072,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         submit.active = canEdit && !savedName.isBlank();
         nameField.setResponder(value -> submit.active = canEdit && !value.isBlank());
         if (!creating) {
-            if (hasOwnerAccess()) addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+            if (hasOwnerAccess()) addRenderableWidget(new AE2Button(x0 + 106, y0 + 230, 92, 16,
                     Component.translatable("ae2lt.gui.button.delete").copy().withStyle(ChatFormatting.DARK_RED),
                     btn -> { deleteConfirmOpen = true; scheduleRebuild(); }));
-            else addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
+            else addRenderableWidget(new AE2Button(x0 + 106, y0 + 230, 92, 16,
                     Component.translatable("ae2lt.gui.button.leave"), btn -> {
                 var player = Minecraft.getInstance().player;
                 if (player == null) return;
