@@ -37,8 +37,7 @@ class ProviderWirelessDispatchRecoveryTest {
         dispatch.prepare(
                 unchangedTopology,
                 200L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
 
         boolean acceptedWhileOffline = dispatch.dispatchSingleCopy(
                 WirelessDispatchMode.EVEN_DISTRIBUTION,
@@ -59,8 +58,7 @@ class ProviderWirelessDispatchRecoveryTest {
         dispatch.prepare(
                 unchangedTopology,
                 201L,
-                false,
-                WirelessDispatchMode.EVEN_DISTRIBUTION);
+                false);
         boolean acceptedAfterReload = dispatch.dispatchSingleCopy(
                 WirelessDispatchMode.EVEN_DISTRIBUTION,
                 null,
