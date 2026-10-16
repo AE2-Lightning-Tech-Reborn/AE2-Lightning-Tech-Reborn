@@ -1,0 +1,14 @@
+// Apply after wireless-energy-test.init.gradle; only use with a disposable WirelessEnergyQA save.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/energy/FrequencyCardClientProbe.java',
+                'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java'])
+        neoForge.runs.create('frequencyCardClient') {
+            client()
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('frequencyCardClientDirectory').getOrElse('frequency-card-client')).get().asFile
+            programArguments.addAll '--username', 'WirelessEnergyQA', '--quickPlaySingleplayer', 'WirelessEnergyQA'
+            systemProperty 'ae2lt.frequencyCardClientProbe', 'true'
+            jvmArguments.add '-Xmx1536m'
+        }
+    }
+}

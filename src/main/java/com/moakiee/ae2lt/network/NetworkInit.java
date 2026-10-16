@@ -53,7 +53,7 @@ public final class NetworkInit {
                 WirelessConnectorUsePacket.TYPE,
                 WirelessConnectorUsePacket.STREAM_CODEC,
                 WirelessConnectorUsePacket::handle);
-        registrar.playToServer(
+        registrar.versioned("2").playToServer(
                 FrequencyCardUsePacket.TYPE,
                 FrequencyCardUsePacket.STREAM_CODEC,
                 FrequencyCardUsePacket::handle);

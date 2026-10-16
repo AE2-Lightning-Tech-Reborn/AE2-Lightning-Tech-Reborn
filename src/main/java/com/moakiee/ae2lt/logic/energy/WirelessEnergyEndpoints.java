@@ -36,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 /** FE endpoints never create grid nodes/connections. All access is on the server thread. */
 public final class WirelessEnergyEndpoints extends SavedData {
     private static final int WORLD_LIMIT = 8192;
+    private static final int CLUSTER_LIMIT = 8192;
+    public record BulkResult(boolean bind, int changed, int unchanged, int skipped, boolean unloaded, String error) {}
     public record Location(ResourceKey<Level> dimension, BlockPos pos) {
         public Location { pos = pos.immutable(); }
     }
@@ -122,12 +124,81 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     static @Nullable IEnergyStorage energyInput(ServerLevel level, BlockPos pos, Direction face) {
         var be = loadedBlockEntity(level, pos);
-        return be == null ? null : level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, be.getBlockState(), be, face);
+        if (be == null || excludedInput(be)) return null;
+        if (be instanceof appeng.api.parts.IPartHost host && excludedInput(host.getPart(face))) return null;
+        return level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, be.getBlockState(), be, face);
+    }
+
+    private static boolean excludedInput(@Nullable Object host) {
+        return host instanceof appeng.helpers.InterfaceLogicHost
+                || host instanceof appeng.helpers.patternprovider.PatternProviderLogicHost;
+    }
+
+    /** Select an input without sending or simulating FE; keep the clicked face preferred. */
+    public @Nullable Direction findInputFace(ServerLevel level, BlockPos pos, @Nullable Direction preferred) {
+        if (preferred != null) {
+            var input = energyInput(level, pos, preferred);
+            if (input != null && input.canReceive()) return preferred;
+        }
+        for (var face : Direction.values()) {
+            if (face == preferred) continue;
+            var input = energyInput(level, pos, face);
+            if (input != null && input.canReceive()) return face;
+        }
+        return null;
     }
 
     public boolean isPotentialTarget(ServerLevel level, BlockPos pos, Direction face) {
-        return level.isLoaded(pos) && loadedBlockEntity(level, pos) != null
-                && energyInput(level, pos, face) != null;
+        return findInputFace(level, pos, face) != null;
+    }
+
+    /** The server derives the entire six-neighbour cluster from a reachable seed; clients never submit remote positions. */
+    public BulkResult toggleConnected(ServerPlayer player, int frequency, ServerLevel level, BlockPos seed, Direction preferred) {
+        boolean bind = !isBound(level, seed, frequency);
+        if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
+                || !player.canInteractWithBlock(seed, 1) || !level.mayInteract(player, seed)
+                || level.getChunkSource().getChunkNow(seed.getX() >> 4, seed.getZ() >> 4) == null)
+            return new BulkResult(bind, 0, 0, 0, false, "no_permission");
+        var manager = WirelessFrequencyManager.get(level.getServer());
+        var f = manager == null ? null : manager.getFrequency(frequency);
+        if (f == null || !f.getPlayerAccess(player).canUse())
+            return new BulkResult(bind, 0, 0, 0, false, "no_permission");
+        if (bind && findInputFace(level, seed, preferred) == null)
+            return new BulkResult(true, 0, 0, 0, false, "unsupported");
+        var block = level.getBlockState(seed).getBlock();
+        var queue = new java.util.ArrayDeque<BlockPos>();
+        var seen = new java.util.HashSet<BlockPos>();
+        var cluster = new ArrayList<BlockPos>();
+        queue.add(seed.immutable()); seen.add(seed.immutable());
+        boolean unloaded = false;
+        while (!queue.isEmpty()) {
+            var pos = queue.removeFirst();
+            var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null) { unloaded = true; continue; }
+            if (!chunk.getBlockState(pos).is(block)) continue;
+            if (cluster.size() == CLUSTER_LIMIT)
+                return new BulkResult(bind, 0, 0, 0, unloaded, "cluster_limit");
+            cluster.add(pos);
+            for (var direction : Direction.values()) {
+                var next = pos.relative(direction);
+                if (!level.isOutsideBuildHeight(next) && seen.add(next)) queue.addLast(next);
+            }
+        }
+        int changed = 0, unchanged = 0, skipped = 0;
+        long count = endpoints.values().stream().filter(e -> e.frequency == frequency).count();
+        for (var pos : cluster) {
+            // Capability callbacks from an earlier target may have changed this position.
+            var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+            if (chunk == null || !chunk.getBlockState(pos).is(block)) { skipped++; continue; }
+            boolean before = isBound(level, pos, frequency);
+            var face = bind ? findInputFace(level, pos, preferred) : preferred;
+            if (face == null) { skipped++; continue; }
+            String result = setBound(player, frequency, level, pos, face, bind, "manual", false, count);
+            if (!result.equals(bind ? "connected" : "disconnected")) { skipped++; continue; }
+            if (before == bind) unchanged++;
+            else { changed++; count += bind ? 1 : -1; }
+        }
+        return new BulkResult(bind, changed, unchanged, skipped, unloaded, "");
     }
 
     /** Idempotent desired state supports a later link-management UI without replaying card toggles. */
@@ -137,8 +208,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
                     boolean bind, String source) {
+        return setBound(player, frequency, level, pos, face, bind, source, true, -1);
+    }
+    private String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
+                            boolean bind, String source, boolean requireNearby, long knownCount) {
         if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
-                || !level.isLoaded(pos) || !player.canInteractWithBlock(pos, 1)
+                || !level.isLoaded(pos) || (requireNearby && !player.canInteractWithBlock(pos, 1))
                 || !level.mayInteract(player, pos)) return "no_permission";
         var manager = WirelessFrequencyManager.get(level.getServer());
         var f = manager == null ? null : manager.getFrequency(frequency);
@@ -149,14 +224,14 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (old != null && !old.actor.equals(player.getUUID()) && !f.getPlayerAccess(player).isManager()) return "no_permission";
         if (source.equals("manual")) WirelessEnergyAdmissions.get(level.getServer()).manualOverride(location, player.getUUID(), frequency, face);
         if (!bind) { remove(location); return "disconnected"; }
-        if (old != null) return "connected";
-        if (!AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return "unavailable";
-        if (controller(level.getServer(), frequency) == null) return "no_controller";
-        if (endpoints.size() >= WORLD_LIMIT || endpoints.values().stream()
-                .filter(e -> e.frequency == frequency).count() >= WirelessEnergySettings.endpointLimit.get()) return "limit";
         BlockEntity be = loadedBlockEntity(level, pos);
         var capability = energyInput(level, pos, face);
         if (be == null || capability == null || !capability.canReceive()) return "unsupported";
+        if (old != null) return "connected";
+        if (!AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return "unavailable";
+        if (controller(level.getServer(), frequency) == null) return "no_controller";
+        if (endpoints.size() >= WORLD_LIMIT || (knownCount >= 0 ? knownCount : endpoints.values().stream()
+                .filter(e -> e.frequency == frequency).count()) >= WirelessEnergySettings.endpointLimit.get()) return "limit";
         var controller = controller(level.getServer(), frequency);
         if (controller == null || isBackfeed(be, controller.getMainNode().getGrid())) return "backfeed";
         endpoints.put(location, new Endpoint(UUID.randomUUID(), frequency, location, face, player.getUUID(),

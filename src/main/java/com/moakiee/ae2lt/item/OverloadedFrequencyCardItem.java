@@ -65,7 +65,8 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
                     hit.x,
                     hit.y,
                     hit.z,
-                    net.minecraft.client.gui.screens.Screen.hasShiftDown()));
+                    net.minecraft.client.gui.screens.Screen.hasShiftDown(),
+                    com.moakiee.ae2lt.client.frequency.FrequencyCardBulkInput.controlDown()));
             return InteractionResult.SUCCESS_NO_ITEM_USED;
         }
 
@@ -76,7 +77,10 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (!player.isShiftKeyDown()) {
-            return InteractionResultHolder.pass(stack);
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                    && !com.moakiee.ae2lt.menu.FrequencyMenu.openHeldCard(serverPlayer, hand))
+                return InteractionResultHolder.fail(stack);
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
 
         if (!level.isClientSide()) {
@@ -126,6 +130,8 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         }
         tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.controls")
                 .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.bulk_power").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.auto_controls").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(
                         "tooltip.ae2lt.frequency_card.link_shortcut",
                         Component.keybind("key.ae2lt.toggle_frequency_card_link"))

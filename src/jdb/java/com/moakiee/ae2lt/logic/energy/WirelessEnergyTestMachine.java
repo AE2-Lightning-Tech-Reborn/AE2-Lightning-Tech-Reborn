@@ -25,6 +25,8 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     private static final ResourceLocation ID = ResourceLocation.parse("ae2lt:energy_admission_test_machine");
     static MachineBlock BLOCK;
     static BlockEntityType<WirelessEnergyTestMachine> TYPE;
+    Direction inputFace = Direction.NORTH;
+    int simulations;
     int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor;
     boolean drain, instantTrash, unknown;
     Runnable duringTick = () -> {}, afterReceive = () -> {};
@@ -34,6 +36,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
         ProbeStorage() { super(100000, 100000, 0); }
         void prime(int value) { energy = value; }
         @Override public int receiveEnergy(int amount, boolean simulate) {
+            if (simulate) simulations++;
             int limit = simulate ? receiveLimit : Math.min(receiveLimit, actualLimit);
             int accepted = instantTrash ? Math.min(amount, limit) : super.receiveEnergy(Math.min(amount, limit), simulate);
             if (!simulate) { receiveCalls++; received += accepted; setChanged(); afterReceive.run(); }
@@ -57,7 +60,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
         event.register(Registries.BLOCK_ENTITY_TYPE, ID, () -> TYPE = BlockEntityType.Builder.of(WirelessEnergyTestMachine::new, BLOCK).build(null));
     }
     @SubscribeEvent public static void capabilities(RegisterCapabilitiesEvent event) {
-        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, TYPE, (be, face) -> face == Direction.NORTH ? be.energy : null);
+        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, TYPE, (be, face) -> face == be.inputFace ? be.energy : null);
     }
     static final class MachineBlock extends BaseEntityBlock {
         MachineBlock(Properties properties) { super(properties); }

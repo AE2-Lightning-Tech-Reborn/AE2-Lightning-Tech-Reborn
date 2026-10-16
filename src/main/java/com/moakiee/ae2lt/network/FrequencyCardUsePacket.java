@@ -25,7 +25,8 @@ public record FrequencyCardUsePacket(
         double hitX,
         double hitY,
         double hitZ,
-        boolean shiftDown
+        boolean shiftDown,
+        boolean bulkPower
 ) implements CustomPacketPayload {
     public static final Type<FrequencyCardUsePacket> TYPE =
             new Type<>(NetworkInit.id("frequency_card_use"));
@@ -46,6 +47,7 @@ public record FrequencyCardUsePacket(
                 buf.readDouble(),
                 buf.readDouble(),
                 buf.readDouble(),
+                buf.readBoolean(),
                 buf.readBoolean());
     }
 
@@ -57,6 +59,7 @@ public record FrequencyCardUsePacket(
         buf.writeDouble(hitY);
         buf.writeDouble(hitZ);
         buf.writeBoolean(shiftDown);
+        buf.writeBoolean(bulkPower);
     }
 
     public static void handle(FrequencyCardUsePacket payload, IPayloadContext context) {
@@ -73,7 +76,11 @@ public record FrequencyCardUsePacket(
         if (!player.canInteractWithBlock(pos, 1.0D)) return;
 
         var stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) return;
+        if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) {
+            if (!bulkPower || shiftDown || player.isShiftKeyDown()) return;
+            stack = com.moakiee.ae2lt.item.TerminalCardAccess.findCard(stack);
+            if (stack.isEmpty()) return;
+        }
 
         var be = level.getBlockEntity(pos);
         if (shiftDown || player.isShiftKeyDown()) {
@@ -93,7 +100,7 @@ public record FrequencyCardUsePacket(
         }
 
         tryLinkWithCard(player, stack, level, pos, face,
-                new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ));
+                new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ), bulkPower);
     }
 
     /**
@@ -110,6 +117,11 @@ public record FrequencyCardUsePacket(
             BlockPos pos,
             Direction face,
             net.minecraft.world.phys.Vec3 hitVec) {
+        tryLinkWithCard(player, card, level, pos, face, hitVec, false);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, net.minecraft.world.item.ItemStack card,
+            ServerLevel level, BlockPos pos, Direction face, net.minecraft.world.phys.Vec3 hitVec, boolean bulkPower) {
         if (!validInteraction(player, level, pos, face, hitVec)) return;
         var data = OverloadedFrequencyCardItem.getData(card);
         if (!data.isBound()) {
@@ -130,8 +142,20 @@ public record FrequencyCardUsePacket(
 
         var links = WirelessLinkRegistry.get(level.getServer());
         var energy = com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer());
+        if (bulkPower) {
+            var result = energy.toggleConnected(player, data.frequencyId(), level, pos, face);
+            Component feedback = result.error().isEmpty()
+                    ? Component.translatable("ae2lt.wireless_energy.bulk_" + (result.bind() ? "connected" : "disconnected"),
+                            result.changed(), result.unchanged(), result.skipped()).withStyle(ChatFormatting.GREEN)
+                    : Component.translatable("ae2lt.wireless_energy." + result.error()).withStyle(ChatFormatting.RED);
+            if (result.unloaded()) feedback = Component.empty().append(feedback).append(" ")
+                    .append(Component.translatable("ae2lt.wireless_energy.bulk_unloaded").withStyle(ChatFormatting.YELLOW));
+            player.displayClientMessage(feedback, true);
+            return;
+        }
         boolean aeTarget = links.isPotentialLinkTarget(level, pos);
-        boolean feTarget = energy.isPotentialTarget(level, pos, face)
+        var inputFace = energy.findInputFace(level, pos, face);
+        boolean feTarget = inputFace != null
                 || energy.isBound(level, pos, data.frequencyId());
         if (!feTarget) {
             var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec);
@@ -150,7 +174,7 @@ public record FrequencyCardUsePacket(
             // A combined action follows the AE result; an already-connected physical grid means bind FE.
             bind = !feedback.translationKey().startsWith("ae2lt.frequency_card.disconnected");
         }
-        String result = energy.setBound(player, data.frequencyId(), level, pos, face, bind);
+        String result = energy.setBound(player, data.frequencyId(), level, pos, inputFace == null ? face : inputFace, bind);
         Component feFeedback = Component.translatable("ae2lt.wireless_energy." + result)
                 .withStyle(result.equals("connected") || result.equals("disconnected") ? ChatFormatting.GREEN : ChatFormatting.YELLOW);
         player.displayClientMessage(aeTarget ? Component.empty().append(aeFeedback).append(" | FE: ").append(feFeedback) : feFeedback, true);
