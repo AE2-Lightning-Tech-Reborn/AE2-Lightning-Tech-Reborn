@@ -165,6 +165,3 @@ public class OverloadProcessingFactoryBlock extends AE2LTBaseEntityBlock<Overloa
         level.playSound(player, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 }
-
-
-

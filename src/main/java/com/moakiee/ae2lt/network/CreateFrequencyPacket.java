@@ -48,12 +48,7 @@ public record CreateFrequencyPacket(
                 NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
                 return;
             }
-            // UI rule: "ENCRYPTED without a password is PRIVATE" — silently
-            // downgrade instead of bouncing the request back with a
-            // REQUIRE_PASSWORD error dialog. The client-side Create tab
-            // doesn't force the user to enter a password before allowing
-            // the ENCRYPTED option, so this fallback keeps the two layers
-            // consistent.
+            // Encrypted frequencies without a password become private.
             FrequencySecurityLevel effectiveSecurity = pkt.security;
             if (effectiveSecurity == FrequencySecurityLevel.ENCRYPTED && pkt.password.isBlank()) {
                 effectiveSecurity = FrequencySecurityLevel.PRIVATE;
@@ -63,16 +58,7 @@ public record CreateFrequencyPacket(
             if (freq != null) {
                 UpdateFrequencyBasicPacket.broadcastToPlayers(
                         player.getServer(), UpdateFrequencyBasicPacket.forFrequency(freq));
-                // Push the member list to the creator immediately. The
-                // generic {@link SyncFrequencyDetailPacket#broadcastMembersTo}
-                // filters on "player.containerMenu's current freq id ==
-                // this freq", but a newly-created frequency isn't yet
-                // bound to any device — so without this explicit send
-                // the creator's client frequency cache
-                // never learns they're an OWNER member, and the client's
-                // {@code needsPasswordUnlock} predicate misfires on the
-                // first Select click (pops the password modal for the
-                // creator of an ENCRYPTED freq they just set up).
+                // Send ownership before binding; the normal broadcast only reaches already-bound menus.
                 SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(player, freq.getId());
             }
         });

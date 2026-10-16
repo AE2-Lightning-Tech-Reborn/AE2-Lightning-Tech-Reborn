@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.CooldownTracker;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IOSpeedMode;
-import com.moakiee.ae2lt.logic.TransferPollSchedule;
+import com.moakiee.ae2lt.logic.transfer.TransferPollSchedule;
 
 /** Exercise the actual importer callback contract, including its next-tick drain check. */
 class OverloadedInterfaceImportRecoveryTest {

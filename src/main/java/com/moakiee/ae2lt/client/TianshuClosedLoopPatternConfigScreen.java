@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client;
 import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
+import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.StackSizeRenderer;
 import com.moakiee.ae2lt.client.gui.AE2Button;
@@ -31,6 +32,11 @@ import org.lwjgl.glfw.GLFW;
 /** Server-backed, paged editor for one closed-loop pattern draft. */
 final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic("closed-loop-patterns");
+    }
+
     private static final int SLOT_X = 13;
     private static final int ROW_SLOT_Y_OFFSET = 4;
     private static final int HIDDEN_SLOT = -10000;

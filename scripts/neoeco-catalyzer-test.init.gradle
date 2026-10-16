@@ -1,0 +1,21 @@
+// Presence matrix: -Pneoeco_test_present=true -Pforge_version=47.4.0
+// Default verifies recipe exclusion without Neo ECO on the normal Forge baseline.
+allprojects {
+    afterEvaluate {
+        def present = (project.findProperty('neoeco_test_present') ?: 'false').toBoolean()
+        sourceSets.jdb.java.setIncludes(['**/NeoEcoCatalyzerGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics'])
+        }
+        if (present) {
+            dependencies.add('runtimeOnly', fg.deobf('maven.modrinth:neoecoae:20.3.0'))
+            dependencies.add('runtimeOnly', fg.deobf('maven.modrinth:ldlib:mc1.20.1-1.0.33.b-forge'))
+        }
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_machine_recharge'
+            property 'ae2lt.neoecoTestPresent', present.toString()
+            workingDirectory project.file('build/neoeco-catalyzer-' + (present ? 'present' : 'absent'))
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ExportTransferState;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IOSpeedMode;
-import com.moakiee.ae2lt.logic.TransferPollSchedule;
+import com.moakiee.ae2lt.logic.transfer.TransferPollSchedule;
 
 /** Exercise production timing against finite machines; delays themselves are not the oracle. */
 class OverloadedInterfaceTransferCadenceTest {

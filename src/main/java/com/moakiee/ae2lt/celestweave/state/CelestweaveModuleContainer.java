@@ -14,13 +14,9 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Immutable per-stack persistent state for one Celestweave armor piece. Backs a
- * data component, so it is auto-synced to clients and saved with the stack.
- * Mutations return a new instance (Mekanism-style), which keeps callers from
- * aliasing the stored map and forces a {@code stack.set} to re-sync.
- *
- * <p>{@code energyModuleCapacityFe} empty means "never computed" (legacy stacks);
- * present (even 0) means the cache is valid.
+ * Per-stack armor state persisted through {@code ModDataComponents}. Mutations return
+ * a new container. Empty {@code energyModuleCapacityFe} means not computed;
+ * a present value, including zero, is valid.
  */
 public record CelestweaveModuleContainer(
         Optional<UUID> armorId,
@@ -63,6 +59,21 @@ public record CelestweaveModuleContainer(
         tag.put("submodule_data", dataTag);
         energyModuleCapacityFe.ifPresent(v -> tag.putLong("energy_capacity_fe", v));
         return tag;
+    }
+
+    /** Forge stores components as raw NBT, so persist legacy normalization on first access. */
+    public static boolean needsMigration(CompoundTag tag) {
+        if (tag.getCompound("toggles").contains("undying")
+                || tag.getCompound("submodule_data").contains("undying")) return true;
+        boolean overload = false;
+        boolean absorbedShield = false;
+        for (var entry : tag.getList("modules", Tag.TAG_COMPOUND)) {
+            String id = ((CompoundTag) entry).getString("id");
+            if (id.equals("ae2lt:module_undying")) return true;
+            overload |= id.equals("ae2lt:module_overload_protection");
+            absorbedShield |= id.equals("ae2lt:module_phase_shield") || id.equals("ae2lt:module_defense_matrix");
+        }
+        return overload && absorbedShield;
     }
 
     public static CelestweaveModuleContainer load(CompoundTag tag) {

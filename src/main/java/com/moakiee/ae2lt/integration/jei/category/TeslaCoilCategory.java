@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -131,7 +133,7 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
 
         Component energyText = Component.translatable(
                 "jei.ae2lt.tesla_coil.energy",
-                formatCompactEnergy(mode.totalEnergy()));
+                compactEnergy(mode.totalEnergy()));
         drawCentered(guiGraphics, font, energyText, TEXT_LINES[1]);
 
         Component inputText;
@@ -189,24 +191,6 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
                 ICON_SIZE,
                 ICON_SIZE,
                 ICON_SHEET_H);
-    }
-
-    private static String formatCompactEnergy(long energy) {
-        if (energy >= 1_000_000L) {
-            return formatCompactValue(energy / 1_000_000D, "m");
-        }
-        if (energy >= 1_000L) {
-            return formatCompactValue(energy / 1_000D, "k");
-        }
-        return Long.toString(energy);
-    }
-
-    private static String formatCompactValue(double value, String suffix) {
-        double rounded = Math.round(value * 10.0D) / 10.0D;
-        if (Math.abs(rounded - Math.rint(rounded)) < 0.0001D) {
-            return Long.toString(Math.round(rounded)) + suffix;
-        }
-        return rounded + suffix;
     }
 
     public enum Page {

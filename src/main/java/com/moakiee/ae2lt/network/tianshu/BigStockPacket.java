@@ -36,7 +36,6 @@ public record BigStockPacket(int containerId, Map<AEKey, BigInteger> changed)
         return new BigStockPacket(id, Map.copyOf(result));
     }
 
-
     public static void handle(BigStockPacket packet, Supplier<NetworkEvent.Context> context) {
         var ctx = context.get();
         ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(

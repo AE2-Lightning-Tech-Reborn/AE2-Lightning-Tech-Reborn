@@ -15,13 +15,13 @@ class WirelessTianshuAe2wtlibContractTest {
     @Test
     void menuAndStyleExposeTheEntangledSingularity() throws Exception {
         String menu = readJava("menu/TianshuWirelessPatternEncodingTermMenu.java");
-        String screen = readJava("client/TianshuWirelessPatternEncodingTermScreen.java");
+        String screen = readJava("client/tianshu/TianshuWirelessPatternEncodingTermScreen.java");
         String style = Files.readString(MAIN.resolve(Path.of(
                 "resources/assets/ae2/screens/wireless_tianshu_pattern_encoding_terminal.json")));
         String terminalStyle = Files.readString(MAIN.resolve(Path.of(
                 "resources/assets/ae2/screens/terminals/tianshu_pattern_encoding_terminal.json")));
         String guidePage = Files.readString(MAIN.resolve(Path.of(
-                "resources/assets/ae2lt/ae2guide/tianshu/pattern-encoding-terminal.md")));
+                "resources/assets/ae2lt/ae2guide/terminals/pattern-encoding-terminal.md")));
 
         assertTrue(menu.contains("PlacableItemType.QE_SINGULARITY"));
         assertTrue(menu.contains("AE2wtlibSlotSemantics.SINGULARITY"));

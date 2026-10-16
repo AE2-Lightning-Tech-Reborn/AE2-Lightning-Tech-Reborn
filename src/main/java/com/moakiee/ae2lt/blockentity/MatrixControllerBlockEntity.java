@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.jetbrains.annotations.Nullable;
+
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.block.MatrixControllerBlock;
 import com.moakiee.ae2lt.block.MatrixFormedBlock;
@@ -35,6 +37,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 import com.moakiee.ae2lt.crafting.matrix.core.CraftingCoreHost;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.ae2lt.crafting.matrix.core.MolecularCopyAssembler;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
@@ -62,7 +65,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.core.RegistryAccess;
 
 public class MatrixControllerBlockEntity extends BlockEntity
         implements CraftingCoreHost, MatrixCraftingEnergy {
@@ -135,6 +137,8 @@ public class MatrixControllerBlockEntity extends BlockEntity
     private int autoBuildPlacedBlocks;
     private long nextAutoBuildTick;
     private long lastObservedClusterThreads = -1L;
+    private final com.moakiee.ae2lt.logic.craft.migration.MatrixPatternMigration patternMigration =
+            new com.moakiee.ae2lt.logic.craft.migration.MatrixPatternMigration(this);
 
     public MatrixControllerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATRIX_CONTROLLER.get(), pos, blockState);
@@ -148,6 +152,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         if (level.isClientSide) {
             return;
         }
+        be.patternMigration.tick();
         if (!be.persistentStateOwner) {
             if (be.formed) be.deform();
             return;
@@ -255,6 +260,14 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     public boolean isCraftingBusy() {
         return cluster.isBusy();
+    }
+
+    public boolean hasPendingMigrationWork() {
+        return cluster.threadsInFlight() > 0;
+    }
+
+    public com.moakiee.ae2lt.logic.craft.migration.MatrixPatternMigration getPatternMigration() {
+        return patternMigration;
     }
 
     public void performAction(MatrixControllerActionPacket.Action action, ServerPlayer player) {
@@ -736,6 +749,8 @@ public class MatrixControllerBlockEntity extends BlockEntity
      * UUID-keyed SavedData.
      */
     public void prepareForControllerRemoval() {
+        patternMigration.stop(com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot.Reason.TARGET_CHANGED);
+        patternMigration.dropRecovery();
         if (!persistentStateOwner || !(level instanceof ServerLevel)) return;
         cluster.tryReleaseOutputs();
         persistRuntimeStateIfChanged();
@@ -1322,6 +1337,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        patternMigration.writeTo(tag);
         tag.putBoolean(TAG_FORMED, formed);
         tag.putInt(TAG_ORIENTATION, orientation.get3DDataValue());
         if (portPos != null) {
@@ -1342,6 +1358,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
+        patternMigration.readFrom(tag);
         formed = tag.getBoolean(TAG_FORMED);
         structureCacheValid = false;
         structureCacheValidationRequired = true;
@@ -1377,6 +1394,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     @Override
     public void onChunkUnloaded() {
+        patternMigration.stop(com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot.Reason.TARGET_CHANGED);
         persistRuntimeStateIfChanged();
         suspendRuntime();
         releasePersistentState();
@@ -1385,6 +1403,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     @Override
     public void setRemoved() {
+        patternMigration.stop(com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot.Reason.TARGET_CHANGED);
         persistRuntimeStateIfChanged();
         suspendRuntime();
         releasePersistentState();

@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.blockentity;
 
 import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
-import com.moakiee.ae2lt.logic.ManualItemExport;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -53,9 +53,9 @@ import com.moakiee.ae2lt.block.OverloadProcessingFactoryBlock;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
-import com.moakiee.ae2lt.logic.AdjacentItemAutoExportHelper;
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
 import com.moakiee.ae2lt.logic.FluidStackHelper;
-import com.moakiee.ae2lt.logic.MemoryCardConfigSupport;
+import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
 import com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank;
@@ -209,7 +209,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
         if (target == null) {
             return false;
         }
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.insertFromCarried(player, target);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.insertFromCarried(player, target);
         if (changed) {
             saveChanges();
         }
@@ -222,7 +222,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
         if (target == null) {
             return false;
         }
-        boolean changed = com.moakiee.ae2lt.logic.FluidTankInteractionHelper.extractToCarried(player, target);
+        boolean changed = com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.extractToCarried(player, target);
         if (changed) {
             saveChanges();
         }
@@ -235,7 +235,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
         if (target == null || target.getFluid().isEmpty()) {
             return;
         }
-        com.moakiee.ae2lt.logic.FluidTankInteractionHelper.clear(target);
+        com.moakiee.ae2lt.logic.transfer.FluidTankInteractionHelper.clear(target);
         saveChanges();
     }
 

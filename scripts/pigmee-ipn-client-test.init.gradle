@@ -1,0 +1,33 @@
+// Use a disposable PigmeeIpnTest world in build/pigmee-ipn-client/saves.
+// -PpigmeeIpnMode=fixed|absent
+allprojects {
+    afterEvaluate {
+        def mode = project.findProperty('pigmeeIpnMode') ?: 'fixed'
+        if (!(mode in ['fixed', 'absent'])) throw new GradleException('Unknown IPN probe mode: ' + mode)
+        sourceSets.jdb.java.setIncludes(['**/PigmeeIpnClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics'])
+        }
+        if (mode == 'fixed') {
+            dependencies.add('runtimeOnly', fg.deobf("maven.modrinth:inventory-profiles-next:${inventory_profiles_next_version}"))
+            dependencies.add('runtimeOnly', fg.deobf('maven.modrinth:libipn:forge-1.20-4.0.2'))
+            dependencies.add('runtimeOnly', 'maven.modrinth:kotlin-for-forge:4.12.0')
+        }
+        def probeDir = project.file('build/pigmee-ipn-client')
+        def result = new File(probeDir, 'pigmee-ipn-' + mode + '.txt')
+        minecraft.runs.client {
+            workingDirectory probeDir
+            property 'ae2lt.pigmeeIpnMode', mode
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'PigmeeIpnTest', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst { result.delete() }
+            doLast {
+                if (!result.isFile() || !result.text.startsWith('PASS'))
+                    throw new GradleException('IPN probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

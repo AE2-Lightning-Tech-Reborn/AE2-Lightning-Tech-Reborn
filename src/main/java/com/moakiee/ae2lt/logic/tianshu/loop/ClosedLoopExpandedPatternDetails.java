@@ -10,7 +10,6 @@ import com.moakiee.thunderbolt.core.crafting.loop.IPrioritizedCraftingTask;
 import com.moakiee.thunderbolt.core.crafting.pattern.IProviderLookupPattern;
 import com.moakiee.thunderbolt.core.crafting.loop.ISeedPreservingCraftingTask;
 import com.moakiee.thunderbolt.core.crafting.loop.IPlannedSeedSlotPattern;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;

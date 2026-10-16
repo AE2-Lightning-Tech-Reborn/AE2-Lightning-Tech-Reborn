@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.machine.common;
 import com.moakiee.ae2lt.machine.lightningchamber.LargeStackItemHandler;
 import net.minecraft.world.item.ItemStack;
 
+/** A bounded, one-shot operation. Each machine owns its cooldown, including across menu reopenings. */
 public final class ManualInputTransfer {
     public static final int COOLDOWN_TICKS = 4;
     public static final int EXPORT_ATTEMPTS = 12;
@@ -25,9 +26,7 @@ public final class ManualInputTransfer {
             return true;
         }
 
-        public boolean hasRemaining() {
-            return remaining > 0;
-        }
+        public boolean hasRemaining() { return remaining > 0; }
     }
 
     public Result execute(long gameTime, LargeStackItemHandler inventory,
@@ -43,22 +42,21 @@ public final class ManualInputTransfer {
         Budget budget = new Budget();
         try {
             inventory.batchChanges(() -> {
+                // Capture the click's inputs before calling external storage.
                 ItemStack[] inputs = new ItemStack[inputCount];
-                for (int input = 0; input < inputCount; input++) {
-                    inputs[input] = inventory.getStackInSlot(firstInput + input).copy();
-                }
+                for (int i = 0; i < inputCount; i++) inputs[i] = inventory.getStackInSlot(firstInput + i).copy();
                 totals[1] += exporter.export(budget);
-                for (int input = 0; input < inputCount; input++) {
-                    ItemStack snapshot = inputs[input];
+                for (int i = 0; i < inputCount; i++) {
+                    ItemStack snapshot = inputs[i];
                     int remaining = snapshot.getCount();
                     while (remaining > 0) {
-                        ItemStack current = inventory.getStackInSlot(firstInput + input);
+                        ItemStack current = inventory.getStackInSlot(firstInput + i);
                         if (!ItemStack.isSameItemSameTags(snapshot, current)) break;
                         int moved = 0;
                         for (int pass = 0; pass < 2; pass++) {
                             for (int output = firstOutput; output < firstOutput + outputCount; output++) {
                                 if (inventory.getStackInSlot(output).isEmpty() != (pass == 1)) continue;
-                                int amount = inventory.moveToOutput(firstInput + input, output, remaining);
+                                int amount = inventory.moveToOutput(firstInput + i, output, remaining);
                                 remaining -= amount;
                                 moved += amount;
                             }
@@ -67,13 +65,14 @@ public final class ManualInputTransfer {
                         totals[0] += moved;
                         long exported = budget.hasRemaining() ? exporter.export(budget) : 0;
                         totals[1] += exported;
+                        // No unbounded retry when a receiver only accepts tiny amounts.
                         if (remaining == 0 || exported == 0) break;
                     }
                 }
             });
             int remainingSlots = 0;
-            for (int input = 0; input < inputCount; input++) {
-                if (!inventory.getStackInSlot(firstInput + input).isEmpty()) remainingSlots++;
+            for (int i = 0; i < inputCount; i++) {
+                if (!inventory.getStackInSlot(firstInput + i).isEmpty()) remainingSlots++;
             }
             return new Result(true, totals[0], totals[1], remainingSlots);
         } finally {

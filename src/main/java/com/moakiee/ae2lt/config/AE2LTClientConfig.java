@@ -65,9 +65,7 @@ public final class AE2LTClientConfig {
         return TIANSHU_INTERCEPT_DUPLICATE_ENCODING.get();
     }
 
-    public static boolean jeiWirelessSupply() {
-        return TIANSHU_JEI_WIRELESS_SUPPLY.get();
-    }
+    public static boolean jeiWirelessSupply() { return TIANSHU_JEI_WIRELESS_SUPPLY.get(); }
 
     public static void setJeiWirelessSupply(boolean enabled) {
         TIANSHU_JEI_WIRELESS_SUPPLY.set(enabled);

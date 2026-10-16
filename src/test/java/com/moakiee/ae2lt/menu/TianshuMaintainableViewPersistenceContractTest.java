@@ -17,12 +17,12 @@ class TianshuMaintainableViewPersistenceContractTest {
         String menu = Files.readString(JAVA_ROOT.resolve(
                 "menu/TianshuPatternEncodingTermMenu.java"));
         String overview = Files.readString(JAVA_ROOT.resolve(
-                "client/TianshuGlobalReserveScreen.java"));
+                "client/tianshu/TianshuGlobalReserveScreen.java"));
 
         assertTrue(menu.contains("this.maintainableView = host.isMaintainableView()"));
         assertTrue(menu.contains("if (persist) tianshuHost.setMaintainableView(maintainableView)"));
         assertTrue(menu.contains("applyTerminalViewMode(mode, true)"));
-        assertTrue(menu.contains("TianshuTerminalViewMode.from(getTerminalViewMode().viewItems(), false), false)"));
+        assertTrue(menu.contains("mode -> applyTerminalViewMode(mode, false)"));
         assertTrue(overview.contains("menu.setMaintainableViewTemporarily(false)"));
         assertTrue(overview.contains("menu.setMaintainableViewTemporarily(true)"));
     }

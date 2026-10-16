@@ -7,14 +7,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 
-/**
- * 自定义音效注册。
- *
- * <p>当前每个 SoundEvent 在 sounds.json 里通过 {@code "type": "event"} 重定向到
- * vanilla 等价音效（amethyst chime / thunder / generic explode），充当 placeholder：
- * 即使没放任何 .ogg 文件，运行时听感与替换前完全一致。未来填充自定义 .ogg
- * 时仅需修改 sounds.json，调用代码无需改动。
- */
+/** Sound events mapped to vanilla sounds by sounds.json. */
 public final class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
             DeferredRegister.create(Registries.SOUND_EVENT, AE2LightningTech.MODID);

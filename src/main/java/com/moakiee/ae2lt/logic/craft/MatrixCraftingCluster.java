@@ -19,6 +19,7 @@ import com.moakiee.ae2lt.crafting.matrix.core.CraftingCore;
 import com.moakiee.ae2lt.crafting.matrix.core.CraftingCoreHost;
 import com.moakiee.ae2lt.crafting.matrix.core.CraftingCoreRegistry;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
+import org.jetbrains.annotations.Nullable;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
 import org.jetbrains.annotations.Nullable;
 
@@ -208,6 +209,8 @@ public final class MatrixCraftingCluster {
 
     public boolean isWorking() {
         long now = host.getGameTime();
+        // CPU dispatch runs after the controller's tick. Preserve the activity indication through
+        // the next render-state publication even when direct delivery left no buffered threads.
         return engine.threadsInFlight() > 0 || lastSuccessfulDispatchTick == now
                 || lastSuccessfulDispatchTick == now - 1;
     }

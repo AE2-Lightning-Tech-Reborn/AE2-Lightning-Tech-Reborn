@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe;
 import dev.emi.emi.api.stack.EmiStack;
@@ -98,7 +100,7 @@ final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessi
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.overload_processing.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
+                        compactEnergy(recipe.totalEnergy())),
                 WIDTH / 2,
                 70);
         EmiRecipeWidgets.centeredText(

@@ -10,14 +10,15 @@ import org.junit.jupiter.api.Test;
 
 import com.moakiee.ae2lt.celestweave.module.MultidimensionalProtectionSubmodule;
 import com.moakiee.ae2lt.celestweave.module.ResistanceSubmodule;
+import com.moakiee.ae2lt.celestweave.module.OverloadProtectionSubmodule;
 
 final class MultidimensionalProtectionContractTest {
     @Test
-    void occupiesShieldInstallGroup() {
+    void sharesTheMitigationInstallGroupWithOtherShields() {
         var groups = MultidimensionalProtectionSubmodule.INSTANCE.installGroupIds();
 
         assertTrue(groups.contains(ResistanceSubmodule.INSTALL_GROUP));
-        assertTrue(groups.size() == 1);
+        assertTrue(groups.contains(OverloadProtectionSubmodule.INSTANCE.installGroupId()));
     }
 
     @Test
@@ -50,9 +51,11 @@ final class MultidimensionalProtectionContractTest {
 
         int undyingFree = undying.indexOf(
                 "if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId()))");
+        int ordinaryBranch = undying.indexOf("var quote = ShieldChargeWindow.quoteLastStand(", undyingFree);
         int undyingPayment = undying.indexOf("ArmorShieldPayment.pay(", undyingFree);
-        assertTrue(undyingFree >= 0 && undyingFree < undyingPayment);
-        String freeBranch = undying.substring(undyingFree, undyingPayment);
+        assertTrue(undyingFree >= 0 && undyingFree < ordinaryBranch);
+        assertTrue(ordinaryBranch < undyingPayment);
+        String freeBranch = undying.substring(undyingFree, ordinaryBranch);
         assertTrue(freeBranch.contains("recordProtectedTick(player, now)"));
         assertTrue(freeBranch.contains("restoreSurvivalState(player)"));
         assertFalse(freeBranch.contains("ArmorLightningService"));

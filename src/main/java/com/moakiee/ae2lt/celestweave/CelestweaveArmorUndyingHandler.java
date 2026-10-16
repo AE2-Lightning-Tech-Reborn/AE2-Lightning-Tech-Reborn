@@ -27,6 +27,8 @@ import com.moakiee.ae2lt.registry.ModDamageTypes;
 @EventBusSubscriber(modid = AE2LightningTech.MODID)
 public final class CelestweaveArmorUndyingHandler {
     private static final String TAG_PROTECTED_TICK = "ae2lt.undying_protected_tick";
+    // Untyped forced-death hooks may re-enter via setHealth/kill/loot in the same tick.
+    // Typed damage callbacks instead deduplicate by their shared Object.
 
     private CelestweaveArmorUndyingHandler() {
     }
@@ -43,13 +45,13 @@ public final class CelestweaveArmorUndyingHandler {
                 || damage < player.getHealth() + player.getAbsorptionAmount()) {
             return;
         }
+        // The old incoming last-stand shortcut must not price a huge hit as a flat revival.
+        // Both replacement tiers carry a shield; bill the actual hit through that path first.
+        // Direct death and post-mitigation fatal damage retain the last-stand hooks below.
         if (hasActiveLastStand(player)) {
             var result = CelestweaveArmorDamageHandler.onIncomingDamage(player, event.getSource(), damage);
-            if (result.canceled()) {
-                event.setCanceled(true);
-            } else {
-                event.setAmount(result.amount());
-            }
+            if (result.canceled()) event.setCanceled(true);
+            else event.setAmount(result.amount());
         }
     }
 
@@ -62,13 +64,15 @@ public final class CelestweaveArmorUndyingHandler {
         if (damage <= 0.0F || damage < player.getHealth() + player.getAbsorptionAmount()) {
             return;
         }
-        long now = player.level().getGameTime();
-        if (wasProtectedThisTick(player)) {
-            event.setAmount(0.0F);
-        } else if (hasActiveLastStand(player)
+        // Forge uses different event objects for Hurt and Damage. A reopened shielded hit
+        // must reuse its ordinary-damage credit instead of advancing the death combo.
+        if (hasActiveLastStand(player)
                 && CelestweaveArmorDamageHandler.onIncomingDamage(player, event.getSource(), damage).canceled()) {
             event.setAmount(0.0F);
-        } else if (tryTrigger(player, now, event)) {
+            return;
+        }
+        long now = player.level().getGameTime();
+        if (tryTrigger(player, now, event)) {
             event.setAmount(0.0F);
         }
     }
@@ -139,7 +143,8 @@ public final class CelestweaveArmorUndyingHandler {
         return tryProtectForcedDeath(player);
     }
 
-    private static boolean tryTrigger(ServerPlayer player, long now, Object damage) {
+    private static boolean tryTrigger(ServerPlayer player, long now,
+            Object damage) {
         for (var active : collectActiveLastStand(player)) {
             if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId())) {
                 recordProtectedTick(player, now);
@@ -197,11 +202,10 @@ public final class CelestweaveArmorUndyingHandler {
     private static List<ActiveLastStand> collectActiveLastStand(ServerPlayer player) {
         return ArmorCapabilityCollector.collectPerInstalledStack(player).stream()
                 .flatMap(active -> {
-                    if (active.capability() instanceof DeviceCapability.LastStandTuning tuning) {
+                    if (active.capability() instanceof DeviceCapability.LastStandTuning) {
                         return java.util.stream.Stream.of(new ActiveLastStand(
                                 active.armor(),
-                                active.submoduleId(),
-                                tuning));
+                                active.submoduleId()));
                     }
                     return java.util.stream.Stream.empty();
                 })
@@ -210,7 +214,6 @@ public final class CelestweaveArmorUndyingHandler {
 
     private record ActiveLastStand(
             ItemStack armor,
-            String submoduleId,
-            DeviceCapability.LastStandTuning tuning) {
+            String submoduleId) {
     }
 }

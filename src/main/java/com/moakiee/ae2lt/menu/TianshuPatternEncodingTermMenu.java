@@ -21,7 +21,7 @@ import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.util.SlotPositionAccess;
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.logic.AdvancedAECompat;
+import com.moakiee.ae2lt.logic.compat.AdvancedAECompat;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryService;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopDiscoveryCandidate;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopMemberPattern;
@@ -43,24 +43,14 @@ import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternTerminalDraft;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalTarget;
-import com.moakiee.ae2lt.logic.tianshu.terminal.MaintenanceEditorData;
 import com.moakiee.ae2lt.logic.tianshu.terminal.PatternEncodingDuplicateFilter;
 import com.moakiee.ae2lt.me.GridNodeAccess;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceRule;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceStatus;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.MaintenanceTopologyService;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceService;
-import com.moakiee.ae2lt.network.tianshu.MaintenanceEditorSyncPacket;
-import com.moakiee.ae2lt.network.tianshu.OpenMaintenanceEditorPacket;
-import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.overload.pattern.PatternConversionService;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -69,7 +59,6 @@ import com.moakiee.ae2lt.item.OverloadPatternItem;
 import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.Ae2PlainPatternResolver;
-import com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternDefinition;
 import net.minecraft.server.level.ServerPlayer;
 import com.moakiee.ae2lt.network.PacketSender;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
@@ -79,7 +68,6 @@ import appeng.api.config.Settings;
 import appeng.api.config.ViewItems;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
-import com.moakiee.ae2lt.network.tianshu.MaintenanceSummarySyncPacket;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestUploadTargetsPacket;
@@ -87,15 +75,11 @@ import com.moakiee.ae2lt.network.tianshu.UploadPatternToTargetPacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.EnumMap;
 import java.util.Map;
-import com.moakiee.ae2lt.network.tianshu.SaveGlobalReservePacket;
-import com.moakiee.ae2lt.network.tianshu.TianshuPacketLimits;
 import com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot;
 import net.minecraft.world.entity.player.Player;
 import org.anti_ad.mc.ipn.api.IPNIgnore;
-import net.minecraft.core.RegistryAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -673,7 +657,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void clear() {
         if (isClientSide()) {
-            com.moakiee.ae2lt.client.TianshuRecipeTransferContext.clear(this);
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.clear(this);
             clearClientUploadSelectionState();
         }
         resetProcessingEncodingType();
@@ -1346,7 +1330,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                         source,
                         new Ae2PlainPatternResolver(getPlayer().level())).orElse(null);
                 if (restored == null
-                        || !replaceProcessingInventories(restored.parsedPattern())) {
+                        || !replaceProcessingInventories(details)) {
                     return;
                 }
                 var advancedConfig = advanced == null ? null
@@ -1375,20 +1359,25 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         }
     }
 
-    private boolean replaceProcessingInventories(ParsedPatternDefinition pattern) {
+    private boolean replaceProcessingInventories(appeng.api.crafting.IPatternDetails pattern) {
         var inputs = nullableStackList(tianshuHost.getLogic().getEncodedInputInv().size());
         var outputs = nullableStackList(tianshuHost.getLogic().getEncodedOutputInv().size());
-        for (var input : pattern.inputs()) {
-            if (input.slotIndex() >= inputs.size()) return false;
-            var stack = GenericStack.fromItemStack(input.stack());
-            if (stack == null) return false;
-            inputs.set(input.slotIndex(), stack);
+        var patternInputs = pattern.getInputs();
+        if (patternInputs.length > inputs.size() || pattern.getOutputs().length > outputs.size()) return false;
+        for (int slot = 0; slot < patternInputs.length; slot++) {
+            var input = patternInputs[slot];
+            var possible = input.getPossibleInputs();
+            if (possible.length == 0) return false;
+            // AE2 separates an input's template amount from its multiplier. The overload edit
+            // metadata only carries templates; restore quantities from the runtime definition,
+            // without converting long amounts through ItemStack's int-sized count.
+            var stack = possible[0];
+            long amount = Math.multiplyExact(stack.amount(), input.getMultiplier());
+            if (amount <= 0) return false;
+            inputs.set(slot, new GenericStack(stack.what(), amount));
         }
-        for (var output : pattern.outputs()) {
-            if (output.slotIndex() >= outputs.size()) return false;
-            var stack = GenericStack.fromItemStack(output.stack());
-            if (stack == null) return false;
-            outputs.set(output.slotIndex(), stack);
+        for (int slot = 0; slot < pattern.getOutputs().length; slot++) {
+            outputs.set(slot, pattern.getOutputs()[slot]);
         }
         return replaceProcessingInventories(inputs, outputs);
     }
@@ -1871,6 +1860,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     private void applyTerminalViewMode(TianshuTerminalViewMode mode, boolean persist) {
         if (mode == null) return;
+        // Keep the newest local selection while older server config/sync packets are in flight.
         if (isClientSide()) clientViewMode = mode;
         maintainableView = mode == TianshuTerminalViewMode.MAINTAINABLE;
         getConfigManager().putSetting(Settings.VIEW_MODE, mode.viewItems());
@@ -1890,7 +1880,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public void encode() {
         if (isClientSide()) {
             beginClientEncoding(
-                    com.moakiee.ae2lt.client.TianshuUploadTriggerClient.shouldTrigger(), false);
+                    com.moakiee.ae2lt.client.tianshu.TianshuUploadTriggerClient.shouldTrigger(), false);
             return;
         }
         encodeServerWithOptions(false);
@@ -1911,7 +1901,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void beginClientEncoding(boolean triggerUpload, boolean directUpload) {
-        com.moakiee.ae2lt.client.TianshuRecipeTransferContext.beginEncoding(
+        com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.beginEncoding(
                 this, tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
         pendingTriggeredUpload = triggerUpload;
         pendingDirectUpload = triggerUpload && directUpload;
@@ -1930,13 +1920,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             boolean carriesNetworkBlank = isRefundableEncodedPattern(
                     encodedInventory.getStackInSlot(0));
             boolean stagedNetworkBlank = false;
+            var processingInputs = snapshotProcessingInputs();
+            var processingOutputs = snapshotProcessingOutputs();
             ae2EncodingInProgress = true;
             try {
                 stagedNetworkBlank = stageNetworkBlankPattern();
                 try (var ignored = ExtendedAEPlusEncodingCompat.suppressAutomaticUpload(this)) {
                     super.encode();
                 }
-                applyConfiguredProcessingConversion();
+                applyConfiguredProcessingConversion(processingInputs, processingOutputs);
             } finally {
                 ae2EncodingInProgress = false;
                 if (stagedNetworkBlank) returnStagedBlankPatternToNetwork();
@@ -2124,6 +2116,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void settleNetworkBlankCharge() {
+        // Encoding already consumed the blank. A failed upload leaves the paid encoded item
+        // in its slot for the player to retry, edit or remove; it must not dismantle the item.
         refundableEncodedPattern = ItemStack.EMPTY;
     }
 
@@ -2148,14 +2142,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     /** Applies the persistent processing configuration to the freshly encoded pattern. */
-    private void applyConfiguredProcessingConversion() {
+    private void applyConfiguredProcessingConversion(
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         if (tianshuMode != TianshuEncodingMode.PROCESSING
                 || processingEncodingType == ProcessingPatternEncodingType.NORMAL) return;
         var inventory = tianshuHost.getLogic().getEncodedPatternInv();
         var source = inventory.getStackInSlot(0);
         if (source.isEmpty()) return;
         var converted = convertConfiguredProcessingPattern(
-                source, getAdvancedEncodingConfig(), getOverloadEncodingConfig());
+                source, getAdvancedEncodingConfig(), getOverloadEncodingConfig(), draftInputs, draftOutputs);
         if (converted != null && !converted.isEmpty()) {
             inventory.setItemDirect(0, converted);
         }
@@ -2165,14 +2160,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private ItemStack convertConfiguredProcessingPattern(
             ItemStack source,
             @Nullable ProcessingPatternEncodingType.AdvancedConfig advancedConfig,
-            @Nullable ProcessingPatternEncodingType.OverloadConfig overloadConfig) {
+            @Nullable ProcessingPatternEncodingType.OverloadConfig overloadConfig,
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         ItemStack converted = source;
         if (advancedConfig != null) {
             converted = convertToAdvanced(converted, advancedConfig);
             if (converted == null || converted.isEmpty()) return null;
         }
         if (overloadConfig != null) {
-            converted = convertToOverload(converted, overloadConfig);
+            converted = convertToOverload(converted, overloadConfig, draftInputs, draftOutputs);
             if (converted == null || converted.isEmpty()) return null;
         }
         return converted;
@@ -2190,7 +2186,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     @Nullable
     private ItemStack convertToOverload(
-            ItemStack source, @Nullable ProcessingPatternEncodingType.OverloadConfig config) {
+            ItemStack source, @Nullable ProcessingPatternEncodingType.OverloadConfig config,
+            List<GenericStack> draftInputs, List<GenericStack> draftOutputs) {
         if (config == null) return null;
         try {
             var editable = conversionService.resolveEditableSource(
@@ -2200,11 +2197,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             var parsed = editable.parsedPattern();
             var builder = EncodedOverloadPattern.builder();
             for (var input : parsed.inputs()) {
-                builder.input(input.slotIndex(), config.isInputIdOnly(input.slotIndex())
+                builder.input(input.slotIndex(), isEncodedSlotIdOnly(
+                        AEItemKey.of(input.stack()), draftInputs, config::isInputIdOnly)
                         ? MatchMode.ID_ONLY : MatchMode.STRICT);
             }
             for (var output : parsed.outputs()) {
-                builder.output(output.slotIndex(), config.isOutputIdOnly(output.slotIndex())
+                builder.output(output.slotIndex(), isEncodedSlotIdOnly(
+                        AEItemKey.of(output.stack()), draftOutputs, config::isOutputIdOnly)
                         ? MatchMode.ID_ONLY : MatchMode.STRICT);
             }
             return conversionService.createOverloadPatternStack(
@@ -2212,6 +2211,20 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         } catch (RuntimeException ignored) {
             return null;
         }
+    }
+
+    private static boolean isEncodedSlotIdOnly(
+            AEKey key, List<GenericStack> draft, java.util.function.IntPredicate idOnly) {
+        boolean found = false;
+        for (int slot = 0; slot < draft.size(); slot++) {
+            var stack = draft.get(slot);
+            if (stack == null || !stack.what().equals(key)) continue;
+            // AE2 removes blank slots and merges equal keys. Attach the mode to the original
+            // item, not its former screen index; a merged strict requirement stays strict.
+            if (!idOnly.test(slot)) return false;
+            found = true;
+        }
+        return found;
     }
 
     private ItemStack encodeSelectedClosedLoopCandidate() {

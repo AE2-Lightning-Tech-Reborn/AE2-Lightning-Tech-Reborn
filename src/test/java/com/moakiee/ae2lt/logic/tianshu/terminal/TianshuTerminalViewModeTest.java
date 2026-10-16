@@ -26,7 +26,7 @@ class TianshuTerminalViewModeTest {
     private static List<String> cycle(boolean reverse) {
         var result = new ArrayList<String>();
         var mode = TianshuTerminalViewMode.ALL;
-        for (int index = 0; index < 4; index++) {
+        for (int i = 0; i < 4; i++) {
             mode = mode.next(reverse);
             result.add(mode.name());
         }

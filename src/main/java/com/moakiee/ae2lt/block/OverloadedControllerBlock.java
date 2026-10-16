@@ -19,14 +19,7 @@ import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import appeng.menu.me.networktool.NetworkStatusMenu;
 
-/**
- * Minimal custom controller block shell.
- * Keeps controller-like blockstate properties on our own block so later channel
- * logic can remain owner-scoped instead of patching the vanilla controller.
- * <p>
- * Important: this block only handles AE2LT's own controller visuals and
- * right-click menu entry. It does not alter vanilla AE2 controller behavior.
- */
+/** Controller block with AE2LT-specific render states. */
 public class OverloadedControllerBlock extends AE2LTBaseEntityBlock<OverloadedControllerBlockEntity> {
 
     public OverloadedControllerBlock() {

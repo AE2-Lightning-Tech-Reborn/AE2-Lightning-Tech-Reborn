@@ -152,6 +152,18 @@ public final class ExecuteLoopPattern implements IPatternDetails, IProviderLooku
     }
     public UUID seedConsumerId() { return seedConsumerId; }
     public KeyCounter initialSeed() { return copy(initialSeed); }
+
+    /** Job-local loan size; encoded pattern settings and per-dispatch flows stay unchanged. */
+    public ExecuteLoopPattern withInitialSeedMultiplier(int multiplier) {
+        if (multiplier <= 1 || initialSeed.isEmpty()) return this;
+        var scaled = new KeyCounter();
+        for (var seed : initialSeed) {
+            scaled.add(seed.getKey(), com.moakiee.thunderbolt.core.crafting.planner.Sat.mul(
+                    seed.getLongValue(), multiplier));
+        }
+        return new ExecuteLoopPattern(delegate, seedConsumerId, scaled, inputSeed,
+                outputSeedCredits, sharedOutputSeedCredits);
+    }
     public KeyCounter inputSeed() { return copy(inputSeed); }
     public Map<UUID, KeyCounter> outputSeedCredits() {
         return copyCredits(outputSeedCredits);

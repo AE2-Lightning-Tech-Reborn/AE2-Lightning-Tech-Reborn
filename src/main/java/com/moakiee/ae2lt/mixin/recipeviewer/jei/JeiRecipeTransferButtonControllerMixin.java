@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.mixin.recipeviewer.jei;
 
-import com.moakiee.ae2lt.client.JeiRecipeTransferMetadata;
-import com.moakiee.ae2lt.client.TianshuDirectUploadClient;
+import com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata;
+import com.moakiee.ae2lt.client.tianshu.TianshuDirectUploadClient;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.gui.recipes.RecipeTransferButton;
@@ -35,6 +35,8 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
         JeiRecipeTransferMetadata.clear();
     }
 
+    // JEI 15 moved UserInput and replaced parentContainer with a screen supplier. The layout
+    // is read only after simulated clicks and missing transfer targets have been rejected.
     @Inject(
             method = {
                     "onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z",
@@ -66,6 +68,7 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
         // pending-direct-upload request. Do not sample the physical modifier again here: JEI
         // may run this close callback after its input state has advanced, which would close the
         // recipe page even though the direct upload is already armed.
+        // Pinned recipes have their own success callback, which must still run.
         if (recipeScreen instanceof RecipesGui
                 && player != null
                 && player.containerMenu instanceof TianshuPatternEncodingTermMenu tianshuMenu

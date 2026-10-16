@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -111,6 +110,23 @@ final class LoopSeedLedgerBook {
         for (var seed : sharedMaximum.entrySet()) {
             adjust(ExecuteLoopPattern.SHARED_SEED_ACCOUNT_ID, seed.getKey(), seed.getValue());
         }
+    }
+
+    /** Adds optional exact seed loans before dispatch, preserving already-bound host variants. */
+    void increaseInitialSeedLoans(
+            List<ExecuteLoopPattern> previous, List<ExecuteLoopPattern> expanded) {
+        var before = new LoopSeedLedgerBook();
+        before.initialize(previous);
+        var after = new LoopSeedLedgerBook();
+        after.initialize(expanded);
+        for (var account : after.ledgers.entrySet()) {
+            for (var seed : account.getValue().entrySet()) {
+                long increase = seed.getValue() - before.balance(account.getKey(), seed.getKey());
+                if (increase > 0) adjust(account.getKey(), seed.getKey(), increase);
+            }
+        }
+        // Do not initialize this book again: the minimum loan may already have been assigned to
+        // physical tool/component variants. Additional loans use exact planned keys only.
     }
 
     /** Package-private deterministic initializer used by focused accounting tests. */
@@ -514,8 +530,8 @@ final class LoopSeedLedgerBook {
                 var planned = GenericStack.readTag(
                         ruleTag.getCompound(TAG_PLANNED));
                 if (planned == null) continue;
-                var exact = readRuleKeys(ruleTag, TAG_RULE_EXACT, registries);
-                var fuzzy = readRuleKeys(ruleTag, TAG_RULE_FUZZY, registries);
+                var exact = readRuleKeys(ruleTag, TAG_RULE_EXACT);
+                var fuzzy = readRuleKeys(ruleTag, TAG_RULE_FUZZY);
                 variantRules
                         .computeIfAbsent(consumer, ignored -> new LinkedHashMap<>())
                         .merge(planned.what(),
@@ -596,9 +612,9 @@ final class LoopSeedLedgerBook {
                 var ruleTag = new CompoundTag();
                 ruleTag.put(TAG_PLANNED, GenericStack.writeTag(
                         new GenericStack(planned, 1L)));
-                writeRuleKeys(ruleTag, TAG_RULE_EXACT, rule.exactVariants(), registries);
+                writeRuleKeys(ruleTag, TAG_RULE_EXACT, rule.exactVariants());
                 writeRuleKeys(
-                        ruleTag, TAG_RULE_FUZZY, rule.fuzzyIdentities(), registries);
+                        ruleTag, TAG_RULE_FUZZY, rule.fuzzyIdentities());
                 long bundleUnits = consumerBundleUnits
                         .getOrDefault(consumer, Map.of()).getOrDefault(planned, 0L);
                 if (consumerBundleUnits.getOrDefault(consumer, Map.of()).containsKey(planned)) {
@@ -768,8 +784,7 @@ final class LoopSeedLedgerBook {
 
     private static Set<AEKey> readRuleKeys(
             CompoundTag owner,
-            String name,
-            HolderLookup.Provider registries) {
+            String name) {
         var result = new LinkedHashSet<AEKey>();
         var tags = owner.getList(name, Tag.TAG_COMPOUND);
         for (int i = 0; i < tags.size(); i++) {
@@ -782,8 +797,7 @@ final class LoopSeedLedgerBook {
     private static void writeRuleKeys(
             CompoundTag owner,
             String name,
-            Set<AEKey> keys,
-            HolderLookup.Provider registries) {
+            Set<AEKey> keys) {
         if (keys.isEmpty()) return;
         var tags = new ListTag();
         for (var key : keys) {

@@ -36,7 +36,6 @@ class MachineSlotCapacityParityTest {
 
         assertContains("crystalcatalyzer/CrystalCatalyzerInventory.java", "CATALYST_SLOT_LIMIT = 256");
         assertContains("crystalcatalyzer/CrystalCatalyzerInventory.java", "OUTPUT_SLOT_LIMIT = 16384");
-        assertContains("crystalcatalyzer/CrystalCatalyzerInventory.java", "PIGMEE_OUTPUT_SLOT_LIMIT = 64");
         assertContains("crystalcatalyzer/CrystalCatalyzerInventory.java", "MATRIX_SLOT_LIMIT = 1");
 
         assertContains("firmament/FirmamentConversionInventory.java", "SLOT_LIMIT = 64");

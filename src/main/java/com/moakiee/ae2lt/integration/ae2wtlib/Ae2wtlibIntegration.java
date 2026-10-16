@@ -78,10 +78,10 @@ public final class Ae2wtlibIntegration {
      */
     public static void verifyTerminalRegistration() {
         var definition = WUTHandler.wirelessTerminals.get(TIANSHU_TERMINAL_NAME);
-        int tianshuIndex = WUTHandler.terminalNames.indexOf(TIANSHU_TERMINAL_NAME);
-        if (definition == null || tianshuIndex < 0
-                || definition.item() != ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get()) {
-            throw new IllegalStateException("AE2WTLib did not register the wireless Tianshu terminal");
+        var expected = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
+        if (definition == null || !WUTHandler.terminalNames.contains(TIANSHU_TERMINAL_NAME)
+                || definition.item() != expected) {
+            throw new IllegalStateException("AE2WTLib did not register Tianshu terminal " + TIANSHU_TERMINAL_NAME);
         }
     }
 
@@ -93,8 +93,9 @@ public final class Ae2wtlibIntegration {
      */
     public static void register() {
         UpgradeHelper.addUpgradeToAllTerminals(ModItems.OVERLOADED_FREQUENCY_CARD.get(), 1);
+        // WTLib's initial sweep can precede our item-registry callback on Forge.
         var terminal = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
-        Upgrades.add(AE2wtlib.QUANTUM_BRIDGE_CARD, terminal, 1);
-        Upgrades.add(AEItems.ENERGY_CARD, terminal, 2);
+        appeng.api.upgrades.Upgrades.add(de.mari_023.ae2wtlib.AE2wtlib.QUANTUM_BRIDGE_CARD, terminal, 1);
+        appeng.api.upgrades.Upgrades.add(appeng.core.definitions.AEItems.ENERGY_CARD, terminal, 2);
     }
 }

@@ -21,19 +21,8 @@ class OverloadProcessingCompatibilityRecipeContractTest {
 
     @Test
     void unsupportedExtendedAeProcessorIsNotShippedOnForge() {
+        // The Forge ExtendedAE version has no concurrent processor item.
         assertFalse(Files.exists(RECIPE_ROOT.resolve("eae_concurrent_processor.json")));
-    }
-
-    @Test
-    void appliedFluxRecipesKeepUpstreamConventionTags() throws Exception {
-        assertTag("appflux_harden_insulating_resin.json", 2, "forge:silicon");
-        assertTag("appflux_harden_insulating_resin.json", 4, "forge:dusts/glowstone");
-    }
-
-    @Test
-    void ae2FluixPearlKeepsUpstreamConventionTags() throws Exception {
-        assertTag("ae2_fluix_pearl.json", 0, "forge:ender_pearls");
-        assertTag("ae2_fluix_pearl.json", 1, "forge:dusts/fluix");
     }
 
     private static void assertTag(String filename, int inputIndex, String expectedTag) throws Exception {

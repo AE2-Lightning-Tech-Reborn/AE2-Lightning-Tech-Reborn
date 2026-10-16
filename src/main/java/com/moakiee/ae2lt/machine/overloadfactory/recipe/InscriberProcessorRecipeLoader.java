@@ -37,6 +37,7 @@ public final class InscriberProcessorRecipeLoader {
                     existing.add(new RecipeHolder<>(entry.getKey(), nativeRecipe));
                 }
             } catch (IllegalArgumentException | com.google.gson.JsonParseException invalid) {
+                // The normal recipe loader reports malformed original recipes.
             }
         }
         int count = 0;

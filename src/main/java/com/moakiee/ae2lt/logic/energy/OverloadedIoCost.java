@@ -12,6 +12,7 @@ final class OverloadedIoCost {
             return 0.0;
         }
         long perOperation = Math.max(1L, amountPerOperation);
+        // Positive ceiling division without overflowing an unlimited request.
         return 1L + (amount - 1L) / perOperation;
     }
 

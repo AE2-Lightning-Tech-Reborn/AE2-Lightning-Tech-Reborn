@@ -20,10 +20,11 @@
  *       {@link com.moakiee.ae2lt.api.event.LightningCollectedEvent}</li>
  * </ul>
  *
- * <h2>Constraints on the API package itself</h2>
- * <p>Code under {@code com.moakiee.ae2lt.api.*} only depends on JDK, Minecraft,
- * Forge, AE2 public API, and other types from the same {@code api} sub-tree. It
- * does not import any non-api package of this mod, so addons can compile against
- * the API surface without pulling in implementation classes.
+ * <h2>Compilation and implementation boundaries</h2>
+ * <p>Compile against the complete AE2LT artifact and its declared dependencies.
+ * Public facade implementations delegate to internal classes; this package is
+ * not a standalone API-only JAR. New contracts expose JDK, Minecraft, Forge,
+ * AE2 and public AE2LT types. Legacy signatures that expose implementation types
+ * remain for binary compatibility; prefer the documented public alternatives.
  */
 package com.moakiee.ae2lt.api;

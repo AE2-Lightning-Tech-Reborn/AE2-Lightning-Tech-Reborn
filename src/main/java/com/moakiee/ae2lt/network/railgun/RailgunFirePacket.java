@@ -9,22 +9,18 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
-
 /**
- * Server to client: a charged shot fired with the listed chain segments. The
- * client uses this to render electric arcs along each segment plus a flash
- * at the first hit.
+ * Server-to-client charged-shot effects. The client resolves the shooter's barrel
+ * for the trail origin and falls back to {@code from}.
  *
- * @param shooterId   id of the firing player; the client looks them up to compute the
- *                    gun-barrel position so the visual plasma trail emanates from the
- *                    weapon, not from the eye/screen-center.
- * @param from        the eye position the shot was fired from (server fallback)
- * @param firstHit    the impact location (entity hit position, or block-hit point on miss)
- * @param chainPath   pairs of points (from, to) for each chain segment to render
- * @param tier        charge tier ordinal (0=HV, 1=EHV1, 2=EHV2, 3=EHV3)
- * @param isMax       true on max-tier shots
- * @param soundEnabled true when railgun-specific sounds should play client-side
- * @param impactRadius radius (blocks) of the impact splash AOE for shockwave rendering
+ * @param shooterId firing player
+ * @param from server eye position used as a fallback
+ * @param firstHit primary entity or block impact
+ * @param chainPath endpoint pairs for arc segments
+ * @param tier charge tier (0=HV, 1=EHV1, 2=EHV2, 3=EHV3)
+ * @param isMax whether this is a maximum-tier shot
+ * @param soundEnabled whether to play railgun sounds
+ * @param impactRadius splash radius in blocks for the shockwave
  */
 public record RailgunFirePacket(
         UUID shooterId,
@@ -71,5 +67,4 @@ public void write(FriendlyByteBuf buf) {
         ctx.setPacketHandled(true);
     }
 
-    /** Compile-time guard on unused imports. */
 }

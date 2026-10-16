@@ -14,7 +14,7 @@ import appeng.api.stacks.AEKeyType;
 import appeng.api.storage.MEStorage;
 import appeng.blockentity.AEBaseBlockEntity;
 import appeng.me.storage.CompositeStorage;
-import com.moakiee.ae2lt.logic.ManualItemExport;
+import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
 import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
 import com.moakiee.ae2lt.machine.lightningchamber.LargeStackItemHandler;
 import com.moakiee.ae2lt.registry.ModBlocks;

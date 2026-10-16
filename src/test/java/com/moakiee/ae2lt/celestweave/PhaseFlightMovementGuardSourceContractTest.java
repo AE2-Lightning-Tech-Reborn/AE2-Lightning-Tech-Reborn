@@ -67,7 +67,7 @@ class PhaseFlightMovementGuardSourceContractTest {
         String phaseFlight = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/celestweave/module/PhaseFlightSubmodule.java"));
         String clientHandler = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java"));
         String packetMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/ServerGamePacketListenerPhaseMovementMixin.java"));
         String clientMixin = Files.readString(Path.of(
@@ -221,7 +221,7 @@ class PhaseFlightMovementGuardSourceContractTest {
     }
 
     @Test
-    void commandQueuesBindTheirInitiatingSourceWithFinallySafeCleanup() throws Exception {
+    void commandExecutionUsesVanillaFinallyLifetimeWithoutWrappingDispatch() throws Exception {
         String commandMixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/CommandsPhaseTeleportMixin.java"));
         String guard = Files.readString(Path.of(
@@ -230,8 +230,15 @@ class PhaseFlightMovementGuardSourceContractTest {
 
         assertTrue(commandMixin.contains("@Mixin(Commands.class)"));
         assertTrue(commandMixin.contains("performPrefixedCommand"));
-        assertTrue(commandMixin.contains("runAsCommandExecution("));
-        assertTrue(commandMixin.contains("CommandSourceStack source"));
+        assertTrue(commandMixin.contains("performCommand(Lcom/mojang/brigadier/ParseResults;Ljava/lang/String;)I"));
+        assertTrue(commandMixin.contains("ProfilerFiller;push(Ljava/util/function/Supplier;)V"));
+        assertTrue(commandMixin.contains("ProfilerFiller;pop()V"));
+        assertTrue(commandMixin.contains("previousCommandSource"));
+        assertTrue(commandMixin.contains("PhaseFlightMovementGuard.bindCommandSource(parseResults.getContext().getSource())"));
+        assertTrue(commandMixin.contains("PhaseFlightMovementGuard.restoreCommandSource(previousSource.get())"));
+        assertFalse(commandMixin.contains("@WrapMethod"));
+        assertFalse(guard.contains("runAsCommandExecution("));
+        assertTrue(commandMixin.contains("ParseResults<CommandSourceStack> parseResults"));
         assertTrue(guard.contains("CommandSourceStack previous = COMMAND_SOURCE.get()"));
         assertTrue(guard.contains("COMMAND_SOURCE.remove()"));
         assertTrue(mixinConfig.contains("CommandsPhaseTeleportMixin"));

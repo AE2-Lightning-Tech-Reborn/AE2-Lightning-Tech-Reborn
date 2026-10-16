@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import appeng.client.guidebook.PageAnchor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -33,6 +34,12 @@ import org.lwjgl.glfw.GLFW;
 /** Inventory-maintenance and Tianshu-wide reserved-stock overview. */
 public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends AESubScreen<M, TianshuMaintenanceTermScreen<M>> {
+    @Override
+    protected PageAnchor getHelpTopic() {
+        return TianshuMaintenanceTermScreen.terminalHelpTopic(
+                view == View.RESERVES ? "global-reserves" : "inventory-maintenance");
+    }
+
     private static final int LIST_LEFT = 9;
     private static final int LIST_RIGHT = 187;
     private static final int LIST_CENTER_X = (LIST_LEFT + LIST_RIGHT) / 2;
@@ -476,6 +483,11 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
 
     private static final class GlobalReserveEditScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
             extends AESubScreen<M, TianshuGlobalReserveScreen<M>> {
+        @Override
+        protected PageAnchor getHelpTopic() {
+            return TianshuMaintenanceTermScreen.terminalHelpTopic("global-reserves");
+        }
+
         private static final int VARIANT_FIRST_ROW = 134;
         private static final int VARIANT_ROW_HEIGHT = 17;
         private static final int VISIBLE_VARIANTS = 3;

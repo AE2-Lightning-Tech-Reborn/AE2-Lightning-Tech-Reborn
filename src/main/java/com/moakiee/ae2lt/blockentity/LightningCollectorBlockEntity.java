@@ -19,6 +19,9 @@ import appeng.menu.locator.MenuLocator;
 
 import com.moakiee.ae2lt.block.LightningCollectorBlock;
 import com.moakiee.ae2lt.api.event.LightningCollectedEvent;
+import com.moakiee.ae2lt.api.event.LightningCaptureCompletedEvent;
+import com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi;
+import com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalBehavior;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
@@ -70,6 +73,7 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
     private int cooldownTicks;
     private int workingTicks;
     private long lastCaptureGameTime = Long.MIN_VALUE;
+    private boolean captureInProgress;
     private long lastNaturalCultivationGameTime = Long.MIN_VALUE;
 
     public LightningCollectorBlockEntity(BlockPos pos, BlockState blockState) {
@@ -151,6 +155,16 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
     public OutputPreview getPreview(LightningKey.Tier tier) {
         ItemStack crystal = getInstalledCrystal();
         boolean extremeHighVoltage = tier == LightningKey.Tier.EXTREME_HIGH_VOLTAGE;
+        var behavior = CollectorCrystalApi.find(crystal);
+        if (behavior != null) {
+            int min = extremeHighVoltage ? AE2LTCommonConfig.lightningCollectorEhvBaseMin()
+                    : AE2LTCommonConfig.lightningCollectorHvBaseMin();
+            int max = extremeHighVoltage ? AE2LTCommonConfig.lightningCollectorEhvBaseMax()
+                    : AE2LTCommonConfig.lightningCollectorHvBaseMax();
+            var output = behavior.preview(crystal, LightningKey.toApiTier(tier),
+                    new CollectorCrystalBehavior.OutputRange(Math.min(min, max), Math.max(min, max)));
+            return new OutputPreview(output.min(), output.max());
+        }
         if (crystal.isEmpty()) {
             int baseMin = extremeHighVoltage
                     ? AE2LTCommonConfig.lightningCollectorEhvBaseMin()
@@ -193,6 +207,16 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
     }
 
     public boolean captureLightning(boolean naturalWeatherLightning) {
+        if (captureInProgress) return false;
+        captureInProgress = true;
+        try {
+            return performCapture(naturalWeatherLightning);
+        } finally {
+            captureInProgress = false;
+        }
+    }
+
+    private boolean performCapture(boolean naturalWeatherLightning) {
         if (!(level instanceof ServerLevel serverLevel) || cooldownTicks > 0 || hasCapturedThisTick(serverLevel)) {
             return false;
         }
@@ -205,6 +229,8 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
         LightningKey.Tier tier = naturalWeatherLightning
                 ? LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                 : LightningKey.Tier.HIGH_VOLTAGE;
+        ItemStack originalCrystal = getInstalledCrystal();
+        var behavior = CollectorCrystalApi.find(originalCrystal);
         OutputPreview preview = getPreview(tier);
         int rolledOutput = preview.roll(serverLevel.random);
         if (rolledOutput <= 0) {
@@ -238,7 +264,8 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
             return false;
         }
 
-        if (tier == LightningKey.Tier.EXTREME_HIGH_VOLTAGE && canCultivateFromNaturalStrike(serverLevel)) {
+        if (behavior == null && getInstalledCrystal() == originalCrystal
+                && tier == LightningKey.Tier.EXTREME_HIGH_VOLTAGE && canCultivateFromNaturalStrike(serverLevel)) {
             if (cultivateCrystal(serverLevel.random)) {
                 lastNaturalCultivationGameTime = serverLevel.getGameTime();
             }
@@ -250,6 +277,24 @@ public class LightningCollectorBlockEntity extends AENetworkBlockEntity
         updateWorkingBlockState(true);
         saveChanges();
         markForUpdate();
+        if (behavior != null && getInstalledCrystal() == originalCrystal) {
+            try {
+                var replacement = java.util.Objects.requireNonNull(behavior.onCaptured(
+                        new CollectorCrystalBehavior.Capture(serverLevel, worldPosition, LightningKey.toApiTier(tier),
+                                naturalWeatherLightning, amountToInsert, inserted, this::getInstalledCrystal),
+                        originalCrystal));
+                if (getInstalledCrystal() == originalCrystal && replacement != originalCrystal) {
+                    inventory.setStackInSlot(LightningCollectorInventory.SLOT_CRYSTAL, replacement);
+                }
+            } catch (RuntimeException failure) {
+                LOG.error("Collector crystal callback failed after capture at {}", worldPosition, failure);
+            } finally {
+                saveChanges();
+                markForUpdate();
+            }
+        }
+        MinecraftForge.EVENT_BUS.post(new LightningCaptureCompletedEvent(serverLevel, worldPosition,
+                LightningKey.toApiTier(tier), naturalWeatherLightning, amountToInsert, inserted));
         return true;
     }
 

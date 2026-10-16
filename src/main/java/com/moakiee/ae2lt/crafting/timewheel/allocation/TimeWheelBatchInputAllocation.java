@@ -32,6 +32,15 @@ public final class TimeWheelBatchInputAllocation {
             ListCraftingInventory inventory, long copies, boolean shared,
             Map<AEKey, Long> reserved, Level level,
             Supplier<ParallelBatchCpuHelper.BulkResult> original) {
+        return extract(pattern, inventory, copies, shared, reserved, level,
+                ParallelBatchCpuHelper.currentBatchCapacityLimiter(pattern, inventory), original);
+    }
+
+    public static ParallelBatchCpuHelper.BulkResult extract(IPatternDetails pattern,
+            ListCraftingInventory inventory, long copies, boolean shared,
+            Map<AEKey, Long> reserved, Level level,
+            ParallelBatchCpuHelper.BatchCapacityLimiter capacityLimiter,
+            Supplier<ParallelBatchCpuHelper.BulkResult> original) {
         var scope = CURRENT.get();
         if (scope == null || scope.pattern != pattern || scope.inventory != inventory) {
             return original.get();
@@ -40,7 +49,7 @@ public final class TimeWheelBatchInputAllocation {
         // extraction path. Never fall back to an unguarded native batch for an LT allocation.
         if (!TimeWheelInputExtractor.canExportNativeBatch()) return null;
         var result = TimeWheelInputExtractor.bulkExtract(pattern, inventory, copies, shared, reserved, level,
-                (visible, requested) -> scope.allocator.allocate(pattern, visible, level, requested));
+                (visible, requested) -> scope.allocator.allocate(pattern, visible, level, requested), capacityLimiter);
         if (result == null) return null;
         try {
             return TimeWheelInputExtractor.exportNativeBatch(result);

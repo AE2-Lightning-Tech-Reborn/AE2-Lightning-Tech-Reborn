@@ -35,7 +35,7 @@ class HyperdimensionalPigmeeResearchContractTest {
         String rewardEntity = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/entity/RitualHyperdimensionalPigmeeEntity.java"));
         String renderer = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/RitualHyperdimensionalPigmeeRenderer.java"));
+                "src/main/java/com/moakiee/ae2lt/client/render/RitualHyperdimensionalPigmeeRenderer.java"));
         String burstPacket = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/network/RitualItemBurstPacket.java"));
         String burstClient = Files.readString(Path.of(

@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
+import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
+
 import com.moakiee.ae2lt.lightning.LightningTransformRecipe;
 import com.moakiee.ae2lt.machine.firmament.recipe.FirmamentConversionRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
@@ -62,7 +64,7 @@ final class EmiLightningAssemblyRecipe extends EmiBackedRecipe<LightningAssembly
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.lightning_assembly.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
+                        compactEnergy(recipe.totalEnergy())),
                 WIDTH / 2,
                 80);
         EmiRecipeWidgets.centeredText(
@@ -101,7 +103,7 @@ final class EmiLightningSimulationRecipe extends EmiBackedRecipe<LightningSimula
                 widgets,
                 Component.translatable(
                         "jei.ae2lt.lightning_simulation.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
+                        compactEnergy(recipe.totalEnergy())),
                 WIDTH / 2,
                 66);
         EmiRecipeWidgets.centeredText(

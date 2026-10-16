@@ -22,6 +22,7 @@ public abstract class JeiWirelessSupplyMixin {
             AbstractContainerMenu menu, Object recipe, IRecipeSlotsView slots, Player player,
             boolean maximum, boolean doTransfer, Operation<IRecipeTransferError> original) {
         return JeiWirelessSupplyClient.transfer(handler, menu, recipe, slots, player, maximum, doTransfer,
-                (max, take) -> original.call(handler, menu, recipe, slots, player, max, take));
+                (max, take, partialSlots) -> original.call(handler, menu, recipe,
+                        partialSlots == null ? slots : partialSlots, player, max, take));
     }
 }

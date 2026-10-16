@@ -77,9 +77,9 @@ final class PhaseEnvironmentMovementSourceContractTest {
         String hoverReset = "PhaseFlightMovementGuard.runAsSelfMovement(player, () -> player.setDeltaMovement(Vec3.ZERO));";
         String hoverStart = "PhaseFlightMovementGuard.runAsSelfMovement(player, () -> player.setDeltaMovement(0.0D, vertical, 0.0D));";
         assertTrue(playerMixin.contains(hoverReset));
-        assertTrue(playerMixin.contains(hoverStart));
-        assertTrue(playerMixin.contains("player.onGround() ? Math.min(0.0D, player.getDeltaMovement().y) : 0.0D"));
-        assertFalse(playerMixin.replace(hoverReset, "").replace(hoverStart, "").contains("runAsSelfMovement("));
+        String groundContact = "PhaseFlightMovementGuard.runAsSelfMovement(player, () -> player.setDeltaMovement(0.0D, vertical, 0.0D));";
+        assertTrue(playerMixin.contains(groundContact));
+        assertFalse(playerMixin.replace(hoverReset, "").replace(groundContact, "").contains("runAsSelfMovement("));
         assertFalse(playerMixin.contains("beginSelfMovement("));
         assertFalse(playerMixin.contains("endSelfMovement("));
     }

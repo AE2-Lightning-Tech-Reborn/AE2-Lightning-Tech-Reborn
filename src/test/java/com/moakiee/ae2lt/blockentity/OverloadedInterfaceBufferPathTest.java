@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap;
 
 import org.junit.jupiter.api.Test;
 
@@ -107,7 +108,7 @@ class OverloadedInterfaceBufferPathTest {
 
     @Test
     void rejectedPrefixDoesNotLockAnUntouchedTailOfTheSameKeyType() {
-        var buffer = new LinkedHashMap<AEKey, Long>();
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>();
         TestKey tail = null;
         var rejected = new HashSet<AEKey>();
         for (int i = 0; i < 16_385; i++) {
@@ -152,7 +153,7 @@ class OverloadedInterfaceBufferPathTest {
     @Test
     void newlyAppendedAcceptedTailIsObservedBeforeATypeLock() {
         int initialKeys = 16_385;
-        var buffer = new LinkedHashMap<AEKey, Long>(initialKeys + 1);
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>(initialKeys + 1);
         for (int i = 0; i < initialKeys; i++) {
             buffer.put(new TestKey(ITEMS, "late-reject-" + i), 1L);
         }
@@ -191,7 +192,7 @@ class OverloadedInterfaceBufferPathTest {
         var aRejected = new TestKey(ITEMS, "reject");
         var aPartial = new TestKey(ITEMS, "partial");
         var bAccepted = new TestKey(FLUIDS, "accepted");
-        var buffer = new LinkedHashMap<AEKey, Long>();
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>();
         buffer.put(aRejected, 4L);
         buffer.put(aPartial, 10L);
         buffer.put(bAccepted, 7L);
@@ -219,7 +220,7 @@ class OverloadedInterfaceBufferPathTest {
     @Test
     void stoppedHighCardinalityBacklogDrainsWithoutDroppingKeys() {
         int keyCount = 49_152;
-        var buffer = new LinkedHashMap<AEKey, Long>(keyCount);
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>(keyCount);
         for (int i = 0; i < keyCount; i++) {
             buffer.put(new TestKey(ITEMS, "drain-" + i), 1L);
         }
@@ -261,7 +262,7 @@ class OverloadedInterfaceBufferPathTest {
     void aRejectedSliceDoesNotScanTheWholeRemainingBacklog() {
         int keyCount = 49_152;
         var partial = new TestKey(ITEMS, "partial-first");
-        var buffer = new LinkedHashMap<AEKey, Long>(keyCount);
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>(keyCount);
         buffer.put(partial, 2L);
         for (int i = 1; i < keyCount; i++) {
             buffer.put(new TestKey(ITEMS, "rejected-" + i), 1L);
@@ -298,7 +299,7 @@ class OverloadedInterfaceBufferPathTest {
     @Test
     void aRejectedTypeRecoversAndItsLockIsRemovedAfterARealSuccessfulFlush() {
         var key = new TestKey(ITEMS, "recovery");
-        var buffer = new LinkedHashMap<AEKey, Long>();
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>();
         buffer.put(key, 6L);
         var locks = new IdentityHashMap<AEKeyType, Long>();
         var flushState = new OverloadedInterfaceBlockEntity.ImportBufferFlushState();
@@ -329,7 +330,7 @@ class OverloadedInterfaceBufferPathTest {
         var first = new TestKey(ITEMS, "locked-old");
         var second = new TestKey(ITEMS, "locked-second");
         var late = new TestKey(ITEMS, "locked-late-new");
-        var buffer = new LinkedHashMap<AEKey, Long>();
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>();
         buffer.put(first, 1L);
         buffer.put(second, 1L);
         var locks = new IdentityHashMap<AEKeyType, Long>();
@@ -369,7 +370,7 @@ class OverloadedInterfaceBufferPathTest {
     @Test
     void allRejectedHighCardinalityLocksAcrossSlicesWithContinuousInputAndRecovers() {
         int initialKeys = 16_385;
-        var buffer = new LinkedHashMap<AEKey, Long>(initialKeys + 4);
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>(initialKeys + 4);
         for (int i = 0; i < initialKeys; i++) {
             buffer.put(new TestKey(ITEMS, "rejecting-" + i), 1L);
         }
@@ -435,7 +436,7 @@ class OverloadedInterfaceBufferPathTest {
 
     private static void assertContinuousReplenishmentEventuallyLocksAndRecovers(
             int initialKeys, int rounds) {
-        var buffer = new LinkedHashMap<AEKey, Long>(initialKeys + rounds);
+        var buffer = new Object2LongLinkedOpenHashMap<AEKey>(initialKeys + rounds);
         var keys = new java.util.ArrayList<TestKey>(initialKeys);
         for (int i = 0; i < initialKeys; i++) {
             var key = new TestKey(ITEMS, "replenish-" + initialKeys + "-" + i);

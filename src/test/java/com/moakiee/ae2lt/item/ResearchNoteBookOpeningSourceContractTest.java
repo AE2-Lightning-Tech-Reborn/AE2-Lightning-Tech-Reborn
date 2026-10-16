@@ -34,7 +34,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         String packet = source("src/main/java/com/moakiee/ae2lt/network/OpenResearchNotePacket.java");
         String bridge = source("src/main/java/com/moakiee/ae2lt/network/ResearchNoteClientBridge.java");
         String bootstrap = source("src/main/java/com/moakiee/ae2lt/client/ResearchNoteClientBootstrap.java");
-        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/LightningKeyClientInit.java");
+        String clientInit = source("src/main/java/com/moakiee/ae2lt/client/equipment/LightningKeyClientInit.java");
 
         assertFalse(packet.contains("net.minecraft.client"));
         assertFalse(packet.contains("com.moakiee.ae2lt.client"));
@@ -93,7 +93,11 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "MaintenanceSummarySyncPacket",
                 "UploadTargetsSyncPacket",
                 "ClosedLoopResultPagePacket",
-                "OpenResearchNotePacket");
+                "OpenResearchNotePacket",
+                "MatrixPatternMigrationActionPacket",
+                "MatrixPatternMigrationStatusPacket",
+                "BigStockPacket",
+                "ConfirmBigAmountPacket");
         var matcher = Pattern.compile("(?m)^\\s+([A-Za-z0-9]+Packet)\\.class,$").matcher(network);
         List<String> actualOrder = new ArrayList<>();
         while (matcher.find()) {
@@ -102,10 +106,10 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"gtl-8\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"10\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
-                "Existing packet discriminators must remain stable");
+                "Existing packet discriminators must remain stable and new packets must stay last");
 
         int stock = network.indexOf("BigStockPacket.class");
         int confirm = network.indexOf("ConfirmBigAmountPacket.class");

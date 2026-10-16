@@ -25,4 +25,3 @@ public record EasterEggPacket(GlobalPos source) {
         ctx.setPacketHandled(true);
     }
 }
-

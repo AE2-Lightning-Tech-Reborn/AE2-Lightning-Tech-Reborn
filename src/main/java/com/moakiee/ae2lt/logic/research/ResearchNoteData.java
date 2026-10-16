@@ -97,6 +97,8 @@ public record ResearchNoteData(
 
             ResourceLocation id = ResourceLocation.tryParse(stringTag.getAsString());
             if (id != null) {
+                // These are raw recipe IDs, not ItemStack codecs, so registry aliases alone
+                // cannot update old notes before ritual multiset/order comparisons.
                 values.add(LEGACY_UNDYING.equals(id) ? OVERLOAD_PROTECTION : id);
             }
         }

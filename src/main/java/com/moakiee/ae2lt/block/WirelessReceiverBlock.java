@@ -30,14 +30,7 @@ public class WirelessReceiverBlock extends AE2LTBaseEntityBlock<WirelessReceiver
                                                BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof WirelessReceiverBlockEntity be) {
             if (!level.isClientSide && player instanceof ServerPlayer sp) {
-                // Gate menu-open on frequency membership. Non-members
-                // are rejected on PRIVATE frequencies; ENCRYPTED is a
-                // deliberate escape hatch so strangers can still open
-                // the GUI to enter the password (Selection tab auto-
-                // enrolls them via {@code enrollAsUser} on a correct
-                // hash match). Unbound devices (freqId <= 0) are
-                // always accessible so whoever places the block can
-                // assign a frequency.
+                // Allow encrypted outsiders to open the password prompt; private frequencies require membership.
                 int freqId = be.getFrequencyId();
                 if (freqId > 0) {
                     var manager = WirelessFrequencyManager.get();

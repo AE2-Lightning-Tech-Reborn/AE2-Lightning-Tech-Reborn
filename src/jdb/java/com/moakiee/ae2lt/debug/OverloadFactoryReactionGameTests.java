@@ -39,25 +39,6 @@ import net.pedroksl.ae2addonlib.recipes.IngredientStack;
 @GameTestHolder("ae2lt_overload")
 @PrefixGameTestTemplate(false)
 public final class OverloadFactoryReactionGameTests {
-    @net.minecraft.gametest.framework.GameTestGenerator
-    public static List<net.minecraft.gametest.framework.TestFunction> optionalIntegrationTests() {
-        var tests = new ArrayList<net.minecraft.gametest.framework.TestFunction>();
-        if (net.minecraftforge.fml.ModList.get().isLoaded("appgen")) {
-            tests.add(new net.minecraft.gametest.framework.TestFunction("defaultBatch",
-                    "derivesrealappgenprocessorwhenmanualcompatibilityismissing", "ae2lt_overload:empty",
-                    net.minecraft.world.level.block.Rotation.NONE, 100, 0L, true, 1, 1,
-                    OverloadFactoryReactionGameTests::derivesRealAppGenProcessorWhenManualCompatibilityIsMissing));
-        }
-        if (Boolean.getBoolean("ae2lt.inscriberScriptTest")
-                && net.minecraftforge.fml.ModList.get().isLoaded("kubejs")) {
-            tests.add(new net.minecraft.gametest.framework.TestFunction("defaultBatch",
-                    "kubejseditsremainauthoritativeafterreload", "ae2lt_overload:empty",
-                    net.minecraft.world.level.block.Rotation.NONE, 2000, 0L, true, 1, 1,
-                    OverloadFactoryReactionGameTests::kubeJsEditsRemainAuthoritativeAfterReload));
-        }
-        return tests;
-    }
-
     @GameTest(template = "empty", timeoutTicks = 250)
     public static void completesDerivedProcessorBatchWithOriginalPrintingAndBlockRecipes(GameTestHelper helper) {
         var manager = helper.getLevel().getRecipeManager();
@@ -104,7 +85,9 @@ public final class OverloadFactoryReactionGameTests {
         });
     }
 
+    @GameTest(template = "empty")
     public static void derivesRealAppGenProcessorWhenManualCompatibilityIsMissing(GameTestHelper helper) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("appgen")) { helper.succeed(); return; }
         var manager = new net.minecraft.world.item.crafting.RecipeManager(net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY);
         var original = helper.getLevel().getRecipeManager().getRecipes();
         var manual = new ResourceLocation("ae2lt:overload_processing/appgen_origination_processor");
@@ -146,6 +129,7 @@ public final class OverloadFactoryReactionGameTests {
                 "real AppGen chain must derive 9 ember blocks, 4 redstone blocks and 4 silicon blocks: " + describe(recipe));
         helper.assertTrue(recipe.itemResults().get(0).getCount() == 36, "wrong processor output quantity");
         helper.assertTrue(OverloadProcessingRecipeCatalog.find(manager, derived.getId()).isPresent(), "derived ID cannot resume");
+        // Script-like removal after generation must remain authoritative, even with its sources intact.
         manager.replaceRecipes(loaded.stream().filter(h -> !h.getId().equals(derived.getId())).toList());
         helper.assertTrue(OverloadProcessingRecipeCatalog.find(manager, derived.getId()).isEmpty(), "deleted fallback was regenerated");
         helper.succeed();
@@ -155,7 +139,9 @@ public final class OverloadFactoryReactionGameTests {
         return recipe.itemInputs().stream().map(i -> i.count() + " x " + java.util.Arrays.toString(i.ingredient().getItems())).toList().toString();
     }
 
+    @GameTest(template = "empty", timeoutTicks = 2000)
     public static void kubeJsEditsRemainAuthoritativeAfterReload(GameTestHelper helper) {
+        if (!Boolean.getBoolean("ae2lt.inscriberScriptTest")) { helper.succeed(); return; }
         assertScriptResults(helper);
         helper.runAfterDelay(80, () -> {
             var server = helper.getLevel().getServer();

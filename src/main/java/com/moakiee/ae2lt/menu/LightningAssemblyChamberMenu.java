@@ -23,7 +23,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.LightningAssemblyChamberBlockEntity;
 import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInventory;
 
-public class LightningAssemblyChamberMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu {
+public class LightningAssemblyChamberMenu extends AEBaseMenu implements InputTransferMenu, FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<LightningAssemblyChamberMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(
             MenuTypeBuilder
                     .create(LightningAssemblyChamberMenu::new, LightningAssemblyChamberBlockEntity.class)
@@ -268,7 +268,6 @@ public class LightningAssemblyChamberMenu extends AEBaseMenu implements InputTra
     public LightningAssemblyChamberBlockEntity getHost() {
         return host;
     }
-
 
     public ToolboxMenu getToolbox() {
         return toolbox;

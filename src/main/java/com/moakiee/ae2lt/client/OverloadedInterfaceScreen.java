@@ -1,5 +1,9 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.widgets.PageButton;
+import com.moakiee.ae2lt.client.widgets.PageInput;
+
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +23,6 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.ServerSettingToggleButton;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.ToolboxPanel;
@@ -45,8 +48,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
     private final TextureToggleButton exportModeButton;
     private final TextureToggleButton importModeButton;
     private final TextureToggleButton speedButton;
-    private final PageButton prevPageButton;
-    private final PageButton nextPageButton;
+    private final PageButton pageButton;
     private final List<SetAmountButton> amountButtons = new ArrayList<>();
     private final List<Slot> configSlots;
 
@@ -73,18 +75,17 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         this.fuzzyMode = new ServerSettingToggleButton<>(Settings.FUZZY_MODE, FuzzyMode.IGNORE_ALL);
         addToLeftToolbar(this.fuzzyMode);
 
-        this.nextPageButton = new PageButton(Icon.ARROW_RIGHT, btn -> menu.nextPage());
-        this.nextPageButton.setMessage(Component.translatable("ae2lt.gui.overloaded_interface.next_page"));
-        addToLeftToolbar(this.nextPageButton);
-
-        this.prevPageButton = new PageButton(Icon.ARROW_LEFT, btn -> menu.prevPage());
-        this.prevPageButton.setMessage(Component.translatable("ae2lt.gui.overloaded_interface.prev_page"));
-        addToLeftToolbar(this.prevPageButton);
+        this.pageButton = new PageButton(
+                this::isHandlingRightClick, menu::clientPrevPage, menu::clientNextPage);
+        addToLeftToolbar(this.pageButton);
 
         this.modeButton = new TextureToggleButton(
                 TextureToggleButton.ButtonType.MODE, btn -> menu.cycleInterfaceMode());
         this.modeButton.setTooltipOn(List.of(Component.translatable("ae2lt.gui.interface_mode.wireless")));
-        this.modeButton.setTooltipOff(List.of(Component.translatable("ae2lt.gui.interface_mode.normal")));
+        this.modeButton.setTooltipOff(List.of(
+                Component.translatable("ae2lt.gui.interface_mode.normal"),
+                Component.translatable("ae2lt.gui.interface_mode.normal_hint"),
+                Component.translatable("ae2lt.gui.interface_mode.normal_wrench")));
         addToLeftToolbar(this.modeButton);
 
         this.exportModeButton = new TextureToggleButton(
@@ -178,9 +179,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
             }
         }
 
-        boolean hasMultiplePages = menu.totalPages > 1;
-        prevPageButton.setVisibility(hasMultiplePages && page > 0);
-        nextPageButton.setVisibility(hasMultiplePages && page < menu.totalPages - 1);
+        this.pageButton.setPage(page, menu.totalPages);
     }
 
     @Override
@@ -188,11 +187,15 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
                         int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
-        String pageText = (menu.currentPage + 1) + "/" + menu.totalPages;
-        int textWidth = this.font.width(pageText);
-        guiGraphics.drawString(this.font, pageText,
-                GuiTextLayout.centeredX(this.imageWidth, textWidth), PAGE_INDICATOR_Y,
-                style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+        if (menu.totalPages > 1) {
+            String pageText = (menu.currentPage + 1) + "/" + menu.totalPages;
+            int textWidth = this.font.width(pageText);
+            guiGraphics.drawString(this.font, pageText,
+                    GuiTextLayout.centeredX(this.imageWidth, textWidth),
+                    PAGE_INDICATOR_Y,
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
+                    false);
+        }
 
         int page = menu.currentPage;
         int start = page * SLOTS_PER_PAGE;
@@ -206,6 +209,15 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
                 }
             }
         }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
+        if (menu.totalPages > 1
+                && PageInput.handleScroll(scrollY, menu::clientPrevPage, menu::clientNextPage)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     private List<Component> getCompatibleUpgrades() {
@@ -225,20 +237,6 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         protected Icon getIcon() {
             // 1.20.1: no COG sprites; reuse the wrench pair.
             return isHoveredOrFocused() ? Icon.WRENCH : Icon.WRENCH_DISABLED;
-        }
-    }
-
-    static class PageButton extends IconButton {
-        private final Icon icon;
-
-        public PageButton(Icon icon, OnPress onPress) {
-            super(onPress);
-            this.icon = icon;
-        }
-
-        @Override
-        protected Icon getIcon() {
-            return this.icon;
         }
     }
 }

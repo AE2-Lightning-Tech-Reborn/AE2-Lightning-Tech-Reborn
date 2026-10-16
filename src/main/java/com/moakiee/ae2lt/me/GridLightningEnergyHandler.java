@@ -25,9 +25,15 @@ import com.moakiee.ae2lt.me.key.LightningKey;
 public final class GridLightningEnergyHandler implements ILightningEnergyHandler {
 
     private final IActionHost host;
+    private final IActionSource source;
 
     public GridLightningEnergyHandler(IActionHost host) {
-        this.host = host;
+        this(host, IActionSource.ofMachine(host));
+    }
+
+    public GridLightningEnergyHandler(IActionHost host, IActionSource source) {
+        this.host = java.util.Objects.requireNonNull(host);
+        this.source = java.util.Objects.requireNonNull(source);
     }
 
     private @Nullable IGrid getGrid() {
@@ -63,7 +69,7 @@ public final class GridLightningEnergyHandler implements ILightningEnergyHandler
                 LightningKey.of(tier),
                 amount,
                 simulate ? Actionable.SIMULATE : Actionable.MODULATE,
-                IActionSource.ofMachine(host));
+                source);
     }
 
     @Override
@@ -79,7 +85,7 @@ public final class GridLightningEnergyHandler implements ILightningEnergyHandler
                 LightningKey.of(tier),
                 amount,
                 simulate ? Actionable.SIMULATE : Actionable.MODULATE,
-                IActionSource.ofMachine(host));
+                source);
     }
 
     @Override

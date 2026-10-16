@@ -35,6 +35,7 @@ public final class OverloadProcessingRecipe implements Recipe<OverloadProcessing
     private final int priority;
     private final List<OverloadProcessingIngredient> itemInputs;
     private final FluidStack fluidInput;
+    // Only borrowed recipes use this predicate. They are never registered or serialized as LT recipes.
     private final BorrowedFluidInput borrowedFluidInput;
     private final List<ItemStack> itemResults;
     private final FluidStack fluidResult;

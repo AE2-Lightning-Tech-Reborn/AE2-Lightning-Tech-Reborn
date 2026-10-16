@@ -265,6 +265,11 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
             for (var entry : strategies.entrySet()) {
                 Object identity = null;
                 MEStorage wrapper;
+                // A multiblock can replace its inventory without invalidating
+                // every part's capability cache. Use the actual live handler
+                // for AE2's standard adapters, including when it becomes null.
+                // The wrapper and the deduplication identity must be the same
+                // handler, not a cached wrapper paired with a fresh identity.
                 if (entry.getValue() instanceof ForgeExternalStorageStrategy<?, ?>
                         && entry.getKey() == AEKeyType.items()) {
                     var handler = target == null ? null : target.getCapability(
@@ -291,6 +296,8 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
                     wrapper = entry.getValue().createWrapper(false, this::saveChanges);
                 }
                 if (wrapper != null) {
+                    // Multiple ports may expose the exact same handler. Count
+                    // and simulate it only once, independently for each key type.
                     if (identity == null && entry.getKey() == AEKeyType.items()) {
                         identity = target == null ? null : target.getCapability(
                                 ForgeCapabilities.ITEM_HANDLER, side.getOpposite()).orElse(null);

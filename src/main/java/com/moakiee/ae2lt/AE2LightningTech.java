@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt;
 
+import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
+import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModEntities;
@@ -39,7 +41,6 @@ import com.moakiee.ae2lt.blockentity.PigmeeMentalmathUnitBlockEntity;
 import com.moakiee.ae2lt.blockentity.PigmeeMolecularAssemblerBlockEntity;
 import com.moakiee.ae2lt.blockentity.PigmeePatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
-import com.moakiee.ae2lt.block.TeslaCoilBlock;
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity;
@@ -102,7 +103,7 @@ import com.moakiee.ae2lt.me.cell.BulkLightningCellHandler;
 import com.moakiee.ae2lt.me.cell.FixedInfiniteCellHandler;
 import com.moakiee.ae2lt.me.cell.VoidCellHandler;
 
-import com.moakiee.ae2lt.logic.MachineAdapterRegistry;
+import com.moakiee.ae2lt.logic.provider.MachineAdapterRegistry;
 import com.moakiee.ae2lt.logic.craft.BatchPatternEligibility;
 import com.moakiee.thunderbolt.CoreConfig;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchExecutor;
@@ -173,6 +174,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER);
                         acceptCreative(output, ModBlocks.OVERLOAD_PROCESSING_FACTORY);
                         acceptCreative(output, ModBlocks.MINING_FACTORY);
+                        acceptCreative(output, ModBlocks.OVERLOADED_IO_PORT);
 
                         // 过载 ME 网络设备
                         acceptCreative(output, ModBlocks.OVERLOADED_CONTROLLER);
@@ -367,7 +369,7 @@ public class AE2LightningTech {
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
                         output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
-                        acceptCreative(output, ModItems.DYE_BASE);
+                        output.accept(ModItems.DYE_BASE.get());
                         output.accept(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get());
                         acceptCreative(output, ModBlocks.PIGMEE_CRYSTAL_CATALYZER);
                         acceptCreative(output, ModBlocks.PIGMEE_MENTALMATH_UNIT);
@@ -425,6 +427,11 @@ public class AE2LightningTech {
         modEventBus.addListener(ModAEKeyTypes::register);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent event) ->
+                event.enqueueWork(() -> {
+                    com.moakiee.ae2lt.api.lightning.collector.CollectorCrystalApi.freeze();
+                    com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters.freezeItems();
+                }));
         modEventBus.addListener(this::onConfigChanged);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AE2LTCommonConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
@@ -752,9 +759,7 @@ public class AE2LightningTech {
     }
 
     private static IItemHandlerModifiable getItemHandlerCapability(BlockEntity blockEntity) {
-        if (blockEntity instanceof MiningFactoryBlockEntity be) {
-            return be.getAutomationInventory();
-        }
+        if (blockEntity instanceof MiningFactoryBlockEntity be) return be.getAutomationInventory();
         if (blockEntity instanceof LightningCollectorBlockEntity be) {
             return be.getAutomationInventory();
         }
@@ -799,9 +804,7 @@ public class AE2LightningTech {
     }
 
     private static IEnergyStorage getEnergyCapability(BlockEntity blockEntity, Direction side) {
-        if (blockEntity instanceof MiningFactoryBlockEntity be) {
-            return be.getEnergyStorage();
-        }
+        if (blockEntity instanceof MiningFactoryBlockEntity be) return be.getEnergyStorage();
         if (blockEntity instanceof LightningSimulationChamberBlockEntity be) {
             return be.getEnergyStorageCapability(side);
         }
@@ -830,9 +833,7 @@ public class AE2LightningTech {
     }
 
     private static ILightningEnergyHandler getLightningEnergyCapability(BlockEntity blockEntity) {
-        if (blockEntity instanceof MiningFactoryBlockEntity be) {
-            return new GridLightningEnergyHandler(be);
-        }
+        if (blockEntity instanceof MiningFactoryBlockEntity be) return new GridLightningEnergyHandler(be);
         if (blockEntity instanceof LightningCollectorBlockEntity be) {
             return new GridLightningEnergyHandler(be);
         }
@@ -853,15 +854,15 @@ public class AE2LightningTech {
 
     private static GenericInternalInventory getGenericInternalInventoryCapability(BlockEntity blockEntity) {
         if (blockEntity instanceof OverloadedPatternProviderBlockEntity be) {
-            var logic = (com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic) be.getLogic();
-            return new com.moakiee.ae2lt.logic.InsertOnlyReturnInvWrapper(
-                    (com.moakiee.ae2lt.logic.UnlimitedReturnInventory) logic.getInternalReturnInv(),
+            var logic = (com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic) be.getLogic();
+            return new com.moakiee.ae2lt.logic.provider.InsertOnlyReturnInvWrapper(
+                    (com.moakiee.ae2lt.logic.provider.UnlimitedReturnInventory) logic.getInternalReturnInv(),
                     logic);
         }
         if (blockEntity instanceof ExtendedOverloadedPatternProviderBlockEntity be) {
-            var logic = (com.moakiee.ae2lt.logic.OverloadedPatternProviderLogic) be.getLogic();
-            return new com.moakiee.ae2lt.logic.InsertOnlyReturnInvWrapper(
-                    (com.moakiee.ae2lt.logic.UnlimitedReturnInventory) logic.getInternalReturnInv(),
+            var logic = (com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic) be.getLogic();
+            return new com.moakiee.ae2lt.logic.provider.InsertOnlyReturnInvWrapper(
+                    (com.moakiee.ae2lt.logic.provider.UnlimitedReturnInventory) logic.getInternalReturnInv(),
                     logic);
         }
         if (blockEntity instanceof PigmeePatternProviderBlockEntity be) {
@@ -884,6 +885,9 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
+                    com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.
@@ -927,6 +931,16 @@ public class AE2LightningTech {
                     null,
                     LightningAssemblyChamberBlockEntity::serverTick);
 
+            ModBlocks.OVERLOADED_IO_PORT.get().setBlockEntity(OverloadedIOPortBlockEntity.class,
+                    ModBlockEntities.OVERLOADED_IO_PORT.get(), null, null);
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.OVERLOADED_IO_PORT.get(), ModBlocks.OVERLOADED_IO_PORT.get().asItem());
+            Upgrades.add(AEItems.SPEED_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), OverloadedIOPortBlockEntity.SPEED_CARD_SLOTS);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.OVERLOADED_IO_PORT.get(), 1);
+
+            ModBlocks.MINING_FACTORY.get().setBlockEntity(MiningFactoryBlockEntity.class,
+                    ModBlockEntities.MINING_FACTORY.get(), null, MiningFactoryBlockEntity::serverTick);
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.MINING_FACTORY.get(), ModBlocks.MINING_FACTORY.get().asItem());
+
             var overloadProcessingFactoryBlock = ModBlocks.OVERLOAD_PROCESSING_FACTORY.get();
             var overloadProcessingFactoryBeType = ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get();
             overloadProcessingFactoryBlock.setBlockEntity(
@@ -966,7 +980,7 @@ public class AE2LightningTech {
                     OverloadDeviceWorkbenchBlockEntity.class,
                     overloadDeviceWorkbenchBeType,
                     null,
-                    null);
+                    OverloadDeviceWorkbenchBlockEntity::serverTick);
 
             var crystalCatalyzerBlock = ModBlocks.CRYSTAL_CATALYZER.get();
             var crystalCatalyzerBeType = ModBlockEntities.CRYSTAL_CATALYZER.get();

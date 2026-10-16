@@ -33,7 +33,7 @@ class PhaseFlightClientInputSourceContractTest {
         String inputPacket = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/network/PhaseFlightInputPacket.java"));
         String clientHandler = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/ClientPhaseFlightHandler.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java"));
 
         assertTrue(rules.contains("player.level().noCollision(player, player.getBoundingBox())"));
         assertTrue(mixin.contains("PhaseFlightControlRules.intersectsWorldCollision(player)"));
@@ -47,7 +47,7 @@ class PhaseFlightClientInputSourceContractTest {
     }
 
     @Test
-    void groundJumpAuthorizesOnlyTheTwoVanillaJumpImpulses() throws Exception {
+    void movementInputsAuthorizeOnlyTheirNativeImpulses() throws Exception {
         String mixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/LivingEntityPhaseJumpMixin.java"));
         assertTrue(mixin.contains("method = \"jumpFromGround\""));
@@ -56,8 +56,7 @@ class PhaseFlightClientInputSourceContractTest {
         assertTrue(mixin.contains("PhaseFlightMovementGuard.runAsSelfMovement("));
         assertTrue(mixin.contains("LivingEntity;jumpInFluid(Lnet/minecraftforge/fluids/FluidType;)V"));
         assertTrue(mixin.contains("LivingEntity;sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V"));
-        assertFalse(mixin.contains("@WrapMethod(method = \"aiStep\")"));
-        assertFalse(mixin.contains("@Inject(method = \"aiStep\", at = @At(\"HEAD\"))"));
+        assertFalse(mixin.contains("@Inject"));
 
         String mixinConfig = Files.readString(Path.of("src/main/resources/ae2lt.mixins.json"));
         assertTrue(mixinConfig.contains("LivingEntityPhaseJumpMixin"));

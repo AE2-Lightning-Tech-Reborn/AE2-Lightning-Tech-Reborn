@@ -8,6 +8,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.crafting.*;
 import net.minecraftforge.common.crafting.conditions.ICondition;
 
+/** Mirrors the identity exposed by the production Mixin; unit JVMs do not apply Mixins. */
 final class TestRecipeManager extends RecipeManager implements RecipeManagerByTypeAccess {
     private Object snapshot = new Object();
     TestRecipeManager() { super(ICondition.IContext.EMPTY); }

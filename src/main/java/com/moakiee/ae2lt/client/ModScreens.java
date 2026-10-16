@@ -1,6 +1,31 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.machine.AtmosphericIonizerScreen;
+import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
+import com.moakiee.ae2lt.client.machine.LightningAssemblyChamberScreen;
+import com.moakiee.ae2lt.client.machine.LightningCollectorScreen;
+import com.moakiee.ae2lt.client.machine.LightningSimulationChamberScreen;
+import com.moakiee.ae2lt.client.machine.MatrixControllerScreen;
+import com.moakiee.ae2lt.client.machine.MatrixPortScreen;
+import com.moakiee.ae2lt.client.machine.MiningFactoryScreen;
+import com.moakiee.ae2lt.client.machine.OverloadDeviceWorkbenchScreen;
+import com.moakiee.ae2lt.client.machine.OverloadPatternEncoderScreen;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryScreen;
+import com.moakiee.ae2lt.client.machine.OverloadedIOPortScreen;
+import com.moakiee.ae2lt.client.machine.OverloadedInterfaceScreen;
+import com.moakiee.ae2lt.client.machine.OverloadedPowerSupplyScreen;
+import com.moakiee.ae2lt.client.machine.PigmeeMolecularAssemblerScreen;
+import com.moakiee.ae2lt.client.machine.PigmeeSynthesisStationScreen;
+import com.moakiee.ae2lt.client.machine.TeslaCoilScreen;
+import com.moakiee.ae2lt.client.provider.OverloadedPatternProviderScreen;
+import com.moakiee.ae2lt.client.provider.PigmeePatternProviderScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuSeedStorageScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuSupercomputerControllerScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuWirelessPatternEncodingTermScreen;
+
 import net.minecraft.client.gui.screens.MenuScreens;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.api.distmarker.Dist;
@@ -10,6 +35,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 import appeng.client.gui.style.StyleManager;
 
+import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.FrequencyScreen;
 import com.moakiee.ae2lt.client.hub.DeviceHubScreen;
@@ -65,6 +91,8 @@ public class ModScreens {
             MenuScreens.register(LightningSimulationChamberMenu.TYPE, ModScreens::createLightningSimulationChamberScreen);
             MenuScreens.register(LightningAssemblyChamberMenu.TYPE, ModScreens::createLightningAssemblyChamberScreen);
             MenuScreens.register(LightningCollectorMenu.TYPE, ModScreens::createLightningCollectorScreen);
+            MenuScreens.register(OverloadedIOPortMenu.TYPE, ModScreens::createOverloadedIOPortScreen);
+            MenuScreens.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
             MenuScreens.register(OverloadProcessingFactoryMenu.TYPE, ModScreens::createOverloadProcessingFactoryScreen);
             MenuScreens.register(MiningFactoryMenu.TYPE, ModScreens::createMiningFactoryScreen);
             MenuScreens.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
@@ -158,6 +186,14 @@ public class ModScreens {
             LightningAssemblyChamberMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/lightning_assembly_chamber.json");
         return new LightningAssemblyChamberScreen(menu, inv, title, style);
+    }
+
+    private static OverloadedIOPortScreen createOverloadedIOPortScreen(OverloadedIOPortMenu menu, Inventory inv, Component title) {
+        return new OverloadedIOPortScreen(menu, inv, title, StyleManager.loadStyleDoc("/screens/overloaded_io_port.json"));
+    }
+
+    private static MiningFactoryScreen createMiningFactoryScreen(MiningFactoryMenu menu, Inventory inventory, Component title) {
+        return new MiningFactoryScreen(menu, inventory, title, StyleManager.loadStyleDoc("/screens/mining_factory.json"));
     }
 
     private static LightningCollectorScreen createLightningCollectorScreen(

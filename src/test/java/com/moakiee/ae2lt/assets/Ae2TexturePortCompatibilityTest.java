@@ -78,7 +78,7 @@ class Ae2TexturePortCompatibilityTest {
     void customScreensSampleTheAe2_1_20CheckboxAtlas() throws IOException {
         String encoder = Files.readString(Path.of(
                 "src", "main", "java", "com", "moakiee", "ae2lt", "client",
-                "OverloadPatternEncoderScreen.java"));
+                "machine/OverloadPatternEncoderScreen.java"));
         assertTrue(encoder.contains("ENTRY_SWITCH_WIDTH = 14"));
         assertTrue(encoder.contains("ENTRY_SWITCH_HEIGHT = 14"));
         assertTrue(encoder.contains("? 14 : 0"));
@@ -110,7 +110,7 @@ class Ae2TexturePortCompatibilityTest {
 
         String clientInit = Files.readString(Path.of(
                 "src", "main", "java", "com", "moakiee", "ae2lt", "client",
-                "ModEntityRenderers.java"));
+                "render/ModEntityRenderers.java"));
         assertTrue(clientInit.contains("ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get()"));
         assertTrue(clientInit.contains("RenderType.cutout()"));
     }

@@ -28,7 +28,8 @@ final class PigmeeCuriosCompatibilityContractTest {
                 "ae2lt:pigmee_fumo",
                 "ae2lt:rainbow_pigmee_fumo",
                 "ae2lt:hyperdimensional_pigmee_fumo",
-                "ae2lt:creative_pigmee_fumo"), values);
+                "ae2lt:creative_pigmee_fumo",
+                "ae2lt:rainbow_pigmee_fumo"), values);
     }
 
     @Test
@@ -46,17 +47,17 @@ final class PigmeeCuriosCompatibilityContractTest {
     @Test
     void clientRenderingIsRegisteredOnlyBehindTheOptionalCuriosBoundary() throws Exception {
         String clientSetup = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/LightningKeyClientInit.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/LightningKeyClientInit.java"));
         String bridge = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/client/PigmeeCuriosClientBridge.java"));
+                "src/main/java/com/moakiee/ae2lt/client/equipment/PigmeeCuriosClientBridge.java"));
 
         assertTrue(clientSetup.contains("ModList.get().isLoaded(\"curios\")"));
         assertTrue(clientSetup.contains("PigmeeCuriosClientBridge.registerRenderers()"));
         assertEquals(4, countOccurrences(bridge, "CuriosRendererRegistry.register("));
-        assertTrue(bridge.contains("ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ModFumos.PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get()"));
+        assertTrue(bridge.contains("ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ItemDisplayContext.HEAD"));
         assertTrue(bridge.contains("CustomHeadLayer.translateToHead"));
     }

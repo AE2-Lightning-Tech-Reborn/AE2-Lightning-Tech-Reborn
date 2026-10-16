@@ -64,6 +64,7 @@ class AdvancedAeReactionAdapterTest {
                 FluidStack.EMPTY);
         assertEquals(96, recipe.planMatch(input, 3).orElseThrow().getConsumptionForSlot(0));
         assertEquals(192, recipe.getScaledItemResults(3).get(0).getCount());
+        // The view never replaced or changed the original recipe.
         assertEquals(123456, source.value().getEnergy());
         assertEquals(64, source.value().output.amount());
     }

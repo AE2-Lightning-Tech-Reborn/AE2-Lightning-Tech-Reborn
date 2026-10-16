@@ -15,12 +15,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 
-public class MatrixControllerMenu extends AbstractContainerMenu {
+public class MatrixControllerMenu extends AbstractContainerMenu implements MatrixMigrationMenu {
     public static final MenuType<MatrixControllerMenu> TYPE =
             IForgeMenuType.create(MatrixControllerMenu::clientCreate);
 
     private final BlockPos blockPos;
     private final MatrixControllerBlockEntity host;
+    private final MatrixMigrationMenuState migrationState = new MatrixMigrationMenuState();
     private final DataSlot formedSlot = DataSlot.standalone();
     private final DataSlot memberCountSlot = DataSlot.standalone();
     private final DataSlot patternStorageCountSlot = DataSlot.standalone();
@@ -44,6 +45,7 @@ public class MatrixControllerMenu extends AbstractContainerMenu {
         super(TYPE, containerId);
         this.blockPos = host.getBlockPos();
         this.host = host;
+        migrationState.bind(playerInventory, () -> host);
         syncFromHost();
         addSyncSlots();
     }
@@ -143,7 +145,13 @@ public class MatrixControllerMenu extends AbstractContainerMenu {
             syncFromHost();
         }
         super.broadcastChanges();
+        migrationState.sync(this);
     }
+
+    @Override public BlockPos getMigrationMenuPos() { return blockPos; }
+    @Override public MatrixControllerBlockEntity getMigrationController() { return host; }
+    @Override public com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot getMigrationSnapshot() { return migrationState.snapshot; }
+    @Override public void acceptMigrationSnapshot(com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot snapshot) { migrationState.snapshot = snapshot; }
 
     @Override
     public boolean stillValid(Player player) {

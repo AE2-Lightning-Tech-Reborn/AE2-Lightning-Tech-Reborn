@@ -74,6 +74,7 @@ public final class TianshuSeedRefillService {
         var networkMissing = new LinkedHashMap<AEKey, Long>();
         var storageBlocked = new LinkedHashMap<AEKey, Long>();
         var returnBlocked = new LinkedHashMap<AEKey, Long>();
+        // Return obsolete/excess keys first so they cannot occupy the cells needed by new seeds.
         for (var entry : seeds.getAvailableStacks()) {
             long excess = Math.max(0L, entry.getLongValue()
                     - required.getOrDefault(entry.getKey(), 0L));

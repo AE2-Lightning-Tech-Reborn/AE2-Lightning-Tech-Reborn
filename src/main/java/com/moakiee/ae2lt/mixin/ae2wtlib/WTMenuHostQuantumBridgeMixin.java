@@ -32,8 +32,9 @@ public abstract class WTMenuHostQuantumBridgeMixin {
         var self = (WTMenuHost) (Object) this;
         var stack = self.getItemStack();
         var player = self.getPlayer();
+        // Resolve by the terminal's own binding/card rules, retaining native access-point fallback.
         var grid = ((WirelessTerminalItem) stack.getItem()).getLinkedGrid(stack, player.level(), null);
-        if (grid == null) return;
+        if (grid == null) return; // Keep retrying while the bridge is being rebuilt.
         targetGrid = grid;
         var nativeHost = (WirelessTerminalGridAccessor) self;
         nativeHost.ae2lt$setTargetGrid(grid);

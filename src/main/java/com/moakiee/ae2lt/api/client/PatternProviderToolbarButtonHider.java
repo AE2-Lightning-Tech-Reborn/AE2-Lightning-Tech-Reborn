@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.moakiee.ae2lt.client.SettingToggleButtonAccess;
+import com.moakiee.ae2lt.client.widgets.SettingToggleButtonAccess;
 
 /**
  * Client-side extension point for hiding left-toolbar buttons that other mods

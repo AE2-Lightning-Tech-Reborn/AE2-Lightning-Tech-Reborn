@@ -13,6 +13,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ExportMode;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ImportMode;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
+import com.moakiee.ae2lt.logic.BarrelInventoryNotificationBatch;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
@@ -33,7 +34,8 @@ public final class WirelessInterfaceExportGameTests {
 
     private WirelessInterfaceExportGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_01_export_benchmark", timeoutTicks = 1500)
+    @GameTest(templateNamespace = "ae2lt_io_export", template = "wireless_io_empty",
+            batch = "wireless_io_01_export_benchmark", timeoutTicks = 1500)
     public static void fastWirelessExportBenchmark(GameTestHelper helper) {
         var scenario = System.getProperty("ae2lt.wirelessIoBenchmark.scenario", "");
         if (!Boolean.getBoolean("ae2lt.wirelessIoBenchmark") || !scenario.contains("-export-")) {
@@ -202,12 +204,14 @@ public final class WirelessInterfaceExportGameTests {
                     }
                     continue;
                 }
-                for (int slot = 0; slot < keys.length; slot++) {
-                    var taken = target.removeItem(slot, UNITS_PER_KEY);
-                    require(taken.getCount() == UNITS_PER_KEY && keys[slot].matches(taken),
-                            "consumer changed its atomic input batch");
+                try (var notifications = BarrelInventoryNotificationBatch.open()) {
+                    for (int slot = 0; slot < keys.length; slot++) {
+                        var taken = target.removeItem(slot, UNITS_PER_KEY);
+                        require(taken.getCount() == UNITS_PER_KEY && keys[slot].matches(taken),
+                                "consumer changed its atomic input batch");
+                    }
+                    target.setChanged();
                 }
-                target.setChanged();
                 starveStreak[index] = 0;
                 completed++;
                 if (tick >= 0) {

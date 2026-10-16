@@ -1,0 +1,36 @@
+// Run with -PphaseLockHudSeedWorld=<1.20.1 save directory>; only level.dat is copied.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseLockHudClientProbe.java'])
+        def probeDirectory = project.file('.codex-tmp/phase-lock-hud-forge-client')
+        def reportDirectory = project.file('build/reports/phase-lock-hud-forge-client')
+        def seedPath = project.providers.gradleProperty('phaseLockHudSeedWorld').getOrElse('')
+        def seedFile = seedPath.isEmpty() ? null : new File(project.file(seedPath), 'level.dat')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.phaseLockHudClientProbe', 'true'
+            property 'ae2lt.phaseLockHudOutput', reportDirectory.absolutePath
+            args '--username', 'PhaseLockHudQA', '--quickPlaySingleplayer', 'PhaseLockHudQA',
+                    '--width', '1280', '--height', '720'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                if (seedFile == null || !seedFile.isFile()) {
+                    throw new GradleException('Specify -PphaseLockHudSeedWorld=<1.20.1 save directory> with level.dat')
+                }
+                def destination = probeDirectory.toPath().resolve('saves/PhaseLockHudQA/level.dat')
+                java.nio.file.Files.createDirectories(destination.parent)
+                if (!java.nio.file.Files.exists(destination)) java.nio.file.Files.copy(seedFile.toPath(), destination)
+                reportDirectory.mkdirs()
+                new File(reportDirectory, 'result.txt').delete()
+            }
+            doLast {
+                def result = new File(reportDirectory, 'result.txt')
+                if (!result.isFile() || !result.text.contains('PASS:') || result.text.contains('FAIL')) {
+                    throw new GradleException('Phase lock HUD client probe failed: ' + (result.isFile() ? result.text : 'no result'))
+                }
+            }
+        }
+    }
+}

@@ -9,25 +9,16 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
-
 /**
- * Server -> client: chain-jump visual update for the held left-click beam.
+ * Server-to-client chain effects, sent only when a sustained beam triggers a chain.
  *
- * <p>The beam itself is rendered every frame via {@link RailgunBeamUpdatePacket}
- * keepalive state. This packet is fired only when a chain actually triggers
- * (throttled to ~4 jumps/sec by {@code railgunBeamChainThrottleTicks}) so the
- * client can spawn a one-shot lightning arc from the primary impact through
- * each chained target. Without this packet the beam would hit chained enemies
- * silently with no visual feedback, which is the exact bug we're patching.
- *
- * @param shooterId  firing player; used to dedupe / locate the source for FX
- * @param chainPath  flat list of segment endpoints — pairs (i, i+1) form one
- *                   arc segment; empty if no chain triggered this tick
- * @param firstHit   primary impact point (entity's hit center) — used as the
- *                   origin for the first arc and for impact sparks
- * @param soundEnabled true when railgun-specific sounds should play client-side
+ * @param shooterId firing player
+ * @param firstHit primary impact and first arc origin
+ * @param chainPath flat endpoint pairs, one pair per arc segment
+ * @param soundEnabled whether to play railgun sounds
+ * @param ehv whether to use the EHV palette
  */
-public record RailgunBeamChainFxPacket(UUID shooterId, Vec3 firstHit, List<Vec3> chainPath, boolean soundEnabled) {
+public record RailgunBeamChainFxPacket(UUID shooterId, Vec3 firstHit, List<Vec3> chainPath, boolean soundEnabled, boolean ehv) {
 public void write(FriendlyByteBuf buf) {
         buf.writeUUID(shooterId);
         buf.writeDouble(firstHit.x);
@@ -40,6 +31,7 @@ public void write(FriendlyByteBuf buf) {
             buf.writeDouble(v.z);
         }
         buf.writeBoolean(soundEnabled);
+        buf.writeBoolean(ehv);
     }
 
     public static RailgunBeamChainFxPacket decode(FriendlyByteBuf buf) {
@@ -51,7 +43,8 @@ public void write(FriendlyByteBuf buf) {
             path.add(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
         }
         boolean soundEnabled = buf.readBoolean();
-        return new RailgunBeamChainFxPacket(id, first, path, soundEnabled);
+        boolean ehv = buf.readBoolean();
+        return new RailgunBeamChainFxPacket(id, first, path, soundEnabled, ehv);
     }
 
     public static void handle(RailgunBeamChainFxPacket p, Supplier<NetworkEvent.Context> ctxSup) {
@@ -60,5 +53,4 @@ public void write(FriendlyByteBuf buf) {
         ctx.setPacketHandled(true);
     }
 
-    /** Compile-time guard. */
 }

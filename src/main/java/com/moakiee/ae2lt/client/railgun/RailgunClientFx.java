@@ -10,18 +10,8 @@ import com.moakiee.ae2lt.network.railgun.RailgunFirePacket;
 import com.moakiee.ae2lt.registry.ModSounds;
 
 /**
- * Plays charged-fire client effects:
- *  - real electric arcs along each chain segment (via {@link RailgunArcRenderer})
- *  - a ground-aligned expanding shockwave + flash core at the impact point (via
- *    {@link RailgunShockwaveRenderer})
- *  - radial mini-bolts crackling outward from the impact
- *  - layered vanilla particles (FLASH, ELECTRIC_SPARK, LARGE_SMOKE) for grit
- *  - tier-scaled thunder sound
- *
- * <p>All lifetimes are tuned to feel deliberate (≈1.5–2.5 s on the heavier
- * effects). The plasma trail's origin is the shooter's gun barrel (resolved via
- * {@link RailgunVisuals}), not the screen-center / eye, so the visual reads as
- * "fired from the weapon".
+ * Charged-shot arcs, shockwaves, particles and tier-scaled sound. Trails originate
+ * at the shooter's gun barrel resolved by {@link RailgunVisuals}.
  */
 public final class RailgunClientFx {
 

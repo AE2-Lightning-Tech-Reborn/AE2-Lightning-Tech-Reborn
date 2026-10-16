@@ -34,7 +34,7 @@ import com.moakiee.ae2lt.util.SlotPositionAccess;
  * click handling remain authoritative on the server. The screen only repositions the currently
  * visible rows when searching or scrolling.</p>
  */
-public class MatrixPortMenu extends AbstractContainerMenu {
+public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigrationMenu {
     public static final MenuType<MatrixPortMenu> TYPE =
             IForgeMenuType.create(MatrixPortMenu::clientCreate);
 
@@ -57,6 +57,7 @@ public class MatrixPortMenu extends AbstractContainerMenu {
     private final List<MatrixPatternSlot> patternSlots = new ArrayList<>();
     private final int patternSlotCount;
     private long patternContentRevision;
+    private final MatrixMigrationMenuState migrationState = new MatrixMigrationMenuState();
 
     public MatrixPortMenu(int containerId, Inventory playerInventory, MatrixPortBlockEntity host) {
         this(containerId,
@@ -77,6 +78,7 @@ public class MatrixPortMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.host = host;
         this.patternSlotCount = patternSlotCount;
+        migrationState.bind(playerInventory, this::getMigrationController);
 
         for (int slot = 0; slot < patternSlotCount; slot++) {
             var patternSlot = new MatrixPatternSlot(patternInventory, slot);
@@ -120,6 +122,12 @@ public class MatrixPortMenu extends AbstractContainerMenu {
         buffer.writeBlockPos(host.getBlockPos());
         buffer.writeVarInt(host.getTerminalPatternInventory().size());
     }
+
+    @Override public BlockPos getMigrationMenuPos() { return blockPos; }
+    @Override public com.moakiee.ae2lt.blockentity.MatrixControllerBlockEntity getMigrationController() { return host == null ? null : host.getController(); }
+    @Override public com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot getMigrationSnapshot() { return migrationState.snapshot; }
+    @Override public void acceptMigrationSnapshot(com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot snapshot) { migrationState.snapshot = snapshot; }
+    @Override public void broadcastChanges() { super.broadcastChanges(); migrationState.sync(this); }
 
     @Override
     public boolean stillValid(Player player) {

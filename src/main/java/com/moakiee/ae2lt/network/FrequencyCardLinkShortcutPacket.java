@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.network;
 
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -12,31 +11,33 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
+import java.util.function.Supplier;
 
+/** Links the looked-at target using the player's preferred frequency card. */
 public record FrequencyCardLinkShortcutPacket(BlockPos pos, Direction face, Vec3 hitVec) {
-    public static FrequencyCardLinkShortcutPacket decode(FriendlyByteBuf buffer) {
+    public static FrequencyCardLinkShortcutPacket decode(FriendlyByteBuf buf) {
         return new FrequencyCardLinkShortcutPacket(
-                buffer.readBlockPos(), buffer.readEnum(Direction.class),
-                new Vec3(buffer.readDouble(), buffer.readDouble(), buffer.readDouble()));
+                buf.readBlockPos(), buf.readEnum(Direction.class),
+                new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }
 
-    public void write(FriendlyByteBuf buffer) {
-        buffer.writeBlockPos(pos);
-        buffer.writeEnum(face);
-        buffer.writeDouble(hitVec.x);
-        buffer.writeDouble(hitVec.y);
-        buffer.writeDouble(hitVec.z);
+    public void write(FriendlyByteBuf buf) {
+        buf.writeBlockPos(pos);
+        buf.writeEnum(face);
+        buf.writeDouble(hitVec.x);
+        buf.writeDouble(hitVec.y);
+        buf.writeDouble(hitVec.z);
     }
 
     public static void handle(FrequencyCardLinkShortcutPacket payload, Supplier<NetworkEvent.Context> context) {
-        var packetContext = context.get();
-        packetContext.enqueueWork(() -> {
-            ServerPlayer player = packetContext.getSender();
+        var ctx = context.get();
+        ctx.enqueueWork(() -> {
+            ServerPlayer player = ctx.getSender();
             if (player != null) {
                 payload.handleOnServer(player);
             }
         });
-        packetContext.setPacketHandled(true);
+        ctx.setPacketHandled(true);
     }
 
     private void handleOnServer(ServerPlayer player) {

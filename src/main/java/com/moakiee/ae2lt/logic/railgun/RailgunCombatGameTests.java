@@ -205,7 +205,7 @@ public final class RailgunCombatGameTests {
         helper.succeed();
     }
 
-    @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty", timeoutTicks = 160)
+    @GameTest(templateNamespace = "ae2lt", template = "railgun_combat_empty", timeoutTicks = 160)
     public static void realMeBeamPaysEhvAndHonorsContinuousDamage(GameTestHelper helper) {
         var level = helper.getLevel();
         check(!ModDamageTypes.electromagneticHolder(level).is(DamageTypeTags.BYPASSES_COOLDOWN),
@@ -282,7 +282,10 @@ public final class RailgunCombatGameTests {
                 RailgunModuleStorage.INSTANCE.uninstallOne(g, "ehv_beam");
                 check(!RailgunBeamProfile.resolve(RailgunModuleStorage.entryData(g), ModDataComponents.RAILGUN_SETTINGS.get(g)).ehv(), "removing module disables EHV even with stored switch on");
                 helper.succeed();
-            } catch (Exception exception) { throw new RuntimeException(exception); }
+            } catch (Throwable failure) {
+                failure.printStackTrace();
+                helper.fail(failure.toString());
+            }
         });
     }
 }
