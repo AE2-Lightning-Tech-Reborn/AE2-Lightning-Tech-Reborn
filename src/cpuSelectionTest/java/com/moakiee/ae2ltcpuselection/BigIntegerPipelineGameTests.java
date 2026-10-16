@@ -193,10 +193,18 @@ public final class BigIntegerPipelineGameTests {
     }
 
     public static void formedMultidimensionalMachinesRunAnExactOrder(GameTestHelper h) {
+        formedMachines(h, false);
+    }
+
+    public static void matrixAndOrdinaryProviderCompleteThroughNativeNetworkAndRestart(GameTestHelper h) {
+        formedMachines(h, true);
+    }
+
+    private static void formedMachines(GameTestHelper h, boolean mixed) {
         var level = h.getLevel();
         var direction = Direction.EAST;
-        var cpuPos = h.absolutePos(new BlockPos(4, 10, 4));
-        var matrixPos = h.absolutePos(new BlockPos(22, 12, 4));
+        var cpuPos = h.absolutePos(new BlockPos(4, 10, mixed ? 100 : 4));
+        var matrixPos = h.absolutePos(new BlockPos(22, 12, mixed ? 100 : 4));
         for (int x = 0; x < 7; x++)
             for (int y = 0; y < 7; y++)
                 for (int z = 0; z < 7; z++) {
@@ -284,7 +292,7 @@ public final class BigIntegerPipelineGameTests {
                     };
             place(h, world, state);
         }
-        var drivePos = h.absolutePos(new BlockPos(14, 10, 4));
+        var drivePos = h.absolutePos(new BlockPos(14, 10, mixed ? 100 : 4));
         var powerPos = drivePos.above();
         place(h, drivePos, AEBlocks.DRIVE.block().defaultBlockState());
         place(h, powerPos, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
@@ -327,6 +335,10 @@ public final class BigIntegerPipelineGameTests {
                                 require(
                                         cpu.bigCrafting().available(),
                                         "CPU exact service inactive");
+                                if (mixed) {
+                                    runMixed(h, cpu, cpuPort);
+                                    return;
+                                }
                                 var inventory = cpu.getGrid().getStorageService().getInventory();
                                 var raw = AEItemKey.of(Items.OAK_LOG);
                                 var output = AEItemKey.of(Items.OAK_PLANKS);
@@ -514,6 +526,96 @@ public final class BigIntegerPipelineGameTests {
         GridHelper.createConnection(node, cpuNode);
         GridHelper.createConnection(node, matrixNode);
         connected.run();
+    }
+
+    private static void runMixed(GameTestHelper h, TianshuSupercomputerControllerBlockEntity cpu,
+            TianshuSupercomputerPortBlockEntity cpuPort) {
+        var raw = AEItemKey.of(Items.OAK_LOG);
+        var intermediate = AEItemKey.of(Items.OAK_PLANKS);
+        var target = AEItemKey.of(Items.GOLD_INGOT);
+        var byproduct = AEItemKey.of(Items.STICK);
+        var crafting = (appeng.me.service.CraftingService) cpu.getGrid().getCraftingService();
+        var inventory = cpu.getGrid().getStorageService().getInventory();
+        var details = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(intermediate, 2)),
+                List.of(new GenericStack(target, 3), new GenericStack(byproduct, 1))), h.getLevel());
+        int[] calls = {0};
+        var provider = new appeng.api.networking.crafting.ICraftingProvider() {
+            public List<appeng.api.crafting.IPatternDetails> getAvailablePatterns() { return List.of(details); }
+            public boolean isBusy() { return false; }
+            public boolean pushPattern(appeng.api.crafting.IPatternDetails pattern, KeyCounter[] inputs) {
+                require(inputs.length == 1 && inputs[0].get(intermediate) == 2, "ordinary provider received wrong inputs");
+                calls[0]++;
+                return true;
+            }
+        };
+        crafting.addGlobalCraftingProvider(provider);
+        require(BigStorageOps.insert(inventory, raw, BigInteger.TEN, Actionable.MODULATE, SOURCE)
+                .equals(BigInteger.TEN), "failed to fund mixed graph");
+        // This host has only AE2's generic interfaces; no Tianshu terminal subtype.
+        class GenericTerminal extends net.minecraft.world.level.block.entity.BlockEntity
+                implements appeng.api.storage.ISubMenuHost, appeng.api.networking.security.IActionHost {
+            GenericTerminal() {
+                super(net.minecraft.world.level.block.entity.BlockEntityType.CHEST, cpu.getBlockPos(), Blocks.CHEST.defaultBlockState());
+                setLevel(h.getLevel());
+            }
+            public appeng.api.networking.IGridNode getActionableNode() { return cpuPort.getMainNode().getNode(); }
+            public void returnToMainMenu(net.minecraft.world.entity.player.Player p, appeng.menu.ISubMenu sub) {}
+            public ItemStack getMainMenuIcon() { return ItemStack.EMPTY; }
+        }
+        var host = new GenericTerminal();
+        var player = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(h.getLevel());
+        var amountMenu = new appeng.menu.me.crafting.CraftAmountMenu(117, player.getInventory(), host);
+        require(((BigAmountMenu) amountMenu).ae2lt$bigAvailable(), "ordinary terminal did not enable exact amounts");
+        var confirm = new appeng.menu.me.crafting.CraftConfirmMenu(118, player.getInventory(), host);
+        ((BigConfirmMenu) confirm).ae2lt$planBig(target, BigInteger.valueOf(60));
+        require(((BigConfirmMenu) confirm).ae2lt$isBig(), "ordinary confirmation did not select exact planning");
+        var future = BigCraftingService.preview(cpu.getGrid(), h.getLevel(), target, BigInteger.valueOf(60), SOURCE);
+        int[] phase = {0};
+        long[] receiptAt = {0};
+        h.succeedWhen(() -> {
+            h.assertTrue(future.isDone(), "waiting for mixed planner");
+            var plan = future.join();
+            require(plan.executable(), "mixed recipe graph was rejected");
+            var service = cpu.bigCrafting();
+            if (phase[0] == 0) {
+                boolean ordinary = false, matrix = false;
+                for (var block : plan.program().blocks()) for (var step : block.steps()) {
+                    ordinary |= step.recipe().source() instanceof BigProviderRecipe;
+                    matrix |= step.recipe().source() instanceof BigMatrixRecipe;
+                }
+                require(ordinary && matrix, "test did not capture both provider contracts");
+                var submitted = crafting.submitJob(new BigCraftingPlan(target, BigInteger.valueOf(60), plan, ""),
+                        null, cpuPort.getTimeWheelCraftingCpuPool(), false, SOURCE);
+                require(submitted.successful(), "native mixed submit failed: " + submitted);
+                phase[0] = 1;
+            }
+            if (phase[0] == 1) {
+                h.assertTrue(calls[0] == 20, "waiting for ordinary single-copy dispatch");
+                require(service.busy() && service.job().waiting.get(target).equals(BigInteger.valueOf(60)),
+                        "CPU completed without actual machine returns");
+                require(crafting.getRequestedAmount(target) == 60, "native requested count missed exact CPU");
+                service.load(service.save(h.getLevel().registryAccess()), h.getLevel().registryAccess());
+                receiptAt[0] = h.getLevel().getGameTime() + 2;
+                phase[0] = 2;
+            }
+            if (phase[0] == 2) {
+                h.assertTrue(h.getLevel().getGameTime() >= receiptAt[0], "waiting for native watcher refresh");
+                require(crafting.isRequesting(target), "native waiting-key index missed exact order");
+                require(inventory.insert(target, 60, Actionable.MODULATE, SOURCE) == 60, "network rejected actual output");
+                require(service.job().escrow.get(target).equals(BigInteger.valueOf(60)), "network bypassed CPU output ownership");
+                require(inventory.insert(byproduct, 20, Actionable.MODULATE, SOURCE) == 20, "byproduct return failed");
+                phase[0] = 3;
+            }
+            h.assertTrue(!service.busy(), "waiting for mixed order completion");
+            var stock = BigStorageOps.snapshot(inventory, SOURCE);
+            require(stock.getOrDefault(raw, BigInteger.ZERO).signum() == 0, "raw material duplicated");
+            require(stock.getOrDefault(intermediate, BigInteger.ZERO).signum() == 0, "intermediate duplicated");
+            require(stock.get(target).equals(BigInteger.valueOf(60)), "final output changed");
+            require(stock.get(byproduct).equals(BigInteger.valueOf(20)), "byproduct changed");
+            require(calls[0] == 20, "restart repeated accepted work");
+            crafting.removeGlobalCraftingProvider(provider);
+        });
     }
 
     private static void place(GameTestHelper h, BlockPos pos, BlockState state) {

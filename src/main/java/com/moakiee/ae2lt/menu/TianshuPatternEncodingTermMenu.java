@@ -255,16 +255,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private final appeng.menu.slot.FakeSlot[] omniversalMoldSlots;
     private boolean omniversalBulkUpdating;
 
-    private final com.moakiee.ae2lt.crafting.big.BigTerminalStock bigStock =
-            new com.moakiee.ae2lt.crafting.big.BigTerminalStock();
-
-    public java.math.BigInteger getBigStock(appeng.api.stacks.AEKey key) {
-        return bigStock.get(key);
-    }
-
-    public void applyBigStock(java.util.Map<appeng.api.stacks.AEKey, java.math.BigInteger> changes) {
-        if (isClientSide()) bigStock.apply(changes);
-    }
 
     public TianshuPatternEncodingTermMenu(
             int id, Inventory inventory, TianshuPatternTerminalHost host) {
@@ -407,7 +397,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         broadcastParentChanges();
         if (isServerSide()) {
             maintenanceSession.sendMaintenanceSummaryIfNeeded();
-            bigStock.sync(this, tianshuHost);
         }
     }
 

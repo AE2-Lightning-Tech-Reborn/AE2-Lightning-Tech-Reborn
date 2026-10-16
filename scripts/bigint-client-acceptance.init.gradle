@@ -1,0 +1,45 @@
+// Native client widgets, menu callbacks and real packets in an isolated acceptance world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+            'com/moakiee/ae2lt/debug/BigIntegerNativeUiProbe.java',
+            'com/moakiee/ae2lt/debug/BigIntegerClientAcceptanceProbe.java'
+        ])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        def probeDirectory = project.layout.buildDirectory.dir('bigint-client-acceptance').get().asFile
+        def result = new File(probeDirectory, 'acceptance-results.txt')
+        def clientWorld = new File(probeDirectory, 'saves/BigIntProbe')
+        def sourceWorld = project.file('run-cpu-selection-gametest/gametestserver/gametestworld')
+        neoForge.runs.client {
+            gameDirectory = probeDirectory
+            systemProperty 'ae2lt.bigClientAcceptance','true'
+            systemProperty 'ae2lt.bigClientActions','true'
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp') })
+            programArguments.addAll '--quickPlaySingleplayer','BigIntProbe','--width','1280','--height','900'
+        }
+        tasks.named('runClient') {
+            doFirst {
+                probeDirectory.mkdirs()
+                result.text = ''
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run the CPU selection GameTests first.')
+                    java.nio.file.Files.walk(sourceWorld.toPath()).withCloseable { paths ->
+                        paths.forEach { path ->
+                            def target = clientWorld.toPath().resolve(sourceWorld.toPath().relativize(path))
+                            if (java.nio.file.Files.isDirectory(path)) java.nio.file.Files.createDirectories(target)
+                            else java.nio.file.Files.copy(path, target)
+                        }
+                    }
+                }
+            }
+            doLast {
+                if (!result.isFile() || !result.text.contains(':all-complete ')
+                        || result.text.contains('BIG_CLIENT FAIL')) {
+                    throw new GradleException('BigInteger client acceptance failed: ' + (result.isFile() ? result.text : 'no result'))
+                }
+            }
+        }
+    }
+}

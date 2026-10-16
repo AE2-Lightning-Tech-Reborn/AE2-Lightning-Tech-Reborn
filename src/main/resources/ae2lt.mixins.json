@@ -51,6 +51,7 @@
     "thunderbolt.AdvCraftingCpuLogicMixin",
     "ControllerValidatorMixin",
     "ShulkerBulletMixin",
+    "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",

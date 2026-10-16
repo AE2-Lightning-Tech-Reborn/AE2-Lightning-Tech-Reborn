@@ -15,7 +15,7 @@ import java.math.BigInteger;
 import java.util.*;
 
 /**
- * Target-rooted capture from connected multidimensional matrices, using real single-copy assembly.
+ * Target-rooted capture of native network patterns, with an optional exact matrix execution route.
  */
 public record BigGraphExport(
         CraftGraph<AEKey> graph, Map<AEKey, BigInteger> stock, int recipeCount) {
@@ -35,23 +35,21 @@ public record BigGraphExport(
     public static BigGraphExport capture(
             IGrid grid, Level level, AEKey target, IActionSource source) {
         var stock = BigStorageOps.snapshot(grid.getStorageService().getInventory(), source);
+        var matrixPatterns = new HashSet<AEItemKey>();
+        for (var matrix : matrices(grid))
+            for (var details : matrix.getAvailablePatterns()) matrixPatterns.add(details.getDefinition());
+        return capture(grid.getCraftingService(), level, target, stock, matrixPatterns);
+    }
+
+    static BigGraphExport capture(appeng.api.networking.crafting.ICraftingService crafting,
+            Level level, AEKey target, Map<AEKey, BigInteger> stock, Set<AEItemKey> matrixPatterns) {
         var builder = CraftGraph.<AEKey>builder();
         stock.forEach(
                 (k, n) -> {
                     if (!k.equals(target)) builder.stockExact(k, n);
                 });
-        var byOutput = new LinkedHashMap<AEKey, List<IPatternDetails>>();
-        var definitions = new HashSet<AEItemKey>();
-        for (var matrix : matrices(grid))
-            for (var pattern : matrix.getAvailablePatterns()) {
-                PlanningCancellation.check();
-                if (definitions.add(pattern.getDefinition()))
-                    byOutput.computeIfAbsent(
-                                    pattern.getPrimaryOutput().what(), k -> new ArrayList<>())
-                            .add(pattern);
-            }
         var candidates = new LinkedHashSet<AEKey>(stock.keySet());
-        candidates.addAll(byOutput.keySet());
+        candidates.addAll(crafting.getCraftables(key -> true));
         var variants = new HashMap<AEKey, List<AEKey>>();
         for (var candidate : candidates)
             variants.computeIfAbsent(candidate.dropSecondary(), k -> new ArrayList<>())
@@ -64,7 +62,10 @@ public record BigGraphExport(
         while (!queue.isEmpty()) {
             PlanningCancellation.check();
             var key = queue.removeFirst();
-            for (var details : byOutput.getOrDefault(key, List.of())) {
+            var definitions = new HashSet<AEItemKey>();
+            for (var details : crafting.getCraftingFor(key)) {
+                if (!details.getPrimaryOutput().what().equals(key)
+                        || !definitions.add(details.getDefinition())) continue;
                 var choices = new ArrayList<List<Map<AEKey, Long>>>();
                 boolean valid = true;
                 for (var input : details.getInputs()) {
@@ -114,7 +115,9 @@ public record BigGraphExport(
                 combine(choices, 0, new ArrayList<>(), combinations);
                 for (var slots : combinations) {
                     PlanningCancellation.check();
-                    var recipe = BigMatrixRecipe.capture(details, slots, level);
+                    BigCraftingRecipe recipe = matrixPatterns.contains(details.getDefinition())
+                            ? BigMatrixRecipe.capture(details, slots, level) : null;
+                    if (recipe == null) recipe = BigProviderRecipe.capture(details, slots, level);
                     if (recipe == null || !recipe.pattern().output().equals(key)) continue;
                     builder.pattern(recipe.pattern());
                     if (++recipes > 16384)

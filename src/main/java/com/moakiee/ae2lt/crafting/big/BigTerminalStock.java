@@ -1,9 +1,9 @@
 package com.moakiee.ae2lt.crafting.big;
 
 import appeng.api.stacks.AEKey;
-import appeng.menu.AEBaseMenu;
+import appeng.api.stacks.KeyCounter;
+import appeng.menu.me.common.MEStorageMenu;
 
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuTerminalHost;
 import com.moakiee.ae2lt.network.tianshu.BigStockPacket;
 import com.moakiee.thunderbolt.core.storage.big.BigStorageOps;
 
@@ -32,21 +32,27 @@ public final class BigTerminalStock {
                 });
     }
 
-    public void sync(AEBaseMenu menu, TianshuTerminalHost tianshuHost) {
+    public void sync(MEStorageMenu menu, KeyCounter available) {
         if (!(menu.getPlayer() instanceof ServerPlayer player)) return;
         long now = player.level().getGameTime();
         if (now < nextBigStockSync) return;
         nextBigStockSync = now + 20;
-        var node = tianshuHost.getActionableNode();
+        var node = menu.getGridNode();
+        // Only supplement entries already sent by the native menu. A restricted/portable view
+        // must not reveal other grid stock, and ordinary long-only grids need no extra scan.
+        boolean saturated = available != null && available.keySet().stream()
+                .anyMatch(key -> available.get(key) == Long.MAX_VALUE && menu.isKeyVisible(key));
         var snapshot =
-                node == null
+                node == null || !saturated
                         ? new HashMap<AEKey, BigInteger>()
                         : new HashMap<>(
                                 BigStorageOps.snapshot(
                                         node.getGrid().getStorageService().getInventory(),
                                         menu.getActionSource()));
         snapshot.entrySet()
-                .removeIf(e -> e.getValue().compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0);
+                .removeIf(e -> e.getValue().compareTo(BigInteger.valueOf(Long.MAX_VALUE)) <= 0
+                        || available.get(e.getKey()) != Long.MAX_VALUE
+                        || !menu.isKeyVisible(e.getKey()));
         var delta = new LinkedHashMap<AEKey, BigInteger>();
         snapshot.forEach(
                 (k, n) -> {

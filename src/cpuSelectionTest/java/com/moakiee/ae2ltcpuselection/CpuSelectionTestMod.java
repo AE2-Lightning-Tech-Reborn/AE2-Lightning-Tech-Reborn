@@ -55,6 +55,9 @@ public final class CpuSelectionTestMod {
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> BIG_WORLD =
             FUNCTIONS.register("big_formed_machine_order", () -> guarded(
                     BigIntegerPipelineGameTests::formedMultidimensionalMachinesRunAnExactOrder));
+    private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> BIG_MIXED_WORLD =
+            FUNCTIONS.register("big_mixed_machine_order", () -> guarded(
+                    BigIntegerPipelineGameTests::matrixAndOrdinaryProviderCompleteThroughNativeNetworkAndRestart));
     private static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> PIGMEE_STORAGE =
             FUNCTIONS.register("pigmee_station_storage_power", () -> guarded(
                     PigmeeSynthesisStationGameTests::liveStorageAndPower));
@@ -98,6 +101,15 @@ public final class CpuSelectionTestMod {
             FUNCTIONS.register("applied_flux_wireless_power_delivery", () -> guarded(
                     AvailableAddonCompatGameTests::appliedFluxWirelessPowerDelivery));
 
+    private static final List<DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>>> BIG_MIXED = List.of(
+            FUNCTIONS.register("big_mixed_ordinary_provider_keeps_huge_remainder_and_waits_for_actual_output", () -> guarded(BigMixedProviderGameTests::ordinaryProviderKeepsHugeRemainderAndWaitsForActualOutput)),
+            FUNCTIONS.register("big_mixed_long_batch_partial_acceptance_and_synchronous_returns_are_exact", () -> guarded(BigMixedProviderGameTests::longBatchPartialAcceptanceAndSynchronousReturnsAreExact)),
+            FUNCTIONS.register("big_mixed_order_beyond_long_completes_in_bounded_physical_batches", () -> guarded(BigMixedProviderGameTests::orderBeyondLongCompletesInBoundedPhysicalBatches)),
+            FUNCTIONS.register("big_mixed_prepared_admission_and_energy_limit_only_accepted_inputs", () -> guarded(BigMixedProviderGameTests::preparedAdmissionAndEnergyLimitOnlyAcceptedInputs)),
+            FUNCTIONS.register("big_mixed_one_copy_batch_capacity_still_uses_its_job_aware_contract", () -> guarded(BigMixedProviderGameTests::oneCopyBatchCapacityStillUsesItsJobAwareContract)),
+            FUNCTIONS.register("big_mixed_rejection_refunds_but_indeterminate_ownership_does_not_retry", () -> guarded(BigMixedProviderGameTests::rejectionRefundsButIndeterminateOwnershipDoesNotRetry)),
+            FUNCTIONS.register("big_mixed_exact_plan_display_survives_native_packet_without_preview_only_flag", () -> guarded(BigMixedProviderGameTests::exactPlanDisplaySurvivesNativePacketWithoutPreviewOnlyFlag)));
+
     public CpuSelectionTestMod(IEventBus modEventBus) {
         FUNCTIONS.register(modEventBus);
         modEventBus.addListener(this::registerTests);
@@ -133,10 +145,18 @@ public final class CpuSelectionTestMod {
         event.registerTest(id("big_plan_restart_refund"), new FunctionGameTestInstance(
                 BIG_RESTART.getKey(), new TestData<>(environment,
                         Identifier.withDefaultNamespace("empty"), 20, 0, true)));
+        for (var test : BIG_MIXED) {
+            event.registerTest(test.getId(), new FunctionGameTestInstance(
+                    test.getKey(), new TestData<>(environment,
+                            Identifier.withDefaultNamespace("empty"), 20, 0, true)));
+        }
         var largeEnvironment = event.registerEnvironment(id("large_multiblock"),
                 new TestEnvironmentDefinition.AllOf(List.of()));
         event.registerTest(id("big_formed_machine_order"), new FunctionGameTestInstance(
                 BIG_WORLD.getKey(), new TestData<>(largeEnvironment,
+                        Identifier.withDefaultNamespace("empty"), 300, 0, true)));
+        event.registerTest(id("big_mixed_machine_order"), new FunctionGameTestInstance(
+                BIG_MIXED_WORLD.getKey(), new TestData<>(largeEnvironment,
                         Identifier.withDefaultNamespace("empty"), 300, 0, true)));
         var pigmeeEnvironment = event.registerEnvironment(id("pigmee_station"),
                 new TestEnvironmentDefinition.AllOf(List.of()));

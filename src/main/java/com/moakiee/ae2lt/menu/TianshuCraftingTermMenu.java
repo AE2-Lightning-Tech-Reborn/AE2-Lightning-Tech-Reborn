@@ -805,16 +805,6 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
         return super.quickMoveStack(player, index);
     }
 
-    private final com.moakiee.ae2lt.crafting.big.BigTerminalStock bigStock =
-            new com.moakiee.ae2lt.crafting.big.BigTerminalStock();
-
-    @Override public java.math.BigInteger getBigStock(appeng.api.stacks.AEKey key) {
-        return bigStock.get(key);
-    }
-
-    @Override public void applyBigStock(java.util.Map<appeng.api.stacks.AEKey, java.math.BigInteger> changes) {
-        bigStock.apply(changes);
-    }
 
     @Override public void broadcastChanges() {
         if (isServerSide() && maintenanceSession != null) {
@@ -836,7 +826,6 @@ public class TianshuCraftingTermMenu extends CraftingTermMenu implements Tianshu
         super.broadcastChanges();
         if (isServerSide() && maintenanceSession != null) {
             maintenanceSession.sendMaintenanceSummaryIfNeeded();
-            bigStock.sync(this, tianshuHost);
         }
     }
 
