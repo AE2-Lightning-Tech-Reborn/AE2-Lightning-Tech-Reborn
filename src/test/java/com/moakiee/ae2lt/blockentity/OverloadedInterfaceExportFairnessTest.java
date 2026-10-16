@@ -17,7 +17,6 @@ import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ConnectionState;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ExportConfigEntry;
-import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.ExportPlan;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity.IOSpeedMode;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.machine.lightningchamber.LargeStackItemHandler;
@@ -55,6 +54,29 @@ class OverloadedInterfaceExportFairnessTest {
         model.handler.extractItem(0, 4096, false);
         model.tick(2, IOSpeedMode.NORMAL);
         assertTrue(gold.matches(model.handler.getStackInSlot(0)), "first waiting key must win the empty slot");
+    }
+
+    @Test void recencyOrderMatchesSuccessfulServiceHistoryWithoutChangingAnOpenPass() {
+        var keys = List.of(iron, gold, iron, copper, gold);
+        var entries = keys.stream().map(key -> new ExportConfigEntry(key, Long.MAX_VALUE)).toList();
+        var plan = new ConnectionState().exportPlan(iron.getType(), entries);
+        var expected = new ArrayList<>(List.of(iron, gold, copper));
+        var random = new java.util.Random(20261015);
+        for (int pass = 0; pass < 500; pass++) {
+            plan.prepare(null, null, SOURCE, pass);
+            var order = new ArrayList<Integer>();
+            for (var key : expected)
+                for (int slot = 0; slot < keys.size(); slot++)
+                    if (keys.get(slot).equals(key)) order.add(slot);
+            for (int i = 0; i < keys.size(); i++) assertEquals(order.get(i), plan.indexAt(i));
+            for (int n = random.nextInt(12); n > 0; n--) {
+                int slot = random.nextInt(keys.size());
+                plan.transferred(slot);
+                expected.remove(keys.get(slot));
+                expected.add(keys.get(slot));
+                for (int i = 0; i < keys.size(); i++) assertEquals(order.get(i), plan.indexAt(i));
+            }
+        }
     }
 
     @Test void missingAndInvalidKeysDoNotHoldTheOnlyUsableMaterial() {
@@ -98,7 +120,7 @@ class OverloadedInterfaceExportFairnessTest {
             assertEquals(0, model.handler.validityChecks);
             assertEquals(0, model.simulations);
             plan.transferred(0);
-            assertEquals(0, plan.startIndex());
+            assertEquals(0, plan.indexAt(0));
         }
     }
 
@@ -164,7 +186,7 @@ class OverloadedInterfaceExportFairnessTest {
         assertFalse(replacement.shouldYield(0));
         model.state.resetWirelessIo(IOSpeedMode.NORMAL);
         var reset = model.state.exportPlan(iron.getType(), model.plan.entries());
-        assertEquals(0, reset.startIndex());
+        assertEquals(0, reset.indexAt(0));
         assertFalse(reset.transfers()[1].waitingForSpace);
     }
 
@@ -415,7 +437,7 @@ class OverloadedInterfaceExportFairnessTest {
         final ConnectionState state = new ConnectionState();
         final PowerCostUtil.EnergyAccess energy = new PowerCostUtil.EnergyAccess();
         final IGrid grid;
-        ExportPlan plan;
+        InterfaceExportPlan plan;
         Handler handler;
         long simulations;
         final MEStorage storage = new MEStorage() {
@@ -445,9 +467,8 @@ class OverloadedInterfaceExportFairnessTest {
 
         void tick(long now, IOSpeedMode mode) {
             plan.prepare(handler, storage, SOURCE, now);
-            int start = plan.startIndex();
             for (int offset = 0; offset < plan.entries().size(); offset++) {
-                int index = plan.indexAt(start, offset);
+                int index = plan.indexAt(offset);
                 var transfer = plan.transfers()[index];
                 if (plan.shouldYield(index)) transfer.untilTick = now + 1;
                 else if (now >= transfer.untilTick) {
