@@ -122,7 +122,14 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
                 Component.translatable("ae2lt.tianshu.work.cell_copy_keep")));
         keepCellConfig.setDisableBackground(true);
         widgets.add("cellKeepConfig", keepCellConfig);
-        anvilName = new AETextField(style, font, 0, 0, 128, 12);
+        anvilName = new AETextField(style, font, 0, 0, 128, 12) {
+            @Override
+            public boolean isMouseOver(double mouseX, double mouseY) {
+                // AEBaseScreen converts right-clicks over widgets to left-clicks. The hidden
+                // anvil editor overlaps the crafting grid, so it must not participate in hit tests.
+                return visible && active && super.isMouseOver(mouseX, mouseY);
+            }
+        };
         anvilName.setBordered(false);
         anvilName.setTooltipMessage(List.of(Component.translatable("ae2lt.tianshu.work.anvil_name")));
         anvilName.setMaxLength(50);
