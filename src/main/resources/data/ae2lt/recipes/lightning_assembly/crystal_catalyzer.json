@@ -4,7 +4,7 @@
   "inputs": [
     {
       "ingredient": {
-        "item": "ae2:growth_accelerator"
+        "item": "ae2:quartz_growth_accelerator"
       },
       "count": 16
     },

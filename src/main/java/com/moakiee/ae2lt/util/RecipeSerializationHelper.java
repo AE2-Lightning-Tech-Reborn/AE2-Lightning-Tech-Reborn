@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.util;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.StringRepresentable;
@@ -49,7 +49,7 @@ public final class RecipeSerializationHelper {
     }
 
     public static Block blockFromId(ResourceLocation id) {
-        return BuiltInRegistries.BLOCK.getOptional(id)
+        return Registry.BLOCK.getOptional(id)
                 .orElseThrow(() -> new JsonSyntaxException("Unknown block id: " + id));
     }
 
@@ -98,7 +98,7 @@ public final class RecipeSerializationHelper {
     }
 
     private static Item itemFromId(ResourceLocation id) {
-        return BuiltInRegistries.ITEM.getOptional(id)
+        return Registry.ITEM.getOptional(id)
                 .orElseThrow(() -> new JsonSyntaxException("Unknown item id: " + id));
     }
 }

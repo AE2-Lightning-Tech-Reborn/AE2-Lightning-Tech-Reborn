@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.menu;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.blockentity.AEBaseBlockEntity;
 
 /** Shared controls for the existing six-face machine output screen. */

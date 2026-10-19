@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -30,18 +31,18 @@ public final class VoidCellScreen extends AEBaseScreen<VoidCellMenu> {
     @Override
     public void init() {
         super.init();
-        trash.setPosition(leftPos + 22, topPos + 20);
-        matterBalls.setPosition(leftPos + 54, topPos + 20);
-        singularity.setPosition(leftPos + 84, topPos + 20);
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(trash, leftPos + 22, topPos + 20);
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(matterBalls, leftPos + 54, topPos + 20);
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(singularity, leftPos + 84, topPos + 20);
         addRenderableWidget(trash);
         addRenderableWidget(matterBalls);
         addRenderableWidget(singularity);
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-        graphics.drawString(
+        LegacyGui.drawString(graphics,
                 font,
                 Component.translatable("gui.ae2lt.void_cell.mode." + menu.getMode().ordinal()),
                 5,

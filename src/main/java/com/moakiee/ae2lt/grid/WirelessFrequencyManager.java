@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -421,7 +421,7 @@ public final class WirelessFrequencyManager extends SavedData {
         for (int i = 0; i < txList.size(); i++) {
             CompoundTag entry = txList.getCompound(i);
             int freqId = entry.getInt("freqId");
-            var dimKey = ResourceKey.create(Registries.DIMENSION,
+            var dimKey = ResourceKey.create(Registry.DIMENSION_REGISTRY,
                     ResourceLocation.tryParse(entry.getString("dim")));
             BlockPos pos = BlockPos.of(entry.getLong("pos"));
             boolean adv = entry.getBoolean("advanced");
@@ -432,7 +432,7 @@ public final class WirelessFrequencyManager extends SavedData {
         for (int i = 0; i < devList.size(); i++) {
             CompoundTag entry = devList.getCompound(i);
             int freqId = entry.getInt("freqId");
-            var dimKey = ResourceKey.create(Registries.DIMENSION,
+            var dimKey = ResourceKey.create(Registry.DIMENSION_REGISTRY,
                     ResourceLocation.tryParse(entry.getString("dim")));
             BlockPos pos = BlockPos.of(entry.getLong("pos"));
             boolean ctrl = entry.getBoolean("controller");

@@ -7,7 +7,8 @@ import java.util.function.Supplier;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -85,11 +86,11 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
 
     private void playClickSound() {
         Minecraft.getInstance().getSoundManager().play(
-                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         FluidStack fluid = fluidSupplier.get();
         if (fluid.isEmpty()) {
             return;
@@ -112,12 +113,12 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
                 .colorRgb(attributes.getTintColor(fluid))
                 .blending(true);
 
-        int x = getX();
-        int yBottom = getY() + height;
+        int x = this.x;
+        int yBottom = y + height;
         int drawn = 0;
         while (drawn < filled) {
             int sliceH = Math.min(width, filled - drawn);
-            blitter.dest(x, yBottom - drawn - sliceH, width, sliceH).blit(guiGraphics);
+            blitter.dest(x, yBottom - drawn - sliceH, width, sliceH).blit(guiGraphics, 0);
             drawn += sliceH;
         }
     }
@@ -160,7 +161,7 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
 
     @Override
     public Rect2i getTooltipArea() {
-        return new Rect2i(getX(), getY(), width, height);
+        return new Rect2i(x, y, width, height);
     }
 
     @Override
@@ -169,7 +170,7 @@ public class OverloadProcessingFactoryFluidWidget extends AbstractWidget impleme
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 
     private static String getModDisplayName(FluidStack fluid) {

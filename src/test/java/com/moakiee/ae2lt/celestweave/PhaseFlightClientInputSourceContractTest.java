@@ -35,7 +35,7 @@ class PhaseFlightClientInputSourceContractTest {
         String clientHandler = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/equipment/ClientPhaseFlightHandler.java"));
 
-        assertTrue(rules.contains("player.level().noCollision(player, player.getBoundingBox())"));
+        assertTrue(rules.contains("player.level.noCollision(player, player.getBoundingBox())"));
         assertTrue(mixin.contains("PhaseFlightControlRules.intersectsWorldCollision(player)"));
         assertFalse(mixin.contains("player.isInWall()"));
         assertTrue(module.contains("PhaseFlightControlRules.intersectsWorldCollision(player)"));

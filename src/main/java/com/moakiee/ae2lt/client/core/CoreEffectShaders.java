@@ -56,7 +56,7 @@ public final class CoreEffectShaders {
                                        ShaderTracker tracker) throws IOException {
         event.registerShader(
                 new TimedShaderInstance(
-                        event.getResourceProvider(),
+                        event.getResourceManager(),
                         location,
                         DefaultVertexFormat.POSITION_COLOR_NORMAL),
                 tracker::setInstance);

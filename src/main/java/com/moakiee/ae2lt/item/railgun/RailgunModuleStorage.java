@@ -79,7 +79,7 @@ public final class RailgunModuleStorage implements DeviceModuleStorage {
                 return true;
             }
         }
-        stacks.add(candidate.copyWithCount(1));
+        stacks.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(candidate, 1));
         setEntries(device, new RailgunModuleEntries(stacks));
         return true;
     }
@@ -96,7 +96,7 @@ public final class RailgunModuleStorage implements DeviceModuleStorage {
             if (!typeId.equals(RailgunModuleEntries.typeId(stack))) {
                 continue;
             }
-            var detached = stack.copyWithCount(1);
+            var detached = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             if (stack.getCount() <= 1) {
                 stacks.remove(index);
             } else {

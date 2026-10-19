@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -47,7 +47,7 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
         poseStack.pushPose();
         if (spinning) {
             poseStack.translate(0.5D, 0.0D, 0.5D);
-            poseStack.mulPose(Axis.YP.rotationDegrees(blockEntity.getRenderYRot(partialTick)));
+            poseStack.mulPose(Vector3f.YP.rotationDegrees(blockEntity.getRenderYRot(partialTick)));
             poseStack.translate(-0.5D, 0.0D, -0.5D);
         }
 

@@ -15,7 +15,7 @@ import appeng.api.inventories.BaseInternalInventory;
 import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.IGrid;
 import appeng.api.stacks.AEItemKey;
-import appeng.helpers.patternprovider.PatternContainer;
+import appeng.helpers.iface.PatternContainer;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -230,7 +230,7 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
             }
             return stack.getCount() <= 1
                     ? ItemStack.EMPTY
-                    : stack.copyWithCount(stack.getCount() - 1);
+                    : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, stack.getCount() - 1);
         }
 
         @Override

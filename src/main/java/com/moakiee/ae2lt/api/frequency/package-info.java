@@ -23,7 +23,7 @@
  *
  * <h2>Integrating a third-party block entity as a receiver</h2>
  * <pre>
- * public class MyMachineBE extends AENetworkBlockEntity implements FrequencyBindingHost {
+ * public class MyMachineBE extends LegacyNetworkBlockEntity implements FrequencyBindingHost {
  *     private final FrequencyBindingAccess binding = FrequencyApi.createBinding(this);
  *
  *     public void serverTick() { binding.serverTick(); }

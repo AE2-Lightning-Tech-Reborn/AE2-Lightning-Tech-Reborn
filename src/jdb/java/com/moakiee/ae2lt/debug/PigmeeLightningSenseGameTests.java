@@ -117,7 +117,7 @@ public final class PigmeeLightningSenseGameTests {
     private static final class CuriosChecks {
         private static void run(GameTestHelper h) {
             var player = player(h);
-            var head = top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).resolve()
+            var head = top.theillusivec4.curios.api.CuriosApi.getCuriosHelper().getCuriosHandler(player).resolve()
                     .flatMap(inventory -> inventory.getStacksHandler("head")).orElseThrow();
             h.assertTrue(head.getSlots() > 0, "Pigmee Curios head slot must exist");
             head.getStacks().setStackInSlot(0, new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()));

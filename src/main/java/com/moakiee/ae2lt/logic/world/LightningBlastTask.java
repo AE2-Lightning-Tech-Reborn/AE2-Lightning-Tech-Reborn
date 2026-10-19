@@ -250,7 +250,7 @@ public class LightningBlastTask {
                 this.center.getX() + r + 1, this.center.getY() + r + 1, this.center.getZ() + r + 1);
         Vec3 centerVec = Vec3.atCenterOf(this.center);
         double radiusSq = r * r;
-        DamageSource source = this.level.damageSources().lightningBolt();
+        DamageSource source = DamageSource.LIGHTNING_BOLT;
         for (LivingEntity entity : this.level.getEntitiesOfClass(LivingEntity.class, aabb)) {
             double dSq = entity.position().distanceToSqr(centerVec);
             if (dSq > radiusSq) {

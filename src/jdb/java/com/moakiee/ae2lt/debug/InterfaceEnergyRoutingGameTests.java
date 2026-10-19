@@ -11,7 +11,7 @@ import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -72,7 +72,7 @@ public final class InterfaceEnergyRoutingGameTests {
         h.setBlock(HOST, nativeAe ? AEBlocks.INTERFACE.block() : ModBlocks.OVERLOADED_INTERFACE.get());
         InterfaceBlockEntity host = (InterfaceBlockEntity) h.getBlockEntity(HOST);
         host.getInterfaceLogic().getUpgrades().setItemDirect(0,
-                new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux:induction_card"))));
+                new ItemStack(Registry.ITEM.get(new ResourceLocation("appflux:induction_card"))));
         if (host instanceof OverloadedInterfaceBlockEntity overloaded) {
             overloaded.getLevel().setBlockAndUpdate(overloaded.getBlockPos(), overloaded.getBlockState().setValue(
                 appeng.block.crafting.PatternProviderBlock.PUSH_DIRECTION, appeng.block.crafting.PushDirection.fromDirection(Direction.EAST)));
@@ -84,7 +84,7 @@ public final class InterfaceEnergyRoutingGameTests {
         h.setBlock(HOST.below(), AEBlocks.CONTROLLER.block());
         h.setBlock(HOST.below(2), AEBlocks.CREATIVE_ENERGY_CELL.block());
         h.setBlock(HOST.below().west(), AEBlocks.DRIVE.block());
-        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux:fe_64m_cell")));
+        var cell = new ItemStack(Registry.ITEM.get(new ResourceLocation("appflux:fe_64m_cell")));
         var storage = StorageCells.getCellInventory(cell, null);
         h.assertTrue(storage != null && storage.insert(AppFluxHelper.FE_KEY, 100_000_000L,
                 Actionable.MODULATE, IActionSource.ofMachine(host)) == 100_000_000L, "could not fill FE cell");

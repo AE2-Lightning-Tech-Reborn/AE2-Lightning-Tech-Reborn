@@ -51,7 +51,7 @@ class OverloadedInterfaceCraftingTest {
     static void bootstrapMinecraft() throws Exception {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), null);
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         keyTypeRegistry = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
         keyTypeRegistry.setAccessible(true);
         previousRegistry = keyTypeRegistry.get(null);
@@ -360,7 +360,7 @@ class OverloadedInterfaceCraftingTest {
 
     private static CraftingLink link(ICraftingRequester requester) {
         var tag = new CompoundTag();
-        tag.putUUID("craftId", UUID.randomUUID());
+        tag.putString("CraftID", UUID.randomUUID().toString());
         tag.putBoolean("req", true);
         return new CraftingLink(tag, requester);
     }

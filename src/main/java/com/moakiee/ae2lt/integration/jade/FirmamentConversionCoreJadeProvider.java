@@ -13,7 +13,7 @@ import snownee.jade.api.IServerDataProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvider, IServerDataProvider<net.minecraft.world.level.block.entity.BlockEntity> {
     private static final ResourceLocation UID =
             new ResourceLocation(AE2LightningTech.MODID, "firmament_conversion_core");
     private static final String TAG_INSIDE_STARSHIP = "InsideStarship";
@@ -27,8 +27,8 @@ public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvi
     }
 
     @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        if (accessor.getBlockEntity() instanceof FirmamentConversionCoreBlockEntity core) {
+    public void appendServerData(CompoundTag data, net.minecraft.server.level.ServerPlayer player, net.minecraft.world.level.Level world, net.minecraft.world.level.block.entity.BlockEntity blockEntity, boolean showDetails) {
+        if (blockEntity instanceof FirmamentConversionCoreBlockEntity core) {
             data.putBoolean(TAG_INSIDE_STARSHIP, core.isInsideFirmamentStarship());
             data.putBoolean(TAG_INACTIVE_CORE_OUTPUT, core.hasInactiveSpiritCoreOutput());
             data.putInt(TAG_PROGRESS, core.getProgress());

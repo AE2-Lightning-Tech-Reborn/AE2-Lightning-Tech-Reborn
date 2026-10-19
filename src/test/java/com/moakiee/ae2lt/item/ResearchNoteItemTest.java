@@ -27,7 +27,7 @@ class ResearchNoteItemTest {
     @BeforeAll
     static void bootstrapMinecraft() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test

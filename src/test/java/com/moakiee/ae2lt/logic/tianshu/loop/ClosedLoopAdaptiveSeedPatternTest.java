@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -70,7 +69,7 @@ public class ClosedLoopAdaptiveSeedPatternTest {
             net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         }
         net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         var keyRegistry = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
         keyRegistry.setAccessible(true);
         if (keyRegistry.get(null) == null) {
@@ -96,22 +95,22 @@ public class ClosedLoopAdaptiveSeedPatternTest {
             var registry = (net.minecraftforge.registries.ForgeRegistry<Item>)
                     net.minecraftforge.registries.ForgeRegistries.ITEMS;
             registry.unfreeze();
-            var unfreeze = BuiltInRegistries.ITEM.getClass().getMethod("unfreeze");
+            var unfreeze = Registry.ITEM.getClass().getMethod("unfreeze");
             unfreeze.setAccessible(true);
-            unfreeze.invoke(BuiltInRegistries.ITEM);
+            unfreeze.invoke(Registry.ITEM);
             try {
                 var missingContent = new ResourceLocation("ae2", "missing_content");
-                if (!BuiltInRegistries.ITEM.containsKey(missingContent)) {
+                if (!Registry.ITEM.containsKey(missingContent)) {
                     registry.register(missingContent, new Item(new Item.Properties()));
                 }
                 item = new ClosedLoopPatternItem(new Item.Properties());
                 registry.register(new ResourceLocation("ae2lt_test", "adaptive_loop"), item);
             } finally {
-                BuiltInRegistries.ITEM.freeze();
+                Registry.ITEM.freeze();
                 registry.freeze();
             }
         }
-        var registries = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+        var registries = RegistryAccess.fromRegistryOfRegistries(Registry.REGISTRY);
         var seed = AEItemKey.of(Items.WHEAT_SEEDS);
         var fuel = AEItemKey.of(Items.GOLD_INGOT);
         var raw = new IPatternDetails() {
@@ -127,7 +126,7 @@ public class ClosedLoopAdaptiveSeedPatternTest {
         var unsafeField = unsafeType.getDeclaredField("theUnsafe");
         unsafeField.setAccessible(true);
         var level = (Level) unsafeType.getMethod("allocateInstance", Class.class)
-                .invoke(unsafeField.get(null), ServerLevel.class);
+                .invoke(unsafeField.get(null), FixtureLevel.class);
         for (Class<?> type = Level.class; type != null; type = type.getSuperclass()) {
             for (var field : type.getDeclaredFields()) {
                 if (RegistryAccess.class.isAssignableFrom(field.getType())) {
@@ -150,6 +149,10 @@ public class ClosedLoopAdaptiveSeedPatternTest {
                 UUID.randomUUID(), ignored -> Map.of(seed, 8L), List.of(raw)), raw, seed, fuel, level);
     }
 
+    private static final class FixtureLevel extends ServerLevel {
+        FixtureLevel() { super(null, null, null, null, null, null, null, false, 0, null, false); }
+        @Override public RegistryAccess registryAccess() { return RegistryAccess.fromRegistryOfRegistries(Registry.REGISTRY); }
+    }
     public record Fixture(Ae2ClosedLoopPatternDetails macro, IPatternDetails raw,
                           AEKey seed, AEKey fuel, Level level) { }
 

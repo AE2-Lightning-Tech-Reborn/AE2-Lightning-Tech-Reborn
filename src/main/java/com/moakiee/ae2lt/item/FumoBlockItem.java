@@ -7,7 +7,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Equipable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -15,7 +14,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.Nullable;
 
-public class FumoBlockItem extends AE2LTBlockItem implements Equipable {
+public class FumoBlockItem extends AE2LTBlockItem {
     @Nullable
     private final String tooltipKey;
 
@@ -34,7 +33,7 @@ public class FumoBlockItem extends AE2LTBlockItem implements Equipable {
     }
 
     @Override
-    public EquipmentSlot getEquipmentSlot() {
+    public EquipmentSlot getEquipmentSlot(ItemStack stack) {
         return EquipmentSlot.HEAD;
     }
 
@@ -53,7 +52,7 @@ public class FumoBlockItem extends AE2LTBlockItem implements Equipable {
     /** Keep optional Curios classes behind the mod-presence check; cosmetic slots grant no effect. */
     private static final class CuriosBridge {
         private static boolean isWearingPigmee(Player player) {
-            return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).resolve()
+            return top.theillusivec4.curios.api.CuriosApi.getCuriosHelper().getCuriosHandler(player).resolve()
                     .flatMap(inventory -> inventory.getStacksHandler("head"))
                     .map(handler -> {
                         var stacks = handler.getStacks();

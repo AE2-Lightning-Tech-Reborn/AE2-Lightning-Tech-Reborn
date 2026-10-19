@@ -6,12 +6,12 @@ import java.util.List;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -83,14 +83,14 @@ final class EmiLightningStrikePreviewWidget extends Widget {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void render(PoseStack graphics, int mouseX, int mouseY, float delta) {
         if (blocks.isEmpty() || scale <= 0F) {
             return;
         }
         var client = Minecraft.getInstance();
         var bufferSource = client.renderBuffers().bufferSource();
         var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = graphics.pose();
+        PoseStack pose = graphics;
         float rotation = (Util.getMillis() * ROTATION_DEGREES_PER_MS) % 360F;
 
         for (Entry entry : blocks) {
@@ -100,8 +100,8 @@ final class EmiLightningStrikePreviewWidget extends Widget {
                     bounds.y() + bounds.height() / 2F,
                     400);
             pose.scale(scale, -scale, scale);
-            pose.mulPose(Axis.XP.rotationDegrees(X_ROTATION_DEG));
-            pose.mulPose(Axis.YP.rotationDegrees(225 + rotation));
+            pose.mulPose(Vector3f.XP.rotationDegrees(X_ROTATION_DEG));
+            pose.mulPose(Vector3f.YP.rotationDegrees(225 + rotation));
             pose.translate(
                     -0.5F + entry.offset.getX() - centerX,
                     -0.5F + entry.offset.getY() - centerY,

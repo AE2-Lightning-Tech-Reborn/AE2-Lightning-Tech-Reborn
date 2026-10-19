@@ -138,7 +138,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
         if (!simulate) {
             ItemStack newStack;
             if (existing.isEmpty()) {
-                newStack = stack.copyWithCount(toInsert);
+                newStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, toInsert);
             } else {
                 newStack = existing.copy();
                 newStack.grow(toInsert);
@@ -174,7 +174,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             return ItemStack.EMPTY;
         }
 
-        ItemStack extracted = existing.copyWithCount(toExtract);
+        ItemStack extracted = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(existing, toExtract);
         if (!simulate) {
             if (toExtract == existing.getCount()) {
                 stacks.set(slot, ItemStack.EMPTY);
@@ -244,7 +244,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             CompoundTag itemTag = new CompoundTag();
             itemTag.putInt(TAG_SLOT, slot);
             itemTag.putInt(TAG_COUNT_INT, stack.getCount());
-            Tag stackTag = stack.copyWithCount(1).save(new CompoundTag());
+            Tag stackTag = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1).save(new CompoundTag());
             itemTag.put(TAG_STACK, stackTag);
             items.add(itemTag);
         }
@@ -284,7 +284,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             // lowered (e.g. matrix slot 64 -> 32). The insert path still enforces the
             // current limit, so external automation cannot grow stacks beyond it; the
             // player can drain the excess through the GUI.
-            stack = stack.copyWithCount(Math.max(1, savedCount));
+            stack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, Math.max(1, savedCount));
             stacks.set(slot, stack);
         }
     }
@@ -323,8 +323,8 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
         if (input.isEmpty() || (!output.isEmpty() && !ItemStack.isSameItemSameTags(input, output))) return 0;
         int count = Math.min(Math.min(input.getCount(), maximum), Math.max(0, getSlotLimit(destination) - output.getCount()));
         if (count == 0) return 0;
-        stacks.set(destination, input.copyWithCount(output.getCount() + count));
-        stacks.set(source, count == input.getCount() ? ItemStack.EMPTY : input.copyWithCount(input.getCount() - count));
+        stacks.set(destination, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(input, output.getCount() + count));
+        stacks.set(source, count == input.getCount() ? ItemStack.EMPTY : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(input, input.getCount() - count));
         onContentsChanged(source);
         return count;
     }
@@ -362,7 +362,7 @@ public abstract class LargeStackItemHandler implements IItemHandlerModifiable, I
             return accepted;
         } finally {
             stacks.set(slot, accepted == original.getCount() ? ItemStack.EMPTY
-                    : original.copyWithCount(original.getCount() - (int) accepted));
+                    : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(original, original.getCount() - (int) accepted));
             exporting = false;
             // A callback snapshot omitted the reserved output; persist any restored remainder.
             if (accepted > 0 || savedDuringExport) onContentsChanged(slot);

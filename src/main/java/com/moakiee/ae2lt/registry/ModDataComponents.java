@@ -158,7 +158,7 @@ public final class ModDataComponents {
 
     /**
      * ItemStack 值组件：1.20.1 的 {@code ItemStack.save(CompoundTag)} / {@code ItemStack.of(CompoundTag)}
-     * 不需要 HolderLookup.Provider，可直接做 NBT 往返；空栈视为"无"并删除 key。
+     * 不需要 RegistryAccess，可直接做 NBT 往返；空栈视为"无"并删除 key。
      */
     private static ComponentKey<ItemStack> itemStackKey(String key) {
         return new ComponentKey<>(

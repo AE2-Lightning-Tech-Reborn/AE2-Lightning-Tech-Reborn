@@ -7,7 +7,8 @@ import java.util.List;
 
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -163,7 +164,7 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
     public void draw(
             OverloadProcessingRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             double mouseX,
             double mouseY) {
         background.draw(guiGraphics);
@@ -174,7 +175,7 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
                 "jei.ae2lt.overload_processing.energy",
                 compactEnergy(recipe.totalEnergy()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
         var lightningText = Component.translatable(
                 "jei.ae2lt.overload_processing.lightning",
@@ -183,17 +184,17 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
                         : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
         int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
     }
 
-    private void drawProcessOverlay(GuiGraphics guiGraphics) {
+    private void drawProcessOverlay(PoseStack guiGraphics) {
         long elapsed = Util.getMillis() % PROCESS_CYCLE_MS;
         double progress = elapsed / (double) PROCESS_CYCLE_MS;
         int width = Mth.clamp((int) Math.ceil(progress * PROCESS_OVERLAY_WIDTH), 0, PROCESS_OVERLAY_WIDTH);
         if (width <= 0) {
             return;
         }
-        guiGraphics.blit(
+        LegacyGui.blit(guiGraphics,
                 BACKGROUND_TEXTURE,
                 PROCESS_X,
                 PROCESS_Y,
@@ -207,7 +208,7 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())
-                .map(stack -> stack.copyWithCount(count))
+                .map(stack -> com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, count))
                 .toList();
     }
 

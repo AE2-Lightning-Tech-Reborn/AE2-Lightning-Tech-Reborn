@@ -13,7 +13,8 @@ import appeng.core.definitions.AEItems;
 import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -41,13 +42,13 @@ public class OverloadedIOPortScreen extends UpgradeableScreen<OverloadedIOPortMe
         fullness.set(menu.fullness); operation.set(menu.operation);
         redstone.set(menu.getRedStoneMode()); redstone.setVisibility(menu.hasUpgrade(AEItems.REDSTONE_CARD));
     }
-    @Override public void drawBG(GuiGraphics graphics, int x, int y, int mx, int my, float partial) {
+    @Override public void drawBG(PoseStack graphics, int x, int y, int mx, int my, float partial) {
         super.drawBG(graphics, x, y, mx, my, partial);
         // The 1.20.1 AE2 texture has a large arrow where the live rate/status labels go.
-        graphics.fill(x + 56, y + 34, x + 121, y + 69, 0xffc6c6c6);
-        filterSlotFrame.copy().dest(x + 65, y + 52).blit(graphics);
-        filterSlotFrame.copy().dest(x + 91, y + 52).blit(graphics);
-        drawItem(graphics, x + 58, y + 17, AEItems.ITEM_CELL_1K.stack());
-        drawItem(graphics, x + 102, y + 17, AEBlocks.DRIVE.stack());
+        LegacyGui.fill(graphics, x + 56, y + 34, x + 121, y + 69, 0xffc6c6c6);
+        filterSlotFrame.copy().dest(x + 65, y + 52).blit(graphics, 0);
+        filterSlotFrame.copy().dest(x + 91, y + 52).blit(graphics, 0);
+        drawItem( x + 58, y + 17, AEItems.ITEM_CELL_1K.stack());
+        drawItem( x + 102, y + 17, AEBlocks.DRIVE.stack());
     }
 }

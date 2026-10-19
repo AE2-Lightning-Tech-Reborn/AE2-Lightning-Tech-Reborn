@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
+import com.mojang.math.Vector3f;
 import org.slf4j.Logger;
 
 public final class NaturalLightningTransformationHandler {
@@ -46,7 +46,7 @@ public final class NaturalLightningTransformationHandler {
     }
 
     public static void handleLightningTick(LightningBolt lightningBolt) {
-        if (!(lightningBolt.level() instanceof ServerLevel serverLevel)) {
+        if (!(lightningBolt.level instanceof ServerLevel serverLevel)) {
             return;
         }
 

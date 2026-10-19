@@ -18,9 +18,7 @@ class CoreEffectShaderSourceContractTest {
         String metadata = Files.readString(Path.of("src/main/resources/META-INF/mods.toml"));
 
         assertAll(
-                () -> assertTrue(build.contains(
-                        "compileOnly(fg.deobf(\"foundry.veil:Veil-forge-${minecraft_version}")),
-                () -> assertTrue(build.contains("${veil_version}:slim")),
+                () -> assertFalse(build.contains("compileOnly(fg.deobf(\"foundry.veil")),
                 () -> assertFalse(build.contains("runtimeOnly fg.deobf(\"foundry.veil")),
                 () -> assertFalse(build.contains("implementation fg.deobf(\"foundry.veil")),
                 () -> assertTrue(metadata.contains("modId = \"veil\"")),

@@ -18,7 +18,7 @@ public final class LargeStackStreamCodecs {
             return;
         }
 
-        buffer.writeItemStack(stack.copyWithCount(1), true);
+        buffer.writeItemStack(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1), true);
         writeStackCount(buffer, stack.getCount());
     }
 

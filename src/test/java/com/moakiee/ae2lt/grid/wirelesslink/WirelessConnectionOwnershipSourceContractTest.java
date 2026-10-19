@@ -38,8 +38,8 @@ class WirelessConnectionOwnershipSourceContractTest {
         }
 
         String ops = source("com/moakiee/ae2lt/grid/wirelesslink/WirelessLinkOps.java");
-        assertTrue(ops.contains("catch (IllegalStateException duplicateCandidate)"));
-        assertTrue(ops.contains("throw duplicateCandidate;"));
+        assertTrue(ops.contains("catch (appeng.api.exceptions.FailedConnectionException | IllegalStateException duplicateCandidate)"));
+        assertTrue(ops.contains("throw new IllegalStateException(\"Unable to connect wireless nodes\", duplicateCandidate);"));
         assertTrue(ops.contains("isDuplicateConnectionFailure(duplicateCandidate)"));
         assertFalse(ops.contains("!isWirelessBridge(connection)"));
         assertFalse(ops.contains("A virtual connection owned by another system already exists"));

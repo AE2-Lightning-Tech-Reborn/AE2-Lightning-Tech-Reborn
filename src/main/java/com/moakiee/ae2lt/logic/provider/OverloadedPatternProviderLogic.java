@@ -39,9 +39,9 @@ import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.upgrades.IUpgradeableObject;
-import appeng.helpers.patternprovider.PatternProviderLogic;
-import appeng.helpers.patternprovider.PatternProviderReturnInventory;
-import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.iface.PatternProviderLogic;
+import appeng.helpers.iface.PatternProviderReturnInventory;
+import appeng.helpers.iface.PatternProviderTarget;
 import appeng.me.helpers.MachineSource;
 import appeng.util.inv.filter.IAEItemFilter;
 
@@ -489,7 +489,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     private boolean canUseAdaptiveBatch(IPatternDetails details) {
         return overloadedHost.isAdaptiveBatchEnabled()
                 && details != null
-                && details.supportsPushInputsToExternalInventory()
+                && com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(details)
                 && !AdvancedAECompat.isDirectional(details);
     }
 
@@ -544,7 +544,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
                         return new ProviderNormalDispatch.BatchAttemptResult(
                                 0L, false, false);
                     }
-                    autoReturn.beforeDispatch(context.level(), context.target());
+                    autoReturn.beforeDispatch(context.level, context.target());
                     var ramp = dispatchNormalBatchRamp(
                             context,
                             pattern,
@@ -723,7 +723,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             BatchTargetContext context, IPatternDetails pattern) {
         return isTargetBlocked(
                 context.target(),
-                context.level(),
+                context.level,
                 pattern);
     }
 
@@ -752,10 +752,10 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             double oneCopyCost,
             PatternInputAcceptance inputAcceptance) {
         boolean batchSupported = context.target().supportsBatch(
-                context.level(), pattern);
+                context.level, pattern);
         long targetMaxCraft = Math.min(
                 maxCraft,
-                context.target().batchCopyLimit(context.level()));
+                context.target().batchCopyLimit(context.level));
         var result = context.target().pushPattern(
                 patternHandle,
                 targetMaxCraft,
@@ -782,11 +782,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             double oneCopyCost,
             boolean preserveBatchHistoryOnRejection) {
         boolean batchSupported = context.target().supportsBatch(
-                context.level(), pattern);
+                context.level, pattern);
         var result = context.target().pushPatternStep(
                 patternHandle,
                 maxCraft,
-                context.level().getGameTime(),
+                context.level.getGameTime(),
                 batchSupported,
                 preserveBatchHistoryOnRejection,
                 () -> isBatchTargetBlocked(context, patternHandle),
@@ -828,7 +828,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         }
 
         var result = context.target().pushCopies(
-                context.level(), pattern, oneCopyTemplate, copies,
+                context.level, pattern, oneCopyTemplate, copies,
                 inputAcceptance,
                 ((PatternProviderLogicAccessor) this).getPatternInputs(),
                 wirelessSource);
@@ -869,7 +869,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         ((PatternProviderLogicAccessor) this).invokeOnPushPatternSuccess(pattern);
         syncPendingUnlockRule(pattern);
         context.target().markPatternDispatched(
-                context.level(), patternHandle);
+                context.level, patternHandle);
     }
 
     private boolean wirelessPushPattern(IPatternDetails pattern, KeyCounter[] inputs) {
@@ -1016,7 +1016,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         if (!gridNode.isActive()) return false;
         if (patternHandle == null) return false;
         if (getCraftingLockedReason() != LockCraftingMode.NONE) return false;
-        if (!pattern.supportsPushInputsToExternalInventory()) return false;
+        if (!com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(pattern)) return false;
 
         var level = overloadedHost.getLevel();
         if (!(level instanceof ServerLevel sl)) return false;
@@ -1081,7 +1081,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         var targetLevel = server.getLevel(conn.dimension());
         if (targetLevel == null) return WirelessPushOutcome.HARD_FAIL;
         if (!targetLevel.isLoaded(conn.pos())) return WirelessPushOutcome.HARD_FAIL;
-        if (!pattern.supportsPushInputsToExternalInventory()) return WirelessPushOutcome.SOFT_FAIL;
+        if (!com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(pattern)) return WirelessPushOutcome.SOFT_FAIL;
 
         var be = targetLevel.getBlockEntity(conn.pos());
         if (be == null) return WirelessPushOutcome.HARD_FAIL;
@@ -1181,7 +1181,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             IPatternDetails pattern, KeyCounter[] inputs,
             Map<Direction, PatternProviderTarget> faceToTarget, Direction defaultFace) {
         var overflow = new ArrayList<RoutedPatternOverflow.Entry>();
-        pattern.pushInputsToExternalInventory(inputs, (what, amount) -> {
+        com.moakiee.ae2lt.compat.LegacyPatternDetails.push(pattern, inputs, (what, amount) -> {
             var dir = AdvancedAECompat.getDirectionForKey(pattern, what);
             var face = dir != null ? dir : defaultFace;
             var target = faceToTarget.get(face);
@@ -2004,9 +2004,8 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         storage.addDrops(drops);
     }
 
-    @Override
     public void clearContent() {
-        super.clearContent();
+
         storage.clear();
         if (pendingLocalDirectionalOverflowTarget != null) {
             pendingLocalDirectionalOverflowTarget.clearDirectionalOverflow();

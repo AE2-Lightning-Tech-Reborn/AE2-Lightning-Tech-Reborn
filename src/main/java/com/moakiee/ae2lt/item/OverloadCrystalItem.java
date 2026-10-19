@@ -46,9 +46,9 @@ public class OverloadCrystalItem extends AE2LTItem {
 
     @Override
     public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
-        if (entity.level().isClientSide) {
+        if (entity.level.isClientSide) {
             spawnDroppedLightning(entity);
-        } else if (entity.level() instanceof ServerLevel serverLevel) {
+        } else if (entity.level instanceof ServerLevel serverLevel) {
             // Only advance the timer once per DROPPED_TICK_INTERVAL ticks. tickCount is an
             // in-memory counter that resets when the entity reloads, but the NBT-stored
             // counter preserves progress across saves, so the worst-case slip after a
@@ -97,7 +97,7 @@ public class OverloadCrystalItem extends AE2LTItem {
 
     @OnlyIn(Dist.CLIENT)
     private static void spawnDroppedLightning(ItemEntity entity) {
-        RandomSource random = entity.level().random;
+        RandomSource random = entity.level.random;
         if (random.nextInt(12) != 0) {
             return;
         }

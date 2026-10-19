@@ -8,7 +8,7 @@ import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipeService;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import io.netty.buffer.Unpooled;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -46,14 +46,14 @@ public final class AppGenProcessorGameTests {
                 .orElseThrow().value();
         helper.assertTrue(compression.getWidth() == 2 && compression.getHeight() == 2
                         && compression.getIngredients().stream().allMatch(i -> i.test(ember))
-                        && compression.getResultItem(level.registryAccess()).is(emberBlock.getItem()),
+                        && compression.getResultItem().is(emberBlock.getItem()),
                 "actual AppGen compression is four crystals per ember block");
         var printing = (InscriberRecipe) manager.byKey(new ResourceLocation("appgen:inscriber/printed_origination_processor"))
                 .orElseThrow().value();
         var finishing = (InscriberRecipe) manager.byKey(new ResourceLocation("appgen:inscriber/origination_processor"))
                 .orElseThrow().value();
-        helper.assertTrue(printing.getMiddleInput().test(ember) && printing.getResultItem(level.registryAccess()).is(printed.getItem())
-                        && finishing.getTopOptional().test(printed) && finishing.getResultItem(level.registryAccess()).is(processor.getItem()),
+        helper.assertTrue(printing.getMiddleInput().test(ember) && printing.getResultItem().is(printed.getItem())
+                        && finishing.getTopOptional().test(printed) && finishing.getResultItem().is(processor.getItem()),
                 "bulk output follows the real inscriber processor chain");
         helper.assertTrue(bulk.isPresent() && bulk.get().value() instanceof OverloadProcessingRecipe, "conditional bulk recipe loaded");
         var recipe = (OverloadProcessingRecipe) bulk.orElseThrow().value();
@@ -98,7 +98,7 @@ public final class AppGenProcessorGameTests {
     }
 
     private static ItemStack item(String id) {
-        return new ItemStack(BuiltInRegistries.ITEM.getOptional(new ResourceLocation(id)).orElseThrow());
+        return new ItemStack(Registry.ITEM.getOptional(new ResourceLocation(id)).orElseThrow());
     }
 
     @GameTest(template = "pigmee_station_empty")
@@ -145,7 +145,7 @@ public final class AppGenProcessorGameTests {
                 inventory.setStackInSlot(slot, stack);
             }
             var upstreamFluid = upstream.getAsJsonObject("input_fluid");
-            var fluid = new FluidStack(BuiltInRegistries.FLUID.getOptional(new ResourceLocation(
+            var fluid = new FluidStack(Registry.FLUID.getOptional(new ResourceLocation(
                     upstreamFluid.getAsJsonObject("ingredient").get("fluid").getAsString())).orElseThrow(),
                     upstreamFluid.get("amount").getAsInt());
             helper.assertTrue(recipe.inputFluidAmount() == fluid.getAmount() && recipe.hasRequiredFluid(fluid, 1),

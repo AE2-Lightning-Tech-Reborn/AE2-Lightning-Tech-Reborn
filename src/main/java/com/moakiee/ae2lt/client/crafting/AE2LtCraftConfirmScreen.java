@@ -6,15 +6,16 @@ import java.util.Locale;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 import appeng.api.config.Settings;
 import appeng.api.config.TerminalStyle;
-import appeng.client.gui.StackWithBounds;
+import appeng.api.stacks.GenericStack;
 import appeng.client.gui.me.crafting.CraftConfirmScreen;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.Scrollbar;
@@ -58,7 +59,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         bookmarkMissing = widgets.addButton("bookmarkMissing",
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing"), this::bookmarkMissing);
         bookmarkMissing.active = false;
-        bookmarkMissing.setTooltip(Tooltip.create(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(bookmarkMissing, Tooltip.create(
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing.tooltip")));
         addToLeftToolbar(new SettingToggleButton<>(Settings.TERMINAL_STYLE,
                 config.getTerminalStyle(), this::toggleTerminalStyle));
@@ -111,7 +112,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         start.active = !menu.hasNoCPU() && (startable || forceStart);
         start.setMessage(forceStart ? Component.translatable("gui.ae2lt.crafting_report.force_start")
                 : GuiText.Start.text());
-        start.setTooltip(canForce ? Tooltip.create(Component.translatable(forceStart
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(start, canForce ? Tooltip.create(Component.translatable(forceStart
                 ? "gui.ae2lt.crafting_report.force_start.tooltip"
                 : "gui.ae2lt.crafting_report.force_start.hint")) : null);
         selectCpu.active = startable || forceStart;
@@ -187,25 +188,25 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(PoseStack graphics, int offsetX, int offsetY,
             int mouseX, int mouseY, float partialTicks) {
         var background = style.getBackground().copy();
-        background.src(0, 0, imageWidth, HEADER_HEIGHT).dest(offsetX, offsetY).blit(graphics);
+        background.src(0, 0, imageWidth, HEADER_HEIGHT).dest(offsetX, offsetY).blit(graphics, 0);
         for (int row = 0; row < visibleRows; row++) {
             // Only the first row includes the two-pixel top bevel. Repeat an interior row.
             background.src(0, row == 0 ? HEADER_HEIGHT : HEADER_HEIGHT + ROW_HEIGHT, imageWidth, ROW_HEIGHT)
-                    .dest(offsetX, offsetY + HEADER_HEIGHT + row * ROW_HEIGHT).blit(graphics);
+                    .dest(offsetX, offsetY + HEADER_HEIGHT + row * ROW_HEIGHT).blit(graphics, 0);
         }
         background.src(0, FOOTER_Y - 1, imageWidth, 1)
-                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 1).blit(graphics);
+                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 1).blit(graphics, 0);
         background.src(0, FOOTER_Y, imageWidth, FOOTER_HEIGHT - 8)
-                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT).blit(graphics);
+                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT).blit(graphics, 0);
         background.src(0, 248, imageWidth, 8)
-                .dest(offsetX, offsetY + imageHeight - 8).blit(graphics);
+                .dest(offsetX, offsetY + imageHeight - 8).blit(graphics, 0);
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         CraftingPlanSummary plan = menu.getPlan();
         if (plan != null) {
             table.render(graphics, mouseX, mouseY, plan.getEntries(), scrollbar.getCurrentScroll());
@@ -213,8 +214,8 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     }
 
     @Override
-    public @Nullable StackWithBounds getStackUnderMouse(double mouseX, double mouseY) {
-        StackWithBounds hovered = table.getHoveredStack();
+    public @Nullable GenericStack getStackUnderMouse(double mouseX, double mouseY) {
+        GenericStack hovered = table.getHoveredStack();
         return hovered != null ? hovered : super.getStackUnderMouse(mouseX, mouseY);
     }
 

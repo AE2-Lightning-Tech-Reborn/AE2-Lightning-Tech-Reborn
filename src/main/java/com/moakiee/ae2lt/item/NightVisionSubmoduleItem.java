@@ -7,7 +7,7 @@ import com.moakiee.ae2lt.celestweave.ArmorOverloadRules;
 import com.moakiee.ae2lt.celestweave.ArmorPart;
 import com.moakiee.ae2lt.celestweave.module.NightVisionSubmodule;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.effect.MobEffects;
 
 public final class NightVisionSubmoduleItem extends AbstractSingleArmorSubmoduleItem {
@@ -20,7 +20,7 @@ public final class NightVisionSubmoduleItem extends AbstractSingleArmorSubmodule
                 stack -> List.of(
                         // 1.20.1: MobEffects fields are raw MobEffect; wrap for the Holder-taking record.
                         new DeviceCapability.StatusEffectGrant(
-                                BuiltInRegistries.MOB_EFFECT.wrapAsHolder(MobEffects.NIGHT_VISION), 0),
+                                net.minecraft.core.Holder.direct(MobEffects.NIGHT_VISION), 0),
                         new DeviceCapability.PassiveDrain(ArmorOverloadRules.NIGHT_VISION_PASSIVE_DRAIN_FE)));
     }
 }

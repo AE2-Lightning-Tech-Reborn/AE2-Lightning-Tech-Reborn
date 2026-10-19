@@ -64,22 +64,22 @@ public final class TianshuTerminalStateGameTests {
 
         var saved = new CompoundTag();
         part.writeToNBT(saved);
-        helper.assertTrue(saved.getString("TianshuEncodingMode").equals("CLOSED_LOOP"),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(saved.getString("TianshuEncodingMode").equals("CLOSED_LOOP"),
                 "Wired terminals must retain their original root NBT keys");
-        helper.assertFalse(saved.contains("patternEncodingLogic"), "Do not migrate wired state into item NBT");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(saved.contains("patternEncodingLogic"), "Do not migrate wired state into item NBT");
 
         var restored = new TianshuPatternEncodingTerminalPart(ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL.get());
         restored.setPartHostInfo(Direction.SOUTH, bus, bus);
         restored.readFromNBT(saved.copy());
         assertPopulated(helper, restored);
-        helper.assertTrue(restored.getLogic().isSubstitution(), "Native pattern settings must survive reload");
-        helper.assertTrue(restored.getLogic().getBlankPatternInv().getSlotLimit(0) == 0,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getLogic().isSubstitution(), "Native pattern settings must survive reload");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getLogic().getBlankPatternInv().getSlotLimit(0) == 0,
                 "Physical blank-pattern storage must remain disabled");
         restored.setClosedLoopTerminalDraft(null);
         restored.setProcessingPatternTerminalDraft(null);
         restored.writeToNBT(saved);
-        helper.assertFalse(saved.contains("ClosedLoopDraft"), "Cleared closed-loop drafts must be removed");
-        helper.assertFalse(saved.contains("ProcessingDraft"), "Cleared processing drafts must be removed");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(saved.contains("ClosedLoopDraft"), "Cleared closed-loop drafts must be removed");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(saved.contains("ProcessingDraft"), "Cleared processing drafts must be removed");
         helper.succeed();
     }
 
@@ -87,9 +87,9 @@ public final class TianshuTerminalStateGameTests {
     public static void wirelessHostsFollowOptionalDependency(GameTestHelper helper) {
         if (!ModList.get().isLoaded("ae2wtlib")) {
             var id = new ResourceLocation(AE2LightningTech.MODID, "wireless_tianshu_pattern_encoding_terminal");
-            helper.assertFalse(ForgeRegistries.ITEMS.containsKey(id),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(ForgeRegistries.ITEMS.containsKey(id),
                     "The wireless item must stay absent without AE2WTLib");
-            helper.assertFalse(ForgeRegistries.MENU_TYPES.containsKey(id),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(ForgeRegistries.MENU_TYPES.containsKey(id),
                     "The wireless menu must stay absent without AE2WTLib");
         } else {
             WirelessHosts.verify(helper);
@@ -108,11 +108,11 @@ public final class TianshuTerminalStateGameTests {
         populate(host);
         var restored = new TianshuWirelessPatternEncodingTermMenuHost(player, 0, stack, (p, menu) -> { });
         assertPopulated(helper, restored);
-        helper.assertTrue(restored.getViewCellStorage().getStackInSlot(0).is(AEItems.VIEW_CELL.asItem()),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getViewCellStorage().getStackInSlot(0).is(AEItems.VIEW_CELL.asItem()),
                 "The compatibility host must still restore its own view cells");
-        helper.assertTrue(stack.getOrCreateTagElement("patternEncodingLogic").contains("viewcells"),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(stack.getOrCreateTagElement("patternEncodingLogic").contains("viewcells"),
                 "Legacy view cells must retain their nested location");
-        helper.assertFalse(stack.getOrCreateTag().contains("viewcells"),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(stack.getOrCreateTag().contains("viewcells"),
                 "Do not migrate legacy view cells to AE2WTLib's root location");
         player.getInventory().clearContent();
         helper.succeed();
@@ -126,11 +126,11 @@ public final class TianshuTerminalStateGameTests {
     }
 
     private static void assertPopulated(GameTestHelper helper, TianshuPatternTerminalHost host) {
-        helper.assertTrue(host.getTianshuEncodingMode() == TianshuEncodingMode.CLOSED_LOOP, "Mode must survive reload");
-        helper.assertTrue(host.isMaintainableView(), "View selection must survive reload");
-        helper.assertTrue(ClosedLoopTerminalDraft.sameState(closedLoopDraft(), host.getClosedLoopTerminalDraft()),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(host.getTianshuEncodingMode() == TianshuEncodingMode.CLOSED_LOOP, "Mode must survive reload");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(host.isMaintainableView(), "View selection must survive reload");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(ClosedLoopTerminalDraft.sameState(closedLoopDraft(), host.getClosedLoopTerminalDraft()),
                 "Closed-loop stacks, roles and multipliers must survive reload");
-        helper.assertTrue(ProcessingPatternTerminalDraft.sameState(processingDraft(), host.getProcessingPatternTerminalDraft()),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(ProcessingPatternTerminalDraft.sameState(processingDraft(), host.getProcessingPatternTerminalDraft()),
                 "Processing configuration must survive reload");
     }
 
@@ -157,10 +157,10 @@ public final class TianshuTerminalStateGameTests {
     private static final class WirelessHosts {
         private static void verify(GameTestHelper helper) {
             var item = Ae2wtlibIntegration.terminal();
-            helper.assertTrue(item == ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(item == ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get(),
                     "Item registration and the terminal definition must share an instance");
             var name = Ae2wtlibIntegration.TIANSHU_TERMINAL_NAME;
-            helper.assertTrue(WUTHandler.wirelessTerminals.get(name).item() == item,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(WUTHandler.wirelessTerminals.get(name).item() == item,
                     "WUT must use the registered item instance");
             var universal = new ItemStack(AE2wtlib.UNIVERSAL_TERMINAL);
             for (var installed : WUTHandler.terminalNames) {
@@ -183,30 +183,30 @@ public final class TianshuTerminalStateGameTests {
             populate(host);
             var data = stack.getOrCreateTagElement("patternEncodingLogic");
             data.putString("foreignState", "preserve");
-            helper.assertTrue(data.getString("tianshuMode").equals("CLOSED_LOOP"),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(data.getString("tianshuMode").equals("CLOSED_LOOP"),
                     "Wireless setters must save immediately using legacy keys");
-            helper.assertFalse(stack.getOrCreateTag().contains("TianshuEncodingMode"),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(stack.getOrCreateTag().contains("TianshuEncodingMode"),
                     "Wireless state must not use the part's root keys");
 
             // A nullable slot is the supported non-inventory/Curios constructor path.
             var restored = new TianshuWTMenuHost(player, null, stack, (p, menu) -> { });
             assertPopulated(helper, restored);
-            helper.assertTrue(restored.getLogic().isSubstitution(), "Native pattern settings must survive reload");
-            helper.assertTrue(restored.getLogic().getBlankPatternInv().getSlotLimit(0) == 0,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getLogic().isSubstitution(), "Native pattern settings must survive reload");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getLogic().getBlankPatternInv().getSlotLimit(0) == 0,
                     "Physical blank-pattern storage must remain disabled");
-            helper.assertTrue(restored.getViewCellStorage().getStackInSlot(0).is(AEItems.VIEW_CELL.asItem()),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getViewCellStorage().getStackInSlot(0).is(AEItems.VIEW_CELL.asItem()),
                     "AE2WTLib must retain ownership of view-cell persistence");
-            helper.assertTrue(restored.getSubInventory(WTMenuHost.INV_SINGULARITY)
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getSubInventory(WTMenuHost.INV_SINGULARITY)
                             .getStackInSlot(0).is(AEItems.QUANTUM_ENTANGLED_SINGULARITY.asItem()),
                     "AE2WTLib must retain ownership of singularity persistence");
             restored.setClosedLoopTerminalDraft(null);
             restored.setProcessingPatternTerminalDraft(null);
-            helper.assertFalse(data.contains("tianshuClosedLoopDraft"), "Cleared wireless drafts must be removed");
-            helper.assertFalse(data.contains("tianshuProcessingDraft"), "Cleared processing drafts must be removed");
-            helper.assertTrue(data.getString("foreignState").equals("preserve"), "Unrelated NBT must be preserved");
-            helper.assertTrue(WUTHandler.getCurrentTerminal(stack).equals(terminalName),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(data.contains("tianshuClosedLoopDraft"), "Cleared wireless drafts must be removed");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(data.contains("tianshuProcessingDraft"), "Cleared processing drafts must be removed");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(data.getString("foreignState").equals("preserve"), "Unrelated NBT must be preserved");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(WUTHandler.getCurrentTerminal(stack).equals(terminalName),
                     "Saving state must not change WUT terminal selection");
-            helper.assertTrue(restored.getMainMenuIcon().is(ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get()),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(restored.getMainMenuIcon().is(ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get()),
                     "The main menu must retain the Tianshu terminal icon");
             verifyFrequencyInventory(helper, player, restored, stack);
             player.getInventory().clearContent();
@@ -215,21 +215,21 @@ public final class TianshuTerminalStateGameTests {
         private static void verifyFrequencyInventory(GameTestHelper helper, Player player,
                 TianshuWTMenuHost host, ItemStack stack) {
             var noCard = WirelessTerminalFrequencyLink.resolveRoute(player, stack);
-            helper.assertTrue(noCard.kind() == RouteKind.NO_FREQUENCY,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(noCard.kind() == RouteKind.NO_FREQUENCY,
                     "An empty upgrade inventory must defer to native connections");
             var upgrades = host.getUpgrades();
             var unbound = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
             upgrades.setItemDirect(0, unbound);
-            helper.assertFalse(WirelessTerminalFrequencyLink.resolveRoute(player, stack)
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(WirelessTerminalFrequencyLink.resolveRoute(player, stack)
                     .usesFrequencyRoute(), "An unbound card must defer to native connections");
 
             // Historical inventory fixture: an unbound card precedes a bound card in a later slot.
             // Direct writes intentionally bypass the normal one-card installation limit.
             int lastSlot = upgrades.size() - 1;
             if (host.isUniversalWirelessTerminal()) {
-                helper.assertTrue(lastSlot >= 2, "The multi-terminal WUT must exercise slots beyond the vanilla two-slot view");
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(lastSlot >= 2, "The multi-terminal WUT must exercise slots beyond the vanilla two-slot view");
             } else {
-                helper.assertTrue(upgrades.size() == 2, "Standalone terminals must retain their native two-slot host view");
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(upgrades.size() == 2, "Standalone terminals must retain their native two-slot host view");
             }
             var bound = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
             OverloadedFrequencyCardItem.setData(bound, OverloadedFrequencyCardData.empty()
@@ -237,10 +237,10 @@ public final class TianshuTerminalStateGameTests {
             upgrades.setItemDirect(lastSlot, bound);
             var itemRoute = WirelessTerminalFrequencyLink.resolveRoute(player, stack);
             var hostRoute = WirelessTerminalFrequencyLink.resolveRoute(player, upgrades);
-            helper.assertTrue(itemRoute.kind() == RouteKind.UNAVAILABLE,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(itemRoute.kind() == RouteKind.UNAVAILABLE,
                     "Resolve the first bound card across all host slots, without adding owner/auto-connect gates");
-            helper.assertTrue(itemRoute.kind() == hostRoute.kind(), "Item and host views must resolve the same route");
-            helper.assertFalse(itemRoute.usesFrequencyRoute(), "An unavailable frequency must retain native fallback");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(itemRoute.kind() == hostRoute.kind(), "Item and host views must resolve the same route");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(itemRoute.usesFrequencyRoute(), "An unavailable frequency must retain native fallback");
         }
     }
 }

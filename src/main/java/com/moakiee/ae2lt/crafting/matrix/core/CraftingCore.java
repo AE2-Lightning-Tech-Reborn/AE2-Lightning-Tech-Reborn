@@ -10,7 +10,7 @@ import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -189,7 +189,7 @@ public final class CraftingCore implements Sweepable {
         assemblyCache.clear();
     }
 
-    public void writeTo(CompoundTag tag, HolderLookup.Provider registries) {
+    public void writeTo(CompoundTag tag, RegistryAccess registries) {
         if (threadsInFlight <= 0) return;
 
         var pendingTag = new CompoundTag();
@@ -202,7 +202,7 @@ public final class CraftingCore implements Sweepable {
         }
     }
 
-    public void readFrom(CompoundTag tag, HolderLookup.Provider registries) {
+    public void readFrom(CompoundTag tag, RegistryAccess registries) {
         registry.markInactive(this);
         reset();
         if (!tag.contains(NBT_PENDING, Tag.TAG_COMPOUND)) return;

@@ -5,8 +5,7 @@ import com.google.gson.JsonObject;
 import java.util.Iterator;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -50,7 +49,7 @@ public sealed interface CrystalCatalyzerOutput
     static CrystalCatalyzerOutput fromJson(JsonObject json) {
         if (json.has("tag")) {
             return new OfTag(
-                    TagKey.create(Registries.ITEM, ResourceLocation.tryParse(GsonHelper.getAsString(json, "tag"))),
+                    TagKey.create(Registry.ITEM_REGISTRY, ResourceLocation.tryParse(GsonHelper.getAsString(json, "tag"))),
                     GsonHelper.getAsInt(json, "count", 1));
         }
         return new OfItem(RecipeSerializationHelper.itemStackFromJson(json));
@@ -75,7 +74,7 @@ public sealed interface CrystalCatalyzerOutput
         if (buf.readBoolean()) {
             ResourceLocation tagId = buf.readResourceLocation();
             int count = buf.readInt();
-            return new OfTag(TagKey.create(Registries.ITEM, tagId), count);
+            return new OfTag(TagKey.create(Registry.ITEM_REGISTRY, tagId), count);
         }
         ItemStack stack = LargeStackStreamCodecs.readItemStack(buf);
         return new OfItem(stack);
@@ -109,7 +108,7 @@ public sealed interface CrystalCatalyzerOutput
 
         @Override
         public ItemStack resolve() {
-            HolderSet.Named<Item> holders = BuiltInRegistries.ITEM.getTag(tag).orElse(null);
+            HolderSet.Named<Item> holders = Registry.ITEM.getTag(tag).orElse(null);
             if (holders == null || holders.size() == 0) {
                 return ItemStack.EMPTY;
             }

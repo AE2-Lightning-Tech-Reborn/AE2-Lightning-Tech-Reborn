@@ -59,7 +59,7 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
                     new ConfirmBigAmountPacket(
                             menu.containerId,
                             n.get(),
-                            amountToCraft.startsWithEquals(),
+                            ((BigNumberEntry) amountToCraft).ae2lt$startsWithEquals(),
                             hasShiftDown()));
             ci.cancel();
         }

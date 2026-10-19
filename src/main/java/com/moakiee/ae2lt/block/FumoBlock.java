@@ -27,7 +27,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -45,8 +45,8 @@ public class FumoBlock extends Block implements EntityBlock {
     private static final VoxelShape SHAPE_EAST = Block.box(1.3, 0, 3.8, 12, 13.6, 12.2);
 
     public FumoBlock() {
-        super(BlockBehaviour.Properties.of()
-                .mapColor(MapColor.NONE)
+        super(BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+                .color(MaterialColor.NONE)
                 .sound(SoundType.WOOL)
                 .strength(0.5f)
                 .noOcclusion());

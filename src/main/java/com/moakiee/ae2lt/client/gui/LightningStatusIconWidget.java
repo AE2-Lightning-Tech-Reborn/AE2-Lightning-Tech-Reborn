@@ -3,7 +3,8 @@ package com.moakiee.ae2lt.client.gui;
 import java.util.List;
 import java.util.function.Supplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.renderer.Rect2i;
@@ -35,8 +36,8 @@ public class LightningStatusIconWidget extends AbstractWidget implements IToolti
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        guiGraphics.blit(ICON, getX(), getY(), 0, 0, SIZE, SIZE, SIZE, SIZE);
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
+        LegacyGui.blit(guiGraphics, ICON, x, y, 0, 0, SIZE, SIZE, SIZE, SIZE);
     }
 
     @Override
@@ -47,7 +48,7 @@ public class LightningStatusIconWidget extends AbstractWidget implements IToolti
 
     @Override
     public Rect2i getTooltipArea() {
-        return new Rect2i(getX(), getY(), width, height);
+        return new Rect2i(x, y, width, height);
     }
 
     @Override
@@ -56,6 +57,6 @@ public class LightningStatusIconWidget extends AbstractWidget implements IToolti
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 }

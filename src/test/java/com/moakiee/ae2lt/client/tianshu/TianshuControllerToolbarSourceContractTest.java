@@ -19,6 +19,6 @@ class TianshuControllerToolbarSourceContractTest {
         assertTrue(source.contains("TianshuControllerActionPacket.Action.AUTO_BUILD"));
         assertTrue(source.contains("TextureToggleButton.ButtonType.CPU_SELECTION"));
         assertTrue(source.contains("TianshuControllerActionPacket.Action.OPEN_ALGORITHM_SELECTION"));
-        assertTrue(source.contains("selection.setPosition(x, y + 22)"));
+        assertTrue(source.contains("com.moakiee.ae2lt.client.compat.LegacyWidgets.position(selection, x, y + 22)"));
     }
 }

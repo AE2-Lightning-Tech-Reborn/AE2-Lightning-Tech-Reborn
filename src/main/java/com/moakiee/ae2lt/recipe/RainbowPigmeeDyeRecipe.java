@@ -18,8 +18,8 @@ public final class RainbowPigmeeDyeRecipe extends ShapedRecipe {
     private RainbowPigmeeColoring coloring = RainbowPigmeeColoring.EMPTY;
 
     private RainbowPigmeeDyeRecipe(ShapedRecipe recipe) {
-        super(recipe.getId(), recipe.getGroup(), recipe.category(), recipe.getWidth(), recipe.getHeight(),
-                recipe.getIngredients(), recipe.getResultItem(null), recipe.showNotification());
+        super(recipe.getId(), recipe.getGroup(), recipe.getWidth(), recipe.getHeight(),
+                recipe.getIngredients(), recipe.getResultItem());
     }
 
     void setColoring(RainbowPigmeeColoring coloring) {
@@ -32,8 +32,8 @@ public final class RainbowPigmeeDyeRecipe extends ShapedRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer input, RegistryAccess registries) {
-        return matchesDyeBases(input) ? super.assemble(input, registries) : recolorResult(input, registries);
+    public ItemStack assemble(CraftingContainer input) {
+        return matchesDyeBases(input) ? super.assemble(input) : recolorResult(input, RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.Registry.REGISTRY));
     }
 
     private boolean matchesDyeBases(CraftingContainer input) {
@@ -45,7 +45,7 @@ public final class RainbowPigmeeDyeRecipe extends ShapedRecipe {
     private ItemStack recolorResult(CraftingContainer input, RegistryAccess registries) {
         if (input.getWidth() != 3 || input.getHeight() != 3 || getWidth() != 3 || getHeight() != 3
                 || !input.getItem(4).is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())
-                || !(getResultItem(null).getItem() instanceof DyeItem dye)) {
+                || !(getResultItem().getItem() instanceof DyeItem dye)) {
             return ItemStack.EMPTY;
         }
         ItemStack target = ItemStack.EMPTY;
@@ -86,7 +86,7 @@ public final class RainbowPigmeeDyeRecipe extends ShapedRecipe {
         for (int slot = 0; slot < input.getContainerSize(); slot++) {
             var stack = input.getItem(slot);
             if (stack.is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())) {
-                remaining.set(slot, stack.copyWithCount(1));
+                remaining.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return remaining;

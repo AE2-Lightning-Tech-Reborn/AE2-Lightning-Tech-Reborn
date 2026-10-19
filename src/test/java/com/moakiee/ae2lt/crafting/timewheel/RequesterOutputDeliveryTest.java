@@ -25,7 +25,7 @@ import appeng.me.storage.NetworkStorage;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceHost;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.TianshuInventoryMaintenanceService;
 import com.moakiee.ae2lt.me.key.LightningKey;
-import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
+import com.moakiee.ae2lt.compat.LegacyTimeTracker;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -58,7 +58,7 @@ class RequesterOutputDeliveryTest {
     @BeforeAll
     static void initializeTrackerKeyTypes() throws Exception {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         // AE2 15 reads key types from a Forge registry, not the newer allTypes cache.
         // Use a private manager so plain JUnit does not modify Forge's global registries.
         keyTypeRegistry = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
@@ -301,7 +301,7 @@ class RequesterOutputDeliveryTest {
     }
 
     private static final class Fixture {
-        final NetworkStorage network = new NetworkStorage();
+        final NetworkStorage network = new NetworkStorage(new appeng.me.service.SecurityService(proxy(IGrid.class, Map.of())));
         final Disk disk = new Disk();
         final IActionSource source = proxy(IActionSource.class, Map.of());
         final Ae2LtTimeWheelCraftingCpuLogic logic;
@@ -423,7 +423,7 @@ class RequesterOutputDeliveryTest {
 
         private static CompoundTag linkTag(boolean standalone) {
             var tag = new CompoundTag();
-            tag.putUUID("craftId", UUID.randomUUID());
+            tag.putString("CraftID", UUID.randomUUID().toString());
             tag.putBoolean("req", false);
             tag.putBoolean("standalone", standalone);
             return tag;
@@ -431,7 +431,8 @@ class RequesterOutputDeliveryTest {
     }
 
     /** Supplies the accessors normally installed by Mixin, retaining the real tracker math. */
-    private static final class Tracker extends ElapsedTimeTracker implements ElapsedTimeTrackerAccessor {
+    private static final class Tracker extends ElapsedTimeTracker implements LegacyTimeTracker {
+        Tracker() { super(0); }
         @Override public void ae2lt$addMaxItems(long amount, AEKeyType type) {
             forward("addMaxItems", amount, type);
         }
@@ -441,13 +442,21 @@ class RequesterOutputDeliveryTest {
 
         private void forward(String name, long amount, AEKeyType type) {
             try {
-                var method = ElapsedTimeTracker.class.getDeclaredMethod(name, long.class, AEKeyType.class);
-                method.setAccessible(true);
-                method.invoke(this, amount, type);
-            } catch (ReflectiveOperationException e) {
-                throw new AssertionError(e);
-            }
+                if (name.equals("decrementItems")) {
+                    var method = ElapsedTimeTracker.class.getDeclaredMethod(name, long.class);
+                    method.setAccessible(true);
+                    method.invoke(this, amount);
+                } else {
+                    for (var fieldName : java.util.List.of("startItemCount", "remainingItemCount")) {
+                        var field = ElapsedTimeTracker.class.getDeclaredField(fieldName);
+                        field.setAccessible(true);
+                        long old = field.getLong(this);
+                        field.setLong(this, old > Long.MAX_VALUE - amount ? Long.MAX_VALUE : old + amount);
+                    }
+                }
+            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         }
+
     }
 
     private static Field field(Object target, String name) throws Exception {

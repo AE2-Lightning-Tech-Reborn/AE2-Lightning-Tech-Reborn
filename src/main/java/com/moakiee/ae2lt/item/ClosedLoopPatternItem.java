@@ -55,7 +55,7 @@ public final class ClosedLoopPatternItem extends EncodedPatternItem {
     }
 
     public void writePayload(ItemStack stack, ClosedLoopPatternPayload payload,
-                             net.minecraft.core.HolderLookup.Provider registries) {
+                             net.minecraft.core.RegistryAccess registries) {
         if (stack == null || stack.getItem() != this) {
             throw new IllegalArgumentException("payload target must be a closed-loop pattern item");
         }
@@ -64,7 +64,7 @@ public final class ClosedLoopPatternItem extends EncodedPatternItem {
     }
 
     public ItemStack createStack(ClosedLoopPatternPayload payload,
-                                 net.minecraft.core.HolderLookup.Provider registries) {
+                                 net.minecraft.core.RegistryAccess registries) {
         var stack = new ItemStack(this);
         writePayload(stack, payload, registries);
         return stack;
@@ -73,7 +73,7 @@ public final class ClosedLoopPatternItem extends EncodedPatternItem {
     public ItemStack createExecutionMemberStack(
             ClosedLoopPatternPayload payload,
             int memberIndex,
-            net.minecraft.core.HolderLookup.Provider registries) {
+            net.minecraft.core.RegistryAccess registries) {
         if (memberIndex < 0 || memberIndex >= payload.memberPatterns().size()) {
             throw new IllegalArgumentException("closed-loop execution member index is out of bounds");
         }

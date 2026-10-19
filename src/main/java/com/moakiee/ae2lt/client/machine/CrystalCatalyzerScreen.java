@@ -6,7 +6,8 @@ import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -50,8 +51,8 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
         widgets.add("processArea", new CrystalCatalyzerProgressWidget(menu, style.getImage("processOverlay")));
 
         this.autoExportButton = new ToggleButton(
-                Icon.AUTO_EXPORT_ON,
-                Icon.AUTO_EXPORT_OFF,
+                Icon.ARROW_UP,
+                Icon.REDSTONE_LOW,
                 state -> menu.clientToggleAutoExport());
         this.autoExportButton.setTooltipOn(List.of(
                 Component.translatable("ae2lt.gui.crystal_catalyzer.auto_export.title"),
@@ -108,16 +109,16 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(PoseStack graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
         if (menu.isPigmeeVariant()) {
             // Cover the shared background's FE scale and unused matrix branch with its own blank texture.
             var background = new net.minecraft.resources.ResourceLocation(
                     "ae2lt", "textures/guis/crystal_catalyzer.png");
-            graphics.blit(background, offsetX + 138, offsetY + 28, 150, 28, 10, 22);
+            LegacyGui.blit(graphics, background, offsetX + 138, offsetY + 28, 150, 28, 10, 22);
             // Matrix connectors begin directly below the horizontal arrow at y=40.
-            graphics.blit(background, offsetX + 80, offsetY + 40, 150, 28, 24, 33);
+            LegacyGui.blit(graphics, background, offsetX + 80, offsetY + 40, 150, 28, 24, 33);
         }
     }
 
@@ -134,14 +135,14 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
     }
 
     @Override
-    public void renderSlot(GuiGraphics guiGraphics, Slot slot) {
+    public void renderSlot(PoseStack guiGraphics, Slot slot) {
         super.renderSlot(guiGraphics, slot);
         LargeStackCountRenderer.renderSlotCount(guiGraphics, font, slot);
     }
 
     @Override
-    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-        var lines = super.getTooltipFromContainerItem(stack);
+    public List<Component> getTooltipFromItem(ItemStack stack) {
+        var lines = super.getTooltipFromItem(stack);
         LargeStackCountRenderer.appendCountTooltip(lines, hoveredSlot);
         return lines;
     }

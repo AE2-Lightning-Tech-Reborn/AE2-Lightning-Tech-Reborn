@@ -3,7 +3,8 @@ package com.moakiee.ae2lt.client.machine;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -85,33 +86,33 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+    protected void renderBg(PoseStack gfx, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(gfx, TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
         renderStatusArea(gfx);
         renderInstallProgress(gfx);
         renderModuleList(gfx, mouseX, mouseY);
     }
 
-    private void renderStatusArea(GuiGraphics gfx) {
+    private void renderStatusArea(PoseStack gfx) {
         int x = leftPos + STATUS_X;
         int y = topPos + STATUS_Y;
 
         if (!menu.hasDeviceInserted()) {
-            gfx.drawString(font, Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
+            LegacyGui.drawString(gfx, font, Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
                     x, y + 7, TEXT_ON_DARK_BG, false);
             return;
         }
 
-        gfx.drawString(font, menu.getStatusText(), x, y, TEXT_ON_DARK_BG, false);
+        LegacyGui.drawString(gfx, font, menu.getStatusText(), x, y, TEXT_ON_DARK_BG, false);
 
         boolean grid = menu.gridConnected != 0;
         Component gridText = grid
                 ? Component.translatable("ae2lt.overload_device_workbench.screen.network.online")
                 : Component.translatable("ae2lt.overload_device_workbench.screen.network.offline");
-        gfx.drawString(font, gridText, x, y + STATUS_SECOND_LINE_Y, TEXT_ON_DARK_BG, false);
+        LegacyGui.drawString(gfx, font, gridText, x, y + STATUS_SECOND_LINE_Y, TEXT_ON_DARK_BG, false);
     }
 
-    private void renderInstallProgress(GuiGraphics gfx) {
+    private void renderInstallProgress(PoseStack gfx) {
         if (menu.installProgress <= 0) {
             return;
         }
@@ -119,13 +120,13 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         double ratio = (double) menu.installProgress / OverloadDeviceWorkbenchMenu.INSTALL_TICKS;
         int visible = Math.max(1, (int) Math.ceil(ARROW_PROGRESS_VISIBLE_WIDTH * ratio));
         int filled = Math.min(ARROW_PROGRESS_WIDTH, ARROW_PROGRESS_VISIBLE_OFFSET_X + visible);
-        gfx.blit(TEXTURE, leftPos + ARROW_PROGRESS_X, topPos + ARROW_PROGRESS_Y,
+        LegacyGui.blit(gfx, TEXTURE, leftPos + ARROW_PROGRESS_X, topPos + ARROW_PROGRESS_Y,
                 ARROW_PROGRESS_SRC_X, ARROW_PROGRESS_SRC_Y,
                 filled, ARROW_PROGRESS_HEIGHT,
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleList(PoseStack gfx, int mouseX, int mouseY) {
         List<ItemStack> modules = menu.getInstalledModuleList();
         int listLeft = leftPos + MODULE_ROW_X;
         int listTop = topPos + MODULE_ROW_Y;
@@ -136,7 +137,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         Component header = Component.translatable(
                 "ae2lt.overload_device_workbench.screen.module_types",
                 modules.size());
-        gfx.drawString(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+        LegacyGui.drawString(gfx, font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             int moduleIndex = scrollOffset + row;
@@ -152,19 +153,19 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
             renderModuleRowFrame(gfx, rowY, hovered);
 
             ItemStack stack = modules.get(moduleIndex);
-            gfx.renderItem(stack, leftPos + MODULE_ICON_X, rowY + MODULE_ITEM_Y_OFFSET);
+            LegacyGui.renderItem(gfx, stack, leftPos + MODULE_ICON_X, rowY + MODULE_ITEM_Y_OFFSET);
 
             int cap = menu.getModuleMaxInstallAmount(stack);
             String amount = cap > 0 ? "x" + stack.getCount() + "/" + cap : "x" + stack.getCount();
             int amountWidth = font.width(amount);
             int amountX = REMOVE_BUTTON_X - amountWidth - 4;
             int rowTextColor = hovered ? TEXT_ON_LIGHT_BG : TEXT_ON_DARK_BG;
-            gfx.drawString(font, Component.literal(amount),
+            LegacyGui.drawString(gfx, font, Component.literal(amount),
                     leftPos + amountX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
 
             int nameX = leftPos + MODULE_NAME_X;
             int nameMaxWidth = leftPos + amountX - nameX - 3;
-            gfx.drawString(font, Component.literal(truncate(font, stack.getHoverName().getString(), nameMaxWidth)),
+            LegacyGui.drawString(gfx, font, Component.literal(truncate(font, stack.getHoverName().getString(), nameMaxWidth)),
                     nameX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
 
             renderRemoveButton(gfx, leftPos + REMOVE_BUTTON_X, rowY + REMOVE_BUTTON_Y_OFFSET, mouseX, mouseY);
@@ -175,19 +176,19 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         }
     }
 
-    private void renderModuleRowFrame(GuiGraphics gfx, int rowY, boolean selected) {
-        gfx.blit(TEXTURE, leftPos + MODULE_ROW_X, rowY,
+    private void renderModuleRowFrame(PoseStack gfx, int rowY, boolean selected) {
+        LegacyGui.blit(gfx, TEXTURE, leftPos + MODULE_ROW_X, rowY,
                 MODULE_ROW_SRC_X, selected ? MODULE_ROW_SELECTED_SRC_Y : MODULE_ROW_SRC_Y,
                 MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT,
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderRemoveButton(GuiGraphics gfx, int x, int y, int mouseX, int mouseY) {
+    private void renderRemoveButton(PoseStack gfx, int x, int y, int mouseX, int mouseY) {
         boolean hovered = mouseX >= x
                 && mouseX < x + REMOVE_BUTTON_SIZE
                 && mouseY >= y
                 && mouseY < y + REMOVE_BUTTON_SIZE;
-        gfx.blit(TEXTURE, x, y,
+        LegacyGui.blit(gfx, TEXTURE, x, y,
                 hovered ? REMOVE_BUTTON_HOVER_SRC_X : REMOVE_BUTTON_SRC_X,
                 hovered ? REMOVE_BUTTON_HOVER_SRC_Y : REMOVE_BUTTON_SRC_Y,
                 REMOVE_BUTTON_WIDTH,
@@ -195,7 +196,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                 TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
+    private void renderScrollBar(PoseStack gfx, int moduleCount, int mouseX, int mouseY) {
         int barX = leftPos + SCROLLBAR_X;
         int barTop = topPos + SCROLLBAR_Y;
         int thumbSpace = SCROLLBAR_HEIGHT - SCROLLBAR_THUMB_HEIGHT;
@@ -204,7 +205,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                 && mouseX < barX + SCROLLBAR_WIDTH
                 && mouseY >= thumbY
                 && mouseY < thumbY + SCROLLBAR_THUMB_HEIGHT;
-        gfx.blit(TEXTURE, barX, thumbY,
+        LegacyGui.blit(gfx, TEXTURE, barX, thumbY,
                 SCROLLBAR_THUMB_SRC_X,
                 hovered ? SCROLLBAR_THUMB_HOVER_SRC_Y : SCROLLBAR_THUMB_SRC_Y,
                 SCROLLBAR_WIDTH,
@@ -224,7 +225,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     }
 
     @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack gfx, int mouseX, int mouseY, float partialTick) {
         renderBackground(gfx);
         super.render(gfx, mouseX, mouseY, partialTick);
         renderModuleRowTooltip(gfx, mouseX, mouseY);
@@ -232,10 +233,10 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     }
 
     @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        gfx.drawString(font, Component.translatable("block.ae2lt.overload_device_workbench"),
+    protected void renderLabels(PoseStack gfx, int mouseX, int mouseY) {
+        LegacyGui.drawString(gfx, font, Component.translatable("block.ae2lt.overload_device_workbench"),
                 42, 6, TEXT_ON_LIGHT_BG, false);
-        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT_ON_LIGHT_BG, false);
+        LegacyGui.drawString(gfx, font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT_ON_LIGHT_BG, false);
     }
 
     @Override
@@ -287,7 +288,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void renderModuleRowTooltip(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleRowTooltip(PoseStack gfx, int mouseX, int mouseY) {
         List<ItemStack> modules = menu.getInstalledModuleList();
         int listLeft = leftPos + MODULE_ROW_X;
         int listTop = topPos + MODULE_ROW_Y;
@@ -304,7 +305,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                     && mouseX < buttonX + REMOVE_BUTTON_SIZE
                     && mouseY >= buttonY
                     && mouseY < buttonY + REMOVE_BUTTON_SIZE) {
-                gfx.renderComponentTooltip(font, List.of(
+                LegacyGui.renderComponentTooltip(gfx, font, List.of(
                                 Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_one"),
                                 Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_all")),
                         mouseX, mouseY);
@@ -314,7 +315,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
                     && mouseX < listRight
                     && mouseY >= rowY
                     && mouseY < rowY + MODULE_ROW_HEIGHT) {
-                gfx.renderTooltip(font, modules.get(moduleIndex), mouseX, mouseY);
+                LegacyGui.renderTooltip(gfx, font, modules.get(moduleIndex), mouseX, mouseY);
                 return;
             }
         }

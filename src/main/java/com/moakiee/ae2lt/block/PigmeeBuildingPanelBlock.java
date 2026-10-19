@@ -10,7 +10,7 @@ public final class PigmeeBuildingPanelBlock extends Block {
     private final boolean framed;
 
     public PigmeeBuildingPanelBlock(DyeColor color, boolean framed) {
-        super(Properties.of().mapColor(color.getMapColor()).strength(1.5F, 6.0F).sound(SoundType.STONE)
+        super(Properties.of(net.minecraft.world.level.material.Material.STONE).color(color.getMaterialColor()).strength(1.5F, 6.0F).sound(SoundType.STONE)
                 .requiresCorrectToolForDrops());
         this.color = color;
         this.framed = framed;

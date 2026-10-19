@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.block;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -19,7 +19,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class MiningFactoryBlock extends AE2LTBaseEntityBlock<MiningFactoryBlockEntity> {
     public static final BooleanProperty WORKING = BooleanProperty.create("working");
     public MiningFactoryBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState().setValue(WORKING, false)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
     }

@@ -6,7 +6,7 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import com.moakiee.thunderbolt.core.crafting.planner.CraftPattern;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import java.util.List;
@@ -18,7 +18,7 @@ public interface BigCraftingRecipe {
     List<Map<AEKey, Long>> slots();
     CraftPattern<AEKey> pattern();
     boolean matches(IPatternDetails current, Level level);
-    CompoundTag save(HolderLookup.Provider registries);
+    CompoundTag save(RegistryAccess registries);
 
     default KeyCounter[] template() {
         return slots().stream().map(slot -> {
@@ -35,7 +35,7 @@ public interface BigCraftingRecipe {
         return null;
     }
 
-    static BigCraftingRecipe load(CompoundTag tag, HolderLookup.Provider registries) {
+    static BigCraftingRecipe load(CompoundTag tag, RegistryAccess registries) {
         return tag.getString("kind").equals("provider")
                 ? BigProviderRecipe.load(tag, registries) : BigMatrixRecipe.load(tag, registries);
     }

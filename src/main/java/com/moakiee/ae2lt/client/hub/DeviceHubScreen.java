@@ -4,7 +4,8 @@ import com.moakiee.ae2lt.network.NetworkInit;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -144,13 +145,13 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+    protected void renderBg(PoseStack gfx, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(gfx, TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
         renderSelectedTabTexture(gfx, menu.getSelectedTab());
     }
 
     @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack gfx, int mouseX, int mouseY, float partialTick) {
         renderBackground(gfx);
         super.render(gfx, mouseX, mouseY, partialTick);
 
@@ -165,7 +166,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
         boolean hasDevice = (tabMask & (1 << selectedTab)) != 0;
         if (!hasDevice) {
-            gfx.drawString(font, Component.translatable("ae2lt.device_hub.no_device"),
+            LegacyGui.drawString(gfx, font, Component.translatable("ae2lt.device_hub.no_device"),
                     leftPos + STATUS_X, topPos + STATUS_Y + 9, TEXT_ON_DARK_BG, false);
             renderTabTooltips(gfx, mouseX, mouseY, tabMask);
             renderTooltip(gfx, mouseX, mouseY);
@@ -186,14 +187,14 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+    protected void renderLabels(PoseStack gfx, int mouseX, int mouseY) {
     }
 
-    private void renderSelectedTabTexture(GuiGraphics gfx, int selectedTab) {
+    private void renderSelectedTabTexture(PoseStack gfx, int selectedTab) {
         if (selectedTab < 0 || selectedTab >= TAB_COUNT) {
             return;
         }
-        gfx.blit(TEXTURE,
+        LegacyGui.blit(gfx, TEXTURE,
                 leftPos + TAB_X[selectedTab],
                 topPos + TAB_Y,
                 TAB_ACTIVE_SRC_X[selectedTab],
@@ -204,32 +205,32 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 TEXTURE_SIZE);
     }
 
-    private void renderTabIcons(GuiGraphics gfx) {
+    private void renderTabIcons(PoseStack gfx) {
         for (int i = 0; i < TAB_COUNT; i++) {
             int x = leftPos + TAB_X[i];
             ItemStack stack = tabDisplayStack(i);
             if (!stack.isEmpty()) {
                 int iconX = x + (TAB_WIDTH - TAB_ICON_SIZE) / 2;
-                gfx.renderItem(stack, iconX, topPos + 5);
+                LegacyGui.renderItem(gfx, stack, iconX, topPos + 5);
             }
         }
     }
 
-    private void renderStatusPanel(GuiGraphics gfx, boolean railgunTab) {
+    private void renderStatusPanel(PoseStack gfx, boolean railgunTab) {
         int x = leftPos + STATUS_TEXT_X;
         ItemStack stack = selectedDeviceStack();
         if (!stack.isEmpty()) {
-            gfx.renderItem(stack, leftPos + STATUS_ICON_X, topPos + STATUS_ICON_Y);
+            LegacyGui.renderItem(gfx, stack, leftPos + STATUS_ICON_X, topPos + STATUS_ICON_Y);
         }
 
         String deviceName = menu.getDeviceName();
         if (!deviceName.isEmpty()) {
-            gfx.drawString(font, Component.literal(truncate(font, deviceName, STATUS_RIGHT - STATUS_TEXT_X)),
+            LegacyGui.drawString(gfx, font, Component.literal(truncate(font, deviceName, STATUS_RIGHT - STATUS_TEXT_X)),
                     x, topPos + STATUS_NAME_Y, TEXT_ON_DARK_BG, false);
         }
 
         Component statusLine = Component.translatable("ae2lt.device_hub.status.line", statusText(railgunTab));
-        gfx.drawString(font, statusLine, x, topPos + STATUS_LINE_Y, TEXT_ON_DARK_BG, false);
+        LegacyGui.drawString(gfx, font, statusLine, x, topPos + STATUS_LINE_Y, TEXT_ON_DARK_BG, false);
     }
 
     private Component statusText(boolean railgunTab) {
@@ -243,12 +244,12 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 : "ae2lt.device_hub.status.unpowered");
     }
 
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY, boolean railgunTab) {
+    private void renderModuleList(PoseStack gfx, int mouseX, int mouseY, boolean railgunTab) {
         List<String> moduleNameKeys = menu.getModuleNameKeys();
         List<Integer> moduleCounts = menu.getModuleCounts();
         List<Boolean> moduleEnabled = menu.getModuleEnabled();
 
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.modules"),
+        LegacyGui.drawString(gfx, font, Component.translatable("ae2lt.device_hub.modules"),
                 leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
@@ -266,7 +267,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     && mouseY >= rowY
                     && mouseY < rowY + MODULE_ROW_H;
             if (hovered || idx == selectedModuleIndex) {
-                gfx.fill(leftPos + MODULE_LIST_X - 1, rowY - 1,
+                LegacyGui.fill(gfx, leftPos + MODULE_LIST_X - 1, rowY - 1,
                         leftPos + MODULE_LIST_RIGHT, rowY + MODULE_ROW_H - 1,
                         idx == selectedModuleIndex ? ROW_SELECTED : ROW_HOVER);
             }
@@ -276,7 +277,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     ? MODULE_LIST_RIGHT - MODULE_LIST_X
                     : MODULE_CHECKBOX_X - MODULE_LIST_X - 6;
             String name = truncate(font, moduleName(moduleNameKeys.get(idx), count).getString(), nameMaxWidth);
-            gfx.drawString(font, Component.literal(name), leftPos + MODULE_LIST_X, rowY + 2, TEXT_ON_DARK_BG, false);
+            LegacyGui.drawString(gfx, font, Component.literal(name), leftPos + MODULE_LIST_X, rowY + 2, TEXT_ON_DARK_BG, false);
 
             if (!railgunTab) {
                 boolean enabled = idx < moduleEnabled.size() && moduleEnabled.get(idx);
@@ -284,7 +285,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             }
 
             if (i < Math.min(moduleNameKeys.size(), MODULE_VISIBLE_ROWS) - 1) {
-                gfx.fill(leftPos + MODULE_LIST_X,
+                LegacyGui.fill(gfx, leftPos + MODULE_LIST_X,
                         rowY + MODULE_ROW_H - 1,
                         leftPos + MODULE_LIST_RIGHT,
                         rowY + MODULE_ROW_H,
@@ -297,7 +298,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
     }
 
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
+    private void renderScrollBar(PoseStack gfx, int moduleCount, int mouseX, int mouseY) {
         renderScrollBar(
                 gfx,
                 moduleCount,
@@ -310,10 +311,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 mouseY);
     }
 
-    private void renderModuleConfig(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderModuleConfig(PoseStack gfx, int mouseX, int mouseY) {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.celestweave.screen.module_options"),
+        LegacyGui.drawString(gfx, font, Component.translatable("ae2lt.celestweave.screen.module_options"),
                 leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
         int count = moduleConfigCount();
         if (count <= 0) {
@@ -330,7 +331,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             }
             String value = menu.getModuleConfigValues().get(configIndex);
             boolean editable = menu.getModuleConfigEditable().get(configIndex);
-            gfx.drawString(font, moduleConfigLabel(configIndex),
+            LegacyGui.drawString(gfx, font, moduleConfigLabel(configIndex),
                     x, rowY + 1, TEXT_ON_DARK_BG, false);
             drawConfigValueButton(gfx, leftPos + CONFIG_BUTTON_X, rowY - 1, value, editable, mouseX, mouseY);
             rowY += CONFIG_ROW_H;
@@ -340,10 +341,10 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
     }
 
-    private void renderRailgunSettings(GuiGraphics gfx, int mouseX, int mouseY) {
+    private void renderRailgunSettings(PoseStack gfx, int mouseX, int mouseY) {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.settings"),
+        LegacyGui.drawString(gfx, font, Component.translatable("ae2lt.device_hub.settings"),
                 leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
 
         configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
@@ -358,7 +359,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             if (settingIndex != RAILGUN_SETTING_EXECUTION_MODE) {
                 drawSettingRow(gfx, x, rowY, label, railgunSettingEnabled(settingIndex));
             } else {
-                gfx.drawString(font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
+                LegacyGui.drawString(gfx, font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
                 drawConfigValueButton(
                         gfx,
                         leftPos + CONFIG_BUTTON_X,
@@ -412,13 +413,13 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return key.isEmpty() ? "" : Component.translatable(key).getString();
     }
 
-    private void drawSettingRow(GuiGraphics gfx, int x, int y, Component label, boolean on) {
-        gfx.drawString(font, label, x, y + 1, TEXT_ON_DARK_BG, false);
+    private void drawSettingRow(PoseStack gfx, int x, int y, Component label, boolean on) {
+        LegacyGui.drawString(gfx, font, label, x, y + 1, TEXT_ON_DARK_BG, false);
         drawCheckbox(gfx, leftPos + MODULE_CHECKBOX_X, y, on);
     }
 
-    private void drawCheckbox(GuiGraphics gfx, int x, int y, boolean checked) {
-        gfx.blit(CHECKBOX_TEXTURE,
+    private void drawCheckbox(PoseStack gfx, int x, int y, boolean checked) {
+        LegacyGui.blit(gfx, CHECKBOX_TEXTURE,
                 x,
                 y,
                 0,
@@ -430,7 +431,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private void drawConfigValueButton(
-            GuiGraphics gfx, int x, int y, String value, boolean editable, int mouseX, int mouseY) {
+            PoseStack gfx, int x, int y, String value, boolean editable, int mouseX, int mouseY) {
         boolean hovered = editable
                 && mouseX >= x
                 && mouseX <= x + CONFIG_BUTTON_W
@@ -438,11 +439,11 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 && mouseY <= y + CONFIG_BUTTON_H;
         int borderColor = editable ? hovered ? BUTTON_BORDER_HOVER : BUTTON_BORDER : BUTTON_DISABLED;
         int fillColor = editable ? hovered ? BUTTON_FILL_HOVER : BUTTON_FILL : BUTTON_FILL_DISABLED;
-        gfx.fill(x - 1, y - 1, x + CONFIG_BUTTON_W + 1, y + CONFIG_BUTTON_H + 1, borderColor);
-        gfx.fill(x, y, x + CONFIG_BUTTON_W, y + CONFIG_BUTTON_H, fillColor);
+        LegacyGui.fill(gfx, x - 1, y - 1, x + CONFIG_BUTTON_W + 1, y + CONFIG_BUTTON_H + 1, borderColor);
+        LegacyGui.fill(gfx, x, y, x + CONFIG_BUTTON_W, y + CONFIG_BUTTON_H, fillColor);
         String text = truncate(font, value, CONFIG_BUTTON_W - 4);
         int textColor = editable ? BUTTON_TEXT : TEXT_ON_DARK_BG;
-        gfx.drawString(font, Component.literal(text),
+        LegacyGui.drawString(gfx, font, Component.literal(text),
                 x + (CONFIG_BUTTON_W - font.width(text)) / 2, y + 2, textColor, false);
     }
 
@@ -653,7 +654,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void renderConfigScrollBar(GuiGraphics gfx, int configCount, int mouseX, int mouseY) {
+    private void renderConfigScrollBar(PoseStack gfx, int configCount, int mouseX, int mouseY) {
         renderScrollBar(
                 gfx,
                 configCount,
@@ -667,7 +668,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private void renderScrollBar(
-            GuiGraphics gfx,
+            PoseStack gfx,
             int itemCount,
             int visibleRows,
             int offset,
@@ -684,7 +685,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 && mouseX < thumbX + SCROLL_SRC_W
                 && mouseY >= thumbY
                 && mouseY < thumbY + SCROLL_SRC_H;
-        gfx.blit(
+        LegacyGui.blit(gfx,
                 TEXTURE,
                 thumbX,
                 thumbY,
@@ -715,7 +716,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return offset;
     }
 
-    private void renderTabTooltips(GuiGraphics gfx, int mouseX, int mouseY, int tabMask) {
+    private void renderTabTooltips(PoseStack gfx, int mouseX, int mouseY, int tabMask) {
         for (int i = 0; i < TAB_COUNT; i++) {
             int tx = leftPos + TAB_X[i];
             boolean available = (tabMask & (1 << i)) != 0;
@@ -726,12 +727,12 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 if (available) {
                     ItemStack stack = tabStack(i);
                     if (!stack.isEmpty()) {
-                        gfx.renderTooltip(font, stack, mouseX, mouseY);
+                        LegacyGui.renderTooltip(gfx, font, stack, mouseX, mouseY);
                     } else {
-                        gfx.renderTooltip(font, Component.translatable(TAB_LABEL_KEYS[i]), mouseX, mouseY);
+                        LegacyGui.renderTooltip(gfx, font, Component.translatable(TAB_LABEL_KEYS[i]), mouseX, mouseY);
                     }
                 } else {
-                    gfx.renderTooltip(font, Component.translatable(TAB_REQUIRED_KEYS[i]), mouseX, mouseY);
+                    LegacyGui.renderTooltip(gfx, font, Component.translatable(TAB_REQUIRED_KEYS[i]), mouseX, mouseY);
                 }
                 return;
             }
@@ -755,7 +756,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private void playClick() {
         if (minecraft != null && minecraft.getSoundManager() != null) {
             minecraft.getSoundManager().play(
-                    SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+                    SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         }
     }
 

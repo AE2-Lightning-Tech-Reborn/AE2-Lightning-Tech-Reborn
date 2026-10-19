@@ -28,7 +28,7 @@ class LargeStackExportReceiptTest {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(),
                 new net.minecraftforge.fml.loading.EarlyLoadingException("test bootstrap", null, List.of()));
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     record Layout(Function<Runnable, LargeStackItemHandler> create, int output) {}

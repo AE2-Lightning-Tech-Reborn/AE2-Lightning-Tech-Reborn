@@ -31,7 +31,7 @@ class CraftingReportInventoryTest {
     static {
         LoadingModList.of(List.of(), List.of(), null);
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     private static final AEKey IRON = AEItemKey.of(Items.IRON_INGOT);

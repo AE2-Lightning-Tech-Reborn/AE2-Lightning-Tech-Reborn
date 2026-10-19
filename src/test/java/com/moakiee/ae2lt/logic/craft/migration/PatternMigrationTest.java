@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class PatternMigrationTest {
     @BeforeAll static void bootstrap() {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), null);
-        SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();
+        SharedConstants.tryDetectVersion(); com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     private static ItemStack pattern(int count, boolean substitute) {
@@ -155,12 +155,12 @@ class PatternMigrationTest {
     @Test void rosterUsesConcreteClassesAndFiniteEpochAcrossRemovalAndRejoin() {
         var roster = new PatternMigrationGridService();
         var a = node(new Parent()); var b = node(new Child());
-        roster.addNode(a, new CompoundTag()); roster.addNode(b, new CompoundTag()); long epoch = roster.epoch();
-        var c = node(new Child()); roster.addNode(c, new CompoundTag());
+        roster.addNode(a); roster.addNode(b); long epoch = roster.epoch();
+        var c = node(new Child()); roster.addNode(c);
         assertSame(a, roster.next(Parent.class, 0, epoch).node());
         assertSame(b, roster.next(Child.class, 0, epoch).node());
         assertNull(roster.next(Child.class, roster.next(Child.class, 0, epoch).id(), epoch));
-        roster.removeNode(b); roster.addNode(b, new CompoundTag());
+        roster.removeNode(b); roster.addNode(b);
         assertNull(roster.next(Child.class, 0, epoch));
     }
 
@@ -210,7 +210,7 @@ class PatternMigrationTest {
         Slot(ItemStack stack) { this.stack = stack; }
         public ItemStack read() { return stack; }
         public ItemStack extract(boolean simulate) {
-            var unit = stack.copyWithCount(1);
+            var unit = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             if (simulate && mutateSimulation) stack = pattern(stack.getCount(), true);
             if (!simulate) { stack.shrink(1); extractions++; if (throwExtractAfter) throw new IllegalStateException(); }
             return unit;

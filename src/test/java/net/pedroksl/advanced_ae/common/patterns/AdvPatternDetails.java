@@ -17,5 +17,5 @@ public interface AdvPatternDetails {
     Direction getDirectionSideForInputKey(AEKey key);
 
     void pushInputsToExternalInventory(
-            KeyCounter[] inputHolder, IPatternDetails.PatternInputSink inputSink);
+            KeyCounter[] inputHolder, com.moakiee.ae2lt.compat.LegacyPatternDetails.PatternInputSink inputSink);
 }

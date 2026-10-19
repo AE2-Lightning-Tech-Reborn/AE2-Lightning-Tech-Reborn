@@ -147,7 +147,7 @@ class PhaseFlightMovementGuardSourceContractTest {
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.isMovementPositionUpdate(player)"));
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.runAsMovementPositionUpdate("));
         assertTrue(entityMixin.contains("PhaseFlightMovementGuard.isSelfTeleportAuthorized(player)"));
-        assertTrue(packetMixin.contains("relativeMovements.contains(RelativeMovement.X)"));
+        assertTrue(packetMixin.contains("relativeMovements.contains(RelativeArgument.X)"));
         assertTrue(packetMixin.contains("notifyBlockedTeleport(player, target)"));
         assertTrue(packetMixin.contains("!player.position().equals(target)"));
         assertTrue(dimensionMixin.contains("notifyBlockedDimensionTeleport("));

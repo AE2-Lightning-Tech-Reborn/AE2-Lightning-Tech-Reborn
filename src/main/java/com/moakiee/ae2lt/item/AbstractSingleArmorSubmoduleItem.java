@@ -47,7 +47,7 @@ public abstract class AbstractSingleArmorSubmoduleItem extends Item implements C
 
     @Override
     public List<DeviceCapability> capabilities(ItemStack stack) {
-        return capabilityFactory.apply(stack.copyWithCount(1));
+        return capabilityFactory.apply(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
     }
 
     @Override

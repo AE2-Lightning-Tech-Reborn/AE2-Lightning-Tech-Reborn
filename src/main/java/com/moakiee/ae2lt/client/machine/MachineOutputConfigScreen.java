@@ -6,12 +6,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.ItemLike;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.blockentity.AEBaseBlockEntity;
 import appeng.blockentity.networking.CableBusBlockEntity;
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.menu.MachineOutputConfigMenu;
@@ -102,7 +102,7 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
         }
 
         for (var relative : RelativeSide.values()) {
-            var absolute = host.getOrientation().getSide(relative);
+            var absolute = com.moakiee.ae2lt.compat.orientation.BlockOrientation.get(host.getBlockState()).getSide(relative);
             getButton(relative).setDisplay(getDisplayIcon(host, absolute));
         }
     }

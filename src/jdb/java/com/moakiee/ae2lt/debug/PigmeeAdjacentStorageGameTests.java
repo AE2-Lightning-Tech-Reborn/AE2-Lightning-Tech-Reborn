@@ -20,7 +20,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -143,7 +143,7 @@ public final class PigmeeAdjacentStorageGameTests {
     public static void cuttingBoardAndNativeRecipeFill(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
-        var board = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("farmersdelight:cutting_board"));
+        var board = Registry.BLOCK.get(ResourceLocation.parse("farmersdelight:cutting_board"));
         helper.assertTrue(board != Blocks.AIR, "This suite requires the real Farmer's Delight jar");
         var north = barrel(helper, Direction.NORTH, new ItemStack(Items.OAK_PLANKS, 2));
         var east = barrel(helper, Direction.EAST, new ItemStack(Items.OAK_PLANKS, 1));

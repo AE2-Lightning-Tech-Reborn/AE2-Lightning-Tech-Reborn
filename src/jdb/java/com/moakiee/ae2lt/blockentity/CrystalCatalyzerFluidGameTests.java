@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -109,15 +109,15 @@ public final class CrystalCatalyzerFluidGameTests {
             check(candidate.isPresent() == ModList.get().isLoaded(route.mod()), "optional recipe boundary " + route.path());
             if (candidate.isEmpty()) continue;
             var recipe = candidate.get().recipe();
-            check(BuiltInRegistries.FLUID.getKey(recipe.fluidInput().getFluid()).toString().equals(route.fluid()),
+            check(Registry.FLUID.getKey(recipe.fluidInput().getFluid()).toString().equals(route.fluid()),
                     "wrong fluid " + route.path());
             check(recipe.fluidInput().getAmount() == 1000 && recipe.catalystCount() == 1
                     && recipe.getOutputTemplate().getCount() == 1 && recipe.energyPerCycle() == 100_000
                     && recipe.lightningCost() == 1 && recipe.lightningTier() == LightningKey.Tier.HIGH_VOLTAGE,
                     "per-cycle costs changed " + route.path());
-            check(recipe.catalystMatches(new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(route.catalyst())))),
+            check(recipe.catalystMatches(new ItemStack(Registry.ITEM.get(new ResourceLocation(route.catalyst())))),
                     "wrong catalyst " + route.path());
-            check(BuiltInRegistries.ITEM.getKey(recipe.getOutputTemplate().getItem()).toString().equals(route.output()),
+            check(Registry.ITEM.getKey(recipe.getOutputTemplate().getItem()).toString().equals(route.output()),
                     "wrong output " + route.path());
             recipes.add(recipe);
         }
@@ -347,7 +347,7 @@ public final class CrystalCatalyzerFluidGameTests {
                 "energized_fluix", "fluix", "redstone", "resonating", "quantum", "link", "meteor", "entro")) {
             var catalystId = new ResourceLocation("ae2cs:" + family + "_mother_rock");
             var candidate = find(h, "ae2cs/" + family + "_mother_rock");
-            boolean available = BuiltInRegistries.ITEM.containsKey(catalystId)
+            boolean available = Registry.ITEM.containsKey(catalystId)
                     && (!family.equals("entro") || ModList.get().isLoaded("extendedae"));
             check(candidate.isPresent() == available, "incorrect optional recipe presence: " + family);
             if (!available) continue;
@@ -355,23 +355,23 @@ public final class CrystalCatalyzerFluidGameTests {
             var recipe = candidate.orElseThrow().recipe();
             var clusterId = new ResourceLocation(family.equals("entro")
                     ? "extendedae:entro_cluster" : "ae2cs:" + family + "_crystal_cluster");
-            check(BuiltInRegistries.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + family);
+            check(Registry.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + family);
             var rawDrops = new ArrayList<ItemStack>();
             var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(h.getLevel())
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
                             net.minecraft.world.phys.Vec3.atCenterOf(h.absolutePos(POS)))
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
-                            BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState())
+                            Registry.BLOCK.get(clusterId).defaultBlockState())
                     .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.TOOL,
                             new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE))
                     .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.BLOCK);
             h.getLevel().getServer().getLootData()
-                    .getLootTable(BuiltInRegistries.BLOCK.get(clusterId).getLootTable())
+                    .getLootTable(Registry.BLOCK.get(clusterId).getLootTable())
                     .getRandomItemsRaw(lootParams, rawDrops::add);
             check(rawDrops.stream().anyMatch(drop -> ItemStack.isSameItemSameTags(drop, recipe.getOutputTemplate())),
                     "mature loot definition differs from catalyzer output: " + family + " drops=" + rawDrops);
 
-            var catalyst = new ItemStack(BuiltInRegistries.ITEM.get(catalystId));
+            var catalyst = new ItemStack(Registry.ITEM.get(catalystId));
             host.getInventory().setItemDirect(CATALYST, catalyst);
             check(host.findProcessableRecipe().orElseThrow().recipe().getId().equals(candidate.get().recipe().getId()),
                     "machine did not select the mother rock recipe: " + family);

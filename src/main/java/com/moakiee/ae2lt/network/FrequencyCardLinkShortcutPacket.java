@@ -41,9 +41,9 @@ public record FrequencyCardLinkShortcutPacket(BlockPos pos, Direction face, Vec3
     }
 
     private void handleOnServer(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel level)
+        if (!(player.level instanceof ServerLevel level)
                 || !level.isLoaded(pos)
-                || !player.canReach(pos, 1.0D)
+                || !player.canInteractWith(pos, 1.0D)
                 || !hitInsideBlock()) {
             return;
         }

@@ -134,7 +134,7 @@ public abstract class PlayerPhaseFlightMixin implements PhaseFlightPlayerState.A
                 PhaseFlightPlayerState.isFlightLocked(player),
                 PhaseFlightMovementGuard.isPhaseModeEnabled(player),
                 PhaseFlightPlayerState.isFlying(player),
-                player.onGround(),
+                player.isOnGround(),
                 player.isShiftKeyDown());
         if (!phaseTraversal && !crouchChord && !groundCrouch) {
             return;
@@ -188,7 +188,7 @@ public abstract class PlayerPhaseFlightMixin implements PhaseFlightPlayerState.A
         if (ae2lt$sneakHoverTravel) {
             player.setSprinting(false);
             // Preserve downward contact so native collision keeps locked ground crouch stable.
-            double vertical = player.onGround() ? Math.min(0.0D, player.getDeltaMovement().y) : 0.0D;
+            double vertical = player.isOnGround() ? Math.min(0.0D, player.getDeltaMovement().y) : 0.0D;
             PhaseFlightMovementGuard.runAsSelfMovement(player, () -> player.setDeltaMovement(0.0D, vertical, 0.0D));
         }
     }

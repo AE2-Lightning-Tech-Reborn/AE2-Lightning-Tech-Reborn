@@ -64,7 +64,7 @@ class SiliconBlockCompatibilityContractTest {
 
     private static void assertOptionalSiliconBlock(String relativePath) throws IOException {
         JsonObject tag = readJson(relativePath);
-        boolean found = tag.getAsJsonArray("values").asList().stream()
+        boolean found = java.util.stream.StreamSupport.stream(tag.getAsJsonArray("values").spliterator(), false)
                 .filter(element -> element.isJsonObject())
                 .map(element -> element.getAsJsonObject())
                 .anyMatch(entry -> "ae2lt:silicon_block".equals(entry.get("id").getAsString())
@@ -72,7 +72,7 @@ class SiliconBlockCompatibilityContractTest {
                         && !entry.get("required").getAsBoolean());
 
         assertTrue(found, relativePath);
-        assertFalse(tag.getAsJsonArray("values").asList().stream()
+        assertFalse(java.util.stream.StreamSupport.stream(tag.getAsJsonArray("values").spliterator(), false)
                 .anyMatch(element -> element.isJsonPrimitive()
                         && "ae2lt:silicon_block".equals(element.getAsString())), relativePath);
     }

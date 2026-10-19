@@ -29,7 +29,7 @@ import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.capabilities.Capabilities;
-import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.iface.PatternProviderTarget;
 import appeng.parts.automation.StackWorldBehaviors;
 
 import com.google.common.util.concurrent.Runnables;
@@ -161,7 +161,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
         if (machine != null && machine.acceptsPlans()) {
             return true;
         }
-        return pattern.supportsPushInputsToExternalInventory();
+        return com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(pattern);
     }
 
     @Override
@@ -176,7 +176,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
             return true;
         }
         return cachedTarget != null
-                && pattern.supportsPushInputsToExternalInventory();
+                && com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(pattern);
     }
 
     @Override
@@ -234,7 +234,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
         }
 
         // 2. Generic inventory path
-        if (!pattern.supportsPushInputsToExternalInventory()) {
+        if (!com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(pattern)) {
             return PushResult.REJECTED;
         }
 
@@ -327,7 +327,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
         // capability is the authoritative target. Only adapt platform item/fluid
         // capabilities when no native storage exists. Scanning both could extract
         // the same logical inventory twice when a block exposes both views.
-        var directStorage = resolveDirectStorage(level, pos, face);
+        var directStorage = resolveDirectStorage(level, pos, face, source);
         var storages = preferredExtractionStorages(
                 directStorage,
                 () -> resolveExternalStorages(level, pos, face));
@@ -403,12 +403,13 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
 
     @Nullable
     private static MEStorage resolveDirectStorage(
-            ServerLevel level, BlockPos pos, Direction face) {
+            ServerLevel level, BlockPos pos, Direction face, IActionSource source) {
         var blockEntity = level.getBlockEntity(pos);
         if (blockEntity == null) {
             return null;
         }
-        return blockEntity.getCapability(Capabilities.STORAGE, face).orElse(null);
+        var accessor = blockEntity.getCapability(Capabilities.STORAGE_MONITORABLE_ACCESSOR, face).orElse(null);
+        return accessor == null ? null : accessor.getInventory(source);
     }
 
     private List<MEStorage> resolveExternalStorages(
@@ -445,7 +446,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
 
         var planned = new ArrayList<GenericStack>();
         try {
-            pattern.pushInputsToExternalInventory(inputHolder, (what, amount) -> {
+            com.moakiee.ae2lt.compat.LegacyPatternDetails.push(pattern, inputHolder, (what, amount) -> {
                 long scaled = Math.multiplyExact(amount, (long) copies);
                 if (scaled > 0) {
                     planned.add(new GenericStack(what, scaled));

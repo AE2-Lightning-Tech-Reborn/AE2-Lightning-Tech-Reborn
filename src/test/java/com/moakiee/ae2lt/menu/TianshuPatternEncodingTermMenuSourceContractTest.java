@@ -287,6 +287,6 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         assertTrue(layout.contains("\"AE2LT_TIANSHU_GLOBAL_RESERVE_MARK\""));
         assertTrue(screen.contains("GenericStack.fromItemStack(menu.getGlobalReserveMarkSlot().getItem())"));
         assertTrue(screen.contains("menu.sendGlobalReserve(key, value, ReservedStockMatchMode.EXACT)"));
-        assertTrue(screen.contains("menu.getGlobalReserveMarkSlot().setFilterTo("));
+        assertTrue(screen.contains("menu.getGlobalReserveMarkSlot().set("));
     }
 }

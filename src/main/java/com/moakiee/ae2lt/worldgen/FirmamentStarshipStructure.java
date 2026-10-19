@@ -63,7 +63,7 @@ public final class FirmamentStarshipStructure extends Structure {
     }
 
     @Override
-    protected Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext context) {
+    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext context) {
         return Optional.of(createGenerationStub(context, findBestAnchorHeight(context)));
     }
 

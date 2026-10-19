@@ -14,7 +14,7 @@ import net.minecraft.world.level.Level;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.GenericStack;
-import appeng.helpers.patternprovider.PatternProviderLogic;
+import appeng.helpers.iface.PatternProviderLogic;
 import com.moakiee.ae2lt.logic.provider.OverloadedPatternProviderLogic;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
 

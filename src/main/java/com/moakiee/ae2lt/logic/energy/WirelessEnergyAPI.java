@@ -119,7 +119,7 @@ public final class WirelessEnergyAPI {
         long totalPushed = 0L;
         for (ResolvedTarget entry : liveTargets) {
             Object capCache = AppFluxBridge.createCapCache(
-                    entry.level(), entry.target().virtualHostPos(), gridSupplier);
+                    entry.level, entry.target().virtualHostPos(), gridSupplier);
             TargetAccess target = resolveEnergyTarget(capCache, entry.target().face());
             totalPushed += sendToTarget(target, proxy, source, AppFluxBridge.TRANSFER_RATE);
         }

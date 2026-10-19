@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class PowerCostServiceAccessTest {
-    @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
+    @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized(); }
 
     private static final class Energy {
         double stored = 100, idle = 4;

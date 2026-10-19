@@ -5,7 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -75,7 +75,6 @@ public final class TimeWheelCraftingCPU implements ICraftingCPU {
                 elapsedTimeTracker.getElapsedTime());
     }
 
-    @Override
     public void cancelJob() {
         craftingLogic.cancel();
     }
@@ -167,7 +166,7 @@ public final class TimeWheelCraftingCPU implements ICraftingCPU {
         host.markCpuDirty();
     }
 
-    public void writeToNBT(CompoundTag tag, HolderLookup.Provider registries) {
+    public void writeToNBT(CompoundTag tag, RegistryAccess registries) {
         craftingLogic.writeToNBT(tag, registries);
     }
 
@@ -175,7 +174,7 @@ public final class TimeWheelCraftingCPU implements ICraftingCPU {
         return craftingLogic.hasPersistentState();
     }
 
-    public void readFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
+    public void readFromNBT(CompoundTag tag, RegistryAccess registries) {
         craftingLogic.readFromNBT(tag, registries);
     }
 

@@ -11,7 +11,7 @@
   },
   "criteria": {
     "craft_pigmee_mentalmath_unit": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": {
         "recipe_id": "ae2lt:pigmee_mentalmath_unit"
       }

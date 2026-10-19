@@ -77,7 +77,7 @@ public final class LightningTransformService {
             }
 
             pendingOutputs.add(new PendingOutput(
-                    matchedRecipe.get().recipe().getResultItem(level.registryAccess()),
+                    matchedRecipe.get().recipe().getResultItem(),
                     plan.spawnPosition()));
             executedPlans.add(plan);
         }
@@ -152,10 +152,10 @@ public final class LightningTransformService {
 
         for (AccumulatedOutput output : accumulated.values()) {
             Vec3 position = output.averagePosition();
-            ItemStack remaining = output.stack.copyWithCount(output.totalCount);
+            ItemStack remaining = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(output.stack, output.totalCount);
             while (!remaining.isEmpty()) {
                 int spawnCount = Math.min(remaining.getCount(), remaining.getMaxStackSize());
-                ItemStack spawnedStack = remaining.copyWithCount(spawnCount);
+                ItemStack spawnedStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(remaining, spawnCount);
                 remaining.shrink(spawnCount);
 
                 ItemEntity itemEntity = new ItemEntity(
@@ -178,7 +178,7 @@ public final class LightningTransformService {
         private final int hash;
 
         private ItemStackKey(ItemStack stack) {
-            this.stack = stack.copyWithCount(1);
+            this.stack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             this.hash = Objects.hash(this.stack.getItem(), this.stack.getTag());
         }
 
@@ -210,7 +210,7 @@ public final class LightningTransformService {
         private int positionWeight;
 
         private AccumulatedOutput(ItemStack stack) {
-            this.stack = stack.copyWithCount(1);
+            this.stack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
         }
 
         private void add(int count, Vec3 position) {

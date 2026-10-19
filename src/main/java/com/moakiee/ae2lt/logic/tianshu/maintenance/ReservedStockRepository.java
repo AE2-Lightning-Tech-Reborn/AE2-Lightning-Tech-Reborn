@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.function.IntSupplier;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -120,7 +120,7 @@ public final class ReservedStockRepository {
         return 0L;
     }
 
-    public void writeTo(CompoundTag parent, HolderLookup.Provider registries) {
+    public void writeTo(CompoundTag parent, RegistryAccess registries) {
         var list = new ListTag();
         for (var entry : reserves.values()) {
             var tag = GenericStack.writeTag(new GenericStack(entry.key(), 1));
@@ -131,7 +131,7 @@ public final class ReservedStockRepository {
         parent.put(TAG_ENTRIES, list);
     }
 
-    public void readFrom(CompoundTag parent, HolderLookup.Provider registries) {
+    public void readFrom(CompoundTag parent, RegistryAccess registries) {
         reserves.clear();
         var list = parent.getList(TAG_ENTRIES, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {

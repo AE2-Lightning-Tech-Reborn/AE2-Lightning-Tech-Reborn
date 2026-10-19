@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -64,7 +64,7 @@ public final class AppFluxBridge {
 
     @Nullable
     public static Item getInductionCard() {
-        Item card = BuiltInRegistries.ITEM.get(INDUCTION_CARD_ID);
+        Item card = Registry.ITEM.get(INDUCTION_CARD_ID);
         return card != null && card != Items.AIR ? card : null;
     }
 

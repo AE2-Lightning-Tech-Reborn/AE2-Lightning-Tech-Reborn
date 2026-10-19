@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.registries.RegistryObject;
@@ -10,7 +10,9 @@ import net.minecraftforge.registries.DeferredRegister;
 /** Sound events mapped to vanilla sounds by sounds.json. */
 public final class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
-            DeferredRegister.create(Registries.SOUND_EVENT, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.SOUND_EVENT_REGISTRY, AE2LightningTech.MODID);
+
+    public static final RegistryObject<SoundEvent> SILENT = register("silent");
 
     /** EHV1 / EHV2 子档蓄力释放的主音。 */
     public static final RegistryObject<SoundEvent> RAILGUN_FIRE_CHARGED =
@@ -42,7 +44,7 @@ public final class ModSounds {
 
     private static RegistryObject<SoundEvent> register(String name) {
         var id = new ResourceLocation(AE2LightningTech.MODID, name);
-        return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(id));
+        return SOUND_EVENTS.register(name, () -> new SoundEvent(id));
     }
 
     private ModSounds() {

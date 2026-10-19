@@ -25,7 +25,7 @@ import snownee.jade.api.config.IPluginConfig;
  * precisely targeted part of an AE2 cable bus.
  */
 public final class FrequencyCardWirelessNodeJadeProvider
-        implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+        implements IBlockComponentProvider, IServerDataProvider<net.minecraft.world.level.block.entity.BlockEntity> {
     private static final ResourceLocation UID =
             new ResourceLocation(AE2LightningTech.MODID, "frequency_card_wireless_node");
     private static final String TAG_LINK = "AE2LTFrequencyCardWirelessNode";
@@ -48,18 +48,20 @@ public final class FrequencyCardWirelessNodeJadeProvider
     }
 
     @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        if (!(accessor.getLevel() instanceof ServerLevel level)) {
+    public void appendServerData(CompoundTag data, net.minecraft.server.level.ServerPlayer player, net.minecraft.world.level.Level world, net.minecraft.world.level.block.entity.BlockEntity blockEntity, boolean showDetails) {
+        if (!(world instanceof ServerLevel level)) {
             return;
         }
 
-        DisplayData displayData = inspectNativeHost(accessor);
+        DisplayData displayData = inspectNativeHost(blockEntity);
         if (displayData == null) {
-            var hitResult = accessor.getHitResult();
+            var ray = player.pick(32, 1, false);
+            var hitResult = ray instanceof net.minecraft.world.phys.BlockHitResult blockHit ? blockHit : null;
+            if (hitResult == null || !hitResult.getBlockPos().equals(blockEntity.getBlockPos())) return;
             var inspection = WirelessLinkRegistry.get(level.getServer()).inspectTarget(
                     level,
-                    accessor.getPosition(),
-                    accessor.getSide(),
+                    blockEntity.getBlockPos(),
+                    hitResult.getDirection(),
                     hitResult == null ? null : hitResult.getLocation());
             displayData = displayData(inspection);
         }
@@ -73,8 +75,8 @@ public final class FrequencyCardWirelessNodeJadeProvider
         data.put(TAG_LINK, linkData);
     }
 
-    private static DisplayData inspectNativeHost(BlockAccessor accessor) {
-        if (!(accessor.getBlockEntity() instanceof FrequencyBindingHost host)
+    private static DisplayData inspectNativeHost(net.minecraft.world.level.block.entity.BlockEntity blockEntity) {
+        if (!(blockEntity instanceof FrequencyBindingHost host)
                 || host.getFrequencyId() <= 0) {
             return null;
         }

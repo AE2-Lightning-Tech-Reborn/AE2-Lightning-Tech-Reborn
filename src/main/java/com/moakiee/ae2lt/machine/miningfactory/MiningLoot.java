@@ -144,6 +144,6 @@ public final class MiningLoot {
                 return;
             }
         }
-        drops.add(new Drop(stack.copyWithCount(1), count));
+        drops.add(new Drop(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1), count));
     }
 }

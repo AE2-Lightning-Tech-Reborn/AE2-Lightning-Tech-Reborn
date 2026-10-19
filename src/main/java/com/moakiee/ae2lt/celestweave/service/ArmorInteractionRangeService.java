@@ -34,8 +34,8 @@ public final class ArmorInteractionRangeService {
             entityBonus = Math.max(entityBonus, ReachSubmodule.entityBonus(active.armor()));
         }
 
-        updateModifier(player, ForgeMod.BLOCK_REACH.get(), BLOCK_RANGE_MODIFIER_ID, blockBonus);
-        updateModifier(player, ForgeMod.ENTITY_REACH.get(), ENTITY_RANGE_MODIFIER_ID, entityBonus);
+        updateModifier(player, ForgeMod.REACH_DISTANCE.get(), BLOCK_RANGE_MODIFIER_ID, blockBonus);
+        updateModifier(player, ForgeMod.ATTACK_RANGE.get(), ENTITY_RANGE_MODIFIER_ID, entityBonus);
     }
 
     private static void updateModifier(

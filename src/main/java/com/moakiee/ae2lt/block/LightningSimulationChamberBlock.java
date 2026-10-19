@@ -20,8 +20,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 import appeng.util.InteractionUtil;
 
@@ -39,7 +39,7 @@ public class LightningSimulationChamberBlock extends AE2LTBaseEntityBlock<Lightn
             NORTH_SHAPE);
 
     public LightningSimulationChamberBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(FACING, Direction.NORTH));

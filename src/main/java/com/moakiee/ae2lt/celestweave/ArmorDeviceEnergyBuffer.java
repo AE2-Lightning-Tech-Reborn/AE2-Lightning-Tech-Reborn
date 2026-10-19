@@ -33,8 +33,8 @@ public final class ArmorDeviceEnergyBuffer implements DeviceEnergyBuffer {
                 stack,
                 player,
                 Math.max(0L,
-                        ArmorEnergyBuffer.capacity(stack, player.level().registryAccess())
-                                - ArmorEnergyBuffer.read(stack, player.level().registryAccess())));
+                        ArmorEnergyBuffer.capacity(stack, player.level.registryAccess())
+                                - ArmorEnergyBuffer.read(stack, player.level.registryAccess())));
     }
 
     @Override

@@ -63,7 +63,7 @@ public final class TianshuWTMenuHost extends WTMenuHost
 
     @Override
     public Level getLevel() {
-        return getPlayer().level();
+        return getPlayer().level;
     }
 
     @Override

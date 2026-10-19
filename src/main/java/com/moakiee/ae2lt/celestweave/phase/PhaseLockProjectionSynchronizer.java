@@ -105,8 +105,8 @@ final class PhaseLockProjectionSynchronizer {
 
     private static void publishEnergySnapshot(ServerPlayer player, ItemStack armor, ItemStack projection) {
         var snapshot = new PhaseLockEnergySnapshot(
-                ArmorEnergyBuffer.capacity(armor, player.level().registryAccess()),
-                ArmorEnergyBuffer.read(armor, player.level().registryAccess()));
+                ArmorEnergyBuffer.capacity(armor, player.level.registryAccess()),
+                ArmorEnergyBuffer.read(armor, player.level.registryAccess()));
         if (!snapshot.equals(ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.get(projection))) {
             ModDataComponents.PHASE_LOCK_ENERGY_SNAPSHOT.set(projection, snapshot);
         }

@@ -12,8 +12,8 @@ import appeng.api.behaviors.ExternalStorageStrategy;
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKeyType;
@@ -200,7 +200,7 @@ public final class AdjacentItemAutoExportHelper {
 
                 long inserted = target.insert(key, extracted.getCount(), Actionable.MODULATE, actionSource);
                 if (inserted < extracted.getCount()) {
-                    remainderInserter.insert(extracted.copyWithCount((int) (extracted.getCount() - inserted)));
+                    remainderInserter.insert(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(extracted, (int) (extracted.getCount() - inserted)));
                 }
 
                 if (inserted > 0L) {

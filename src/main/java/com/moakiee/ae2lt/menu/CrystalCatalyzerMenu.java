@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,7 +16,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
 import appeng.menu.guisync.GuiSync;
@@ -107,7 +107,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
             working = host.isWorking();
 
             var fluid = host.getFluid();
-            fluidId = fluid.isEmpty() ? -1 : BuiltInRegistries.FLUID.getId(fluid.getFluid());
+            fluidId = fluid.isEmpty() ? -1 : Registry.FLUID.getId(fluid.getFluid());
             fluidAmount = fluid.getAmount();
 
             autoExport = host.isAutoExportEnabled();
@@ -164,7 +164,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,
@@ -212,7 +212,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
             return FluidStack.EMPTY;
         }
 
-        Fluid fluid = BuiltInRegistries.FLUID.byId(fluidId);
+        Fluid fluid = Registry.FLUID.byId(fluidId);
         if (fluid == null || fluid == Fluids.EMPTY) {
             return FluidStack.EMPTY;
         }

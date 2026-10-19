@@ -34,13 +34,6 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
-modId = "guideme"
-mandatory = true
-versionRange = "${guideme_version_range}"
-ordering = "AFTER"
-side = "BOTH"
-
-[[dependencies."${mod_id}"]]
 modId = "jade"
 mandatory = false
 versionRange = "${jade_version_range}"
@@ -60,13 +53,6 @@ mandatory = false
 versionRange = "${emi_version_range}"
 ordering = "AFTER"
 side = "CLIENT"
-
-[[dependencies."${mod_id}"]]
-modId = "advanced_ae"
-mandatory = false
-versionRange = "${advancedae_version_range}"
-ordering = "AFTER"
-side = "BOTH"
 
 [[dependencies."${mod_id}"]]
 modId = "expatternprovider"

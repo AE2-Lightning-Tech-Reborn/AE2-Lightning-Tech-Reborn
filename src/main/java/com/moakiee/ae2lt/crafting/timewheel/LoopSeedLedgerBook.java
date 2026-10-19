@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.BiPredicate;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -489,7 +489,7 @@ final class LoopSeedLedgerBook {
         totalReserved.clear();
     }
 
-    void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
+    void readFromNBT(CompoundTag data, RegistryAccess registries) {
         clear();
         var accountTags = data.getList(TAG_LEDGERS, Tag.TAG_COMPOUND);
         for (int i = 0; i < accountTags.size(); i++) {
@@ -545,7 +545,7 @@ final class LoopSeedLedgerBook {
         }
     }
 
-    void writeToNBT(CompoundTag data, HolderLookup.Provider registries) {
+    void writeToNBT(CompoundTag data, RegistryAccess registries) {
         if (ledgers.isEmpty() && variantDebts.isEmpty() && variantRules.isEmpty()
                 && consumerBundleUnits.isEmpty()
                 && consumerGroups.isEmpty() && singleSeedConsumers.isEmpty()) {

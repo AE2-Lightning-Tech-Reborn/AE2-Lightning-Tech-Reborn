@@ -9,7 +9,7 @@ import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -80,7 +80,7 @@ public final class RailgunTerrainService {
             default -> 0.0D;
         };
 
-        BlockPos centerPos = BlockPos.containing(center);
+        BlockPos centerPos = new BlockPos(center);
         if (RailgunSettings.soundEnabled(stack)) {
             level.playSound(null, centerPos, ModSounds.RAILGUN_FIRE_IMPACT.get(), SoundSource.BLOCKS,
                     1.5F + tier.ordinal() * 0.3F, 0.5F);
@@ -106,7 +106,7 @@ public final class RailgunTerrainService {
         double r = RailgunDefaults.PENETRATION_DESTROY_RADIUS;
         float maxHardness = (float) RailgunDefaults.PENETRATION_DESTROY_HARDNESS;
         for (Vec3 p : hitPoints) {
-            List<BlockPos> candidates = collectSphere(BlockPos.containing(p), r);
+            List<BlockPos> candidates = collectSphere(new BlockPos(p), r);
             PENDING.add(new DestroyJob(level.dimension(), player.getUUID(),
                     new ArrayDeque<>(candidates), maxHardness, stack.copy()));
         }
@@ -177,7 +177,7 @@ public final class RailgunTerrainService {
         java.util.Set<Block> cached = PROTECTED_BLOCKS;
         if (cached != null) return cached;
         java.util.Set<Block> set = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-        for (var entry : BuiltInRegistries.BLOCK.entrySet()) {
+        for (var entry : Registry.BLOCK.entrySet()) {
             String ns = entry.getKey().location().getNamespace();
             if (ns.equals(AE2LightningTech.MODID) || ns.equals("ae2") || ns.equals("appliedenergistics2")) {
                 set.add(entry.getValue());

@@ -24,7 +24,8 @@ import mezz.jei.gui.recipes.RecipesGui;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -227,7 +228,7 @@ public final class JeiWirelessSupplyClient {
                 if (remaining == 0) break;
                 if (stack.isEmpty() || input.getItemStacks().noneMatch(s -> equivalent(s, stack))) continue;
                 int used = Math.min(remaining, stack.getCount());
-                stored.add(stack.copyWithCount(used));
+                stored.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, used));
                 stack.shrink(used); remaining -= used;
             }
             hasAvailable |= required > remaining;
@@ -251,7 +252,7 @@ public final class JeiWirelessSupplyClient {
 
     private static IRecipeSlotView partialSlot(IRecipeSlotView original, int count) {
         var manager = Internal.getJeiRuntime().getIngredientManager();
-        var ingredients = original.getItemStacks().map(s -> s.copyWithCount(count))
+        var ingredients = original.getItemStacks().map(s -> com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(s, count))
                 .filter(s -> !s.isEmpty()).map(s -> manager.createTypedIngredient(mezz.jei.api.constants.VanillaTypes.ITEM_STACK, s)
                         .orElseThrow()).toList();
         return (IRecipeSlotView) java.lang.reflect.Proxy.newProxyInstance(IRecipeSlotView.class.getClassLoader(),
@@ -285,10 +286,10 @@ public final class JeiWirelessSupplyClient {
             while (low < high) {
                 int middle = (low + high) >>> 1;
                 var candidate = WirelessJeiInventoryPlan.copy(result);
-                if (middle == 0) candidate.remove(i); else candidate.set(i, stack.copyWithCount(middle));
+                if (middle == 0) candidate.remove(i); else candidate.set(i, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, middle));
                 if (allows(preview(operation, candidate))) high = middle; else low = middle + 1;
             }
-            if (low == 0) result.remove(i); else result.set(i, stack.copyWithCount(low));
+            if (low == 0) result.remove(i); else result.set(i, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, low));
         }
         return result;
     }
@@ -327,11 +328,11 @@ public final class JeiWirelessSupplyClient {
         while (low < high) {
             int middle = (low + high + 1) >>> 1;
             var candidate = WirelessJeiInventoryPlan.copy(plan);
-            candidate.add(stack.copyWithCount(middle));
+            candidate.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, middle));
             if (WirelessJeiInventoryPlan.insert(player.getInventory().items, candidate) != null) low = middle;
             else high = middle - 1;
         }
-        if (low > 0) plan.add(stack.copyWithCount(low));
+        if (low > 0) plan.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, low));
     }
 
     private static boolean equivalent(ItemStack a, ItemStack b) {
@@ -456,9 +457,9 @@ public final class JeiWirelessSupplyClient {
         @Override public void getTooltip(ITooltipBuilder tooltip) {
             tooltip.addAll(TransferHelper.createCraftingTooltip(missing, craftMissing));
         }
-        @Override public void showError(GuiGraphics graphics, int mouseX, int mouseY,
+        @Override public void showError(PoseStack graphics, int mouseX, int mouseY,
                 IRecipeSlotsView slots, int recipeX, int recipeY) {
-            var pose = graphics.pose();
+            var pose = graphics;
             pose.pushPose(); pose.translate(recipeX, recipeY, 0);
             var inputs = slots.getSlotViews(RecipeIngredientRole.INPUT);
             for (int i = 0; i < inputs.size(); i++) {

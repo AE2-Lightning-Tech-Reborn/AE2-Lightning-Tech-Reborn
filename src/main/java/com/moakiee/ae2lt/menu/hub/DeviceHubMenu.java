@@ -366,7 +366,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
             return;
         }
         // Armor: toggle submodule
-        var submodules = CelestweaveArmorState.collectSubmodules(deviceStack, player.level().registryAccess());
+        var submodules = CelestweaveArmorState.collectSubmodules(deviceStack, player.level.registryAccess());
         if (moduleIndex < 0 || moduleIndex >= submodules.size()) return;
         var sub = submodules.get(moduleIndex);
         boolean current = CelestweaveArmorState.isSubmoduleEnabled(deviceStack, sub);
@@ -447,7 +447,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         if (selectedTab == TAB_RAILGUN) {
             return;
         }
-        var submodules = CelestweaveArmorState.collectSubmodules(deviceStack, player.level().registryAccess());
+        var submodules = CelestweaveArmorState.collectSubmodules(deviceStack, player.level.registryAccess());
         if (selectedModuleIndex < 0 || selectedModuleIndex >= submodules.size()) return;
         var submodule = submodules.get(selectedModuleIndex);
         var configs = submodule.getConfigs(deviceStack);

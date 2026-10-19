@@ -304,6 +304,6 @@ public final class FixedInfiniteCellItem extends AE2LTItem {
                 ? (long) Integer.MAX_VALUE * key.getAmountPerUnit()
                 : key.getAmountPerUnit();
         var content = Collections.singletonList(new GenericStack(key, amount));
-        return Optional.of(new StorageCellTooltipComponent(List.of(), content, false, true));
+        return Optional.of(new StorageCellTooltipComponent(List.of(), content, false));
     }
 }

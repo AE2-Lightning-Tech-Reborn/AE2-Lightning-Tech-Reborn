@@ -8,7 +8,6 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
@@ -18,8 +17,8 @@ import net.minecraft.world.level.Level;
  * Unlike the Creative Pigmee recipe, this recipe has no arbitrary-item duplication fallback.
  */
 public final class HyperdimensionalPigmeeConversionRecipe extends CustomRecipe {
-    public HyperdimensionalPigmeeConversionRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    public HyperdimensionalPigmeeConversionRecipe(ResourceLocation id) {
+        super(id);
     }
 
     // 1.20.1 crafts against a CraftingContainer; assemble() takes a RegistryAccess.
@@ -29,7 +28,7 @@ public final class HyperdimensionalPigmeeConversionRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer input, RegistryAccess registryAccess) {
+    public ItemStack assemble(CraftingContainer input) {
         return PigmeeConversionLogic.createResult(findTarget(input));
     }
 

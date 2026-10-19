@@ -13,9 +13,8 @@ public final class RailgunStructuralCore {
         if (railgun == null || railgun.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        return ModDataComponents.RAILGUN_STRUCTURAL_CORE
-                .getOrDefault(railgun, ItemStack.EMPTY)
-                .copyWithCount(1);
+        return com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(
+                ModDataComponents.RAILGUN_STRUCTURAL_CORE.getOrDefault(railgun, ItemStack.EMPTY), 1);
     }
 
     public static void setCore(ItemStack railgun, ItemStack core) {
@@ -29,7 +28,7 @@ public final class RailgunStructuralCore {
         if (!isValidCore(core)) {
             return;
         }
-        ModDataComponents.RAILGUN_STRUCTURAL_CORE.set(railgun, core.copyWithCount(1));
+        ModDataComponents.RAILGUN_STRUCTURAL_CORE.set(railgun, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(core, 1));
     }
 
     public static ItemStack removeCore(ItemStack railgun, int amount) {

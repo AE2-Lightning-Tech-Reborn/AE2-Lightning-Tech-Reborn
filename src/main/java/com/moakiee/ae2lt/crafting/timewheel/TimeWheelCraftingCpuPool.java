@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -365,7 +365,7 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         return !activeCpus.isEmpty();
     }
 
-    public void writeToNBT(CompoundTag tag, HolderLookup.Provider registries) {
+    public void writeToNBT(CompoundTag tag, RegistryAccess registries) {
         tag.putInt(TAG_VERSION, DATA_VERSION);
         var cpuList = new ListTag();
         for (var entry : activeCpus.values()) {
@@ -386,7 +386,7 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         }
     }
 
-    public void readFromNBT(CompoundTag tag, HolderLookup.Provider registries) {
+    public void readFromNBT(CompoundTag tag, RegistryAccess registries) {
         activeCpus.clear();
         remainingStorage = totalStorage;
         cpuListChanged = false;
@@ -460,7 +460,6 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         return null;
     }
 
-    @Override
     public void cancelJob() {
     }
 

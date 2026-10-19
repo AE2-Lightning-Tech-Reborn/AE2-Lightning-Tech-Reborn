@@ -38,7 +38,7 @@ public final class VoidCellGameTests {
 
         var unpartitionedStack = new ItemStack(ModItems.VOID_CELL.get());
         var unpartitioned = new VoidCellInventory(unpartitionedStack, null);
-        helper.assertTrue(
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(
                 unpartitioned.insert(AEItemKey.of(Items.STONE), 1, Actionable.SIMULATE,
                         IActionSource.empty()) == 0,
                 "An unpartitioned void cell must reject input like the 1.21 implementation");
@@ -48,7 +48,7 @@ public final class VoidCellGameTests {
     @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty")
     public static void condensesInputIntoExtractableMatterBalls(GameTestHelper helper) {
         int requiredPower = CondenserOutput.MATTER_BALLS.requiredPower;
-        helper.assertTrue(requiredPower > 0, "AE2 Matter Ball condenser power must be configured");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(requiredPower > 0, "AE2 Matter Ball condenser power must be configured");
 
         ItemStack stack = configuredCell(AEItemKey.of(Items.STONE));
         VoidCellData.writeMode(stack, VoidCellMode.MATTER_BALLS);
@@ -57,10 +57,10 @@ public final class VoidCellGameTests {
                 AEItemKey.of(Items.STONE), requiredPower, Actionable.MODULATE, IActionSource.empty());
         var matterBall = AEItemKey.of(AEItems.MATTER_BALL);
 
-        helper.assertTrue(inserted == requiredPower, "The complete input amount must be accepted");
-        helper.assertTrue(cell.getAvailableStacks().get(matterBall) == 1,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(inserted == requiredPower, "The complete input amount must be accepted");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cell.getAvailableStacks().get(matterBall) == 1,
                 "One condenser threshold of input must produce one Matter Ball");
-        helper.assertTrue(cell.extract(matterBall, 1, Actionable.SIMULATE, IActionSource.empty()) == 1,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cell.extract(matterBall, 1, Actionable.SIMULATE, IActionSource.empty()) == 1,
                 "Produced Matter Balls must remain extractable from the cell");
         helper.succeed();
     }
@@ -68,7 +68,7 @@ public final class VoidCellGameTests {
     private static void assertAccepted(GameTestHelper helper, AEKey key, long amount) {
         var cell = new VoidCellInventory(configuredCell(key), null);
         long accepted = cell.insert(key, amount, Actionable.MODULATE, IActionSource.empty());
-        helper.assertTrue(accepted == amount,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(accepted == amount,
                 "Configured AE key type was rejected: " + key.getType().getId());
     }
 

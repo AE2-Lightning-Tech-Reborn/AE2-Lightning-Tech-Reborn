@@ -198,7 +198,7 @@ public final class PigmeeLightningClientProbe {
 
     private static final class CuriosChecks {
         private static void run(LightningBolt natural, LightningBolt artificial) {
-            var head = top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(Minecraft.getInstance().player).resolve()
+            var head = top.theillusivec4.curios.api.CuriosApi.getCuriosHelper().getCuriosHandler(Minecraft.getInstance().player).resolve()
                     .flatMap(inventory -> inventory.getStacksHandler("head")).orElseThrow();
             var original = head.getStacks().getStackInSlot(0).copy();
             try {

@@ -9,7 +9,7 @@ import com.moakiee.ae2lt.registry.ModRecipeTypes;
 
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
@@ -80,7 +80,7 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
     }
 
     @Override
-    public ItemStack assemble(LightningStrikeRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(LightningStrikeRecipeInput input) {
         return new ItemStack(centerOutput);
     }
 
@@ -90,7 +90,7 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return new ItemStack(centerOutput);
     }
 
@@ -126,9 +126,9 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
             return new LightningStrikeRecipe(
                     recipeId,
                     GsonHelper.getAsBoolean(json, "requires_natural_lightning", false),
-                    BuiltInRegistries.BLOCK.getOptional(ResourceLocation.tryParse(GsonHelper.getAsString(json, "center_input")))
+                    Registry.BLOCK.getOptional(ResourceLocation.tryParse(GsonHelper.getAsString(json, "center_input")))
                             .orElseThrow(() -> new IllegalArgumentException("Unknown block id for center_input")),
-                    BuiltInRegistries.BLOCK.getOptional(ResourceLocation.tryParse(GsonHelper.getAsString(json, "center_output")))
+                    Registry.BLOCK.getOptional(ResourceLocation.tryParse(GsonHelper.getAsString(json, "center_output")))
                             .orElseThrow(() -> new IllegalArgumentException("Unknown block id for center_output")),
                     requirements);
         }
@@ -136,9 +136,9 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
         @Override
         public LightningStrikeRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
             boolean requiresNatural = buffer.readBoolean();
-            Block centerInput = BuiltInRegistries.BLOCK.getOptional(buffer.readResourceLocation())
+            Block centerInput = Registry.BLOCK.getOptional(buffer.readResourceLocation())
                     .orElseThrow(() -> new IllegalStateException("Received unknown center_input block id"));
-            Block centerOutput = BuiltInRegistries.BLOCK.getOptional(buffer.readResourceLocation())
+            Block centerOutput = Registry.BLOCK.getOptional(buffer.readResourceLocation())
                     .orElseThrow(() -> new IllegalStateException("Received unknown center_output block id"));
             int requirementCount = buffer.readInt();
             List<StructureRequirement> requirements = new java.util.ArrayList<>(requirementCount);
@@ -152,8 +152,8 @@ public final class LightningStrikeRecipe implements Recipe<LightningStrikeRecipe
         @Override
         public void toNetwork(FriendlyByteBuf buffer, LightningStrikeRecipe recipe) {
             buffer.writeBoolean(recipe.requiresNaturalLightning());
-            buffer.writeResourceLocation(BuiltInRegistries.BLOCK.getKey(recipe.centerInput()));
-            buffer.writeResourceLocation(BuiltInRegistries.BLOCK.getKey(recipe.centerOutput()));
+            buffer.writeResourceLocation(Registry.BLOCK.getKey(recipe.centerInput()));
+            buffer.writeResourceLocation(Registry.BLOCK.getKey(recipe.centerOutput()));
             buffer.writeInt(recipe.requirements().size());
             for (StructureRequirement requirement : recipe.requirements()) {
                 requirement.toNetwork(buffer);

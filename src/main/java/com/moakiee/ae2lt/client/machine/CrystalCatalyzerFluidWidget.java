@@ -7,7 +7,8 @@ import java.util.function.Supplier;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -109,11 +110,11 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
 
     private void playClickSound() {
         Minecraft.getInstance().getSoundManager().play(
-                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         FluidStack fluid = fluidSupplier.get();
         if (!fluid.isEmpty()) {
             int capacity = Math.max(1, capacitySupplier.getAsInt());
@@ -125,14 +126,14 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
                 // would vertically stretch the fluid. Tile the texture bottom-up in
                 // 16-px chunks instead, keeping its native aspect ratio. Only the
                 // final (top) chunk gets clipped when filled is not a multiple of 16.
-                int y = getY() + height;
+                int y = this.y + height;
                 int remaining = filled;
                 while (remaining > 0) {
                     int chunk = Math.min(16, remaining);
                     y -= chunk;
                     FluidBlitter.create(fluid)
-                            .dest(getX(), y, width, chunk)
-                            .blit(guiGraphics);
+                            .dest(x, y, width, chunk)
+                            .blit(guiGraphics, 0);
                     remaining -= chunk;
                 }
             }
@@ -148,13 +149,13 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
         }
     }
 
-    private void drawTick(GuiGraphics guiGraphics, int srcX, int srcY, int tickWidth) {
+    private void drawTick(PoseStack guiGraphics, int srcX, int srcY, int tickWidth) {
         int offsetX = srcX - TANK_SRC_X;
         int offsetY = srcY - TANK_SRC_Y;
         Blitter.texture(BACKGROUND_TEXTURE)
                 .src(srcX, srcY, tickWidth, 1)
-                .dest(getX() + offsetX, getY() + offsetY, tickWidth, 1)
-                .blit(guiGraphics);
+                .dest(x + offsetX, y + offsetY, tickWidth, 1)
+                .blit(guiGraphics, 0);
     }
 
     @Override
@@ -183,7 +184,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
 
     @Override
     public Rect2i getTooltipArea() {
-        return new Rect2i(getX(), getY(), width, height);
+        return new Rect2i(x, y, width, height);
     }
 
     @Override
@@ -192,7 +193,7 @@ public class CrystalCatalyzerFluidWidget extends AbstractWidget implements ITool
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 
     private static String getModDisplayName(FluidStack fluid) {

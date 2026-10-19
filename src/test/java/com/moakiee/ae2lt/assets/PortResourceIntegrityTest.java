@@ -86,7 +86,7 @@ class PortResourceIntegrityTest {
                 }
                 collectModelReferences(source, model, missing);
                 if (model.has("textures")) {
-                    for (JsonElement texture : model.getAsJsonObject("textures").asMap().values()) {
+                    for (JsonElement texture : model.getAsJsonObject("textures").entrySet().stream().map(java.util.Map.Entry::getValue).toList()) {
                         validateTextureReference(source, texture.getAsString(), missing);
                     }
                 }

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,7 +16,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.upgrades.Upgrades;
 import appeng.core.localization.GuiText;
 import appeng.menu.AEBaseMenu;
@@ -158,11 +158,11 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements InputTr
             outputSideMask = toOutputSideMask(host.getAllowedOutputs());
 
             var inputFluid = host.getInputFluid();
-            inputFluidId = inputFluid.isEmpty() ? -1 : BuiltInRegistries.FLUID.getId(inputFluid.getFluid());
+            inputFluidId = inputFluid.isEmpty() ? -1 : Registry.FLUID.getId(inputFluid.getFluid());
             inputFluidAmount = inputFluid.getAmount();
 
             var outputFluid = host.getOutputFluid();
-            outputFluidId = outputFluid.isEmpty() ? -1 : BuiltInRegistries.FLUID.getId(outputFluid.getFluid());
+            outputFluidId = outputFluid.isEmpty() ? -1 : Registry.FLUID.getId(outputFluid.getFluid());
             outputFluidAmount = outputFluid.getAmount();
 
             var lockedRecipe = host.getLockedRecipe().orElse(null);
@@ -254,7 +254,7 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements InputTr
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,
@@ -497,7 +497,7 @@ public class OverloadProcessingFactoryMenu extends AEBaseMenu implements InputTr
             return FluidStack.EMPTY;
         }
 
-        Fluid fluid = BuiltInRegistries.FLUID.byId(fluidId);
+        Fluid fluid = Registry.FLUID.byId(fluidId);
         if (fluid == null || fluid == Fluids.EMPTY) {
             return FluidStack.EMPTY;
         }

@@ -2,7 +2,8 @@ package com.moakiee.ae2lt.client.machine;
 
 import java.util.function.DoubleSupplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
@@ -27,7 +28,7 @@ public class OverloadProcessingFactoryProgressWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         int filled = Mth.clamp((int) Math.ceil(width * progress.getAsDouble()), 0, width);
         if (filled <= 0) {
             return;
@@ -35,12 +36,12 @@ public class OverloadProcessingFactoryProgressWidget extends AbstractWidget {
 
         overlay.copy()
                 .src(overlay.getSrcX(), overlay.getSrcY(), filled, height)
-                .dest(getX(), getY(), filled, height)
-                .blit(guiGraphics);
+                .dest(x, y, filled, height)
+                .blit(guiGraphics, 0);
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 
     @Override

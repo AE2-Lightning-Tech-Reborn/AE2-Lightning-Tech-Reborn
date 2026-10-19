@@ -26,7 +26,7 @@ final class CreativePigmeeMultidimensionalConversionContractTest {
         assertTrue(conversion.contains(
                 "new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION.get())"));
         assertTrue(recipe.indexOf("PigmeeConversionLogic.createResult(target)")
-                < recipe.indexOf("target.copyWithCount(OUTPUT_COUNT)"));
+                < recipe.indexOf("com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(target, OUTPUT_COUNT)"));
     }
 
     private static String source(String path) throws Exception {

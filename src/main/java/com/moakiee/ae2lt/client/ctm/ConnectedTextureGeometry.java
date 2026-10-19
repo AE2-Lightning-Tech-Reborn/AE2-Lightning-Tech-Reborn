@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.ModelBaker;
+import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.state.properties.SlabType;
@@ -43,7 +43,18 @@ public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextu
     }
 
     @Override
-    public BakedModel bake(IGeometryBakingContext context, ModelBaker baker,
+    public java.util.Collection<Material> getMaterials(IGeometryBakingContext context,
+            Function<ResourceLocation, net.minecraft.client.resources.model.UnbakedModel> models,
+            java.util.Set<com.mojang.datafixers.util.Pair<String, String>> missing) {
+        var materials = new java.util.ArrayList<Material>();
+        materials.add(context.getMaterial("base"));
+        materials.add(context.getMaterial("ctm"));
+        if (context.hasMaterial("overlay")) materials.add(context.getMaterial("overlay"));
+        return materials;
+    }
+
+    @Override
+    public BakedModel bake(IGeometryBakingContext context, ModelBakery baker,
             Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState,
             ItemOverrides overrides, ResourceLocation modelLocation) {
         TextureAtlasSprite base = spriteGetter.apply(context.getMaterial("base"));

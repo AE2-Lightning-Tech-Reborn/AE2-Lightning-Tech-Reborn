@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.IntSupplier;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -58,7 +58,7 @@ public final class InventoryMaintenanceRepository {
 
     public boolean remove(AEKey key) { return rules.remove(key) != null; }
 
-    public void writeTo(CompoundTag parent, HolderLookup.Provider registries) {
+    public void writeTo(CompoundTag parent, RegistryAccess registries) {
         var list = new ListTag();
         for (var rule : rules.values()) {
             var tag = new CompoundTag();
@@ -75,7 +75,7 @@ public final class InventoryMaintenanceRepository {
         parent.put(TAG_RULES, list);
     }
 
-    public void readFrom(CompoundTag parent, HolderLookup.Provider registries) {
+    public void readFrom(CompoundTag parent, RegistryAccess registries) {
         rules.clear();
         var list = parent.getList(TAG_RULES, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {

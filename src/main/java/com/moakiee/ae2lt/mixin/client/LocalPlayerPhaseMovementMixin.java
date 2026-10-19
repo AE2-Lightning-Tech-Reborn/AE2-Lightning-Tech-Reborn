@@ -162,7 +162,7 @@ public abstract class LocalPlayerPhaseMovementMixin {
                 PhaseFlightPlayerState.isFlightLocked(player),
                 PhaseFlightMovementGuard.isPhaseModeEnabled(player),
                 PhaseFlightPlayerState.isFlying(player),
-                player.onGround(),
+                player.isOnGround(),
                 player.isShiftKeyDown());
         if (crouchChord || groundCrouch) {
             cir.setReturnValue(true);

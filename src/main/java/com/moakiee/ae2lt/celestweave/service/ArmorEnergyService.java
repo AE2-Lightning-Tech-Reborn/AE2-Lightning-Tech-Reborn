@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -46,7 +46,7 @@ public final class ArmorEnergyService {
     private ArmorEnergyService() {
     }
 
-    public static long refillFromBoundNetworkIfLow(Player player, ItemStack armor, HolderLookup.Provider registries) {
+    public static long refillFromBoundNetworkIfLow(Player player, ItemStack armor, RegistryAccess registries) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return 0L;
         }
@@ -56,7 +56,7 @@ public final class ArmorEnergyService {
         return rechargeFromNetwork(serverPlayer, armor, request, false);
     }
 
-    public static boolean consumePassiveDrain(Player player, ItemStack armor, HolderLookup.Provider registries) {
+    public static boolean consumePassiveDrain(Player player, ItemStack armor, RegistryAccess registries) {
         return consumePassiveDrain(
                 player,
                 armor,
@@ -68,7 +68,7 @@ public final class ArmorEnergyService {
             Player player,
             ItemStack armor,
             List<CelestweaveArmorState.InstalledSubmodule> installedSubmodules,
-            HolderLookup.Provider registries) {
+            RegistryAccess registries) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return true;
         }
@@ -131,7 +131,7 @@ public final class ArmorEnergyService {
             return 0L;
         }
         UUID armorId = CelestweaveArmorState.ensureArmorId(armor);
-        long now = player.level().getGameTime();
+        long now = player.level.getGameTime();
         if (!ignoreCooldown) {
             long nextRetry = NEXT_NETWORK_RETRY_TICK.getOrDefault(armorId, 0L);
             if (ArmorNetworkRechargePolicy.isCoolingDown(nextRetry, now)) {
@@ -140,8 +140,8 @@ public final class ArmorEnergyService {
         }
 
         long received = ArmorEnergyBuffer.refillFromNetwork(armor, player, request);
-        long storedAfter = ArmorEnergyBuffer.read(armor, player.level().registryAccess());
-        long capacity = ArmorEnergyBuffer.capacity(armor, player.level().registryAccess());
+        long storedAfter = ArmorEnergyBuffer.read(armor, player.level.registryAccess());
+        long capacity = ArmorEnergyBuffer.capacity(armor, player.level.registryAccess());
         if (storedAfter >= capacity) {
             NEXT_NETWORK_RETRY_TICK.remove(armorId);
         } else if (ArmorNetworkRechargePolicy.shouldThrottlePassiveRetry(storedAfter, capacity, received)) {
@@ -158,8 +158,8 @@ public final class ArmorEnergyService {
         }
         ArmorEnergyBuffer.write(
                 armor,
-                player.level().registryAccess(),
-                ArmorEnergyBuffer.read(armor, player.level().registryAccess()) + amount);
+                player.level.registryAccess(),
+                ArmorEnergyBuffer.read(armor, player.level.registryAccess()) + amount);
     }
 
     private static void rechargeCandidatesForCost(ServerPlayer player, List<ItemStack> candidates, long amount) {
@@ -168,11 +168,11 @@ public final class ArmorEnergyService {
             if (remaining <= 0L) {
                 return;
             }
-            long stored = ArmorEnergyBuffer.read(candidate, player.level().registryAccess());
-            long capacity = ArmorEnergyBuffer.capacity(candidate, player.level().registryAccess());
+            long stored = ArmorEnergyBuffer.read(candidate, player.level.registryAccess());
+            long capacity = ArmorEnergyBuffer.capacity(candidate, player.level.registryAccess());
             long request = ArmorNetworkRechargePolicy.activeRechargeRequest(stored, capacity, remaining);
             rechargeFromNetwork(player, candidate, request, true);
-            remaining -= Math.min(remaining, ArmorEnergyBuffer.read(candidate, player.level().registryAccess()));
+            remaining -= Math.min(remaining, ArmorEnergyBuffer.read(candidate, player.level.registryAccess()));
         }
     }
 
@@ -185,7 +185,7 @@ public final class ArmorEnergyService {
         for (int i = 0; i < candidates.size(); i++) {
             sources.add(new ArmorEnergySpendPlan.Source(
                     i,
-                    ArmorEnergyBuffer.read(candidates.get(i), player.level().registryAccess())));
+                    ArmorEnergyBuffer.read(candidates.get(i), player.level.registryAccess())));
         }
         List<NetworkEnergySource> networkSources = includeBoundNetworks
                 ? collectNetworkEnergySources(player, candidates, amount)
@@ -205,8 +205,8 @@ public final class ArmorEnergyService {
         for (ArmorEnergySpendPlan.Debit debit : plan.debits()) {
             if (debit.sourceIndex() < networkSourceOffset) {
                 ItemStack stack = candidates.get(debit.sourceIndex());
-                long current = ArmorEnergyBuffer.read(stack, player.level().registryAccess());
-                ArmorEnergyBuffer.write(stack, player.level().registryAccess(), current - debit.amount());
+                long current = ArmorEnergyBuffer.read(stack, player.level.registryAccess());
+                ArmorEnergyBuffer.write(stack, player.level.registryAccess(), current - debit.amount());
                 debits.add(new EnergyDebit(stack, debit.amount()));
                 continue;
             }
@@ -291,7 +291,7 @@ public final class ArmorEnergyService {
         for (ItemStack candidate : collectEnergyCandidates(player, preferredArmor)) {
             long accepted = ArmorEnergyBuffer.receiveFe(
                     candidate,
-                    player.level().registryAccess(),
+                    player.level.registryAccess(),
                     remaining,
                     false);
             received += accepted;
@@ -340,7 +340,7 @@ public final class ArmorEnergyService {
             ServerPlayer player,
             ItemStack armor,
             List<CelestweaveArmorState.InstalledSubmodule> installedSubmodules,
-            HolderLookup.Provider registries) {
+            RegistryAccess registries) {
         if (!CelestweaveArmorState.hasCore(armor, registries)) {
             return new PassiveCost(0L, LightningCost.NONE);
         }

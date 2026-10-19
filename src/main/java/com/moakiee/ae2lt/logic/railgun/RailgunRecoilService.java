@@ -48,14 +48,14 @@ public final class RailgunRecoilService {
             speed *= RailgunDefaults.RECOIL_CROUCH_MUL;
             pitchUp *= (float) RailgunDefaults.RECOIL_CROUCH_MUL;
         }
-        if (!player.onGround()) {
+        if (!player.isOnGround()) {
             speed *= RailgunDefaults.RECOIL_AIRBORNE_MUL;
         }
 
         // Wall-check: any non-air collidable block 1 cell behind kills speed.
         Vec3 backDir = player.getLookAngle().scale(-1).normalize();
-        Level level = player.level();
-        BlockPos bp = BlockPos.containing(player.position().add(backDir));
+        Level level = player.level;
+        BlockPos bp = new BlockPos(player.position().add(backDir));
         if (!level.getBlockState(bp).isAir()
                 && !level.getBlockState(bp).getCollisionShape(level, bp).isEmpty()) {
             speed = 0.0D;
@@ -82,6 +82,6 @@ public final class RailgunRecoilService {
     public static boolean inRecoilGrace(ServerPlayer player) {
         long t = player.getPersistentData().getLong(RECOIL_GRACE_TAG);
         if (t == 0L) return false;
-        return player.level().getGameTime() <= t;
+        return player.level.getGameTime() <= t;
     }
 }

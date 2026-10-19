@@ -14,7 +14,7 @@ import com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternPayload;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -307,7 +307,7 @@ public final class PatternEncodingDuplicateFilter {
             return "empty";
         }
         int fingerprint = Objects.hash(stack.getItem(), stack.getTag());
-        return BuiltInRegistries.ITEM.getKey(stack.getItem())
+        return Registry.ITEM.getKey(stack.getItem())
                 + "#" + Integer.toUnsignedString(fingerprint, 16);
     }
 

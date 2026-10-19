@@ -96,7 +96,7 @@ public class OverloadTntBlock extends TntBlock {
             return;
         }
 
-        var source = explosion.getIndirectSourceEntity();
+        var source = explosion.getSourceMob();
         LivingEntity owner = source instanceof LivingEntity ? (LivingEntity) source : null;
         OverloadTntEntity tnt = new OverloadTntEntity(level, pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, owner);
         int fuse = tnt.getFuse();

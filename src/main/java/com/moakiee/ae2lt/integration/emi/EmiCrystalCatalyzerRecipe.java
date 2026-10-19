@@ -1,4 +1,5 @@
 package com.moakiee.ae2lt.integration.emi;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 
 import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
 
@@ -117,11 +118,11 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
         widgets.addDrawable(0, y, WIDTH, 8, (graphics, mouseX, mouseY, delta) -> {
             var font = Minecraft.getInstance().font;
             float scale = 0.8f;
-            graphics.pose().pushPose();
-            graphics.pose().scale(scale, scale, 1);
+            graphics.pushPose();
+            graphics.scale(scale, scale, 1);
             int x = Math.round((WIDTH / 2f) / scale - font.width(text) / 2f);
-            graphics.drawString(font, text, x, 0, EmiRecipeWidgets.TEXT_COLOR, false);
-            graphics.pose().popPose();
+            LegacyGui.drawString(graphics, font, text, x, 0, EmiRecipeWidgets.TEXT_COLOR, false);
+            graphics.popPose();
         });
     }
 }

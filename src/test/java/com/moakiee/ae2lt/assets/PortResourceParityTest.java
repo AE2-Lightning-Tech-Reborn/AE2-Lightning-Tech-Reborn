@@ -47,7 +47,7 @@ class PortResourceParityTest {
         assertTrue(source.contains("AppFluxBridge.persistCellStorage(cachedCellView);"));
         assertTrue(source.contains("drops.add(cell.copy());"));
         assertTrue(source.contains("void clearContent()"));
-        assertTrue(source.contains("cellInv.clear();"));
+        assertTrue(source.contains("com.moakiee.ae2lt.compat.LegacyInventories.clear(cellInv);"));
     }
 
 }

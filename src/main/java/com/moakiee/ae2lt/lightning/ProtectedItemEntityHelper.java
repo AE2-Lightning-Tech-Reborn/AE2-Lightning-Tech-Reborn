@@ -2,9 +2,7 @@ package com.moakiee.ae2lt.lightning;
 
 import java.util.Set;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 
@@ -63,7 +61,7 @@ public final class ProtectedItemEntityHelper {
     }
 
     public static boolean isProtectedItem(ItemEntity itemEntity) {
-        return isProtectedItem(itemEntity, itemEntity.level().getGameTime());
+        return isProtectedItem(itemEntity, itemEntity.level.getGameTime());
     }
 
     public static boolean isProtectedItem(ItemEntity itemEntity, long gameTime) {
@@ -96,15 +94,15 @@ public final class ProtectedItemEntityHelper {
     }
 
     private static boolean isLightningOrFireDamage(DamageSource damageSource) {
-        return damageSource.is(DamageTypes.LIGHTNING_BOLT)
-                || damageSource.is(DamageTypes.IN_FIRE)
-                || damageSource.is(DamageTypes.ON_FIRE)
-                || damageSource.is(DamageTypes.LAVA)
-                || damageSource.is(DamageTypeTags.IS_FIRE);
+        return "lightningBolt".equals(damageSource.getMsgId())
+                || "inFire".equals(damageSource.getMsgId())
+                || "onFire".equals(damageSource.getMsgId())
+                || "lava".equals(damageSource.getMsgId())
+                || damageSource.isFire();
     }
 
     public static void tick(ItemEntity itemEntity) {
-        if (itemEntity.level().isClientSide()) {
+        if (itemEntity.level.isClientSide()) {
             return;
         }
 
@@ -113,7 +111,7 @@ public final class ProtectedItemEntityHelper {
             return;
         }
 
-        long gameTime = itemEntity.level().getGameTime();
+        long gameTime = itemEntity.level.getGameTime();
         if (isProtectedItem(itemEntity, gameTime)) {
             itemEntity.clearFire();
             itemEntity.setRemainingFireTicks(0);

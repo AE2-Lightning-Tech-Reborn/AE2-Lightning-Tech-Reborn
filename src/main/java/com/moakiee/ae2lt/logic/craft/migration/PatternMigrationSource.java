@@ -4,7 +4,7 @@ import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.parts.AEBasePart;
-import appeng.helpers.patternprovider.PatternContainer;
+import appeng.helpers.iface.PatternContainer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import net.minecraft.world.item.ItemStack;

@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -22,7 +22,7 @@ final class HyperdimensionalPigmeeItemRenderer extends BlockEntityWithoutLevelRe
     }
 
     @Override
-    public void renderByItem(ItemStack stack, ItemDisplayContext displayContext, PoseStack poseStack,
+    public void renderByItem(ItemStack stack, TransformType displayContext, PoseStack poseStack,
             MultiBufferSource buffers, int packedLight, int packedOverlay) {
         Minecraft minecraft = Minecraft.getInstance();
         BakedModel wrappedModel =

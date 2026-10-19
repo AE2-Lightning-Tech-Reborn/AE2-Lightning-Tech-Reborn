@@ -22,7 +22,8 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -156,7 +157,7 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
     public void draw(
             LightningStrikeRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             double mouseX,
             double mouseY) {
         var font = Minecraft.getInstance().font;
@@ -166,9 +167,9 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
                         .withStyle(ChatFormatting.DARK_PURPLE)
                 : Component.translatable("jei.ae2lt.lightning_strike.any_lightning")
                         .withStyle(ChatFormatting.DARK_AQUA);
-        guiGraphics.drawString(font, lightningLabel, PREVIEW_X, 2, TEXT_COLOR, false);
+        LegacyGui.drawString(guiGraphics, font, lightningLabel, PREVIEW_X, 2, TEXT_COLOR, false);
 
-        guiGraphics.drawString(
+        LegacyGui.drawString(guiGraphics,
                 font,
                 Component.translatable("jei.ae2lt.lightning_strike.materials"),
                 MATERIALS_X,

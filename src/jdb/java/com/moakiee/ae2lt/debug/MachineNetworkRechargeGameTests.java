@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.blockentity.*;
 import com.moakiee.ae2lt.logic.energy.AppFluxHelper;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -89,7 +89,7 @@ public final class MachineNetworkRechargeGameTests {
         h.setBlock(POS.below(), AEBlocks.CONTROLLER.block());
         h.setBlock(POS.below(2), AEBlocks.CREATIVE_ENERGY_CELL.block());
         h.setBlock(POS.below().east(), AEBlocks.DRIVE.block());
-        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux:fe_64m_cell")));
+        var cell = new ItemStack(Registry.ITEM.get(new ResourceLocation("appflux:fe_64m_cell")));
         var storage = StorageCells.getCellInventory(cell, null);
         check(storage != null, "Applied Flux cell was not registered");
         if (fill) {

@@ -100,7 +100,7 @@ public class AtmosphericIonizerMenu extends AEBaseMenu implements FrequencyBindi
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,

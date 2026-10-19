@@ -91,7 +91,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
         }
 
         int offeredCount = Math.min(increment, stack.getCount());
-        ItemStack offered = stack.copyWithCount(offeredCount);
+        ItemStack offered = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, offeredCount);
         ItemStack rejected = backingInventory.insertItem(backingSlot, offered, false);
         int inserted = offeredCount - rejected.getCount();
         if (inserted > 0) {
@@ -140,7 +140,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
         }
 
         AEItemKey key = AEItemKey.of(actual);
-        if (key != null && actual.getCount() > key.getMaxStackSize()) {
+        if (key != null && actual.getCount() > key.toStack().getMaxStackSize()) {
             return GenericStack.wrapInItemStack(key, actual.getCount());
         }
         return actual;
@@ -152,7 +152,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
         }
 
         int offeredCount = Math.min(amount, stack.getCount());
-        ItemStack offered = stack.copyWithCount(offeredCount);
+        ItemStack offered = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, offeredCount);
         ItemStack rejected = backingInventory.insertItem(backingSlot, offered, false);
         int inserted = offeredCount - rejected.getCount();
         if (inserted > 0) {
@@ -315,7 +315,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
         }
 
         if (moved > 0) {
-            ItemStack movedStack = original.copyWithCount(moved);
+            ItemStack movedStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(original, moved);
             slot.onTake(player, movedStack);
             slot.setChanged();
         }
@@ -369,7 +369,7 @@ public class LargeStackAppEngSlot extends AppEngSlot {
 
         ItemStack actual = slot.getBackingItem();
         if (!actual.isEmpty()) {
-            menu.setCarried(actual.copyWithCount(actual.getMaxStackSize()));
+            menu.setCarried(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(actual, actual.getMaxStackSize()));
         }
     }
 

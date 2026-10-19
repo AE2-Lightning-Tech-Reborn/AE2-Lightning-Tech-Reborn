@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -124,7 +125,7 @@ public class TextureToggleButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!this.visible) {
             return;
         }
@@ -133,7 +134,7 @@ public class TextureToggleButton extends IconButton {
         // focus outline and exact 16x16 toolbar footprint.
         boolean wasActive = this.active;
         this.active = true; // Native backgrounds do not dim when a button is disabled.
-        super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+        super.renderButton(guiGraphics, mouseX, mouseY, partialTick);
         this.active = wasActive;
 
         if (this.textures.isEmpty()) {
@@ -145,7 +146,7 @@ public class TextureToggleButton extends IconButton {
         if (!this.active) {
             blitter.opacity(0.5f);
         }
-        blitter.dest(getX(), getY()).blit(guiGraphics);
+        blitter.dest(x, y).blit(guiGraphics, 0);
     }
 
     @Override

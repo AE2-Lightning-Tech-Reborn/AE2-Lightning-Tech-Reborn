@@ -14,8 +14,8 @@ import net.minecraft.world.item.crafting.ShapedRecipe;
 /** A visible shaped recipe that returns the Pigmee catalyst with its NBT intact. */
 public final class PigmeeBuildingRecipe extends ShapedRecipe {
     private PigmeeBuildingRecipe(ShapedRecipe recipe) {
-        super(recipe.getId(), recipe.getGroup(), recipe.category(), recipe.getWidth(), recipe.getHeight(),
-                recipe.getIngredients(), recipe.getResultItem(null), recipe.showNotification());
+        super(recipe.getId(), recipe.getGroup(), recipe.getWidth(), recipe.getHeight(),
+                recipe.getIngredients(), recipe.getResultItem());
     }
 
     @Override
@@ -29,7 +29,7 @@ public final class PigmeeBuildingRecipe extends ShapedRecipe {
         for (int slot = 0; slot < input.getContainerSize(); slot++) {
             var stack = input.getItem(slot);
             if (stack.is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())) {
-                remaining.set(slot, stack.copyWithCount(1));
+                remaining.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return remaining;

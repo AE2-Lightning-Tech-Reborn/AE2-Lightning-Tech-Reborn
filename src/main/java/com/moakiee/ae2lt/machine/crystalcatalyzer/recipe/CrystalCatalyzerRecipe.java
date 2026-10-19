@@ -178,7 +178,7 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
     }
 
     @Override
-    public ItemStack assemble(CrystalCatalyzerRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(CrystalCatalyzerRecipeInput input) {
         return output.resolve();
     }
 
@@ -188,7 +188,7 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return output.resolve();
     }
 

@@ -7,7 +7,7 @@ import com.moakiee.thunderbolt.core.crafting.batch.SharedBatchInputPattern;
 import com.moakiee.thunderbolt.core.crafting.batch.SharedBatchInputs;
 import com.moakiee.thunderbolt.core.crafting.big.BigExecutionProgram;
 import com.moakiee.thunderbolt.core.crafting.planner.*;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.*;
 import net.minecraft.world.level.Level;
 import java.math.BigInteger;
@@ -122,7 +122,7 @@ public final class BigProviderRecipe implements BigCraftingRecipe {
         } catch (RuntimeException invalid) { return false; }
     }
 
-    public CompoundTag save(HolderLookup.Provider registries) {
+    public CompoundTag save(RegistryAccess registries) {
         var tag = new CompoundTag();
         tag.putString("kind", "provider");
         tag.put("definition", definition.toTagGeneric());
@@ -138,7 +138,7 @@ public final class BigProviderRecipe implements BigCraftingRecipe {
         return tag;
     }
 
-    public static BigProviderRecipe load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static BigProviderRecipe load(CompoundTag tag, RegistryAccess registries) {
         var slots = new ArrayList<Map<AEKey, Long>>();
         for (var slot : tag.getList("slots", Tag.TAG_LIST)) slots.add(read((ListTag) slot, registries));
         return new BigProviderRecipe((AEItemKey) AEKey.fromTagGeneric(tag.getCompound("definition")),
@@ -149,13 +149,13 @@ public final class BigProviderRecipe implements BigCraftingRecipe {
                 read(tag.getList("sharedOutputs", Tag.TAG_COMPOUND), registries));
     }
 
-    private static ListTag write(Map<AEKey, Long> values, HolderLookup.Provider registries) {
+    private static ListTag write(Map<AEKey, Long> values, RegistryAccess registries) {
         var exact = new LinkedHashMap<AEKey, BigInteger>();
         values.forEach((key, count) -> exact.put(key, BigInteger.valueOf(count)));
         return BigStackCodec.write(exact, registries);
     }
 
-    private static Map<AEKey, Long> read(ListTag values, HolderLookup.Provider registries) {
+    private static Map<AEKey, Long> read(ListTag values, RegistryAccess registries) {
         var result = new LinkedHashMap<AEKey, Long>();
         BigStackCodec.read(values, registries).forEach((key, count) -> result.put(key, count.longValueExact()));
         return result;

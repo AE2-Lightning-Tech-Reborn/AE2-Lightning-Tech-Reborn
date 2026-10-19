@@ -27,7 +27,7 @@ import net.minecraft.world.phys.Vec3;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -328,7 +328,7 @@ public final class OverloadedInterfaceWiredTargetGameTests {
     }
 
     private static void prepareFluxCell(GameTestHelper helper) {
-        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux:fe_1k_cell")));
+        var cell = new ItemStack(Registry.ITEM.get(new ResourceLocation("appflux:fe_1k_cell")));
         check(!cell.isEmpty(), "Applied Flux test dependency missing");
         drive(helper).getInternalInventory().setItemDirect(1, cell);
     }

@@ -44,7 +44,7 @@ public final class FluidTankInteractionHelper {
     private static boolean interactSource(Player player, java.util.function.Function<ItemStack, ItemStack> action) {
         ItemStack carried = player.containerMenu.getCarried();
         if (!carried.isEmpty()) {
-            ItemStack result = action.apply(carried.copyWithCount(1));
+            ItemStack result = action.apply(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(carried, 1));
             if (result == null) {
                 return false;
             }
@@ -62,7 +62,7 @@ public final class FluidTankInteractionHelper {
             return false;
         }
 
-        ItemStack result = action.apply(hotbar.copyWithCount(1));
+        ItemStack result = action.apply(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(hotbar, 1));
         if (result == null) {
             return false;
         }

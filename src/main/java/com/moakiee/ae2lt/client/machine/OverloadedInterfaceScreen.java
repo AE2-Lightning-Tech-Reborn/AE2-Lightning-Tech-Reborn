@@ -14,7 +14,8 @@ import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import com.moakiee.ae2lt.menu.OverloadedInterfaceMenu;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -120,7 +121,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
             });
             button.setDisableBackground(true);
             button.setMessage(Component.translatable("ae2lt.gui.set_amount.message"));
-            button.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+            com.moakiee.ae2lt.client.compat.LegacyTooltips.set(button, com.moakiee.ae2lt.client.compat.Tooltip.create(
                     Component.translatable("ae2lt.gui.set_amount.tooltip")));
             amountButtons.add(button);
         }
@@ -171,7 +172,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
                 int inPage = i - start;
                 int col = inPage % COLS;
                 int row = inPage / COLS;
-                button.setPosition(
+                com.moakiee.ae2lt.client.compat.LegacyWidgets.position(button,
                         this.leftPos + AMT_START_X + col * SLOT_SPACING,
                         this.topPos + (row == 0 ? AMT_ROW1_Y : AMT_ROW2_Y));
                 var item = configSlots.get(i).getItem();
@@ -185,14 +186,14 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
     }
 
     @Override
-    public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY,
+    public void drawFG(PoseStack guiGraphics, int offsetX, int offsetY,
                         int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         if (menu.totalPages > 1) {
             String pageText = (menu.currentPage + 1) + "/" + menu.totalPages;
             int textWidth = this.font.width(pageText);
-            guiGraphics.drawString(this.font, pageText,
+            LegacyGui.drawString(guiGraphics, this.font, pageText,
                     GuiTextLayout.centeredX(this.imageWidth, textWidth),
                     PAGE_INDICATOR_Y,
                     style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
@@ -206,7 +207,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
             if (menu.isSlotUnlimited(i)) {
                 var slot = configSlots.get(i);
                 if (!slot.getItem().isEmpty()) {
-                    guiGraphics.drawString(this.font, "\u221E",
+                    LegacyGui.drawString(guiGraphics, this.font, "\u221E",
                             slot.x + 10, slot.y - 10, 0xFF00FF00, true);
                 }
             }
@@ -238,7 +239,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         @Override
         protected Icon getIcon() {
             // 1.20.1: no COG sprites; reuse the wrench pair.
-            return isHoveredOrFocused() ? Icon.WRENCH : Icon.WRENCH_DISABLED;
+            return isHoveredOrFocused() ? Icon.WRENCH : Icon.WRENCH;
         }
     }
 }

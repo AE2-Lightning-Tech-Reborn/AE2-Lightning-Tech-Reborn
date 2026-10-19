@@ -32,7 +32,7 @@ public final class WirelessJeiInventoryPlan {
                             : !present.isEmpty()) continue;
                     int moved = Math.min(left, Math.min(64, request.getMaxStackSize()) - present.getCount());
                     if (moved <= 0) continue;
-                    result.set(i, request.copyWithCount(present.getCount() + moved));
+                    result.set(i, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(request, present.getCount() + moved));
                     left -= moved;
                 }
             }

@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu;
 import appeng.menu.MenuOpener;
@@ -124,7 +124,7 @@ public class TianshuSupercomputerControllerBlock extends Block
     }
 
     @Override
-    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+    public List<ItemStack> getDrops(BlockState state, LootContext.Builder builder) {
         var drops = new ArrayList<>(super.getDrops(state, builder));
         var blockEntity = builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (blockEntity instanceof TianshuSupercomputerControllerBlockEntity controller) {

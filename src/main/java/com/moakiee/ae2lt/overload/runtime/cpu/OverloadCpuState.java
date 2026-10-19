@@ -15,7 +15,7 @@ import java.util.function.Predicate;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
@@ -348,7 +348,7 @@ public final class OverloadCpuState {
         return tag;
     }
 
-    public CompoundTag toTag(HolderLookup.Provider registries) {
+    public CompoundTag toTag(RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return toTag();
     }
@@ -393,7 +393,7 @@ public final class OverloadCpuState {
     public static OverloadCpuState fromTag(
             OverloadCpuOwner owner,
             CompoundTag tag,
-            HolderLookup.Provider registries) {
+            RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return fromTag(owner, tag);
     }

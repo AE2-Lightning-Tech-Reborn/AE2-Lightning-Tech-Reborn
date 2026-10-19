@@ -27,7 +27,7 @@ class ManualInputTransferTest {
     @BeforeAll static void bootstrap() {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test bootstrap", null, List.of()));
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     record Layout(LargeStackItemHandler inventory, int inputCount, int output, int outputCount, int protectedSlot) {}
@@ -70,7 +70,7 @@ class ManualInputTransferTest {
         ItemStack named = new ItemStack(Items.IRON_INGOT, 200);
         named.setHoverName(Component.literal("Named input"));
         inv.setItemDirect(0, named);
-        inv.setItemDirect(4, named.copyWithCount(8100));
+        inv.setItemDirect(4, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(named, 8100));
         var result = new ManualInputTransfer().execute(0, inv, 0, 3, 4, 1, budget -> 0, aborts::incrementAndGet);
         assertEquals(92, result.moved());
         assertEquals(108, inv.getStackInSlot(0).getCount());

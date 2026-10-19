@@ -120,8 +120,8 @@ public final class PhaseLockHudClientProbe {
         if (enabled() && event.getOverlay().id().toString().equals("ae2lt:celestweave_energy_level")) {
             var mc = Minecraft.getInstance();
             layerHeightBefore = ((ForgeGui) mc.gui).leftHeight;
-            hudX = event.getGuiGraphics().guiWidth() / 2 - 91;
-            hudY = event.getGuiGraphics().guiHeight() - layerHeightBefore + 2;
+            hudX = event.getPoseStack().guiWidth() / 2 - 91;
+            hudY = event.getPoseStack().guiHeight() - layerHeightBefore + 2;
         }
     }
 

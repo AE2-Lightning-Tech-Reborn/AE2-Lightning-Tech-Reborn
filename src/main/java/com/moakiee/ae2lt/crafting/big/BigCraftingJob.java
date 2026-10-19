@@ -6,7 +6,7 @@ import com.moakiee.thunderbolt.core.crafting.big.BigExecutionProgram;
 import com.moakiee.thunderbolt.core.crafting.big.BigLongSlice;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.*;
 
 import java.math.BigInteger;
@@ -186,7 +186,7 @@ public final class BigCraftingJob {
         status = "returning";
     }
 
-    public CompoundTag save(HolderLookup.Provider registries) {
+    public CompoundTag save(RegistryAccess registries) {
         var tag = new CompoundTag();
         tag.putInt("version", 2);
         tag.putUUID("id", id);
@@ -223,7 +223,7 @@ public final class BigCraftingJob {
         return tag;
     }
 
-    public static BigCraftingJob load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static BigCraftingJob load(CompoundTag tag, RegistryAccess registries) {
         int version = tag.getInt("version");
         if (version != 1 && version != 2)
             throw new IllegalArgumentException("Unsupported exact crafting job version");

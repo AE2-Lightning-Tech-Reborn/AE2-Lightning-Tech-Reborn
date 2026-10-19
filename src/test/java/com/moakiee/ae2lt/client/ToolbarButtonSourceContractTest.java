@@ -39,7 +39,7 @@ class ToolbarButtonSourceContractTest {
         String source = Files.readString(CLIENT_SOURCE.resolve(fileName));
 
         assertTrue(source.contains("extends IconButton"));
-        assertTrue(source.contains("super.renderWidget("));
+        assertTrue(source.contains("super.renderButton("));
         assertFalse(source.contains("dest(getX() - 1"));
         assertFalse(source.contains("18, 20"));
         assertFalse(source.contains("isHovered() ? 1 : 0"));

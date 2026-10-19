@@ -19,7 +19,7 @@ import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -71,7 +71,7 @@ import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.thunderbolt.core.crafting.loop.CraftingTaskPersistenceDefinition;
 import com.moakiee.thunderbolt.core.crafting.loop.ISeedPreservingCraftingTask;
 import com.moakiee.thunderbolt.core.crafting.loop.ReusableSeedPattern;
-import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
+import com.moakiee.ae2lt.compat.LegacyTimeTracker;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadClaimResult;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadConsumerCredit;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuStateManager;
@@ -211,7 +211,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 .orElse(null);
         var craftId = UUID.randomUUID();
         var linkCpu = new CraftingLink(
-                CraftingCpuHelper.generateLinkData(craftId, requester == null, false), cpu);
+                CraftingCpuHelper.generateLinkData(craftId.toString(), requester == null, false), cpu);
         var candidateJob = new TimeWheelJob(forced.original(), this::postChange, linkCpu, playerId);
         candidateJob.addManualWaiting(forced.manualMissing());
         loopSeedLedgers.initialize(candidateJob.loopPatterns());
@@ -316,7 +316,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         notifyJobOwner(job, CraftingJobStatusPacket.Status.STARTED);
 
         if (requester != null) {
-            var linkReq = new CraftingLink(CraftingCpuHelper.generateLinkData(craftId, false, true), requester);
+            var linkReq = new CraftingLink(CraftingCpuHelper.generateLinkData(craftId.toString(), false, true), requester);
             var craftingService = (CraftingService) grid.getCraftingService();
             craftingService.addLink(linkCpu);
             craftingService.addLink(linkReq);
@@ -1486,7 +1486,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     public void clearRemovedContent() {
         prepareForRemoval();
         this.inventory.clear();
-        this.inventory.list.removeEmptySubmaps();
+        this.inventory.list.removeZeros();
         this.directOutputRemainders.clear();
     }
 
@@ -1876,7 +1876,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             finishCompletedFinalOutput(activeJob, finalKey, delivered);
             AELog.warn(
                     "[ae2lt] Recovered %d terminal final-output units from CPU inventory for crafting job %s.",
-                    delivered, activeJob.link.getCraftingID());
+                    delivered, com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(activeJob.link.getCraftingID()));
             cpu.markDirty();
         }
     }
@@ -1886,13 +1886,15 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         long current = Math.max(0L, counter.get(key));
         if (current <= 0) {
             // KeyCounter keeps zero-valued records unless callers remove them explicitly.
-            counter.remove(key);
+            counter.set(key, 0);
+            counter.removeZeros();
             return;
         }
         long remaining = Math.max(0L, current - Math.max(0L, amount));
         if (remaining == current) return;
         if (remaining <= 0) {
-            counter.remove(key);
+            counter.set(key, 0);
+            counter.removeZeros();
         } else {
             counter.set(key, remaining);
         }
@@ -1902,11 +1904,11 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         loopSeedLedgers.clear();
     }
 
-    private void readLoopSeedState(CompoundTag data, HolderLookup.Provider registries) {
+    private void readLoopSeedState(CompoundTag data, RegistryAccess registries) {
         loopSeedLedgers.readFromNBT(data, registries);
     }
 
-    private void writeLoopSeedState(CompoundTag data, HolderLookup.Provider registries) {
+    private void writeLoopSeedState(CompoundTag data, RegistryAccess registries) {
         loopSeedLedgers.writeToNBT(data, registries);
     }
 
@@ -1981,7 +1983,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
     }
 
-    public void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
+    public void readFromNBT(CompoundTag data, RegistryAccess registries) {
         this.inventory.readFromNBT(data.getList(TAG_INVENTORY, Tag.TAG_COMPOUND));
         this.directOutputRemainders.readFromNBT(data.getList(TAG_DIRECT_OUTPUTS, Tag.TAG_COMPOUND));
         this.job = null;
@@ -2034,7 +2036,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
     }
 
-    public void writeToNBT(CompoundTag data, HolderLookup.Provider registries) {
+    public void writeToNBT(CompoundTag data, RegistryAccess registries) {
         if (!directOutputRemainders.list.isEmpty()) {
             data.put(TAG_DIRECT_OUTPUTS, directOutputRemainders.writeToNBT());
         } else {
@@ -2113,7 +2115,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     private void restoreJobFromNBT(CompoundTag jobTag,
                                    @Nullable CompoundTag overloadTag,
-                                   HolderLookup.Provider registries) {
+                                   RegistryAccess registries) {
         this.job = readJobFromNBT(jobTag, registries);
         patternPowerCache.clear();
         if (this.job == null || this.job.finalOutput == null) {
@@ -2128,7 +2130,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         if (overloadTag != null) {
             OverloadCpuStateManager.INSTANCE.readFromTag(
                     this,
-                    job.link.getCraftingID(),
+                    com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(job.link.getCraftingID()),
                     overloadTag,
                     registries);
         }
@@ -2147,7 +2149,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     @Nullable
-    private TimeWheelJob readJobFromNBT(CompoundTag data, HolderLookup.Provider registries) {
+    private TimeWheelJob readJobFromNBT(CompoundTag data, RegistryAccess registries) {
         var loadedJob = TimeWheelJob.readFromNBT(data, registries, this::postChange, cpu);
         if (loadedJob == null) {
             return null;
@@ -2202,7 +2204,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     public ElapsedTimeTracker getElapsedTimeTracker() {
-        return this.job != null ? this.job.timeTracker : new ElapsedTimeTracker();
+        return this.job != null ? this.job.timeTracker : new ElapsedTimeTracker(0);
     }
 
     public void addListener(Consumer<AEKey> listener) {
@@ -2372,7 +2374,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         var finalOutputKey = activeJob.finalOutput != null ? activeJob.finalOutput.what() : null;
         OverloadCpuStateManager.INSTANCE.registerExpectedOutputs(
                 this,
-                activeJob.link.getCraftingID(),
+                com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(activeJob.link.getCraftingID()),
                 reference,
                 overloadDetails.overloadPatternDetailsView(),
                 List.of(details.getOutputs()),
@@ -3030,16 +3032,16 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private static void addMaxItems(ElapsedTimeTracker tracker, long count, AEKeyType type) {
-        ((ElapsedTimeTrackerAccessor) tracker).ae2lt$addMaxItems(count, type);
+        ((LegacyTimeTracker) tracker).ae2lt$addMaxItems(count, type);
     }
 
     private static void decrementItems(ElapsedTimeTracker tracker, long count, AEKeyType type) {
-        ((ElapsedTimeTrackerAccessor) tracker).ae2lt$decrementItems(count, type);
+        ((LegacyTimeTracker) tracker).ae2lt$decrementItems(count, type);
     }
 
     private static void clearScratchCounter(KeyCounter counter) {
         // Only zero the entries; keep the per-type submaps allocated. These counters are reused every
-        // dispatch, so removeEmptySubmaps() would just churn allocations for no benefit.
+        // dispatch, so removeZeros() would just churn allocations for no benefit.
         counter.clear();
     }
 
@@ -3150,7 +3152,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                              Consumer<AEKey> postCraftingDifference,
                              CraftingLink link,
                              @Nullable Integer playerId) {
-            this(plan, postCraftingDifference, link, playerId, new ElapsedTimeTracker());
+            this(plan, postCraftingDifference, link, playerId, new ElapsedTimeTracker(0));
         }
 
         private TimeWheelJob(ICraftingPlan plan,
@@ -3195,7 +3197,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
         @Nullable
         private static TimeWheelJob readFromNBT(CompoundTag data,
-                                                HolderLookup.Provider registries,
+                                                RegistryAccess registries,
                                                 Consumer<AEKey> postCraftingDifference,
                                                 TimeWheelCraftingCPU cpu) {
             var finalOutput = GenericStack.readTag(data.getCompound(NBT_FINAL_OUTPUT));
@@ -3235,7 +3237,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             return job;
         }
 
-        private void readTasks(ListTag tasksTag, HolderLookup.Provider registries, @Nullable Level level) {
+        private void readTasks(ListTag tasksTag, RegistryAccess registries, @Nullable Level level) {
             if (level == null) {
                 return;
             }
@@ -3368,14 +3370,15 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 long amount = multiplySaturated(output.amount(), copies);
                 long current = pendingOutputs.get(output.what());
                 if (current <= amount) {
-                    pendingOutputs.remove(output.what());
+                    pendingOutputs.set(output.what(), 0);
+                    pendingOutputs.removeZeros();
                 } else {
                     pendingOutputs.remove(output.what(), amount);
                 }
             }
         }
 
-        private CompoundTag writeToNBT(HolderLookup.Provider registries) {
+        private CompoundTag writeToNBT(RegistryAccess registries) {
             var data = new CompoundTag();
 
             var linkData = new CompoundTag();
@@ -3580,7 +3583,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
         @Override
         public UUID craftingId() {
-            return activeJob.link.getCraftingID();
+            return com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(activeJob.link.getCraftingID());
         }
 
         @Override

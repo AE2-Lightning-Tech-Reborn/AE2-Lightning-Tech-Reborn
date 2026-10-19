@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.client.core.veil;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import foundry.veil.api.client.render.VeilRenderBridge;
 import java.lang.reflect.Modifier;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +21,7 @@ public final class VeilCoreEffectShaders {
 
     public static boolean isApiCompatible() {
         try {
-            var shaderState = VeilRenderBridge.class.getMethod(
+            var shaderState = Class.forName("foundry.veil.api.client.render.VeilRenderBridge").getMethod(
                     "shaderState", ResourceLocation.class);
             return Modifier.isStatic(shaderState.getModifiers())
                     && RenderStateShard.ShaderStateShard.class.isAssignableFrom(
@@ -33,10 +32,18 @@ public final class VeilCoreEffectShaders {
     }
 
     public static RenderStateShard.ShaderStateShard tianshu() {
-        return VeilRenderBridge.shaderState(TIANSHU_SHADER);
+        return shaderState(TIANSHU_SHADER);
     }
 
     public static RenderStateShard.ShaderStateShard matrix() {
-        return VeilRenderBridge.shaderState(MATRIX_SHADER);
+        return shaderState(MATRIX_SHADER);
+    }
+    private static RenderStateShard.ShaderStateShard shaderState(ResourceLocation id) {
+        try {
+            return (RenderStateShard.ShaderStateShard) Class.forName("foundry.veil.api.client.render.VeilRenderBridge")
+                    .getMethod("shaderState", ResourceLocation.class).invoke(null, id);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Veil shader bridge is unavailable", exception);
+        }
     }
 }

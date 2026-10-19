@@ -2,7 +2,8 @@ package com.moakiee.ae2lt.client.machine;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -51,14 +52,14 @@ public class TeslaCoilModeButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partial) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partial) {
         if (!this.visible) {
             return;
         }
 
         boolean wasActive = this.active;
         this.active = true;
-        super.renderWidget(guiGraphics, mouseX, mouseY, partial);
+        super.renderButton(guiGraphics, mouseX, mouseY, partial);
         this.active = wasActive;
 
         var texture = mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE ? EHV_TEXTURE : HV_TEXTURE;
@@ -66,6 +67,6 @@ public class TeslaCoilModeButton extends IconButton {
         if (!wasActive) {
             blitter.opacity(0.5F);
         }
-        blitter.dest(getX(), getY(), 16, 16).blit(guiGraphics);
+        blitter.dest(x, y, 16, 16).blit(guiGraphics, 0);
     }
 }

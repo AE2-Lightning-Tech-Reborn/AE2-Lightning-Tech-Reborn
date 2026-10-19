@@ -33,11 +33,11 @@ import appeng.api.networking.crafting.ICraftingLink;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.crafting.ICraftingRequester;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.util.AECableType;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.me.helpers.MachineSource;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
@@ -60,7 +60,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * AE network link for a Tianshu controller. Runtime state and functional services belong to the
  * controller; this block entity only exposes them to the grid and keeps link/migration metadata.
  */
-public class TianshuSupercomputerPortBlockEntity extends AENetworkBlockEntity
+public class TianshuSupercomputerPortBlockEntity extends LegacyNetworkBlockEntity
         implements TimeWheelCraftingCpuPoolProvider, ICraftingProvider, ICraftingRequester,
         CraftingAlgorithmProviderMenuHost {
     private static final double LINK_IDLE_POWER = 8.0D;

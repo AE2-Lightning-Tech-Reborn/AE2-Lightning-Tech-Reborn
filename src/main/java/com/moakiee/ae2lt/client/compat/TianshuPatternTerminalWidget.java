@@ -4,7 +4,8 @@ import appeng.menu.SlotSemantics;
 import com.illusivesoulworks.polymorph.client.recipe.widget.PlayerRecipesWidget;
 import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -26,12 +27,12 @@ final class TianshuPatternTerminalWidget extends PlayerRecipesWidget {
     @Override
     public void selectRecipe(ResourceLocation id) {
         super.selectRecipe(id);
-        screen.getMenu().getPlayer().level().getRecipeManager().byKey(id)
+        screen.getMenu().getPlayer().level.getRecipeManager().byKey(id)
                 .ifPresent(recipe -> screen.getMenu().refreshPolymorphRecipe());
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         if (isCraftingMode()) super.render(graphics, mouseX, mouseY, partialTick);
     }
 

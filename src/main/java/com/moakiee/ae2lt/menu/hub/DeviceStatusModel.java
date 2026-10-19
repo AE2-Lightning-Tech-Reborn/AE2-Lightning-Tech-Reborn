@@ -65,13 +65,13 @@ public record DeviceStatusModel(
         boolean gridReachable = resolve.success();
         boolean appFlux = AppFluxBridge.isAvailable();
 
-        long stored = ArmorEnergyBuffer.read(armor, player.level().registryAccess());
+        long stored = ArmorEnergyBuffer.read(armor, player.level.registryAccess());
 
-        var snapshot = CelestweaveArmorState.snapshot(player, armor, player.level().registryAccess(), true);
+        var snapshot = CelestweaveArmorState.snapshot(player, armor, player.level.registryAccess(), true);
         boolean powered = DeviceHubDisplayRules.powerAvailable(stored, gridReachable, appFlux);
 
         List<ModuleInfo> modules = new ArrayList<>();
-        for (var stack : CelestweaveArmorState.loadModuleStacks(armor, player.level().registryAccess())) {
+        for (var stack : CelestweaveArmorState.loadModuleStacks(armor, player.level.registryAccess())) {
             if (!(stack.getItem() instanceof CelestweaveArmorSubmoduleItem provider)) {
                 continue;
             }
@@ -159,7 +159,7 @@ public record DeviceStatusModel(
     }
 
     private static List<ModuleConfigInfo> moduleConfigs(ItemStack armor, ServerPlayer player, int selectedModuleIndex) {
-        var submodules = CelestweaveArmorState.collectSubmodules(armor, player.level().registryAccess());
+        var submodules = CelestweaveArmorState.collectSubmodules(armor, player.level.registryAccess());
         if (selectedModuleIndex < 0 || selectedModuleIndex >= submodules.size()) {
             return List.of();
         }

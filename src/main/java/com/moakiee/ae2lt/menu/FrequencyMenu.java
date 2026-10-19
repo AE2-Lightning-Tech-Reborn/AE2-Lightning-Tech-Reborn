@@ -497,7 +497,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
                 return false;
             }
 
-            if (player.level() != backingBlockEntity.getLevel()) {
+            if (player.level != backingBlockEntity.getLevel()) {
                 return false;
             }
 
@@ -644,7 +644,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
             return 0;
         }
         // The card is only active when bound to an advanced transmitter.
-        return manager.resolveAdvancedNode(freqId, cardPlayer.serverLevel().getServer()) != null ? 1 : 0;
+        return manager.resolveAdvancedNode(freqId, cardPlayer.getLevel().getServer()) != null ? 1 : 0;
     }
 
     public int getUsedChannels() {

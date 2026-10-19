@@ -18,7 +18,7 @@ public final class RailgunEnergyModuleStorage {
                 continue;
             }
             if (module.getItem() instanceof OverloadDeviceModuleItem provider) {
-                for (var capability : provider.capabilities(module.copyWithCount(1))) {
+                for (var capability : provider.capabilities(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(module, 1))) {
                     if (capability instanceof DeviceCapability.EnergyCapacity energyCapacity) {
                         capacity = Math.max(capacity, energyCapacity.fe());
                     }

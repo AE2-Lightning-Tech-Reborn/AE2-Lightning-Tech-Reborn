@@ -14,7 +14,7 @@ public record FirmamentConversionIngredient(Ingredient ingredient, int count) {
 
     // 1.20.1 Ingredient 无 CODEC 字段:通过 JSON 编解码(与 datagen/手工配方 JSON 一致)。
     private static final Codec<Ingredient> INGREDIENT_CODEC =
-            ExtraCodecs.JSON.xmap(Ingredient::fromJson, Ingredient::toJson);
+            com.mojang.serialization.Codec.PASSTHROUGH.xmap(value -> value.convert(com.mojang.serialization.JsonOps.INSTANCE).getValue(), value -> new com.mojang.serialization.Dynamic<>(com.mojang.serialization.JsonOps.INSTANCE, value)).xmap(Ingredient::fromJson, Ingredient::toJson);
 
     public static final MapCodec<FirmamentConversionIngredient> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                     INGREDIENT_CODEC.fieldOf("ingredient").forGetter(FirmamentConversionIngredient::ingredient),

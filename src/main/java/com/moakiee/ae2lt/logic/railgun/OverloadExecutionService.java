@@ -112,7 +112,7 @@ public final class OverloadExecutionService {
                 ? settings.executionMode().forMultidimensional() : settings.executionMode();
         if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         DamageSource damageSource =
-                new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
+                ModDamageTypes.electromagnetic(player, false);
         if (mods.hasMultidimensionalExecution()) {
             if (!executionMode.entersExecutionFlow()) {
                 applyOrdinaryDamage(target, damageSource, OFF_MULTIDIMENSIONAL_DAMAGE);
@@ -200,8 +200,8 @@ public final class OverloadExecutionService {
             target.setHealth((float) finalHp);
             // Visual feedback — recompute combat tracker without re-running damage rules.
             target.getCombatTracker().recordDamage(
-                    new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player),
-                    (float) (currentHp - finalHp));
+                    ModDamageTypes.electromagnetic(player, false),
+                    (float) currentHp, (float) (currentHp - finalHp));
             target.hurtTime = 10;
             target.hurtDuration = 10;
             target.gameEvent(GameEvent.ENTITY_DAMAGE);
@@ -259,7 +259,7 @@ public final class OverloadExecutionService {
         if (executionMode == RailgunExecutionMode.PERCENTAGE) return;
         if (!executionMode.entersExecutionFlow()) {
             DamageSource source =
-                    new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
+                    ModDamageTypes.electromagnetic(player, false);
             target.hurt(
                     source,
                     multidimensional ? OFF_MULTIDIMENSIONAL_DAMAGE : OFF_OVERLOAD_DAMAGE);
@@ -490,14 +490,14 @@ public final class OverloadExecutionService {
 
     /** Establishes a lethal combat state without entering the interceptable damage pipeline. */
     private static void prepareLethalState(LivingEntity victim, DamageSource source, float amount) {
-        if (victim.level().isClientSide) return;
+        if (victim.level.isClientSide) return;
         if (victim.isSleeping()) victim.stopSleeping();
 
         victim.setNoActionTime(0);
-        victim.walkAnimation.setSpeed(1.5F);
+        victim.animationSpeed = 1.5F;
         victim.lastHurt = amount;
         victim.invulnerableTime = 0;
-        victim.getCombatTracker().recordDamage(source, amount);
+        victim.getCombatTracker().recordDamage(source, victim.getHealth(), amount);
         victim.setHealth(0.0F);
         victim.gameEvent(GameEvent.ENTITY_DAMAGE);
         victim.hurtDuration = 10;
@@ -519,12 +519,9 @@ public final class OverloadExecutionService {
         victim.dead = true;
         victim.getCombatTracker().recheckStatus();
 
-        if (victim.level() instanceof ServerLevel serverLevel) {
-            Entity sourceEntity = source.getEntity();
-            if (sourceEntity == null || sourceEntity.killedEntity(serverLevel, victim)) {
-                victim.gameEvent(GameEvent.ENTITY_DIE);
-                victim.dropAllDeathLoot(source);
-            }
+        if (victim.level instanceof ServerLevel serverLevel) {
+            victim.gameEvent(GameEvent.ENTITY_DIE);
+            victim.dropAllDeathLoot(source);
             serverLevel.broadcastEntityEvent(victim, (byte) 3);
         }
         victim.setPose(Pose.DYING);

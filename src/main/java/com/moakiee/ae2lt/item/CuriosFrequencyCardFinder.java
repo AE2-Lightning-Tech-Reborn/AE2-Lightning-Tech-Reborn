@@ -33,19 +33,14 @@ final class CuriosFrequencyCardFinder {
         }
 
         static List<ItemStack> findFrequencyCards(Player player) {
-            return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player)
-                    .map(handler -> handler.findCurios(
-                                    stack -> stack.getItem() instanceof OverloadedFrequencyCardItem)
-                            .stream()
-                            .map(top.theillusivec4.curios.api.SlotResult::stack)
-                            .toList())
-                    .orElse(List.of());
+            return top.theillusivec4.curios.api.CuriosApi.getCuriosHelper()
+                    .findCurios(player, stack -> stack.getItem() instanceof OverloadedFrequencyCardItem)
+                    .stream().map(top.theillusivec4.curios.api.SlotResult::stack).toList();
         }
 
         static List<ItemStack> findAllEquippedStacks(Player player) {
-            return top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player)
-                    .map(handler -> {
-                        var equipped = handler.getEquippedCurios();
+            return top.theillusivec4.curios.api.CuriosApi.getCuriosHelper().getEquippedCurios(player)
+                    .map(equipped -> {
                         List<ItemStack> stacks = new java.util.ArrayList<>(equipped.getSlots());
                         for (int slot = 0; slot < equipped.getSlots(); slot++) {
                             stacks.add(equipped.getStackInSlot(slot));

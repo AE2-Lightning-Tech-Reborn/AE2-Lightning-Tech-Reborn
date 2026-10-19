@@ -5,9 +5,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -58,12 +56,12 @@ public final class CelestweaveArmorDamageHandler {
             LivingEntity entity,
             DamageSource source,
             float incoming) {
-        if (!(entity instanceof Player player) || player.level().isClientSide()) {
+        if (!(entity instanceof Player player) || player.level.isClientSide()) {
             return IncomingDamageResult.pass(incoming);
         }
         for (var active : ArmorCapabilityCollector.collectPerInstalledStack(player)) {
             if (active.capability() instanceof DeviceCapability.DamageTypeImmunity immunity
-                    && source.is(immunity.damageType())) {
+                    && immunity.damageType().equals(source.getMsgId())) {
                 return IncomingDamageResult.cancel();
             }
         }
@@ -98,7 +96,7 @@ public final class CelestweaveArmorDamageHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPre(LivingDamageEvent event) {
-        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) return;
+        if (!(event.getEntity() instanceof Player player) || player.level.isClientSide()) return;
         if (!isReflectingDamage()) {
             reflectIncomingDamage(player, event.getSource(), currentIncomingDamage(player, event.getAmount()));
         }
@@ -168,36 +166,36 @@ public final class CelestweaveArmorDamageHandler {
     }
 
     private static boolean isHardDamage(DamageSource source) {
-        return source.is(DamageTypeTags.BYPASSES_ARMOR)
-                || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
-                || source.is(DamageTypeTags.BYPASSES_EFFECTS)
-                || source.is(DamageTypeTags.BYPASSES_RESISTANCE)
-                || source.is(DamageTypeTags.BYPASSES_ENCHANTMENTS)
-                || source.is(DamageTypes.FELL_OUT_OF_WORLD)
-                || source.is(DamageTypes.GENERIC_KILL)
-                || source.is(DamageTypes.STARVE)
-                || source.is(DamageTypes.MAGIC)
-                || source.is(DamageTypes.INDIRECT_MAGIC)
-                || source.is(DamageTypes.WITHER)
-                || source.is(DamageTypes.WITHER_SKULL)
-                || source.is(ModDamageTypes.ELECTROMAGNETIC);
+        return source.isBypassArmor()
+                || source.isBypassInvul()
+                || source.isBypassMagic()
+                || source.isBypassMagic()
+                || source.isBypassEnchantments()
+                || "outOfWorld".equals(source.getMsgId())
+                || "genericKill".equals(source.getMsgId())
+                || "starve".equals(source.getMsgId())
+                || "magic".equals(source.getMsgId())
+                || "indirectMagic".equals(source.getMsgId())
+                || "wither".equals(source.getMsgId())
+                || "witherSkull".equals(source.getMsgId())
+                || ModDamageTypes.ELECTROMAGNETIC.equals(source.getMsgId());
     }
 
     private static boolean isEnvironmentDamage(DamageSource source) {
-        return source.is(DamageTypeTags.IS_FIRE)
-                || source.is(DamageTypeTags.IS_FALL)
-                || source.is(DamageTypeTags.IS_DROWNING)
-                || source.is(DamageTypes.IN_FIRE)
-                || source.is(DamageTypes.ON_FIRE)
-                || source.is(DamageTypes.LAVA)
-                || source.is(DamageTypes.HOT_FLOOR)
-                || source.is(DamageTypes.IN_WALL)
-                || source.is(DamageTypes.CRAMMING)
-                || source.is(DamageTypes.CACTUS)
-                || source.is(DamageTypes.DRY_OUT)
-                || source.is(DamageTypes.SWEET_BERRY_BUSH)
-                || source.is(DamageTypes.FREEZE)
-                || source.is(DamageTypes.STALAGMITE);
+        return source.isFire()
+                || source.isFall()
+                || "drown".equals(source.getMsgId())
+                || "inFire".equals(source.getMsgId())
+                || "onFire".equals(source.getMsgId())
+                || "lava".equals(source.getMsgId())
+                || "hotFloor".equals(source.getMsgId())
+                || "inWall".equals(source.getMsgId())
+                || "cramming".equals(source.getMsgId())
+                || "cactus".equals(source.getMsgId())
+                || "dryout".equals(source.getMsgId())
+                || "sweetBerryBush".equals(source.getMsgId())
+                || "freeze".equals(source.getMsgId())
+                || "stalagmite".equals(source.getMsgId());
     }
 
     private static boolean payMitigationLightning(
@@ -215,7 +213,7 @@ public final class CelestweaveArmorDamageHandler {
         if ("phase_shield".equals(staged.stage()) || OverloadProtectionSubmodule.ID.equals(staged.stage())) {
             return ArmorShieldPayment.pay(serverPlayer, mitigation.armor(), ShieldChargeWindow.quote(
                     mitigation.armor(), ShieldChargeWindow.Profile.forStage(staged.stage()),
-                    serverPlayer.level().getGameTime(), preventedDamage), damage);
+                    serverPlayer.level.getGameTime(), preventedDamage), damage);
         }
         long amount = (long) Math.ceil(preventedDamage
                 * ArmorModuleLightningPolicy.triggeredCost(ArmorModuleLightningPolicy.Trigger.MATRIX_SHIELD)
@@ -228,7 +226,7 @@ public final class CelestweaveArmorDamageHandler {
         int comboIndex = ArmorOverloadCombo.nextComboIndex(
                 mitigation.armor(),
                 ResistanceSubmodule.T1,
-                serverPlayer.level().getGameTime());
+                serverPlayer.level.getGameTime());
         long finalAmount = ArmorOverloadCombo.scaledCost(amount, comboIndex);
         ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
                 serverPlayer,
@@ -253,7 +251,7 @@ public final class CelestweaveArmorDamageHandler {
         ArmorOverloadCombo.recordTrigger(
                 mitigation.armor(),
                 ResistanceSubmodule.T1,
-                serverPlayer.level().getGameTime(),
+                serverPlayer.level.getGameTime(),
                 AE2LTCommonConfig.overloadArmorShieldComboWindowTicks(),
                 comboIndex);
         return true;

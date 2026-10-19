@@ -41,14 +41,14 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.util.AECableType;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.me.helpers.MachineSource;
 
-public class MatrixPortBlockEntity extends AENetworkBlockEntity
+public class MatrixPortBlockEntity extends LegacyNetworkBlockEntity
         implements IBatchCraftingProvider, TianshuSynthesizer, DeferredCraftingProvider {
     private static final String TAG_CONTROLLER_POS = "ControllerPos";
     private static final String TAG_FORMED = "Formed";

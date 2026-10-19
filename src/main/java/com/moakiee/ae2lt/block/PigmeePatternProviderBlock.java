@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.block;
 
-import appeng.block.crafting.PushDirection;
+import com.moakiee.ae2lt.compat.PushDirection;
 import appeng.menu.locator.MenuLocators;
 import appeng.util.InteractionUtil;
 import appeng.util.Platform;
@@ -23,7 +23,7 @@ public final class PigmeePatternProviderBlock extends AE2LTBaseEntityBlock<Pigme
             EnumProperty.create("push_direction", PushDirection.class);
 
     public PigmeePatternProviderBlock() {
-        super(metalProps().forceSolidOn());
+        super(metalProps());
         registerDefaultState(defaultBlockState().setValue(PUSH_DIRECTION, PushDirection.ALL));
     }
 

@@ -318,7 +318,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
     }
 
     private static boolean escapeFromBlocks(Player player) {
-        var level = player.level();
+        var level = player.level;
         BlockPos origin = player.blockPosition();
         var preferred = java.util.List.of(
                 origin,
@@ -352,7 +352,7 @@ public final class PhaseFlightSubmodule extends AbstractCelestweaveArmorSubmodul
     }
 
     private static boolean tryTeleportToCollisionFree(Player player, BlockPos candidate) {
-        var level = player.level();
+        var level = player.level;
         Vec3 target = Vec3.atBottomCenterOf(candidate);
         if (!level.noCollision(player, player.getBoundingBox().move(target.subtract(player.position())))) {
             return false;

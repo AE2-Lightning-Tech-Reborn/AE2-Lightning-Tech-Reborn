@@ -5,7 +5,8 @@ import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -54,14 +55,14 @@ public class TeslaCoilScreen extends AEBaseScreen<TeslaCoilMenu> {
     }
 
     @Override
-    public void renderSlot(GuiGraphics guiGraphics, Slot slot) {
+    public void renderSlot(PoseStack guiGraphics, Slot slot) {
         super.renderSlot(guiGraphics, slot);
         LargeStackCountRenderer.renderSlotCount(guiGraphics, font, slot);
     }
 
     @Override
-    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-        var lines = super.getTooltipFromContainerItem(stack);
+    public List<Component> getTooltipFromItem(ItemStack stack) {
+        var lines = super.getTooltipFromItem(stack);
         LargeStackCountRenderer.appendCountTooltip(lines, hoveredSlot);
         return lines;
     }

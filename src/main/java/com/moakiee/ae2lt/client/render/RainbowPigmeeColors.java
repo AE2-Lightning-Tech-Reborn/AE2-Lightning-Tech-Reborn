@@ -35,9 +35,16 @@ public final class RainbowPigmeeColors {
     public static int sheepColor() {
         double ticks = animationTicks();
         int index = (int) (ticks / 25.0);
-        return FastColor.ARGB32.lerp((float) (ticks % 25.0 / 25.0),
+        return lerpColor((float) (ticks % 25.0 / 25.0),
                 brighten(Sheep.getColorArray(DyeColor.byId(index % 16))),
                 brighten(Sheep.getColorArray(DyeColor.byId((index + 1) % 16))));
+    }
+
+    private static int lerpColor(float delta, int from, int to) {
+        return FastColor.ARGB32.color(255,
+                (int) Mth.lerp(delta, FastColor.ARGB32.red(from), FastColor.ARGB32.red(to)),
+                (int) Mth.lerp(delta, FastColor.ARGB32.green(from), FastColor.ARGB32.green(to)),
+                (int) Mth.lerp(delta, FastColor.ARGB32.blue(from), FastColor.ARGB32.blue(to)));
     }
 
     private static int brighten(float[] color) {

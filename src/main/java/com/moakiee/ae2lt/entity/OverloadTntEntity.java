@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
@@ -57,7 +57,7 @@ public class OverloadTntEntity extends PrimedTnt {
     @Override
     @Nullable
     public LivingEntity getOwner() {
-        if (owner == null && ownerUuid != null && this.level() instanceof ServerLevel serverLevel) {
+        if (owner == null && ownerUuid != null && this.level instanceof ServerLevel serverLevel) {
             var entity = serverLevel.getEntity(ownerUuid);
             if (entity instanceof LivingEntity livingEntity) {
                 owner = livingEntity;
@@ -83,7 +83,7 @@ public class OverloadTntEntity extends PrimedTnt {
 
     @Override
     protected void explode() {
-        if (this.level() instanceof ServerLevel serverLevel) {
+        if (this.level instanceof ServerLevel serverLevel) {
             if (AE2LTCommonConfig.easterEggEnabled()
                     && tryTriggerEasterEgg(serverLevel)) {
                 return;
@@ -154,7 +154,7 @@ public class OverloadTntEntity extends PrimedTnt {
     @Nullable
     private static Item configuredEasterEggItem() {
         ResourceLocation id = ResourceLocation.tryParse(AE2LTCommonConfig.easterEggItem());
-        return id == null ? null : BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+        return id == null ? null : Registry.ITEM.getOptional(id).orElse(null);
     }
 
 }

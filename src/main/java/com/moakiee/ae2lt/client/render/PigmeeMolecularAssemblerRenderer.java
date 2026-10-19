@@ -18,7 +18,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.model.data.ModelData;
 
@@ -124,12 +124,11 @@ public final class PigmeeMolecularAssemblerRenderer
         poseStack.translate(0.0D, stack.getItem() instanceof BlockItem ? -0.2F : -0.3F, 0.0D);
         itemRenderer.renderStatic(
                 stack,
-                ItemDisplayContext.GROUND,
+                TransformType.GROUND,
                 packedLight,
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 buffer,
-                blockEntity.getLevel(),
                 0);
         poseStack.popPose();
     }

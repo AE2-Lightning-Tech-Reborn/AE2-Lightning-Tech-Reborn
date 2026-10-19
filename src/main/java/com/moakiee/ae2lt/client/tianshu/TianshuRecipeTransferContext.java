@@ -5,7 +5,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
@@ -66,7 +66,7 @@ public final class TianshuRecipeTransferContext {
         String recipeId = "";
         var defaultAliases = new ArrayList<String>();
         if (recipe != null) {
-            var typeId = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
+            var typeId = Registry.RECIPE_TYPE.getKey(recipe.getType());
             sourceKey = typeId == null ? "" : typeId.toString();
         }
         if (sourceKey.isBlank() && fallbackSourceKey != null) sourceKey = fallbackSourceKey;

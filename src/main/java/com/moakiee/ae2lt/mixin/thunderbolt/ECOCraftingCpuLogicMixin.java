@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 
 import appeng.api.config.Actionable;
@@ -292,7 +292,7 @@ public abstract class ECOCraftingCpuLogicMixin {
             AEKey finalOutputKey = finalOutput != null ? finalOutput.what() : null;
             CraftingLink link = ae2lt$getJobLink(job);
             if (link != null) {
-                UUID craftingId = link.getCraftingID();
+                UUID craftingId = com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID());
                 OverloadCpuStateManager.INSTANCE.registerExpectedOutputs(
                         this,
                         craftingId,
@@ -307,7 +307,7 @@ public abstract class ECOCraftingCpuLogicMixin {
     }
 
     @Inject(method = "writeToNBT", at = @At("RETURN"))
-    private void ae2lt$writeOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$writeOverloadState(CompoundTag data, RegistryAccess registries, CallbackInfo ci) {
         if (!AE2LT_ECO_AVAILABLE) return;
         var overloadStateTag = OverloadCpuStateManager.INSTANCE.writeToTag(this, registries);
         if (overloadStateTag != null) {
@@ -318,7 +318,7 @@ public abstract class ECOCraftingCpuLogicMixin {
     }
 
     @Inject(method = "readFromNBT", at = @At("RETURN"))
-    private void ae2lt$readOverloadState(CompoundTag data, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void ae2lt$readOverloadState(CompoundTag data, RegistryAccess registries, CallbackInfo ci) {
         if (!AE2LT_ECO_AVAILABLE) return;
         OverloadCpuStateManager.INSTANCE.clear(this);
         var job = ae2lt$getJob();
@@ -327,7 +327,7 @@ public abstract class ECOCraftingCpuLogicMixin {
             if (link != null) {
                 OverloadCpuStateManager.INSTANCE.readFromTag(
                         this,
-                        link.getCraftingID(),
+                        com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()),
                         data.getCompound("ae2ltOverloadState"),
                         registries);
             }

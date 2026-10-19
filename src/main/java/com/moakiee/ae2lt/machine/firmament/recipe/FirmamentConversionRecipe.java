@@ -165,7 +165,7 @@ public final class FirmamentConversionRecipe implements Recipe<FirmamentConversi
     }
 
     @Override
-    public ItemStack assemble(FirmamentConversionRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(FirmamentConversionRecipeInput input) {
         return getResultStack();
     }
 
@@ -175,7 +175,7 @@ public final class FirmamentConversionRecipe implements Recipe<FirmamentConversi
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return getResultStack();
     }
 

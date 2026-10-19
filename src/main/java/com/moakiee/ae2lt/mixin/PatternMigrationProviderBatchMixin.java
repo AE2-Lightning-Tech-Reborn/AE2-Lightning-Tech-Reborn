@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.mixin;
 
-import appeng.helpers.patternprovider.PatternProviderLogic;
+import appeng.helpers.iface.PatternProviderLogic;
 import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationMutationScope;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

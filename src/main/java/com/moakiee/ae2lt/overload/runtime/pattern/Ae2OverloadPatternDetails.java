@@ -25,7 +25,7 @@ import com.moakiee.thunderbolt.core.crafting.pattern.IWrappedPatternDetails;
  * matching semantics per slot for planning and crafting extraction.
  */
 public final class Ae2OverloadPatternDetails
-        implements IPatternDetails, OverloadedProviderOnlyPatternDetails, IWrappedPatternDetails {
+        implements com.moakiee.ae2lt.compat.LegacyPatternDetails, OverloadedProviderOnlyPatternDetails, IWrappedPatternDetails {
     private final AEItemKey definition;
     private final OverloadPatternDetails overloadDetails;
     private final IPatternDetails sourceDetails;
@@ -67,7 +67,7 @@ public final class Ae2OverloadPatternDetails
 
     @Override
     public boolean supportsPushInputsToExternalInventory() {
-        return sourceDetails.supportsPushInputsToExternalInventory();
+        return com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(sourceDetails);
     }
 
     @Override
@@ -77,7 +77,7 @@ public final class Ae2OverloadPatternDetails
             return;
         }
 
-        IPatternDetails.super.pushInputsToExternalInventory(inputHolder, inputSink);
+        com.moakiee.ae2lt.compat.LegacyPatternDetails.super.pushInputsToExternalInventory(inputHolder, inputSink);
     }
 
     @Override

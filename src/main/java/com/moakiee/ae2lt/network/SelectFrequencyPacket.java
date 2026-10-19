@@ -59,7 +59,7 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            var level = player.serverLevel();
+            var level = player.getLevel();
             var be = level.getBlockEntity(pkt.blockPos);
 
             // Resolve the device's CURRENT frequency so the block-op
@@ -217,7 +217,7 @@ public record SelectFrequencyPacket(
         final int boundId = targetFreqId;
         TerminalCardAccess.updateCard(terminal, data -> data.bindFrequency(
                 boundId,
-                player.level().dimension().location().toString(),
+                player.level.dimension().location().toString(),
                 player.blockPosition().asLong(),
                 player.getUUID()));
     }

@@ -87,7 +87,7 @@ class AdaptiveLoopSeedCpuTest {
                 net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
             }
             net.minecraft.SharedConstants.tryDetectVersion();
-            net.minecraft.server.Bootstrap.bootStrap();
+            com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
             priorTick = field(TickHandler.class, "tickCounter").getLong(TickHandler.instance());
             var level = fixture.level();
             var source = proxy(IActionSource.class, Map.of());
@@ -117,7 +117,7 @@ class AdaptiveLoopSeedCpuTest {
             var macro = fixture.macro();
             var plan = proxy(ICraftingPlan.class, Map.of("finalOutput", new GenericStack(POWDER, 80),
                     "emittedItems", new KeyCounter(), "patternTimes", Map.of(macro, 10L)));
-            var tag = new CompoundTag(); tag.putUUID("craftId", UUID.randomUUID());
+            var tag = new CompoundTag(); tag.putString("CraftID", UUID.randomUUID().toString());
             tag.putBoolean("req", false); tag.putBoolean("standalone", true);
             var link = new CraftingLink(tag, cpu);
             jobClass = Class.forName(logic.getClass().getName() + "$TimeWheelJob");

@@ -18,7 +18,7 @@ public final class PatternMigrationGridService implements IGridService, IGridSer
 
     public PatternMigrationGridService() {}
 
-    @Override public void addNode(IGridNode node, CompoundTag savedData) {
+    @Override public void addNode(IGridNode node) {
         if (ids.containsKey(node)) return;
         long id = ++epoch;
         ids.put(node, id);

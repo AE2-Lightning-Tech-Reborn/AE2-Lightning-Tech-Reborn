@@ -1,7 +1,8 @@
 package com.moakiee.ae2lt.client.railgun;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -49,14 +50,14 @@ public final class RailgunHudRenderer {
         int t3 = RailgunDefaults.CHARGE_TICKS_TIER3;
         float progress = Math.min(1.0f, (float) ticks / (float) t3);
 
-        GuiGraphics gfx = e.getGuiGraphics();
+        PoseStack gfx = e.getPoseStack();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
         int x = w / 2 + CROSSHAIR_OFFSET_X;
         int y = (h - ICON_H) / 2;
 
         // Empty bolt as the always-visible background.
-        gfx.blit(EMPTY_TEX, x, y, 0, 0, ICON_W, ICON_H, ICON_W, ICON_H);
+        LegacyGui.blit(gfx, EMPTY_TEX, x, y, 0, 0, ICON_W, ICON_H, ICON_W, ICON_H);
 
         // Reveal the lit bolt from the bottom up by sampling the matching
         // bottom slice of the full texture; this keeps pixel alignment exact
@@ -64,7 +65,7 @@ public final class RailgunHudRenderer {
         int filledH = Math.round(ICON_H * progress);
         if (filledH > 0) {
             int emptyTop = ICON_H - filledH;
-            gfx.blit(FULL_TEX, x, y + emptyTop, 0, emptyTop, ICON_W, filledH, ICON_W, ICON_H);
+            LegacyGui.blit(gfx, FULL_TEX, x, y + emptyTop, 0, emptyTop, ICON_W, filledH, ICON_W, ICON_H);
         }
     }
 }

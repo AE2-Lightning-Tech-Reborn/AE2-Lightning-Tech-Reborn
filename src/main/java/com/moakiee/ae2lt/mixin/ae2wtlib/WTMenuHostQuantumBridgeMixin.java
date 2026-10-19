@@ -18,7 +18,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = WTMenuHost.class, remap = false)
 public abstract class WTMenuHostQuantumBridgeMixin {
     @Shadow private IActionHost quantumBridge;
-    @Shadow @Final @Mutable private IGrid targetGrid;
+    @Shadow private IActionHost securityTerminal;
+    @Shadow private appeng.api.networking.IGridNode securityTerminalNode;
     @Unique private boolean ae2lt$refreshQuantumGrid;
 
     @Inject(method = {"rangeCheck", "isQuantumLinked"}, at = @At("HEAD"), require = 1)
@@ -33,9 +34,12 @@ public abstract class WTMenuHostQuantumBridgeMixin {
         var stack = self.getItemStack();
         var player = self.getPlayer();
         // Resolve by the terminal's own binding/card rules, retaining native access-point fallback.
-        var grid = ((WirelessTerminalItem) stack.getItem()).getLinkedGrid(stack, player.level(), null);
-        if (grid == null) return; // Keep retrying while the bridge is being rebuilt.
-        targetGrid = grid;
+        var key = ((WirelessTerminalItem) stack.getItem()).getGridKey(stack);
+        if (key.isEmpty()) return;
+        securityTerminal = appeng.api.features.Locatables.securityStations().get(player.level, key.getAsLong());
+        securityTerminalNode = securityTerminal == null ? null : securityTerminal.getActionableNode();
+        if (securityTerminalNode == null) return;
+        var grid = securityTerminalNode.getGrid();
         var nativeHost = (WirelessTerminalGridAccessor) self;
         nativeHost.ae2lt$setTargetGrid(grid);
         nativeHost.ae2lt$setStorageService(grid.getStorageService());

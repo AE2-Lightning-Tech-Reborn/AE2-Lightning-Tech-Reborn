@@ -12,7 +12,7 @@ public final class LargeStackNbt {
     }
 
     public static CompoundTag save(ItemStack stack) {
-        CompoundTag tag = stack.copyWithCount(1).save(new CompoundTag());
+        CompoundTag tag = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1).save(new CompoundTag());
         tag.putInt(COUNT, stack.getCount());
         return tag;
     }

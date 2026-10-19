@@ -10,7 +10,7 @@ import com.moakiee.ae2lt.network.EasterEggPacket;
 import com.moakiee.ae2lt.network.NetworkInit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,7 +33,7 @@ public final class LightningItemTransformationHandler {
     }
 
     public static void handleLightningTick(LightningBolt lightningBolt) {
-        if (!(lightningBolt.level() instanceof ServerLevel serverLevel)) {
+        if (!(lightningBolt.level instanceof ServerLevel serverLevel)) {
             return;
         }
 
@@ -72,20 +72,20 @@ public final class LightningItemTransformationHandler {
     }
 
     private static void checkEasterEgg(ServerLevel level, LightningBolt lightningBolt) {
-        var fumoOpt = BuiltInRegistries.BLOCK.getOptional(FUMO_BLOCK_ID);
+        var fumoOpt = Registry.BLOCK.getOptional(FUMO_BLOCK_ID);
         if (fumoOpt.isEmpty()) {
             return;
         }
         Block fumoBlock = fumoOpt.get();
 
-        BlockPos center = BlockPos.containing(lightningBolt.position());
+        BlockPos center = new BlockPos(lightningBolt.position());
         for (BlockPos pos : BlockPos.betweenClosed(
                 center.offset(-EASTER_EGG_SEARCH_RADIUS, -1, -EASTER_EGG_SEARCH_RADIUS),
                 center.offset(EASTER_EGG_SEARCH_RADIUS, 2, EASTER_EGG_SEARCH_RADIUS))) {
             if (level.getBlockState(pos).is(fumoBlock)) {
                 var source = GlobalPos.of(level.dimension(), pos.immutable());
                 for (ServerPlayer player : level.players()) {
-                    if (EasterEggAudience.includes(source, player.level().dimension(), player.position())) {
+                    if (EasterEggAudience.includes(source, player.level.dimension(), player.position())) {
                         NetworkInit.sendToPlayer(player, new EasterEggPacket(source));
                     }
                 }

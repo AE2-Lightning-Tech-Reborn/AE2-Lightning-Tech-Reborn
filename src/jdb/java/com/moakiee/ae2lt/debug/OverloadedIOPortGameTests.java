@@ -19,7 +19,7 @@ import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecip
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.*;
 import net.minecraft.core.*;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -480,7 +480,7 @@ public final class OverloadedIOPortGameTests {
     public static void accelerationShortensIntervalWithoutRaisingBatchLimit(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
-            BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(200).forEach(i->from.amounts.put(AEItemKey.of(i),100L));
+            Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(200).forEach(i->from.amounts.put(AEItemKey.of(i),100L));
             be.getInternalInventory().setItemDirect(0,cell(from));
             h.assertTrue(be.getTransferInterval()==5,"default interval");
             for(int i=0;i<4;i++){
@@ -499,7 +499,7 @@ public final class OverloadedIOPortGameTests {
     public static void removingAccelerationCannotResetCooldown(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
-            BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(6)
+            Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(6)
                     .forEach(i->from.amounts.put(AEItemKey.of(i),1000L));
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
@@ -517,7 +517,7 @@ public final class OverloadedIOPortGameTests {
     public static void blockedPrefixEventuallyReachesLateNetworkKey(GameTestHelper h) {
         fixture(h,be->{
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
-            var network=new Store();BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(36)
+            var network=new Store();Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(36)
                     .forEach(i->network.amounts.put(AEItemKey.of(i),123L));mount(be,network);
             var ordered=new ArrayList<AEKey>();for(var e:be.getMainNode().getGrid().getStorageService().getCachedInventory())ordered.add(e.getKey());
             var destination=new Store();destination.only=ordered.get(ordered.size() - 1);
@@ -592,7 +592,7 @@ public final class OverloadedIOPortGameTests {
     public static void newlyArrivedTypeIsCheckedBeforeHalfEjection(GameTestHelper h) {
         fixture(h,be->{
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
-            var network=new Store();BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR && i!=Items.DIAMOND).limit(12)
+            var network=new Store();Registry.ITEM.stream().filter(i->i!=Items.AIR && i!=Items.DIAMOND).limit(12)
                     .forEach(i->network.amounts.put(AEItemKey.of(i),123L));mount(be,network);
             var destination=new Store();destination.only=AEItemKey.of(Items.DIAMOND);
             setMode(be,OperationMode.FILL,FullnessMode.HALF);be.getInternalInventory().setItemDirect(0,cell(destination));tick(be);
@@ -667,7 +667,7 @@ public final class OverloadedIOPortGameTests {
             var target=new Store();mount(be,target);var sources=new ArrayList<Store>();
             for(int slot=0;slot<6;slot++) {
                 var from=new Store();sources.add(from);
-                BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(20).forEach(i->from.amounts.put(AEItemKey.of(i),100L));
+                Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(20).forEach(i->from.amounts.put(AEItemKey.of(i),100L));
                 be.getInternalInventory().setItemDirect(slot,cell(from));
             }
             // Output cells remain output cells even at maximum throughput.
@@ -685,7 +685,7 @@ public final class OverloadedIOPortGameTests {
     public static void rejectedKeysSpendMatrixBudgetWithoutPrematureHalfEjection(GameTestHelper h) {
         fixture(h,be->{
             be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
-            var network=new Store();BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
+            var network=new Store();Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
                     .forEach(i->network.amounts.put(AEItemKey.of(i),123L));mount(be,network);
             var ordered=new ArrayList<AEKey>();for(var e:be.getMainNode().getGrid().getStorageService().getCachedInventory())ordered.add(e.getKey());
             var destination=new Store();destination.only=ordered.get(ordered.size()-1);setMode(be,OperationMode.FILL,FullnessMode.HALF);
@@ -699,7 +699,7 @@ public final class OverloadedIOPortGameTests {
     public static void matrixChangesPreserveCooldownAndUpdateAmountCap(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
-            BuiltInRegistries.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
+            Registry.ITEM.stream().filter(i->i!=Items.AIR).limit(20)
                     .forEach(i->from.amounts.put(AEItemKey.of(i),1_000_000_000L));
             be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
             h.assertTrue(target.amounts.size()==4 && target.amounts.values().stream().allMatch(n->n==BASE_CAP),

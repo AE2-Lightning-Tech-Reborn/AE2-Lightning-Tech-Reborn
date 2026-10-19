@@ -28,7 +28,7 @@ public class ElectromagneticParalysisEffect extends MobEffect {
 
     @Override
     public void applyEffectTick(LivingEntity entity, int amplifier) {
-        if (entity.level() instanceof ServerLevel level) {
+        if (entity.level instanceof ServerLevel level) {
             double w = entity.getBbWidth() * 0.4;
             double h = entity.getBbHeight() * 0.4;
             level.sendParticles(

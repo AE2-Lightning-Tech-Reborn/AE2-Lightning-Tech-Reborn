@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client.machine;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
@@ -23,7 +24,7 @@ public class LightningSimulationProcessWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         double progress = menu.getProgress();
         int stage = progress <= 0.0D
                 ? 0
@@ -39,22 +40,22 @@ public class LightningSimulationProcessWidget extends AbstractWidget {
         if (topRows > 0) {
             overlay.copy()
                     .src(overlay.getSrcX(), overlay.getSrcY(), width, topRows)
-                    .dest(getX(), getY(), width, topRows)
-                    .blit(guiGraphics);
+                    .dest(x, y, width, topRows)
+                    .blit(guiGraphics, 0);
         }
 
         if (bottomRows > 0) {
             int srcY = overlay.getSrcY() + height - bottomRows;
-            int destY = getY() + height - bottomRows;
+            int destY = y + height - bottomRows;
             overlay.copy()
                     .src(overlay.getSrcX(), srcY, width, bottomRows)
-                    .dest(getX(), destY, width, bottomRows)
-                    .blit(guiGraphics);
+                    .dest(x, destY, width, bottomRows)
+                    .blit(guiGraphics, 0);
         }
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 
     @Override

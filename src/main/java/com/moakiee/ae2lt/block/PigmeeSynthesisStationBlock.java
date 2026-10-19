@@ -21,7 +21,7 @@ import net.minecraft.world.phys.BlockHitResult;
 public final class PigmeeSynthesisStationBlock
         extends AEBaseEntityBlock<PigmeeSynthesisStationBlockEntity> {
     public PigmeeSynthesisStationBlock() {
-        super(metalProps().noOcclusion());
+        super(AE2LTBaseEntityBlock.metalProps().noOcclusion());
     }
 
     @Override

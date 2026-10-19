@@ -28,7 +28,7 @@ public class LightningCollectorBlock extends AE2LTBaseEntityBlock<LightningColle
             Block.box(12, 12, 6, 16, 16, 10));
 
     public LightningCollectorBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState().setValue(WORKING, false));
     }
 

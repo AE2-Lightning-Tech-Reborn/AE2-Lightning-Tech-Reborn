@@ -50,7 +50,8 @@ public abstract class BigNumberEntryWidgetMixin implements BigNumberEntry {
 
     public Optional<BigInteger> ae2lt$getBig() {
         try {
-            var parsed = getValueInternal();
+            String input = textField.getValue().trim();
+            var parsed = appeng.client.gui.MathExpressionParser.parse(input.startsWith("=") ? input.substring(1) : input, decimalFormat);
             if (parsed.isEmpty()) return Optional.empty();
             var value = parsed.get().multiply(BigDecimal.valueOf(type.amountPerUnit()));
             if (value.precision() - (long) value.scale() > 4933 || value.scale() > 5000)
@@ -63,6 +64,8 @@ public abstract class BigNumberEntryWidgetMixin implements BigNumberEntry {
             return Optional.empty();
         }
     }
+
+    public boolean ae2lt$startsWithEquals() { return textField.getValue().trim().startsWith("="); }
 
     public void ae2lt$setBig(BigInteger amount) {
         // AE2 key units are powers of ten, so this conversion is exact.

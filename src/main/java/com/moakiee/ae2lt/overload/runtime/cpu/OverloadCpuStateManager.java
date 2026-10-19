@@ -11,7 +11,7 @@ import java.util.function.BiPredicate;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
@@ -43,7 +43,7 @@ public final class OverloadCpuStateManager {
         if (link == null) {
             throw new IllegalStateException("crafting logic has no active link");
         }
-        return getOrCreate(logic, link.getCraftingID());
+        return getOrCreate(logic, com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()));
     }
 
     public synchronized OverloadCpuState getOrCreate(Object logic, UUID craftingId) {
@@ -337,12 +337,12 @@ public final class OverloadCpuStateManager {
         states.remove(logic);
     }
 
-    public synchronized @Nullable CompoundTag writeToTag(CraftingCpuLogic logic, HolderLookup.Provider registries) {
+    public synchronized @Nullable CompoundTag writeToTag(CraftingCpuLogic logic, RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return writeToTag((Object) logic);
     }
 
-    public synchronized @Nullable CompoundTag writeToTag(Object logic, HolderLookup.Provider registries) {
+    public synchronized @Nullable CompoundTag writeToTag(Object logic, RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return writeToTag(logic);
     }
@@ -357,7 +357,7 @@ public final class OverloadCpuStateManager {
         return state != null && !state.isEmpty() ? state.toTag() : null;
     }
 
-    public synchronized void readFromTag(CraftingCpuLogic logic, CompoundTag tag, HolderLookup.Provider registries) {
+    public synchronized void readFromTag(CraftingCpuLogic logic, CompoundTag tag, RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         readFromTag(logic, tag);
     }
@@ -367,11 +367,11 @@ public final class OverloadCpuStateManager {
         if (link == null) {
             throw new IllegalStateException("crafting logic has no active link");
         }
-        readFromTag(logic, link.getCraftingID(), tag);
+        readFromTag(logic, com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()), tag);
     }
 
     public synchronized void readFromTag(Object logic, UUID craftingId, CompoundTag tag,
-                                         HolderLookup.Provider registries) {
+                                         RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         readFromTag(logic, craftingId, tag);
     }

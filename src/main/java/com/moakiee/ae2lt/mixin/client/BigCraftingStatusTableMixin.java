@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.mixin.client;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.client.gui.me.crafting.CraftingStatusTableRenderer;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftingStatusEntry;
@@ -45,7 +45,7 @@ public abstract class BigCraftingStatusTableMixin {
         if (a == null) return null;
         var lines =
                 full
-                        ? new ArrayList<>(AEKeyRendering.getTooltip(e.getWhat()))
+                        ? new ArrayList<>(AEStackRendering.getTooltip(e.getWhat()))
                         : new ArrayList<Component>();
         int unit = e.getWhat().getAmountPerUnit();
         if (a.stored().signum() > 0)

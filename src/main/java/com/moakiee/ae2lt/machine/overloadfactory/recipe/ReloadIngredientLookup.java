@@ -7,7 +7,7 @@ import java.util.function.UnaryOperator;
 
 import com.google.gson.JsonElement;
 import com.mojang.serialization.DynamicOps;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
@@ -49,10 +49,10 @@ final class ReloadIngredientLookup implements UnaryOperator<Ingredient> {
         if (json.isJsonArray()) {
             json.getAsJsonArray().forEach(entry -> collect(entry, stacks));
         } else if (json.isJsonObject() && json.getAsJsonObject().has("tag")) {
-            var tag = TagKey.create(Registries.ITEM, new ResourceLocation(json.getAsJsonObject().get("tag").getAsString()));
+            var tag = TagKey.create(Registry.ITEM_REGISTRY, new ResourceLocation(json.getAsJsonObject().get("tag").getAsString()));
             context.getTag(tag).forEach(holder -> stacks.add(new ItemStack(holder)));
         } else if (json.isJsonObject() && json.getAsJsonObject().has("item")) {
-            var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            var item = net.minecraft.core.Registry.ITEM.get(
                     new ResourceLocation(json.getAsJsonObject().get("item").getAsString()));
             stacks.add(new ItemStack(item));
         } else {

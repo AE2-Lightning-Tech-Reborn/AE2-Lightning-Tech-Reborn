@@ -45,7 +45,7 @@ public final class PhaseFlightMovementGuard {
             Player player,
             boolean phaseModeEnabled,
             boolean phaseTraversalActive) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return;
         }
         SERVER_SETTINGS.compute(player.getUUID(), (id, current) ->
@@ -60,7 +60,7 @@ public final class PhaseFlightMovementGuard {
             Player player,
             boolean blockForces,
             boolean blockTeleports) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return;
         }
         SERVER_SETTINGS.compute(player.getUUID(), (id, current) ->
@@ -121,7 +121,7 @@ public final class PhaseFlightMovementGuard {
         if (player == null) {
             return false;
         }
-        if (player.level().isClientSide()) {
+        if (player.level.isClientSide()) {
             return CelestweaveArmorState.getClientPhaseLockBlockExternalForces();
         }
         ServerSettings settings = SERVER_SETTINGS.get(player.getUUID());
@@ -129,7 +129,7 @@ public final class PhaseFlightMovementGuard {
     }
 
     public static boolean blocksExternalTeleports(Player player) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return false;
         }
         ServerSettings settings = SERVER_SETTINGS.get(player.getUUID());
@@ -147,7 +147,7 @@ public final class PhaseFlightMovementGuard {
         if (player == null) {
             return false;
         }
-        if (player.level().isClientSide()) {
+        if (player.level.isClientSide()) {
             return isPhaseModeEnabled(player) && PhaseWingFlight.isFlightActive(player);
         }
         ServerSettings settings = SERVER_SETTINGS.get(player.getUUID());
@@ -162,7 +162,7 @@ public final class PhaseFlightMovementGuard {
         if (player == null) {
             return false;
         }
-        if (player.level().isClientSide()) {
+        if (player.level.isClientSide()) {
             return CelestweaveArmorState.isAnyClientFlightControlActive()
                     && CelestweaveArmorState.getClientPhaseMode().allows(
                             PhaseFlightPlayerState.isFlying(player),
@@ -220,7 +220,7 @@ public final class PhaseFlightMovementGuard {
      * production remapping.</p>
      */
     public static void beginMovementPacket(Player player) {
-        if (player != null && !player.level().isClientSide()) {
+        if (player != null && !player.level.isClientSide()) {
             MOVEMENT_PACKET_PLAYER.set(player);
         }
     }
@@ -232,7 +232,7 @@ public final class PhaseFlightMovementGuard {
     }
 
     public static void beginCustomPayload(Player player) {
-        if (player != null && !player.level().isClientSide()) {
+        if (player != null && !player.level.isClientSide()) {
             CUSTOM_PAYLOAD_PLAYER.set(player);
         }
     }
@@ -419,7 +419,7 @@ public final class PhaseFlightMovementGuard {
     }
 
     public static void notifyBlockedTeleport(ServerPlayer player, Vec3 target) {
-        notifyBlockedTeleport(player, player.serverLevel(), target, false);
+        notifyBlockedTeleport(player, player.getLevel(), target, false);
     }
 
     public static void notifyBlockedDimensionTeleport(

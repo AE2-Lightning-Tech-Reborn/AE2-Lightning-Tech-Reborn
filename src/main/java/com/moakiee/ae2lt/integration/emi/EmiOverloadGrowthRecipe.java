@@ -1,4 +1,5 @@
 package com.moakiee.ae2lt.integration.emi;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 
 import java.util.List;
 
@@ -69,7 +70,7 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
             }
             case ACCELERATION -> {
                 inputs.add(EmiIngredient.of(BUDDING));
-                catalysts.add(EmiStack.of(AEBlocks.GROWTH_ACCELERATOR.asItem()));
+                catalysts.add(EmiStack.of(AEBlocks.QUARTZ_GROWTH_ACCELERATOR.asItem()));
             }
         }
     }
@@ -131,7 +132,7 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
                             if (y + font.lineHeight > 60) {
                                 return;
                             }
-                            graphics.drawString(font, line, 2, y, EmiRecipeWidgets.TEXT_COLOR, false);
+                            LegacyGui.drawString(graphics, font, line, 2, y, EmiRecipeWidgets.TEXT_COLOR, false);
                             y += font.lineHeight;
                         }
                     }

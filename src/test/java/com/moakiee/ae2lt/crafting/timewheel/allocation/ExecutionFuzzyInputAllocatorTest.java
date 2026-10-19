@@ -40,7 +40,7 @@ class ExecutionFuzzyInputAllocatorTest {
     static {
         LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     private static final AEKey GLASS = AEItemKey.of(Items.GLASS);

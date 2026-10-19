@@ -18,7 +18,7 @@ public class OverloadDeviceWorkbenchBlock extends AEBaseEntityBlock<OverloadDevi
         // The model has open sections between its base, work surface and top.
         // Treating it as a full occluding cube makes adjacent blocks cull their
         // entire shared face, which leaves visible holes through those sections.
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(AE2LTBaseEntityBlock.metalProps().noOcclusion());
     }
 
     @Override

@@ -18,7 +18,7 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
+
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -35,7 +35,7 @@ class InscriberProcessorAdapterTest {
     static void bootstrap() {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), null);
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         if (net.minecraftforge.common.crafting.CraftingHelper.getID(
                 net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCE) == null) {
             net.minecraftforge.common.crafting.CraftingHelper.register(new ResourceLocation("minecraft", "item"),
@@ -178,13 +178,13 @@ class InscriberProcessorAdapterTest {
         assertFalse(rawRoute.itemInputs().get(0).ingredient().test(new ItemStack(Items.GOLD_INGOT)));
 
         var tagId = new ResourceLocation("test:mixed_ingots");
-        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, tagId);
+        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.Registry.ITEM_REGISTRY, tagId);
         var context = new net.minecraftforge.common.crafting.conditions.ICondition.IContext() {
             @Override
             @SuppressWarnings({"unchecked", "rawtypes"})
             public <T> Map<ResourceLocation, java.util.Collection<net.minecraft.core.Holder<T>>> getAllTags(
                     net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<T>> registry) {
-                return registry.equals(net.minecraft.core.registries.Registries.ITEM)
+                return registry.equals(net.minecraft.core.Registry.ITEM_REGISTRY)
                         ? (Map) Map.of(tagId, List.of(Items.GOLD_INGOT.builtInRegistryHolder(),
                                 Items.IRON_INGOT.builtInRegistryHolder())) : Map.of();
             }
@@ -269,12 +269,12 @@ class InscriberProcessorAdapterTest {
     @SuppressWarnings({"unchecked", "rawtypes"})
     void usesPendingReloadTagsAndAcceptsEquivalentTagAndItemCompressionSlots() {
         var tagId = new ResourceLocation("test:pending_gold");
-        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, tagId);
+        var tag = net.minecraft.tags.TagKey.create(net.minecraft.core.Registry.ITEM_REGISTRY, tagId);
         var context = new net.minecraftforge.common.crafting.conditions.ICondition.IContext() {
             @Override
             public <T> Map<ResourceLocation, java.util.Collection<net.minecraft.core.Holder<T>>> getAllTags(
                     net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<T>> registry) {
-                return registry.equals(net.minecraft.core.registries.Registries.ITEM)
+                return registry.equals(net.minecraft.core.Registry.ITEM_REGISTRY)
                         ? (Map) Map.of(tagId, List.of(Items.GOLD_INGOT.builtInRegistryHolder())) : Map.of();
             }
         };
@@ -320,7 +320,7 @@ class InscriberProcessorAdapterTest {
     private static RecipeHolder<ShapelessRecipe> crafting(String id, ItemStack result, List<Ingredient> inputs) {
         var ingredients = NonNullList.<Ingredient>create();
         ingredients.addAll(inputs);
-        return holder(id, new ShapelessRecipe(new ResourceLocation("test", id.replace(':', '_')), "", CraftingBookCategory.MISC, result, ingredients));
+        return holder(id, new ShapelessRecipe(new ResourceLocation("test", id.replace(':', '_')), "", result, ingredients));
     }
 
     private static <R extends Recipe<?>> RecipeHolder<R> holder(String id, R recipe) {

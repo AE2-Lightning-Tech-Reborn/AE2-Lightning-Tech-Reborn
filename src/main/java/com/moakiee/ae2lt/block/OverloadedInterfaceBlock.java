@@ -8,7 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.StateDefinition;
 import appeng.block.crafting.PatternProviderBlock;
-import appeng.block.crafting.PushDirection;
+import com.moakiee.ae2lt.compat.PushDirection;
 import appeng.core.definitions.AEBlocks;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -22,14 +22,14 @@ import appeng.util.InteractionUtil;
 public class OverloadedInterfaceBlock extends AE2LTBaseEntityBlock<OverloadedInterfaceBlockEntity> {
 
     public OverloadedInterfaceBlock() {
-        super(metalProps().forceSolidOn());
-        registerDefaultState(defaultBlockState().setValue(PatternProviderBlock.PUSH_DIRECTION, PushDirection.ALL));
+        super(metalProps());
+        registerDefaultState(defaultBlockState().setValue(com.moakiee.ae2lt.compat.PushDirection.PROPERTY, PushDirection.ALL));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
-        builder.add(PatternProviderBlock.PUSH_DIRECTION);
+        builder.add(com.moakiee.ae2lt.compat.PushDirection.PROPERTY);
     }
 
     @Override
@@ -39,7 +39,13 @@ public class OverloadedInterfaceBlock extends AE2LTBaseEntityBlock<OverloadedInt
         if (InteractionUtil.canWrenchRotate(heldItem)) {
             // AE2's native all/opposite/clicked-face/rotation behavior. This
             // method only updates PUSH_DIRECTION, shared by our blockstate.
-            AEBlocks.PATTERN_PROVIDER.block().setSide(level, pos, hit.getDirection());
+            var facing = hit.getDirection();
+            var pushSide = state.getValue(PushDirection.PROPERTY).getDirection();
+            var next = pushSide == facing.getOpposite() ? PushDirection.fromDirection(facing)
+                    : pushSide == facing ? PushDirection.ALL
+                    : pushSide == null ? PushDirection.fromDirection(facing.getOpposite())
+                    : PushDirection.fromDirection(appeng.util.Platform.rotateAround(pushSide, facing));
+            level.setBlockAndUpdate(pos, state.setValue(PushDirection.PROPERTY, next));
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
         return super.useItemOn(heldItem, state, level, pos, player, hand, hit);

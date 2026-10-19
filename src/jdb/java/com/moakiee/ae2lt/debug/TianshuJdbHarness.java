@@ -76,12 +76,12 @@ public final class TianshuJdbHarness {
                 throw new IllegalStateException("prudentium recipe is not a crafting recipe");
             }
 
-            var masterItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            var masterItem = net.minecraft.core.registries.Registry.ITEM.get(
                     new ResourceLocation(
                             "mysticalagriculture", "master_infusion_crystal"));
-            var inferiumItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            var inferiumItem = net.minecraft.core.registries.Registry.ITEM.get(
                     new ResourceLocation("mysticalagriculture", "inferium_essence"));
-            var prudentiumItem = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+            var prudentiumItem = net.minecraft.core.registries.Registry.ITEM.get(
                     new ResourceLocation("mysticalagriculture", "prudentium_essence"));
             require(masterItem != Items.AIR && inferiumItem != Items.AIR && prudentiumItem != Items.AIR,
                     "Mystical Agriculture probe items unavailable");

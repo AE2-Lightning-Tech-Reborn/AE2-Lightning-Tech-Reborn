@@ -21,7 +21,7 @@ public final class PigmeeMolecularAssemblerBlock
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
 
     public PigmeeMolecularAssemblerBlock() {
-        super(metalProps().noOcclusion());
+        super(AE2LTBaseEntityBlock.metalProps().noOcclusion());
         registerDefaultState(defaultBlockState().setValue(POWERED, false));
     }
 

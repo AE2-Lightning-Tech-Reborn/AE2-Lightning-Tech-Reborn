@@ -31,7 +31,7 @@ public final class RainbowPigmeeShader {
 
     @SubscribeEvent
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
-        event.registerShader(new TickShader(event.getResourceProvider()), loaded -> shader = loaded);
+        event.registerShader(new TickShader(event.getResourceManager()), loaded -> shader = loaded);
     }
 
     private static final class TickShader extends ShaderInstance {

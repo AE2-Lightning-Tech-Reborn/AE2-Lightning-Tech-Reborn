@@ -172,7 +172,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,
@@ -251,7 +251,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
      * 1.20.1: AbstractContainerMenu has no registryAccess(); resolve it from the player.
      */
     private RegistryAccess registryAccess() {
-        return getPlayer().level().registryAccess();
+        return getPlayer().level.registryAccess();
     }
 
     /**
@@ -286,7 +286,7 @@ public class OverloadDeviceWorkbenchMenu extends AEBaseMenu {
         installProgress++;
         if (installProgress >= INSTALL_TICKS) {
             installProgress = 0;
-            var unit = stack.copyWithCount(1);
+            var unit = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             if (host.installOneModule(registryAccess(), unit)) {
                 stack.shrink(1);
                 inputContainer.setItem(0, stack.isEmpty() ? ItemStack.EMPTY : stack);

@@ -66,7 +66,7 @@ public final class ArmorModuleStorage implements DeviceModuleStorage {
         var result = new ArrayList<ItemStack>();
         for (var stack : listEntries(device)) {
             for (int i = 0; i < stack.getCount(); i++) {
-                result.add(stack.copyWithCount(1));
+                result.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return result.stream();

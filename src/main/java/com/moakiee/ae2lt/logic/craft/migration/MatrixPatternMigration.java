@@ -206,7 +206,7 @@ public final class MatrixPatternMigration {
         for (int i = 0; i < inventory.items.size() && !remainder.isEmpty(); i++) {
             if (!inventory.items.get(i).isEmpty()) continue;
             int accepted = Math.min(remainder.getCount(), Math.min(remainder.getMaxStackSize(), inventory.getMaxStackSize()));
-            inventory.items.set(i, remainder.copyWithCount(accepted));
+            inventory.items.set(i, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(remainder, accepted));
             remainder.shrink(accepted);
         }
         inventory.setChanged();
@@ -411,7 +411,7 @@ public final class MatrixPatternMigration {
                         TargetSlot target = duplicate ? null : findEmptySlot();
                         if (!duplicate && target == null) { noSpace++; clearPending(); continue; }
                         PatternMigrationTransfer.Destination destination = duplicate ? refundDestination(player) : target.destination(details);
-                        if (!destination.canAccept(stack.copyWithCount(1))) {
+                        if (!destination.canAccept(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1))) {
                             if (duplicate) refundBlocked++; else noSpace++;
                             clearPending();
                             continue;

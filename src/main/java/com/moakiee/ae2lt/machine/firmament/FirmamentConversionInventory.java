@@ -137,7 +137,7 @@ public class FirmamentConversionInventory extends LargeStackItemHandler {
             }
 
             int toInsert = Math.min(freeSpace, remainder.getCount());
-            simulated[index] = existing.copyWithCount(existing.getCount() + toInsert);
+            simulated[index] = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(existing, existing.getCount() + toInsert);
             if (toInsert == remainder.getCount()) {
                 return ItemStack.EMPTY;
             }
@@ -150,7 +150,7 @@ public class FirmamentConversionInventory extends LargeStackItemHandler {
             }
 
             int toInsert = Math.min(SLOT_LIMIT, remainder.getCount());
-            simulated[index] = remainder.copyWithCount(toInsert);
+            simulated[index] = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(remainder, toInsert);
             if (toInsert == remainder.getCount()) {
                 return ItemStack.EMPTY;
             }

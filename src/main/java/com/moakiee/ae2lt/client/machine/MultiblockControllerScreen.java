@@ -4,7 +4,8 @@ import com.moakiee.ae2lt.AE2LightningTech;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -46,87 +47,87 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    protected void renderBg(PoseStack guiGraphics, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(guiGraphics, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    protected void drawTitle(GuiGraphics guiGraphics) {
-        guiGraphics.drawString(font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
+    protected void drawTitle(PoseStack guiGraphics) {
+        LegacyGui.drawString(guiGraphics, font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
     }
 
     /** Status strip line with an indicator dot, inside the upper recess. */
-    protected void drawStatus(GuiGraphics guiGraphics, Component text, int color) {
-        guiGraphics.fill(TEXT_X, 24, TEXT_X + 4, 28, 0xFF000000 | color);
-        guiGraphics.drawString(font, text, TEXT_X + 8, STATUS_TEXT_Y, color, false);
+    protected void drawStatus(PoseStack guiGraphics, Component text, int color) {
+        LegacyGui.fill(guiGraphics, TEXT_X, 24, TEXT_X + 4, 28, 0xFF000000 | color);
+        LegacyGui.drawString(guiGraphics, font, text, TEXT_X + 8, STATUS_TEXT_Y, color, false);
     }
 
     /** Data row: label on the left, value right-aligned. */
-    protected void drawRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
-        guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
+    protected void drawRow(PoseStack guiGraphics, int y, Component label, String value, int valueColor) {
+        LegacyGui.drawString(guiGraphics, font, label, TEXT_X, y, COL_LABEL, false);
+        LegacyGui.drawString(guiGraphics, font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
     }
 
     /** A longer summary uses a second line so translated labels never overlap its value. */
-    protected void drawStackedRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
-        guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y + LINE_H, valueColor, false);
+    protected void drawStackedRow(PoseStack guiGraphics, int y, Component label, String value, int valueColor) {
+        LegacyGui.drawString(guiGraphics, font, label, TEXT_X, y, COL_LABEL, false);
+        LegacyGui.drawString(guiGraphics, font, value, VALUE_RIGHT - font.width(value), y + LINE_H, valueColor, false);
     }
 
     /** Word-wrapped issue text at the top of the body recess, with a muted hint below. */
-    protected void drawUnformed(GuiGraphics guiGraphics, Component issue, String hintKey) {
+    protected void drawUnformed(PoseStack guiGraphics, Component issue, String hintKey) {
         int y = ROW_Y;
         for (var line : font.split(issue, VALUE_RIGHT - TEXT_X)) {
-            guiGraphics.drawString(font, line, TEXT_X, y, COL_RED, false);
+            LegacyGui.drawString(guiGraphics, font, line, TEXT_X, y, COL_RED, false);
             y += 11;
         }
-        guiGraphics.drawString(font, Component.translatable(hintKey),
+        LegacyGui.drawString(guiGraphics, font, Component.translatable(hintKey),
                 TEXT_X, y - 11 + HINT_GAP, COL_MUTED, false);
     }
 
     /** Footer gauge: recessed frame, quarter ticks, beveled fill; markLo/markHi < 0 hides the target zone. */
-    protected void drawGauge(GuiGraphics guiGraphics, double fill, int fillColor,
+    protected void drawGauge(PoseStack guiGraphics, double fill, int fillColor,
             double markLo, double markHi) {
         int x0 = TEXT_X, y0 = 149, w = VALUE_RIGHT - TEXT_X, h = 10;
 
         // frame in the texture's recess style: dark top/left, white bottom/right
-        guiGraphics.fill(x0 - 1, y0 - 1, x0 + w + 1, y0, 0xFF696D88);
-        guiGraphics.fill(x0 - 1, y0 - 1, x0, y0 + h + 1, 0xFF696D88);
-        guiGraphics.fill(x0 - 1, y0 + h, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
-        guiGraphics.fill(x0 + w, y0, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
+        LegacyGui.fill(guiGraphics, x0 - 1, y0 - 1, x0 + w + 1, y0, 0xFF696D88);
+        LegacyGui.fill(guiGraphics, x0 - 1, y0 - 1, x0, y0 + h + 1, 0xFF696D88);
+        LegacyGui.fill(guiGraphics, x0 - 1, y0 + h, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
+        LegacyGui.fill(guiGraphics, x0 + w, y0, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
 
         // well with quarter ticks, matching the texture's recess tone
-        guiGraphics.fill(x0, y0, x0 + w, y0 + h, 0xFF9A9FB4);
+        LegacyGui.fill(guiGraphics, x0, y0, x0 + w, y0 + h, 0xFF9A9FB4);
         for (int i = 1; i < 4; i++) {
             int tx = x0 + w * i / 4;
-            guiGraphics.fill(tx, y0, tx + 1, y0 + h, 0xFF868BA4);
+            LegacyGui.fill(guiGraphics, tx, y0, tx + 1, y0 + h, 0xFF868BA4);
         }
 
         // target-zone bed, visible until covered by the fill
         int lo = x0 + (int) Math.round(w * markLo);
         int hi = x0 + (int) Math.round(w * markHi);
         if (markLo >= 0.0D) {
-            guiGraphics.fill(lo, y0, hi, y0 + h, 0xFF79A186);
+            LegacyGui.fill(guiGraphics, lo, y0, hi, y0 + h, 0xFF79A186);
         }
 
         // beveled fill: highlight / body / shade
         int fw = Math.max(0, Math.min(w, (int) Math.round(w * fill)));
         if (fw > 0) {
-            guiGraphics.fill(x0, y0, x0 + fw, y0 + 1, mix(fillColor, 0xFFFFFF, 0.45D));
-            guiGraphics.fill(x0, y0 + 1, x0 + fw, y0 + h - 1, fillColor);
-            guiGraphics.fill(x0, y0 + h - 1, x0 + fw, y0 + h, mix(fillColor, 0x000000, 0.30D));
+            LegacyGui.fill(guiGraphics, x0, y0, x0 + fw, y0 + 1, mix(fillColor, 0xFFFFFF, 0.45D));
+            LegacyGui.fill(guiGraphics, x0, y0 + 1, x0 + fw, y0 + h - 1, fillColor);
+            LegacyGui.fill(guiGraphics, x0, y0 + h - 1, x0 + fw, y0 + h, mix(fillColor, 0x000000, 0.30D));
         }
 
         // target-zone boundary pins, always on top
         if (markLo >= 0.0D) {
-            guiGraphics.fill(lo, y0, lo + 1, y0 + h, 0xFFF2F2F2);
-            guiGraphics.fill(hi - 1, y0, hi, y0 + h, 0xFFF2F2F2);
+            LegacyGui.fill(guiGraphics, lo, y0, lo + 1, y0 + h, 0xFFF2F2F2);
+            LegacyGui.fill(guiGraphics, hi - 1, y0, hi, y0 + h, 0xFFF2F2F2);
         }
     }
 

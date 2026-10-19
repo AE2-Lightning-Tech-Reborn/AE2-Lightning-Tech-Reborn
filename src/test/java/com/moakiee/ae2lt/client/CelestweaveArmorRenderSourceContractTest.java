@@ -20,7 +20,7 @@ class CelestweaveArmorRenderSourceContractTest {
 
         assertTrue(baseArmor.contains("CelestweaveArmorRenderExtensions.INSTANCE"));
         assertTrue(projection.contains("CelestweaveArmorRenderExtensions.INSTANCE"));
-        assertTrue(projection.contains("return SoundEvents.EMPTY"));
+        assertTrue(projection.contains("return com.moakiee.ae2lt.registry.ModSounds.SILENT.get()"));
         assertFalse(projection.contains("equipmentSlot == EquipmentSlot.HEAD"));
         assertTrue(extensions.contains("original.setAllVisible(false)"));
         assertTrue(extensions.contains("return original"));

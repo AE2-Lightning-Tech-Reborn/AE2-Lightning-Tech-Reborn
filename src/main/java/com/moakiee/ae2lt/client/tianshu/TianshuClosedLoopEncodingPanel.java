@@ -28,8 +28,9 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -90,7 +91,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         detailButton = new AE2Button(
                 Component.translatable("ae2lt.tianshu.closed_loop.detail"), btn -> openDetail.run());
         widgets.add("closedLoopDetail", detailButton);
-        detailButton.setTooltip(Tooltip.create(Component.translatable(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(detailButton, Tooltip.create(Component.translatable(
                 "ae2lt.tianshu.closed_loop.detail.tooltip")));
         autoFillButton = new AE2Button(
                 Component.translatable("ae2lt.tianshu.closed_loop.auto_fill"),
@@ -195,7 +196,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         autoFillButton.active = menu.closedLoopCandidateCount > 0
                 || menu.hasClosedLoopPrimaryOutputMark();
         cycleOutputButton.setVisibility(menu.canCycleClosedLoopOutputs());
-        autoFillButton.setTooltip(Tooltip.create(Component.translatable(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(autoFillButton, Tooltip.create(Component.translatable(
                 "ae2lt.tianshu.closed_loop.auto_fill.tooltip",
                 menu.closedLoopCandidateCount == 0 ? 0 : menu.closedLoopCandidateIndex + 1,
                 menu.closedLoopCandidateCount)));
@@ -205,15 +206,15 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawBackgroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
         int panelX = bounds.getX() + x - 1;
         int panelY = bounds.getY() + y + 1;
-        BG.dest(panelX, panelY).blit(graphics);
-        ARROW_COVER.dest(panelX + ARROW_X, panelY + ARROW_Y).blit(graphics);
+        BG.dest(panelX, panelY).blit(graphics, 0);
+        ARROW_COVER.dest(panelX + ARROW_X, panelY + ARROW_Y).blit(graphics, 0);
     }
 
     @Override
-    public void drawForegroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    public void drawForegroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
         drawScaledLabel(graphics, Component.translatable(
                 "ae2lt.tianshu.closed_loop.execution_multiplier.short"), EXEC_LABEL_Y);
         drawScaledLabel(graphics, Component.translatable(
@@ -221,27 +222,27 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         drawStatus(graphics);
     }
 
-    private void drawScaledLabel(GuiGraphics graphics, Component text, int labelY) {
+    private void drawScaledLabel(PoseStack graphics, Component text, int labelY) {
         var font = Minecraft.getInstance().font;
-        var pose = graphics.pose();
+        var pose = graphics;
         pose.pushPose();
         pose.translate(x + CONTROL_X, y + labelY, 0);
         pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, font.plainSubstrByWidth(
+        LegacyGui.drawString(graphics, font, font.plainSubstrByWidth(
                 text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0, 0x404040, false);
         pose.popPose();
     }
 
-    private void drawStatus(GuiGraphics graphics) {
+    private void drawStatus(PoseStack graphics) {
         var font = Minecraft.getInstance().font;
         var text = font.plainSubstrByWidth(
                 statusText().getString(), (int) (CONTROL_WIDTH / LABEL_SCALE));
         float textWidth = font.width(text) * LABEL_SCALE;
-        var pose = graphics.pose();
+        var pose = graphics;
         pose.pushPose();
         pose.translate(x + CONTROL_X + (CONTROL_WIDTH - textWidth) / 2.0F, y + STATUS_Y, 0);
         pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, text, 0, 0, statusColor(), false);
+        LegacyGui.drawString(graphics, font, text, 0, 0, statusColor(), false);
         pose.popPose();
     }
 

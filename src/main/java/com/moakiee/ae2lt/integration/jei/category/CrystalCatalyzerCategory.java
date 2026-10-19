@@ -7,7 +7,8 @@ import java.util.List;
 
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -157,7 +158,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     public void draw(
             CrystalCatalyzerRecipe recipe,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             double mouseX,
             double mouseY) {
         background.draw(guiGraphics);
@@ -169,14 +170,14 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                 "jei.ae2lt.crystal_catalyzer.energy",
                 compactEnergy(recipe.energyPerCycle()));
         int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
 
         String timeStr = recipe.mode() == Mode.CRYSTAL ? "1s" : "2s";
         var timeText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.time",
                 Component.translatable(recipe.mode().translationKey()), timeStr);
         int timeX = (WIDTH - font.width(timeText)) / 2;
-        guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
 
         var lightningText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.lightning",
@@ -185,16 +186,16 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
                         : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
         int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
 
         var matrixText = Component.translatable(
                 "jei.ae2lt.crystal_catalyzer.matrix_note",
                 CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER);
         int matrixX = (WIDTH - font.width(matrixText)) / 2;
-        guiGraphics.drawString(font, matrixText, matrixX, MATRIX_TEXT_Y, 0x404040, false);
+        LegacyGui.drawString(guiGraphics, font, matrixText, matrixX, MATRIX_TEXT_Y, 0x404040, false);
     }
 
-    private void drawProcessOverlay(GuiGraphics guiGraphics, Mode mode) {
+    private void drawProcessOverlay(PoseStack guiGraphics, Mode mode) {
         long cycleMs = mode == Mode.CRYSTAL ? PROCESS_CYCLE_MS_CRYSTAL : PROCESS_CYCLE_MS_DUST;
         long elapsed = Util.getMillis() % cycleMs;
         double progress = elapsed / (double) cycleMs;
@@ -202,7 +203,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
         if (width <= 0) {
             return;
         }
-        guiGraphics.blit(
+        LegacyGui.blit(guiGraphics,
                 BACKGROUND_TEXTURE,
                 PROCESS_X,
                 PROCESS_Y,
@@ -216,7 +217,7 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())
-                .map(stack -> stack.copyWithCount(count))
+                .map(stack -> com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, count))
                 .toList();
     }
 

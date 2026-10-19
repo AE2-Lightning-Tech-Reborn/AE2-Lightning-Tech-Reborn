@@ -12,7 +12,7 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.NumberEntryType;
 import appeng.client.gui.me.common.ClientDisplaySlot;
 import appeng.client.gui.widgets.NumberEntryWidget;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import com.google.common.primitives.Longs;
@@ -51,7 +51,6 @@ final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEnco
         addClientSideSlot(new ClientDisplaySlot(currentStack), SlotSemantics.MACHINE_OUTPUT);
     }
 
-    @Override
     protected PageAnchor getHelpTopic() {
         return getParent().getHelpTopic();
     }

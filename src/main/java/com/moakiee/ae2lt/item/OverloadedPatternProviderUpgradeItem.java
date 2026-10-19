@@ -2,13 +2,13 @@ package com.moakiee.ae2lt.item;
 
 import java.util.Set;
 
-import appeng.helpers.patternprovider.PatternContainer;
+import appeng.helpers.iface.PatternContainer;
 
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,7 +28,7 @@ public final class OverloadedPatternProviderUpgradeItem extends AbstractPatternP
     @Override
     protected boolean isSupportedSource(BlockState state, BlockEntity blockEntity) {
         return blockEntity instanceof PatternContainer
-                && supportsSource(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
+                && supportsSource(Registry.BLOCK.getKey(state.getBlock()));
     }
 
     static boolean supportsSource(ResourceLocation blockId) {

@@ -27,15 +27,15 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
@@ -75,7 +75,7 @@ public class TeslaCoilBlock extends AE2LTBaseEntityBlock<TeslaCoilBlockEntity> {
             Block.box(1, 10, 7.5, 6, 12, 8.5));
 
     public TeslaCoilBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(FACING, Direction.NORTH)
@@ -219,7 +219,7 @@ public class TeslaCoilBlock extends AE2LTBaseEntityBlock<TeslaCoilBlockEntity> {
     }
 
     @Override
-    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+    public List<ItemStack> getDrops(BlockState state, LootContext.Builder builder) {
         if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             return List.of();
         }

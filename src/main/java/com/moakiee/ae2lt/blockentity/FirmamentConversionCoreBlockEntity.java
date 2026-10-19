@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -236,7 +236,7 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
         }
 
         Structure structure = serverLevel.registryAccess()
-                .registryOrThrow(Registries.STRUCTURE)
+                .registryOrThrow(Registry.STRUCTURE_REGISTRY)
                 .get(FIRMAMENT_STARSHIP_ID);
         if (structure == null) {
             return false;

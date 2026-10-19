@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.EnumSet;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
 import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
@@ -18,6 +18,7 @@ import appeng.api.networking.IGridNodeListener;
 import appeng.api.config.Actionable;
 import appeng.api.storage.MEStorage;
 import appeng.api.networking.security.IActionSource;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -45,7 +46,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-public final class MiningFactoryBlockEntity extends AENetworkBlockEntity implements FrequencyBindingHost, LightningCollapseMatrixHost {
+public final class MiningFactoryBlockEntity extends LegacyNetworkBlockEntity implements FrequencyBindingHost, LightningCollapseMatrixHost {
     public static final int PROCESSING_TICKS = 5;
     public static final int ENERGY_CAPACITY = 4_000_000;
     public enum Status { IDLE, WORKING, TOOL, HARVEST, ENERGY, OUTPUT, UNSUPPORTED, ERROR, LIGHTNING }
@@ -220,7 +221,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
         for (int i = 0; i < pending.size();) {
             MiningLoot.Drop drop = pending.get(i);
             int offered = (int) Math.min(drop.count(), (long) MiningFactoryInventory.CAPACITY * MiningFactoryInventory.OUTPUT_COUNT);
-            ItemStack remainder = inventory.insertOutput(drop.stack().copyWithCount(offered));
+            ItemStack remainder = inventory.insertOutput(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(drop.stack(), offered));
             long left = drop.count() - offered + remainder.getCount();
             if (left != drop.count()) changed = true;
             if (left == 0) {
@@ -248,7 +249,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
     }
 
     private void captureCycle() {
-        cycleInput = inventory.getStackInSlot(MiningFactoryInventory.INPUT).copyWithCount(1);
+        cycleInput = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(inventory.getStackInSlot(MiningFactoryInventory.INPUT), 1);
         cycleTool = inventory.getStackInSlot(MiningFactoryInventory.TOOL).copy();
         cycleParallel = getInstalledParallelCapacity();
     }
@@ -318,7 +319,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
                 remainder -> {
                     ItemStack left = inventory.insertOutput(remainder);
                     if (!left.isEmpty()) {
-                        pending.add(new MiningLoot.Drop(left.copyWithCount(1), left.getCount()));
+                        pending.add(new MiningLoot.Drop(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(left, 1), left.getCount()));
                         saveChanges();
                     }
                 }, direction -> exportTargets.resolve(server, worldPosition, direction));
@@ -372,7 +373,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
         ListTag output = new ListTag();
         for (MiningLoot.Drop drop : pending) {
             CompoundTag entry = new CompoundTag();
-            entry.put("Stack", drop.stack().copyWithCount(1).save(new CompoundTag()));
+            entry.put("Stack", com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(drop.stack(), 1).save(new CompoundTag()));
             entry.putLong("Count", drop.count());
             output.add(entry);
         }
@@ -392,7 +393,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
             CompoundTag entry = (CompoundTag) element;
             ItemStack stack = ItemStack.of( entry.getCompound("Stack"));
             long count = entry.getLong("Count");
-            if (!stack.isEmpty() && count > 0) pending.add(new MiningLoot.Drop(stack.copyWithCount(1), count));
+            if (!stack.isEmpty() && count > 0) pending.add(new MiningLoot.Drop(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1), count));
         }
         autoExport = tag.getBoolean("AutoExport");
         allowedOutputs = MemoryCardConfigSupport.readRelativeSideSet(tag, "AllowedOutputs");
@@ -409,7 +410,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
             long left = drop.count();
             while (left > 0) {
                 int count = (int) Math.min(left, Integer.MAX_VALUE);
-                NativeStackDropHelper.addDrops(drops, drop.stack().copyWithCount(count));
+                NativeStackDropHelper.addDrops(drops, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(drop.stack(), count));
                 left -= count;
             }
         }

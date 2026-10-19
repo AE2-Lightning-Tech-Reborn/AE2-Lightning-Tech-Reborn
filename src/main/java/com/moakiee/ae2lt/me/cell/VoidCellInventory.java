@@ -222,6 +222,6 @@ public final class VoidCellInventory implements StorageCell {
         }
 
         return Optional.of(new StorageCellTooltipComponent(
-                upgradeStacks, content, hasMoreContent, true));
+                upgradeStacks, content, hasMoreContent));
     }
 }

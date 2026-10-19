@@ -21,10 +21,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootContext;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 import appeng.util.InteractionUtil;
 
@@ -68,7 +68,7 @@ public class OverloadedPowerSupplyBlock extends AE2LTBaseEntityBlock<OverloadedP
             BlockShapeHelper.createAllFacingShapes(UP_SHAPE);
 
     public OverloadedPowerSupplyBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(POWERED, false)
                 .setValue(OVERLOADED, false)
@@ -107,12 +107,12 @@ public class OverloadedPowerSupplyBlock extends AE2LTBaseEntityBlock<OverloadedP
     }
 
     @Override
-    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+    public List<ItemStack> getDrops(BlockState state, LootContext.Builder builder) {
         // The block item only exists when AppFlux is loaded, so a normal minecraft:item entry
         // would make this always-loaded loot table fail to deserialize in the no-AppFlux profile.
         // A vanilla dynamic entry defers item creation until this registered block is actually
         // broken while retaining explosion conditions, datapack overrides and Forge loot modifiers.
-        builder.withDynamicDrop(BLOCK_ITEM_DROP, output -> output.accept(new ItemStack(this)));
+        builder.withDynamicDrop(BLOCK_ITEM_DROP, (context, output) -> output.accept(new ItemStack(this)));
         return super.getDrops(state, builder);
     }
 

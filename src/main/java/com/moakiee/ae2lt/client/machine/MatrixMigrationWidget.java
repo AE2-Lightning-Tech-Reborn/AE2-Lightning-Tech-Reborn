@@ -6,8 +6,9 @@ import com.moakiee.ae2lt.menu.MatrixMigrationMenu;
 import com.moakiee.ae2lt.network.MatrixPatternMigrationActionPacket;
 import java.util.Locale;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -24,7 +25,7 @@ final class MatrixMigrationWidget {
         button = new TextureToggleButton(TextureToggleButton.ButtonType.PATTERN_MIGRATION, ignored ->
                 NetworkInit.sendToServer(new MatrixPatternMigrationActionPacket(
                         ((AbstractContainerMenu) menu).containerId, menu.getMigrationMenuPos(), menu.getMigrationSnapshot().active())));
-        button.setPosition(x, y);
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(button, x, y);
         update();
     }
 
@@ -46,16 +47,16 @@ final class MatrixMigrationWidget {
             text.append("\n").append(Component.translatable("ae2lt.matrix.migration.remaining",
                     s.incompatible(), s.noSpace(), s.refundBlocked(), s.unavailable(), s.unsupported(), s.disks()));
         }
-        button.setTooltip(Tooltip.create(text));
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(button, Tooltip.create(text));
     }
 
-    void render(GuiGraphics graphics, Font font, int x, int y, int width, int color) {
+    void render(PoseStack graphics, Font font, int x, int y, int width, int color) {
         var s = menu.getMigrationSnapshot();
         if (s.stage() == PatternMigrationSnapshot.Stage.IDLE) return;
         String line = s.reason() == PatternMigrationSnapshot.Reason.RECOVERY
                 ? Component.translatable("ae2lt.matrix.migration.recovery_summary").getString()
                 : stage(s).getString() + " · " + Component.translatable("ae2lt.matrix.migration.counts", s.moved(), s.recovered()).getString();
-        graphics.drawString(font, font.plainSubstrByWidth(line, width), x, y, color, false);
+        LegacyGui.drawString(graphics, font, font.plainSubstrByWidth(line, width), x, y, color, false);
     }
 
     private static Component stage(PatternMigrationSnapshot s) {

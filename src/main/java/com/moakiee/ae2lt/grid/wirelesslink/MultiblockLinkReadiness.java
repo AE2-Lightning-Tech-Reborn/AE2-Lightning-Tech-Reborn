@@ -6,7 +6,7 @@ import appeng.api.networking.IGridNode;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,7 +39,7 @@ public final class MultiblockLinkReadiness {
             return false;
         }
 
-        var blockId = BuiltInRegistries.BLOCK.getKey(currentBlockState(blockEntity).getBlock());
+        var blockId = Registry.BLOCK.getKey(currentBlockState(blockEntity).getBlock());
         if (!node.hasFlag(GridFlags.MULTIBLOCK)
                 && !isKnownFormedStateMultiblock(owner.getClass().getName(), blockId)) {
             return false;
@@ -62,7 +62,7 @@ public final class MultiblockLinkReadiness {
         }
 
         var state = currentBlockState(blockEntity);
-        var blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var blockId = Registry.BLOCK.getKey(state.getBlock());
         if (readBooleanProperty(state, FORMED_PROPERTY) == null
                 || (!node.hasFlag(GridFlags.MULTIBLOCK)
                         && !isKnownFormedStateMultiblock(owner.getClass().getName(), blockId))) {
@@ -113,7 +113,7 @@ public final class MultiblockLinkReadiness {
             return null;
         }
 
-        var blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var blockId = Registry.BLOCK.getKey(state.getBlock());
         if (node.hasFlag(GridFlags.MULTIBLOCK)
                 || isKnownFormedStateMultiblock(owner.getClass().getName(), blockId)) {
             return formed;

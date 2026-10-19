@@ -112,7 +112,7 @@ public final class PhaseLockService {
                         player,
                         armor,
                         true,
-                        player.level().registryAccess(),
+                        player.level.registryAccess(),
                         Dist.DEDICATED_SERVER);
                 PhaseLockProjectionSynchronizer.publishArmorChanges(
                         player,
@@ -196,7 +196,7 @@ public final class PhaseLockService {
                     player,
                     armor,
                     true,
-                    player.level().registryAccess(),
+                    player.level.registryAccess(),
                     Dist.DEDICATED_SERVER);
         }
         // Preserve any future/unknown entries instead of silently deleting them.
@@ -299,10 +299,10 @@ public final class PhaseLockService {
     }
 
     private static boolean shouldRemainLocked(ServerPlayer player, ItemStack anchor) {
-        return CelestweaveArmorState.hasCore(anchor, player.level().registryAccess())
+        return CelestweaveArmorState.hasCore(anchor, player.level.registryAccess())
                 && CelestweaveArmorState.isSubmoduleInstalled(
                         anchor,
-                        player.level().registryAccess(),
+                        player.level.registryAccess(),
                         PhaseLockSubmodule.INSTANCE.id())
                 && CelestweaveArmorState.isSubmoduleEnabled(anchor, PhaseLockSubmodule.INSTANCE)
                 && PhaseLockSubmodule.isArmorLockEnabled(anchor);
@@ -426,12 +426,12 @@ public final class PhaseLockService {
     }
 
     private static void playCollapseSound(ServerPlayer player) {
-        player.level().playSound(
+        player.level.playSound(
                 null,
                 player.getX(),
                 player.getY(),
                 player.getZ(),
-                SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
+                SoundEvents.RESPAWN_ANCHOR_DEPLETE,
                 SoundSource.PLAYERS,
                 0.8F,
                 0.7F);

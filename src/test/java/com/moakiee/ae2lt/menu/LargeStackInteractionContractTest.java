@@ -67,7 +67,7 @@ class LargeStackInteractionContractTest {
 
         String mixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/AEBaseMenuManagedSlotClickMixin.java"));
-        assertTrue(mixin.contains("@Mixin(AEBaseMenu.class)"));
+        assertTrue(mixin.contains("@Mixin(net.minecraft.world.inventory.AbstractContainerMenu.class)"));
         assertTrue(mixin.contains("@Inject(method = \"clicked\", at = @At(\"HEAD\"), cancellable = true)"));
         assertTrue(mixin.contains("LargeStackAppEngSlot.handleMenuInteraction(menu, slotId, button, clickType, player)"));
         assertTrue(mixin.contains("button != 40"),

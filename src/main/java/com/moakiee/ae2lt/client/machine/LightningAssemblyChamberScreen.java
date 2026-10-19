@@ -6,7 +6,8 @@ import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -60,8 +61,8 @@ public class LightningAssemblyChamberScreen extends AEBaseScreen<LightningAssemb
         widgets.add("energyBar", energyBar);
 
         this.autoExportButton = new ToggleButton(
-                Icon.AUTO_EXPORT_ON,
-                Icon.AUTO_EXPORT_OFF,
+                Icon.ARROW_UP,
+                Icon.REDSTONE_LOW,
                 state -> menu.clientToggleAutoExport());
         this.autoExportButton.setTooltipOn(List.of(
                 Component.translatable("ae2lt.gui.lightning_assembly.auto_export.title"),
@@ -89,14 +90,14 @@ public class LightningAssemblyChamberScreen extends AEBaseScreen<LightningAssemb
     }
 
     @Override
-    public void renderSlot(GuiGraphics guiGraphics, Slot slot) {
+    public void renderSlot(PoseStack guiGraphics, Slot slot) {
         super.renderSlot(guiGraphics, slot);
         LargeStackCountRenderer.renderSlotCount(guiGraphics, font, slot);
     }
 
     @Override
-    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-        var lines = super.getTooltipFromContainerItem(stack);
+    public List<Component> getTooltipFromItem(ItemStack stack) {
+        var lines = super.getTooltipFromItem(stack);
         LargeStackCountRenderer.appendCountTooltip(lines, hoveredSlot);
         return lines;
     }

@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.overload.runtime.pattern;
 
 import java.util.Objects;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.crafting.IPatternDetails;
@@ -19,7 +19,7 @@ public final class OverloadPatternSupport {
 
     public static ParsedPatternDefinition toParsedDefinition(ItemStack sourcePatternStack,
                                                              IPatternDetails sourceDetails,
-                                                             HolderLookup.Provider registries) {
+                                                             RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return toParsedDefinition(sourcePatternStack, sourceDetails);
     }

@@ -13,19 +13,19 @@ import com.moakiee.ae2lt.recipe.HyperdimensionalPigmeeConversionRecipe;
 import com.moakiee.ae2lt.recipe.PigmeeBuildingRecipe;
 import com.moakiee.ae2lt.recipe.RainbowPigmeeDyeRecipe;
 import com.moakiee.ae2lt.recipe.RainbowPigmeeColorCycleRecipe;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
+import net.minecraft.world.item.crafting.SimpleRecipeSerializer;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
 public final class ModRecipeTypes {
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-            DeferredRegister.create(Registries.RECIPE_SERIALIZER, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.RECIPE_SERIALIZER_REGISTRY, AE2LightningTech.MODID);
     public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES =
-            DeferredRegister.create(Registries.RECIPE_TYPE, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.RECIPE_TYPE_REGISTRY, AE2LightningTech.MODID);
 
     public static final RegistryObject<RecipeSerializer<LightningTransformRecipe>>
             LIGHTNING_TRANSFORM_SERIALIZER =
@@ -90,7 +90,7 @@ public final class ModRecipeTypes {
             HYPERDIMENSIONAL_PIGMEE_CONVERSION_SERIALIZER =
                     RECIPE_SERIALIZERS.register(
                             "hyperdimensional_pigmee_conversion",
-                            () -> new SimpleCraftingRecipeSerializer<>(
+                            () -> new SimpleRecipeSerializer<>(
                                     HyperdimensionalPigmeeConversionRecipe::new));
 
     public static final RegistryObject<RecipeType<FirmamentConversionRecipe>>
@@ -103,7 +103,7 @@ public final class ModRecipeTypes {
             CREATIVE_PIGMEE_DUPLICATION_SERIALIZER =
                     RECIPE_SERIALIZERS.register(
                             "creative_pigmee_duplication",
-                            () -> new SimpleCraftingRecipeSerializer<>(
+                            () -> new SimpleRecipeSerializer<>(
                                     CreativePigmeeDuplicationRecipe::new));
 
     public static final RegistryObject<RecipeSerializer<PigmeeBuildingRecipe>> PIGMEE_BUILDING_SERIALIZER =
@@ -116,7 +116,7 @@ public final class ModRecipeTypes {
     public static final RegistryObject<RecipeSerializer<RainbowPigmeeColorCycleRecipe>>
             RAINBOW_PIGMEE_COLOR_CYCLE_SERIALIZER =
                     RECIPE_SERIALIZERS.register("rainbow_pigmee_color_cycle",
-                            () -> new SimpleCraftingRecipeSerializer<>(RainbowPigmeeColorCycleRecipe::new));
+                            () -> new SimpleRecipeSerializer<>(RainbowPigmeeColorCycleRecipe::new));
 
     private ModRecipeTypes() {
     }

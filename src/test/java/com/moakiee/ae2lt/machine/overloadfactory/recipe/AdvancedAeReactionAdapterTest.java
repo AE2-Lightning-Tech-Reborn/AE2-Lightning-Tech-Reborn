@@ -35,7 +35,7 @@ class AdvancedAeReactionAdapterTest {
             LoadingModList.of(List.of(), List.of(), null);
         }
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client.core;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 import net.minecraft.client.renderer.MultiBufferSource;
 
 final class CoreEffectGeometry {
@@ -44,8 +44,8 @@ final class CoreEffectGeometry {
         stack.scale(1.50F, 1.50F, 1.50F);
 
         stack.pushPose();
-        stack.mulPose(Axis.YP.rotationDegrees(corePhase * 0.42F));
-        stack.mulPose(Axis.XP.rotationDegrees(corePhase * -0.27F));
+        stack.mulPose(Vector3f.YP.rotationDegrees(corePhase * 0.42F));
+        stack.mulPose(Vector3f.XP.rotationDegrees(corePhase * -0.27F));
         CoreEffectMesh.sphere(
                 stack,
                 coreConsumer,
@@ -99,9 +99,9 @@ final class CoreEffectGeometry {
                                          float yaw, float pitch, float roll,
                                          float red, float green, float blue, float alpha) {
         stack.pushPose();
-        stack.mulPose(Axis.YP.rotationDegrees(yaw));
-        stack.mulPose(Axis.XP.rotationDegrees(pitch));
-        stack.mulPose(Axis.ZP.rotationDegrees(roll));
+        stack.mulPose(Vector3f.YP.rotationDegrees(yaw));
+        stack.mulPose(Vector3f.XP.rotationDegrees(pitch));
+        stack.mulPose(Vector3f.ZP.rotationDegrees(roll));
         CoreEffectMesh.ringBand(
                 stack,
                 consumer,
@@ -122,16 +122,16 @@ final class CoreEffectGeometry {
                                          int count, float nodeRadius,
                                          float red, float green, float blue, float alpha) {
         stack.pushPose();
-        stack.mulPose(Axis.YP.rotationDegrees(yaw));
-        stack.mulPose(Axis.XP.rotationDegrees(pitch));
-        stack.mulPose(Axis.ZP.rotationDegrees(roll));
+        stack.mulPose(Vector3f.YP.rotationDegrees(yaw));
+        stack.mulPose(Vector3f.XP.rotationDegrees(pitch));
+        stack.mulPose(Vector3f.ZP.rotationDegrees(roll));
         for (int index = 0; index < count; index++) {
             stack.pushPose();
-            stack.mulPose(Axis.YP.rotationDegrees(
+            stack.mulPose(Vector3f.YP.rotationDegrees(
                     orbitDegrees + index * 360.0F / count));
             stack.translate(radius, 0.0F, 0.0F);
-            stack.mulPose(Axis.YP.rotationDegrees(45.0F));
-            stack.mulPose(Axis.ZP.rotationDegrees(45.0F));
+            stack.mulPose(Vector3f.YP.rotationDegrees(45.0F));
+            stack.mulPose(Vector3f.ZP.rotationDegrees(45.0F));
             CoreEffectMesh.octahedron(
                     stack,
                     consumer,
@@ -173,9 +173,9 @@ final class CoreEffectGeometry {
         float direction = (step & 1) == 0 ? 1.0F : -1.0F;
 
         stack.pushPose();
-        stack.mulPose(Axis.YP.rotationDegrees((float) spinDegrees));
-        stack.mulPose(Axis.XP.rotationDegrees(24.0F));
-        stack.mulPose(Axis.ZP.rotationDegrees(-8.0F));
+        stack.mulPose(Vector3f.YP.rotationDegrees((float) spinDegrees));
+        stack.mulPose(Vector3f.XP.rotationDegrees(24.0F));
+        stack.mulPose(Vector3f.ZP.rotationDegrees(-8.0F));
 
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
@@ -200,11 +200,11 @@ final class CoreEffectGeometry {
         int coordinate = axis == 0 ? x : axis == 1 ? y : z;
         if (coordinate == layer) {
             if (axis == 0) {
-                stack.mulPose(Axis.XP.rotationDegrees(turn));
+                stack.mulPose(Vector3f.XP.rotationDegrees(turn));
             } else if (axis == 1) {
-                stack.mulPose(Axis.YP.rotationDegrees(turn));
+                stack.mulPose(Vector3f.YP.rotationDegrees(turn));
             } else {
-                stack.mulPose(Axis.ZP.rotationDegrees(turn));
+                stack.mulPose(Vector3f.ZP.rotationDegrees(turn));
             }
         }
 

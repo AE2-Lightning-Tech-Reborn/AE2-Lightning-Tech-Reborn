@@ -54,12 +54,12 @@ public final class ArmorCapabilityCollector {
                 continue;
             }
 
-            var snapshot = CelestweaveArmorState.snapshot(player, armor, player.level().registryAccess(), true);
+            var snapshot = CelestweaveArmorState.snapshot(player, armor, player.level.registryAccess(), true);
             if (!snapshot.hasCore()) {
                 continue;
             }
 
-            for (ItemStack moduleStack : CelestweaveArmorState.loadModuleStacks(armor, player.level().registryAccess())) {
+            for (ItemStack moduleStack : CelestweaveArmorState.loadModuleStacks(armor, player.level.registryAccess())) {
                 if (!(moduleStack.getItem() instanceof OverloadDeviceModuleItem module)) {
                     continue;
                 }
@@ -70,7 +70,7 @@ public final class ArmorCapabilityCollector {
 
                 int iterations = expandByCount ? Math.max(1, moduleStack.getCount()) : 1;
                 for (int i = 0; i < iterations; i++) {
-                    ItemStack unit = moduleStack.copyWithCount(1);
+                    ItemStack unit = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(moduleStack, 1);
                     if (!(moduleStack.getItem() instanceof CelestweaveArmorSubmoduleItem submoduleProvider)) {
                         for (var capability : module.capabilities(unit)) {
                             out.add(new ActiveCapability(armor, module.moduleTypeId(unit), capability));
@@ -92,9 +92,9 @@ public final class ArmorCapabilityCollector {
     }
 
     private static boolean isSubmoduleActiveForSide(Player player, ItemStack armor, CelestweaveArmorSubmodule submodule) {
-        if (player.level().isClientSide()) {
+        if (player.level.isClientSide()) {
             // Client derives active state from the synced stack; no client-side cache.
-            return CelestweaveArmorState.isSubmoduleActiveClient(armor, submodule, player.level().getGameTime());
+            return CelestweaveArmorState.isSubmoduleActiveClient(armor, submodule, player.level.getGameTime());
         }
         return CelestweaveArmorState.isSubmoduleRuntimeActive(armor, submodule.id());
     }
@@ -110,9 +110,9 @@ public final class ArmorCapabilityCollector {
         private List<ActiveCapability> perInstalledUnit;
 
         synchronized List<ActiveCapability> get(Player player, boolean expandByCount) {
-            long currentGameTime = player.level().getGameTime();
-            boolean currentClientSide = player.level().isClientSide();
-            ResourceKey<Level> currentDimension = player.level().dimension();
+            long currentGameTime = player.level.getGameTime();
+            boolean currentClientSide = player.level.isClientSide();
+            ResourceKey<Level> currentDimension = player.level.dimension();
             if (gameTime != currentGameTime
                     || clientSide != currentClientSide
                     || !currentDimension.equals(dimension)) {

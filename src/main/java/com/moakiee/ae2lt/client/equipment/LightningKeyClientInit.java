@@ -13,7 +13,7 @@ import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.api.util.AEColor;
 import appeng.items.storage.BasicStorageCell;
 
@@ -40,7 +40,7 @@ public final class LightningKeyClientInit {
             if (ModList.get().isLoaded("curios")) {
                 PigmeeCuriosClientBridge.registerRenderers();
             }
-            AEKeyRendering.register(LightningKeyType.INSTANCE, LightningKey.class, LightningKeyRenderHandler.INSTANCE);
+            AEStackRendering.register(LightningKeyType.INSTANCE, LightningKey.class, LightningKeyRenderHandler.INSTANCE);
 
             ItemProperties.register(
                     ModItems.ELECTRO_CHIME_CRYSTAL.get(),

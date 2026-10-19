@@ -2,7 +2,6 @@ package com.moakiee.ae2lt.network;
 import java.util.function.Supplier;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.server.level.ServerPlayer;
 
 public record DashPacket() {

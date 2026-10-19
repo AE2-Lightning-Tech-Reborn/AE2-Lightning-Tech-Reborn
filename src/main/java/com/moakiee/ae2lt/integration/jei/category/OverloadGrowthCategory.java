@@ -258,7 +258,7 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
 
             builder.addSlot(RecipeIngredientRole.CATALYST, centerX + 8, 40)
                     .setStandardSlotBackground()
-                    .addItemLike(AEBlocks.GROWTH_ACCELERATOR);
+                    .addItemLike(AEBlocks.QUARTZ_GROWTH_ACCELERATOR);
         }
     }
 }

@@ -232,7 +232,7 @@ public final class RailgunArcRenderer {
         stack.popPose();
     }
 
-    private static void drawArc(BufferBuilder bb, org.joml.Matrix4f matrix, Arc arc, Vec3 camPos, float alpha) {
+    private static void drawArc(BufferBuilder bb, com.mojang.math.Matrix4f matrix, Arc arc, Vec3 camPos, float alpha) {
         for (int i = 0; i < arc.points.size() - 1; i++) {
             Vec3 a = arc.points.get(i);
             Vec3 b = arc.points.get(i + 1);
@@ -251,7 +251,7 @@ public final class RailgunArcRenderer {
         }
     }
 
-    private static void addSegmentBillboard(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void addSegmentBillboard(BufferBuilder bb, com.mojang.math.Matrix4f matrix,
                                             Vec3 a, Vec3 b, Vec3 camPos, float width,
                                             float r, float g, float bCol, float alpha) {
         if (!isRenderableSegment(a, b)

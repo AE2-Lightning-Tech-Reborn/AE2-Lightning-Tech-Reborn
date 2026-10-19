@@ -19,7 +19,7 @@ import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 
 /** Execution snapshot for one member of an already-planned closed loop. */
 public class ClosedLoopExpandedPatternDetails
-        implements IPatternDetails, CraftingTaskPersistenceDefinition, IPrioritizedCraftingTask,
+        implements com.moakiee.ae2lt.compat.LegacyPatternDetails, CraftingTaskPersistenceDefinition, IPrioritizedCraftingTask,
         IProviderLookupPattern, ISeedPreservingCraftingTask, IPlannedSeedSlotPattern {
     public static final int CLOSED_LOOP_DISPATCH_PRIORITY = 1_000;
     protected final IPatternDetails delegate;
@@ -221,10 +221,10 @@ public class ClosedLoopExpandedPatternDetails
     @Override public IInput[] getInputs() { return executionInputs.clone(); }
     @Override public GenericStack[] getOutputs() { return delegate.getOutputs(); }
     @Override public boolean supportsPushInputsToExternalInventory() {
-        return delegate.supportsPushInputsToExternalInventory();
+        return com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(delegate);
     }
     @Override public void pushInputsToExternalInventory(KeyCounter[] inputHolder, PatternInputSink inputSink) {
-        delegate.pushInputsToExternalInventory(inputHolder, inputSink);
+        com.moakiee.ae2lt.compat.LegacyPatternDetails.push(delegate, inputHolder, inputSink);
     }
 
     @Override

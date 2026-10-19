@@ -30,7 +30,7 @@ import appeng.crafting.inv.ListCraftingInventory;
 import appeng.hooks.ticking.TickHandler;
 import appeng.me.service.CraftingService;
 import com.moakiee.ae2lt.me.key.LightningKey;
-import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
+import com.moakiee.ae2lt.compat.LegacyTimeTracker;
 import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -102,7 +102,7 @@ class TimeWheelDispatchBoundaryTest {
             net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         }
         net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         var types = field(Class.forName("appeng.api.stacks.AEKeyTypesInternal"), "registry");
         var previousTypes = types.get(null);
         var clock = field(TickHandler.class, "tickCounter");
@@ -137,7 +137,7 @@ class TimeWheelDispatchBoundaryTest {
                     "finalOutput", new GenericStack(OUTPUT, amount),
                     "emittedItems", new KeyCounter(), "patternTimes", Map.of(pattern, amount)));
             var linkData = new CompoundTag();
-            linkData.putUUID("craftId", UUID.randomUUID());
+            linkData.putString("CraftID", UUID.randomUUID().toString());
             linkData.putBoolean("req", false);
             linkData.putBoolean("standalone", true);
             var link = new CraftingLink(linkData, cpu);
@@ -222,15 +222,26 @@ class TimeWheelDispatchBoundaryTest {
         }));
     }
 
-    static final class Tracker extends ElapsedTimeTracker implements ElapsedTimeTrackerAccessor {
+    static final class Tracker extends ElapsedTimeTracker implements LegacyTimeTracker {
+        Tracker() { super(0); }
         @Override public void ae2lt$addMaxItems(long amount, AEKeyType type) { forward("addMaxItems", amount, type); }
         @Override public void ae2lt$decrementItems(long amount, AEKeyType type) { forward("decrementItems", amount, type); }
         private void forward(String name, long amount, AEKeyType type) {
             try {
-                var method = ElapsedTimeTracker.class.getDeclaredMethod(name, long.class, AEKeyType.class);
-                method.setAccessible(true);
-                method.invoke(this, amount, type);
+                if (name.equals("decrementItems")) {
+                    var method = ElapsedTimeTracker.class.getDeclaredMethod(name, long.class);
+                    method.setAccessible(true);
+                    method.invoke(this, amount);
+                } else {
+                    for (var fieldName : java.util.List.of("startItemCount", "remainingItemCount")) {
+                        var field = ElapsedTimeTracker.class.getDeclaredField(fieldName);
+                        field.setAccessible(true);
+                        long old = field.getLong(this);
+                        field.setLong(this, old > Long.MAX_VALUE - amount ? Long.MAX_VALUE : old + amount);
+                    }
+                }
             } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         }
+
     }
 }

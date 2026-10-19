@@ -39,7 +39,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,7 +56,7 @@ import net.minecraftforge.common.util.LazyOptional;
  * <p>This intentionally does not extend AE2's molecular assembler and therefore
  * has no upgrade inventory at all.</p>
  */
-public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkInvBlockEntity
+public final class PigmeeMolecularAssemblerBlockEntity extends com.moakiee.ae2lt.compat.LegacyNetworkInvBlockEntity
         implements IGridTickable, ICraftingMachine, IPowerChannelState {
     public static final ResourceLocation INV_MAIN = new ResourceLocation(AE2LightningTech.MODID, "pigmee_molecular_assembler");
 
@@ -68,7 +68,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkInvBlock
     private static final int ENERGY_PER_TICK = 10;
 
     private final CraftingContainer craftingGrid =
-            new TransientCraftingContainer(new AutoCraftingMenu(), 3, 3);
+            new CraftingContainer(new AutoCraftingMenu(), 3, 3);
     private final AppEngInternalInventory itemInventory =
             new AppEngInternalInventory(this, CRAFTING_SLOT_COUNT + 1, 1);
     private final AppEngInternalInventory patternInventory =
@@ -99,8 +99,8 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkInvBlock
 
     @Override
     public PatternContainerGroup getCraftingMachineInfo() {
-        Component name = hasCustomName()
-                ? getCustomName()
+        Component name = hasCustomInventoryName()
+                ? getCustomInventoryName()
                 : ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get().asItem().getDescription();
         return new PatternContainerGroup(
                 AEItemKey.of(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get()),
@@ -128,7 +128,7 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkInvBlock
             input.removeZeros();
             if (!input.isEmpty()) {
                 clearAutomaticJob();
-                itemInventory.clear();
+                com.moakiee.ae2lt.compat.LegacyInventories.clear(itemInventory);
                 throw new IllegalStateException(
                         "Pigmee assembler could not place all supplied crafting inputs");
             }

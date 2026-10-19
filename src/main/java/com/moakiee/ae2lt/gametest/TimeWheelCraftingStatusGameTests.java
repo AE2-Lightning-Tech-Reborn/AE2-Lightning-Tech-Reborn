@@ -74,32 +74,32 @@ public final class TimeWheelCraftingStatusGameTests {
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var running = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(running.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(running.isFullStatus(),
                     "Selecting the virtual CPU must send an initial full status");
-            helper.assertTrue(running.getEntries().size() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(running.getEntries().size() == 1,
                     "The running job must expose its emitted output in the status table");
-            helper.assertTrue(
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(
                     running.getRemainingItemCount() == runningTracker.getRemainingItemCount(),
                     "The status header must use the tracker's remaining item count");
-            helper.assertTrue(running.getStartItemCount() == runningTracker.getStartItemCount(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(running.getStartItemCount() == runningTracker.getStartItemCount(),
                     "The status header must use the tracker's initial item count");
 
             cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE);
-            helper.assertFalse(cpu.getCraftingLogic().hasJob(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(cpu.getCraftingLogic().hasJob(),
                     "Returning the emitted final output must finish the virtual job");
 
             var finishedTracker = cpu.getCraftingLogic().getElapsedTimeTracker();
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var finished = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(finished.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(finished.isFullStatus(),
                     "The active-to-finished transition must replace the client status view");
-            helper.assertTrue(finished.getEntries().isEmpty(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(finished.getEntries().isEmpty(),
                     "The replacement status must not retain entries from the finished job");
-            helper.assertTrue(
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(
                     finished.getRemainingItemCount() == finishedTracker.getRemainingItemCount(),
                     "The terminal status must use the empty tracker's remaining item count");
-            helper.assertTrue(finished.getStartItemCount() == finishedTracker.getStartItemCount(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(finished.getStartItemCount() == finishedTracker.getStartItemCount(),
                     "The terminal status must use the empty tracker's initial item count");
         } finally {
             harness.close();
@@ -121,36 +121,36 @@ public final class TimeWheelCraftingStatusGameTests {
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var initial = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(initial.isFullStatus() && initial.getEntries().size() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(initial.isFullStatus() && initial.getEntries().size() == 1,
                     "Selecting the running CPU must establish one full baseline entry");
             var initialEntry = initial.getEntries().get(0);
-            helper.assertTrue(output.equals(initialEntry.getWhat()),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(output.equals(initialEntry.getWhat()),
                     "The full baseline must identify the emitted output");
-            helper.assertTrue(initialEntry.getActiveAmount() == 4,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(initialEntry.getActiveAmount() == 4,
                     "The full baseline must expose all four waiting outputs");
 
             cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE);
-            helper.assertTrue(cpu.getCraftingLogic().hasJob(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cpu.getCraftingLogic().hasJob(),
                     "Returning one of four outputs must leave the job active");
             var tracker = cpu.getCraftingLogic().getElapsedTimeTracker();
 
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var update = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertFalse(update.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(update.isFullStatus(),
                     "An in-job item change must remain an incremental status update");
-            helper.assertTrue(update.getEntries().size() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(update.getEntries().size() == 1,
                     "The incremental update must contain only the changed output");
             var updatedEntry = update.getEntries().get(0);
-            helper.assertTrue(updatedEntry.getSerial() == initialEntry.getSerial(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(updatedEntry.getSerial() == initialEntry.getSerial(),
                     "The incremental update must retain the baseline serial");
-            helper.assertTrue(updatedEntry.getWhat() == null,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(updatedEntry.getWhat() == null,
                     "A known incremental serial must omit the repeated AE key payload");
-            helper.assertTrue(updatedEntry.getActiveAmount() == 3,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(updatedEntry.getActiveAmount() == 3,
                     "The incremental update must report the reduced waiting amount");
-            helper.assertTrue(update.getRemainingItemCount() == tracker.getRemainingItemCount(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(update.getRemainingItemCount() == tracker.getRemainingItemCount(),
                     "The incremental header must use the live tracker's remaining count");
-            helper.assertTrue(update.getStartItemCount() == tracker.getStartItemCount(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(update.getStartItemCount() == tracker.getStartItemCount(),
                     "The incremental header must use the live tracker's initial count");
         } finally {
             harness.close();
@@ -174,15 +174,15 @@ public final class TimeWheelCraftingStatusGameTests {
             harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
 
             cpu.cancelJob();
-            helper.assertFalse(cpu.getCraftingLogic().hasJob(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(cpu.getCraftingLogic().hasJob(),
                     "Canceling an ordinary virtual job must close its lifecycle immediately");
 
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var cancelled = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(cancelled.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cancelled.isFullStatus(),
                     "Cancellation must replace the client's incremental status view");
-            helper.assertTrue(cancelled.getEntries().isEmpty(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cancelled.getEntries().isEmpty(),
                     "An empty canceled CPU must not retain entries from its old job");
 
             harness.connection().clear();
@@ -212,9 +212,9 @@ public final class TimeWheelCraftingStatusGameTests {
             }
         });
         var plan = syntheticPlan(output, 1, new KeyCounter());
-        helper.assertTrue(pool.submitJob(grid, plan, IActionSource.empty(), null).successful(),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(pool.submitJob(grid, plan, IActionSource.empty(), null).successful(),
                 "The pool must accept the synthetic emitted-item job");
-        helper.assertTrue(pool.getActiveCpus().size() == 1,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(pool.getActiveCpus().size() == 1,
                 "Submitting the job must publish one virtual CPU");
         var selectedCpu = pool.getActiveCpus().get(0);
         var harness = openMenu(helper, "time-wheel-pool-removal");
@@ -226,15 +226,15 @@ public final class TimeWheelCraftingStatusGameTests {
             harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
 
             pool.cancelAll();
-            helper.assertTrue(pool.getActiveCpus().isEmpty(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(pool.getActiveCpus().isEmpty(),
                     "The pool must remove a canceled virtual CPU with no retained state");
 
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var terminal = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(terminal.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(terminal.isFullStatus(),
                     "A menu retaining the removed CPU object must receive a terminal full snapshot");
-            helper.assertTrue(terminal.getEntries().isEmpty(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(terminal.getEntries().isEmpty(),
                     "The removed empty CPU must replace the old client entries with an empty view");
         } finally {
             harness.close();
@@ -254,7 +254,7 @@ public final class TimeWheelCraftingStatusGameTests {
         var harness = openMenu(helper, "time-wheel-retained");
 
         try {
-            helper.assertTrue(cpu.getCraftingLogic().getStored(ingredient) == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cpu.getCraftingLogic().getStored(ingredient) == 1,
                     "The job must initially hold its extracted ingredient");
             selectCpu(harness.menu(), cpu);
             harness.connection().clear();
@@ -262,24 +262,24 @@ public final class TimeWheelCraftingStatusGameTests {
             harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
 
             cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE);
-            helper.assertFalse(cpu.getCraftingLogic().hasJob(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(cpu.getCraftingLogic().hasJob(),
                     "Returning the final output must finish the synthetic job");
-            helper.assertTrue(cpu.getCraftingLogic().getStored(ingredient) == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cpu.getCraftingLogic().getStored(ingredient) == 1,
                     "Rejected network insertion must leave the ingredient in CPU inventory");
 
             harness.connection().clear();
             harness.menu().broadcastChanges();
             var terminal = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(terminal.isFullStatus(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(terminal.isFullStatus(),
                     "The job boundary must still send a replacement snapshot with retained inventory");
-            helper.assertTrue(terminal.getEntries().size() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(terminal.getEntries().size() == 1,
                     "The replacement snapshot must contain exactly the retained ingredient");
             var retained = terminal.getEntries().get(0);
-            helper.assertTrue(ingredient.equals(retained.getWhat()),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(ingredient.equals(retained.getWhat()),
                     "The replacement snapshot must identify the retained ingredient");
-            helper.assertTrue(retained.getStoredAmount() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(retained.getStoredAmount() == 1,
                     "The replacement snapshot must preserve the retained stored amount");
-            helper.assertTrue(retained.getActiveAmount() == 0 && retained.getPendingAmount() == 0,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(retained.getActiveAmount() == 0 && retained.getPendingAmount() == 0,
                     "Retained inventory must not inherit active or pending counts from the old job");
         } finally {
             harness.close();
@@ -307,9 +307,9 @@ public final class TimeWheelCraftingStatusGameTests {
             selectCpu(harness.menu(), secondCpu);
             harness.menu().broadcastChanges();
             var switched = harness.connection().requireOnlyCraftingStatus(harness.menu().containerId);
-            helper.assertTrue(switched.isFullStatus() && switched.getEntries().size() == 1,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(switched.isFullStatus() && switched.getEntries().size() == 1,
                     "Switching virtual CPUs must establish a new full baseline");
-            helper.assertTrue(secondOutput.equals(switched.getEntries().get(0).getWhat()),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(secondOutput.equals(switched.getEntries().get(0).getWhat()),
                     "The new baseline must contain only the newly selected CPU's output");
 
             harness.connection().clear();
@@ -333,7 +333,7 @@ public final class TimeWheelCraftingStatusGameTests {
             KeyCounter usedItems) {
         var cpu = new TimeWheelCraftingCPU(new TestCpuHost(helper, grid), 1, 0, 1, false);
         var plan = syntheticPlan(output, amount, usedItems);
-        helper.assertTrue(cpu.submitJob(grid, plan, IActionSource.empty(), null).successful(),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cpu.submitJob(grid, plan, IActionSource.empty(), null).successful(),
                 "The synthetic emitted-item job must be accepted by the virtual CPU");
         return cpu;
     }
@@ -354,7 +354,7 @@ public final class TimeWheelCraftingStatusGameTests {
         var player = new ServerPlayer(
                 helper.getLevel().getServer(),
                 helper.getLevel(),
-                new GameProfile(UUID.randomUUID(), playerName));
+                new GameProfile(UUID.randomUUID(), playerName), null);
         var connection = new RecordingConnection();
         new ServerGamePacketListenerImpl(helper.getLevel().getServer(), connection, player);
         var menu = new CraftingCPUMenu(CraftingCPUMenu.TYPE, 1, player.getInventory(), null);
@@ -591,12 +591,7 @@ public final class TimeWheelCraftingStatusGameTests {
                     if (data.readInt() != BasePacketHandler.PacketTypes.CRAFTING_STATUS.ordinal()) {
                         continue;
                     }
-                    int containerId = data.readInt();
-                    if (containerId != expectedContainerId) {
-                        throw new AssertionError(
-                                "Crafting status targeted container " + containerId
-                                        + " instead of " + expectedContainerId);
-                    }
+                    // AE2 12 routes status packets to the active CPU screen; it carries no menu ID.
                     statuses.add(CraftingStatus.read(data));
                 } finally {
                     data.release();

@@ -58,7 +58,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.registries.DeferredRegister;
@@ -79,7 +79,7 @@ public final class ModBlocks {
             registerPigmeePanels(true);
 
     public static final RegistryObject<PigmeeBuildingSlabBlock> PIGMEE_BUILDING_SLAB =
-            registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MapColor.COLOR_PINK));
+            registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MaterialColor.COLOR_PINK));
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_BUILDING_SLABS =
             registerPigmeeSlabs(false);
     public static final Map<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>> PIGMEE_FRAMED_BUILDING_SLABS =
@@ -89,7 +89,7 @@ public final class ModBlocks {
         var slabs = new EnumMap<DyeColor, RegistryObject<PigmeeBuildingSlabBlock>>(DyeColor.class);
         for (DyeColor color : DyeColor.values()) {
             String name = color.getName() + (framed ? "_pigmee_framed_building_slab" : "_pigmee_building_slab");
-            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMapColor())));
+            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMaterialColor())));
         }
         return Collections.unmodifiableMap(slabs);
     }
@@ -103,59 +103,58 @@ public final class ModBlocks {
         return Collections.unmodifiableMap(panels);
     }
 
-    private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.COLOR_CYAN)
+    private static final BlockBehaviour.Properties BUDDING_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.COLOR_CYAN)
             .strength(3.0F, 5.0F)
             .sound(SoundType.AMETHYST)
             .randomTicks()
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties CLUSTER_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.COLOR_CYAN)
+    private static final BlockBehaviour.Properties CLUSTER_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.COLOR_CYAN)
             .strength(1.5F)
             .sound(SoundType.AMETHYST_CLUSTER)
-            .forceSolidOn()
+
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties OVERLOAD_CRYSTAL_BLOCK_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.COLOR_CYAN)
+    private static final BlockBehaviour.Properties OVERLOAD_CRYSTAL_BLOCK_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.COLOR_CYAN)
             .strength(3.0F, 5.0F)
             .sound(SoundType.STONE)
-            .forceSolidOn()
+
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties SILICON_BLOCK_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.METAL)
+    private static final BlockBehaviour.Properties SILICON_BLOCK_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
-            .forceSolidOn()
+
             .requiresCorrectToolForDrops()
             .noLootTable();
 
-    private static final BlockBehaviour.Properties OVERLOAD_MACHINE_FRAME_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.METAL)
+    private static final BlockBehaviour.Properties OVERLOAD_MACHINE_FRAME_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
-            .forceSolidOn()
+
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties FIRMAMENT_CONVERSION_CORE_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.COLOR_CYAN)
+    private static final BlockBehaviour.Properties FIRMAMENT_CONVERSION_CORE_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.HEAVY_METAL)
+            .color(MaterialColor.COLOR_CYAN)
             .strength(-1.0F, 3600000.0F)
             .sound(SoundType.METAL)
-            .forceSolidOn()
-            .pushReaction(PushReaction.BLOCK)
+
             .noLootTable();
 
-    private static final BlockBehaviour.Properties MATRIX_MACHINE_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.METAL)
+    private static final BlockBehaviour.Properties MATRIX_MACHINE_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.METAL)
             .strength(5.0F, 6.0F)
             .sound(SoundType.METAL)
-            .forceSolidOn()
+
             .requiresCorrectToolForDrops();
 
-    private static final BlockBehaviour.Properties MATRIX_GLASS_PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.COLOR_CYAN)
+    private static final BlockBehaviour.Properties MATRIX_GLASS_PROPERTIES = BlockBehaviour.Properties.of(net.minecraft.world.level.material.Material.STONE)
+            .color(MaterialColor.COLOR_CYAN)
             .strength(3.0F, 6.0F)
             .sound(SoundType.GLASS)
             .noOcclusion()

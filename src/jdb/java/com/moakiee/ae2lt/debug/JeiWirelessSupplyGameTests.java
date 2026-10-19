@@ -119,7 +119,7 @@ public final class JeiWirelessSupplyGameTests {
             player.containerMenu = new CraftingMenu(17, player.getInventory(), ContainerLevelAccess.create(level, table));
             check(WirelessJeiSupply.handle(player, packet(player, 7, true, materials)).status() == 0, "menu identity rechecked despite reused id");
             player.containerMenu = menu;
-            var curios = top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).orElseThrow(AssertionError::new).getEquippedCurios();
+            var curios = top.theillusivec4.curios.api.CuriosApi.getCuriosHelper().getCuriosHandler(player).orElseThrow(AssertionError::new).getEquippedCurios();
             check(curios.getSlots() > 0, "Curios fixture slots available");
             player.getInventory().setItem(0, ItemStack.EMPTY);
             player.getInventory().setItem(1, ItemStack.EMPTY);

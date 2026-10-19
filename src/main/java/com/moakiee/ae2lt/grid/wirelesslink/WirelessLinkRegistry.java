@@ -37,8 +37,7 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -843,7 +842,7 @@ public final class WirelessLinkRegistry extends SavedData {
         var sourceIds = new LinkedHashSet<UUID>();
 
         for (var pending : pendingChanges) {
-            var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(pending.dimensionId));
+            var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(pending.dimensionId));
             var level = server.getLevel(dim);
             if (level == null) {
                 continue;
@@ -1232,7 +1231,7 @@ public final class WirelessLinkRegistry extends SavedData {
             return;
         }
 
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(pending.dimensionId()));
+        var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(pending.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return;
@@ -1533,7 +1532,7 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     private PersistedTarget resolvePersistedTarget(WirelessLink link, MinecraftServer server) {
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(link.dimensionId()));
+        var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(link.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return PersistedTarget.state(WirelessLinkState.PENDING_TARGET_CHUNK);
@@ -1549,8 +1548,8 @@ public final class WirelessLinkRegistry extends SavedData {
             return PersistedTarget.state(WirelessLinkState.TARGET_MISSING);
         }
 
-        var currentBlockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString();
-        var currentBeType = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString();
+        var currentBlockId = Registry.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString();
+        var currentBeType = Registry.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString();
         if (!currentBlockId.equals(link.blockId()) || !currentBeType.equals(link.blockEntityTypeId())) {
             return PersistedTarget.state(link.mode() == WirelessLinkMode.PART
                     ? WirelessLinkState.PART_TYPE_CHANGED
@@ -1881,8 +1880,8 @@ public final class WirelessLinkRegistry extends SavedData {
                 WirelessLinkMode.DEVICE,
                 node,
                 "",
-                BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
-                BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString(),
+                Registry.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
+                Registry.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString(),
                 "",
                 ""));
     }
@@ -2015,7 +2014,7 @@ public final class WirelessLinkRegistry extends SavedData {
 
     @Nullable
     private LocatedTarget resolveLocator(TargetLocator locator, MinecraftServer server) {
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(locator.dimensionId()));
+        var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(locator.dimensionId()));
         var level = server.getLevel(dim);
         if (level == null) {
             return null;
@@ -2065,12 +2064,12 @@ public final class WirelessLinkRegistry extends SavedData {
         var be = level.getBlockEntity(pos);
         String beType = be == null
                 ? "minecraft:empty"
-                : BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString();
+                : Registry.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString();
         return new LinkTarget(
                 WirelessLinkMode.PART,
                 node,
                 side == null ? "" : side.getName(),
-                BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
+                Registry.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
                 beType,
                 partId(part),
                 part.getClass().getName());
@@ -2082,10 +2081,10 @@ public final class WirelessLinkRegistry extends SavedData {
                 WirelessLinkMode.DEVICE,
                 node,
                 "",
-                BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
+                Registry.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString(),
                 be == null
                         ? "minecraft:empty"
-                        : BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString(),
+                        : Registry.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString(),
                 "",
                 "");
     }
@@ -2117,7 +2116,7 @@ public final class WirelessLinkRegistry extends SavedData {
     private void registerDevice(WirelessLink link) {
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(link.dimensionId()));
+        var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(link.dimensionId()));
         manager.registerDevice(link.frequencyId(), new WirelessFrequencyManager.DeviceEntry(
                 dim,
                 BlockPos.of(link.posLong()),
@@ -2129,7 +2128,7 @@ public final class WirelessLinkRegistry extends SavedData {
     private void unregisterDevice(WirelessLink link) {
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
-        var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(link.dimensionId()));
+        var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(link.dimensionId()));
         manager.unregisterDevice(link.frequencyId(), dim, BlockPos.of(link.posLong()));
     }
 

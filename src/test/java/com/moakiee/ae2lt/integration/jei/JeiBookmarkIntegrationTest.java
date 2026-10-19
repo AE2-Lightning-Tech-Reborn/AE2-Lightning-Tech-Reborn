@@ -46,7 +46,7 @@ class JeiBookmarkIntegrationTest {
             LoadingModList.of(List.of(), List.of(), null);
         }
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @BeforeEach
@@ -254,8 +254,8 @@ class JeiBookmarkIntegrationTest {
             var helper = Proxy.newProxyInstance(loader,
                     new Class<?>[] {mezz.jei.api.ingredients.IIngredientHelper.class},
                     (proxy, method, arguments) -> {
-                        if (method.getName().equals("getUniqueId")) {
-                            Object value = arguments[0];
+                        if (method.getName().equals("getUniqueId") || method.getName().equals("getUid")) {
+                            Object value = arguments[0] instanceof ITypedIngredient<?> typed ? typed.getIngredient() : arguments[0];
                             return (value instanceof ItemStack item ? AEItemKey.of(item)
                                     : AEFluidKey.of((FluidStack) value)).toString();
                         }
@@ -313,6 +313,7 @@ class JeiBookmarkIntegrationTest {
         return (IJeiRuntime) Proxy.newProxyInstance(loader, new Class<?>[] {IJeiRuntime.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
                     case "getBookmarkOverlay" -> overlay;
+                    case "getBookmarkManager" -> null;
                     case "getIngredientManager" -> manager;
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
@@ -324,6 +325,7 @@ class JeiBookmarkIntegrationTest {
     }
 
     private record TypedIngredient<T>(IIngredientType<T> type, T ingredient) implements ITypedIngredient<T> {
+        @Override public ITypedIngredient<T> normalize(mezz.jei.api.ingredients.IIngredientHelper<T> helper) { return new TypedIngredient<>(type, helper.normalizeIngredient(ingredient)); }
         @Override
         public IIngredientType<T> getType() {
             return type;

@@ -279,9 +279,7 @@ public final class RailgunFireService {
             RailgunChargeTier tier,
             ExecutionScope executionScope) {
         if (hits.isEmpty()) return;
-        Holder<net.minecraft.world.damagesource.DamageType> damageHolder =
-                ModDamageTypes.electromagneticHolder(level);
-        DamageSource ds = new DamageSource(damageHolder, player, player);
+        DamageSource ds = ModDamageTypes.electromagnetic(player, false);
         boolean damagePlayers = AE2LTCommonConfig.railgunDamagePlayers();
         boolean allowPlayerTargets = damagePlayers && ctx.pvp();
         boolean paralyzePlayers = AE2LTCommonConfig.railgunParalysisOnPlayers();
@@ -336,7 +334,7 @@ public final class RailgunFireService {
             boolean allowPlayerTargets) {
         if (!RailgunTargetRules.canAffect(player, target, allowPlayerTargets)) return;
 
-        DamageSource source = new DamageSource(ModDamageTypes.electromagneticHolder(level), player, player);
+        DamageSource source = ModDamageTypes.electromagnetic(player, false);
         target.hurt(source, (float) damage);
 
         // A normal hit gets the entity's own damage behavior first. The configured

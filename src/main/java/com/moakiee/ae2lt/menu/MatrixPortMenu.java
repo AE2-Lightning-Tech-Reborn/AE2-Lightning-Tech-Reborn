@@ -112,7 +112,7 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
         BlockPos blockPos = buffer.readBlockPos();
         int slotCount = Mth.clamp(buffer.readVarInt(), 0, MAX_PATTERN_SLOTS);
         var clientInventory = new AppEngInternalInventory(slotCount);
-        var blockEntity = playerInventory.player.level().getBlockEntity(blockPos);
+        var blockEntity = playerInventory.player.level.getBlockEntity(blockPos);
         var host = blockEntity instanceof MatrixPortBlockEntity port ? port : null;
         return new MatrixPortMenu(
                 containerId, playerInventory, blockPos, host, clientInventory, slotCount);
@@ -132,7 +132,7 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
     @Override
     public boolean stillValid(Player player) {
         if (host != null) {
-            if (host.isRemoved() || host.getLevel() == null || player.level() != host.getLevel()) {
+            if (host.isRemoved() || host.getLevel() == null || player.level != host.getLevel()) {
                 return false;
             }
             BlockEntity current = host.getLevel().getBlockEntity(blockPos);

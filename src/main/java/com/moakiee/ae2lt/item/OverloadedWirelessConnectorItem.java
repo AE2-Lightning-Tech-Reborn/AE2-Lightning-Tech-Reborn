@@ -9,7 +9,7 @@ import com.moakiee.ae2lt.network.NetworkInit;
 import com.moakiee.ae2lt.network.WirelessConnectorUsePacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -164,7 +164,7 @@ public class OverloadedWirelessConnectorItem extends AE2LTItem {
         if (!tag.contains(TAG_SELECTED)) return null;
 
         var sel = tag.getCompound(TAG_SELECTED);
-        var dimKey = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(sel.getString(TAG_DIM)));
+        var dimKey = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(sel.getString(TAG_DIM)));
         var pos = BlockPos.of(sel.getLong(TAG_POS));
 
         if (!level.dimension().equals(dimKey) || !level.isLoaded(pos)) return null;

@@ -29,7 +29,7 @@ import appeng.api.stacks.AEKeyType;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
-import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.iface.PatternProviderTarget;
 
 class AE2NativeMachineAdapterTest {
     private static final TestKey STICK = new TestKey("stick");

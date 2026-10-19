@@ -11,7 +11,7 @@
   },
   "criteria": {
     "hyperdimensional_conversion": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": {
         "recipe_id": "ae2lt:hyperdimensional_pigmee_conversion"
       }

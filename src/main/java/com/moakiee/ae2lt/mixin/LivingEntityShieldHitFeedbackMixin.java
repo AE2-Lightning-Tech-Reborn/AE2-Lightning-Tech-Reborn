@@ -26,14 +26,13 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
             method = "hurt",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/level/Level;broadcastDamageEvent(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/damagesource/DamageSource;)V"),
-            require = 0)
-    private void ae2lt$skipShieldDamageEvent(Level level, Entity entity, DamageSource source) {
+                    target = "Lnet/minecraft/world/level/Level;broadcastEntityEvent(Lnet/minecraft/world/entity/Entity;B)V"))
+    private void ae2lt$skipShieldDamageEvent(Level level, Entity entity, byte event) {
         if (entity instanceof LivingEntity living
                 && CelestweaveArmorDamageHandler.shouldSuppressShieldHitFeedback(living)) {
             return;
         }
-        level.broadcastDamageEvent(entity, source);
+        level.broadcastEntityEvent(entity, event);
     }
 
     @WrapOperation(
@@ -52,16 +51,17 @@ public abstract class LivingEntityShieldHitFeedbackMixin {
             method = "hurt",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;indicateDamage(DD)V"))
+                    target = "Lnet/minecraft/world/entity/LivingEntity;knockback(DDD)V"))
     private void ae2lt$skipShieldDamageIndication(
             LivingEntity entity,
+            double strength,
             double x,
             double z,
             Operation<Void> original) {
         if (CelestweaveArmorDamageHandler.shouldSuppressShieldHitFeedback(entity)) {
             return;
         }
-        original.call(entity, x, z);
+        original.call(entity, strength, x, z);
     }
 
     @Redirect(

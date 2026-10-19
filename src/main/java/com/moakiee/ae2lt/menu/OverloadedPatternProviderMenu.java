@@ -8,7 +8,7 @@ import net.minecraft.world.inventory.MenuType;
 
 import appeng.api.config.Settings;
 import appeng.api.config.YesNo;
-import appeng.helpers.patternprovider.PatternProviderLogicHost;
+import appeng.helpers.iface.PatternProviderLogicHost;
 import appeng.menu.SlotSemantics;
 import appeng.menu.guisync.GuiSync;
 import appeng.menu.implementations.MenuTypeBuilder;

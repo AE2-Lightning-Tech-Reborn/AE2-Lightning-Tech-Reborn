@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -18,7 +18,7 @@ import appeng.api.implementations.blockentities.IWirelessAccessPoint;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.util.DimensionalBlockPos;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
 import appeng.util.inv.AppEngInternalInventory;
@@ -32,7 +32,7 @@ import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
-public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
+public class OverloadDeviceWorkbenchBlockEntity extends LegacyNetworkBlockEntity
         implements InternalInventoryHost, IWirelessAccessPoint {
     private static final String TAG_DEVICE_INV = "DeviceInv";
 
@@ -79,7 +79,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
         return adapter == null ? List.of() : adapter.structuralSlots();
     }
 
-    public ItemStack getStructuralSlot(HolderLookup.Provider registries, StructuralSlotSpec spec) {
+    public ItemStack getStructuralSlot(RegistryAccess registries, StructuralSlotSpec spec) {
         var adapter = currentAdapter();
         return adapter == null
                 ? ItemStack.EMPTY
@@ -87,7 +87,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     }
 
     public boolean canPlaceStructural(
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         var adapter = currentAdapter();
@@ -96,7 +96,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     }
 
     public void setStructuralSlot(
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         var adapter = currentAdapter();
@@ -109,7 +109,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     }
 
     public ItemStack removeStructuralSlot(
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             int amount) {
         var adapter = currentAdapter();
@@ -125,7 +125,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     }
 
     public boolean mayPickupStructural(
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             Player player,
             ItemStack carried) {
@@ -134,20 +134,20 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
                 && adapter.mayPickupStructural(getInstalledDevice(), registries, spec, player, carried);
     }
 
-    public List<ItemStack> getModuleList(HolderLookup.Provider registries) {
+    public List<ItemStack> getModuleList(RegistryAccess registries) {
         var adapter = currentAdapter();
         return adapter == null
                 ? List.of()
                 : adapter.listModuleEntries(getInstalledDevice(), registries);
     }
 
-    public boolean canInstallOneModule(HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean canInstallOneModule(RegistryAccess registries, ItemStack candidate) {
         var adapter = currentAdapter();
         return adapter != null
                 && adapter.canInstallOne(getInstalledDevice(), registries, candidate);
     }
 
-    public boolean installOneModule(HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean installOneModule(RegistryAccess registries, ItemStack candidate) {
         var adapter = currentAdapter();
         if (adapter == null || candidate == null || candidate.isEmpty()) {
             return false;
@@ -161,7 +161,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
         return true;
     }
 
-    public ItemStack uninstallOneModule(HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallOneModule(RegistryAccess registries, String typeId) {
         var adapter = currentAdapter();
         if (adapter == null) {
             return ItemStack.EMPTY;
@@ -176,7 +176,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
         return detached;
     }
 
-    public ItemStack uninstallAllOfModule(HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallAllOfModule(RegistryAccess registries, String typeId) {
         var adapter = currentAdapter();
         if (adapter == null) {
             return ItemStack.EMPTY;
@@ -248,7 +248,7 @@ public class OverloadDeviceWorkbenchBlockEntity extends AENetworkBlockEntity
     @Override
     public void clearContent() {
         super.clearContent();
-        deviceInventory.clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(deviceInventory);
     }
 
     @Override

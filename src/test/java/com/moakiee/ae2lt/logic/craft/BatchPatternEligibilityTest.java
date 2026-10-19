@@ -67,7 +67,7 @@ class BatchPatternEligibilityTest {
                 candidate -> candidate == safeLoop));
     }
 
-    private static class PlainPattern implements IPatternDetails {
+    private static class PlainPattern implements com.moakiee.ae2lt.compat.LegacyPatternDetails {
         @Override
         public AEItemKey getDefinition() {
             return null;

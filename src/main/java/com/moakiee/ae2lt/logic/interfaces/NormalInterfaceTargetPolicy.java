@@ -7,7 +7,7 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.storage.IStorageProvider;
 import appeng.helpers.InterfaceLogicHost;
-import appeng.helpers.patternprovider.PatternProviderLogicHost;
+import appeng.helpers.iface.PatternProviderLogicHost;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;

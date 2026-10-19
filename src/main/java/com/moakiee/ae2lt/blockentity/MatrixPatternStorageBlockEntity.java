@@ -34,7 +34,7 @@ import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.IGrid;
 import appeng.api.stacks.AEItemKey;
 import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
-import appeng.helpers.patternprovider.PatternContainer;
+import appeng.helpers.iface.PatternContainer;
 
 public class MatrixPatternStorageBlockEntity extends BlockEntity
         implements MatrixPatternCore, PatternContainer {
@@ -95,8 +95,8 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
                 || !(prepared instanceof IMolecularAssemblerSupportedPattern)
                 || !PatternDetailsHelper.isEncodedPattern(stack)
                 || !java.util.Objects.equals(prepared.getDefinition(), AEItemKey.of(stack))) return stack;
-        if (!simulate) inventory.setStackInSlotInternal(slot, stack.copyWithCount(1), false);
-        return stack.getCount() == 1 ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - 1);
+        if (!simulate) inventory.setStackInSlotInternal(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1), false);
+        return stack.getCount() == 1 ? ItemStack.EMPTY : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, stack.getCount() - 1);
     }
 
     public boolean isEmpty() {
@@ -397,7 +397,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             if (stack == null || stack.isEmpty()) {
                 items.set(slot, ItemStack.EMPTY);
             } else {
-                var copy = stack.copyWithCount(1);
+                var copy = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
                 if (validatePattern && !isValidPatternStack(copy)) {
                     throw new IllegalArgumentException("Stack is not a molecular assembler pattern: " + copy);
                 }
@@ -423,7 +423,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             }
             if (!simulate) {
                 var previous = items.get(slot);
-                items.set(slot, stack.copyWithCount(1));
+                items.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
                 updateUsedSlots(previous, items.get(slot));
                 patternsDirty = true;
                 setChangedAndUpdate();
@@ -446,7 +446,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             if (existing.isEmpty()) {
                 return ItemStack.EMPTY;
             }
-            var extracted = existing.copyWithCount(1);
+            var extracted = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(existing, 1);
             if (!simulate) {
                 var previous = items.get(slot);
                 items.set(slot, ItemStack.EMPTY);

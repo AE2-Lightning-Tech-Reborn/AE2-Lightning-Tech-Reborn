@@ -41,6 +41,6 @@ public final class RailgunTargetRules {
             return living.isAlive() && !living.isDeadOrDying();
         }
 
-        return target.canBeHitByProjectile();
+        return !target.isSpectator() && target.isAlive() && target.isPickable();
     }
 }

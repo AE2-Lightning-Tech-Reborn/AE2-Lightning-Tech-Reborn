@@ -11,7 +11,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -110,8 +111,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         searchField.setBordered(false);
         searchField.setMaxLength(64);
         searchField.setTextColor(0xF2F2F2);
-        searchField.setHint(GuiText.SearchPlaceholder.text().copy().setStyle(
-                Style.EMPTY.withColor(TextColor.fromRgb(0xDEDFE3))));
+        searchField.setSuggestion(GuiText.SearchPlaceholder.text().copy().setStyle(
+                Style.EMPTY.withColor(TextColor.fromRgb(0xDEDFE3))).getString());
         searchField.setResponder(ignored -> refreshList(true));
         addRenderableWidget(searchField);
         setInitialFocus(searchField);
@@ -133,8 +134,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(
+    protected void renderBg(PoseStack graphics, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(graphics,
                 TEXTURE,
                 leftPos,
                 topPos,
@@ -149,9 +150,9 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(PoseStack graphics, int mouseX, int mouseY) {
         if (migration != null) migration.render(graphics, font, 13, 129, 162, 0x404040);
-        graphics.drawString(
+        LegacyGui.drawString(graphics,
                 font,
                 Component.translatable("ae2lt.gui.matrix_port.title"),
                 7,
@@ -161,7 +162,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         renderVisibleBatch(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }
@@ -173,7 +174,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
      * slot id, so normal container clicks and synchronization keep their existing contract.
      */
     private void renderVisibleBatch(
-            GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         menu.slots.clear();
         menu.slots.addAll(visibleMenuSlots);
         try {
@@ -372,7 +373,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         visibleMenuSlots.addAll(playerMenuSlots);
     }
 
-    private void renderSearchHighlights(GuiGraphics graphics) {
+    private void renderSearchHighlights(PoseStack graphics) {
         if (searchField == null || searchField.getValue().isBlank()) {
             return;
         }
@@ -380,7 +381,7 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
             int color = matchingPatternSlots.contains(slot.getPatternIndex())
                     ? 0x8A00FF00
                     : 0x6A000000;
-            graphics.fill(
+            LegacyGui.fill(graphics,
                     leftPos + slot.x,
                     topPos + slot.y,
                     leftPos + slot.x + 16,
@@ -389,10 +390,10 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         }
     }
 
-    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderScrollbar(PoseStack graphics, int mouseX, int mouseY) {
         int handleY = handleY();
         boolean hovered = draggingScrollbar || isMouseOverHandle(mouseX, mouseY, handleY);
-        graphics.blit(
+        LegacyGui.blit(graphics,
                 TEXTURE,
                 leftPos + SCROLLBAR_X,
                 topPos + handleY,

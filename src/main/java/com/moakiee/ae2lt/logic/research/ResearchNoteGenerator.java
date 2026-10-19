@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -88,7 +88,7 @@ public final class ResearchNoteGenerator {
     }
 
     private static boolean isAvailable(Candidate candidate) {
-        return BuiltInRegistries.ITEM.getOptional(candidate.id())
+        return Registry.ITEM.getOptional(candidate.id())
                 .filter(item -> item != Items.AIR)
                 .isPresent();
     }

@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.registry;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.effect.ElectromagneticParalysisEffect;
 
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -13,7 +13,7 @@ import net.minecraftforge.registries.DeferredRegister;
 
 public final class ModMobEffects {
     public static final DeferredRegister<MobEffect> EFFECTS =
-            DeferredRegister.create(Registries.MOB_EFFECT, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.MOB_EFFECT_REGISTRY, AE2LightningTech.MODID);
 
     public static final RegistryObject<ElectromagneticParalysisEffect>
             ELECTROMAGNETIC_PARALYSIS = EFFECTS.register(

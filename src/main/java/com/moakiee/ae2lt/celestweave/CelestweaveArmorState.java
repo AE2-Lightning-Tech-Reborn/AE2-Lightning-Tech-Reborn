@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -73,24 +73,24 @@ public final class CelestweaveArmorState {
         ArmorPersistentData.setCachedEnergyModuleCapacityFe(armor, capacityFe);
     }
 
-    public static ItemStack getSlot(ItemStack armor, HolderLookup.Provider registries, int slot) {
+    public static ItemStack getSlot(ItemStack armor, RegistryAccess registries, int slot) {
         if (slot == SLOT_CORE) {
             return ArmorPersistentData.structuralCore(armor);
         }
         return ItemStack.EMPTY;
     }
 
-    public static void setSlot(ItemStack armor, HolderLookup.Provider registries, int slot, ItemStack stack) {
+    public static void setSlot(ItemStack armor, RegistryAccess registries, int slot, ItemStack stack) {
         if (slot == SLOT_CORE) {
             ArmorPersistentData.setStructuralCore(armor, stack);
         }
     }
 
-    public static boolean canInstallCore(ItemStack armor, HolderLookup.Provider registries, ItemStack core) {
+    public static boolean canInstallCore(ItemStack armor, RegistryAccess registries, ItemStack core) {
         return core != null && !core.isEmpty() && core.is(ModItems.ULTIMATE_OVERLOAD_CORE.get());
     }
 
-    public static boolean hasCore(ItemStack armor, HolderLookup.Provider registries) {
+    public static boolean hasCore(ItemStack armor, RegistryAccess registries) {
         return ArmorPersistentData.hasStructuralCore(armor);
     }
 
@@ -101,7 +101,7 @@ public final class CelestweaveArmorState {
         return ArmorPart.CHEST;
     }
 
-    public static boolean canInstallModule(ItemStack armor, HolderLookup.Provider registries, ItemStack candidate) {
+    public static boolean canInstallModule(ItemStack armor, RegistryAccess registries, ItemStack candidate) {
         if (candidate == null || candidate.isEmpty()) {
             return false;
         }
@@ -147,7 +147,7 @@ public final class CelestweaveArmorState {
         return true;
     }
 
-    public static boolean installOneModule(ItemStack armor, HolderLookup.Provider registries, ItemStack candidate) {
+    public static boolean installOneModule(ItemStack armor, RegistryAccess registries, ItemStack candidate) {
         if (!canInstallModule(armor, registries, candidate)) {
             return false;
         }
@@ -162,13 +162,13 @@ public final class CelestweaveArmorState {
             }
         }
         if (!merged) {
-            stacks.add(candidate.copyWithCount(1));
+            stacks.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(candidate, 1));
         }
         saveModuleStacks(armor, registries, stacks);
         return true;
     }
 
-    public static ItemStack uninstallOneModule(ItemStack armor, HolderLookup.Provider registries, String submoduleId) {
+    public static ItemStack uninstallOneModule(ItemStack armor, RegistryAccess registries, String submoduleId) {
         if (submoduleId == null || submoduleId.isBlank()) {
             return ItemStack.EMPTY;
         }
@@ -178,7 +178,7 @@ public final class CelestweaveArmorState {
             if (!submoduleId.equals(resolveSubmoduleId(stack))) {
                 continue;
             }
-            ItemStack detached = stack.copyWithCount(1);
+            ItemStack detached = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             if (stack.getCount() <= 1) {
                 stacks.remove(index);
             } else {
@@ -191,7 +191,7 @@ public final class CelestweaveArmorState {
         return ItemStack.EMPTY;
     }
 
-    public static ItemStack uninstallAllOfType(ItemStack armor, HolderLookup.Provider registries, String submoduleId) {
+    public static ItemStack uninstallAllOfType(ItemStack armor, RegistryAccess registries, String submoduleId) {
         if (submoduleId == null || submoduleId.isBlank()) {
             return ItemStack.EMPTY;
         }
@@ -209,19 +209,19 @@ public final class CelestweaveArmorState {
         return ItemStack.EMPTY;
     }
 
-    public static List<ItemStack> loadModuleStacks(ItemStack armor, HolderLookup.Provider registries) {
+    public static List<ItemStack> loadModuleStacks(ItemStack armor, RegistryAccess registries) {
         return ArmorPersistentData.loadModuleStacks(armor, registries);
     }
 
-    private static void saveModuleStacks(ItemStack armor, HolderLookup.Provider registries, List<ItemStack> stacks) {
+    private static void saveModuleStacks(ItemStack armor, RegistryAccess registries, List<ItemStack> stacks) {
         ArmorPersistentData.saveModuleStacks(armor, registries, stacks);
     }
 
-    public static boolean hasAnyInstalledModule(ItemStack armor, HolderLookup.Provider registries) {
+    public static boolean hasAnyInstalledModule(ItemStack armor, RegistryAccess registries) {
         return !loadModuleStacks(armor, registries).isEmpty();
     }
 
-    public static int getInstalledAmount(ItemStack armor, HolderLookup.Provider registries, String submoduleId) {
+    public static int getInstalledAmount(ItemStack armor, RegistryAccess registries, String submoduleId) {
         if (submoduleId == null || submoduleId.isBlank()) {
             return 0;
         }
@@ -233,7 +233,7 @@ public final class CelestweaveArmorState {
         return 0;
     }
 
-    public static List<CelestweaveArmorSubmodule> collectSubmodules(ItemStack armor, HolderLookup.Provider registries) {
+    public static List<CelestweaveArmorSubmodule> collectSubmodules(ItemStack armor, RegistryAccess registries) {
         return collectInstalledSubmoduleEntries(armor, registries).stream()
                 .map(InstalledSubmodule::submodule)
                 .toList();
@@ -266,7 +266,7 @@ public final class CelestweaveArmorState {
         return submodule == null ? 0 : Math.max(0, submodule.getMaxInstallAmount());
     }
 
-    public static boolean isSubmoduleInstalled(ItemStack armor, HolderLookup.Provider registries, String submoduleId) {
+    public static boolean isSubmoduleInstalled(ItemStack armor, RegistryAccess registries, String submoduleId) {
         return getInstalledAmount(armor, registries, submoduleId) > 0;
     }
 
@@ -318,14 +318,14 @@ public final class CelestweaveArmorState {
         return id != null && ArmorRuntimeRegistry.isSubmoduleRuntimeActive(id, submoduleId);
     }
 
-    public static boolean isSubmoduleActive(ItemStack armor, CelestweaveArmorSubmodule submodule, HolderLookup.Provider registries, boolean equipped) {
+    public static boolean isSubmoduleActive(ItemStack armor, CelestweaveArmorSubmodule submodule, RegistryAccess registries, boolean equipped) {
         return submodule != null && isSubmoduleRuntimeActive(armor, submodule.id());
     }
 
     public static void syncSubmoduleActiveState(
             @Nullable Player player,
             ItemStack armor,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             boolean equipped,
             Dist dist) {
         syncSubmoduleActiveState(player, armor, registries, equipped, dist, false);
@@ -334,7 +334,7 @@ public final class CelestweaveArmorState {
     public static void syncSubmoduleActiveState(
             @Nullable Player player,
             ItemStack armor,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             boolean equipped,
             Dist dist,
             boolean forceClientSync) {
@@ -371,7 +371,7 @@ public final class CelestweaveArmorState {
             boolean active = hasCore && isSubmoduleEnabled(armor, submodule)
                     && (isModulesPowered(armor) || (player != null
                             && ShieldChargeWindow.remainsActiveWithoutPassivePower(
-                                    armor, submodule.id(), player.level().getGameTime())));
+                                    armor, submodule.id(), player.level.getGameTime())));
             // Runtime map holds only active entries, so absent (null) means previously inactive.
             Boolean previous = setSubmoduleRuntimeActive(armor, submodule.id(), active);
             boolean changed = (previous != null && previous) != active;
@@ -418,7 +418,7 @@ public final class CelestweaveArmorState {
     public static void reconcileInstalledSubmodules(
             @Nullable Player player,
             ItemStack armor,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             Dist dist) {
         ensureArmorId(armor);
         for (var submodule : collectSubmodules(armor, registries)) {
@@ -429,7 +429,7 @@ public final class CelestweaveArmorState {
     public static void tickActiveSubmodules(
             @Nullable Player player,
             ItemStack armor,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             Dist dist) {
         tickActiveSubmodules(player, armor, collectInstalledSubmoduleEntries(armor, registries), dist);
     }
@@ -448,7 +448,7 @@ public final class CelestweaveArmorState {
         }
     }
 
-    public static Snapshot tickEquipped(Player player, ItemStack armor, HolderLookup.Provider registries) {
+    public static Snapshot tickEquipped(Player player, ItemStack armor, RegistryAccess registries) {
         return tickEquipped(player, armor, collectInstalledSubmoduleEntries(armor, registries), registries);
     }
 
@@ -456,20 +456,20 @@ public final class CelestweaveArmorState {
             Player player,
             ItemStack armor,
             List<InstalledSubmodule> installedSubmodules,
-            HolderLookup.Provider registries) {
+            RegistryAccess registries) {
         UUID id = ensureArmorId(armor);
         pruneRemovedRuntime(id, installedSubmoduleIds(installedSubmodules));
         return snapshot(player, armor, registries, true);
     }
 
-    public static Snapshot snapshot(ItemStack armor, HolderLookup.Provider registries, boolean equipped) {
+    public static Snapshot snapshot(ItemStack armor, RegistryAccess registries, boolean equipped) {
         return snapshot(null, armor, registries, equipped);
     }
 
     public static Snapshot snapshot(
             @Nullable Player player,
             ItemStack armor,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             boolean equipped) {
         long stored = ArmorEnergyBuffer.read(armor, registries);
         long capacity = ArmorEnergyBuffer.capacity(armor, registries);
@@ -487,7 +487,7 @@ public final class CelestweaveArmorState {
         return ArmorEnergyBuffer.read(armor);
     }
 
-    public static long addStoredEnergy(ItemStack armor, HolderLookup.Provider registries, long amount) {
+    public static long addStoredEnergy(ItemStack armor, RegistryAccess registries, long amount) {
         return ArmorEnergyBuffer.receiveFe(armor, registries, amount, false);
     }
 
@@ -610,14 +610,14 @@ public final class CelestweaveArmorState {
 
     public static List<InstalledSubmodule> collectInstalledSubmoduleEntries(
             ItemStack armor,
-            HolderLookup.Provider registries) {
+            RegistryAccess registries) {
         var result = new ArrayList<InstalledSubmodule>();
         for (var stack : loadModuleStacks(armor, registries)) {
             if (!(stack.getItem() instanceof CelestweaveArmorSubmoduleItem provider)) {
                 continue;
             }
             int count = Math.max(1, stack.getCount());
-            ItemStack installedStack = stack.copyWithCount(count);
+            ItemStack installedStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, count);
             provider.collectSubmodules(installedStack, submodule -> {
                 if (submodule != null && !submodule.id().isBlank()) {
                     result.add(new InstalledSubmodule(installedStack, submodule, count));
@@ -636,7 +636,7 @@ public final class CelestweaveArmorState {
         }
     }
 
-    private static Set<String> installedSubmoduleIds(ItemStack armor, HolderLookup.Provider registries) {
+    private static Set<String> installedSubmoduleIds(ItemStack armor, RegistryAccess registries) {
         return installedSubmoduleIds(collectInstalledSubmoduleEntries(armor, registries));
     }
 

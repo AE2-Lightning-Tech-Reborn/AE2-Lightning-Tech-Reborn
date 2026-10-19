@@ -7,21 +7,21 @@ import appeng.client.gui.AESubScreen;
 import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.menu.SlotSemantics;
 import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.TianshuUploadTrigger;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 /** Tianshu-specific settings linked from AE2's terminal settings screen. */
 public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         extends AESubScreen<M, TerminalSettingsScreen<M>> {
-    @Override
     protected PageAnchor getHelpTopic() {
         return TianshuMaintenanceTermScreen.terminalHelpTopic("settings");
     }
@@ -43,14 +43,13 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
             if (net.minecraftforge.fml.ModList.get().isLoaded("jei")) JeiWirelessSupplyClient.clear();
             wirelessSupplyButton.setMessage(wirelessSupplyLabel());
         });
-        wirelessSupplyButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(wirelessSupplyButton, com.moakiee.ae2lt.client.compat.Tooltip.create(
                 Component.translatable("ae2lt.tianshu.settings.jei_supply.hint")));
     }
 
     private void hideTerminalSlots() {
         for (var semantic : List.of(SlotSemantics.CRAFTING_GRID, SlotSemantics.CRAFTING_RESULT,
                 SlotSemantics.PROCESSING_INPUTS, SlotSemantics.PROCESSING_OUTPUTS,
-                SlotSemantics.SMITHING_TABLE_TEMPLATE, SlotSemantics.SMITHING_TABLE_BASE,
                 SlotSemantics.SMITHING_TABLE_ADDITION, SlotSemantics.SMITHING_TABLE_RESULT,
                 SlotSemantics.STONECUTTING_INPUT, SlotSemantics.BLANK_PATTERN,
                 SlotSemantics.ENCODED_PATTERN, SlotSemantics.PLAYER_INVENTORY,
@@ -89,20 +88,20 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
+        LegacyGui.drawString(graphics, font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
                 10, 30, 0x404040, false);
-        graphics.drawWordWrap(font,
+        LegacyGui.drawWordWrap(graphics, font,
                 Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"),
                 10, 72, 180, 0x666666);
-        graphics.drawString(font,
+        LegacyGui.drawString(graphics, font,
                 Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
                 10, 118, 0x404040, false);
-        graphics.drawWordWrap(font,
+        LegacyGui.drawWordWrap(graphics, font,
                 Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"),
                 10, 160, 180, 0x666666);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
+        LegacyGui.drawString(graphics, font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
                 10, 202, 0x404040, false);
     }
 

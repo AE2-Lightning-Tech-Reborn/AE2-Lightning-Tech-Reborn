@@ -1,7 +1,8 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.resources.ResourceLocation;
 
 /** Shared pixel-atlas layout for the AdvancedAE and overload pattern popups. */
@@ -24,12 +25,12 @@ final class TianshuPatternConfigLayout {
     private TianshuPatternConfigLayout() {
     }
 
-    static void drawBackground(GuiGraphics graphics, int offsetX, int offsetY) {
-        graphics.blit(TEXTURE, offsetX, offsetY,
+    static void drawBackground(PoseStack graphics, int offsetX, int offsetY) {
+        LegacyGui.blit(graphics, TEXTURE, offsetX, offsetY,
                 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
         for (int visible = 0; visible < VISIBLE_ROWS; visible++) {
             int top = offsetY + HEADER_HEIGHT + visible * ROW_HEIGHT;
-            graphics.blit(TEXTURE, offsetX + ROW_TEXTURE_X, top,
+            LegacyGui.blit(graphics, TEXTURE, offsetX + ROW_TEXTURE_X, top,
                     ROW_TEXTURE_X, ROW_TEXTURE_Y, ROW_TEXTURE_WIDTH, ROW_HEIGHT,
                     TEXTURE_SIZE, TEXTURE_SIZE);
         }

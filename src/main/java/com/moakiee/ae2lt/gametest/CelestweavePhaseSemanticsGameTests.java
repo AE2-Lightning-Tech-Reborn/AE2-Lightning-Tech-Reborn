@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -16,7 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -59,8 +58,8 @@ public final class CelestweavePhaseSemanticsGameTests {
                     || event.getPosition().distanceToSqr(wearer.position()) > 1.0E-6D) {
                 return;
             }
-            SoundEvent sound = event.getSound().value();
-            if (sound == SoundEvents.EMPTY || sound == SoundEvents.ARMOR_EQUIP_GENERIC) {
+            SoundEvent sound = event.getSound();
+            if (sound == com.moakiee.ae2lt.registry.ModSounds.SILENT.get() || sound == SoundEvents.ARMOR_EQUIP_GENERIC) {
                 projectionSounds.add(sound);
             }
         };
@@ -78,12 +77,12 @@ public final class CelestweavePhaseSemanticsGameTests {
                     .filter(sound -> sound == SoundEvents.ARMOR_EQUIP_GENERIC)
                     .count();
             long emptySounds = projectionSounds.stream()
-                    .filter(sound -> sound == SoundEvents.EMPTY)
+                    .filter(sound -> sound == com.moakiee.ae2lt.registry.ModSounds.SILENT.get())
                     .count();
-            helper.assertTrue(genericEquipSounds == 0,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(genericEquipSounds == 0,
                     "Repeated projection echoes emitted " + genericEquipSounds + " audible equip sounds");
-            helper.assertTrue(emptySounds == 3,
-                    "Expected three silent projection equip transitions, observed " + emptySounds);
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(emptySounds == 1,
+                    "Expected one silent item transition; 1.19.2 does not re-equip on tag-only echoes, observed " + emptySounds);
             helper.succeed();
         });
     }
@@ -101,14 +100,14 @@ public final class CelestweavePhaseSemanticsGameTests {
             float healthBefore = player.getHealth();
             float absorptionBefore = player.getAbsorptionAmount();
 
-            boolean accepted = player.hurt(helper.getLevel().damageSources().genericKill(), 12.0F);
+            boolean accepted = player.hurt(com.moakiee.ae2lt.registry.ModDamageTypes.genericKill(), 12.0F);
 
-            helper.assertFalse(accepted, "A completely shielded hit must return false from LivingEntity.hurt");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(accepted, "A completely shielded hit must return false from LivingEntity.hurt");
             assertClose(helper, healthBefore, player.getHealth(),
                     "A completely shielded hit changed player health");
             assertClose(helper, absorptionBefore, player.getAbsorptionAmount(),
                     "A completely shielded hit consumed absorption");
-            helper.assertTrue(player.invulnerableTime == 0,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(player.invulnerableTime == 0,
                     "A completely shielded hit reached vanilla invulnerability processing");
             helper.succeed();
         } finally {
@@ -125,12 +124,8 @@ public final class CelestweavePhaseSemanticsGameTests {
             var attacker = new RecordingServerPlayer(helper.getLevel());
             // genericKill bypasses a freshly constructed player's spawn protection. A player
             // attacker prevents difficulty scaling; the test target explicitly admits PVP below.
-            DamageSource source = new DamageSource(
-                    helper.getLevel()
-                            .registryAccess()
-                            .registryOrThrow(Registries.DAMAGE_TYPE)
-                            .getHolderOrThrow(DamageTypes.GENERIC_KILL),
-                    attacker);
+            DamageSource source = new net.minecraft.world.damagesource.EntityDamageSource("genericKill", attacker)
+                    .bypassArmor().bypassInvul().bypassMagic();
 
             hurtUnconnectedPlayer(player, source, 4.0F);
             hurtUnconnectedPlayer(player, source, 10.0F);
@@ -142,7 +137,7 @@ public final class CelestweavePhaseSemanticsGameTests {
             fallbackAttacker.setHealth(fallbackAttacker.getMaxHealth());
             CelestweaveArmorDamageHandler.onPre(new LivingDamageEvent(
                     player,
-                    helper.getLevel().damageSources().mobAttack(fallbackAttacker),
+                    net.minecraft.world.damagesource.DamageSource.mobAttack(fallbackAttacker),
                     2.0F));
             assertClose(helper, fallbackAttacker.getMaxHealth() - 0.6F, fallbackAttacker.getHealth(),
                     "The completed hurt call left stale original-damage scope behind");
@@ -160,17 +155,17 @@ public final class CelestweavePhaseSemanticsGameTests {
         try {
             boolean threw = false;
             try {
-                player.hurt(helper.getLevel().damageSources().genericKill(), 11.0F);
+                player.hurt(com.moakiee.ae2lt.registry.ModDamageTypes.genericKill(), 11.0F);
             } catch (ExpectedDamageException expected) {
                 threw = true;
             }
-            helper.assertTrue(threw, "The throwing player did not exercise the actuallyHurt wrapper");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(threw, "The throwing player did not exercise the actuallyHurt wrapper");
 
             var attacker = helper.spawn(EntityType.PIG, new BlockPos(1, 2, 1));
             attacker.setHealth(attacker.getMaxHealth());
             CelestweaveArmorDamageHandler.onPre(new LivingDamageEvent(
                     player,
-                    helper.getLevel().damageSources().mobAttack(attacker),
+                    net.minecraft.world.damagesource.DamageSource.mobAttack(attacker),
                     2.0F));
             assertClose(helper, attacker.getMaxHealth() - 0.6F, attacker.getHealth(),
                     "Exceptional damage processing leaked the original 11 damage into the next event");
@@ -185,26 +180,26 @@ public final class CelestweavePhaseSemanticsGameTests {
         ServerPlayer sender = new ServerPlayer(
                 helper.getLevel().getServer(),
                 helper.getLevel(),
-                new GameProfile(UUID.randomUUID(), "payload-sender"));
+                new GameProfile(UUID.randomUUID(), "payload-sender"), null);
         ServerPlayer other = new ServerPlayer(
                 helper.getLevel().getServer(),
                 helper.getLevel(),
-                new GameProfile(UUID.randomUUID(), "payload-other"));
+                new GameProfile(UUID.randomUUID(), "payload-other"), null);
 
-        helper.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                 "The sender started with stale payload authorization");
         PhaseFlightMovementGuard.runAsPlayerPayloadHandler(sender, () -> {
-            helper.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                     "The sending player was not authorized inside its payload handler");
-            helper.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(other),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(other),
                     "One player's payload authorized a different player");
             PhaseFlightMovementGuard.runAsPlayerPayloadHandler(sender, () ->
-                    helper.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+                    com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                             "Nested payload authorization lost the outer sender"));
-            helper.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                     "Closing a nested payload scope cleared the outer scope");
         });
-        helper.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                 "A completed payload handler leaked teleport authorization");
 
         boolean threw = false;
@@ -218,8 +213,8 @@ public final class CelestweavePhaseSemanticsGameTests {
             PhaseFlightMovementGuard.clear(sender);
             PhaseFlightMovementGuard.clear(other);
         }
-        helper.assertTrue(threw, "The exceptional payload path was not exercised");
-        helper.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(threw, "The exceptional payload path was not exercised");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertFalse(PhaseFlightMovementGuard.isSelfTeleportAuthorized(sender),
                 "An exceptional payload handler leaked teleport authorization");
         helper.succeed();
     }
@@ -235,7 +230,7 @@ public final class CelestweavePhaseSemanticsGameTests {
         UUID armorId = CelestweaveArmorState.ensureArmorId(chest);
         for (Item module : modules) {
             ItemStack moduleStack = new ItemStack(module);
-            helper.assertTrue(CelestweaveArmorState.installOneModule(chest, registries, moduleStack),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(CelestweaveArmorState.installOneModule(chest, registries, moduleStack),
                     "Failed to install test armor module: " + module);
             String moduleId = CelestweaveArmorState.moduleTypeId(moduleStack);
             ArmorRuntimeRegistry.setSubmoduleRuntimeActive(armorId, moduleId, true);
@@ -258,7 +253,7 @@ public final class CelestweavePhaseSemanticsGameTests {
     }
 
     private static void assertClose(GameTestHelper helper, float expected, float actual, String message) {
-        helper.assertTrue(Math.abs(expected - actual) <= EPSILON,
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(Math.abs(expected - actual) <= EPSILON,
                 message + ": expected " + expected + ", got " + actual);
     }
 
@@ -279,11 +274,22 @@ public final class CelestweavePhaseSemanticsGameTests {
         }
     }
 
+    private static void clearSpawnProtection(ServerPlayer player) {
+        // In 1.19.2 only the exact OUT_OF_WORLD singleton bypasses this private timer.
+        // The test needs a source carrying its attacker, so expire the spawn protection.
+        try {
+            var field = ServerPlayer.class.getDeclaredField("spawnInvulnerableTime");
+            field.setAccessible(true);
+            field.setInt(player, 0);
+        } catch (ReflectiveOperationException failure) { throw new IllegalStateException(failure); }
+    }
+
     private static ServerPlayer newTestPlayer(GameTestHelper helper, String name) {
         ServerPlayer player = new ServerPlayer(
                 helper.getLevel().getServer(),
                 helper.getLevel(),
-                new GameProfile(UUID.randomUUID(), name));
+                new GameProfile(UUID.randomUUID(), name), null);
+        clearSpawnProtection(player);
         player.setGameMode(GameType.SURVIVAL);
         player.getAbilities().invulnerable = false;
         return player;
@@ -294,7 +300,8 @@ public final class CelestweavePhaseSemanticsGameTests {
             super(
                     level.getServer(),
                     level,
-                    new GameProfile(UUID.randomUUID(), "damage-thrower"));
+                    new GameProfile(UUID.randomUUID(), "damage-thrower"), null);
+            clearSpawnProtection(this);
         }
 
         @Override
@@ -310,7 +317,8 @@ public final class CelestweavePhaseSemanticsGameTests {
             super(
                     level.getServer(),
                     level,
-                    new GameProfile(UUID.randomUUID(), "final-damage-dispatcher"));
+                    new GameProfile(UUID.randomUUID(), "final-damage-dispatcher"), null);
+            clearSpawnProtection(this);
         }
 
         @Override
@@ -334,7 +342,7 @@ public final class CelestweavePhaseSemanticsGameTests {
             super(
                     level.getServer(),
                     level,
-                    new GameProfile(UUID.randomUUID(), "reflection-recorder"));
+                    new GameProfile(UUID.randomUUID(), "reflection-recorder"), null);
         }
 
         @Override

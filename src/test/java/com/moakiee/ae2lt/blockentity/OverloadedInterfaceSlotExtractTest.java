@@ -23,7 +23,7 @@ class OverloadedInterfaceSlotExtractTest {
     @BeforeAll
     static void bootstrapMinecraft() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     /** Minimal handler: one slot, optional per-call cap, counts extract calls. */
@@ -50,8 +50,8 @@ class OverloadedInterfaceSlotExtractTest {
             if (extractCalls > maximumCalls) return ItemStack.EMPTY;
             int take = Math.min(Math.min(amount, perCallCap), stack.getCount());
             if (take <= 0) return ItemStack.EMPTY;
-            var out = stack.copyWithCount(take);
-            if (!simulate) stack = stack.getCount() == take ? ItemStack.EMPTY : stack.copyWithCount(stack.getCount() - take);
+            var out = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, take);
+            if (!simulate) stack = stack.getCount() == take ? ItemStack.EMPTY : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, stack.getCount() - take);
             return out;
         }
     }

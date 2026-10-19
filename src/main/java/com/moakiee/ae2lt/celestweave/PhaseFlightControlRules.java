@@ -64,6 +64,6 @@ public final class PhaseFlightControlRules {
      */
     public static boolean intersectsWorldCollision(Player player) {
         return player != null
-                && !player.level().noCollision(player, player.getBoundingBox());
+                && !player.level.noCollision(player, player.getBoundingBox());
     }
 }

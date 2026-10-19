@@ -4,25 +4,32 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.transfer.IRecipeTransferError;
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
-import mezz.jei.common.transfer.RecipeTransferUtil;
-import net.minecraft.world.entity.player.Player;
+import mezz.jei.api.recipe.transfer.*;
+import mezz.jei.common.transfer.RecipeTransferService;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Wraps the handler JEI has already selected; unsupported recipe/menu pairs never reach this hook. */
-@Mixin(value = RecipeTransferUtil.class, remap = false)
+/** Preserves JEI 11's transfer context and completion lifecycle while supplying missing inputs. */
+@Mixin(value = RecipeTransferService.class, remap = false)
 public abstract class JeiWirelessSupplyMixin {
-    @WrapOperation(method = "transferRecipe(Lmezz/jei/api/recipe/transfer/IRecipeTransferManager;Lnet/minecraft/world/inventory/AbstractContainerMenu;Lmezz/jei/api/gui/IRecipeLayoutDrawable;Lnet/minecraft/world/entity/player/Player;ZZ)Ljava/util/Optional;",
-            remap = false, at = @At(value = "INVOKE", remap = false,
-            target = "Lmezz/jei/api/recipe/transfer/IRecipeTransferHandler;transferRecipe(Lnet/minecraft/world/inventory/AbstractContainerMenu;Ljava/lang/Object;Lmezz/jei/api/gui/ingredient/IRecipeSlotsView;Lnet/minecraft/world/entity/player/Player;ZZ)Lmezz/jei/api/recipe/transfer/IRecipeTransferError;"), require = 0)
-    private static IRecipeTransferError ae2lt$supply(IRecipeTransferHandler<AbstractContainerMenu, Object> handler,
-            AbstractContainerMenu menu, Object recipe, IRecipeSlotsView slots, Player player,
-            boolean maximum, boolean doTransfer, Operation<IRecipeTransferError> original) {
-        return JeiWirelessSupplyClient.transfer(handler, menu, recipe, slots, player, maximum, doTransfer,
-                (max, take, partialSlots) -> original.call(handler, menu, recipe,
-                        partialSlots == null ? slots : partialSlots, player, max, take));
+    @WrapOperation(method = "transferRecipe(Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;Lmezz/jei/api/gui/IRecipeLayoutDrawable;Lnet/minecraft/world/entity/player/Player;ZZ)Ljava/util/Optional;",
+            at = @At(value = "INVOKE", target = "Lmezz/jei/api/recipe/transfer/IRecipeTransferHandler;transferRecipe(Lmezz/jei/api/recipe/transfer/IRecipeTransferContext;Z)Lmezz/jei/api/recipe/transfer/IRecipeTransferError;"), require = 1)
+    private IRecipeTransferError ae2lt$supply(IRecipeTransferHandler<AbstractContainerMenu, Object> handler,
+            IRecipeTransferContext<Object, AbstractContainerMenu> context, boolean doTransfer,
+            Operation<IRecipeTransferError> original) {
+        return JeiWirelessSupplyClient.transfer(handler, context.getContainer(), context.getRecipe(),
+                context.getRecipeSlots(), context.getPlayer(), context.isMaxTransfer(), doTransfer,
+                (max, take, slots) -> original.call(handler, new IRecipeTransferContext<Object, AbstractContainerMenu>() {
+                    public int getTransferId() { return context.getTransferId(); }
+                    public void completeRecipeTransfer(RecipeTransferResult result) { context.completeRecipeTransfer(result); }
+                    public Object getRecipe() { return context.getRecipe(); }
+                    public mezz.jei.api.recipe.RecipeType<Object> getRecipeType() { return context.getRecipeType(); }
+                    public AbstractContainerMenu getContainer() { return context.getContainer(); }
+                    public net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<AbstractContainerMenu> getScreen() { return context.getScreen(); }
+                    public IRecipeSlotsView getRecipeSlots() { return slots == null ? context.getRecipeSlots() : slots; }
+                    public net.minecraft.world.entity.player.Player getPlayer() { return context.getPlayer(); }
+                    public boolean isMaxTransfer() { return max; }
+                }, take));
     }
 }

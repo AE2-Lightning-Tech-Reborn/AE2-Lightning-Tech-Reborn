@@ -18,7 +18,7 @@ import com.moakiee.ae2lt.machine.miningfactory.MiningLoot;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.Item;

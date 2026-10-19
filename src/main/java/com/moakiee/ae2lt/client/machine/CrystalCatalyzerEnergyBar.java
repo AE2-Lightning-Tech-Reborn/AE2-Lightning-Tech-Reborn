@@ -2,7 +2,8 @@ package com.moakiee.ae2lt.client.machine;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.renderer.Rect2i;
@@ -24,11 +25,11 @@ public class CrystalCatalyzerEnergyBar extends AbstractWidget implements IToolti
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (menu.isPigmeeVariant()) {
             return;
         }
-        fill.copy().opacity(0.2f).dest(getX(), getY(), width, height).blit(guiGraphics);
+        fill.copy().opacity(0.2f).dest(x, y, width, height).blit(guiGraphics, 0);
 
         long capacity = Math.max(1L, menu.getEnergyCapacity());
         long stored = Math.min(Math.max(0L, menu.getStoredEnergy()), capacity);
@@ -39,11 +40,11 @@ public class CrystalCatalyzerEnergyBar extends AbstractWidget implements IToolti
         filled = Math.min(filled, height);
 
         int srcY = fill.getSrcY() + height - filled;
-        int destY = getY() + height - filled;
+        int destY = y + height - filled;
         fill.copy()
                 .src(fill.getSrcX(), srcY, width, filled)
-                .dest(getX(), destY, width, filled)
-                .blit(guiGraphics);
+                .dest(x, destY, width, filled)
+                .blit(guiGraphics, 0);
     }
 
     @Override
@@ -56,7 +57,7 @@ public class CrystalCatalyzerEnergyBar extends AbstractWidget implements IToolti
 
     @Override
     public Rect2i getTooltipArea() {
-        return new Rect2i(getX() - 2, getY() - 2, width + 4, height + 4);
+        return new Rect2i(x - 2, y - 2, width + 4, height + 4);
     }
 
     @Override
@@ -65,6 +66,6 @@ public class CrystalCatalyzerEnergyBar extends AbstractWidget implements IToolti
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 }

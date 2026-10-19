@@ -14,9 +14,9 @@ import mezz.jei.api.gui.inputs.IJeiInputHandler;
 import mezz.jei.api.gui.inputs.IJeiUserInput;
 import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.widgets.ISlottedRecipeWidget;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.navigation.ScreenPosition;
-import net.minecraft.client.gui.navigation.ScreenRectangle;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
@@ -29,10 +29,9 @@ public final class InteractiveMultiblockWidget
     public static final String ALTERNATIVE_SLOT_PREFIX = "multiblock_alternative_";
     public static final int MAX_ALTERNATIVE_SLOTS = InteractiveMultiblockPreview.MAX_ALTERNATIVE_SLOTS;
 
-    private static final ScreenPosition POSITION = new ScreenPosition(0, 0);
 
     private final InteractiveMultiblockPreview preview;
-    private final ScreenRectangle area;
+    private final Rect2i area;
     private final List<IRecipeSlotDrawable> materialSlots;
     private final IRecipeSlotDrawable selectedBlockSlot;
     private final List<IRecipeSlotDrawable> alternativeSlots;
@@ -48,21 +47,16 @@ public final class InteractiveMultiblockWidget
         this.selectedBlockSlot = selectedBlockSlot;
         this.alternativeSlots = List.copyOf(alternativeSlots);
         this.preview = new InteractiveMultiblockPreview(recipe, width, height, this);
-        this.area = new ScreenRectangle(0, 0, width, height);
+        this.area = new Rect2i(0, 0, width, height);
     }
 
     @Override
-    public ScreenPosition getPosition() {
-        return POSITION;
-    }
-
-    @Override
-    public ScreenRectangle getArea() {
+    public Rect2i getArea() {
         return area;
     }
 
     @Override
-    public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void drawWidget(PoseStack guiGraphics, double mouseX, double mouseY) {
         preview.drawWidget(guiGraphics, mouseX, mouseY);
     }
 
@@ -75,7 +69,7 @@ public final class InteractiveMultiblockWidget
     public Optional<RecipeSlotUnderMouse> getSlotUnderMouse(double mouseX, double mouseY) {
         return preview.getSlotUnderMouse(mouseX, mouseY)
                 .map(this::slotFor)
-                .map(slot -> new RecipeSlotUnderMouse(slot, POSITION));
+                .map(slot -> new RecipeSlotUnderMouse(slot, 0, 0));
     }
 
     @Override
@@ -122,20 +116,20 @@ public final class InteractiveMultiblockWidget
     }
 
     @Override
-    public void drawMaterialSlot(GuiGraphics guiGraphics, int index, int x, int y) {
+    public void drawMaterialSlot(PoseStack guiGraphics, int index, int x, int y) {
         IRecipeSlotDrawable slot = materialSlots.get(index);
         slot.setPosition(x, y);
         slot.draw(guiGraphics);
     }
 
     @Override
-    public void drawSelectedBlockSlot(GuiGraphics guiGraphics, Block block, int x, int y) {
+    public void drawSelectedBlockSlot(PoseStack guiGraphics, Block block, int x, int y) {
         setSlotStack(selectedBlockSlot, block, x, y);
         selectedBlockSlot.draw(guiGraphics);
     }
 
     @Override
-    public void drawAlternativeSlot(GuiGraphics guiGraphics, int index, Block block, int x, int y) {
+    public void drawAlternativeSlot(PoseStack guiGraphics, int index, Block block, int x, int y) {
         IRecipeSlotDrawable slot = alternativeSlots.get(index);
         setSlotStack(slot, block, x, y);
         slot.draw(guiGraphics);

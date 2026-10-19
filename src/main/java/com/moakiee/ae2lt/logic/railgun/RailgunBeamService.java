@@ -126,7 +126,7 @@ public final class RailgunBeamService {
             }
             s.lastSettleTick = player.tickCount;
             s.settleCount++;
-            boolean cont = settle((ServerLevel) player.level(), player, stack, s, chainThrottle);
+            boolean cont = settle((ServerLevel) player.level, player, stack, s, chainThrottle);
             if (!cont) {
                 it.remove();
                 broadcastStop(player);
@@ -239,6 +239,8 @@ public final class RailgunBeamService {
                 double armorReduction = DamageContext.effectiveArmorReduction(primary);
                 double finalDamage = DamageContext.finalDamage(
                         ctx.firstDamage(), ctx.bypassRatio(), armorReduction);
+                // 1.19.2 has no bypasses_cooldown damage tag. Preserve the EHV beam's per-tick hits.
+                if (profile.ehv()) primary.invulnerableTime = 0;
                 primary.hurt(ds, (float) finalDamage);
                 if (primary.isAlive() && RailgunDefaults.PARALYSIS_DURATION_TICKS > 0) {
                     primary.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -339,14 +341,11 @@ public final class RailgunBeamService {
     }
 
     private static DamageSource beamDamageSource(ServerLevel level, ServerPlayer player, boolean ehv) {
-        Holder<net.minecraft.world.damagesource.DamageType> h = ehv
-                ? ModDamageTypes.electromagneticEhvBeamHolder(level)
-                : ModDamageTypes.electromagneticHolder(level);
-        return new DamageSource(h, player, player);
+        return ModDamageTypes.electromagnetic(player, ehv);
     }
 
     private static void broadcastStop(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel sl)) return;
+        if (!(player.level instanceof ServerLevel sl)) return;
         var pkt = new RailgunBeamUpdatePacket(player.getUUID(), Vec3.ZERO, Vec3.ZERO, false, false);
         NetworkHandler.sendToTrackingChunk(sl, player.chunkPosition(), pkt);
     }

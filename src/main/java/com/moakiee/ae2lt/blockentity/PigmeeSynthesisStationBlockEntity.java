@@ -192,10 +192,9 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
         }
     }
 
-    @Override
     public void clearContent() {
-        super.clearContent();
-        craftingInventory.clear();
+
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(craftingInventory);
     }
 
     @Override
@@ -248,7 +247,7 @@ public final class PigmeeSynthesisStationBlockEntity extends AEBaseBlockEntity
 
             // ME storage is intentionally not a valid station source. This is
             // the important distinction from simply mounting an interface.
-            if (target != null && target.getCapability(Capabilities.STORAGE, side.getOpposite()).isPresent()) {
+            if (target != null && target.getCapability(Capabilities.STORAGE_MONITORABLE_ACCESSOR, side.getOpposite()).isPresent()) {
                 strategiesBySide.remove(side);
                 continue;
             }

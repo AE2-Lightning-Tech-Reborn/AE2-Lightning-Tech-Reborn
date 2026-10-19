@@ -2,7 +2,8 @@ package com.moakiee.ae2lt.client.provider;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -43,8 +44,8 @@ final class ProviderBlockingModeButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(
-            GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(
+            PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         boolean customIcon = state == STATE_SAME_PATTERN;
         setDisableBackground(customIcon);
 
@@ -54,7 +55,7 @@ final class ProviderBlockingModeButton extends IconButton {
             // remain opaque while only the custom icon is dimmed.
             active = true;
         }
-        super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+        super.renderButton(guiGraphics, mouseX, mouseY, partialTick);
         active = wasActive;
 
         if (customIcon && visible) {
@@ -63,8 +64,8 @@ final class ProviderBlockingModeButton extends IconButton {
             if (!wasActive) {
                 blitter.opacity(0.5F);
             }
-            blitter.dest(getX(), getY())
-                    .blit(guiGraphics);
+            blitter.dest(x, y)
+                    .blit(guiGraphics, 0);
         }
     }
 

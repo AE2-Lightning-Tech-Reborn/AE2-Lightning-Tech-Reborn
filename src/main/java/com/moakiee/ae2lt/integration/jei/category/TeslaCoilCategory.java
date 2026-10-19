@@ -5,7 +5,8 @@ import static com.moakiee.ae2lt.integration.RecipeEnergyFormat.compactEnergy;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -113,7 +114,7 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
     public void draw(
             Page page,
             IRecipeSlotsView recipeSlotsView,
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             double mouseX,
             double mouseY) {
         TeslaCoilMode mode = page.mode;
@@ -155,19 +156,19 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
         drawCentered(guiGraphics, font, outputText, TEXT_LINES[3]);
     }
 
-    private static void drawCentered(GuiGraphics guiGraphics, Font font, Component text, int y) {
+    private static void drawCentered(PoseStack guiGraphics, Font font, Component text, int y) {
         int x = (WIDTH - font.width(text)) / 2;
-        guiGraphics.drawString(font, text, x, y, TEXT_COLOR, false);
+        LegacyGui.drawString(guiGraphics, font, text, x, y, TEXT_COLOR, false);
     }
 
-    private static void drawArrow(GuiGraphics guiGraphics) {
+    private static void drawArrow(PoseStack guiGraphics) {
         long elapsed = Util.getMillis() % PROCESS_CYCLE_MS;
         double progress = elapsed / (double) PROCESS_CYCLE_MS;
         int fillW = Mth.clamp((int) Math.ceil(progress * ARROW_W), 0, ARROW_W);
         if (fillW <= 0) {
             return;
         }
-        guiGraphics.blit(
+        LegacyGui.blit(guiGraphics,
                 ARROW_TEXTURE,
                 ARROW_X,
                 ARROW_Y,
@@ -179,9 +180,9 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
                 ARROW_TEX_H);
     }
 
-    private static void drawLightningIcon(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y) {
+    private static void drawLightningIcon(PoseStack guiGraphics, ResourceLocation texture, int x, int y) {
         int frame = (int) ((Util.getMillis() / ICON_FRAME_MS) % ICON_FRAMES);
-        guiGraphics.blit(
+        LegacyGui.blit(guiGraphics,
                 texture,
                 x,
                 y,

@@ -11,27 +11,27 @@
   },
   "criteria": {
     "pattern_provider": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_pattern_provider" }
     },
     "molecular_assembler": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_molecular_assembler" }
     },
     "mentalmath_unit": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_mentalmath_unit" }
     },
     "item_cell_housing": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_item_cell_housing" }
     },
     "storage_component": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_storage_component" }
     },
     "storage_cell": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": { "recipe_id": "ae2lt:pigmee_storage_cell_from_housing" }
     }
   },

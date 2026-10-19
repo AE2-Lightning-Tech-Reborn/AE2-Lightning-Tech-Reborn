@@ -13,7 +13,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.util.SettingsFrom;
 
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
@@ -210,7 +210,7 @@ public final class MemoryCardConfigSupport {
             return;
         }
         int missing = host.restoreMatricesFromMemoryCard(player, tag.getInt(TAG_MATRIX_COUNT));
-        if (missing > 0 && player != null && !player.level().isClientSide()) {
+        if (missing > 0 && player != null && !player.level.isClientSide()) {
             player.sendSystemMessage(Component.translatable(
                     "message.ae2lt.memory_card.missing_matrices", missing));
         }

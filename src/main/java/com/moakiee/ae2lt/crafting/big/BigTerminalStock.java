@@ -34,7 +34,7 @@ public final class BigTerminalStock {
 
     public void sync(MEStorageMenu menu, KeyCounter available) {
         if (!(menu.getPlayer() instanceof ServerPlayer player)) return;
-        long now = player.level().getGameTime();
+        long now = player.level.getGameTime();
         if (now < nextBigStockSync) return;
         nextBigStockSync = now + 20;
         var node = menu.getNetworkNode();

@@ -61,7 +61,15 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        return swapWithEquipmentSlot(this, level, player, hand);
+        ItemStack held = player.getItemInHand(hand);
+        var slot = getSlot();
+        ItemStack equipped = player.getItemBySlot(slot);
+        if (!equipped.isEmpty() && net.minecraft.world.item.enchantment.EnchantmentHelper.hasBindingCurse(equipped) && !player.isCreative()) {
+            return InteractionResultHolder.fail(held);
+        }
+        player.setItemSlot(slot, held.copy());
+        player.awardStat(net.minecraft.stats.Stats.ITEM_USED.get(this));
+        return InteractionResultHolder.sidedSuccess(equipped.copy(), level.isClientSide);
     }
 
     @Override
@@ -75,7 +83,7 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
             return;
         }
         boolean equipped = player.getItemBySlot(equipmentSlot(armorPart)) == stack;
-        ArmorTickService.tickEquipped(player, stack, equipped, player.level().registryAccess(), resolveDist(level));
+        ArmorTickService.tickEquipped(player, stack, equipped, player.level.registryAccess(), resolveDist(level));
     }
 
     @Override
@@ -126,12 +134,12 @@ public abstract class BaseCelestweaveArmorItem extends ArmorItem implements Devi
         };
     }
 
-    private static ArmorItem.Type armorType(ArmorPart part) {
+    private static net.minecraft.world.entity.EquipmentSlot armorType(ArmorPart part) {
         return switch (part) {
-            case HEAD -> ArmorItem.Type.HELMET;
-            case CHEST -> ArmorItem.Type.CHESTPLATE;
-            case LEGS -> ArmorItem.Type.LEGGINGS;
-            case FEET -> ArmorItem.Type.BOOTS;
+            case HEAD -> net.minecraft.world.entity.EquipmentSlot.HEAD;
+            case CHEST -> net.minecraft.world.entity.EquipmentSlot.CHEST;
+            case LEGS -> net.minecraft.world.entity.EquipmentSlot.LEGS;
+            case FEET -> net.minecraft.world.entity.EquipmentSlot.FEET;
         };
     }
 }

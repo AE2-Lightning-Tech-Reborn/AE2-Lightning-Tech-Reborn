@@ -38,14 +38,15 @@ import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IStackWatcher;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageWatcherNode;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.stacks.AEKey;
 import appeng.api.networking.ticking.IGridTickable;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.util.AECableType;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -72,7 +73,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.util.LargeStackStreamCodecs;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
-public class LightningSimulationChamberBlockEntity extends AENetworkBlockEntity
+public class LightningSimulationChamberBlockEntity extends LegacyNetworkBlockEntity
     implements IUpgradeableObject, FrequencyBindingHost,
         LightningCollapseMatrixHost,
         GridRecipeMachineHost<LightningSimulationLockedRecipe, LightningSimulationRecipeCandidate> {
@@ -621,7 +622,7 @@ public class LightningSimulationChamberBlockEntity extends AENetworkBlockEntity
     public void clearContent() {
         super.clearContent();
         inventory.clear();
-        upgrades.clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(upgrades);
     }
 
     @Override

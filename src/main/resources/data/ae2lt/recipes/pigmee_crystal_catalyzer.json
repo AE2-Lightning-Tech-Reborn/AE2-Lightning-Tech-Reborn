@@ -8,13 +8,13 @@
   ],
   "key": {
     "R": {
-      "item": "ae2:crystal_resonance_generator"
+      "item": "ae2:vibration_chamber"
     },
     "P": {
       "item": "ae2lt:pigmee_fumo"
     },
     "G": {
-      "item": "ae2:growth_accelerator"
+      "item": "ae2:quartz_growth_accelerator"
     },
     "S": {
       "item": "ae2:cell_component_1k"

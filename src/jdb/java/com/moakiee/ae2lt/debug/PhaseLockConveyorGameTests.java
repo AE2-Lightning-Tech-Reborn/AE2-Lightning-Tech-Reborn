@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.debug;
 import com.moakiee.ae2lt.celestweave.PhaseFlightMovementGuard;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -125,7 +125,7 @@ public final class PhaseLockConveyorGameTests {
 
     private static BlockState conveyor(GameTestHelper h, Direction direction) {
         var id = new ResourceLocation("mob_grinding_utils", "entity_conveyor");
-        h.assertTrue(BuiltInRegistries.BLOCK.containsKey(id), "real MGU jar must be loaded for conveyor tests");
-        return BuiltInRegistries.BLOCK.get(id).defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, direction);
+        h.assertTrue(Registry.BLOCK.containsKey(id), "real MGU jar must be loaded for conveyor tests");
+        return Registry.BLOCK.get(id).defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, direction);
     }
 }

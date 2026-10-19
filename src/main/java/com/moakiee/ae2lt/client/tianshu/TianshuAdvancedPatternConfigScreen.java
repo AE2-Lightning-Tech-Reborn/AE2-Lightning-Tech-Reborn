@@ -6,7 +6,7 @@ import appeng.client.gui.AESubScreen;
 import appeng.client.guidebook.PageAnchor;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.menu.SlotSemantics;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -14,9 +14,10 @@ import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -30,7 +31,6 @@ import net.pedroksl.advanced_ae.common.definitions.AAEText;
  */
 final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
-    @Override
     protected PageAnchor getHelpTopic() {
         return TianshuMaintenanceTermScreen.terminalHelpTopic("processing-patterns");
     }
@@ -82,7 +82,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
             for (int i = 0; i < DIR_COUNT; i++) {
                 var button = new DirectionInputButton(0, 0, DIR_BUTTON_WIDTH, DIR_BUTTON_HEIGHT,
                         directionTextures(i), this::directionPressed);
-                button.setTooltip(Tooltip.create(directionLabel(i)));
+                com.moakiee.ae2lt.client.compat.LegacyTooltips.set(button, Tooltip.create(directionLabel(i)));
                 button.setKey(row.key);
                 button.setIndex(i);
                 button.visible = false;
@@ -129,7 +129,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         for (var buttons : rowButtons) {
             for (var button : buttons) button.visible = false;
         }
@@ -140,7 +140,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
             var row = rows.get(index);
             int rowY = TianshuPatternConfigLayout.HEADER_HEIGHT
                     + visible * TianshuPatternConfigLayout.ROW_HEIGHT;
-            graphics.renderItem(row.key.wrapForDisplayOrFilter(),
+            LegacyGui.renderItem(graphics, row.key.wrapForDisplayOrFilter(),
                     TianshuPatternConfigLayout.ROW_LEFT + 2
                             + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET,
                     rowY + ROW_CONTENT_Y_OFFSET);
@@ -158,7 +158,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
         }
         if (rows.isEmpty()) {
             var text = Component.translatable("ae2lt.tianshu.pattern_config.empty");
-            graphics.drawString(font, text,
+            LegacyGui.drawString(graphics, font, text,
                     (TianshuPatternConfigLayout.GUI_WIDTH - font.width(text)) / 2,
                     TianshuPatternConfigLayout.HEADER_HEIGHT
                             + (TianshuPatternConfigLayout.VISIBLE_ROWS
@@ -168,7 +168,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(PoseStack graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         TianshuPatternConfigLayout.drawBackground(graphics, offsetX, offsetY);
     }

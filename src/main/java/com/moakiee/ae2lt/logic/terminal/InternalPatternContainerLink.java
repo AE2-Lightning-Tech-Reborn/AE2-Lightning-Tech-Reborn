@@ -18,10 +18,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * channel-consuming network link.
  */
 public final class InternalPatternContainerLink {
-    private static final IGridNodeListener<BlockEntity> NODE_LISTENER =
-            (owner, node) -> {
+    private final IGridNodeListener<BlockEntity> NODE_LISTENER =
+            new IGridNodeListener<>() {
+                @Override public void onSecurityBreak(BlockEntity owner, IGridNode node) { disconnect(); }
+                @Override public void onSaveChanges(BlockEntity owner, IGridNode node) {
                 // The internal node has no persistent state. Its connection is reconstructed
                 // from the validated multiblock binding.
+                }
             };
 
     private final BlockEntity owner;
@@ -52,7 +55,12 @@ public final class InternalPatternContainerLink {
                 .setVisualRepresentation(visualRepresentation)
                 .setIdlePowerUsage(0.0D);
         managedNode.create(level, owner.getBlockPos());
-        connection = GridHelper.createConnection(managedNode.getNode(), targetNode);
+        try {
+            connection = GridHelper.createGridConnection(managedNode.getNode(), targetNode);
+        } catch (appeng.api.exceptions.FailedConnectionException failure) {
+            disconnect();
+            return;
+        }
         linkedPortNode = targetNode;
     }
 

@@ -30,7 +30,7 @@ public final class DeviceWorkbenchAdapters {
 
     public static Optional<DeviceWorkbenchAdapter> get(ItemStack stack) {
         if (stack != null && !stack.isEmpty()) {
-            var exact = BY_ITEM.get(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            var exact = BY_ITEM.get(net.minecraft.core.Registry.ITEM.getKey(stack.getItem()));
             if (exact != null) return Optional.of(exact);
         }
         if (stack == null || stack.isEmpty() || !(stack.getItem() instanceof DeviceItem device)) {

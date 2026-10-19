@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import appeng.api.networking.IGrid;
-import appeng.api.storage.ISubMenuHost;
+import appeng.api.storage.ITerminalHost;
 import net.minecraft.world.entity.player.Inventory;
 import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.menu.guisync.GuiSync;
@@ -39,8 +39,8 @@ public abstract class CraftConfirmMenuReportMixin implements CraftingReportMenuS
     private boolean ae2lt$showReport;
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void ae2lt$captureMenuSide(int id, Inventory inventory, ISubMenuHost host, CallbackInfo ci) {
-        ae2lt$serverMenu = !inventory.player.level().isClientSide();
+    private void ae2lt$captureMenuSide(int id, Inventory inventory, ITerminalHost host, CallbackInfo ci) {
+        ae2lt$serverMenu = !inventory.player.level.isClientSide();
     }
 
     @Inject(method = "broadcastChanges()V", at = @At("HEAD"), remap = true)
@@ -88,7 +88,7 @@ public abstract class CraftConfirmMenuReportMixin implements CraftingReportMenuS
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void ae2lt$initializeReportTimer(
-            int id, Inventory inventory, ISubMenuHost host, CallbackInfo ci) {
+            int id, Inventory inventory, ITerminalHost host, CallbackInfo ci) {
         // Some callers install a pre-started Future through setJob rather than planJob.
         // Start timing when the menu is created so that path cannot fall back to nanoTime() - 0.
         ae2lt$calculationStartedNanos = System.nanoTime();

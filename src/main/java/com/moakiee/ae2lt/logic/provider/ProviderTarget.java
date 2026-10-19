@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -25,7 +25,7 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
-import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.iface.PatternProviderTarget;
 
 import com.moakiee.thunderbolt.CoreConfig;
 
@@ -219,7 +219,7 @@ public class ProviderTarget extends TargetAddress {
         }
         var rules = CoreConfig.batchCopyLimitRules();
         if (runtime.batchLimitRulesVersion != rules.version()) {
-            var blockId = BuiltInRegistries.BLOCK.getKey(blockEntity.getBlockState().getBlock());
+            var blockId = Registry.BLOCK.getKey(blockEntity.getBlockState().getBlock());
             runtime.batchCopyLimit = blockId != null
                     ? rules.limit(blockId.toString())
                     : Long.MAX_VALUE;

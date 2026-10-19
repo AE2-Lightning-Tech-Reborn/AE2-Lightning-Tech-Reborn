@@ -147,7 +147,7 @@ class Ae2TexturePortCompatibilityTest {
                 }
                 ringCount++;
                 assertTrue(ring.has("shade") && !ring.get("shade").getAsBoolean(), modelName);
-                for (var face : ring.getAsJsonObject("faces").asMap().values()) {
+                for (var face : ring.getAsJsonObject("faces").entrySet().stream().map(java.util.Map.Entry::getValue).toList()) {
                     var forgeData = face.getAsJsonObject().getAsJsonObject("forge_data");
                     assertTrue(forgeData != null
                             && forgeData.has("ambient_occlusion")

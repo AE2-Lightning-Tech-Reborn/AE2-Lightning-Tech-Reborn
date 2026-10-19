@@ -132,7 +132,7 @@ public final class RainbowPigmeeGameTests {
             var items = ingredients(recipe);
             for (int i = 0; i < 9; i++) menu.getSlot(i + 1).set(i == 4 ? named(true, 2, "My catalyst")
                     : items.get(i).isEmpty() ? ItemStack.EMPTY : items.get(i).copyWithCount(3));
-            var output = recipe.getResultItem(h.getLevel().registryAccess());
+            var output = recipe.getResultItem();
             menu.clicked(0, 0, ClickType.PICKUP, player);
             h.assertTrue(ItemStack.matches(menu.getCarried(), output), "Native crafting result " + color);
             player.getInventory().add(menu.getCarried());
@@ -282,13 +282,13 @@ public final class RainbowPigmeeGameTests {
             var single = new net.minecraft.world.SimpleContainer(stack);
             var matched = cuts.stream().filter(r -> r.matches(single, h.getLevel())).toList();
             h.assertTrue(matched.size() == 33, "Slabs must only recut into 33 other slabs");
-            for (var cut : matched) h.assertTrue(cut.getResultItem(h.getLevel().registryAccess()).getCount() == 1,
+            for (var cut : matched) h.assertTrue(cut.getResultItem().getCount() == 1,
                     "Slab recutting creates extra material");
             h.assertTrue(!restore.matches(ForgeCraftingInput.of(1, 1, List.of(stack)), h.getLevel()), "One slab cannot return a full block");
             var input = ForgeCraftingInput.of(2, 1, List.of(stack, new ItemStack(slabs().get(0))));
             h.assertTrue(restore.matches(input, h.getLevel()) && restore.assemble(input, h.getLevel().registryAccess()).getCount() == 1,
                     "Two mixed slabs should return one base block");
-            var id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(slab).getPath();
+            var id = net.minecraft.core.registries.Registry.BLOCK.getKey(slab).getPath();
             var recipe = (CraftingRecipe) h.getLevel().getRecipeManager().byKey(new ResourceLocation("ae2lt:pigmee_slabs/" + id)).orElseThrow();
             var craft = ForgeCraftingInput.of(3, 1, ingredients(recipe));
             h.assertTrue(recipe.matches(craft, h.getLevel()) && recipe.assemble(craft, h.getLevel().registryAccess()).getCount() == 6,

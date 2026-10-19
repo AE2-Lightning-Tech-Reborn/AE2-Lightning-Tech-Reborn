@@ -27,7 +27,7 @@ import appeng.me.cluster.implementations.CraftingCPUCluster;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.CraftingCpuLogicAccessor;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
-import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ElapsedTimeTrackerAccessor;
+import com.moakiee.ae2lt.compat.LegacyTimeTracker;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.ExecutingCraftingJobAccessor;
 import com.moakiee.ae2lt.overload.runtime.cpu.InsertContext;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadClaimResult;
@@ -236,7 +236,7 @@ public abstract class CraftingCpuLogicMixin {
         }
 
         var jobAccessor = (ExecutingCraftingJobAccessor) job;
-        ((ElapsedTimeTrackerAccessor) jobAccessor.ae2lt$getTimeTracker()).ae2lt$decrementItems(
+        ((LegacyTimeTracker) jobAccessor.ae2lt$getTimeTracker()).ae2lt$decrementItems(
                 claimed,
                 incoming.getType());
         logic.getInventory().insert(incoming, claimed, Actionable.MODULATE);
@@ -258,7 +258,7 @@ public abstract class CraftingCpuLogicMixin {
         }
 
         var jobAccessor = (ExecutingCraftingJobAccessor) job;
-        ((ElapsedTimeTrackerAccessor) jobAccessor.ae2lt$getTimeTracker()).ae2lt$decrementItems(
+        ((LegacyTimeTracker) jobAccessor.ae2lt$getTimeTracker()).ae2lt$decrementItems(
                 claimed,
                 incoming.getType());
         logicAccessor.ae2lt$postChange(incoming);

@@ -4,7 +4,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.entity.FloatingMatterEntity;
 import com.moakiee.ae2lt.entity.OverloadTntEntity;
 import com.moakiee.ae2lt.entity.RitualHyperdimensionalPigmeeEntity;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -12,7 +12,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public final class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
-            DeferredRegister.create(Registries.ENTITY_TYPE, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.ENTITY_TYPE_REGISTRY, AE2LightningTech.MODID);
 
     public static final RegistryObject<EntityType<OverloadTntEntity>> OVERLOAD_TNT =
             ENTITY_TYPES.register(

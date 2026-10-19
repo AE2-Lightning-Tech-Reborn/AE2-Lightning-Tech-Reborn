@@ -9,7 +9,7 @@ import com.google.gson.JsonArray;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraftforge.common.crafting.CraftingHelper;
 import net.minecraftforge.common.crafting.conditions.ICondition;
@@ -65,7 +65,7 @@ public final class InscriberProcessorRecipeLoader {
         var results = new JsonArray();
         for (var output : recipe.itemResults()) {
             var value = new JsonObject();
-            value.addProperty("id", BuiltInRegistries.ITEM.getKey(output.getItem()).toString());
+            value.addProperty("id", Registry.ITEM.getKey(output.getItem()).toString());
             value.addProperty("count", output.getCount());
             if (output.hasTag()) value.addProperty("nbt", output.getTag().toString());
             results.add(value);

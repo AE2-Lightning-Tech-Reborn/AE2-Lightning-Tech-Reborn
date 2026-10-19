@@ -12,7 +12,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
 import appeng.menu.ToolboxMenu;
@@ -215,7 +215,7 @@ public class LightningSimulationChamberMenu extends AEBaseMenu implements InputT
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,

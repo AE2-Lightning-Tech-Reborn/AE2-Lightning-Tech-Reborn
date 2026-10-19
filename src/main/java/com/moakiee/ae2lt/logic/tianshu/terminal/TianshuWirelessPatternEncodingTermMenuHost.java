@@ -71,7 +71,7 @@ public class TianshuWirelessPatternEncodingTermMenuHost extends WirelessTerminal
 
     @Override
     public Level getLevel() {
-        return getPlayer().level();
+        return getPlayer().level;
     }
 
     @Override

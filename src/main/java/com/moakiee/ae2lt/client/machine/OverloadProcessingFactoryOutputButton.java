@@ -4,7 +4,8 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -55,15 +56,15 @@ public class OverloadProcessingFactoryOutputButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partial) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partial) {
         if (!this.visible) {
             return;
         }
 
-        OutputSideButtonStyle.renderBackground(guiGraphics, getX(), getY(), on);
+        OutputSideButtonStyle.renderBackground(guiGraphics, x, y, on);
 
         if (!display.isEmpty()) {
-            guiGraphics.renderItem(display, getX() + 1, getY() + 1, 0, 3);
+            LegacyGui.renderItem(guiGraphics, display, x + 1, y + 1);
         }
     }
 }

@@ -11,7 +11,6 @@
     "PatternMigrationEaepBatchMixin",
     "PatternMigrationRefundMixin",
     "PatternMigrationStorageMountMixin",
-
     "appflux.InterfaceEnergyDistributionMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
@@ -95,7 +94,8 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.GuideLocalizedResourcesMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -84,14 +84,18 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
     public OverloadedInterfaceLogic(IManagedGridNode gridNode,
                                     OverloadedInterfaceBlockEntity host,
                                     Item is, int slots) {
-        super(gridNode, host, is, slots);
+        super(gridNode, host, is);
         this.owner = host;
         this.slotCount = slots;
 
         try {
-            var tracker = (appeng.helpers.MultiCraftingTracker) F_CRAFTING_TRACKER.get(this);
+            var plannedWork = InterfaceLogic.class.getDeclaredField("plannedWork");
+            plannedWork.setAccessible(true);
+            plannedWork.set(this, new GenericStack[slots]);
+            var tracker = new appeng.helpers.MultiCraftingTracker(this, slots);
+            F_CRAFTING_TRACKER.set(this, tracker);
             this.craftingRequests = new OverloadedInterfaceCrafting(tracker, this, slots);
-        } catch (IllegalAccessException e) {
+        } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Failed to read craftingTracker", e);
         }
 
@@ -169,9 +173,8 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         owner.addImportBufferDrops(drops);
     }
 
-    @Override
     public void clearContent() {
-        getUpgrades().clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(getUpgrades());
         owner.getFilterInv().setItemDirect(0, ItemStack.EMPTY);
         owner.clearImportBuffer();
     }
@@ -214,7 +217,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
     }
 
     private void setField(Field f, Object value) {
-        try { f.set(this, value); } catch (IllegalAccessException e) {
+        try { f.set(this, value); } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Reflection set failed", e);
         }
     }

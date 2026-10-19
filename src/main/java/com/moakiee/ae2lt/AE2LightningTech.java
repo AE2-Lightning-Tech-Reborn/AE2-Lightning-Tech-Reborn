@@ -45,11 +45,11 @@ import com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity;
 import com.moakiee.ae2lt.item.FixedInfiniteCellItem;
 import com.moakiee.ae2lt.item.FixedInfiniteCellItem.CellOutcome;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
+import com.moakiee.ae2lt.compat.LegacyCreativeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
@@ -133,19 +133,13 @@ public class AE2LightningTech {
     private static final ResourceLocation BLOCK_ENTITY_CAP_PROVIDER_ID =
             new ResourceLocation(MODID, "block_entity_cap_provider");
 
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
     public static CraftingCoreRegistry craftingCoreRegistry() {
         return CRAFTING_CORE_REGISTRY;
     }
 
-    public static final RegistryObject<CreativeModeTab> MAIN_TAB =
-            CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
-                    .title(Component.translatable("itemGroup.ae2lt"))
-                    .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
-                    .icon(() -> ModItems.OVERLOAD_CRYSTAL.get().getDefaultInstance())
-                    .displayItems((parameters, output) -> {
+    public static final java.util.function.Supplier<CreativeModeTab> MAIN_TAB =
+            LegacyCreativeTab.create("ae2lt", () -> ModItems.OVERLOAD_CRYSTAL.get().getDefaultInstance(), output -> {
                         // 基础方块与水晶生长
                         if (ModBlocks.hasSiliconBlock()) {
                             acceptCreative(output, ModBlocks.SILICON_BLOCK);
@@ -355,15 +349,10 @@ public class AE2LightningTech {
                         // Fumo 收藏品（猪咪系列留在独立物品栏）
                         output.accept(ModFumos.MOAKIEE_FUMO_ITEM.get());
                         output.accept(ModFumos.CYSTRYSU_FUMO_ITEM.get());
-                    })
-                    .build());
+                    });
 
-    public static final RegistryObject<CreativeModeTab> PIGMEE_TAB =
-            CREATIVE_MODE_TABS.register("pigmee", () -> CreativeModeTab.builder()
-                    .title(Component.translatable("itemGroup.ae2lt.pigmee"))
-                    .withTabsAfter(MAIN_TAB.getKey())
-                    .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
-                    .displayItems((parameters, output) -> {
+    public static final java.util.function.Supplier<CreativeModeTab> PIGMEE_TAB =
+            LegacyCreativeTab.create("ae2lt.pigmee", () -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance(), output -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
                         output.accept(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get());
                         output.accept(ModItems.DYE_BASE.get());
@@ -383,8 +372,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModItems.PIGMEE_ITEM_CELL_HOUSING);
                         acceptCreative(output, ModItems.PIGMEE_STORAGE_COMPONENT);
                         acceptCreative(output, ModItems.PIGMEE_STORAGE_CELL);
-                    })
-                    .build());
+                    });
 
     public AE2LightningTech() {
         // No-arg @Mod constructor: the only style accepted by every 1.20.1 loader
@@ -392,6 +380,7 @@ public class AE2LightningTech {
         // Forge 47.4.x falls back to it). Fetch the bus via the static context.
         var modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+        com.moakiee.ae2lt.compat.LegacyRecipeCraftedTrigger.register();
         AE2LTConfigMigration.runIfNeeded();
         WirelessPatternProviderPolicy.setMaxDistanceSupplier(
                 AE2LTCommonConfig::wirelessConnectorMaxDistance);
@@ -409,7 +398,6 @@ public class AE2LightningTech {
         ModStructureTypes.STRUCTURE_TYPES.register(modEventBus);
         ModStructureTypes.STRUCTURE_PIECES.register(modEventBus);
         ModLootModifiers.LOOT_MODIFIER_SERIALIZERS.register(modEventBus);
-        CREATIVE_MODE_TABS.register(modEventBus);
         // Forge 1.20.1: the network channel must be created during mod construction
         // (registry phase). NetworkInit is otherwise loaded lazily on first packet use
         // (e.g. when the client opens the Lightning Assembly Chamber screen), which
@@ -1248,7 +1236,7 @@ public class AE2LightningTech {
 
     private static void registerAppliedFluxInductionCardCompat() {
         var inductionId = new ResourceLocation("appflux", "induction_card");
-        Item inductionCard = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(inductionId);
+        Item inductionCard = net.minecraft.core.Registry.ITEM.get(inductionId);
         if (inductionCard == null || inductionCard == net.minecraft.world.item.Items.AIR) {
             return;
         }
@@ -1308,7 +1296,7 @@ public class AE2LightningTech {
      * Forge 1.20.1 creative tab helper: RegistryObject is not an ItemLike in
      * this version, so unwrap the holder before passing it to the tab output.
      */
-    private static void acceptCreative(CreativeModeTab.Output output, RegistryObject<? extends ItemLike> holder) {
+    private static void acceptCreative(LegacyCreativeTab.Output output, RegistryObject<? extends ItemLike> holder) {
         output.accept(holder.get());
     }
 

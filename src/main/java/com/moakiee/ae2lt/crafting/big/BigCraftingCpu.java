@@ -82,13 +82,13 @@ public final class BigCraftingCpu implements ICraftingCPU, ICraftingLink {
     }
 
     public void writeToNBT(CompoundTag tag) {
-        tag.putUUID("CraftID", job.id);
+        tag.putString("CraftID", job.id.toString());
         tag.putBoolean("standalone", true);
         tag.putBoolean("canceled", isCanceled());
         tag.putBoolean("done", isDone());
     }
 
-    public UUID getCraftingID() {
-        return job.id;
+    public String getCraftingID() {
+        return job.id.toString();
     }
 }

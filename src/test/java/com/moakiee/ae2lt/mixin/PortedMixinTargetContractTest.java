@@ -23,8 +23,8 @@ class PortedMixinTargetContractTest {
                     .getAsJsonObject().getAsJsonObject("mappings");
             var terminal = mappings.getAsJsonObject("com/moakiee/ae2lt/mixin/client/BigTerminalAmountMixin");
             assertNotNull(terminal, "Terminal mixin must map its inherited vanilla override");
-            String descriptor = "(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/inventory/Slot;)V";
-            assertEquals("Lappeng/client/gui/me/common/MEStorageScreen;m_280092_" + descriptor,
+            String descriptor = "(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/inventory/Slot;)V";
+            assertEquals("Lappeng/client/gui/me/common/MEStorageScreen;m_97799_" + descriptor,
                     terminal.get("renderSlot" + descriptor).getAsString());
         }
     }

@@ -12,7 +12,7 @@ import snownee.jade.api.IServerDataProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-public class LightningCollectorJadeProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+public class LightningCollectorJadeProvider implements IBlockComponentProvider, IServerDataProvider<net.minecraft.world.level.block.entity.BlockEntity> {
     private static final ResourceLocation UID =
             new ResourceLocation(AE2LightningTech.MODID, "lightning_collector");
 
@@ -22,8 +22,8 @@ public class LightningCollectorJadeProvider implements IBlockComponentProvider, 
     }
 
     @Override
-    public void appendServerData(CompoundTag data, BlockAccessor accessor) {
-        if (accessor.getBlockEntity() instanceof LightningCollectorBlockEntity collector) {
+    public void appendServerData(CompoundTag data, net.minecraft.server.level.ServerPlayer player, net.minecraft.world.level.Level world, net.minecraft.world.level.block.entity.BlockEntity blockEntity, boolean showDetails) {
+        if (blockEntity instanceof LightningCollectorBlockEntity collector) {
             data.putInt("CooldownTicks", collector.getCooldownTicks());
         }
     }

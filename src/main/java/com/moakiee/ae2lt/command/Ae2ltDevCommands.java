@@ -11,7 +11,7 @@ import com.moakiee.ae2lt.item.ResearchNoteItem;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -59,7 +59,7 @@ public final class Ae2ltDevCommands {
 
         List<ItemStack> ritualItems = new ArrayList<>(note.recipeItems().size());
         for (var itemId : note.recipeItems()) {
-            var item = BuiltInRegistries.ITEM.getOptional(itemId).orElse(Items.AIR);
+            var item = Registry.ITEM.getOptional(itemId).orElse(Items.AIR);
             if (item == Items.AIR) {
                 source.sendFailure(Component.literal("研究材料不存在：" + itemId));
                 return 0;
@@ -72,7 +72,7 @@ public final class Ae2ltDevCommands {
                 player.drop(ritualItem, false);
             }
         }
-        source.sendSuccess(() -> Component.literal("已按笔记顺序给予 9 项仪式材料。"), false);
+        source.sendSuccess(Component.literal("已按笔记顺序给予 9 项仪式材料。"), false);
         return ritualItems.size();
     }
 }

@@ -5,7 +5,8 @@ import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.ProgressBar;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.PigmeeMolecularAssemblerMenu;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -48,14 +49,14 @@ public final class PigmeeMolecularAssemblerScreen
 
     @Override
     public void drawBG(
-            GuiGraphics graphics,
+            PoseStack graphics,
             int offsetX,
             int offsetY,
             int mouseX,
             int mouseY,
             float partialTicks) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
-        graphics.blit(
+        LegacyGui.blit(graphics,
                 TEXTURE,
                 offsetX + CRAFTING_GRID_X,
                 offsetY + CRAFTING_GRID_Y,
@@ -65,7 +66,7 @@ public final class PigmeeMolecularAssemblerScreen
                 CRAFTING_GRID_SIZE,
                 TEXTURE_SIZE,
                 TEXTURE_SIZE);
-        graphics.blit(
+        LegacyGui.blit(graphics,
                 TEXTURE,
                 offsetX + PATTERN_SLOT_X,
                 offsetY + PATTERN_SLOT_Y,

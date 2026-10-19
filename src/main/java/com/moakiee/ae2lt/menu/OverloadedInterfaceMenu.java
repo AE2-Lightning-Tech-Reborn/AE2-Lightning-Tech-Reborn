@@ -92,7 +92,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
     private int lastShownPage = -1;
 
     public OverloadedInterfaceMenu(int id, Inventory playerInventory, InterfaceLogicHost host) {
-        super(TYPE, id, playerInventory, host);
+        super((MenuType) TYPE, id, playerInventory, host);
         this.host = host;
 
         remapSlotSemantics();
@@ -344,7 +344,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
             var key = proxy.cfg().getKey(idx);
             if (!(key instanceof AEItemKey itemKey)) return;
             long cap = proxy.capForSlot(idx);
-            int maxStack = itemKey.getMaxStackSize();
+            int maxStack = itemKey.toStack().getMaxStackSize();
             long maxExtract = Math.min(cap, maxStack);
             if (button == 1) maxExtract = Math.max(1, (maxExtract + 1) / 2);
             long extracted = proxy.proxyExtract(key, maxExtract, Actionable.MODULATE);
@@ -368,7 +368,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         var key = proxy.cfg().getKey(idx);
         if (!(key instanceof AEItemKey itemKey)) return;
         long cap = proxy.capForSlot(idx);
-        int maxStack = itemKey.getMaxStackSize();
+        int maxStack = itemKey.toStack().getMaxStackSize();
         long maxExtract = Math.min(cap, maxStack);
         long extracted = proxy.proxyExtract(key, maxExtract, Actionable.MODULATE);
         if (extracted > 0) {
@@ -384,7 +384,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         var key = proxy.cfg().getKey(idx);
         if (!(key instanceof AEItemKey itemKey)) return;
         long maxExtract = (button == 1)
-                ? Math.min(proxy.capForSlot(idx), itemKey.getMaxStackSize())
+                ? Math.min(proxy.capForSlot(idx), itemKey.toStack().getMaxStackSize())
                 : 1;
         long extracted = proxy.proxyExtract(key, maxExtract, Actionable.MODULATE);
         if (extracted > 0) {
@@ -416,7 +416,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         if (wantExtract) {
             itemKey = (AEItemKey) key;
             long cap = proxy.capForSlot(idx);
-            long maxExtract = Math.min(cap, itemKey.getMaxStackSize());
+            long maxExtract = Math.min(cap, itemKey.toStack().getMaxStackSize());
             simExtracted = proxy.proxyExtract(key, maxExtract, Actionable.SIMULATE);
         }
 
@@ -450,7 +450,7 @@ public class OverloadedInterfaceMenu extends InterfaceMenu implements FrequencyB
         if (!player.isCreative()) return;
         var key = proxy.cfg().getKey(idx);
         if (key instanceof AEItemKey itemKey) {
-            setCarried(itemKey.toStack(itemKey.getMaxStackSize()));
+            setCarried(itemKey.toStack(itemKey.toStack().getMaxStackSize()));
         }
     }
 

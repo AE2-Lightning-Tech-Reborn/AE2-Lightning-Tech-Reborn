@@ -65,7 +65,7 @@ public interface LightningCollapseMatrixHost {
      * @return how many requested matrices could not be supplied
      */
     default int restoreMatricesFromMemoryCard(@Nullable Player player, int requestedCount) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return 0;
         }
 
@@ -96,7 +96,7 @@ public interface LightningCollapseMatrixHost {
 
         if (player.getAbilities().instabuild) {
             ItemStack remainder = getMatrixInventory().insertItem(
-                    getMatrixSlot(), desiredStack.copyWithCount(insertableCount), false);
+                    getMatrixSlot(), com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(desiredStack, insertableCount), false);
             return missingCount - insertableCount + remainder.getCount();
         }
 

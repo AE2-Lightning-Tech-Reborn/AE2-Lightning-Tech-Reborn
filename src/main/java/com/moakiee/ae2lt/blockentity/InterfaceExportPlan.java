@@ -195,7 +195,7 @@ final class InterfaceExportPlan {
     private static int singleInputSlot(IItemHandler handler, AEItemKey key) {
         int result = -1;
         for (int slot = 0; slot < handler.getSlots(); slot++) {
-            if (handler.getSlotLimit(slot) > 0 && handler.isItemValid(slot, key.getReadOnlyStack())) {
+            if (handler.getSlotLimit(slot) > 0 && handler.isItemValid(slot, key.toStack())) {
                 if (result >= 0) return -1;
                 result = slot;
             }

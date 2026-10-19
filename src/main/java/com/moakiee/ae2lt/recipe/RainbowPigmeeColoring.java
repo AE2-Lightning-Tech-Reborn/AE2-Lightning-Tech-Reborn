@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.DyeColor;
@@ -58,7 +58,7 @@ public final class RainbowPigmeeColoring {
     }
 
     public ItemStack next(ItemStack input) {
-        return next(input, RegistryAccess.EMPTY);
+        return next(input, RegistryAccess.fromRegistryOfRegistries(net.minecraft.core.Registry.REGISTRY));
     }
 
     // RecipeManager in 1.20 does not retain registry access; crafting calls supply it instead.
@@ -87,10 +87,10 @@ public final class RainbowPigmeeColoring {
         }
         ItemStack result;
         if (input.getItem() instanceof DyeableLeatherItem dyeable) {
-            result = input.copyWithCount(count);
+            result = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(input, count);
             dyeable.setColor(result, rgb(color));
         } else if (input.is(Items.SHIELD)) {
-            result = input.copyWithCount(count);
+            result = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(input, count);
             result.getOrCreateTagElement("BlockEntityTag").putInt("Base", color.getId());
         } else {
             result = variant(input.getItem(), registries)
@@ -104,7 +104,7 @@ public final class RainbowPigmeeColoring {
     // Save/load also preserves Forge capability data when changing the item identity.
     private static ItemStack copyAs(ItemStack input, Item item, int count) {
         var data = input.save(new CompoundTag());
-        data.putString("id", BuiltInRegistries.ITEM.getKey(item).toString());
+        data.putString("id", Registry.ITEM.getKey(item).toString());
         data.putByte("Count", (byte) count);
         return ItemStack.of(data);
     }
@@ -146,7 +146,7 @@ public final class RainbowPigmeeColoring {
     }
 
     private static Optional<Variant> findColoredVariant(Item item) {
-        var id = BuiltInRegistries.ITEM.getKey(item);
+        var id = Registry.ITEM.getKey(item);
         String path = id.getPath();
         for (var color : NAME_ORDER) {
             String name = color.getName();
@@ -193,7 +193,7 @@ public final class RainbowPigmeeColoring {
                     || recipe.isSpecial() || recipe instanceof RainbowPigmeeDyeRecipe) {
                 continue;
             }
-            var output = recipe.getResultItem(registries);
+            var output = recipe.getResultItem();
             var colored = coloredVariant(output.getItem());
             if (output.isEmpty() || colored.isEmpty() || output.hasTag()) {
                 continue;
@@ -247,7 +247,7 @@ public final class RainbowPigmeeColoring {
         var items = new Item[COLORS.length];
         for (var color : COLORS) {
             var id = new ResourceLocation(namespace, prefix + color.getName() + suffix);
-            var item = BuiltInRegistries.ITEM.getOptional(id).orElse(Items.AIR);
+            var item = Registry.ITEM.getOptional(id).orElse(Items.AIR);
             if (item == Items.AIR) {
                 return Optional.empty();
             }

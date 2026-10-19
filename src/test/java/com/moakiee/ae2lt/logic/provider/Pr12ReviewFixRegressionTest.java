@@ -12,7 +12,7 @@ import appeng.api.crafting.IPatternDetails;
 class Pr12ReviewFixRegressionTest {
     @BeforeAll static void bootstrap() {
         net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
     private static final class Machine {
         int stored;

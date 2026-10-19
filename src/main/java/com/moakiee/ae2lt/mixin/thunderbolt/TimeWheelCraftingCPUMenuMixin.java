@@ -119,7 +119,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
             schedulingMode=ae2lt$bigCpu.getSelectionMode();
             cantStoreItems=ae2lt$bigCpu.isBusy() && ae2lt$bigCpu.job().returning;
             if (ae2lt$bigStatusTicks++ % 5 == 0)
-                sendPacketToClient(new CraftingStatusPacket(containerId,com.moakiee.ae2lt.crafting.big.BigCraftingStatus.create(ae2lt$bigCpu)));
+                sendPacketToClient(new CraftingStatusPacket(com.moakiee.ae2lt.crafting.big.BigCraftingStatus.create(ae2lt$bigCpu)));
         }
         if (!isServerSide() || this.thunderbolt$timeWheelCpu == null) {
             return;
@@ -142,7 +142,7 @@ public abstract class TimeWheelCraftingCPUMenuMixin extends AEBaseMenu {
         if (this.incrementalUpdateHelper.hasChanges()) {
             var status = thunderbolt$createStatus(this.incrementalUpdateHelper, logic);
             this.incrementalUpdateHelper.commitChanges();
-            sendPacketToClient(new CraftingStatusPacket(containerId, status));
+            sendPacketToClient(new CraftingStatusPacket(status));
         }
     }
 

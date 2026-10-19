@@ -12,7 +12,7 @@ import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -36,8 +36,8 @@ public final class NeoEcoCatalyzerGameTests {
             return;
         }
         var recipe = candidate.orElseThrow().recipe();
-        var catalyst = BuiltInRegistries.ITEM.get(new ResourceLocation("neoecoae:flawless_budding_energized_crystal"));
-        var output = BuiltInRegistries.ITEM.get(new ResourceLocation("neoecoae:energized_crystal"));
+        var catalyst = Registry.ITEM.get(new ResourceLocation("neoecoae:flawless_budding_energized_crystal"));
+        var output = Registry.ITEM.get(new ResourceLocation("neoecoae:energized_crystal"));
         h.assertTrue(recipe.getOutputTemplate().is(output) && recipe.getOutputTemplate().getCount() == 16,
                 "incorrect Neo ECO output");
         var pos = new BlockPos(2, 2, 2);

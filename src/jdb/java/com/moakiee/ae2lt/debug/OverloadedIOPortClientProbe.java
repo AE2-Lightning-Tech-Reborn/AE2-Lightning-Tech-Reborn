@@ -126,7 +126,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,installedMatrices.index,0,ClickType.QUICK_MOVE,mc.player);
                     require(jei!=null,"JEI unavailable");
                     var manager=jei.getRecipeManager();var recipes=manager.createRecipeLookup(LightningAssemblyCategory.TYPE).get()
-                            .filter(r->r.getResultItem(mc.level.registryAccess()).is(ModBlocks.OVERLOADED_IO_PORT.get().asItem())).toList();
+                            .filter(r->r.getResultItem().is(ModBlocks.OVERLOADED_IO_PORT.get().asItem())).toList();
                     require(recipes.size()==1,"JEI assembly recipe missing");
                     require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(LightningAssemblyCategory.TYPE),recipes.get(0),jei.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).isPresent(),"JEI layout failed");
                     jei.getRecipesGui().showRecipes(manager.getRecipeCategory(LightningAssemblyCategory.TYPE),recipes,List.of());

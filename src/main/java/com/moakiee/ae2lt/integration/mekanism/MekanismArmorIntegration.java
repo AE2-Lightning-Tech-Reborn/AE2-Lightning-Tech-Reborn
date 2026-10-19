@@ -102,12 +102,12 @@ public final class MekanismArmorIntegration {
     }
 
     public static void tickRadiationRegeneration(ServerPlayer player) {
-        var radiationManager = IRadiationManager.INSTANCE;
+        var radiationManager = mekanism.api.MekanismAPI.getRadiationManager();
         double radiationLevel = radiationManager.getRadiationLevel(player);
         // 1.20.1: RadiationScale is a nested enum of RadiationManager and IRadiationManager
         // has no minRadiationMagnitude(); the threshold lives on RadiationManager.MIN_MAGNITUDE.
         if (!MekanismProtectionRules.shouldRegenerate(
-                player.level().getGameTime(),
+                player.level.getGameTime(),
                 radiationLevel,
                 RadiationManager.MIN_MAGNITUDE,
                 player.getHealth(),

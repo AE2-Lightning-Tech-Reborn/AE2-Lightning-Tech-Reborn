@@ -9,9 +9,13 @@ import net.minecraft.resources.ResourceLocation;
  * <p>Aliases migrate world palettes and item stacks without keeping duplicate
  * compatibility blocks registered. IDs that already match the final names remain unchanged.</p>
  */
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = AE2LightningTech.MODID,
+        bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
 public final class LegacyRegistryAliases {
     private static final String MATRIX_PREFIX = "matter_warping_matrix_";
     private static boolean registered;
+    private static final java.util.Map<ResourceLocation, ResourceLocation> ITEMS = new java.util.HashMap<>();
+    private static final java.util.Map<ResourceLocation, ResourceLocation> BLOCKS = new java.util.HashMap<>();
 
     private LegacyRegistryAliases() {
     }
@@ -22,9 +26,7 @@ public final class LegacyRegistryAliases {
         }
         registered = true;
 
-        ((net.minecraftforge.registries.ForgeRegistry<net.minecraft.world.item.Item>)
-                net.minecraftforge.registries.ForgeRegistries.ITEMS)
-                .addAlias(id("module_undying"), id("module_overload_protection"));
+        ITEMS.put(id("module_undying"), id("module_overload_protection"));
 
         aliasTianshuComputeUnits();
 
@@ -54,12 +56,21 @@ public final class LegacyRegistryAliases {
     }
 
     private static void aliasBlockAndItem(String from, String to) {
-        // 1.20.1: DeferredRegister has no addAlias (that API only exists in newer
-        // NeoForge versions). World-palette migration for renamed IDs must go through
-        // a RegistryEvent.MissingMappings handler instead; the alias table below is
-        // kept as documentation of the intended renames.
-        id(from);
-        id(to);
+        ITEMS.put(id(from), id(to));
+        BLOCKS.put(id(from), id(to));
+    }
+
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void missingMappings(net.minecraftforge.registries.MissingMappingsEvent event) {
+        register();
+        for (var mapping : event.getMappings(net.minecraftforge.registries.ForgeRegistries.Keys.ITEMS, AE2LightningTech.MODID)) {
+            var target = ITEMS.get(mapping.getKey());
+            if (target != null) mapping.remap(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(target));
+        }
+        for (var mapping : event.getMappings(net.minecraftforge.registries.ForgeRegistries.Keys.BLOCKS, AE2LightningTech.MODID)) {
+            var target = BLOCKS.get(mapping.getKey());
+            if (target != null) mapping.remap(net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(target));
+        }
     }
 
     private static ResourceLocation id(String path) {

@@ -4,7 +4,8 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -74,19 +75,19 @@ public final class PageButton extends IconButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!visible) {
             return;
         }
-        super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+        super.renderButton(guiGraphics, mouseX, mouseY, partialTick);
 
         var blitter = Blitter.texture(ICON_TEXTURE, 16, 16)
                 .src(0, 0, 16, 16);
         if (!active) {
             blitter.opacity(0.5F);
         }
-        blitter.dest(getX(), getY())
-                .blit(guiGraphics);
+        blitter.dest(x, y)
+                .blit(guiGraphics, 0);
     }
 
     @Override

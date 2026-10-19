@@ -244,7 +244,7 @@ public class WirelessFrequency {
                 if (!actorAccess.canActOnLevel(effective)) return RESPONSE_NO_PERMISSION;
                 if (targetIsOwner && self) return RESPONSE_INVALID_USER;
                 if (current == null) {
-                    var server = actor.level().getServer();
+                    var server = actor.level.getServer();
                     if (server == null) return RESPONSE_INVALID_USER;
                     Player target = server.getPlayerList().getPlayer(targetUUID);
                     if (target == null) return RESPONSE_INVALID_USER;
@@ -263,7 +263,7 @@ public class WirelessFrequency {
                 if (!actorAccess.canActOnLevel(effective)) return RESPONSE_NO_PERMISSION;
                 if (targetIsOwner && self) return RESPONSE_INVALID_USER;
                 if (current == null) {
-                    var server = actor.level().getServer();
+                    var server = actor.level.getServer();
                     if (server == null) return RESPONSE_INVALID_USER;
                     Player target = server.getPlayerList().getPlayer(targetUUID);
                     if (target == null) return RESPONSE_INVALID_USER;
@@ -295,7 +295,7 @@ public class WirelessFrequency {
                 if (current != null) {
                     current.setAccessLevel(FrequencyAccessLevel.OWNER);
                 } else {
-                    var server = actor.level().getServer();
+                    var server = actor.level.getServer();
                     if (server == null) return RESPONSE_INVALID_USER;
                     Player target = server.getPlayerList().getPlayer(targetUUID);
                     if (target == null) return RESPONSE_INVALID_USER;

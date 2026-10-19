@@ -17,7 +17,8 @@ import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.SimpleContainer;
@@ -74,8 +75,8 @@ final class TianshuSmithingTableEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics);
+    public void drawBackgroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
+        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics, 0);
     }
 
     @Override
@@ -84,17 +85,16 @@ final class TianshuSmithingTableEncodingPanel extends TianshuEncodingModePanel {
 
         // 1.20.1 has no SmithingRecipeInput (1.21); AE2 1.20.1 feeds a 3-slot SimpleContainer
         // into RecipeManager.getRecipeFor(RecipeType.SMITHING, ...) instead.
-        var recipeInput = new SimpleContainer(3);
-        recipeInput.setItem(0, menu.getSmithingTableTemplateSlot().getItem());
-        recipeInput.setItem(1, menu.getSmithingTableBaseSlot().getItem());
-        recipeInput.setItem(2, menu.getSmithingTableAdditionSlot().getItem());
-        var level = menu.getPlayer().level();
+        var recipeInput = new SimpleContainer(2);
+        recipeInput.setItem(0, menu.getSmithingTableBaseSlot().getItem());
+        recipeInput.setItem(1, menu.getSmithingTableAdditionSlot().getItem());
+        var level = menu.getPlayer().level;
         var recipe = level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMITHING, recipeInput, level)
                 .orElse(null);
         resultSlot.set(recipe == null
                 ? ItemStack.EMPTY
-                : recipe.assemble(recipeInput, level.registryAccess()));
+                : recipe.assemble(recipeInput));
     }
 
     @Override
@@ -102,7 +102,6 @@ final class TianshuSmithingTableEncodingPanel extends TianshuEncodingModePanel {
         super.setVisible(visible);
         clearButton.setVisibility(visible);
         substitutionsButton.setVisibility(visible);
-        screen.setSlotsHidden(SlotSemantics.SMITHING_TABLE_TEMPLATE, !visible);
         screen.setSlotsHidden(SlotSemantics.SMITHING_TABLE_BASE, !visible);
         screen.setSlotsHidden(SlotSemantics.SMITHING_TABLE_ADDITION, !visible);
         screen.setSlotsHidden(SlotSemantics.SMITHING_TABLE_RESULT, !visible);

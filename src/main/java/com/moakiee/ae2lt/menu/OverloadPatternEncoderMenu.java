@@ -222,12 +222,12 @@ public class OverloadPatternEncoderMenu extends AEBaseMenu {
                 return null;
             }
 
-            var plainDetails = PatternDetailsHelper.decodePattern(plainSource, getPlayer().level());
+            var plainDetails = PatternDetailsHelper.decodePattern(plainSource, getPlayer().level);
             if (plainDetails == null || plainDetails instanceof IMolecularAssemblerSupportedPattern) {
                 return null;
             }
 
-            var resolver = new Ae2PlainPatternResolver(getPlayer().level());
+            var resolver = new Ae2PlainPatternResolver(getPlayer().level);
             return conversionService.resolveEditableSource(sourceStack, resolver).orElse(null);
         } catch (RuntimeException ignored) {
             return null;

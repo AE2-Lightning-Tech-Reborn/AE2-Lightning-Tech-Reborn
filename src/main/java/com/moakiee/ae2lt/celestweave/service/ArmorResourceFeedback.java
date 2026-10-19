@@ -55,7 +55,7 @@ public final class ArmorResourceFeedback {
         if (player == null) {
             return;
         }
-        long now = player.level().getGameTime();
+        long now = player.level.getGameTime();
         String tag = TAG_PREFIX + resource;
         if (player.getPersistentData().getLong(tag) > now) {
             return;

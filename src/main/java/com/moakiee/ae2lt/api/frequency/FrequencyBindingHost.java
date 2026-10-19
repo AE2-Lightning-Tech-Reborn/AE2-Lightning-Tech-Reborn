@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.api.frequency;
 
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 
 /**

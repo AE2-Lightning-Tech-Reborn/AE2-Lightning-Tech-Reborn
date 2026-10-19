@@ -20,7 +20,7 @@ import appeng.recipes.handlers.InscriberRecipe;
 import com.mojang.logging.LogUtils;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -177,22 +177,22 @@ final class InscriberProcessorAdapter {
     }
 
     private boolean isSiliconPrint(InscriberRecipe recipe) {
-        if (!BuiltInRegistries.ITEM.getKey(recipe.getResultItem().getItem()).equals(PRINTED_SILICON)
+        if (!Registry.ITEM.getKey(recipe.getResultItem().getItem()).equals(PRINTED_SILICON)
                 || recipe.getMiddleInput().getClass() != Ingredient.class) return false;
         var middle = lookup.apply(recipe.getMiddleInput());
         return middle != null && Arrays.stream(middle.getItems())
-                .anyMatch(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(SILICON));
+                .anyMatch(stack -> Registry.ITEM.getKey(stack.getItem()).equals(SILICON));
     }
 
     private List<Material> preferredSiliconBlock(int units) {
         var candidates = compressions.stream()
-                .filter(c -> BuiltInRegistries.ITEM.getKey(c.material().getItem()).equals(SILICON))
+                .filter(c -> Registry.ITEM.getKey(c.material().getItem()).equals(SILICON))
                 .toList();
         var preferredId = preferredSiliconBlockId(candidates.stream()
-                .map(c -> BuiltInRegistries.ITEM.getKey(c.block().getItem())).toList());
+                .map(c -> Registry.ITEM.getKey(c.block().getItem())).toList());
         if (preferredId == null) throw new IllegalArgumentException("no reversible ExtendedAE/LT silicon block recipe");
         var block = candidates.stream()
-                .filter(c -> BuiltInRegistries.ITEM.getKey(c.block().getItem()).equals(preferredId))
+                .filter(c -> Registry.ITEM.getKey(c.block().getItem()).equals(preferredId))
                 .findFirst().orElseThrow();
         return List.of(new Material(StrictNBTIngredient.of( block.block()),
                 checkedMultiply(units, block.units()), "silicon/" + block.route()));
@@ -231,7 +231,7 @@ final class InscriberProcessorAdapter {
         for (var material : selected) operations = checkedMultiply(operations / gcd(operations, material.units()), material.units());
         int batch = operations;
         var inputs = selected.stream().map(m -> new OverloadProcessingIngredient(m.ingredient(), batch / m.units())).toList();
-        var output = source.value().getResultItem().copyWithCount(Math.multiplyExact(batch, source.value().getResultItem().getCount()));
+        var output = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(source.value().getResultItem(), Math.multiplyExact(batch, source.value().getResultItem().getCount()));
         String route = selected.stream().map(m -> m.units() + ":" + m.route()).reduce((a, b) -> a + "|" + b).orElseThrow();
         var id = new ResourceLocation("ae2lt", "derived/inscriber/" + source.id().getNamespace()
                 + "/" + source.id().getPath() + "/" + digest(route));
@@ -253,15 +253,15 @@ final class InscriberProcessorAdapter {
             var first = ingredients.get(0);
             if (first.isEmpty() || first.getClass() != Ingredient.class || !hasItems(first)
                     || ingredients.stream().anyMatch(i -> i.isEmpty() || i.getClass() != Ingredient.class || !hasItems(i))) continue;
-            var block = recipe.getResultItem(RegistryAccess.EMPTY);
+            var block = recipe.getResultItem();
             if (block.getCount() != 1 || !(block.getItem() instanceof BlockItem) || block.hasCraftingRemainingItem()) continue;
             for (var reverseHolder : unpacking) {
                 var reverse = reverseHolder.value();
                 var reverseInputs = reverse.getIngredients();
                 if (reverseInputs.size() != 1 || !matches(reverseInputs.get(0), block)) continue;
-                var material = reverse.getResultItem(RegistryAccess.EMPTY);
+                var material = reverse.getResultItem();
                 if (material.getCount() != ingredients.size() || ingredients.stream().anyMatch(i -> !matches(i, material)) || material.hasCraftingRemainingItem()) continue;
-                result.add(new Compression(block.copy(), material.copyWithCount(1), ingredients.size(), holder.id() + "/" + reverseHolder.id()));
+                result.add(new Compression(block.copy(), com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(material, 1), ingredients.size(), holder.id() + "/" + reverseHolder.id()));
             }
         }
         return List.copyOf(result);

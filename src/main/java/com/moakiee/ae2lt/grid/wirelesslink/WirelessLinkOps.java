@@ -79,14 +79,14 @@ public final class WirelessLinkOps {
             var connection = GridConnection.create(targetNode, transmitterNode, null);
             trackWirelessBridge(connection);
             return connection;
-        } catch (IllegalStateException duplicateCandidate) {
+        } catch (appeng.api.exceptions.FailedConnectionException | IllegalStateException duplicateCandidate) {
             existing = findConnection(targetNode, transmitterNode);
             if (isDuplicateConnectionFailure(duplicateCandidate)
                     && existing != null
                     && !existing.isInWorld()) {
                 return reuseVirtualConnection(existing);
             }
-            throw duplicateCandidate;
+            throw new IllegalStateException("Unable to connect wireless nodes", duplicateCandidate);
         }
     }
 
@@ -98,7 +98,7 @@ public final class WirelessLinkOps {
         return connection;
     }
 
-    private static boolean isDuplicateConnectionFailure(IllegalStateException exception) {
+    private static boolean isDuplicateConnectionFailure(Exception exception) {
         var message = exception.getMessage();
         return message != null && message.contains("already exists");
     }

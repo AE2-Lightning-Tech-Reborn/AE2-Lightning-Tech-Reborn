@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.blockentity.workbench;
 import java.util.List;
 import java.util.function.Predicate;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -24,41 +24,41 @@ public interface DeviceWorkbenchAdapter {
 
     List<StructuralSlotSpec> structuralSlots();
 
-    Predicate<ItemStack> moduleInputValidator(ItemStack device, HolderLookup.Provider registries);
+    Predicate<ItemStack> moduleInputValidator(ItemStack device, RegistryAccess registries);
 
-    List<ItemStack> listModuleEntries(ItemStack device, HolderLookup.Provider registries);
+    List<ItemStack> listModuleEntries(ItemStack device, RegistryAccess registries);
 
-    boolean canInstallOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate);
+    boolean canInstallOne(ItemStack device, RegistryAccess registries, ItemStack candidate);
 
-    boolean installOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate);
+    boolean installOne(ItemStack device, RegistryAccess registries, ItemStack candidate);
 
-    ItemStack uninstallOne(ItemStack device, HolderLookup.Provider registries, String typeId);
+    ItemStack uninstallOne(ItemStack device, RegistryAccess registries, String typeId);
 
-    ItemStack uninstallAll(ItemStack device, HolderLookup.Provider registries, String typeId);
+    ItemStack uninstallAll(ItemStack device, RegistryAccess registries, String typeId);
 
     String moduleTypeId(ItemStack stack);
 
     int maxInstallAmount(ItemStack stack);
 
-    ItemStack getStructuralSlot(ItemStack device, HolderLookup.Provider registries, StructuralSlotSpec spec);
+    ItemStack getStructuralSlot(ItemStack device, RegistryAccess registries, StructuralSlotSpec spec);
 
-    void setStructuralSlot(ItemStack device, HolderLookup.Provider registries, StructuralSlotSpec spec, ItemStack stack);
+    void setStructuralSlot(ItemStack device, RegistryAccess registries, StructuralSlotSpec spec, ItemStack stack);
 
     ItemStack removeStructuralSlot(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             int amount);
 
     boolean canPlaceStructural(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack);
 
     default boolean mayPickupStructural(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             Player player,
             ItemStack carried) {
@@ -68,6 +68,6 @@ public interface DeviceWorkbenchAdapter {
     default void onDeviceInserted(ItemStack device) {
     }
 
-    default void onModulesChanged(ItemStack device, HolderLookup.Provider registries, Dist dist) {
+    default void onModulesChanged(ItemStack device, RegistryAccess registries, Dist dist) {
     }
 }

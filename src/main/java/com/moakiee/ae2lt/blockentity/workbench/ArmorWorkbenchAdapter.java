@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.blockentity.workbench;
 import java.util.List;
 import java.util.function.Predicate;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -66,33 +66,33 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     }
 
     @Override
-    public Predicate<ItemStack> moduleInputValidator(ItemStack device, HolderLookup.Provider registries) {
+    public Predicate<ItemStack> moduleInputValidator(ItemStack device, RegistryAccess registries) {
         return stack -> stack.getItem() instanceof OverloadDeviceModuleItem
                 && CelestweaveArmorState.canInstallModule(device, registries, stack);
     }
 
     @Override
-    public List<ItemStack> listModuleEntries(ItemStack device, HolderLookup.Provider registries) {
+    public List<ItemStack> listModuleEntries(ItemStack device, RegistryAccess registries) {
         return CelestweaveArmorState.loadModuleStacks(device, registries);
     }
 
     @Override
-    public boolean canInstallOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean canInstallOne(ItemStack device, RegistryAccess registries, ItemStack candidate) {
         return CelestweaveArmorState.canInstallModule(device, registries, candidate);
     }
 
     @Override
-    public boolean installOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean installOne(ItemStack device, RegistryAccess registries, ItemStack candidate) {
         return CelestweaveArmorState.installOneModule(device, registries, candidate);
     }
 
     @Override
-    public ItemStack uninstallOne(ItemStack device, HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallOne(ItemStack device, RegistryAccess registries, String typeId) {
         return CelestweaveArmorState.uninstallOneModule(device, registries, typeId);
     }
 
     @Override
-    public ItemStack uninstallAll(ItemStack device, HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallAll(ItemStack device, RegistryAccess registries, String typeId) {
         return CelestweaveArmorState.uninstallAllOfType(device, registries, typeId);
     }
 
@@ -107,14 +107,14 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     }
 
     @Override
-    public ItemStack getStructuralSlot(ItemStack device, HolderLookup.Provider registries, StructuralSlotSpec spec) {
+    public ItemStack getStructuralSlot(ItemStack device, RegistryAccess registries, StructuralSlotSpec spec) {
         return CelestweaveArmorState.getSlot(device, registries, toArmorSlot(spec));
     }
 
     @Override
     public void setStructuralSlot(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         if (stack != null
@@ -130,7 +130,7 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public ItemStack removeStructuralSlot(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             int amount) {
         if (amount <= 0) {
@@ -153,7 +153,7 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public boolean canPlaceStructural(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         if (device.isEmpty() || stack.isEmpty()) {
@@ -169,7 +169,7 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public boolean mayPickupStructural(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             Player player,
             ItemStack carried) {
@@ -185,7 +185,7 @@ public final class ArmorWorkbenchAdapter implements DeviceWorkbenchAdapter {
     }
 
     @Override
-    public void onModulesChanged(ItemStack device, HolderLookup.Provider registries, Dist dist) {
+    public void onModulesChanged(ItemStack device, RegistryAccess registries, Dist dist) {
         CelestweaveArmorState.ensureArmorId(device);
         CelestweaveArmorState.reconcileInstalledSubmodules(null, device, registries, dist);
     }

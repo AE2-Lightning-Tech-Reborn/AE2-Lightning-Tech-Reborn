@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.client.railgun;
 
-import org.joml.Vector3f;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;

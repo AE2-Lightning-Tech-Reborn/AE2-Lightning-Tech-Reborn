@@ -135,7 +135,7 @@ public final class LightningTransformRecipe implements Recipe<LightningTransform
     }
 
     @Override
-    public ItemStack assemble(LightningTransformRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(LightningTransformRecipeInput input) {
         return result.copy();
     }
 
@@ -145,7 +145,7 @@ public final class LightningTransformRecipe implements Recipe<LightningTransform
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return result.copy();
     }
 

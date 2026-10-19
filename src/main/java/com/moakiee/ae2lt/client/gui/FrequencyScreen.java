@@ -13,7 +13,7 @@ import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import com.moakiee.ae2lt.client.gui.AE2Button;
 import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.core.sync.network.NetworkHandler;
 import appeng.core.sync.packets.SwitchGuisPacket;
 
@@ -26,10 +26,11 @@ import com.moakiee.ae2lt.menu.FrequencyMenu;
 import com.moakiee.ae2lt.network.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import com.moakiee.ae2lt.client.compat.Button;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -312,9 +313,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     btn -> NetworkHandler.instance().sendToServer(
                             SwitchGuisPacket.returnToParentMenu()));
             backButton.setStyle(TabButton.Style.BOX);
-            backButton.setX(x0 - TAB_WIDTH + 6);
-            backButton.setY(y0 - TAB_HEIGHT);
-            backButton.setTooltip(Tooltip.create(backTooltip));
+            backButton.x = x0 - TAB_WIDTH + 6;
+            backButton.y = y0 - TAB_HEIGHT;
+            com.moakiee.ae2lt.client.compat.LegacyTooltips.set(backButton, Tooltip.create(backTooltip));
             addRenderableWidget(backButton);
         }
 
@@ -469,9 +470,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             // tabs read as one continuous strip rather than discrete
             // buttons (the effect reported as "tabs look like a long bar").
             button.setStyle(TabButton.Style.BOX);
-            button.setX(bx);
-            button.setY(by);
-            button.setTooltip(Tooltip.create(tooltip));
+            button.x = bx;
+            button.y = by;
+            com.moakiee.ae2lt.client.compat.LegacyTooltips.set(button, Tooltip.create(tooltip));
             addRenderableWidget(button);
         }
     }
@@ -488,18 +489,18 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         @Override
         public boolean isFocused() {
-            return super.isFocused() || this.isHovered();
+            return super.isFocused() || this.isHovered;
         }
 
         @Override
-        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
             // Super paints the BOX background sprite and — only when
             // the super icon field is non-null — the AE2 glyph. Passing
             // {@code null} for tabs that have a custom PNG means super
             // leaves the icon surface untouched, so we can overlay our
             // own 16×16 without the AE2 glyph bleeding through the
             // transparent pixels of the overlay.
-            super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+            super.renderButton(guiGraphics, mouseX, mouseY, partialTick);
             if (customIcon != null) {
                 // Match AE2's own (+2, +1) icon offset used by
                 // TabButton for the BOX style — see its renderWidget
@@ -507,8 +508,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 // where offset=2 for BOX. Using the same position keeps
                 // our custom PNG visually aligned with the AE2 COG that
                 // TAB_SETTING still renders through the base class.
-                guiGraphics.blit(customIcon,
-                        getX() + 2, getY() + 1,
+                LegacyGui.blit(guiGraphics, customIcon,
+                        x + 2, y + 1,
                         0, 0, 16, 16, 16, 16);
             }
         }
@@ -1094,8 +1095,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     // Rendering
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        g.blit(
+    protected void renderBg(PoseStack g, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(g,
                 backgroundTextureForTab(currentTab),
                 leftPos,
                 topPos,
@@ -1133,33 +1134,33 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     /** Draws the password modal background beneath its text and controls. */
-    private void drawPasswordPromptPanel(GuiGraphics g) {
+    private void drawPasswordPromptPanel(PoseStack g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
         int pw = 144;
         int ph = 66;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
+        LegacyGui.fill(g, px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
+        LegacyGui.fill(g, px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
+        LegacyGui.fill(g, px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
     /** Draws the delete-confirmation background beneath its text and controls. */
-    private void drawDeleteConfirmPanel(GuiGraphics g) {
+    private void drawDeleteConfirmPanel(PoseStack g) {
         int px0 = leftPos + 16;
         int py0 = topPos + 50;
         int pw = 144;
         int ph = 66;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
+        LegacyGui.fill(g, px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
+        LegacyGui.fill(g, px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
+        LegacyGui.fill(g, px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
     /** Draws the member editor background beneath its text and controls. */
-    private void drawMemberPopupPanel(GuiGraphics g) {
+    private void drawMemberPopupPanel(PoseStack g) {
         int px0 = leftPos + 10;
         int py0 = topPos + 26;
         int pw = 156;
@@ -1167,11 +1168,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // sits inside the panel — at 110 it poked 4 px below the
         // bottom bevel.
         int ph = 120;
-        g.fill(px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
-        g.fill(px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
-        g.fill(px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
-        g.fill(px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
-        g.fill(px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + ph, 0xFFCBCCD4);             // panel fill
+        LegacyGui.fill(g, px0, py0, px0 + pw, py0 + 1, 0xFF5A5A6B);               // top shadow
+        LegacyGui.fill(g, px0, py0, px0 + 1, py0 + ph, 0xFF5A5A6B);               // left shadow
+        LegacyGui.fill(g, px0 + pw - 1, py0, px0 + pw, py0 + ph, 0xFFFFFFFF);     // right highlight
+        LegacyGui.fill(g, px0, py0 + ph - 1, px0 + pw, py0 + ph, 0xFFFFFFFF);     // bottom highlight
     }
 
     /** Shared tab X coordinate for widgets and background rendering; Create is right-aligned. */
@@ -1183,7 +1184,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
+    protected void renderLabels(PoseStack g, int mouseX, int mouseY) {
         fittedTextTooltips.clear();
 
         drawFlatCentered(g,
@@ -1262,8 +1263,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 int bgW = Math.min(imageWidth - 8, textW + 8);
                 int bgX = (imageWidth - bgW) / 2;
                 int bgY = imageHeight - 14;
-                g.fill(bgX, bgY, bgX + bgW, bgY + 12, 0xD0202028);
-                g.fill(bgX, bgY, bgX + bgW, bgY + 1, 0xFFD04848);   // top accent
+                LegacyGui.fill(g, bgX, bgY, bgX + bgW, bgY + 12, 0xD0202028);
+                LegacyGui.fill(g, bgX, bgY, bgX + bgW, bgY + 1, 0xFFD04848);   // top accent
                 drawFlatCentered(g, display, imageWidth / 2, bgY + 2, 0xFFFFB4B4);
                 if (!full.equals(fitted)) {
                     addFittedTooltip(bgX, bgY, bgW, 12, inlineError);
@@ -1275,40 +1276,40 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     /** Draws panel text without a drop shadow to match AE2 labels. */
-    private void drawFlat(GuiGraphics g, Component text, int x, int y, int color) {
-        g.drawString(font, text, x, y, color, false);
+    private void drawFlat(PoseStack g, Component text, int x, int y, int color) {
+        LegacyGui.drawString(g, font, text, x, y, color, false);
     }
 
-    private void drawFlat(GuiGraphics g, String text, int x, int y, int color) {
-        g.drawString(font, text, x, y, color, false);
+    private void drawFlat(PoseStack g, String text, int x, int y, int color) {
+        LegacyGui.drawString(g, font, text, x, y, color, false);
     }
 
-    private void drawFlatCentered(GuiGraphics g, Component text, int centerX, int y, int color) {
+    private void drawFlatCentered(PoseStack g, Component text, int centerX, int y, int color) {
         int w = font.width(text);
-        g.drawString(font, text, centerX - w / 2, y, color, false);
+        LegacyGui.drawString(g, font, text, centerX - w / 2, y, color, false);
     }
 
-    private void drawFlatFitted(GuiGraphics g, Component text, int x, int y, int maxWidth, int color) {
+    private void drawFlatFitted(PoseStack g, Component text, int x, int y, int maxWidth, int color) {
         String full = text.getString();
         String fitted = FittingText.fit(full, maxWidth, font::width);
         Component display = full.equals(fitted)
                 ? text
                 : Component.literal(fitted).setStyle(text.getStyle());
-        g.drawString(font, display, x, y, color, false);
+        LegacyGui.drawString(g, font, display, x, y, color, false);
         if (!full.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, font.width(display)), 9, text);
         }
     }
 
-    private void drawFlatFitted(GuiGraphics g, String text, int x, int y, int maxWidth, int color) {
+    private void drawFlatFitted(PoseStack g, String text, int x, int y, int maxWidth, int color) {
         String fitted = FittingText.fit(text, maxWidth, font::width);
-        g.drawString(font, fitted, x, y, color, false);
+        LegacyGui.drawString(g, font, fitted, x, y, color, false);
         if (!text.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, font.width(fitted)), 9, Component.literal(text));
         }
     }
 
-    private void drawFlatCenteredFitted(GuiGraphics g, Component text, int centerX, int y, int maxWidth, int color) {
+    private void drawFlatCenteredFitted(PoseStack g, Component text, int centerX, int y, int maxWidth, int color) {
         String full = text.getString();
         String fitted = FittingText.fit(full, maxWidth, font::width);
         Component display = full.equals(fitted)
@@ -1316,7 +1317,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 : Component.literal(fitted).setStyle(text.getStyle());
         int w = font.width(display);
         int x = centerX - w / 2;
-        g.drawString(font, display, x, y, color, false);
+        LegacyGui.drawString(g, font, display, x, y, color, false);
         if (!full.equals(fitted)) {
             addFittedTooltip(x, y, Math.min(maxWidth, w), 9, text);
         }
@@ -1326,7 +1327,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         fittedTextTooltips.add(new FittedTextTooltip(new Rect2i(leftPos + x, topPos + y, width, height), text));
     }
 
-    private void renderHomeLabels(GuiGraphics g) {
+    private void renderHomeLabels(PoseStack g) {
         // Five info lines sit inside the wide info shelf baked into
         // wireless_overloaded_home.png (shelf y=39..111). 14-px row pitch
         // gives clean spacing between glyphs and avoids touching the
@@ -1389,7 +1390,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderSelectionLabels(GuiGraphics g) {
+    private void renderSelectionLabels(PoseStack g) {
         // Single subtitle row between title (y=6) and shelf (y=28).
         // Text at y=18 renders glyphs on y=18..26, keeping a 2-px gap
         // above the shelf and well clear of the title descenders — the
@@ -1412,7 +1413,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // shelf's bottom bevel avoids the prior clipping/overlap.
     }
 
-    private void renderConnectionLabels(GuiGraphics g) {
+    private void renderConnectionLabels(PoseStack g) {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
@@ -1463,7 +1464,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             // two text lines so it reads as a row-level status badge
             // rather than a glyph clinging to either line.
             int dotY = yTop + 5;
-            g.fill(160, dotY, 166, dotY + 6, dotColor);
+            LegacyGui.fill(g, 160, dotY, 166, dotY + 6, dotColor);
 
             // Right-align inside the well (right edge at x=168) rather
             // than against the chassis edge so it doesn't poke past
@@ -1472,7 +1473,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderMemberLabels(GuiGraphics g) {
+    private void renderMemberLabels(PoseStack g) {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
@@ -1498,7 +1499,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private void renderCreateLabels(GuiGraphics g) {
+    private void renderCreateLabels(PoseStack g) {
         drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"),
                 16, 22, AE2_TEXT_MUTED);
         drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"),
@@ -1511,26 +1512,26 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int cx = 42 + (i % 7) * 16;
             int cy = 90 + (i / 7) * 16;
             int fill = PRESET_COLORS[i] | 0xFF000000;
-            g.fill(cx + 1, cy + 1, cx + 13, cy + 13, fill);
+            LegacyGui.fill(g, cx + 1, cy + 1, cx + 13, cy + 13, fill);
             if (PRESET_COLORS[i] == editColor) {
                 // Highlight the selected swatch with a 1-px white frame
                 // so the user can see which colour they've picked.
                 int accent = 0xFFFFFFFF;
-                g.fill(cx,       cy,       cx + 14, cy + 1,  accent); // top
-                g.fill(cx,       cy + 13,  cx + 14, cy + 14, accent); // bottom
-                g.fill(cx,       cy,       cx + 1,  cy + 14, accent); // left
-                g.fill(cx + 13,  cy,       cx + 14, cy + 14, accent); // right
+                LegacyGui.fill(g, cx,       cy,       cx + 14, cy + 1,  accent); // top
+                LegacyGui.fill(g, cx,       cy + 13,  cx + 14, cy + 14, accent); // bottom
+                LegacyGui.fill(g, cx,       cy,       cx + 1,  cy + 14, accent); // left
+                LegacyGui.fill(g, cx + 13,  cy,       cx + 14, cy + 14, accent); // right
             }
         }
 
-        g.fill(16, 124, 28, 134, editColor | 0xFF000000);
+        LegacyGui.fill(g, 16, 124, 28, 134, editColor | 0xFF000000);
         if (nameField != null && !nameField.getValue().isBlank()) {
             drawFlatFitted(g, nameField.getValue(), 32, 125,
                     imageWidth - 42, editColor | 0xFF000000);
         }
     }
 
-    private void renderSettingLabels(GuiGraphics g) {
+    private void renderSettingLabels(PoseStack g) {
         if (ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) == null) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
                     imageWidth / 2, 40, AE2_TEXT_MUTED);
@@ -1551,7 +1552,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack g, int mouseX, int mouseY, float partialTick) {
         renderBackground(g);
         super.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
@@ -1560,12 +1561,12 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     // Helpers
 
-    private void renderFittedTextTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderFittedTextTooltip(PoseStack g, int mouseX, int mouseY) {
         for (int i = fittedTextTooltips.size() - 1; i >= 0; i--) {
             var tooltip = fittedTextTooltips.get(i);
             var area = tooltip.area();
             if (isWithinArea(mouseX, mouseY, area)) {
-                g.renderComponentTooltip(font, List.of(tooltip.text()), mouseX, mouseY);
+                LegacyGui.renderComponentTooltip(g, font, List.of(tooltip.text()), mouseX, mouseY);
                 return;
             }
         }
@@ -1627,14 +1628,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        public void renderButton(PoseStack g, int mouseX, int mouseY, float partialTick) {
             boolean hover = active && (isHoveredOrFocused());
             int srcV = hover ? ROW_SPRITE_HOVER_V : ROW_SPRITE_IDLE_V;
             // BG_LIST and BG_SELECTION carry an identical sprite library
             // below the chassis, so sourcing from BG_LIST works for every
             // tab that uses this widget regardless of which chassis is
             // currently bound for the panel itself.
-            g.blit(BG_LIST,
+            LegacyGui.blit(g, BG_LIST,
                     getX(), getY(),
                     0, srcV,
                     ROW_SPRITE_WIDTH, ROW_SPRITE_HEIGHT,
@@ -1653,7 +1654,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     : Component.literal(fitted).setStyle(getMessage().getStyle());
             int textY = getY() + (getHeight() - 8) / 2;
             int textX = getX() + 4 + (getWidth() - 8 - font.width(display)) / 2;
-            g.drawString(font, display, textX, textY, fallback, false);
+            LegacyGui.drawString(g, font, display, textX, textY, fallback, false);
         }
     }
 
@@ -1711,9 +1712,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        public void renderButton(PoseStack g, int mouseX, int mouseY, float partialTick) {
             boolean enabled = maxOffset() > 0;
-            // 1.20.1 has no GuiGraphics.blitSprite: AE2 1.20.1 draws its scrollbar
+            // 1.20.1 has no PoseStack.blitSprite: AE2 1.20.1 draws its scrollbar
             // handles from the vanilla creative-tabs texture (enabled at 232,0,
             // disabled at 244,0, each 12x15).
             ResourceLocation sprite =
@@ -1721,9 +1722,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int srcX = enabled ? 232 : 244;
             int availH = Math.max(0, getHeight() - SCROLLBAR_HANDLE_HEIGHT);
             int handleY = enabled
-                    ? getY() + scrollOffset * availH / maxOffset()
-                    : getY();
-            g.blit(sprite, getX(), handleY, srcX, 0, SCROLLBAR_WIDTH, SCROLLBAR_HANDLE_HEIGHT, 256, 256);
+                    ? y + scrollOffset * availH / maxOffset()
+                    : y;
+            LegacyGui.blit(g, sprite, x, handleY, srcX, 0, SCROLLBAR_WIDTH, SCROLLBAR_HANDLE_HEIGHT, 256, 256);
         }
 
         @Override
@@ -1732,7 +1733,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             if (!isMouseOver(mouseX, mouseY)) return false;
             if (maxOffset() == 0) return true;
             int availH = Math.max(0, getHeight() - SCROLLBAR_HANDLE_HEIGHT);
-            int handleY = getY() + scrollOffset * availH / maxOffset();
+            int handleY = y + scrollOffset * availH / maxOffset();
             if (mouseY < handleY) {
                 setOffset(scrollOffset - visibleItems);
             } else if (mouseY < handleY + SCROLLBAR_HANDLE_HEIGHT) {
@@ -1756,7 +1757,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             if (!dragging || maxOffset() == 0) return;
             int availH = getHeight() - SCROLLBAR_HANDLE_HEIGHT;
             if (availH <= 0) return;
-            double rel = (mouseY - getY() - dragYOffset) / availH;
+            double rel = (mouseY - y - dragYOffset) / availH;
             rel = Math.max(0, Math.min(1, rel));
             setOffset((int) Math.round(rel * maxOffset()));
         }
@@ -1767,7 +1768,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
 
         @Override
-        protected void updateWidgetNarration(NarrationElementOutput narration) {}
+        public void updateNarration(NarrationElementOutput narration) {}
     }
 
     @Override

@@ -1,14 +1,14 @@
 package com.moakiee.ae2lt.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.block.LightningSimulationChamberBlock;
@@ -36,7 +36,7 @@ public class LightningSimulationChamberRenderer
 
         poseStack.pushPose();
         poseStack.translate(0.5D, 0.0D, 0.5D);
-        poseStack.mulPose(Axis.YP.rotationDegrees(facing.toYRot()));
+        poseStack.mulPose(Vector3f.YP.rotationDegrees(facing.toYRot()));
         poseStack.translate(-0.5D, 0.0D, -0.5D);
 
         for (int i = 0; i < INPUT_X_POSITIONS.length; i++) {
@@ -47,17 +47,16 @@ public class LightningSimulationChamberRenderer
 
             poseStack.pushPose();
             poseStack.translate(INPUT_X_POSITIONS[i], ITEM_BASE_HEIGHT + ITEM_LAYER_OFFSET * i, ITEM_DEPTH);
-            poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
+            poseStack.mulPose(Vector3f.XP.rotationDegrees(90.0F));
             poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);
             itemRenderer.renderStatic(
                     stack,
-                    ItemDisplayContext.FIXED,
+                    TransformType.FIXED,
                     packedLight,
                     packedOverlay,
                     poseStack,
                     buffer,
-                    blockEntity.getLevel(),
-                    0);
+                        0);
             poseStack.popPose();
         }
 

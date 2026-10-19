@@ -13,6 +13,7 @@ final class TestRecipeManager extends RecipeManager implements RecipeManagerByTy
     private Object snapshot = new Object();
     TestRecipeManager() { super(ICondition.IContext.EMPTY); }
     @Override public void replaceRecipes(Iterable<Recipe<?>> recipes) {
+        if (appeng.recipes.handlers.InscriberRecipe.TYPE == null) appeng.recipes.handlers.InscriberRecipe.TYPE = new RecipeType<>() {};
         super.replaceRecipes(recipes);
         snapshot = new Object();
     }

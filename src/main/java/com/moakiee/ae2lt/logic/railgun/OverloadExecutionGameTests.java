@@ -23,11 +23,11 @@ public final class OverloadExecutionGameTests {
 
         OverloadExecutionService.completeNormalDeath(
                 target,
-                helper.getLevel().damageSources().genericKill(),
+                com.moakiee.ae2lt.registry.ModDamageTypes.genericKill(),
                 target.getMaxHealth());
 
-        helper.assertTrue(target.dead, "Fallback did not commit the LivingEntity death state");
-        helper.assertTrue(target.getPose() == Pose.DYING, "Fallback did not enter the dying pose");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(target.dead, "Fallback did not commit the LivingEntity death state");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(target.getPose() == Pose.DYING, "Fallback did not enter the dying pose");
         helper.succeed();
     }
 

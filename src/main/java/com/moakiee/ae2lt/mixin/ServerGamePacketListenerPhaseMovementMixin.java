@@ -16,7 +16,7 @@ import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.RelativeMovement;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket.RelativeArgument;
 import net.minecraft.world.phys.Vec3;
 
 import com.moakiee.ae2lt.celestweave.PhaseFlightMovementGuard;
@@ -50,13 +50,13 @@ public abstract class ServerGamePacketListenerPhaseMovementMixin {
             double z,
             float yRot,
             float xRot,
-            Set<RelativeMovement> relativeMovements,
+            Set<RelativeArgument> relativeMovements,
             CallbackInfo ci) {
         var player = ((ServerGamePacketListenerImpl) (Object) this).player;
         Vec3 target = new Vec3(
-                relativeMovements.contains(RelativeMovement.X) ? player.getX() + x : x,
-                relativeMovements.contains(RelativeMovement.Y) ? player.getY() + y : y,
-                relativeMovements.contains(RelativeMovement.Z) ? player.getZ() + z : z);
+                relativeMovements.contains(RelativeArgument.X) ? player.getX() + x : x,
+                relativeMovements.contains(RelativeArgument.Y) ? player.getY() + y : y,
+                relativeMovements.contains(RelativeArgument.Z) ? player.getZ() + z : z);
         if (PhaseFlightMovementGuard.blocksExternalTeleports(player)
                 && !PhaseFlightMovementGuard.isSelfTeleportAuthorized(player)
                 && !player.position().equals(target)) {

@@ -26,7 +26,7 @@ class TianshuTerminalStateTest {
     @BeforeAll
     static void bootstrapMinecraft() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     // Literal historical keys: do not derive the expected schema from the production codec.

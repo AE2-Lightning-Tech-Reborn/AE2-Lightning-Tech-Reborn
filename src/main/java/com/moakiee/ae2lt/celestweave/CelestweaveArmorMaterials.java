@@ -16,20 +16,20 @@ import net.minecraft.world.item.crafting.Ingredient;
 public final class CelestweaveArmorMaterials {
     private static final int ENCHANTMENT_VALUE = 32;
 
-    private static final Map<ArmorItem.Type, Integer> DEFENSE = Map.of(
-            ArmorItem.Type.HELMET, 6,
-            ArmorItem.Type.CHESTPLATE, 12,
-            ArmorItem.Type.LEGGINGS, 8,
-            ArmorItem.Type.BOOTS, 5);
+    private static final Map<net.minecraft.world.entity.EquipmentSlot, Integer> DEFENSE = Map.of(
+            net.minecraft.world.entity.EquipmentSlot.HEAD, 6,
+            net.minecraft.world.entity.EquipmentSlot.CHEST, 12,
+            net.minecraft.world.entity.EquipmentSlot.LEGS, 8,
+            net.minecraft.world.entity.EquipmentSlot.FEET, 5);
 
     public static final ArmorMaterial CELESTWEAVE = new ArmorMaterial() {
         @Override
-        public int getDurabilityForType(ArmorItem.Type type) {
+        public int getDurabilityForSlot(net.minecraft.world.entity.EquipmentSlot type) {
             return 0;
         }
 
         @Override
-        public int getDefenseForType(ArmorItem.Type type) {
+        public int getDefenseForSlot(net.minecraft.world.entity.EquipmentSlot type) {
             return DEFENSE.getOrDefault(type, 0);
         }
 

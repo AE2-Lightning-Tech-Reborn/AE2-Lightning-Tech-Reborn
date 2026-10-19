@@ -61,8 +61,8 @@ import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
 import com.moakiee.ae2lt.overload.runtime.pattern.Ae2PlainPatternResolver;
 import net.minecraft.server.level.ServerPlayer;
 import com.moakiee.ae2lt.network.PacketSender;
-import appeng.helpers.patternprovider.PatternProviderLogicHost;
-import appeng.helpers.patternprovider.PatternContainer;
+import appeng.helpers.iface.PatternProviderLogicHost;
+import appeng.helpers.iface.PatternContainer;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.config.Settings;
 import appeng.api.config.ViewItems;
@@ -240,26 +240,26 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             if (i == 0) {
                 slot = new ClosedLoopOutputSlot(closedLoopOutputInventory);
                 slot.setIcon(Icon.BACKGROUND_PRIMARY_OUTPUT);
-                slot.setEmptyTooltip(() -> List.of(net.minecraft.network.chat.Component.translatable(
+                slot.setEmptyTooltip(List.of(net.minecraft.network.chat.Component.translatable(
                         "ae2lt.tianshu.closed_loop.primary_output_mark.tooltip")));
             } else {
                 slot = new ClosedLoopReadonlySlot(closedLoopOutputInventory, i);
-                slot.setEmptyTooltip(() -> List.of(net.minecraft.network.chat.Component.translatable(
+                slot.setEmptyTooltip(List.of(net.minecraft.network.chat.Component.translatable(
                         "ae2lt.tianshu.closed_loop.byproduct_output.tooltip")));
             }
             SlotPositionAccess.set(slot, CLOSED_LOOP_OFFSCREEN, CLOSED_LOOP_OFFSCREEN);
             addSlot(slot, Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK);
             closedLoopOutputSlots.add(slot);
         }
-        this.boundTianshuTarget = inventory.player.level().isClientSide
+        this.boundTianshuTarget = inventory.player.level.isClientSide
                 ? null : host.selectTianshuTarget();
         if (boundTianshuTarget != null) tianshuSelectionRevision = 1;
         this.tianshuMode = host.getTianshuEncodingMode();
         this.maintainableView = host.isMaintainableView();
-        if (maintainableView && !inventory.player.level().isClientSide) {
+        if (maintainableView && !inventory.player.level.isClientSide) {
             getConfigManager().putSetting(Settings.VIEW_MODE, ViewItems.ALL);
         }
-        if (!inventory.player.level().isClientSide) {
+        if (!inventory.player.level.isClientSide) {
             restoreProcessingDraft(host.getProcessingPatternTerminalDraft());
             restoreClosedLoopDraft(host.getClosedLoopTerminalDraft());
         }
@@ -677,7 +677,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 || GenericStack.fromItemStack(stack) == null) {
             return false;
         }
-        ((ClosedLoopOutputSlot) closedLoopOutputSlots.get(0)).setFilterTo(stack);
+        ((ClosedLoopOutputSlot) closedLoopOutputSlots.get(0)).set(stack);
         return true;
     }
 
@@ -971,7 +971,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isServerSide() || expectedSelectionRevision != tianshuSelectionRevision) return;
         uploadState = 2;
         var stack = tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0);
-        switch (TianshuPatternUploadRouting.classify(stack, getPlayer().level())) {
+        switch (TianshuPatternUploadRouting.classify(stack, getPlayer().level)) {
             case CLOSED_LOOP_STORAGE -> uploadClosedLoopPatternServer(stack);
             case CRAFTING_ASSEMBLER -> {
                 if (getPlayer() instanceof ServerPlayer player) {
@@ -997,7 +997,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return;
         }
         var target = resolveOrBindTianshu();
-        var payload = item.readPayload(removed, getPlayer().level()).orElse(null);
+        var payload = item.readPayload(removed, getPlayer().level).orElse(null);
         var result = ClosedLoopPatternUploadService.upload(target, payload);
         var success = result == ClosedLoopPatternRepository.PutResult.ADDED
                 || result == ClosedLoopPatternRepository.PutResult.UPDATED;
@@ -1067,7 +1067,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isServerSide() || player == null || group == null) return;
         uploadState = 2;
         var stack = tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0);
-        if (TianshuPatternUploadRouting.classify(stack, getPlayer().level())
+        if (TianshuPatternUploadRouting.classify(stack, getPlayer().level)
                 != TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER) {
             finishProviderUpload(player, false);
             return;
@@ -1307,7 +1307,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (source.getItem() instanceof ClosedLoopPatternItem closedLoopItem) {
             selectInsertedPatternMode(TianshuEncodingMode.CLOSED_LOOP);
             resetClosedLoopDraft();
-            var payload = closedLoopItem.readPayload(source, getPlayer().level()).orElse(null);
+            var payload = closedLoopItem.readPayload(source, getPlayer().level).orElse(null);
             if (payload != null) {
                 closedLoopExecutionSeedMultiplier = payload.executionSeedMultiplier();
                 closedLoopSeedMultiplier = closedLoopExecutionSeedMultiplier;
@@ -1323,7 +1323,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     private void restoreInsertedProcessingPattern(ItemStack source) {
         try {
-            var details = PatternDetailsHelper.decodePattern(source, getPlayer().level());
+            var details = PatternDetailsHelper.decodePattern(source, getPlayer().level);
             if (details == null) return;
             var advanced = AdvancedAECompat.restoreForEditing(
                     details, getProcessingInputSlots().length, getProcessingOutputSlots().length);
@@ -1331,7 +1331,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 var restored = conversionService.restoreEditableState(
                         overloadItem,
                         source,
-                        new Ae2PlainPatternResolver(getPlayer().level())).orElse(null);
+                        new Ae2PlainPatternResolver(getPlayer().level)).orElse(null);
                 if (restored == null
                         || !replaceProcessingInventories(details)) {
                     return;
@@ -1450,7 +1450,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return;
         }
         var discovery = ClosedLoopDiscoveryService.discoverDetailed(
-                grid.getCraftingService(), getPlayer().level(), primaryOutput);
+                grid.getCraftingService(), getPlayer().level, primaryOutput);
         closedLoopCandidates = discovery.candidates();
         closedLoopCandidateCount = closedLoopCandidates.size();
         if (closedLoopCandidates.isEmpty() && discovery.rejectedUndecodablePattern()) {
@@ -1554,7 +1554,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 var member = payload.memberPatterns().get(i);
                 var stack = member.pattern().toItemStack();
                 if (stack.isEmpty()) continue;
-                closedLoopMemberInventory.setItemDirect(i, stack.copyWithCount(1));
+                closedLoopMemberInventory.setItemDirect(i, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
                 closedLoopMemberCopies[i] = member.copiesPerCycle();
             }
             int outputCount = Math.min(CLOSED_LOOP_OUTPUT_SLOTS, payload.netOutputs().size());
@@ -1629,7 +1629,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         closedLoopMainOutput = markedPrimary.what();
         var authored = ClosedLoopPatternAuthoringService.createFromDraft(
                 draft, closedLoopMainOutput, closedLoopExecutionSeedMultiplier,
-                closedLoopStoredTaskMultiplier, getPlayer().level());
+                closedLoopStoredTaskMultiplier, getPlayer().level);
         if (!authored.valid()) {
             clearClosedLoopComputedResults();
             setClosedLoopInvalid(mapAuthoringStatus(authored));
@@ -1941,7 +1941,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 if (stagedNetworkBlank) returnStagedBlankPatternToNetwork();
             }
             var encoded = encodedInventory.getStackInSlot(0);
-            if (TianshuPatternUploadRouting.isValidEncodingResult(encoded, getPlayer().level())) {
+            if (TianshuPatternUploadRouting.isValidEncodingResult(encoded, getPlayer().level)) {
                 if (stagedNetworkBlank || carriesNetworkBlank) {
                     refundableEncodedPattern = encoded.copy();
                 }
@@ -1975,7 +1975,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             if (stagedNetworkBlank || carriesNetworkBlank) {
                 refundableEncodedPattern = result.copy();
             }
-            if (TianshuPatternUploadRouting.isValidEncodingResult(result, getPlayer().level())) {
+            if (TianshuPatternUploadRouting.isValidEncodingResult(result, getPlayer().level)) {
                 triggeredUploadAck++;
             }
             broadcastChanges();
@@ -1986,7 +1986,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!enabled || candidate == null || candidate.isEmpty()) {
             return false;
         }
-        var route = TianshuPatternUploadRouting.classify(candidate, getPlayer().level());
+        var route = TianshuPatternUploadRouting.classify(candidate, getPlayer().level);
         if (route == TianshuPatternUploadRouting.Route.INVALID) {
             return false;
         }
@@ -1994,7 +1994,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         DUPLICATE_LOG.debug("Check start: player={}, route={}, candidate={}",
                 getPlayer().getGameProfile().getName(), route, candidateDescription);
         uploadTargets = discoverUploadTargets(true);
-        var level = getPlayer().level();
+        var level = getPlayer().level;
         for (int targetIndex = 0; targetIndex < uploadTargets.size(); targetIndex++) {
             var target = uploadTargets.get(targetIndex);
             var inventory = target.getTerminalPatternInventory();
@@ -2188,7 +2188,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         int slotCount = getProcessingInputSlots().length;
         var sides = new ArrayList<Integer>(slotCount);
         for (int i = 0; i < slotCount; i++) sides.add(config.direction(i));
-        return AdvancedAECompat.encodeWithDirections(source, getPlayer().level(), sides);
+        return AdvancedAECompat.encodeWithDirections(source, getPlayer().level, sides);
     }
 
     @Nullable
@@ -2198,7 +2198,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (config == null) return null;
         try {
             var editable = conversionService.resolveEditableSource(
-                    source, new Ae2PlainPatternResolver(getPlayer().level()))
+                    source, new Ae2PlainPatternResolver(getPlayer().level))
                     .orElse(null);
             if (editable == null) return null;
             var parsed = editable.parsedPattern();
@@ -2245,7 +2245,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return ItemStack.EMPTY;
         }
         return ((ClosedLoopPatternItem) ModItems.CLOSED_LOOP_PATTERN.get()).createStack(
-                closedLoopPreparedPayload, getPlayer().level().registryAccess());
+                closedLoopPreparedPayload, getPlayer().level.registryAccess());
     }
 
     public record ClosedLoopMemberEdit(int slot, long copies) {
@@ -2265,7 +2265,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
         @Override
         public void set(ItemStack stack) {
-            super.set(stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1));
+            if (canSetFilterTo(stack)) super.set(stack.isEmpty() ? ItemStack.EMPTY : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
         }
 
         @Override
@@ -2278,10 +2278,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return stack.isEmpty() || canUseAsClosedLoopMember(stack);
         }
 
-        @Override
-        public void setFilterTo(ItemStack stack) {
-            if (canSetFilterTo(stack)) super.setFilterTo(stack);
-        }
 
         private boolean canUseAsClosedLoopMember(ItemStack stack) {
             return stack != null && !stack.isEmpty()

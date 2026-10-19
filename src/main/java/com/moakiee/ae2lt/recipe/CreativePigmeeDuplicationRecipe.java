@@ -8,7 +8,6 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
@@ -21,8 +20,8 @@ import net.minecraft.world.level.Level;
 public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
     private static final int OUTPUT_COUNT = 64;
 
-    public CreativePigmeeDuplicationRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    public CreativePigmeeDuplicationRecipe(ResourceLocation id) {
+        super(id);
     }
 
     @Override
@@ -31,7 +30,7 @@ public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer input, RegistryAccess registryAccess) {
+    public ItemStack assemble(CraftingContainer input) {
         ItemStack target = findTarget(input);
         if (target.isEmpty()) {
             return ItemStack.EMPTY;
@@ -42,7 +41,7 @@ public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
             return conversion;
         }
 
-        return target.copyWithCount(OUTPUT_COUNT);
+        return com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(target, OUTPUT_COUNT);
     }
 
     @Override
@@ -51,7 +50,7 @@ public final class CreativePigmeeDuplicationRecipe extends CustomRecipe {
         for (int slot = 0; slot < input.getContainerSize(); slot++) {
             ItemStack stack = input.getItem(slot);
             if (stack.is(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get())) {
-                remaining.set(slot, stack.copyWithCount(1));
+                remaining.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
                 break;
             }
         }

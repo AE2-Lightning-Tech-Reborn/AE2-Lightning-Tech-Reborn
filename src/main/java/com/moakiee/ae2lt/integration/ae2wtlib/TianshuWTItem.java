@@ -36,7 +36,7 @@ public final class TianshuWTItem extends ItemWT {
     @Override
     public boolean checkUniversalPreconditions(ItemStack stack, Player player) {
         if (stack.isEmpty()
-                || player.level().isClientSide()
+                || player.level.isClientSide()
                 || (stack.getItem() != this && !(stack.getItem() instanceof ItemWUT))) {
             return false;
         }

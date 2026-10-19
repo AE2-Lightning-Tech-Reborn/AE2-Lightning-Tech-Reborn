@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
@@ -27,8 +27,9 @@ import appeng.api.networking.IGridNodeListener;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.util.AECableType;
 import appeng.blockentity.crafting.PatternProviderBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
-import appeng.helpers.patternprovider.PatternProviderLogic;
+import appeng.helpers.iface.PatternProviderLogic;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -127,7 +128,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         }
 
         public static WirelessConnection fromTag(CompoundTag tag) {
-            var dim = ResourceKey.create(Registries.DIMENSION,
+            var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY,
                     ResourceLocation.tryParse(tag.getString(TAG_DIM)));
             var pos = BlockPos.of(tag.getLong(TAG_POS));
             var face = Direction.from3DDataValue(tag.getInt(TAG_FACE));
@@ -565,7 +566,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         int count = data.readVarInt();
         var newConns = new ArrayList<WirelessConnection>(Math.min(count, MAX_WIRELESS_CONNECTIONS));
         for (int i = 0; i < count; i++) {
-            var dim = ResourceKey.create(Registries.DIMENSION, data.readResourceLocation());
+            var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, data.readResourceLocation());
             var pos = data.readBlockPos();
             var face = Direction.from3DDataValue(data.readByte());
             WirelessConnectionLists.addOrReplace(
@@ -808,7 +809,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     }
 
     private boolean hasCustomTerminalName() {
-        return hasCustomName();
+        return hasCustomInventoryName();
     }
 
     @Nullable

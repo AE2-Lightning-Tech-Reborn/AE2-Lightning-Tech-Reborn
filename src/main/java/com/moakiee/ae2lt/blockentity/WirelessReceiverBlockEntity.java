@@ -7,9 +7,10 @@ import org.jetbrains.annotations.Nullable;
 
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IManagedGridNode;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.util.AECableType;
 import appeng.blockentity.ServerTickingBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,7 +28,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
  * by {@link FrequencyBindingHelper} so regular machines can reuse the same
  * receiver-side frequency binding.
  */
-public class WirelessReceiverBlockEntity extends AENetworkBlockEntity
+public class WirelessReceiverBlockEntity extends LegacyNetworkBlockEntity
         implements HighCapacityChannelOwner, FrequencyBindingHost, ServerTickingBlockEntity {
 
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);

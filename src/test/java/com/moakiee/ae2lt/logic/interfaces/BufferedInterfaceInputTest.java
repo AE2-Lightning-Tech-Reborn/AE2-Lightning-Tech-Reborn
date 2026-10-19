@@ -38,7 +38,7 @@ class BufferedInterfaceInputTest {
                     new EarlyLoadingException("test bootstrap", null, List.of()));
         }
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     private static AEItemKey variant(int i) {

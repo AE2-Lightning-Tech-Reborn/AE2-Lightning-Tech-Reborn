@@ -36,7 +36,7 @@ class OverloadedInterfaceExportFairnessTest {
 
     @BeforeAll static void bootstrap() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         iron = AEItemKey.of(Items.RAW_IRON);
         gold = AEItemKey.of(Items.RAW_GOLD);
         copper = AEItemKey.of(Items.RAW_COPPER);

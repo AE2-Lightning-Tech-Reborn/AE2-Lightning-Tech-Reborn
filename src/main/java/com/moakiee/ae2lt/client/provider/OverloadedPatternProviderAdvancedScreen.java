@@ -7,14 +7,15 @@ import java.util.List;
 
 import org.lwjgl.glfw.GLFW;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.network.chat.Component;
 
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.client.gui.widgets.AETextField;
 import appeng.menu.SlotSemantics;
 
@@ -72,7 +73,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         machineParallelism.setFilter(OverloadedPatternProviderAdvancedScreen::isParallelismDraft);
         lastSyncedParallelism = menu.machineParallelism;
         machineParallelism.setValue(Integer.toString(lastSyncedParallelism));
-        machineParallelism.setTooltip(Tooltip.create(Component.translatable(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(machineParallelism, Tooltip.create(Component.translatable(
                 "ae2lt.gui.provider_advanced.machine_parallelism_tooltip")));
         applyParallelism = widgets.addButton("applyParallelism",
                 Component.translatable("gui.done"), this::applyParallelism);
@@ -143,20 +144,20 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     }
 
     @Override
-    public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
         int wirelessColor = menu.isWirelessMode() ? 0x404040 : 0x909090;
         if (wirelessTuningVisible) {
-            guiGraphics.drawString(
+            LegacyGui.drawString(guiGraphics,
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.distribution"),
                     LABEL_X,
                     STRATEGY_Y,
                     wirelessColor,
                     false);
-            guiGraphics.drawString(
+            LegacyGui.drawString(guiGraphics,
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.probe"),
                     LABEL_X,
@@ -165,7 +166,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     false);
         }
         if (menu.isFilteredImportVisible()) {
-            guiGraphics.drawString(
+            LegacyGui.drawString(guiGraphics,
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
                     LABEL_X,
@@ -174,15 +175,15 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     false);
         }
         if (wirelessTuningVisible) {
-            guiGraphics.drawString(font,
+            LegacyGui.drawString(guiGraphics, font,
                     Component.translatable("ae2lt.gui.provider_advanced.machine_parallelism"),
                     14, 105, wirelessColor, false);
-            guiGraphics.drawString(font,
+            LegacyGui.drawString(guiGraphics, font,
                     Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
                     14, 147, 0x707070, false);
         }
         if (wirelessTuningVisible && !menu.isWirelessMode()) {
-            guiGraphics.drawString(
+            LegacyGui.drawString(guiGraphics,
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
                     14,

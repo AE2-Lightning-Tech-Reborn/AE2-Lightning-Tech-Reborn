@@ -14,8 +14,8 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
-import appeng.helpers.patternprovider.PatternProviderLogic;
-import appeng.helpers.patternprovider.PatternProviderReturnInventory;
+import appeng.helpers.iface.PatternProviderLogic;
+import appeng.helpers.iface.PatternProviderReturnInventory;
 import appeng.util.inv.AppEngInternalInventory;
 
 /**

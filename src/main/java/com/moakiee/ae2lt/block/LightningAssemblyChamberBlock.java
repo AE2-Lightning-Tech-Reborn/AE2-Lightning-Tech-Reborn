@@ -13,8 +13,8 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 import appeng.util.InteractionUtil;
 
@@ -23,7 +23,7 @@ public class LightningAssemblyChamberBlock extends AE2LTBaseEntityBlock<Lightnin
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
 
     public LightningAssemblyChamberBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(POWERED, false)

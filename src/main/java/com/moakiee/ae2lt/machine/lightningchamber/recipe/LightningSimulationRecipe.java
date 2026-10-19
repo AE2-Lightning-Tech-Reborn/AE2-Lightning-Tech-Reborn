@@ -168,7 +168,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
     }
 
     @Override
-    public ItemStack assemble(LightningSimulationRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(LightningSimulationRecipeInput input) {
         return result.copy();
     }
 
@@ -178,7 +178,7 @@ public final class LightningSimulationRecipe implements Recipe<LightningSimulati
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return result.copy();
     }
 

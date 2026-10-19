@@ -2,8 +2,7 @@ package com.moakiee.ae2lt.celestweave;
 
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffect;
@@ -13,7 +12,7 @@ import net.minecraft.world.item.Items;
 
 public final class PurificationEffectRules {
     public static final TagKey<MobEffect> MEKANISM_SPEED_UP_BLACKLIST = TagKey.create(
-            Registries.MOB_EFFECT,
+            Registry.MOB_EFFECT_REGISTRY,
             new ResourceLocation("mekanism", "speed_up_blacklist"));
 
     private PurificationEffectRules() {
@@ -25,7 +24,7 @@ public final class PurificationEffectRules {
         }
         // 1.20.1 has no EffectCures set API: milk-curability comes from the curative item list.
         return effect.getCurativeItems().stream().anyMatch(stack -> stack.is(Items.MILK_BUCKET))
-                && !BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect.getEffect())
+                && !net.minecraft.core.Holder.direct(effect.getEffect())
                         .is(MEKANISM_SPEED_UP_BLACKLIST);
     }
 

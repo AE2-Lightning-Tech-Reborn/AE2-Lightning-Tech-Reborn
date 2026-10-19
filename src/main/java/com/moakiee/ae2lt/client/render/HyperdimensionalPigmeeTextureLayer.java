@@ -5,7 +5,7 @@ import java.util.List;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -42,7 +42,7 @@ final class HyperdimensionalPigmeeTextureLayer {
             int packedOverlay) {
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.5F, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(rotationFor(state)));
+        poseStack.mulPose(Vector3f.YP.rotationDegrees(rotationFor(state)));
         poseStack.translate(-0.5F, -0.5F, -0.5F);
         render(poseStack, buffers, packedOverlay);
         poseStack.popPose();

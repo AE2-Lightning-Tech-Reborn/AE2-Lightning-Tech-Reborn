@@ -16,14 +16,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Central click boundary for AE2LT's managed AE2 menu slots.
  *
- * <p>The target is AE2's common menu rather than Minecraft's global container
- * menu, and the handler immediately declines every slot that is not a
+ * <p>AE2 12 inherits clicked from the vanilla container menu. The handler
+ * first checks the menu type, then declines every slot that is not a
  * {@link LargeStackAppEngSlot}, or the offhand-swap rule for the overloaded
  * pattern provider's return slots. This keeps the intervention local to
  * AE2LT's explicit managed slots while also covering future machine menus
  * without a per-menu {@code clicked()} override.</p>
  */
-@Mixin(AEBaseMenu.class)
+@Mixin(net.minecraft.world.inventory.AbstractContainerMenu.class)
 public abstract class AEBaseMenuManagedSlotClickMixin {
 
     @Inject(method = "clicked", at = @At("HEAD"), cancellable = true)
@@ -33,7 +33,7 @@ public abstract class AEBaseMenuManagedSlotClickMixin {
             ClickType clickType,
             Player player,
             CallbackInfo ci) {
-        AEBaseMenu menu = (AEBaseMenu) (Object) this;
+        if (!((Object) this instanceof AEBaseMenu menu)) return;
         if (LargeStackAppEngSlot.handleMenuInteraction(menu, slotId, button, clickType, player)) {
             if (!menu.isClientSide()) {
                 menu.broadcastChanges();

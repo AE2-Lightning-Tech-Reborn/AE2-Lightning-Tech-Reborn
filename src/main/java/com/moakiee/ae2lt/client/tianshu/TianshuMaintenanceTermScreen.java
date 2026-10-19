@@ -10,7 +10,7 @@ import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.api.config.Settings;
 import appeng.api.config.ViewItems;
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
 import appeng.menu.me.common.GridInventoryEntry;
@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
@@ -76,11 +77,6 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
                 return repo.getAllEntries();
             }
 
-            @Override
-            public java.util.Collection<GridInventoryEntry> getByIngredient(
-                    net.minecraft.world.item.crafting.Ingredient ingredient) {
-                return repo.getByIngredient(ingredient);
-            }
         });
         replaceViewModeButton();
         addToLeftToolbar(new MaintenanceOverviewButton());
@@ -141,7 +137,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
     }
 
     @Override
-    public void renderSlot(GuiGraphics graphics, Slot slot) {
+    public void renderSlot(PoseStack graphics, Slot slot) {
         super.renderSlot(graphics, slot);
         var repoEntry = slot instanceof RepoSlot repoSlot ? repoSlot.getEntry() : null;
         if (repoEntry == null) return;
@@ -153,7 +149,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
             case RED -> 0xFFDD3333;
             case GRAY -> 0xFF888888;
         };
-        graphics.fill(slot.x + 12, slot.y, slot.x + 16, slot.y + 4, color);
+        LegacyGui.fill(graphics, slot.x + 12, slot.y, slot.x + 16, slot.y + 4, color);
     }
 
     private TianshuViewModeButton replaceViewModeButton() {
@@ -189,14 +185,14 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
 
     @Override
     protected void renderGridInventoryEntryTooltip(
-            GuiGraphics graphics, GridInventoryEntry entry, int x, int y) {
+            PoseStack graphics, GridInventoryEntry entry, int x, int y) {
         var summary = entry != null ? menu.getMaintenanceSummaryEntry(entry.getWhat()) : null;
         if (summary == null || !summary.ruleConfigured()) {
             super.renderGridInventoryEntryTooltip(graphics, entry, x, y);
             return;
         }
 
-        var lines = AEKeyRendering.getTooltip(entry.getWhat());
+        var lines = AEStackRendering.getTooltip(entry.getWhat());
         if (Tooltips.shouldShowAmountTooltip(entry.getWhat(), summary.storedAmount())) {
             var precise = menu.getBigStock(entry.getWhat());
             lines.add(precise == null ? Tooltips.getAmountTooltip(
@@ -224,10 +220,10 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
                 .withStyle(ChatFormatting.GRAY));
 
         if (entry.getWhat() instanceof AEItemKey itemKey) {
-            var stack = itemKey.getReadOnlyStack();
-            graphics.renderTooltip(font, lines, stack.getTooltipImage(), stack, x, y);
+            var stack = itemKey.toStack();
+            LegacyGui.renderTooltip(graphics, font, lines, stack.getTooltipImage(), stack, x, y);
         } else {
-            graphics.renderComponentTooltip(font, lines, x, y);
+            LegacyGui.renderComponentTooltip(graphics, font, lines, x, y);
         }
     }
 

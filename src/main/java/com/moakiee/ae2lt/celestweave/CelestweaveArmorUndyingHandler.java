@@ -2,10 +2,8 @@ package com.moakiee.ae2lt.celestweave;
 
 import java.util.List;
 
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -36,7 +34,7 @@ public final class CelestweaveArmorUndyingHandler {
     // 1.20.1 has no LivingIncomingDamageEvent; LivingHurtEvent is its earliest hook (pre-armor).
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onIncomingFatalDamage(LivingHurtEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.level.isClientSide()) {
             return;
         }
         float damage = event.getAmount();
@@ -57,7 +55,7 @@ public final class CelestweaveArmorUndyingHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onFatalDamage(LivingDamageEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.level.isClientSide()) {
             return;
         }
         float damage = event.getAmount();
@@ -71,7 +69,7 @@ public final class CelestweaveArmorUndyingHandler {
             event.setAmount(0.0F);
             return;
         }
-        long now = player.level().getGameTime();
+        long now = player.level.getGameTime();
         if (tryTrigger(player, now, event)) {
             event.setAmount(0.0F);
         }
@@ -79,7 +77,7 @@ public final class CelestweaveArmorUndyingHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onDeath(LivingDeathEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player.level.isClientSide()) {
             return;
         }
         if (tryProtectForcedDeath(player)) {
@@ -95,7 +93,7 @@ public final class CelestweaveArmorUndyingHandler {
     }
 
     private static void tryProtectDeadOrDying(Player player) {
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.level().isClientSide()) {
+        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.level.isClientSide()) {
             return;
         }
         if (serverPlayer.isDeadOrDying() || serverPlayer.getHealth() <= 0.0F) {
@@ -104,14 +102,14 @@ public final class CelestweaveArmorUndyingHandler {
     }
 
     public static boolean tryProtectForcedDeath(ServerPlayer player) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return false;
         }
         if (wasProtectedThisTick(player)) {
             restoreSurvivalState(player);
             return true;
         }
-        long now = player.level().getGameTime();
+        long now = player.level.getGameTime();
         return tryTrigger(player, now, null);
     }
 
@@ -121,7 +119,7 @@ public final class CelestweaveArmorUndyingHandler {
         }
         var data = player.getPersistentData();
         return data.contains(TAG_PROTECTED_TICK)
-                && data.getLong(TAG_PROTECTED_TICK) == player.level().getGameTime();
+                && data.getLong(TAG_PROTECTED_TICK) == player.level.getGameTime();
     }
 
     /**
@@ -130,7 +128,7 @@ public final class CelestweaveArmorUndyingHandler {
      * damage/death guards cancel it; this closes routines that copy LivingEntity#die instead.
      */
     public static boolean protectBeforeDeathSideEffect(ServerPlayer player) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level.isClientSide()) {
             return false;
         }
         if (wasProtectedThisTick(player)) {
@@ -167,19 +165,19 @@ public final class CelestweaveArmorUndyingHandler {
     }
 
     private static boolean isIncomingUndyingCandidate(DamageSource source) {
-        return source.is(DamageTypeTags.BYPASSES_ARMOR)
-                || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
-                || source.is(DamageTypeTags.BYPASSES_EFFECTS)
-                || source.is(DamageTypeTags.BYPASSES_RESISTANCE)
-                || source.is(DamageTypeTags.BYPASSES_ENCHANTMENTS)
-                || source.is(DamageTypes.FELL_OUT_OF_WORLD)
-                || source.is(DamageTypes.GENERIC_KILL)
-                || source.is(DamageTypes.STARVE)
-                || source.is(DamageTypes.MAGIC)
-                || source.is(DamageTypes.INDIRECT_MAGIC)
-                || source.is(DamageTypes.WITHER)
-                || source.is(DamageTypes.WITHER_SKULL)
-                || source.is(ModDamageTypes.ELECTROMAGNETIC);
+        return source.isBypassArmor()
+                || source.isBypassInvul()
+                || source.isBypassMagic()
+                || source.isBypassMagic()
+                || source.isBypassEnchantments()
+                || "outOfWorld".equals(source.getMsgId())
+                || "genericKill".equals(source.getMsgId())
+                || "starve".equals(source.getMsgId())
+                || "magic".equals(source.getMsgId())
+                || "indirectMagic".equals(source.getMsgId())
+                || "wither".equals(source.getMsgId())
+                || "witherSkull".equals(source.getMsgId())
+                || ModDamageTypes.ELECTROMAGNETIC.equals(source.getMsgId());
     }
 
     private static void recordProtectedTick(ServerPlayer player, long now) {

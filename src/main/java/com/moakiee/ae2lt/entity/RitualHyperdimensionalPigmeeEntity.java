@@ -27,8 +27,14 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
             new ResourceLocation("ae2lt", "main/hyperdimensional_pigmee");
     private static final String PICKUP_CRITERION = "claim_ritual_pigmee";
     private static final String TAG_CEREMONY_END = "CeremonyEndGameTime";
-    private static final EntityDataAccessor<Long> DATA_CEREMONY_END =
-            SynchedEntityData.defineId(RitualHyperdimensionalPigmeeEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<CompoundTag> DATA_CEREMONY_END =
+            SynchedEntityData.defineId(RitualHyperdimensionalPigmeeEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    private void setCeremonyEnd(long end) {
+        var tag = new CompoundTag();
+        tag.putLong("end", end);
+        entityData.set(DATA_CEREMONY_END, tag);
+    }
+
     public static final int CEREMONY_TICKS = 100;
     private static final int FIRST_BURST_REMAINING = 80;
     private static final int SECOND_BURST_REMAINING = 50;
@@ -48,14 +54,14 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
         setDeltaMovement(Vec3.ZERO);
         setNoGravity(true);
         setPickUpDelay(CEREMONY_TICKS);
-        entityData.set(DATA_CEREMONY_END, level.getGameTime() + CEREMONY_TICKS);
+        setCeremonyEnd( level.getGameTime() + CEREMONY_TICKS);
     }
 
     // 1.20.1 defineSynchedData() takes no builder; keys register directly on this.entityData.
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(DATA_CEREMONY_END, 0L);
+        this.entityData.define(DATA_CEREMONY_END, new CompoundTag());
     }
 
     @Override
@@ -68,16 +74,16 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
 
         super.tick();
 
-        if (!level().isClientSide()) {
-            long remaining = entityData.get(DATA_CEREMONY_END) - level().getGameTime();
+        if (!level.isClientSide()) {
+            long remaining = entityData.get(DATA_CEREMONY_END).getLong("end") - level.getGameTime();
             if (remaining == FIRST_BURST_REMAINING) {
                 broadcastItemBurst(RitualItemBurstPacket.PIGMEE_CORE);
             } else if (remaining == SECOND_BURST_REMAINING) {
                 broadcastItemBurst(RitualItemBurstPacket.UNDYING_MODULE);
             } else if (remaining == THIRD_BURST_REMAINING) {
                 broadcastItemBurst(RitualItemBurstPacket.PHASE_LOCK_MODULE);
-            } else if (entityData.get(DATA_CEREMONY_END) != 0L && remaining <= 0L) {
-                entityData.set(DATA_CEREMONY_END, 0L);
+            } else if (entityData.get(DATA_CEREMONY_END).getLong("end") != 0L && remaining <= 0L) {
+                setCeremonyEnd( 0L);
                 setNoGravity(false);
                 setNoPickUpDelay();
             }
@@ -111,7 +117,7 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        long ceremonyEnd = entityData.get(DATA_CEREMONY_END);
+        long ceremonyEnd = entityData.get(DATA_CEREMONY_END).getLong("end");
         if (ceremonyEnd != 0L) {
             tag.putLong(TAG_CEREMONY_END, ceremonyEnd);
         }
@@ -120,18 +126,18 @@ public final class RitualHyperdimensionalPigmeeEntity extends ItemEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        entityData.set(DATA_CEREMONY_END, tag.getLong(TAG_CEREMONY_END));
+        setCeremonyEnd( tag.getLong(TAG_CEREMONY_END));
     }
 
     private float getCeremonyTicksRemaining(float partialTick) {
-        long ceremonyEnd = entityData.get(DATA_CEREMONY_END);
+        long ceremonyEnd = entityData.get(DATA_CEREMONY_END).getLong("end");
         return ceremonyEnd == 0L
                 ? 0.0F
-                : Math.max(0.0F, ceremonyEnd - (level().getGameTime() + partialTick));
+                : Math.max(0.0F, ceremonyEnd - (level.getGameTime() + partialTick));
     }
 
     private void broadcastItemBurst(byte stage) {
-        if (level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             NetworkHandler.sendToTrackingChunk(
                     serverLevel,
                     chunkPosition(),

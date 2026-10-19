@@ -40,14 +40,14 @@ import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageWatcherNode;
 import appeng.api.networking.ticking.IGridTickable;
-import appeng.api.orientation.BlockOrientation;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.stacks.AEKey;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.util.AECableType;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
 import appeng.me.ManagedGridNode;
@@ -80,7 +80,7 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.util.LargeStackStreamCodecs;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
-public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
+public class CrystalCatalyzerBlockEntity extends LegacyNetworkBlockEntity
         implements IActionHost, IUpgradeableObject,
         LightningCollapseMatrixHost,
         GridRecipeMachineHost<CrystalCatalyzerLockedRecipe, CrystalCatalyzerRecipeCandidate> {
@@ -391,7 +391,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         if (outputCount <= 0 || outputCount > Integer.MAX_VALUE) {
             return false;
         }
-        return inventory.canAcceptRecipeOutput(template.copyWithCount((int) outputCount));
+        return inventory.canAcceptRecipeOutput(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(template, (int) outputCount));
     }
 
     private ItemStack getLockedRecipeOutputStack(CrystalCatalyzerLockedRecipe lockedRecipe) {
@@ -403,7 +403,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             return ItemStack.EMPTY;
         }
 
-        ItemStack resultStack = template.copyWithCount((int) outputCount);
+        ItemStack resultStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(template, (int) outputCount);
         return inventory.canAcceptRecipeOutput(resultStack) ? resultStack : ItemStack.EMPTY;
     }
 
@@ -852,7 +852,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                     var sharedId = new ResourceLocation("ae2lt",
                             "crystal_catalyzer/" + id.getPath().substring(oldPrefix.length()));
                     // The retired pigmee_* recipes produced 16; retain their migration to one.
-                    lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, lockedRecipe.output().copyWithCount(1),
+                    lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(lockedRecipe.output(), 1),
                             lockedRecipe.energyPerCycle(), 1,
                             lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
                 }
@@ -860,7 +860,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                     // Already-migrated saves may have a shared ID but still store the old 16-item
                     // template; previous versions always clamped it to one at completion.
                     lockedRecipe = new CrystalCatalyzerLockedRecipe(lockedRecipe.recipeId(),
-                            lockedRecipe.output().copyWithCount(1), lockedRecipe.energyPerCycle(), 1,
+                            com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(lockedRecipe.output(), 1), lockedRecipe.energyPerCycle(), 1,
                             lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
                 }
                 consumedEnergy = 0L;

@@ -11,8 +11,9 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.util.AECableType;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -56,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
 import com.moakiee.ae2lt.api.AE2LTCapabilities;
 import com.moakiee.ae2lt.me.GridLightningEnergyHandler;
 
-public class LightningCollectorBlockEntity extends AENetworkBlockEntity
+public class LightningCollectorBlockEntity extends LegacyNetworkBlockEntity
         implements IActionHost, FrequencyBindingHost {
     private static final Logger LOG = com.mojang.logging.LogUtils.getLogger();
     private static final String TAG_INVENTORY = "Inventory";

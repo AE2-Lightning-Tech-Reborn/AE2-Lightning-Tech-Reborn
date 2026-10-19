@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.blockentity.LightningAssemblyChamberBlockEntity;
@@ -39,12 +39,11 @@ public class LightningAssemblyChamberRenderer
 
         itemRenderer.renderStatic(
                 stack,
-                ItemDisplayContext.GROUND,
+                TransformType.GROUND,
                 packedLight,
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 buffer,
-                blockEntity.getLevel(),
                 0);
         poseStack.popPose();
     }

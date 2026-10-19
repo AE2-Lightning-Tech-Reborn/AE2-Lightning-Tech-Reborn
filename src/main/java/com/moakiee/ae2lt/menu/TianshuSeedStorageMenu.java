@@ -61,8 +61,8 @@ public final class TianshuSeedStorageMenu extends AEBaseMenu {
     public boolean stillValid(Player player) {
         return !host.isRemoved() && host.getLevel() != null
                 && host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
-                && player.distanceToSqr(host.getBlockPos().getCenter()) <= 64.0D;
+                && player.level == host.getLevel()
+                && player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(host.getBlockPos())) <= 64.0D;
     }
 
     /**

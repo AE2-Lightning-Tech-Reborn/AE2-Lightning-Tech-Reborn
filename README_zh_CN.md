@@ -1,58 +1,27 @@
-# AE2 闪电科技 — Forge 1.20.1 移植版
+# AE2 Lightning Tech Reborn — Forge 1.19.2
 
-[English](README.md)
+本分支将 Reborn 的 `1.20.1` 基线移植到 Minecraft 1.19.2、Forge 43.5.2、Java 17 和 AE2 12.9.12。
 
-这是 [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) 的附属模组，添加闪电能源、进阶机器和过载 ME 网络组件。
-
-> 必需依赖 AE2 与 雷电核心：重生 · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
-
-本分支是持续维护的 Forge 1.20.1 移植。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
-
-## 主要内容
-
-- 高压闪电与极高压闪电两级能源。
-- 闪电收集器、大气电离仪和特斯拉线圈能源链。
-- 闪电装配室、闪电模拟室、过载处理工厂和水晶催化器加工链。
-- 过载水晶生长、衰变和批量加工体系。
-- 高吞吐的过载 ME 控制器、接口、样板供应器与线缆。
-- 无线样板路由、天枢超级计算机自动化和可配置批量调度。
-- 苍穹织雷模块化护甲与电磁炮系统。
-
-## 依赖
-
-| 模组 | 要求 |
-|------|------|
-| Minecraft 1.20.1 | 必需 |
-| Forge 47.1.3+ | 必需 |
-| Applied Energistics 2 15.4.10+ | 必需 |
-| 雷电核心：重生 2.0.0-beta.3 至 `<2.1.0` | 必需 |
-| JEI 或 EMI、Jade | 可选联动 |
-| AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
-| Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
-
-所有可选联动均已隔离，不安装时不应影响正常启动。
+保留闪电能量、机器与材料链、过载网络、无线样板分发、天枢与闭环合成、星穹织甲和电磁轨道炮。
+必须安装同为 1.19.2 的 Thunderbolt Core Reborn；Applied Flux Reborn 独立提供可选的 FE 存储与感应卡。
 
 ## 构建
 
-使用 Java 17 并执行：
+先构建 TB 和 Applied Flux 的 `1.19.2` 分支，再执行：
 
-```powershell
-.\gradlew.bat test build
+```sh
+./gradlew test build -Pappflux_build_libs=/path/to/Applied-Flux-Reborn/build/libs
+./gradlew runGameTestServer -Pappflux_build_libs=/path/to/Applied-Flux-Reborn/build/libs
 ```
 
-可发布制品位于 `build/libs/ae2lt-forge-1.20.1-2.1.0-beta.4.jar`。
-带 `-slim.jar` 后缀的是开发中间制品，不应对外发布。
+TB 默认取相邻仓库的 `build/libs`，可用 `-Pthunderbolt_build_libs` 覆盖。分发 `build/libs/ae2lt-forge-1.19.2-2.1.2-beta2.jar`，不要分发 `-slim.jar`。
 
-## 公开 API
+## 兼容边界
 
-`com.moakiee.ae2lt.api.*` 是提供给附属模组作者的稳定接口，包括闪电能源 capability 与事件、固定的方块实体和配方 ID，以及服务器权威的无线频率 API。Forge 事件订阅应使用 `MinecraftForge.EVENT_BUS`。
+客户端验证组合为 JEI 11.68.0.1087、Jade 8.9.2、Curios 1.19.2-5.1.6.4、AE2WTLib 12.9.7-forge。Applied Flux 使用 Reborn 1.19.2-1.3.7-reborn.1。
 
-该包之外的实现均视为内部接口，可能在小版本更新时变化。
+AE2 12 没有新版原生 EMI 编码处理器，本分支保留自有 EMI 配方展示，样板转移以已验证的 JEI 路径为准。AdvancedAE 专用反应配方及配置页不在此分支提供；Veil 特效走原生渲染回退。AE2 的石英生长加速器与振动仓用于替换新版才存在的对应配方部件。
 
-## 许可证
+运行测试覆盖注册机器构造、朝向、接口末槽配置、40 台设备频道、闭环合成、合成状态包、FE 单元掉落和护甲伤害语义。英文 [README](README.md) 包含版本与 API 说明。
 
-- 源代码：[GNU LGPL 3.0](LICENSE)
-- 材质与视觉资源：[CC BY-NC-SA 3.0](LICENSE_ASSETS.md)
-- 改编或内置代码：[第三方声明](THIRD_PARTY_NOTICES.md)
-
-开发者：**MOAKIEE**、**CystrySU**、**gjmhmm8**、**_leng**、**TedXenon**、**MHanHanBing**。
+保留 [LGPL 3.0 源码许可](LICENSE)、[素材许可](LICENSE_ASSETS.md) 和 [第三方署名](THIRD_PARTY_NOTICES.md)。

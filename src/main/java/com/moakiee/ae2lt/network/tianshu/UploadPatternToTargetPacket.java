@@ -4,7 +4,6 @@ import appeng.api.implementations.blockentities.PatternContainerGroup;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.server.level.ServerPlayer;
 
 public record UploadPatternToTargetPacket(int containerId, PatternContainerGroup group) {

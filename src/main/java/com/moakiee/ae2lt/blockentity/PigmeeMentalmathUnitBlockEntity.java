@@ -8,9 +8,9 @@ import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.util.AECableType;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.hooks.ticking.TickHandler;
 import appeng.me.helpers.MachineSource;
 
@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  * Thunderbolt-backed CPU host for the Pigmee mental arithmetic unit. AE2 indexes machine owners by
  * exact class, so a CraftingBlockEntity subclass cannot participate in its base-class CPU scan.
  */
-public final class PigmeeMentalmathUnitBlockEntity extends AENetworkBlockEntity
+public final class PigmeeMentalmathUnitBlockEntity extends LegacyNetworkBlockEntity
         implements TimeWheelCraftingCpuPoolHost {
     public static final long STORAGE_BYTES = 256L;
     public static final int PARALLELISM = 1;

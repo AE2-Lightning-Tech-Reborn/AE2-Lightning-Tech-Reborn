@@ -17,7 +17,8 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -246,7 +247,7 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
         require(!info.isEmpty(),"JEI hint missing");
         var text=info.stream().flatMap(i->i.getDescription().stream()).map(net.minecraft.network.chat.FormattedText::getString).collect(java.util.stream.Collectors.joining());
         require(!text.contains("jeb_")&&!text.contains("Jeb_"),"JEI exposes the exact easter egg name");
-        require(manager.createRecipeLookup(RecipeTypes.CRAFTING).get().noneMatch(h->h.getResultItem(mc.level.registryAccess()).is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())),"Acquisition must not be a crafting recipe");
+        require(manager.createRecipeLookup(RecipeTypes.CRAFTING).get().noneMatch(h->h.getResultItem().is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())),"Acquisition must not be a crafting recipe");
     }
 
     private static void move(double x,double y,double z,float yaw,float pitch) {var mc=Minecraft.getInstance();mc.getSingleplayerServer().execute(()->{var p=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());p.teleportTo(p.serverLevel(),x,y,z,Set.of(),yaw,pitch);});}
@@ -258,21 +259,21 @@ public final class RainbowPigmeeClientProbe implements IModPlugin {
     private static final class ArtPreview extends Screen {
         ArtPreview() { super(Component.literal("Pigmee art preview")); }
         @Override public boolean isPauseScreen() { return false; }
-        @Override public void render(GuiGraphics graphics, int x, int y, float partialTick) {
-            graphics.fill(0,0,width,height,0xff282b34);
+        @Override public void render(PoseStack graphics, int x, int y, float partialTick) {
+            LegacyGui.fill(graphics, 0,0,width,height,0xff282b34);
             var items = List.of(new ItemStack(ModFumos.PIGMEE_FUMO_ITEM.get()), namedPigmee(),
                     new ItemStack(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()),
                     new ItemStack(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get()), new ItemStack(ModItems.DYE_BASE.get()));
             String[] labels = {"Original", "jeb_", "Rainbow", "Hyper", "Dye base"};
             for (int i = 0; i < items.size(); i++) {
                 int cx = width * (i + 1) / 6;
-                graphics.drawCenteredString(font,labels[i],cx,height/2-45,0xffffff);
-                graphics.pose().pushPose();
-                graphics.pose().translate(cx-24,height/2-24,0); graphics.pose().scale(3,3,3);
-                graphics.renderItem(items.get(i),0,0); graphics.pose().popPose();
-                graphics.renderItem(items.get(i),cx-8,height/2+42);
+                LegacyGui.drawCenteredString(graphics, font,labels[i],cx,height/2-45,0xffffff);
+                graphics.pushPose();
+                graphics.translate(cx-24,height/2-24,0); graphics.scale(3,3,3);
+                LegacyGui.renderItem(graphics, items.get(i),0,0); graphics.popPose();
+                LegacyGui.renderItem(graphics, items.get(i),cx-8,height/2+42);
             }
-            graphics.drawCenteredString(font,"Native item render - enlarged and inventory size",width/2,24,0xffffff);
+            LegacyGui.drawCenteredString(graphics, font,"Native item render - enlarged and inventory size",width/2,24,0xffffff);
         }
     }
     private static void capture(String name) {var mc=Minecraft.getInstance();Screenshot.grab(mc.gameDirectory,name,mc.getMainRenderTarget(),text->{});}

@@ -169,7 +169,7 @@ public final class LightningAssemblyRecipe implements Recipe<LightningAssemblyRe
     }
 
     @Override
-    public ItemStack assemble(LightningAssemblyRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(LightningAssemblyRecipeInput input) {
         return result.copy();
     }
 
@@ -179,7 +179,7 @@ public final class LightningAssemblyRecipe implements Recipe<LightningAssemblyRe
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return result.copy();
     }
 

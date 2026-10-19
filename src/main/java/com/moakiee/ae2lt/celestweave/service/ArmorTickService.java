@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.celestweave.service;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +16,7 @@ public final class ArmorTickService {
             Player player,
             ItemStack armor,
             boolean equipped,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             Dist dist) {
         CelestweaveArmorState.ensureArmorId(armor);
         var installedSubmodules = CelestweaveArmorState.collectInstalledSubmoduleEntries(armor, registries);

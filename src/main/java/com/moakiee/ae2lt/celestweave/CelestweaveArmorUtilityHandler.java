@@ -127,7 +127,7 @@ public final class CelestweaveArmorUtilityHandler {
         }
 
         boolean underwater = player.isEyeInFluid(FluidTags.WATER) || player.isUnderWater();
-        boolean airborne = !player.onGround();
+        boolean airborne = !player.isOnGround();
         double multiplier = digSpeedMultiplier(
                 underwater,
                 airborne,
@@ -255,7 +255,7 @@ public final class CelestweaveArmorUtilityHandler {
             }
             if (CelestweaveArmorState.isSubmoduleInstalled(
                     armor,
-                    player.level().registryAccess(),
+                    player.level.registryAccess(),
                     PhaseFlightSubmodule.INSTANCE.id())) {
                 return armor;
             }
@@ -276,7 +276,7 @@ public final class CelestweaveArmorUtilityHandler {
         CelestweaveArmorState.syncSubmoduleActiveState(
                 player,
                 armor,
-                player.level().registryAccess(),
+                player.level.registryAccess(),
                 false,
                 Dist.DEDICATED_SERVER);
     }
@@ -297,7 +297,7 @@ public final class CelestweaveArmorUtilityHandler {
             CelestweaveArmorState.syncSubmoduleActiveState(
                     player,
                     armor,
-                    player.level().registryAccess(),
+                    player.level.registryAccess(),
                     true,
                     Dist.DEDICATED_SERVER,
                     true);

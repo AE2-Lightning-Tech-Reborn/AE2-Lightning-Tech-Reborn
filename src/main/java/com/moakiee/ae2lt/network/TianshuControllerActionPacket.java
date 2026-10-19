@@ -39,7 +39,7 @@ public static void handle(TianshuControllerActionPacket packet, Supplier<Network
                 || menu.token() != token
                 || !menu.getBlockPos().equals(pos)
                 || !menu.stillValid(player)
-                || !(player.level().getBlockEntity(pos) instanceof TianshuSupercomputerControllerBlockEntity controller)) {
+                || !(player.level.getBlockEntity(pos) instanceof TianshuSupercomputerControllerBlockEntity controller)) {
             player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
                     .withStyle(ChatFormatting.RED), true);
             return;
@@ -49,7 +49,7 @@ public static void handle(TianshuControllerActionPacket packet, Supplier<Network
             case OPEN_ALGORITHM_SELECTION -> {
                 var portPos = controller.getPortPos();
                 if (portPos != null
-                        && player.level().getBlockEntity(portPos)
+                        && player.level.getBlockEntity(portPos)
                                 instanceof TianshuSupercomputerPortBlockEntity port
                         && port.getController() == controller) {
                     MenuOpener.open(

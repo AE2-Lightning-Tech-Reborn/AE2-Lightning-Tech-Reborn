@@ -5,7 +5,8 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -81,20 +82,20 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
+    protected void renderBg(PoseStack graphics, float partialTick, int mouseX, int mouseY) {
+        LegacyGui.blit(graphics, TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
         renderEntries(graphics);
         renderScrollbar(graphics);
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, SCREEN_TITLE, 8, 6, 0x404040, false);
-        graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
+    protected void renderLabels(PoseStack graphics, int mouseX, int mouseY) {
+        LegacyGui.drawString(graphics, font, SCREEN_TITLE, 8, 6, 0x404040, false);
+        LegacyGui.drawString(graphics, font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderEntryTooltip(graphics, mouseX, mouseY);
@@ -142,52 +143,52 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
-    private void renderEntries(GuiGraphics graphics) {
+    private void renderEntries(PoseStack graphics) {
         var entries = buildEntries();
         int start = Math.min(scrollOffset, Math.max(0, entries.size() - VISIBLE_ROWS));
         int end = Math.min(entries.size(), start + VISIBLE_ROWS);
 
-        graphics.enableScissor(leftPos + PANEL_X, topPos + PANEL_Y, leftPos + PANEL_X + PANEL_WIDTH, topPos + PANEL_Y + PANEL_HEIGHT);
+        LegacyGui.enableScissor(graphics, leftPos + PANEL_X, topPos + PANEL_Y, leftPos + PANEL_X + PANEL_WIDTH, topPos + PANEL_Y + PANEL_HEIGHT);
         for (int visibleRow = 0; visibleRow < end - start; visibleRow++) {
             var entry = entries.get(start + visibleRow);
             int rowY = topPos + PANEL_Y + ENTRY_TOP_OFFSET + visibleRow * ENTRY_ROW_HEIGHT;
             renderEntry(graphics, entry, rowY);
         }
-        graphics.disableScissor();
+        LegacyGui.disableScissor(graphics);
     }
 
-    private void renderEntry(GuiGraphics graphics, Entry entry, int rowY) {
+    private void renderEntry(PoseStack graphics, Entry entry, int rowY) {
         int slotX = leftPos + ENTRY_SLOT_X;
         int textX = leftPos + ENTRY_TEXT_X;
         int switchX = leftPos + ENTRY_SWITCH_X;
         int contentY = rowY + ENTRY_CONTENT_Y_OFFSET;
 
-        graphics.blit(TEXTURE, slotX, contentY, SLOT_U, SLOT_V, SLOT_SIZE, SLOT_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
-        graphics.renderItem(entry.stack(), slotX + 1, contentY + 1);
-        graphics.renderItemDecorations(font, entry.stack(), slotX + 1, contentY + 1);
+        LegacyGui.blit(graphics, TEXTURE, slotX, contentY, SLOT_U, SLOT_V, SLOT_SIZE, SLOT_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
+        LegacyGui.renderItem(graphics, entry.stack(), slotX + 1, contentY + 1);
+        LegacyGui.renderItemDecorations(graphics, font, entry.stack(), slotX + 1, contentY + 1);
 
-        graphics.drawString(font, entryLabel(entry), textX, contentY + 5, 0x404040, false);
+        LegacyGui.drawString(graphics, font, entryLabel(entry), textX, contentY + 5, 0x404040, false);
 
         renderModeSwitch(graphics, switchX, contentY + 3, entry.mode());
     }
 
-    private void renderModeSwitch(GuiGraphics graphics, int x, int y, MatchMode mode) {
+    private void renderModeSwitch(PoseStack graphics, int x, int y, MatchMode mode) {
         int v = mode.ignoresComponents() ? 14 : 0;
-        graphics.blit(CHECKBOX_TEXTURE, x, y, 0, v, ENTRY_SWITCH_WIDTH, ENTRY_SWITCH_HEIGHT, CHECKBOX_TEXTURE_SIZE, CHECKBOX_TEXTURE_SIZE);
+        LegacyGui.blit(graphics, CHECKBOX_TEXTURE, x, y, 0, v, ENTRY_SWITCH_WIDTH, ENTRY_SWITCH_HEIGHT, CHECKBOX_TEXTURE_SIZE, CHECKBOX_TEXTURE_SIZE);
     }
 
-    private void renderScrollbar(GuiGraphics graphics) {
+    private void renderScrollbar(PoseStack graphics) {
         if (maxScrollOffset() <= 0) {
-            graphics.blit(TEXTURE, leftPos + TRACK_X - 1, topPos + TRACK_Y, SLIDER_U, SLIDER_V, SLIDER_WIDTH, SLIDER_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+            LegacyGui.blit(graphics, TEXTURE, leftPos + TRACK_X - 1, topPos + TRACK_Y, SLIDER_U, SLIDER_V, SLIDER_WIDTH, SLIDER_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
             return;
         }
 
         int sliderTravel = TRACK_HEIGHT - SLIDER_HEIGHT;
         int sliderY = topPos + TRACK_Y + Math.round((scrollOffset / (float) maxScrollOffset()) * sliderTravel);
-        graphics.blit(TEXTURE, leftPos + TRACK_X - 1, sliderY, SLIDER_U, SLIDER_V, SLIDER_WIDTH, SLIDER_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        LegacyGui.blit(graphics, TEXTURE, leftPos + TRACK_X - 1, sliderY, SLIDER_U, SLIDER_V, SLIDER_WIDTH, SLIDER_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
     }
 
-    private void renderEntryTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderEntryTooltip(PoseStack graphics, int mouseX, int mouseY) {
         var entry = getEntryAt(mouseX, mouseY);
         if (entry == null) {
             renderTooltip(graphics, mouseX, mouseY);
@@ -197,12 +198,12 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         int rowY = topPos + PANEL_Y + ENTRY_TOP_OFFSET + entry.row() * ENTRY_ROW_HEIGHT + ENTRY_CONTENT_Y_OFFSET;
         int slotX = leftPos + ENTRY_SLOT_X;
         if (isWithin(mouseX, mouseY, slotX, rowY, SLOT_SIZE, SLOT_SIZE)) {
-            graphics.renderTooltip(font, entry.stack(), mouseX, mouseY);
+            LegacyGui.renderTooltip(graphics, font, entry.stack(), mouseX, mouseY);
             return;
         }
 
         if (isWithinEntrySwitch(mouseX, mouseY, entry.row())) {
-            graphics.renderComponentTooltip(font, modeTooltip(entry), mouseX, mouseY);
+            LegacyGui.renderComponentTooltip(graphics, font, modeTooltip(entry), mouseX, mouseY);
             return;
         }
 

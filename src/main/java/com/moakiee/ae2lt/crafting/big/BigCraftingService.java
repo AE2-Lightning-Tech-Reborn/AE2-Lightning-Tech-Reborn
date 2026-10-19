@@ -10,7 +10,7 @@ import com.moakiee.thunderbolt.core.crafting.big.*;
 import com.moakiee.thunderbolt.core.crafting.planner.PlanningCancellation;
 import com.moakiee.thunderbolt.core.storage.big.*;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 
 import java.math.BigInteger;
@@ -367,13 +367,13 @@ public final class BigCraftingService {
         if (host.getGrid() != null) host.getGrid().getStorageService().invalidateCache();
     }
 
-    public CompoundTag save(HolderLookup.Provider registries) {
+    public CompoundTag save(RegistryAccess registries) {
         var tag = new CompoundTag();
         if (job != null) tag.put("job", job.save(registries));
         return tag;
     }
 
-    public void load(CompoundTag tag, HolderLookup.Provider registries) {
+    public void load(CompoundTag tag, RegistryAccess registries) {
         job = tag.contains("job") ? BigCraftingJob.load(tag.getCompound("job"), registries) : null;
         status = "idle";
         cpuListChanged = true;

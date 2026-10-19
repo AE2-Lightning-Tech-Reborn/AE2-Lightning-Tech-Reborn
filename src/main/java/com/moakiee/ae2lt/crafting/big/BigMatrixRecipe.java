@@ -7,7 +7,7 @@ import com.moakiee.ae2lt.crafting.matrix.core.CopyAssembler;
 import com.moakiee.ae2lt.crafting.matrix.core.MolecularCopyAssembler;
 import com.moakiee.thunderbolt.core.crafting.planner.*;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.*;
 import net.minecraft.world.level.Level;
 
@@ -127,7 +127,7 @@ public final class BigMatrixRecipe implements BigCraftingRecipe {
         }
     }
 
-    public CompoundTag save(HolderLookup.Provider registries) {
+    public CompoundTag save(RegistryAccess registries) {
         var tag = new CompoundTag();
         tag.put("definition", definition.toTagGeneric());
         var slotList = new ListTag();
@@ -153,7 +153,7 @@ public final class BigMatrixRecipe implements BigCraftingRecipe {
         return tag;
     }
 
-    public static BigMatrixRecipe load(CompoundTag tag, HolderLookup.Provider registries) {
+    public static BigMatrixRecipe load(CompoundTag tag, RegistryAccess registries) {
         var definition =
                 (AEItemKey)
                         Objects.requireNonNull(

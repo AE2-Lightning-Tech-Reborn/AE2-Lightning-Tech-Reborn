@@ -5,7 +5,8 @@ import com.moakiee.ae2lt.logic.world.EasterEggAudience;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -54,11 +55,11 @@ public final class EasterEggOverlay implements IGuiOverlay {
         source = null;
     }
 
-    // 1.20.1 IGuiOverlay passes a GuiGraphics (GuiComponent was removed); alpha is applied via setColor.
+    // 1.20.1 IGuiOverlay passes a PoseStack (GuiComponent was removed); alpha is applied via setColor.
     @Override
     public void render(
             ForgeGui gui,
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             float partialTick,
             int screenWidth,
             int screenHeight) {
@@ -83,14 +84,14 @@ public final class EasterEggOverlay implements IGuiOverlay {
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
 
-        guiGraphics.flush();
+        LegacyGui.flush(guiGraphics);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        LegacyGui.setColor(guiGraphics, 1.0f, 1.0f, 1.0f, 1.0f);
         try {
-            guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
+            LegacyGui.blit(guiGraphics, TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
         } finally {
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            LegacyGui.setColor(guiGraphics, 1.0f, 1.0f, 1.0f, 1.0f);
             RenderSystem.disableBlend();
         }
     }

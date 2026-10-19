@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 
@@ -59,7 +59,7 @@ public final class ArmorPersistentData {
     }
 
     public static ItemStack structuralCore(ItemStack armor) {
-        return ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.getOrDefault(armor, ItemStack.EMPTY).copyWithCount(1);
+        return com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.getOrDefault(armor, ItemStack.EMPTY), 1);
     }
 
     public static void setStructuralCore(ItemStack armor, ItemStack stack) {
@@ -69,7 +69,7 @@ public final class ArmorPersistentData {
         if (stack == null || stack.isEmpty()) {
             ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.remove(armor);
         } else {
-            ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.set(armor, stack.copyWithCount(1));
+            ModDataComponents.CELESTWEAVE_STRUCTURAL_CORE.set(armor, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
         }
     }
 
@@ -77,7 +77,7 @@ public final class ArmorPersistentData {
         return !structuralCore(armor).isEmpty();
     }
 
-    public static List<ItemStack> loadModuleStacks(ItemStack armor, HolderLookup.Provider registries) {
+    public static List<ItemStack> loadModuleStacks(ItemStack armor, RegistryAccess registries) {
         List<ItemStack> modules = container(armor).modules();
         if (modules.isEmpty()) {
             return List.of();
@@ -104,7 +104,7 @@ public final class ArmorPersistentData {
         return false;
     }
 
-    public static void saveModuleStacks(ItemStack armor, HolderLookup.Provider registries, List<ItemStack> stacks) {
+    public static void saveModuleStacks(ItemStack armor, RegistryAccess registries, List<ItemStack> stacks) {
         if (armor == null || armor.isEmpty()) {
             return;
         }
@@ -128,7 +128,7 @@ public final class ArmorPersistentData {
         List<ItemStack> out = new ArrayList<>();
         long energyCapacityFe = 0L;
         for (ItemStack stack : merged.values()) {
-            ItemStack writtenStack = stack.copyWithCount(Math.max(1, stack.getCount()));
+            ItemStack writtenStack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, Math.max(1, stack.getCount()));
             out.add(writtenStack);
             energyCapacityFe = Math.max(energyCapacityFe, energyCapacityFe(writtenStack));
         }
@@ -202,7 +202,7 @@ public final class ArmorPersistentData {
         }
         if (stack.getItem() instanceof OverloadDeviceModuleItem provider) {
             long capacity = 0L;
-            for (DeviceCapability capability : provider.capabilities(stack.copyWithCount(1))) {
+            for (DeviceCapability capability : provider.capabilities(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1))) {
                 if (capability instanceof DeviceCapability.EnergyCapacity energyCapacity) {
                     capacity = Math.max(capacity, energyCapacity.fe());
                 }

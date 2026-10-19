@@ -143,9 +143,9 @@ public final class BigTerminalClientProbe {
         try {
             readingTooltip = true;
             var method = MEStorageScreen.class.getDeclaredMethod("renderGridInventoryEntryTooltip",
-                    net.minecraft.client.gui.GuiGraphics.class, appeng.menu.me.common.GridInventoryEntry.class, int.class, int.class);
+                    net.minecraft.client.gui.PoseStack.class, appeng.menu.me.common.GridInventoryEntry.class, int.class, int.class);
             method.setAccessible(true);
-            method.invoke(screen, event.getGuiGraphics(), entry, 160, 40);
+            method.invoke(screen, event.getPoseStack(), entry, 160, 40);
         } catch (ReflectiveOperationException failure) { serverFailure = failure; }
         finally { readingTooltip = false; }
     }

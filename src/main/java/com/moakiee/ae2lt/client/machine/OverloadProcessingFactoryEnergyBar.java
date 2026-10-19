@@ -3,7 +3,8 @@ package com.moakiee.ae2lt.client.machine;
 import java.util.List;
 import java.util.function.LongSupplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.renderer.Rect2i;
@@ -38,8 +39,8 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        fill.copy().opacity(0.2f).dest(getX(), getY(), width, height).blit(guiGraphics);
+    public void renderButton(PoseStack guiGraphics, int mouseX, int mouseY, float partialTick) {
+        fill.copy().opacity(0.2f).dest(x, y, width, height).blit(guiGraphics, 0);
 
         long capacity = Math.max(1L, energyCapacity.getAsLong());
         long stored = Math.min(storedEnergy.getAsLong(), capacity);
@@ -49,11 +50,11 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
         }
 
         int srcY = fill.getSrcY() + height - filled;
-        int destY = getY() + height - filled;
+        int destY = y + height - filled;
         fill.copy()
                 .src(fill.getSrcX(), srcY, width, filled)
-                .dest(getX(), destY, width, filled)
-                .blit(guiGraphics);
+                .dest(x, destY, width, filled)
+                .blit(guiGraphics, 0);
     }
 
     @Override
@@ -66,7 +67,7 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
 
     @Override
     public Rect2i getTooltipArea() {
-        return new Rect2i(getX() - 2, getY() - 2, width + 4, height + 4);
+        return new Rect2i(x - 2, y - 2, width + 4, height + 4);
     }
 
     @Override
@@ -75,6 +76,6 @@ public class OverloadProcessingFactoryEnergyBar extends AbstractWidget implement
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
+    public void updateNarration(NarrationElementOutput narrationElementOutput) {
     }
 }

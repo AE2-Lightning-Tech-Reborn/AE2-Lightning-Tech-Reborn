@@ -15,7 +15,8 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import com.moakiee.ae2lt.util.SlotPositionAccess;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -70,8 +71,8 @@ final class TianshuProcessingEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics);
+    public void drawBackgroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
+        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics, 0);
     }
 
     @Override

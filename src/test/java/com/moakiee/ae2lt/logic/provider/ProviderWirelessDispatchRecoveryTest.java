@@ -26,7 +26,7 @@ class ProviderWirelessDispatchRecoveryTest {
     @Test
     void deadTargetReappearingInSameTopologyIsRequeued() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
 
         var dispatch = new ProviderWirelessDispatch();
         var connection = new WirelessConnection(

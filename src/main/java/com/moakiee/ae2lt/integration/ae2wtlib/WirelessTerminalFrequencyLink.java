@@ -88,7 +88,7 @@ public final class WirelessTerminalFrequencyLink {
      * Card ownership and auto-connect are deliberately not new runtime gates in this adapter.
      */
     public static Resolution resolveRoute(Player player, IUpgradeInventory upgrades) {
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
+        if (!(player.level instanceof ServerLevel serverLevel)) {
             return NO_FREQUENCY;
         }
         return resolveRoute(findBoundFrequency(upgrades), frequencyId -> {

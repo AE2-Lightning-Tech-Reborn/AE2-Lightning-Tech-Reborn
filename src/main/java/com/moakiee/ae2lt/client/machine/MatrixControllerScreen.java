@@ -11,8 +11,9 @@ import com.moakiee.ae2lt.network.MatrixControllerActionPacket;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,15 +34,15 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         var build = new TextureToggleButton(
                 TextureToggleButton.ButtonType.QUICK_BUILD,
                 state -> sendAction(MatrixControllerActionPacket.Action.AUTO_BUILD));
-        build.setTooltip(Tooltip.create(Component.translatable("ae2lt.matrix.gui.build")));
-        build.setPosition(x, y);
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(build, Tooltip.create(Component.translatable("ae2lt.matrix.gui.build")));
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(build, x, y);
         addRenderableWidget(build);
 
         var upgrade = new TextureToggleButton(
                 TextureToggleButton.ButtonType.PATTERN_STORAGE_UPGRADE,
                 state -> sendAction(MatrixControllerActionPacket.Action.UPGRADE_PATTERN_STORAGE));
-        upgrade.setTooltip(Tooltip.create(Component.translatable("ae2lt.matrix.gui.upgrade")));
-        upgrade.setPosition(x, y + 22);
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(upgrade, Tooltip.create(Component.translatable("ae2lt.matrix.gui.upgrade")));
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(upgrade, x, y + 22);
         addRenderableWidget(upgrade);
         migration = new MatrixMigrationWidget(menu, x, y + 44);
         addRenderableWidget(migration.button);
@@ -58,7 +59,7 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    protected void renderLabels(PoseStack guiGraphics, int mouseX, int mouseY) {
         drawTitle(guiGraphics);
 
         if (!menu.isFormed()) {
@@ -95,9 +96,9 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, COL_MUTED);
     }
 
-    private void renderFooter(GuiGraphics guiGraphics, boolean multidimensional) {
+    private void renderFooter(PoseStack guiGraphics, boolean multidimensional) {
         if (multidimensional) {
-            guiGraphics.drawString(font, Component.translatable("ae2lt.matrix.gui.heat_ignored"),
+            LegacyGui.drawString(guiGraphics, font, Component.translatable("ae2lt.matrix.gui.heat_ignored"),
                     TEXT_X, FOOTER_MID_Y, COL_MUTED, false);
             return;
         }

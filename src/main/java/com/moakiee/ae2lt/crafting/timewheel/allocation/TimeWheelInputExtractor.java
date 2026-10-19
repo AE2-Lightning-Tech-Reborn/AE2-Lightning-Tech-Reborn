@@ -254,7 +254,7 @@ public final class TimeWheelInputExtractor {
             CraftingInputAllocation allocation) {
         if (!allocation.allowed()) return null;
         if (allocation.slotAllowances().isEmpty()) {
-            return CraftingCpuHelper.extractPatternInputs(
+            return com.moakiee.thunderbolt.core.crafting.batch.ParallelBatchCpuHelper.extractPatternInputs(
                     details, inventory, level, expectedOutputs, expectedContainers);
         }
         var choices = allocation.openChoices();

@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.menu;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.EnumSet;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
@@ -52,11 +52,11 @@ public class MiningFactoryMenu extends AEBaseMenu implements InputTransferMenu, 
         this.host = host;
         registerClientAction("transferInputs", this::transferInputs);
         var blockInput = new LargeStackAppEngSlot(host.getInventory(), MiningFactoryInventory.INPUT);
-        blockInput.setEmptyTooltip(() -> List.of(Component.translatable("gui.ae2lt.mining_factory.status.idle")));
+        blockInput.setEmptyTooltip(List.of(Component.translatable("gui.ae2lt.mining_factory.status.idle")));
         inputSlot = addSlot(blockInput, SlotSemantics.MACHINE_INPUT);
         Ae2ltSlotBackgrounds.withBackground(inputSlot, Ae2ltSlotBackgrounds.MINING_BLOCK);
         var toolInput = new LargeStackAppEngSlot(host.getInventory(), MiningFactoryInventory.TOOL);
-        toolInput.setEmptyTooltip(() -> List.of(Component.translatable("gui.ae2lt.mining_factory.status.tool")));
+        toolInput.setEmptyTooltip(List.of(Component.translatable("gui.ae2lt.mining_factory.status.tool")));
         toolSlot = addSlot(toolInput, SlotSemantics.CONFIG);
         Ae2ltSlotBackgrounds.withBackground(toolSlot, Ae2ltSlotBackgrounds.MINING_TOOL);
         for (int slot = MiningFactoryInventory.OUTPUT; slot < MiningFactoryInventory.OUTPUT + MiningFactoryInventory.OUTPUT_COUNT; slot++) {
@@ -128,7 +128,7 @@ public class MiningFactoryMenu extends AEBaseMenu implements InputTransferMenu, 
         }
 
         return host.getLevel().getBlockEntity(host.getBlockPos()) == host
-                && player.level() == host.getLevel()
+                && player.level == host.getLevel()
                 && player.distanceToSqr(
                         host.getBlockPos().getX() + 0.5D,
                         host.getBlockPos().getY() + 0.5D,

@@ -26,7 +26,7 @@ import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
  * inventory opens. The listener immediately broadcasts slots whose client-side snapshot changed
  * while the screen was closed. For equipment with live data components (energy, module state,
  * etc.), that broadcast sends a whole, potentially stale armor or projection stack back through
- * {@code handleSetCreativeModeSlot}. Vanilla then calls {@link Slot#setByPlayer(ItemStack)}, which
+ * {@code handleSetCreativeModeSlot}. Vanilla then calls {@link Slot#set(ItemStack)}, which
  * can both overwrite the newer server state and make an armor slot call {@code onEquipItem},
  * producing a false equip sound.</p>
  *
@@ -45,7 +45,7 @@ public abstract class ServerGamePacketListenerCelestweaveCreativeSyncMixin {
             method = "handleSetCreativeModeSlot",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/inventory/Slot;setByPlayer(Lnet/minecraft/world/item/ItemStack;)V"))
+                    target = "Lnet/minecraft/world/inventory/Slot;set(Lnet/minecraft/world/item/ItemStack;)V"))
     private void ae2lt$rejectStaleCelestweaveCreativeEcho(
             Slot slot,
             ItemStack uploaded,

@@ -84,7 +84,7 @@ class AdvancedAECompatTest {
 
         @Override
         public void pushInputsToExternalInventory(
-                KeyCounter[] inputs, PatternInputSink inputSink) {
+                KeyCounter[] inputs, com.moakiee.ae2lt.compat.LegacyPatternDetails.PatternInputSink inputSink) {
         }
 
         @Override

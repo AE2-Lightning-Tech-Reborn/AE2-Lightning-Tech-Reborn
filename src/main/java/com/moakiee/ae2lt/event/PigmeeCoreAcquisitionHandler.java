@@ -6,7 +6,6 @@ import com.moakiee.ae2lt.registry.ModItems;
 
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -32,9 +31,9 @@ public final class PigmeeCoreAcquisitionHandler {
         if (!(event.getEntity() instanceof Pig pig)
                 || pig.isBaby()
                 || pig.isRemoved()
-                || !event.getSource().is(DamageTypes.FALLING_ANVIL)
+                || !"anvil".equals(event.getSource().getMsgId())
                 || !isAnvilLandingOnOverloadCrystal(pig)
-                || !(pig.level() instanceof ServerLevel level)) {
+                || !(pig.level instanceof ServerLevel level)) {
             return;
         }
 

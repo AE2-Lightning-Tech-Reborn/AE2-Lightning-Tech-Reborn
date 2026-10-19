@@ -4,7 +4,7 @@ import appeng.api.stacks.AEKey;
 
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.*;
 
 import java.math.BigInteger;
@@ -16,7 +16,7 @@ import java.util.*;
 public final class BigStackCodec {
     private BigStackCodec() {}
 
-    public static ListTag write(Map<AEKey, BigInteger> values, HolderLookup.Provider registries) {
+    public static ListTag write(Map<AEKey, BigInteger> values, RegistryAccess registries) {
         var list = new ListTag();
         values.forEach(
                 (key, n) -> {
@@ -30,7 +30,7 @@ public final class BigStackCodec {
         return list;
     }
 
-    public static Map<AEKey, BigInteger> read(ListTag list, HolderLookup.Provider registries) {
+    public static Map<AEKey, BigInteger> read(ListTag list, RegistryAccess registries) {
         var values = new LinkedHashMap<AEKey, BigInteger>();
         for (var raw : list) {
             var tag = (CompoundTag) raw;

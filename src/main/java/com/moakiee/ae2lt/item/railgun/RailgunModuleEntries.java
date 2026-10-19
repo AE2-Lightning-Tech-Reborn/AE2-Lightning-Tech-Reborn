@@ -94,7 +94,7 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
         String typeId = type.getSerializedName();
         for (var stack : entries) {
             if (typeId.equals(typeId(stack))) {
-                return stack.copyWithCount(1);
+                return com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             }
         }
         return ItemStack.EMPTY;
@@ -108,7 +108,7 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
                 continue;
             }
             for (int i = 0; i < stack.getCount(); i++) {
-                result.add(stack.copyWithCount(1));
+                result.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return result;
@@ -118,7 +118,7 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
         var result = new ArrayList<ItemStack>();
         for (var stack : entries) {
             for (int i = 0; i < stack.getCount(); i++) {
-                result.add(stack.copyWithCount(1));
+                result.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return result.stream();
@@ -157,7 +157,7 @@ public record RailgunModuleEntries(List<ItemStack> entries) {
             int count = Math.max(stack.getCount(), 1);
             var existing = merged.get(typeId);
             if (existing == null) {
-                merged.put(typeId, stack.copyWithCount(count));
+                merged.put(typeId, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, count));
             } else {
                 existing.grow(count);
             }

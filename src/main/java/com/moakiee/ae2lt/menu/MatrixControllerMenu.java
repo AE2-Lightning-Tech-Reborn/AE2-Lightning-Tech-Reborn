@@ -159,7 +159,7 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
             if (host.isRemoved() || host.getLevel() == null) {
                 return false;
             }
-            if (player.level() != host.getLevel()) {
+            if (player.level != host.getLevel()) {
                 return false;
             }
             BlockEntity current = host.getLevel().getBlockEntity(blockPos);

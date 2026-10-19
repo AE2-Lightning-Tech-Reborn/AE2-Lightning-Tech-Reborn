@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.blockentity.workbench;
 import java.util.List;
 import java.util.function.Predicate;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.menu.SlotSemantic;
@@ -57,34 +57,34 @@ public final class RailgunWorkbenchAdapter implements DeviceWorkbenchAdapter {
     }
 
     @Override
-    public Predicate<ItemStack> moduleInputValidator(ItemStack device, HolderLookup.Provider registries) {
+    public Predicate<ItemStack> moduleInputValidator(ItemStack device, RegistryAccess registries) {
         return stack -> (stack.getItem() instanceof RailgunModuleItem
                 || stack.getItem() instanceof ArmorEnergyModuleItem)
                 && RailgunModuleStorage.INSTANCE.canInstallOne(device, stack);
     }
 
     @Override
-    public List<ItemStack> listModuleEntries(ItemStack device, HolderLookup.Provider registries) {
+    public List<ItemStack> listModuleEntries(ItemStack device, RegistryAccess registries) {
         return RailgunModuleStorage.INSTANCE.listEntries(device);
     }
 
     @Override
-    public boolean canInstallOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean canInstallOne(ItemStack device, RegistryAccess registries, ItemStack candidate) {
         return RailgunModuleStorage.INSTANCE.canInstallOne(device, candidate);
     }
 
     @Override
-    public boolean installOne(ItemStack device, HolderLookup.Provider registries, ItemStack candidate) {
+    public boolean installOne(ItemStack device, RegistryAccess registries, ItemStack candidate) {
         return RailgunModuleStorage.INSTANCE.installOne(device, candidate);
     }
 
     @Override
-    public ItemStack uninstallOne(ItemStack device, HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallOne(ItemStack device, RegistryAccess registries, String typeId) {
         return RailgunModuleStorage.INSTANCE.uninstallOne(device, typeId);
     }
 
     @Override
-    public ItemStack uninstallAll(ItemStack device, HolderLookup.Provider registries, String typeId) {
+    public ItemStack uninstallAll(ItemStack device, RegistryAccess registries, String typeId) {
         return RailgunModuleStorage.INSTANCE.uninstallAll(device, typeId);
     }
 
@@ -104,7 +104,7 @@ public final class RailgunWorkbenchAdapter implements DeviceWorkbenchAdapter {
     }
 
     @Override
-    public ItemStack getStructuralSlot(ItemStack device, HolderLookup.Provider registries, StructuralSlotSpec spec) {
+    public ItemStack getStructuralSlot(ItemStack device, RegistryAccess registries, StructuralSlotSpec spec) {
         return switch (spec.slotType()) {
             case CORE -> RailgunStructuralCore.getCore(device);
             default -> ItemStack.EMPTY;
@@ -114,7 +114,7 @@ public final class RailgunWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public void setStructuralSlot(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         if (!stack.isEmpty() && !canPlaceStructural(device, registries, spec, stack)) {
@@ -130,7 +130,7 @@ public final class RailgunWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public ItemStack removeStructuralSlot(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             int amount) {
         return switch (spec.slotType()) {
@@ -142,7 +142,7 @@ public final class RailgunWorkbenchAdapter implements DeviceWorkbenchAdapter {
     @Override
     public boolean canPlaceStructural(
             ItemStack device,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             StructuralSlotSpec spec,
             ItemStack stack) {
         if (device.isEmpty() || stack.isEmpty()) {

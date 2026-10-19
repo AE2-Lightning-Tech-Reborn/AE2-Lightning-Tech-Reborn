@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.RenderType;
  */
 public class Ae2ltRenderTypes extends RenderType {
 
+    private static final DepthTestStateShard GREATER_DEPTH_TEST = new DepthTestStateShard("greater", 516);
     private static RenderType FACE_SEE_THROUGH;
 
     private Ae2ltRenderTypes(String name, VertexFormat format, VertexFormat.Mode mode,

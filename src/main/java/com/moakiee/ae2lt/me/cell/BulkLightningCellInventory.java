@@ -102,7 +102,6 @@ public final class BulkLightningCellInventory implements StorageCell {
         return idleDrain;
     }
 
-    @Override
     public boolean canFitInsideCell() {
         return highVoltage == 0L && extremeHighVoltage == 0L;
     }

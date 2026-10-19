@@ -55,7 +55,7 @@ class TimeWheelCpuChurnTest {
             net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         }
         net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
         var types = field(Class.forName("appeng.api.stacks.AEKeyTypesInternal"), "registry");
         var oldTypes = types.get(null);
         var clock = field(TickHandler.class, "tickCounter");
@@ -211,7 +211,7 @@ class TimeWheelCpuChurnTest {
             });
             var tag = new CompoundTag();
             var id = UUID.randomUUID();
-            tag.putUUID("craftId", id);
+            tag.putString("CraftID", id.toString());
             tag.putBoolean("req", false);
             tag.putBoolean("standalone", !replenishment);
             var link = new CraftingLink(tag, cpu);

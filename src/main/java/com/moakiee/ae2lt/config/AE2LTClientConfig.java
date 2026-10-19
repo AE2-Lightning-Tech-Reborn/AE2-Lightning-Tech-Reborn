@@ -28,7 +28,7 @@ public final class AE2LTClientConfig {
                 .define("jeiWirelessSupply", false);
         TIANSHU_UPLOAD_ALIASES = builder
                 .comment("Recipe type/category id to pattern-provider alias mappings (source=alias)")
-                .defineListAllowEmpty("uploadAliases", List.of(),
+                .defineListAllowEmpty(List.of("uploadAliases"), List::of,
                         value -> value instanceof String text
                                 && text.length() <= 512
                                 && text.indexOf('=') > 0);

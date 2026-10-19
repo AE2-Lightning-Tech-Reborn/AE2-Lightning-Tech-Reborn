@@ -11,7 +11,7 @@
   },
   "criteria": {
     "craft_overload_tnt": {
-      "trigger": "minecraft:recipe_crafted",
+      "trigger": "ae2lt:recipe_crafted",
       "conditions": {
         "recipe_id": "ae2lt:overload_tnt_from_gunpowder"
       }

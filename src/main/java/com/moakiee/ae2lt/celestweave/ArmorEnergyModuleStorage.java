@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.celestweave;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
 import com.moakiee.ae2lt.device.module.OverloadDeviceModuleItem;
@@ -10,7 +10,7 @@ public final class ArmorEnergyModuleStorage {
     private ArmorEnergyModuleStorage() {
     }
 
-    public static long capacityFe(ItemStack armor, HolderLookup.Provider registries) {
+    public static long capacityFe(ItemStack armor, RegistryAccess registries) {
         // Cache hit: skip module NBT reparse entirely (tick-path hot loop). The cache is
         // written on every saveModuleStacks, so it stays fresh across install/uninstall.
         if (CelestweaveArmorState.hasCachedEnergyModuleCapacityFe(armor)) {
@@ -26,7 +26,7 @@ public final class ArmorEnergyModuleStorage {
                 continue;
             }
             if (module.getItem() instanceof OverloadDeviceModuleItem provider) {
-                for (var capability : provider.capabilities(module.copyWithCount(1))) {
+                for (var capability : provider.capabilities(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(module, 1))) {
                     if (capability instanceof DeviceCapability.EnergyCapacity energyCapacity) {
                         capacity = Math.max(capacity, energyCapacity.fe());
                     }

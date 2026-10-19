@@ -19,7 +19,8 @@ import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity.Status;
 import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -44,7 +45,7 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
                 Component.translatable("gui.ae2lt.mining_factory.lightning", menu.lightning),
                 LightningStatusLines.energy(menu.energy, MiningFactoryBlockEntity.ENERGY_CAPACITY))));
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
-        autoExportButton = new ToggleButton(Icon.AUTO_EXPORT_ON, Icon.AUTO_EXPORT_OFF,
+        autoExportButton = new ToggleButton(Icon.ARROW_UP, Icon.REDSTONE_LOW,
                 state -> menu.clientToggleAutoExport());
         autoExportButton.setTooltipOn(List.of(Component.translatable("ae2lt.gui.overload_factory.auto_export.title"),
                 Component.translatable("ae2lt.gui.overload_factory.auto_export.on")));
@@ -67,7 +68,7 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
         configureOutputButton.setVisibility(menu.isAutoExportEnabled());
     }
 
-    @Override public void drawBG(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTicks) {
+    @Override public void drawBG(PoseStack graphics, int x, int y, int mouseX, int mouseY, float partialTicks) {
         super.drawBG(graphics, x, y, mouseX, mouseY, partialTicks);
         // Reveal the falling fragments from top to bottom using the same batch progress as the arrow.
         int filled = net.minecraft.util.Mth.clamp((int) Math.ceil(miningOverlay.getSrcHeight() * menu.getProgress()),
@@ -76,7 +77,7 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
             miningOverlay.copy()
                     .src(miningOverlay.getSrcX(), miningOverlay.getSrcY(), miningOverlay.getSrcWidth(), filled)
                     .dest(x + 25, y + 43, miningOverlay.getSrcWidth(), filled)
-                    .blit(graphics);
+                    .blit(graphics, 0);
         }
     }
 
@@ -85,13 +86,13 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
         return Component.translatable("gui.ae2lt.mining_factory.status." + status);
     }
 
-    @Override public void renderSlot(GuiGraphics graphics, Slot slot) {
+    @Override public void renderSlot(PoseStack graphics, Slot slot) {
         super.renderSlot(graphics, slot);
         LargeStackCountRenderer.renderSlotCount(graphics, font, slot);
     }
 
-    @Override protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-        var lines = super.getTooltipFromContainerItem(stack);
+    @Override public List<Component> getTooltipFromItem(ItemStack stack) {
+        var lines = super.getTooltipFromItem(stack);
         LargeStackCountRenderer.appendCountTooltip(lines, hoveredSlot);
         return lines;
     }

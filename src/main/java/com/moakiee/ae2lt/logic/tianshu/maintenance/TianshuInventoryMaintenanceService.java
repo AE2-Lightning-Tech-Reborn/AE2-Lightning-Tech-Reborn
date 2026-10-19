@@ -158,7 +158,7 @@ public final class TianshuInventoryMaintenanceService
         UUID craftingId = rule.activeCraftingId();
         for (var cpu : host.getTimeWheelCraftingCpuPool().getActiveCpus()) {
             var link = cpu.getCraftingLogic().getLastLink();
-            if (link != null && craftingId.equals(link.getCraftingID())) {
+            if (link != null && craftingId.equals(com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()))) {
                 cpu.cancelJob();
                 statuses.put(ruleId, InventoryMaintenanceStatus.CANCELLING);
                 return true;
@@ -394,7 +394,7 @@ public final class TianshuInventoryMaintenanceService
                 }
                 var link = (CraftingLink) submitted.link();
                 links.add(link);
-                repository.put(rule.withRuntime(true, link.getCraftingID()));
+                repository.put(rule.withRuntime(true, com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID())));
                 statuses.put(rule.id(), InventoryMaintenanceStatus.CRAFTING);
                 retryAfter.remove(rule.id());
                 host.maintenanceStateChanged();
@@ -481,7 +481,7 @@ public final class TianshuInventoryMaintenanceService
 
     private CraftingLink findLink(UUID id) {
         if (id == null) return null;
-        for (var link : links) if (id.equals(link.getCraftingID())) return link;
+        for (var link : links) if (id.equals(com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()))) return link;
         return null;
     }
 
@@ -507,9 +507,9 @@ public final class TianshuInventoryMaintenanceService
     @Override
     public void jobStateChange(ICraftingLink changed) {
         if (changed == null || (!changed.isDone() && !changed.isCanceled())) return;
-        links.removeIf(link -> link.getCraftingID().equals(changed.getCraftingID()));
+        links.removeIf(link -> com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()).equals(com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(changed.getCraftingID())));
         for (var rule : repository.rules()) {
-            if (changed.getCraftingID().equals(rule.activeCraftingId())) {
+            if (com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(changed.getCraftingID()).equals(rule.activeCraftingId())) {
                 repository.put(rule.withRuntime(rule.replenishing(), null));
                 statuses.put(rule.id(), InventoryMaintenanceStatus.IDLE);
                 if (changed.isCanceled()) {

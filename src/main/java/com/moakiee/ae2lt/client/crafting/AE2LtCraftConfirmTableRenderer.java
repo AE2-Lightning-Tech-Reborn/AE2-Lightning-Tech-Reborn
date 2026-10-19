@@ -5,11 +5,10 @@ import java.util.List;
 
 import net.minecraft.network.chat.Component;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
 import appeng.client.gui.AEBaseScreen;
-import appeng.client.gui.me.crafting.AbstractTableRenderer;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftingPlanSummaryEntry;
 
@@ -17,7 +16,7 @@ import com.moakiee.thunderbolt.ae2.crafting.ExactPlanPresentation;
 
 /** AE2 plan cells fitted to the resizable AE2LT report texture. */
 final class AE2LtCraftConfirmTableRenderer
-        extends AbstractTableRenderer<CraftingPlanSummaryEntry> {
+        extends ResizableCraftingTableRenderer<CraftingPlanSummaryEntry> {
     AE2LtCraftConfirmTableRenderer(AEBaseScreen<?> screen, int rows) {
         super(screen, 9, 27, rows);
     }
@@ -51,7 +50,7 @@ final class AE2LtCraftConfirmTableRenderer
     protected List<Component> getEntryTooltip(CraftingPlanSummaryEntry entry) {
         var exact = ExactPlanPresentation.describe(entry, true);
         if (exact != null) return exact;
-        List<Component> lines = AEKeyRendering.getTooltip(entry.getWhat());
+        List<Component> lines = AEStackRendering.getTooltip(entry.getWhat());
         if (entry.getStoredAmount() > 0) {
             lines.add(GuiText.FromStorage.text(
                     entry.getWhat().formatAmount(entry.getStoredAmount(), AmountFormat.FULL)));

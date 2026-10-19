@@ -17,7 +17,8 @@ import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
@@ -87,8 +88,8 @@ final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics);
+    public void drawBackgroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
+        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics, 0);
 
         var absoluteMouseX = bounds.getX() + mouse.getX();
         var absoluteMouseY = bounds.getY() + mouse.getY();
@@ -100,10 +101,10 @@ final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
         }
     }
 
-    private void drawSlotGreenBackground(Rect2i bounds, GuiGraphics graphics, Slot slot) {
+    private void drawSlotGreenBackground(Rect2i bounds, PoseStack graphics, Slot slot) {
         int slotX = bounds.getX() + slot.x;
         int slotY = bounds.getY() + slot.y;
-        graphics.fill(slotX, slotY, slotX + 16, slotY + 16, 0x7F00FF00);
+        LegacyGui.fill(graphics, slotX, slotY, slotX + 16, slotY + 16, 0x7F00FF00);
     }
 
     @Override

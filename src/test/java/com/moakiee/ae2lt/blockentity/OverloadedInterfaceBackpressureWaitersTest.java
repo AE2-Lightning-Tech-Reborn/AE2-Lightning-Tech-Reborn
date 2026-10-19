@@ -26,7 +26,7 @@ class OverloadedInterfaceBackpressureWaitersTest {
     @org.junit.jupiter.api.BeforeAll
     static void bootstrapMinecraft() {
         net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test

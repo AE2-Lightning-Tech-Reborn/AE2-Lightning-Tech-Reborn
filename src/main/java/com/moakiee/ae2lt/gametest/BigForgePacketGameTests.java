@@ -34,16 +34,16 @@ public final class BigForgePacketGameTests {
         try {
             entry.write(buffer);
             var restored = CraftingStatusEntry.read(buffer);
-            helper.assertTrue(amounts.equals(((BigStatusEntry) restored).ae2lt$amounts()), "Exact status must round-trip");
-            helper.assertTrue(buffer.readableBytes() == 0, "Status codec must consume its exact extension");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(amounts.equals(((BigStatusEntry) restored).ae2lt$amounts()), "Exact status must round-trip");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(buffer.readableBytes() == 0, "Status codec must consume its exact extension");
             var job = new GenericStack(key, Long.MAX_VALUE);
             BigDisplayAmounts.attach(job, n);
             var cpu = new CraftingStatusMenu.CraftingCpuListEntry(3, 1024, 1, null,
-                    CpuSelectionMode.ANY, job, 0.5f, 100L);
+                    CpuSelectionMode.ANY, job, 100L, 50L, 100L);
             cpu.writeToPacket(buffer);
             var read = CraftingStatusMenu.CraftingCpuListEntry.readFromPacket(buffer);
-            helper.assertTrue(n.equals(BigDisplayAmounts.get(read.currentJob())), "Exact CPU job amount must round-trip");
-            helper.assertTrue(buffer.readableBytes() == 0, "CPU codec must consume its exact extension");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(n.equals(BigDisplayAmounts.get(read.currentJob())), "Exact CPU job amount must round-trip");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(buffer.readableBytes() == 0, "CPU codec must consume its exact extension");
         } finally { buffer.release(); }
         helper.succeed();
     }
@@ -64,8 +64,8 @@ public final class BigForgePacketGameTests {
             var decoded = new CraftConfirmPlanPacket(buffer);
             var plan = CraftConfirmPlanPacket.class.getDeclaredField("plan");
             plan.setAccessible(true);
-            helper.assertTrue(report.equals(ExactPlanReports.get(plan.get(decoded))), "Exact report must survive Forge constructors");
-            helper.assertTrue(buffer.readableBytes() == 0, "Confirmation codec must consume its exact extension");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(report.equals(ExactPlanReports.get(plan.get(decoded))), "Exact report must survive Forge constructors");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(buffer.readableBytes() == 0, "Confirmation codec must consume its exact extension");
         } finally { buffer.release(); }
         helper.succeed();
     }

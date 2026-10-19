@@ -18,8 +18,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
@@ -43,7 +43,7 @@ public class CrystalCatalyzerBlock extends AE2LTBaseEntityBlock<CrystalCatalyzer
             BlockShapeHelper.createHorizontalFacingShapes(UPRIGHT_SHAPE);
 
     public CrystalCatalyzerBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(FACING, Direction.NORTH));

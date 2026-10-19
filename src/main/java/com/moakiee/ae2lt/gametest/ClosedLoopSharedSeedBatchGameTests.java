@@ -85,27 +85,46 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         long expectedNetOutput = cumulative;
         helper.runAfterDelay(2 + dispatches.length * 2, () -> {
             try {
-                helper.assertTrue(fixture.provider.validationFailure == null,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.provider.validationFailure == null,
                         fixture.provider.validationFailure == null
                                 ? "The provider received valid shared-batch inputs"
                                 : fixture.provider.validationFailure);
-                helper.assertTrue(fixture.provider.totalAccepted == expectedNetOutput,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.provider.totalAccepted == expectedNetOutput,
                         "Every planned loop copy must reach the provider");
-                helper.assertTrue(!fixture.cpu.getCraftingLogic().hasJob(),
-                        "The closed-loop job must leave no active job after all output returns");
-                helper.assertTrue(fixture.cpu.getJobStatus() == null,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(!fixture.cpu.getCraftingLogic().hasJob(),
+                        "The closed-loop job must leave no active job after all output returns: " + completionState(fixture.cpu));
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.cpu.getJobStatus() == null,
                         "A completed closed-loop job must not retain a crafting status");
-                helper.assertTrue(fixture.storage.amount(fixture.output) == expectedNetOutput,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.storage.amount(fixture.output) == expectedNetOutput,
                         "The network must receive exactly one net output per loop copy");
-                helper.assertTrue(fixture.storage.amount(fixture.ingredient) == 0L,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.storage.amount(fixture.ingredient) == 0L,
                         "All ordinary ingredients must be consumed");
-                helper.assertTrue(fixture.host.seedAmount() == 1L,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(fixture.host.seedAmount() == 1L,
                         "The single reusable seed must return to host storage");
             } finally {
                 fixture.craftingService.removeNode(fixture.providerNode);
             }
             helper.succeed();
         });
+    }
+
+    private static String completionState(TimeWheelCraftingCPU cpu) {
+        try {
+            var logic = cpu.getCraftingLogic();
+            var jobField = logic.getClass().getDeclaredField("job"); jobField.setAccessible(true);
+            var job = jobField.get(logic);
+            if (job == null) return "completed";
+            var result = new StringBuilder();
+            for (var name : List.of("remainingAmount", "tasks", "waitingKeys")) {
+                var field = job.getClass().getDeclaredField(name); field.setAccessible(true);
+                result.append(name).append('=').append(field.get(job)).append(';');
+            }
+            for (var name : List.of("seedReturnQuota", "pendingRequesterOutputs", "inventory")) {
+                var field = logic.getClass().getDeclaredField(name); field.setAccessible(true);
+                result.append(name).append('=').append(field.get(logic)).append(';');
+            }
+            return result.toString();
+        } catch (ReflectiveOperationException failure) { throw new IllegalStateException(failure); }
     }
 
     private record Fixture(
@@ -141,16 +160,16 @@ public final class ClosedLoopSharedSeedBatchGameTests {
             var provider = new ScriptedBatchProvider(physicalPattern, output, ingredient, dispatches);
             var providerNode = ClosedLoopSharedSeedBatchGameTests.providerNode(
                     helper, grid, provider);
-            craftingService.addNode(providerNode, null);
+            craftingService.addNode(providerNode);
 
             var host = new TestHost(helper, grid, output);
             var cpu = new TimeWheelCraftingCPU(host, 1L, 0, totalCopies, false);
             var plan = loopPlan(macro, output, ingredient, totalCopies);
-            helper.assertTrue(cpu.submitJob(grid, plan, IActionSource.empty(), null).successful(),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(cpu.submitJob(grid, plan, IActionSource.empty(), null).successful(),
                     "The closed-loop plan must be accepted by the time-wheel CPU");
-            helper.assertTrue(host.seedAmount() == 0L,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(host.seedAmount() == 0L,
                     "Submitting the job must borrow its reusable seed from the host");
-            helper.assertTrue(storage.amount(ingredient) == 0L,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(storage.amount(ingredient) == 0L,
                     "Submitting the job must move all ordinary ingredients into the CPU");
 
             return new Fixture(
@@ -165,37 +184,37 @@ public final class ClosedLoopSharedSeedBatchGameTests {
                 boolean assertIncrementalNetOutput) {
             var usage = cpu.getCraftingLogic().tickCraftingLogic(
                     energyService, craftingService, 1, expectedDispatch);
-            helper.assertTrue(usage.dispatchedCopies() == expectedDispatch,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(usage.dispatchedCopies() == expectedDispatch,
                     "The scheduler must dispatch the requested batch split");
-            helper.assertTrue(provider.lastAccepted == expectedDispatch,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(provider.lastAccepted == expectedDispatch,
                     "The provider must accept the complete scheduled slice");
 
             long produced = provider.takeProduced();
-            helper.assertTrue(produced == expectedDispatch + 1L,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(produced == expectedDispatch + 1L,
                     "A shared batch must return one seed plus one net output per copy");
             long acceptedByCpu = cpu.getCraftingLogic().insert(
                     output, produced, Actionable.MODULATE);
             long networkRemainder = produced - acceptedByCpu;
             long inserted = storage.insert(
                     output, networkRemainder, Actionable.MODULATE, IActionSource.empty());
-            helper.assertTrue(inserted == networkRemainder,
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(inserted == networkRemainder,
                     "The test network must accept every public final output");
 
             if (assertIncrementalNetOutput) {
-                helper.assertTrue(storage.amount(output) == expectedCumulative,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(storage.amount(output) == expectedCumulative,
                         "A successful shared batch must not retain outputs for future copies");
                 long remaining = provider.totalPlanned - expectedCumulative;
                 if (remaining > 0) {
                     var displayed = cpu.getDisplayedOutput();
-                    helper.assertTrue(displayed != null && displayed.amount() == remaining,
+                    com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(displayed != null && displayed.amount() == remaining,
                             "Job progress must decrease by the net output of each shared batch");
                 }
             } else if (expectedCumulative < provider.totalPlanned) {
                 long expectedPublicOutput = Math.max(0L, expectedCumulative - 1L);
-                helper.assertTrue(storage.amount(output) == expectedPublicOutput,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(storage.amount(output) == expectedPublicOutput,
                         "Ordinary dispatch must retain one public output for the next copy");
                 var displayed = cpu.getDisplayedOutput();
-                helper.assertTrue(displayed != null
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(displayed != null
                                 && displayed.amount() == provider.totalPlanned - expectedPublicOutput,
                         "Ordinary fallback must preserve per-copy seed demand until the next push");
             }
@@ -233,7 +252,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
                 List.of(allocation));
     }
 
-    private static final class TestLoopMacro implements IPatternDetails, PatternFiringExpander,
+    private static final class TestLoopMacro implements com.moakiee.ae2lt.compat.LegacyPatternDetails, PatternFiringExpander,
             ReusableSeedPattern, CraftingCpuRestrictedPattern {
         private final SharedLoopMember member;
         private final AEKey seed;
@@ -333,7 +352,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         }
     }
 
-    private static final class PhysicalLoopPattern implements IPatternDetails {
+    private static final class PhysicalLoopPattern implements com.moakiee.ae2lt.compat.LegacyPatternDetails {
         private final AEItemKey definition = AEItemKey.of(Items.PAPER);
         private final IInput[] inputs;
         private final GenericStack[] outputs;
@@ -364,7 +383,7 @@ public final class ClosedLoopSharedSeedBatchGameTests {
         }
     }
 
-    private record ExactInput(AEKey key) implements IPatternDetails.IInput {
+    private record ExactInput(AEKey key) implements com.moakiee.ae2lt.compat.LegacyPatternDetails.IInput {
         @Override
         public GenericStack[] getPossibleInputs() {
             return new GenericStack[] {new GenericStack(key, 1L)};

@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.client.ctm;
 
 import java.util.EnumMap;
 
-import org.joml.Vector3f;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -94,16 +94,16 @@ public final class CtmFaceGeometry {
     private static Vector3f lerp(Vector3f[] c, float s, float t) {
         Vector3f tl = c[0], bl = c[1], tr = c[3];
         return new Vector3f(
-                tl.x + s * (tr.x - tl.x) + t * (bl.x - tl.x),
-                tl.y + s * (tr.y - tl.y) + t * (bl.y - tl.y),
-                tl.z + s * (tr.z - tl.z) + t * (bl.z - tl.z));
+                tl.x() + s * (tr.x() - tl.x()) + t * (bl.x() - tl.x()),
+                tl.y() + s * (tr.y() - tl.y()) + t * (bl.y() - tl.y()),
+                tl.z() + s * (tr.z() - tl.z()) + t * (bl.z() - tl.z()));
     }
 
     private static Vector3f offset(Vector3f point, Vec3i normal, float amount) {
         return new Vector3f(
-                point.x + normal.getX() * amount,
-                point.y + normal.getY() * amount,
-                point.z + normal.getZ() * amount);
+                point.x() + normal.getX() * amount,
+                point.y() + normal.getY() * amount,
+                point.z() + normal.getZ() * amount);
     }
 
     private static BakedQuad quad(Direction side, Vector3f tl, Vector3f bl, Vector3f br, Vector3f tr,
@@ -125,7 +125,7 @@ public final class CtmFaceGeometry {
     // Vertex element order must match the BLOCK vertex format declaration order.
     private static void putVertex(QuadBakingVertexConsumer builder, Vec3i normal, Vector3f pos,
             TextureAtlasSprite sprite, float u, float v) {
-        builder.vertex(pos.x, pos.y, pos.z);
+        builder.vertex(pos.x(), pos.y(), pos.z());
         builder.color(255, 255, 255, 255);
         builder.normal(normal.getX(), normal.getY(), normal.getZ());
         // 1.20.1 TextureAtlasSprite#getU/getV use the vanilla 0..16 texture

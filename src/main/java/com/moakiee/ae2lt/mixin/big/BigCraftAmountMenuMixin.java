@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.mixin.big;
 
-import appeng.api.storage.ISubMenuHost;
+import appeng.api.storage.ITerminalHost;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.MenuOpener;
 import appeng.menu.guisync.GuiSync;
@@ -22,7 +22,7 @@ import java.math.BigInteger;
 @Mixin(value = CraftAmountMenu.class, remap = false)
 public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigAmountMenu {
     @Shadow
-    public abstract ISubMenuHost getHost();
+    public abstract ITerminalHost getHost();
 
     @Shadow
     public abstract appeng.api.stacks.GenericStack getWhatToCraft();
@@ -40,7 +40,7 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
     }
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void ae2lt$init(int id, Inventory inv, ISubMenuHost host, CallbackInfo ci) {
+    private void ae2lt$init(int id, Inventory inv, ITerminalHost host, CallbackInfo ci) {
         if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.context(host) != null;
     }
 

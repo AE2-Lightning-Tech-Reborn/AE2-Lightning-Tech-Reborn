@@ -27,7 +27,7 @@ public final class FlightSneakMovement {
                         PhaseFlightPlayerState.isFlightLocked(player),
                         PhaseFlightMovementGuard.isPhaseModeEnabled(player),
                         PhaseFlightPlayerState.isFlying(player),
-                        player.onGround(),
+                        player.isOnGround(),
                         shiftHeld));
     }
 

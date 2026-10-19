@@ -41,8 +41,8 @@ final class PhaseWingFlightSourceContractTest {
     void remoteGlideNeverUsesTheObservingPlayersFlightCache() throws Exception {
         String wing = read("src/main/java/com/moakiee/ae2lt/celestweave/PhaseWingFlight.java");
 
-        assertTrue(wing.contains("player.level().isClientSide() && player.isLocalPlayer()"));
-        assertTrue(wing.contains("player.level().isClientSide() && !player.isLocalPlayer()"));
+        assertTrue(wing.contains("player.level.isClientSide() && player.isLocalPlayer()"));
+        assertTrue(wing.contains("player.level.isClientSide() && !player.isLocalPlayer()"));
         assertTrue(wing.contains("return player.isFallFlying()"));
     }
 

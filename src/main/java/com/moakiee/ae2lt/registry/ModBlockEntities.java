@@ -35,7 +35,7 @@ import com.moakiee.ae2lt.blockentity.TianshuSeedStorageBlockEntity;
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -43,7 +43,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public final class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.BLOCK_ENTITY_TYPE_REGISTRY, AE2LightningTech.MODID);
 
     public static final RegistryObject<BlockEntityType<LightningCollectorBlockEntity>>
             LIGHTNING_COLLECTOR = BLOCK_ENTITY_TYPES.register(

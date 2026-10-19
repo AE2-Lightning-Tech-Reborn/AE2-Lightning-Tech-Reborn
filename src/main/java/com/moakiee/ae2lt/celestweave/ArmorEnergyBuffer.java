@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.celestweave;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.energy.IEnergyStorage;
 
@@ -21,7 +21,7 @@ public final class ArmorEnergyBuffer {
         return read(stack, null);
     }
 
-    public static long read(ItemStack stack, HolderLookup.Provider registries) {
+    public static long read(ItemStack stack, RegistryAccess registries) {
         Long value = ModDataComponents.CELESTWEAVE_ENERGY_BUFFER.get(stack);
         return Math.max(0L, Math.min(capacity(stack, registries), value == null ? 0L : value));
     }
@@ -30,7 +30,7 @@ public final class ArmorEnergyBuffer {
         return capacity(stack, null);
     }
 
-    public static long capacity(ItemStack stack, HolderLookup.Provider registries) {
+    public static long capacity(ItemStack stack, RegistryAccess registries) {
         return ArmorEnergyRules.capacityForExtraModuleFe(ArmorEnergyModuleStorage.capacityFe(stack, registries));
     }
 
@@ -38,7 +38,7 @@ public final class ArmorEnergyBuffer {
         write(stack, null, value);
     }
 
-    public static void write(ItemStack stack, HolderLookup.Provider registries, long value) {
+    public static void write(ItemStack stack, RegistryAccess registries, long value) {
         if (stack == null || stack.isEmpty()) {
             return;
         }
@@ -49,7 +49,7 @@ public final class ArmorEnergyBuffer {
         write(stack, read(stack));
     }
 
-    public static void clamp(ItemStack stack, HolderLookup.Provider registries) {
+    public static void clamp(ItemStack stack, RegistryAccess registries) {
         write(stack, registries, read(stack, registries));
     }
 
@@ -57,7 +57,7 @@ public final class ArmorEnergyBuffer {
         if (amount <= 0L) {
             return true;
         }
-        var registries = player.level().registryAccess();
+        var registries = player.level.registryAccess();
         long buffered = read(stack, registries);
         if (buffered >= amount) {
             write(stack, registries, buffered - amount);
@@ -70,7 +70,7 @@ public final class ArmorEnergyBuffer {
         if (stack == null || stack.isEmpty() || player == null || maxAmount <= 0L) {
             return 0L;
         }
-        var registries = player.level().registryAccess();
+        var registries = player.level.registryAccess();
         long room = capacity(stack, registries) - read(stack, registries);
         if (room <= 0L) {
             return 0L;
@@ -102,13 +102,13 @@ public final class ArmorEnergyBuffer {
         return receiveFe(stack, null, amount, simulate);
     }
 
-    public static int receiveFe(ItemStack stack, HolderLookup.Provider registries, int amount, boolean simulate) {
+    public static int receiveFe(ItemStack stack, RegistryAccess registries, int amount, boolean simulate) {
         return (int) receiveFe(stack, registries, (long) amount, simulate);
     }
 
     public static long receiveFe(
             ItemStack stack,
-            HolderLookup.Provider registries,
+            RegistryAccess registries,
             long amount,
             boolean simulate) {
         long accepted = Math.min(

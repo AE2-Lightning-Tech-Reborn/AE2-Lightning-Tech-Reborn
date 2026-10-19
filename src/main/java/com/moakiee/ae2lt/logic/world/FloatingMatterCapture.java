@@ -23,11 +23,11 @@ public final class FloatingMatterCapture {
     public static boolean tryCapture(ShulkerBullet bullet, BlockHitResult hit) {
         if (!AE2LTCommonConfig.shulkerBulletCollectionEnabled()
                 || !bullet.isAlive()
-                || bullet.level().isClientSide()) {
+                || bullet.level.isClientSide()) {
             return false;
         }
 
-        if (!(bullet.level().getBlockEntity(hit.getBlockPos()) instanceof IPartHost host)) {
+        if (!(bullet.level.getBlockEntity(hit.getBlockPos()) instanceof IPartHost host)) {
             return false;
         }
 

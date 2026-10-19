@@ -1,14 +1,14 @@
 package com.moakiee.ae2lt.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.renderer.block.model.ItemTransforms.TransformType;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
@@ -38,19 +38,18 @@ public class CrystalCatalyzerRenderer implements BlockEntityRenderer<CrystalCata
 
         if (level != null) {
             float rotation = (level.getGameTime() + partialTick) * ROTATION_SPEED;
-            poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
+            poseStack.mulPose(Vector3f.YP.rotationDegrees(rotation));
         }
 
         poseStack.scale(ITEM_SCALE, ITEM_SCALE, ITEM_SCALE);
 
         itemRenderer.renderStatic(
                 stack,
-                ItemDisplayContext.FIXED,
+                TransformType.FIXED,
                 packedLight,
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 buffer,
-                level,
                 0);
         poseStack.popPose();
     }

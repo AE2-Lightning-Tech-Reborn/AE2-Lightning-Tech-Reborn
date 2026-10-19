@@ -17,12 +17,12 @@ class CreativePigmeeDuplicationRecipeContractTest {
                 "src/main/java/com/moakiee/ae2lt/recipe/CreativePigmeeDuplicationRecipe.java"));
 
         assertTrue(source.contains("private static final int OUTPUT_COUNT = 64"));
-        assertTrue(source.contains("target.copyWithCount(OUTPUT_COUNT)"));
+        assertTrue(source.contains("com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(target, OUTPUT_COUNT)"));
         assertTrue(source.contains("boolean foundCatalyst = false"));
         assertTrue(source.contains("stack.is(ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get())"));
         assertTrue(source.contains("if (foundCatalyst)"));
         assertTrue(source.contains("getRemainingItems(CraftingContainer input)"));
-        assertTrue(source.contains("remaining.set(slot, stack.copyWithCount(1))"));
+        assertTrue(source.contains("remaining.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1))"));
         assertFalse(source.contains("getMaxStackSize"));
     }
 
@@ -57,7 +57,7 @@ class CreativePigmeeDuplicationRecipeContractTest {
         assertTrue(conversionSource.contains(
                 "new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_MULTIDIMENSIONAL_PROTECTION.get())"));
         assertTrue(creativeSource.indexOf("PigmeeConversionLogic.createResult(target)")
-                < creativeSource.indexOf("target.copyWithCount(OUTPUT_COUNT)"));
+                < creativeSource.indexOf("com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(target, OUTPUT_COUNT)"));
         assertFalse(conversionSource.contains("HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM"));
     }
 
@@ -70,7 +70,7 @@ class CreativePigmeeDuplicationRecipeContractTest {
                 .getAsJsonObject();
 
         assertTrue(registry.contains("CREATIVE_PIGMEE_DUPLICATION_SERIALIZER"));
-        assertTrue(registry.replaceAll("\\s+", "").contains("newSimpleCraftingRecipeSerializer<>(CreativePigmeeDuplicationRecipe::new)"));
+        assertTrue(registry.replaceAll("\\s+", "").contains("newSimpleRecipeSerializer<>(CreativePigmeeDuplicationRecipe::new)"));
         assertEquals("ae2lt:creative_pigmee_duplication", recipe.get("type").getAsString());
         assertFalse(Files.exists(Path.of(
                 "src/main/resources/data/ae2lt/recipes/creative_pigmee_fumo.json")));

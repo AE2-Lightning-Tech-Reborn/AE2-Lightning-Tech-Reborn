@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.gametest;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -41,11 +41,11 @@ public final class LightningCompatibilityGameTests {
 
         helper.runAfterDelay(2, () -> {
             var data = lightning.getPersistentData();
-            helper.assertTrue(data.getBoolean(NATURAL_TRANSFORM_CHECKED_TAG),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(data.getBoolean(NATURAL_TRANSFORM_CHECKED_TAG),
                     "The server pre-tick dispatcher must run structure lightning processing");
-            helper.assertTrue(data.getBoolean(ITEM_TRANSFORM_CHECKED_TAG),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(data.getBoolean(ITEM_TRANSFORM_CHECKED_TAG),
                     "The server pre-tick dispatcher must run item lightning processing");
-            helper.assertTrue(!data.getBoolean(NaturalLightningTransformationHandler.NATURAL_WEATHER_LIGHTNING_TAG),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(!data.getBoolean(NaturalLightningTransformationHandler.NATURAL_WEATHER_LIGHTNING_TAG),
                     "Artificial lightning must not acquire the natural-weather marker");
             helper.succeed();
         });
@@ -56,9 +56,9 @@ public final class LightningCompatibilityGameTests {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
         var blank = new ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
-                new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy_blank")), 3));
+                new ItemStack(Registry.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy_blank")), 3));
         var dust = new ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
-                new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_crystal_dust")), 4));
+                new ItemStack(Registry.ITEM.get(new ResourceLocation("ae2lt", "overload_crystal_dust")), 4));
         blank.setNoGravity(true);
         dust.setNoGravity(true);
         level.addFreshEntity(blank);
@@ -67,12 +67,12 @@ public final class LightningCompatibilityGameTests {
         lightning.setPos(Vec3.atBottomCenterOf(pos));
         level.addFreshEntity(lightning);
         helper.runAfterDelay(2, () -> {
-            var output = BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy"));
+            var output = Registry.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy"));
             int count = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(3)).stream()
                     .filter(item -> item.getItem().is(output))
                     .mapToInt(item -> item.getItem().getCount()).sum();
-            helper.assertTrue(count == 1, "Artificial subclass lightning must produce exactly one alloy");
-            helper.assertTrue(!blank.isAlive() && !dust.isAlive(), "The recipe must consume both inputs");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(count == 1, "Artificial subclass lightning must produce exactly one alloy");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(!blank.isAlive() && !dust.isAlive(), "The recipe must consume both inputs");
             helper.succeed();
         });
     }
@@ -113,12 +113,12 @@ public final class LightningCompatibilityGameTests {
         }
         level.addFreshEntity(lightning);
         helper.runAfterDelay(2, () -> {
-            helper.assertTrue(level.getBlockState(center).is(
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(level.getBlockState(center).is(
                             shouldTransform ? recipe.centerOutput() : recipe.centerInput()),
                     "Structure transformation must respect the natural-lightning requirement");
             for (var requirement : recipe.requirements()) {
                 var state = level.getBlockState(center.offset(requirement.offset()));
-                helper.assertTrue(shouldTransform && requirement.consume()
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(shouldTransform && requirement.consume()
                                 ? state.isAir() : state.is(requirement.block()),
                         "Structure ingredients must only be consumed by a successful transformation");
             }

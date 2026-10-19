@@ -57,12 +57,12 @@ public record WirelessConnectorUsePacket(
     }
 
     private void handleOnServer(ServerPlayer player) {
-        var level = player.level();
+        var level = player.level;
         if (!level.isLoaded(pos)) return;
 
         ItemStack stack = player.getItemInHand(hand);
         if (!(stack.getItem() instanceof OverloadedWirelessConnectorItem)) return;
-        double reach = player.getAttributeValue(ForgeMod.BLOCK_REACH.get()) + 1.0D;
+        double reach = player.getAttributeValue(ForgeMod.REACH_DISTANCE.get()) + 1.0D;
         if (player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) > reach * reach) return;
 
         var state = level.getBlockState(pos);

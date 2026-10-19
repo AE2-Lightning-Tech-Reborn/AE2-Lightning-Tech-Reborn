@@ -43,8 +43,7 @@ public final class OverloadProcessingRecipeCatalog {
         // Its values view is stable between changes, so active jobs don't walk the recipe graph per tick.
         if (previous != null && previous.sources() == snapshot(manager)) return previous.values();
         var nativeRecipes = manager.getAllRecipesFor(ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get()).stream().map(RecipeHolder::of).toList();
-        List<? extends RecipeHolder<?>> reactions = ModList.get() != null && ModList.get().isLoaded("advanced_ae")
-                ? AdvancedAeReactionAdapter.sourceRecipes(manager) : List.of();
+        List<? extends RecipeHolder<?>> reactions = List.of();
         recipes(manager, nativeRecipes, reactions);
         return CACHE.get(manager).values();
     }
@@ -82,13 +81,7 @@ public final class OverloadProcessingRecipeCatalog {
             return previous.recipes();
         }
         var recipes = new ArrayList<>(nativeRecipes);
-        for (var holder : reactions) {
-            try {
-                recipes.add(AdvancedAeReactionAdapter.convert(holder));
-            } catch (IllegalArgumentException e) {
-                LogUtils.getLogger().warn("Overload factory cannot borrow reaction {}: {}", holder.id(), e.getMessage());
-            }
-        }
+        if (!reactions.isEmpty()) throw new IllegalArgumentException("AdvancedAE recipes require a supported AdvancedAE runtime");
         recipes.sort(ORDER);
         var result = List.copyOf(recipes);
         var displayed = new ArrayList<>(nativeRecipes);

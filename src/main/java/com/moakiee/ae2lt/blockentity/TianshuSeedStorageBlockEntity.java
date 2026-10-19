@@ -119,7 +119,7 @@ public final class TianshuSeedStorageBlockEntity extends AEBaseBlockEntity
             var stack = cells.getStackInSlot(slot);
             if (!stack.isEmpty()) NativeStackDropHelper.addDrops(drops, stack);
         }
-        cells.clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(cells);
         for (var stack : drops) {
             NativeStackDropHelper.popResource(level, worldPosition, stack);
         }
@@ -172,5 +172,5 @@ public final class TianshuSeedStorageBlockEntity extends AEBaseBlockEntity
         }
     }
 
-    @Override public void clearContent() { cells.clear(); }
+    public void clearContent() { com.moakiee.ae2lt.compat.LegacyInventories.clear(cells); }
 }

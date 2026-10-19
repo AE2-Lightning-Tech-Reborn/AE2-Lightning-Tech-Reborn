@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 class OverloadedInterfaceExportPlanTest {
     @BeforeAll static void bootstrap() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test void unchangedPlanReusesIndexedStatesAndChangedOrderPreservesKeyState() {
@@ -252,7 +252,7 @@ class OverloadedInterfaceExportPlanTest {
         for (var item : List.of(Items.ENDER_PEARL, Items.IRON_SWORD)) {
             barrel.clearContent();
             var key = AEItemKey.of(item);
-            int limit = key.getMaxStackSize();
+            int limit = key.toStack().getMaxStackSize();
             for (int slot = 0; slot < 26; slot++) barrel.setItem(slot, key.toStack(limit));
             int before = transfer.preferredSlot = 26;
             var remainder = handler.insertItem(26, key.toStack(64), true);

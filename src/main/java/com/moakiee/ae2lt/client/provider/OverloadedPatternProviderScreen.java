@@ -8,7 +8,8 @@ import com.moakiee.ae2lt.client.widgets.PageInput;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -122,13 +123,13 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     }
 
     @Override
-    public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
         int tp = this.menu.getTotalPages();
         if (tp > 1) {
             String pageText = (this.menu.getCurrentPage() + 1) + "/" + tp;
             int textWidth = this.font.width(pageText);
-            guiGraphics.drawString(this.font, pageText,
+            LegacyGui.drawString(guiGraphics, this.font, pageText,
                     GuiTextLayout.centeredX(this.imageWidth, textWidth),
                     33,
                     style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),

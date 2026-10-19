@@ -15,7 +15,8 @@ import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.RegistryAccess;
@@ -53,16 +54,16 @@ final class TianshuStonecuttingEncodingPanel extends TianshuEncodingModePanel {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics);
-        drawRecipes(graphics, bounds, mouse);
+    public void drawBackgroundLayer(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
+        BG.dest(bounds.getX() + 9, bounds.getY() + bounds.getHeight() - 164).blit(graphics, 0);
+        drawRecipes(graphics, zIndex, bounds, mouse);
     }
 
     private RegistryAccess getRegistryAccess() {
         return Objects.requireNonNull(Minecraft.getInstance().level).registryAccess();
     }
 
-    private void drawRecipes(GuiGraphics graphics, Rect2i bounds, Point mouse) {
+    private void drawRecipes(PoseStack graphics, int zIndex, Rect2i bounds, Point mouse) {
         var recipes = menu.getStonecuttingRecipes();
         var startIndex = scrollbar.getCurrentScroll() * COLUMNS;
         var endIndex = startIndex + ROWS * COLUMNS;
@@ -80,11 +81,11 @@ final class TianshuStonecuttingEncodingPanel extends TianshuEncodingModePanel {
                     : mouse.isIn(slotBounds) ? BG_SLOT_HOVER : BG_SLOT;
             var renderX = bounds.getX() + slotBounds.getX();
             var renderY = bounds.getY() + slotBounds.getY();
-            background.dest(renderX, renderY - 1).blit(graphics);
+            background.dest(renderX, renderY - 1).blit(graphics, 0);
 
-            ItemStack result = recipe.getResultItem(getRegistryAccess());
-            graphics.renderItem(result, renderX, renderY);
-            graphics.renderItemDecorations(Minecraft.getInstance().font, result, renderX, renderY);
+            ItemStack result = recipe.getResultItem();
+            LegacyGui.renderItem(graphics, result, renderX, renderY);
+            LegacyGui.renderItemDecorations(graphics, Minecraft.getInstance().font, result, renderX, renderY);
         }
     }
 
@@ -107,8 +108,8 @@ final class TianshuStonecuttingEncodingPanel extends TianshuEncodingModePanel {
         if (recipe == null) {
             return null;
         }
-        var result = recipe.getResultItem(getRegistryAccess());
-        return new Tooltip(screen.getTooltipFromContainerItem(result));
+        var result = recipe.getResultItem();
+        return new Tooltip(screen.getTooltipFromItem(result));
     }
 
     @Nullable

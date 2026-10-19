@@ -19,7 +19,7 @@ apply plugin: 'org.spongepowered.mixin'
 
 group = mod_group_id
 def releaseTag = System.getenv('TAG')?.trim()
-version = releaseTag?.startsWith('1.20.1-') ? releaseTag.substring('1.20.1-'.length()) : (releaseTag ?: mod_version)
+version = releaseTag?.startsWith('1.19.2-') ? releaseTag.substring('1.19.2-'.length()) : (releaseTag ?: mod_version)
 def resolvedProjectVersion = project.version.toString()
 
 def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
@@ -139,11 +139,38 @@ minecraft {
 
 mixin {
     add sourceSets.main, "${mod_id}.refmap.json"
+    config "ae2lt.mixins.json"
+    config "ae2lt.mekanism.mixins.json"
+    config "ae2lt.recipeviewer.mixins.json"
+    config "ae2lt.ae2wtlib.mixins.json"
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    if ((findProperty('enable_packaged_runtime') ?: 'false').toBoolean()) {
+        ivy {
+            name = 'LocalPackagedProviderBuild'
+            url = uri(findProperty('packaged_build_libs') ?: '../AE2LT-Packaged-Pattern-Provider-Reborn/build/libs')
+            patternLayout { artifact 'ae2ltpp-forge-1.19.2-[revision].jar' }
+            metadataSources { artifact() }
+            content { includeGroup 'com.moakiee.ae2lt.packaged' }
+        }
+    }
+    ivy {
+        name = 'LocalAppliedFlux1192'
+        url = uri(findProperty('appflux_build_libs') ?: '../Applied-Flux-Reborn/build/libs')
+        patternLayout { artifact 'appflux-forge-1.19.2-[revision].jar' }
+        metadataSources { artifact() }
+        content { includeModule 'com.glodblock.github.appflux', 'appflux-forge-1.19.2' }
+    }
+    ivy {
+        name = 'LocalThunderbolt1192'
+        url = uri(findProperty('thunderbolt_build_libs') ?: '../Thunderbolt-Core-Reborn/build/libs')
+        patternLayout { artifact 'thunderbolt-forge-1.19.2-[revision].jar' }
+        metadataSources { artifact() }
+        content { includeModule 'com.moakiee.thunderbolt', 'thunderbolt-reborn-forge-1.19.2' }
+    }
     mavenLocal()
     if (githubPackagesUser && githubPackagesToken) {
         maven {
@@ -217,124 +244,43 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-
+    if ((findProperty('enable_packaged_runtime') ?: 'false').toBoolean()) {
+        runtimeOnly fg.deobf('com.moakiee.ae2lt.packaged:ae2ltpp:1.2.2-beta')
+    }
     implementation fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
-
+    compileOnly fg.deobf('curse.maven:flux-networks-248020:4620438')
+    compileOnly fg.deobf('com.glodblock.github.appflux:appflux-forge-1.19.2:1.19.2-1.3.7-reborn.1')
+    if ((findProperty('enable_appflux_runtime') ?: 'true').toBoolean()) runtimeOnly fg.deobf('com.glodblock.github.appflux:appflux-forge-1.19.2:1.19.2-1.3.7-reborn.1')
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
-    // Full jar needed at compile time for mixin targets inside the JEI GUI
-    // (RecipeTransferButton lives in mezz.jei.gui.recipes, not in the api jars).
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
-    if ((findProperty('enable_jei_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
-    }
-
     compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}:api")
-    if ((findProperty('enable_emi_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
-    }
-
-    compileOnly fg.deobf("curse.maven:jade-324717:${jade_file_id}")
-    if ((findProperty('enable_jade_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("curse.maven:jade-324717:${jade_file_id}")
-    }
-
-    compileOnly fg.deobf("curse.maven:applied-flux-965012:${appflux_file_id}")
-    if ((findProperty('enable_appflux_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("curse.maven:applied-flux-965012:${appflux_file_id}")
-    }
-    runtimeOnly fg.deobf("org.appliedenergistics:guideme:${guideme_version}")
-    runtimeOnly fg.deobf("curse.maven:glodium-957920:${glodium_file_id}")
-
-    compileOnly fg.deobf("curse.maven:ex-pattern-provider-892005:${extendedae_file_id}")
-    if ((findProperty('enable_extendedae_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("curse.maven:ex-pattern-provider-892005:${extendedae_file_id}")
-    }
-
-    compileOnly fg.deobf("curse.maven:flux-networks-248020:${flux_networks_file_id}")
-    if ((findProperty('enable_flux_networks_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("curse.maven:flux-networks-248020:${flux_networks_file_id}")
-    }
-
+    compileOnly fg.deobf("maven.modrinth:jade:kp0HjPre")
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
-    if ((findProperty('enable_mekanism_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
-    }
-
-    // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
-    // Provided at runtime as a separate mod jar in the modpack.
-    compileOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
-        transitive = false
-    }
-    runtimeOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
-        transitive = false
-    }
-
-    // Curios integration — frequency card / armor charm slots.
     compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
-    if ((findProperty('enable_curios_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
-    }
-
-    // Optional Polymorph integration for the Tianshu pattern terminal recipe selector.
-    // Runtime jar is supplied by the modpack; only the API is needed at compile time.
-    compileOnly fg.deobf("curse.maven:polymorph-388800:6450982")
-
-    // Optional integrations. Resolve their public release jars reproducibly instead of relying
-    // on an untracked machine-local libs/ directory.
-    compileOnly fg.deobf("maven.modrinth:advancedae:${advancedae_version}")
-    // Exercise AdvancedAE's complete integration path in normal development runs. Pass
-    // -Penable_advancedae_runtime=false to verify the no-integration startup path.
-    if ((findProperty('enable_advancedae_runtime') ?: 'true').toBoolean()) {
-        runtimeOnly fg.deobf("maven.modrinth:advancedae:${advancedae_version}")
-        // AdvancedAE instantiates GeoItem implementations but its 1.20.1 metadata does not
-        // declare GeckoLib. Mirror the dependency from its categorized 1.20.1 source project.
-        runtimeOnly fg.deobf("curse.maven:geckolib-388172:${advancedae_geckolib_file_id}")
-    }
-    // ExtendedAE Plus is optional in production. Pin and expose its real Forge 1.20.1
-    // artifact for reproducible compatibility smoke tests:
-    // -Penable_extendedae_plus_runtime=true.
-    if ((findProperty('enable_extendedae_plus_runtime') ?: 'false').toBoolean()) {
-        runtimeOnly fg.deobf("maven.modrinth:extendedae-plus:${extendedae_plus_version}")
-    }
+    compileOnly fg.deobf("maven.modrinth:polymorph:ZV5cGTr7")
     compileOnly fg.deobf("maven.modrinth:inventory-profiles-next:${inventory_profiles_next_version}")
     compileOnly fg.deobf("maven.modrinth:applied-energistics-2-wireless-terminals:${ae2wtlib_version}")
-    // Exercise the optional wireless-terminal integration in normal development runs. Pass
-    // -Penable_ae2wtlib_runtime=false to verify the no-integration startup path as well.
-    if ((findProperty('enable_ae2wtlib_runtime') ?: 'true').toBoolean()) {
+    implementation(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) { transitive = false }
+    if ((findProperty('enable_jei_runtime') ?: 'true').toBoolean()) runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+    if ((findProperty('enable_emi_runtime') ?: 'false').toBoolean()) runtimeOnly fg.deobf("dev.emi:emi-forge:${emi_version}")
+    if ((findProperty('enable_jade_runtime') ?: 'true').toBoolean()) runtimeOnly fg.deobf("maven.modrinth:jade:kp0HjPre")
+    if ((findProperty('enable_mekanism_runtime') ?: 'false').toBoolean()) runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
+    if ((findProperty('enable_curios_runtime') ?: 'true').toBoolean()) runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
+    if ((findProperty('enable_ae2wtlib_runtime') ?: 'false').toBoolean()) {
         runtimeOnly fg.deobf("maven.modrinth:applied-energistics-2-wireless-terminals:${ae2wtlib_version}")
         runtimeOnly fg.deobf("dev.architectury:architectury-forge:${architectury_version}")
         runtimeOnly fg.deobf("me.shedaniel.cloth:cloth-config-forge:${cloth_config_version}")
     }
-
-    // Veil is an optional client rendering backend. Keep its classes out of the native
-    // fallback path; modpacks supply Veil's shaded distribution jar at runtime.
-    // The unclassified artifact is Veil's shaded distribution jar. ForgeGradle flattens it
-    // onto the development module path, where its bundled LWJGL packages conflict with
-    // Minecraft's LWJGL module. The published slim classifier is the correct form for the
-    // deobfuscated compile classpath.
-    compileOnly(fg.deobf("foundry.veil:Veil-forge-${minecraft_version}:${veil_version}:slim")) {
-        transitive = false
-    }
-
     compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
-
-    // Keep portable resource and pure-logic regressions executable on the Forge 1.20.1 port.
-    testImplementation platform("org.junit:junit-bom:5.10.2")
-    testImplementation "org.junit.jupiter:junit-jupiter"
-    testImplementation fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
-    testImplementation(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
-        transitive = false
-    }
-    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-    testRuntimeOnly "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
-
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))
-    implementation fg.deobf("io.github.llamalad7:mixinextras-forge:${mixinextras_version}")
-    jarJar(group: 'io.github.llamalad7', name: 'mixinextras-forge', version: "[${mixinextras_version},)") {
-        jarJar.pin(it, "${mixinextras_version}")
-    }
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextras_version}")) { jarJar.ranged(it, "[${mixinextras_version},)") }
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
 }
 
 tasks.named('processResources', ProcessResources).configure {
@@ -368,11 +314,9 @@ tasks.named('processResources', ProcessResources).configure {
             mod_authors: mod_authors,
             mod_description: mod_description,
             ae2_version_range: ae2_version_range,
-            guideme_version_range: guideme_version_range,
             jade_version_range: jade_version_range,
             jei_version_range: jei_version_range,
             emi_version_range: emi_version_range,
-            advancedae_version_range: advancedae_version_range,
             extendedae_version_range: extendedae_version_range,
             appflux_version_range: appflux_version_range,
             flux_networks_version_range: flux_networks_version_range,
@@ -883,7 +827,7 @@ tasks.register('checkWirelessIoBenchmarkRegression') {
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
-            artifactId = 'ae2lt-forge-1.20.1'
+            artifactId = 'ae2lt-forge-1.19.2'
             artifact(tasks.named('jarJar')) { classifier = null }
         }
     }
@@ -891,35 +835,16 @@ publishing {
 tasks.withType(GenerateModuleMetadata).configureEach { enabled = false }
 tasks.withType(PublishToMavenLocal).configureEach { dependsOn tasks.named('reobfJarJar') }
 
-// AdvancedAE ships its recipe ingredient API inside its Jar-in-Jar library.
-// Expose that exact bundled version to the compiler without adding a runtime dependency.
-configurations { advancedAeRecipeApi { transitive = false } }
-dependencies { advancedAeRecipeApi "maven.modrinth:advancedae:${advancedae_version}" }
-def advancedAeRecipeApiJar = layout.buildDirectory.file('embedded-libraries/ae2addonlib.jar')
-def extractAdvancedAeRecipeApi = tasks.register('extractAdvancedAeRecipeApi') {
-    inputs.files(configurations.advancedAeRecipeApi)
-    outputs.file(advancedAeRecipeApiJar)
-    doLast {
-        def nested = zipTree(configurations.advancedAeRecipeApi.singleFile)
-                .matching { include 'META-INF/jarjar/ae2addonlib-*.jar' }.singleFile
-        def output = advancedAeRecipeApiJar.get().asFile
-        output.parentFile.mkdirs()
-        java.nio.file.Files.copy(nested.toPath(), output.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-    }
-}
-def advancedAeMcpMappings = tasks.register('advancedAeMcpMappings', net.minecraftforge.gradle.mcp.tasks.DownloadMCPMappings) {
-    mappings = "${mapping_channel}_${mapping_version}"
-    output = layout.buildDirectory.file('embedded-libraries/mcp-mappings.zip')
-}
-def remapAdvancedAeRecipeApi = tasks.register('remapAdvancedAeRecipeApi', net.minecraftforge.gradle.userdev.tasks.RenameJarSrg2Mcp) {
-    input = advancedAeRecipeApiJar
-    mappings = advancedAeMcpMappings.flatMap { it.output }
-    output = layout.buildDirectory.file('embedded-libraries/ae2addonlib-dev.jar')
-    signatureRemoval = true
-    dependsOn extractAdvancedAeRecipeApi
-}
-dependencies {
-    compileOnly files(remapAdvancedAeRecipeApi.flatMap { it.output })
-    testImplementation files(remapAdvancedAeRecipeApi.flatMap { it.output })
-    testImplementation(fg.deobf("maven.modrinth:advancedae:${advancedae_version}")) { transitive = false }
-}
+
+// Optional addons without a Forge 1.19.2 release are not part of this target.
+sourceSets.main.java.exclude(
+    'com/moakiee/ae2lt/client/tianshu/TianshuAdvancedPatternConfigScreen.java',
+    'com/moakiee/ae2lt/machine/overloadfactory/recipe/AdvancedAeReactionAdapter.java',
+    'com/moakiee/ae2lt/integration/jei/compat/AdvancedAeFactoryJeiCompat.java',
+    'com/moakiee/ae2lt/mixin/recipeviewer/emi/EmiEncodePatternTransferMixin.java',
+    'com/moakiee/ae2lt/mixin/recipeviewer/emi/EmiRecipeTransferResultAccessor.java')
+
+tasks.withType(JavaCompile).configureEach { options.compilerArgs += ["-Xmaxerrs", "1500"]; options.fork = true; options.forkOptions.jvmArgs = ["-Duser.language=en", "-Duser.country=US"] }
+
+// AdvancedAE does not publish a 1.19.2 runtime.
+sourceSets.test.java.exclude('com/moakiee/ae2lt/machine/overloadfactory/recipe/AdvancedAeReactionAdapterTest.java')

@@ -27,7 +27,7 @@ import com.moakiee.ae2lt.logic.provider.AllowedOutputFilter;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -228,7 +228,7 @@ public final class ProviderEnergyOutputGameTests {
         var drive = (DriveBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS.west()));
         drive.getInternalInventory().setItemDirect(0, AEItems.ITEM_CELL_1K.stack());
         drive.getInternalInventory().setItemDirect(1, AEItems.FLUID_CELL_1K.stack());
-        var cell = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("appflux", "fe_1k_cell")));
+        var cell = new ItemStack(Registry.ITEM.get(new ResourceLocation("appflux", "fe_1k_cell")));
         helper.assertTrue(!cell.isEmpty(), "Applied Flux dependency missing");
         drive.getInternalInventory().setItemDirect(2, cell);
         var provider = (OverloadedPatternProviderBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS));

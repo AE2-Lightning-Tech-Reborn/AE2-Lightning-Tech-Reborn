@@ -16,8 +16,10 @@ interface JeiBookmarkWriter {
         }
         if (managerGetter != null) {
             Object manager = managerGetter.invoke(runtime);
-            Method add = manager.getClass().getMethod("add", ingredientType);
-            return ingredient -> add.invoke(manager, ingredient);
+            if (manager != null) {
+                Method add = manager.getClass().getMethod("add", ingredientType);
+                return ingredient -> add.invoke(manager, ingredient);
+            }
         }
 
         Object overlay = runtime.getClass().getMethod("getBookmarkOverlay").invoke(runtime);

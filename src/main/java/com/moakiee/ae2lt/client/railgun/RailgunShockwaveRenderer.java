@@ -165,7 +165,7 @@ public final class RailgunShockwaveRenderer {
         }
     }
 
-    private static void addRing(BufferBuilder bb, org.joml.Matrix4f matrix, Burst burst,
+    private static void addRing(BufferBuilder bb, com.mojang.math.Matrix4f matrix, Burst burst,
                                 float radius, float thickness, float progress,
                                 float r, float g, float b, float alpha) {
         if (radius <= 0.0F || thickness <= 0.0F) return;

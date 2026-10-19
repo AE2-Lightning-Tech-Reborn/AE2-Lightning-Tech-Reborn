@@ -32,7 +32,7 @@ public final class LightningTransformRecipeInput extends RecipeContainerInput {
             }
 
             ItemStackKey key = new ItemStackKey(stack);
-            MutableGroup group = grouped.computeIfAbsent(key, ignored -> new MutableGroup(stack.copyWithCount(1)));
+            MutableGroup group = grouped.computeIfAbsent(key, ignored -> new MutableGroup(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1)));
             group.add(itemEntity, stack.getCount(), itemEntity.position());
         }
 
@@ -66,7 +66,7 @@ public final class LightningTransformRecipeInput extends RecipeContainerInput {
         private final List<ParticipantStack> participants;
 
         private GroupedStack(ItemStack stack, int totalCount, List<ParticipantStack> participants) {
-            this.stack = stack.copyWithCount(1);
+            this.stack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             this.totalCount = totalCount;
             this.participants = List.copyOf(participants);
         }
@@ -84,7 +84,7 @@ public final class LightningTransformRecipeInput extends RecipeContainerInput {
         }
 
         public ItemStack asDisplayStack() {
-            return stack.copyWithCount(totalCount);
+            return com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, totalCount);
         }
     }
 
@@ -136,7 +136,7 @@ public final class LightningTransformRecipeInput extends RecipeContainerInput {
         private final int hash;
 
         private ItemStackKey(ItemStack stack) {
-            this.stack = stack.copyWithCount(1);
+            this.stack = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1);
             this.hash = Objects.hash(this.stack.getItem(), this.stack.getTag());
         }
 

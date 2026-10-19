@@ -224,7 +224,7 @@ public final class PigmeeBuildingGameTests {
             helper.assertTrue(menu.getRecipes().size() == 65, "every full input offers 32 panels and 33 slabs");
             var actual = new java.util.HashSet<net.minecraft.world.item.Item>();
             for (var recipe : menu.getRecipes()) {
-                var result = recipe.getResultItem(helper.getLevel().registryAccess());
+                var result = recipe.getResultItem();
                 if (result.getItem() instanceof net.minecraft.world.item.BlockItem item
                         && item.getBlock() instanceof net.minecraft.world.level.block.SlabBlock) {
                     helper.assertTrue(result.getCount() == 2, "whole block yields exactly two slabs");
@@ -284,7 +284,7 @@ public final class PigmeeBuildingGameTests {
             player.containerMenu = menu;
             menu.getSlot(0).set(new ItemStack(item));
             helper.assertTrue(menu.getRecipes().stream().noneMatch(recipe -> panelItems.contains(
-                    recipe.getResultItem(helper.getLevel().registryAccess()).getItem())),
+                    recipe.getResultItem().getItem())),
                     "ordinary stone, concrete, and dyes cannot enter Pigmee conversion recipes");
         }
         var twoPanels = java.util.List.of(new ItemStack(panels().get(0)), new ItemStack(panels().get(panels().size() - 1)));
@@ -309,7 +309,7 @@ public final class PigmeeBuildingGameTests {
         menu.getSlot(0).set(new ItemStack(input, 3));
         int selected = -1;
         for (int i = 0; i < menu.getRecipes().size(); i++) {
-            if (menu.getRecipes().get(i).getResultItem(helper.getLevel().registryAccess()).is(expected.asItem())) {
+            if (menu.getRecipes().get(i).getResultItem().is(expected.asItem())) {
                 selected = i;
                 break;
             }

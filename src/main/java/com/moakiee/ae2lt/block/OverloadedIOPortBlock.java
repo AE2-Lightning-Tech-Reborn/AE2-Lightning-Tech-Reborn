@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.block;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;

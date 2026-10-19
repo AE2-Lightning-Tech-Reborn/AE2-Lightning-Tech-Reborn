@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -120,7 +120,7 @@ public final class MolecularCopyAssembler implements CopyAssembler {
             }
         });
 
-        var container = new TransientCraftingContainer(new AutoCraftingMenu(), 3, 3);
+        var container = new CraftingContainer(new AutoCraftingMenu(), 3, 3);
         for (int i = 0; i < grid.length; i++) {
             container.setItem(i, grid[i]);
         }

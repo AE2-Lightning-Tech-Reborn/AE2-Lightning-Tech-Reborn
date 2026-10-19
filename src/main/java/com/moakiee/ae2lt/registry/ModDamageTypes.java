@@ -1,57 +1,19 @@
 package com.moakiee.ae2lt.registry;
 
-import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.EntityDamageSource;
+import net.minecraft.world.entity.Entity;
 
-import com.moakiee.ae2lt.AE2LightningTech;
-
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.damagesource.DamageType;
-
-/**
- * Pure resource-key holder for our custom damage types. The actual JSON for
- * {@code data/ae2lt/damage_type/electromagnetic.json} carries the message id
- * and exhaustion settings. Partial armor penetration is applied manually by
- * the railgun's {@code DamageContext}; the type is also placed in Minecraft's
- * {@code bypasses_armor} tag so vanilla does not reduce that adjusted damage a
- * second time.
- */
+/** 1.19.2 expresses damage properties on the source rather than in a data registry. */
 public final class ModDamageTypes {
-    public static final ResourceKey<DamageType> ELECTROMAGNETIC = ResourceKey.create(
-            Registries.DAMAGE_TYPE,
-            new ResourceLocation(AE2LightningTech.MODID, "electromagnetic"));
-    /** Only the EHV beam bypasses ordinary hurt cooldown; HV retains its original type. */
-    public static final ResourceKey<DamageType> ELECTROMAGNETIC_EHV_BEAM = ResourceKey.create(
-            Registries.DAMAGE_TYPE,
-            new ResourceLocation(AE2LightningTech.MODID, "electromagnetic_ehv_beam"));
-
-    /**
-     * Per-{@link ServerLevel} cache of the resolved holder. Damage-type registries
-     * are frozen at server start, so the holder is stable for the level's life.
-     */
-    private static final ConcurrentHashMap<ServerLevel, Holder<DamageType>> ELECTROMAGNETIC_CACHE =
-            new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<ServerLevel, Holder<DamageType>> EHV_BEAM_CACHE =
-            new ConcurrentHashMap<>();
-
-    public static Holder<DamageType> electromagneticHolder(ServerLevel level) {
-        return ELECTROMAGNETIC_CACHE.computeIfAbsent(level, l ->
-                l.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ELECTROMAGNETIC));
-    }
-
-    public static Holder<DamageType> electromagneticEhvBeamHolder(ServerLevel level) {
-        return EHV_BEAM_CACHE.computeIfAbsent(level, l ->
-                l.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ELECTROMAGNETIC_EHV_BEAM));
-    }
-
-    /** Cleared on server stop so an integrated server re-launch starts fresh. */
-    public static void clearCache() {
-        ELECTROMAGNETIC_CACHE.clear();
-        EHV_BEAM_CACHE.clear();
-    }
-
+    public static final String ELECTROMAGNETIC = "electromagnetic";
+    public static final String ELECTROMAGNETIC_EHV_BEAM = "electromagnetic_ehv_beam";
     private ModDamageTypes() {}
+    public static DamageSource electromagnetic(Entity attacker, boolean ehv) {
+        return new EntityDamageSource(ehv ? ELECTROMAGNETIC_EHV_BEAM : ELECTROMAGNETIC, attacker).bypassArmor();
+    }
+    public static DamageSource genericKill() {
+        return new DamageSource("genericKill").bypassArmor().bypassInvul().bypassMagic();
+    }
+    public static void clearCache() { }
 }

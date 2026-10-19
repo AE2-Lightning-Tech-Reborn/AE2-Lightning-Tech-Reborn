@@ -31,7 +31,7 @@ import java.util.UUID;
  * {@link #outputSeedCredits} is credited to the fixed downstream consumers. Outputs not routed by
  * {@code outputSeedCredits} remain ordinary public outputs.
  */
-public final class ExecuteLoopPattern implements IPatternDetails, IProviderLookupPattern,
+public final class ExecuteLoopPattern implements com.moakiee.ae2lt.compat.LegacyPatternDetails, IProviderLookupPattern,
         IBatchExecutionPattern,
         IPrioritizedCraftingTask, ISeedPreservingCraftingTask,
         CraftingTaskPersistenceDefinition, SharedBatchInputPattern {
@@ -357,11 +357,11 @@ public final class ExecuteLoopPattern implements IPatternDetails, IProviderLooku
     @Override public IInput[] getInputs() { return executionInputs.clone(); }
     @Override public GenericStack[] getOutputs() { return delegate.getOutputs(); }
     @Override public boolean supportsPushInputsToExternalInventory() {
-        return delegate.supportsPushInputsToExternalInventory();
+        return com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(delegate);
     }
     @Override public void pushInputsToExternalInventory(
             KeyCounter[] inputHolder, PatternInputSink inputSink) {
-        delegate.pushInputsToExternalInventory(inputHolder, inputSink);
+        com.moakiee.ae2lt.compat.LegacyPatternDetails.push(delegate, inputHolder, inputSink);
     }
 
     /**

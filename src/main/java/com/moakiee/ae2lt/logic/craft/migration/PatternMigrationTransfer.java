@@ -25,7 +25,7 @@ public final class PatternMigrationTransfer {
 
     public static Result move(Slot source, ItemStack snapshot, Destination target, Consumer<ItemStack> custody) {
         if (!same(source.read(), snapshot)) return Result.SOURCE_CHANGED;
-        var unit = snapshot.copyWithCount(1);
+        var unit = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(snapshot, 1);
         if (!target.canAccept(unit)) return Result.BLOCKED;
         var simulated = source.extract(true);
         if (!same(simulated, unit) || !same(source.read(), snapshot) || !source.canExtract()) return Result.SOURCE_CHANGED;
@@ -36,7 +36,7 @@ public final class PatternMigrationTransfer {
         } catch (RuntimeException e) {
             // Known physical inventories can throw from a listener after the removal already happened.
             var after = source.read();
-            var expectedAfter = snapshot.copyWithCount(snapshot.getCount() - 1);
+            var expectedAfter = com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(snapshot, snapshot.getCount() - 1);
             if (!same(after, expectedAfter)) return Result.SOURCE_CHANGED;
             held = unit;
             custody.accept(held.copy());
@@ -71,7 +71,7 @@ public final class PatternMigrationTransfer {
             custody.accept(remainder.copy());
             return remainder.isEmpty() ? Result.RESTORED : Result.RECOVERY_REQUIRED;
         } catch (RuntimeException e) {
-            var expected = before.isEmpty() ? held : before.copyWithCount(before.getCount() + held.getCount());
+            var expected = before.isEmpty() ? held : com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(before, before.getCount() + held.getCount());
             if ((before.isEmpty() || ItemStack.isSameItemSameTags(before, held))
                     && same(source.read(), expected)) {
                 custody.accept(ItemStack.EMPTY);

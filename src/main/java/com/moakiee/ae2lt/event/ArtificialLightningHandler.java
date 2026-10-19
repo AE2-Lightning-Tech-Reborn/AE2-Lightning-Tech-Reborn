@@ -35,7 +35,7 @@ public final class ArtificialLightningHandler {
             return;
         }
         Player player = event.player;
-        if (!(player.level() instanceof ServerLevel serverLevel) || player.isSpectator()) {
+        if (!(player.level instanceof ServerLevel serverLevel) || player.isSpectator()) {
             return;
         }
 

@@ -53,31 +53,31 @@ public final class LargeStackRecipeSyncGameTests {
             var assembly = new LightningAssemblyLockedRecipe(ID, output, 12345, 8, tier,
                     new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9});
             var assemblyRead = LightningAssemblyLockedRecipe.fromTag(assembly.toTag());
-            helper.assertTrue(assemblyRead != null && ItemStack.matches(output, assemblyRead.result())
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(assemblyRead != null && ItemStack.matches(output, assemblyRead.result())
                     && assembly.toTag().equals(assemblyRead.toTag()), "Assembly persistence: " + count);
             var simulation = new LightningSimulationLockedRecipe(ID, output, 12345, 8, tier, new int[] {1, 2, 3});
             var simulationRead = LightningSimulationLockedRecipe.fromTag(simulation.toTag());
-            helper.assertTrue(simulationRead != null && ItemStack.matches(output, simulationRead.result())
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(simulationRead != null && ItemStack.matches(output, simulationRead.result())
                     && simulation.toTag().equals(simulationRead.toTag()), "Simulation persistence: " + count);
             var catalyzer = new CrystalCatalyzerLockedRecipe(ID, output, 100, 3, 8, tier);
             var catalyzerRead = CrystalCatalyzerLockedRecipe.fromTag(catalyzer.toTag());
-            helper.assertTrue(catalyzerRead != null && ItemStack.matches(output, catalyzerRead.output())
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(catalyzerRead != null && ItemStack.matches(output, catalyzerRead.output())
                     && catalyzer.toTag().equals(catalyzerRead.toTag()), "Catalyzer persistence: " + count);
             var firmament = new FirmamentConversionLockedRecipe(ID,
                     List.of(output, new ItemStack(Items.EMERALD, count)), 53, new int[] {1, 2, 3});
             var firmamentRead = FirmamentConversionLockedRecipe.fromTag(firmament.toTag());
-            helper.assertTrue(firmamentRead != null && ItemStack.matches(output, firmamentRead.result())
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(firmamentRead != null && ItemStack.matches(output, firmamentRead.result())
                     && firmament.toTag().equals(firmamentRead.toTag()), "Firmament persistence: " + count);
             if (count <= 127) {
                 var legacy = output.save(new net.minecraft.nbt.CompoundTag());
-                helper.assertTrue(ItemStack.matches(output, LargeStackNbt.load(legacy)), "Legacy stack: " + count);
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(ItemStack.matches(output, LargeStackNbt.load(legacy)), "Legacy stack: " + count);
                 var oldAssembly = assembly.toTag();
                 oldAssembly.put("Result", legacy);
                 var oldRead = LightningAssemblyLockedRecipe.fromTag(oldAssembly);
-                helper.assertTrue(oldRead != null && ItemStack.matches(output, oldRead.result()), "Legacy recipe");
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(oldRead != null && ItemStack.matches(output, oldRead.result()), "Legacy recipe");
             }
         }
-        helper.assertTrue(LargeStackNbt.load(LargeStackNbt.save(ItemStack.EMPTY)).isEmpty(), "Empty NBT stack");
+        com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(LargeStackNbt.load(LargeStackNbt.save(ItemStack.EMPTY)).isEmpty(), "Empty NBT stack");
         helper.succeed();
     }
 
@@ -107,7 +107,7 @@ public final class LargeStackRecipeSyncGameTests {
                     new FirmamentConversionRecipe.Serializer(), output);
             roundTrip(helper, new CrystalCatalyzerRecipe(ID, Optional.of(ingredient), 256, output, 100),
                     new CrystalCatalyzerRecipe.Serializer(), output);
-            helper.assertTrue(output.getCount() == count, "Encoding must not mutate the original stack");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(output.getCount() == count, "Encoding must not mutate the original stack");
         }
         helper.succeed();
     }
@@ -139,16 +139,16 @@ public final class LargeStackRecipeSyncGameTests {
                 output.getOrCreateTag().putInt("marker", count);
                 new PigmeeAssemblerAnimationPacket(new BlockPos(3, 4, 5), (byte) 7, output).write(buffer);
             }
-            helper.assertTrue(LargeStackStreamCodecs.readItemStack(buffer).isEmpty(), "Empty stack round trip");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(LargeStackStreamCodecs.readItemStack(buffer).isEmpty(), "Empty stack round trip");
             for (int count : COUNTS) {
                 var decoded = PigmeeAssemblerAnimationPacket.decode(buffer);
-                helper.assertTrue(decoded.pos().equals(new BlockPos(3, 4, 5)) && decoded.speed() == 7,
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(decoded.pos().equals(new BlockPos(3, 4, 5)) && decoded.speed() == 7,
                         "Animation metadata must survive");
-                helper.assertTrue(decoded.output().is(Items.DIAMOND) && decoded.output().getCount() == count
+                com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(decoded.output().is(Items.DIAMOND) && decoded.output().getCount() == count
                         && decoded.output().getOrCreateTag().getInt("marker") == count,
                         "Animation must retain item, count and NBT: " + count);
             }
-            helper.assertTrue(!buffer.isReadable(), "All bytes must be consumed");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(!buffer.isReadable(), "All bytes must be consumed");
         } finally {
             buffer.release();
         }
@@ -162,12 +162,12 @@ public final class LargeStackRecipeSyncGameTests {
         try {
             serializer.toNetwork(buffer, original);
             var decoded = serializer.fromNetwork(ID, buffer);
-            helper.assertTrue(ItemStack.matches(expected, decoded.getResultItem(helper.getLevel().registryAccess())),
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(ItemStack.matches(expected, decoded.getResultItem()),
                     "Output count/item/NBT mismatch: " + original.getClass().getSimpleName() + " / " + expected.getCount());
-            helper.assertTrue(!buffer.isReadable(), "Recipe decoder must consume every field");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(!buffer.isReadable(), "Recipe decoder must consume every field");
             serializer.toNetwork(reencoded, decoded);
             buffer.readerIndex(0);
-            helper.assertTrue(buffer.equals(reencoded), "All recipe fields must survive re-encoding");
+            com.moakiee.ae2lt.compat.GameTestAssertions.assertTrue(buffer.equals(reencoded), "All recipe fields must survive re-encoding");
         } finally {
             buffer.release();
             reencoded.release();

@@ -71,7 +71,7 @@ public final class SaturationSubmodule extends AbstractCelestweaveArmorSubmodule
         if (!data.contains(TAG_READY_AT_TICK, CompoundTag.TAG_LONG)) {
             return 0;
         }
-        long remaining = data.getLong(TAG_READY_AT_TICK) - player.level().getGameTime();
+        long remaining = data.getLong(TAG_READY_AT_TICK) - player.level.getGameTime();
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, remaining));
     }
 
@@ -80,7 +80,7 @@ public final class SaturationSubmodule extends AbstractCelestweaveArmorSubmodule
         if (ticks <= 0 || player == null) {
             data.remove(TAG_READY_AT_TICK);
         } else {
-            data.putLong(TAG_READY_AT_TICK, player.level().getGameTime() + ticks);
+            data.putLong(TAG_READY_AT_TICK, player.level.getGameTime() + ticks);
         }
         CelestweaveArmorState.setSubmoduleData(armor, INSTANCE, data);
     }

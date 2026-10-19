@@ -104,7 +104,7 @@ public final class FirmamentStarshipPiece extends TemplateStructurePiece {
                 this.templatePosition,
                 this.placeSettings,
                 ModBlocks.FIRMAMENT_CONVERSION_CORE.get())) {
-            if (level.getBlockEntity(blockInfo.pos()) instanceof FirmamentConversionCoreBlockEntity core) {
+            if (level.getBlockEntity(blockInfo.pos) instanceof FirmamentConversionCoreBlockEntity core) {
                 core.initializeNaturalLoot(random);
             }
         }

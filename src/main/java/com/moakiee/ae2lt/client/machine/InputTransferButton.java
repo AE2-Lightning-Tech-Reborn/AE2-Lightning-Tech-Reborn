@@ -9,7 +9,8 @@ import appeng.client.gui.widgets.IconButton;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.InputTransferMenu;
 import net.minecraft.Util;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -41,9 +42,9 @@ final class InputTransferButton extends IconButton {
 
     @Override protected Icon getIcon() { return Icon.TOOLBAR_BUTTON_BACKGROUND; }
 
-    @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    @Override public void renderButton(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         active = !pending() && (sentAt < 0 || Util.getMillis() - sentAt >= 200);
-        super.renderWidget(graphics, mouseX, mouseY, partialTick);
+        super.renderButton(graphics, mouseX, mouseY, partialTick);
         if (!visible) {
             return;
         }
@@ -52,10 +53,10 @@ final class InputTransferButton extends IconButton {
         if (!active) {
             blitter.opacity(0.5F);
         }
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 3);
-        blitter.dest(getX(), getY()).blit(graphics);
-        graphics.pose().popPose();
+        graphics.pushPose();
+        graphics.translate(0, 0, 3);
+        blitter.dest(x, y).blit(graphics, 0);
+        graphics.popPose();
     }
 
     @Override public List<Component> getTooltipMessage() {

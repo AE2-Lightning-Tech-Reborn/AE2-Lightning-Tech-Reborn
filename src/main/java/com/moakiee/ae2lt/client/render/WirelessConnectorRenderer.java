@@ -9,13 +9,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.joml.Matrix4f;
+import com.mojang.math.Matrix4f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -557,7 +557,7 @@ public class WirelessConnectorRenderer {
         }
         return new SelectedHost(
                 BlockPos.of(sel.getLong(TAG_POS)),
-                ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(dimStr)),
+                ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(dimStr)),
                 sel.contains(TAG_HOST_TYPE, CompoundTag.TAG_STRING)
                         ? sel.getString(TAG_HOST_TYPE)
                         : OverloadedWirelessConnectorItem.HOST_PROVIDER);

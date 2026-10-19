@@ -228,7 +228,7 @@ public final class RailgunBeamRenderClient {
      * Build the prism segments along the beam. Hot path: uses primitive doubles
      * to avoid the per-frame Vec3 allocations the original implementation produced.
      */
-    private static void addBeam(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 origin, Vec3 endpoint,
+    private static void addBeam(BufferBuilder bb, com.mojang.math.Matrix4f matrix, Vec3 origin, Vec3 endpoint,
                                 float pulse, double smoothTime, boolean ehv) {
         double ax = endpoint.x - origin.x;
         double ay = endpoint.y - origin.y;
@@ -313,7 +313,7 @@ public final class RailgunBeamRenderClient {
      * Draw a hot camera-facing flash quad at the beam's impact point. Sells the
      * "burning into the surface" feel; tracks the breath pulse.
      */
-    private static void addEndpointGlow(BufferBuilder bb, org.joml.Matrix4f matrix, Vec3 center,
+    private static void addEndpointGlow(BufferBuilder bb, com.mojang.math.Matrix4f matrix, Vec3 center,
                                         Vec3 cameraPos, float pulse, boolean ehv) {
         double tcx = cameraPos.x - center.x;
         double tcy = cameraPos.y - center.y;
@@ -363,7 +363,7 @@ public final class RailgunBeamRenderClient {
                 1.00F, 1.00F, 1.00F, 0.90F * pulse);
     }
 
-    private static void emitGlowQuad(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void emitGlowQuad(BufferBuilder bb, com.mojang.math.Matrix4f matrix,
                                      double p0x, double p0y, double p0z,
                                      double p1x, double p1y, double p1z,
                                      double p2x, double p2y, double p2z,
@@ -381,7 +381,7 @@ public final class RailgunBeamRenderClient {
      * the plane perpendicular to the beam axis. Radii may differ at each end for
      * taper. End caps are hidden by the endpoint glow and the muzzle.
      */
-    private static void addPrismSegment(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void addPrismSegment(BufferBuilder bb, com.mojang.math.Matrix4f matrix,
                                         double fx, double fy, double fz,
                                         double tx, double ty, double tz,
                                         double uX, double uY, double uZ,
@@ -408,7 +408,7 @@ public final class RailgunBeamRenderClient {
         emitFace(bb, matrix, f3x, f3y, f3z, f0x, f0y, f0z, t0x, t0y, t0z, t3x, t3y, t3z, r, g, b, aFrom, aTo);
     }
 
-    private static void emitFace(BufferBuilder bb, org.joml.Matrix4f matrix,
+    private static void emitFace(BufferBuilder bb, com.mojang.math.Matrix4f matrix,
                                  double p0x, double p0y, double p0z,
                                  double p1x, double p1y, double p1z,
                                  double p2x, double p2y, double p2z,

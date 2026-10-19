@@ -49,3 +49,11 @@ AE2 Lightning Tech bundles MixinExtras for its mixin injection extensions.
 
 The complete AE2 Lightning Tech GNU LGPL 3.0 license text, asset license notice, and this
 third-party notice are distributed in `META-INF` inside the mod JAR and in the repository root.
+
+## AE2 12 compatibility layer
+
+`compat/orientation`, `compat/PushDirection` and the resizable crafting table
+renderer adapt Applied Energistics 2 code (TeamAppliedEnergistics and the original
+contributors) under LGPL-3.0-or-later. Original file headers are retained where
+present. The 1.19.2 branch adapts their rendering and orientation interfaces to
+Mojang's `PoseStack`, `Quaternion` and `Matrix4f` APIs.

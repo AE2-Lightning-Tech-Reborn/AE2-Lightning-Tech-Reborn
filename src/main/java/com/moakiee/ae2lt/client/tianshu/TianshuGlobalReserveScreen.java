@@ -3,12 +3,12 @@ package com.moakiee.ae2lt.client.tianshu;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.GenericStack;
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Locale;
 import appeng.client.guidebook.PageAnchor;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -33,7 +34,6 @@ import org.lwjgl.glfw.GLFW;
 /** Inventory-maintenance and Tianshu-wide reserved-stock overview. */
 public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
         extends AESubScreen<M, TianshuMaintenanceTermScreen<M>> {
-    @Override
     protected PageAnchor getHelpTopic() {
         return TianshuMaintenanceTermScreen.terminalHelpTopic(
                 view == View.RESERVES ? "global-reserves" : "inventory-maintenance");
@@ -187,7 +187,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         long value = parsedAddAmount();
         if (key == null || value == Long.MIN_VALUE || !menu.isMaintenanceAvailable()) return;
         menu.sendGlobalReserve(key, value, ReservedStockMatchMode.EXACT);
-        menu.getGlobalReserveMarkSlot().setFilterTo(
+        menu.getGlobalReserveMarkSlot().set(
                 net.minecraft.world.item.ItemStack.EMPTY);
         reserveAmount.setValue("1");
     }
@@ -237,11 +237,11 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.overview_title"),
+        LegacyGui.drawString(graphics, font, Component.translatable("ae2lt.tianshu.maintenance.overview_title"),
                 10, 9, 0x30343B, false);
-        graphics.drawString(font,
+        LegacyGui.drawString(graphics, font,
                 Component.translatable("ae2lt.tianshu.maintenance.column.item"),
                 CONTENT_TEXT_LEFT, 53, 0x5D646D, false);
         drawRightAligned(graphics,
@@ -251,7 +251,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
                         ? "ae2lt.tianshu.maintenance.column.target"
                         : "ae2lt.tianshu.maintenance.column.reserve"),
                 VALUE_COLUMN_RIGHT, 53, 0x5D646D);
-        graphics.fill(LIST_LEFT + 1, FIRST_ROW - 1, LIST_RIGHT - 1, FIRST_ROW,
+        LegacyGui.fill(graphics, LIST_LEFT + 1, FIRST_ROW - 1, LIST_RIGHT - 1, FIRST_ROW,
                 0x335D646D);
 
         int localMouseX = mouseX - leftPos;
@@ -265,11 +265,11 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
             var summary = entries.get(index).summary();
             boolean hovered = localMouseX >= LIST_LEFT && localMouseX < LIST_RIGHT
                     && localMouseY >= y && localMouseY < y + ROW_HEIGHT - 1;
-            graphics.fill(LIST_LEFT, y, LIST_RIGHT, y + ROW_HEIGHT - 1,
+            LegacyGui.fill(graphics, LIST_LEFT, y, LIST_RIGHT, y + ROW_HEIGHT - 1,
                     hovered ? 0x553B719F : (row & 1) == 0 ? 0x1EFFFFFF : 0x12000000);
-            graphics.fill(12, y + 8, 16, y + 12, badgeColor(summary));
-            graphics.renderItem(summary.key().wrapForDisplayOrFilter(), 18, y + 2);
-            graphics.drawString(font,
+            LegacyGui.fill(graphics, 12, y + 8, 16, y + 12, badgeColor(summary));
+            LegacyGui.renderItem(graphics, summary.key().wrapForDisplayOrFilter(), 18, y + 2);
+            LegacyGui.drawString(graphics, font,
                     font.plainSubstrByWidth(entries.get(index).displayName(), 70),
                     CONTENT_TEXT_LEFT, y + 6, summary.ruleConfigured() && !summary.craftable()
                             ? 0xA73535 : 0x30343B, false);
@@ -283,11 +283,11 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         }
 
         if (!menu.isMaintenanceAvailable()) {
-            graphics.drawCenteredString(font,
+            LegacyGui.drawCenteredString(graphics, font,
                     Component.translatable("ae2lt.tianshu.maintenance.unavailable"),
                     LIST_CENTER_X, EMPTY_TEXT_Y, 0xA73535);
         } else if (entries.isEmpty()) {
-            graphics.drawCenteredString(font,
+            LegacyGui.drawCenteredString(graphics, font,
                     Component.translatable(view == View.RULES
                             ? "ae2lt.tianshu.maintenance.empty"
                             : search.getValue().isBlank()
@@ -297,25 +297,25 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         }
 
         if (view == View.RESERVES && menu.isMaintenanceAvailable()) {
-            graphics.drawString(font,
+            LegacyGui.drawString(graphics, font,
                     font.plainSubstrByWidth(Component.translatable(
                             "ae2lt.tianshu.reserve.add_hint").getString(), 188),
                     10, 190, 0x666D75, false);
         }
         if (menu.isMaintenanceSummaryOverflow()) {
-            graphics.drawString(font,
+            LegacyGui.drawString(graphics, font,
                     Component.translatable("ae2lt.tianshu.maintenance.summary_too_large"),
                     10, 232, 0xA73535, false);
         }
     }
 
-    private void drawRightAligned(GuiGraphics graphics, String text, int right, int y, int color) {
-        graphics.drawString(font, text, right - font.width(text), y, color, false);
+    private void drawRightAligned(PoseStack graphics, String text, int right, int y, int color) {
+        LegacyGui.drawString(graphics, font, text, right - font.width(text), y, color, false);
     }
 
     private void drawRightAligned(
-            GuiGraphics graphics, Component text, int right, int y, int color) {
-        graphics.drawString(font, text, right - font.width(text), y, color, false);
+            PoseStack graphics, Component text, int right, int y, int color) {
+        LegacyGui.drawString(graphics, font, text, right - font.width(text), y, color, false);
     }
 
     @Override
@@ -360,7 +360,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+    protected void renderTooltip(PoseStack graphics, int x, int y) {
         int row = (y - topPos - FIRST_ROW) / ROW_HEIGHT;
         var entries = entries();
         int index = scrollbar.getCurrentScroll() + row;
@@ -486,7 +486,6 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
 
     private static final class GlobalReserveEditScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
             extends AESubScreen<M, TianshuGlobalReserveScreen<M>> {
-        @Override
         protected PageAnchor getHelpTopic() {
             return TianshuMaintenanceTermScreen.terminalHelpTopic("global-reserves");
         }
@@ -602,27 +601,27 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         }
 
         @Override
-        public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+        public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-            graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.title"),
+            LegacyGui.drawString(graphics, font, Component.translatable("ae2lt.tianshu.reserve.title"),
                     10, 9, 0x30343B, false);
-            graphics.renderItem(entry.key().wrapForDisplayOrFilter(), 16, 32);
-            graphics.drawString(font,
+            LegacyGui.renderItem(graphics, entry.key().wrapForDisplayOrFilter(), 16, 32);
+            LegacyGui.drawString(graphics, font,
                     font.plainSubstrByWidth(entry.key().getDisplayName().getString(), 147),
                     39, 35, 0x30343B, false);
             var currentProtected = Component.translatable(
                     "ae2lt.tianshu.reserve.current_protected",
                     compactAmount(entry.key(), visibleStock()),
                     compactAmount(entry.key(), protectedStock()));
-            graphics.drawString(font,
+            LegacyGui.drawString(graphics, font,
                     font.plainSubstrByWidth(currentProtected.getString(), 187),
                     10, 83, 0x59616B, false);
             var amountLabel = Component.translatable("ae2lt.tianshu.reserve.amount");
-            graphics.drawString(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
+            LegacyGui.drawString(graphics, font, font.plainSubstrByWidth(amountLabel.getString(), 64),
                     10, 99, 0x40464E, false);
             if (mode == ReservedStockMatchMode.IGNORE_SECONDARY) {
                 if (!variants.isEmpty()) {
-                    graphics.drawString(font,
+                    LegacyGui.drawString(graphics, font,
                             Component.translatable("ae2lt.tianshu.reserve.variant_title"),
                             10, 116, 0x555D66, false);
                     int start = scrollbar.getCurrentScroll();
@@ -630,19 +629,19 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
                     for (int index = start; index < end; index++) {
                         int y = VARIANT_FIRST_ROW + (index - start) * VARIANT_ROW_HEIGHT;
                         var variant = variants.get(index);
-                        graphics.renderItem(variant.key().wrapForDisplayOrFilter(), 12, y);
-                        graphics.drawString(font,
+                        LegacyGui.renderItem(graphics, variant.key().wrapForDisplayOrFilter(), 12, y);
+                        LegacyGui.drawString(graphics, font,
                                 font.plainSubstrByWidth(
                                         variant.key().getDisplayName().getString(), 112),
                                 33, y + 4, 0x3C434B, false);
                         String stock = compactAmount(variant.key(), variant.storedAmount());
-                        graphics.drawString(font, stock, 185 - font.width(stock), y + 4,
+                        LegacyGui.drawString(graphics, font, stock, 185 - font.width(stock), y + 4,
                                 variant.craftable() ? 0x2F6D3C : 0x5C636B, false);
                     }
                 } else {
                     var emptyText = Component.translatable(
                             "ae2lt.tianshu.reserve.variant_empty");
-                    graphics.drawString(font, emptyText,
+                    LegacyGui.drawString(graphics, font, emptyText,
                             98 - font.width(emptyText) / 2, 156, 0x5D646D, false);
                 }
             }
@@ -679,7 +678,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         }
 
         @Override
-        protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        protected void renderTooltip(PoseStack graphics, int x, int y) {
             int row = (y - topPos - VARIANT_FIRST_ROW) / VARIANT_ROW_HEIGHT;
             int index = scrollbar.getCurrentScroll() + row;
             if (mode == ReservedStockMatchMode.IGNORE_SECONDARY
@@ -689,7 +688,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
                     && index >= 0 && index < variants.size()
                     && x >= leftPos + 9 && x < leftPos + 187) {
                 var variant = variants.get(index);
-                var lines = new ArrayList<>(AEKeyRendering.getTooltip(variant.key()));
+                var lines = new ArrayList<>(AEStackRendering.getTooltip(variant.key()));
                 lines.add(Component.translatable("ae2lt.tianshu.maintenance.tooltip.stock",
                         compactAmount(variant.key(), variant.storedAmount()))
                         .withStyle(ChatFormatting.GRAY));

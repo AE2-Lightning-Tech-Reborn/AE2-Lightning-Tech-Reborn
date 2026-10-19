@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.client.equipment;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -13,13 +13,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.Level;
 
-import appeng.api.client.AEKeyRenderHandler;
+import appeng.api.client.IAEStackRenderHandler;
 import appeng.client.gui.style.Blitter;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
-public final class LightningKeyRenderHandler implements AEKeyRenderHandler<LightningKey> {
+public final class LightningKeyRenderHandler implements IAEStackRenderHandler<LightningKey> {
     public static final LightningKeyRenderHandler INSTANCE = new LightningKeyRenderHandler();
 
     private static final ResourceLocation HIGH_VOLTAGE_SPRITE =
@@ -38,15 +38,15 @@ public final class LightningKeyRenderHandler implements AEKeyRenderHandler<Light
     }
 
     @Override
-    public void drawInGui(Minecraft minecraft, GuiGraphics guiGraphics, int x, int y, LightningKey stack) {
+    public void drawInGui(Minecraft minecraft, PoseStack guiGraphics, int x, int y, int z, LightningKey stack) {
         Blitter.sprite(spriteFor(stack))
                 .dest(x, y, 16, 16)
-                .blit(guiGraphics);
+                .blit(guiGraphics, z);
     }
 
     @Override
     public void drawOnBlockFace(PoseStack poseStack, MultiBufferSource buffers, LightningKey what, float scale,
-            int combinedLight, Level level) {
+            int combinedLight) {
         var sprite = spriteFor(what);
 
         poseStack.pushPose();

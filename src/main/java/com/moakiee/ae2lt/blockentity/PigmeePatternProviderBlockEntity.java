@@ -16,16 +16,16 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.util.AECableType;
-import appeng.blockentity.grid.AENetworkBlockEntity;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.helpers.InterfaceLogicHost;
-import appeng.helpers.patternprovider.PatternContainer;
-import appeng.helpers.patternprovider.PatternProviderLogicHost;
-import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.iface.PatternContainer;
+import appeng.helpers.iface.PatternProviderLogicHost;
+import appeng.helpers.iface.PatternProviderTarget;
 import appeng.me.helpers.MachineSource;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -50,7 +50,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
-public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
+public final class PigmeePatternProviderBlockEntity extends LegacyNetworkBlockEntity
         implements InternalInventoryHost, ICraftingProvider, PatternContainer {
     public static final int PATTERN_SLOT_COUNT = 3;
 
@@ -155,7 +155,7 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
             inventoryTargets.add(direction);
         }
 
-        if (!patternDetails.supportsPushInputsToExternalInventory()) {
+        if (!com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(patternDetails)) {
             return false;
         }
 
@@ -166,7 +166,7 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
             }
 
             pendingDirection = direction;
-            patternDetails.pushInputsToExternalInventory(inputHolder, (what, amount) -> {
+            com.moakiee.ae2lt.compat.LegacyPatternDetails.push(patternDetails, inputHolder, (what, amount) -> {
                 long inserted = target.insert(what, amount, Actionable.MODULATE);
                 if (inserted < amount) {
                     pendingDispatch.add(new GenericStack(what, amount - inserted));
@@ -370,7 +370,7 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
     @Override
     public void clearContent() {
         super.clearContent();
-        patternInventory.clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(patternInventory);
         returnInventory.clear();
         pendingDispatch.clear();
         pendingDirection = null;
@@ -395,7 +395,6 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
         onGridConnectableSidesChanged();
     }
 
-    @Override
     public Component getDisplayName() {
         return Component.translatable("block.ae2lt.pigmee_pattern_provider");
     }

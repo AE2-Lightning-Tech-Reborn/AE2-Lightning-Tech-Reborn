@@ -47,7 +47,7 @@ public record MatrixControllerActionPacket(int token, BlockPos pos, Action actio
             return;
         }
 
-        if (!(player.level().getBlockEntity(pos) instanceof MatrixControllerBlockEntity controller)) {
+        if (!(player.level.getBlockEntity(pos) instanceof MatrixControllerBlockEntity controller)) {
             player.displayClientMessage(Component.translatable("ae2lt.gui.error.rejected")
                     .withStyle(ChatFormatting.RED), true);
             return;

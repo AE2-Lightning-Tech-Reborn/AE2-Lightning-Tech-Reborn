@@ -10,9 +10,10 @@ import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.ticking.IGridTickable;
-import appeng.api.orientation.BlockOrientation;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.util.AECableType;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -53,7 +54,7 @@ import com.moakiee.ae2lt.api.AE2LTCapabilities;
 import com.moakiee.ae2lt.me.GridLightningEnergyHandler;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
-public class TeslaCoilBlockEntity extends AENetworkBlockEntity
+public class TeslaCoilBlockEntity extends LegacyNetworkBlockEntity
         implements IActionHost, FrequencyBindingHost, LightningCollapseMatrixHost {
     public static final int ENERGY_CAPACITY = 16_000_000;
     private static final String TAG_INVENTORY = "Inventory";

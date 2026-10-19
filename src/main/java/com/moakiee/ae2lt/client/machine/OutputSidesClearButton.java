@@ -2,8 +2,9 @@ package com.moakiee.ae2lt.client.machine;
 
 import java.util.List;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import com.moakiee.ae2lt.client.compat.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 
@@ -11,11 +12,11 @@ import appeng.client.gui.widgets.ITooltip;
 
 final class OutputSidesClearButton extends Button implements ITooltip {
     OutputSidesClearButton(Component tooltip, OnPress onPress) {
-        super(0, 0, 8, 8, tooltip, onPress, Button.DEFAULT_NARRATION);
+        super(0, 0, 8, 8, tooltip, onPress);
     }
 
     @Override
-    protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
         if (visible) {
             OutputSideButtonStyle.renderClearIcon(graphics, getX(), getY());
         }

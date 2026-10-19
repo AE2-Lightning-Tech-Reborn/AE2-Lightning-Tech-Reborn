@@ -5,35 +5,36 @@ import java.util.List;
 
 import com.moakiee.ae2lt.me.key.LightningKey;
 
-import appeng.api.client.AEKeyRendering;
+import appeng.api.client.AEStackRendering;
 import appeng.util.Platform;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.TooltipFlag;
 
 public class LightningJeiIngredientRenderer implements IIngredientRenderer<LightningKey> {
     @Override
-    public void render(GuiGraphics guiGraphics, LightningKey ingredient) {
+    public void render(PoseStack guiGraphics, LightningKey ingredient) {
         render(guiGraphics, ingredient, 0, 0);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, LightningKey ingredient, int posX, int posY) {
+    public void render(PoseStack guiGraphics, LightningKey ingredient, int posX, int posY) {
         if (ingredient == null) {
             return;
         }
 
-        AEKeyRendering.drawInGui(Minecraft.getInstance(), guiGraphics, posX, posY, ingredient);
+        AEStackRendering.drawInGui(Minecraft.getInstance(), guiGraphics, posX, posY, 0, ingredient);
     }
 
     @SuppressWarnings("removal") // JEI 15.20 still declares this deprecated method abstract.
     @Override
     public List<Component> getTooltip(LightningKey ingredient, TooltipFlag tooltipFlag) {
-        return AEKeyRendering.getTooltip(ingredient);
+        return AEStackRendering.getTooltip(ingredient);
     }
 
     @Override
@@ -47,7 +48,7 @@ public class LightningJeiIngredientRenderer implements IIngredientRenderer<Light
     }
 
     private static List<Component> getJeiTooltip(LightningKey ingredient) {
-        var tooltip = new ArrayList<>(AEKeyRendering.getTooltip(ingredient));
+        var tooltip = new ArrayList<>(AEStackRendering.getTooltip(ingredient));
         if (tooltip.isEmpty()) {
             return tooltip;
         }

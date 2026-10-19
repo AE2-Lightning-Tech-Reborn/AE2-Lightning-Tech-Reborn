@@ -52,7 +52,7 @@ public final class TianshuPatternUploadRouting {
         }
         var details = PatternDetailsHelper.decodePattern(stack, level);
         if (details == null) return Route.INVALID;
-        if (!details.supportsPushInputsToExternalInventory()) {
+        if (!com.moakiee.ae2lt.compat.LegacyPatternDetails.supports(details)) {
             return Route.CRAFTING_ASSEMBLER;
         }
         return Route.PROCESSING_PROVIDER;

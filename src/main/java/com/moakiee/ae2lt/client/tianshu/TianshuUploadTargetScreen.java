@@ -10,7 +10,7 @@ import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.SettingToggleButton;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.core.AEConfig;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.ComponentPath;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.locale.Language;
@@ -35,7 +35,6 @@ import org.lwjgl.glfw.GLFW;
 /** EA2-native provider picker modelled after EAEP ClientPlus' provider-list sub-screen. */
 public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTermMenu>
         extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
-    @Override
     protected PageAnchor getHelpTopic() {
         return TianshuMaintenanceTermScreen.terminalHelpTopic("pattern-upload");
     }
@@ -279,7 +278,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     @Override
-    public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+    public void drawFG(PoseStack graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
         int start = scrollbar.getCurrentScroll();
         for (int row = 0; row < visibleRows; row++) {
@@ -288,11 +287,11 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
             var target = filtered.get(index).target();
             int y = GUI_HEADER_HEIGHT + row * ROW_HEIGHT;
             if (target.group().icon() != null) {
-                graphics.renderItem(target.group().icon().getReadOnlyStack(), ROW_LEFT + 2, y);
+                LegacyGui.renderItem(graphics, target.group().icon().toStack(), ROW_LEFT + 2, y);
             }
             String suffix = " [\u2248" + target.availableSlots() + "]";
             var label = target.group().name().copy().append(suffix);
-            graphics.drawString(font, Language.getInstance().getVisualOrder(
+            LegacyGui.drawString(graphics, font, Language.getInstance().getVisualOrder(
                             font.substrByWidth(label, ROW_LABEL_WIDTH)), ROW_LEFT + 22,
                     y + 4, target.availableSlots() > 0 ? textColor : 0xFFAA3333, false);
         }
@@ -312,31 +311,31 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         }
         if (status != null) {
             String text = font.plainSubstrByWidth(status.getString(), 158);
-            graphics.drawString(font, text, (GUI_WIDTH - font.width(text)) / 2,
+            LegacyGui.drawString(graphics, font, text, (GUI_WIDTH - font.width(text)) / 2,
                     GUI_HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 14, statusColor, false);
         }
     }
 
     @Override
-    public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
+    public void drawBG(PoseStack graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         int rowAreaHeight = visibleRows * ROW_HEIGHT;
-        graphics.blit(TEXTURE, offsetX, offsetY,
+        LegacyGui.blit(graphics, TEXTURE, offsetX, offsetY,
                 0, 0, GUI_WIDTH, BACKGROUND_TOP_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
 
         int stretchHeight = Math.max(0, rowAreaHeight - 3);
         if (stretchHeight > 0) {
-            graphics.blit(TEXTURE, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
+            LegacyGui.blit(graphics, TEXTURE, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
                     GUI_WIDTH, stretchHeight,
                     0, BACKGROUND_STRETCH_TEXTURE_Y, GUI_WIDTH, 1,
                     TEXTURE_SIZE, TEXTURE_SIZE);
         }
 
         int bottomBorderY = offsetY + BACKGROUND_TOP_HEIGHT + stretchHeight;
-        graphics.blit(TEXTURE, offsetX, bottomBorderY,
+        LegacyGui.blit(graphics, TEXTURE, offsetX, bottomBorderY,
                 0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1,
                 TEXTURE_SIZE, TEXTURE_SIZE);
-        graphics.blit(TEXTURE, offsetX, bottomBorderY + 1,
+        LegacyGui.blit(graphics, TEXTURE, offsetX, bottomBorderY + 1,
                 0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT,
                 TEXTURE_SIZE, TEXTURE_SIZE);
 
@@ -344,7 +343,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         for (int row = 0; row < visibleRows; row++) {
             int index = start + row;
             int top = offsetY + GUI_HEADER_HEIGHT + row * ROW_HEIGHT;
-            graphics.blit(TEXTURE, offsetX + ROW_TEXTURE_X, top,
+            LegacyGui.blit(graphics, TEXTURE, offsetX + ROW_TEXTURE_X, top,
                     ROW_TEXTURE_X,
                     index == focusedIndex ? ROW_SELECTED_TEXTURE_Y : ROW_NORMAL_TEXTURE_Y,
                     ROW_TEXTURE_WIDTH, ROW_HEIGHT,
@@ -353,7 +352,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderTooltip(PoseStack graphics, int mouseX, int mouseY) {
         super.renderTooltip(graphics, mouseX, mouseY);
         int index = hoveredIndex(mouseX, mouseY);
         if (index < 0) return;
@@ -434,7 +433,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
             updatingAliasField = false;
             queryRefresh = true;
             if (minecraft.player != null) {
-                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.1F, 1.0F);
+                minecraft.player.playSound(SoundEvents.UI_BUTTON_CLICK, 0.1F, 1.0F);
             }
             return true;
         }
@@ -466,9 +465,9 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     @Override
-    public void changeFocus(ComponentPath path) {
-        super.changeFocus(path);
+    public boolean changeFocus(boolean forward) {
         focusedIndex = -1;
+        return super.changeFocus(forward);
     }
 
     @Override

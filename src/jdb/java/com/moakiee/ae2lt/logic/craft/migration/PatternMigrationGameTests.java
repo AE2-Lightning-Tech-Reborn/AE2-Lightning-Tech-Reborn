@@ -147,7 +147,7 @@ public final class PatternMigrationGameTests {
             var encoded=pattern(h,false);assembler.getInternalInventory().setItemDirect(10,encoded.copy());
             var host=(appeng.api.parts.IPartHost)level.getBlockEntity(cable);
             PartHelper.setPart(level,cable,Direction.UP,f.player,AEParts.PATTERN_PROVIDER.asItem());
-            var part=(appeng.helpers.patternprovider.PatternProviderLogicHost)host.getPart(Direction.UP);
+            var part=(appeng.helpers.iface.PatternProviderLogicHost)host.getPart(Direction.UP);
             var changed=pattern(h,true);part.getLogic().getPatternInv().setItemDirect(0,changed.copy());
             h.runAfterDelay(5,()->{
                 f.controller.getPatternMigration().start(f.player);
@@ -338,7 +338,7 @@ public final class PatternMigrationGameTests {
     }
 
     private static net.minecraft.world.level.block.entity.BlockEntity place(GameTestHelper h,BlockPos relative,String id){
-        var block=net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new net.minecraft.resources.ResourceLocation(id));
+        var block=net.minecraft.core.registries.Registry.BLOCK.get(new net.minecraft.resources.ResourceLocation(id));
         h.assertTrue(block!=net.minecraft.world.level.block.Blocks.AIR,"optional block exists: "+id);
         var pos=h.absolutePos(relative);h.getLevel().setBlockAndUpdate(pos,block.defaultBlockState());return h.getLevel().getBlockEntity(pos);
     }

@@ -7,11 +7,11 @@ import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
 import com.moakiee.ae2lt.client.gui.AE2Button;
 import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.client.gui.widgets.TabButton.Style;
 import com.moakiee.ae2lt.util.SlotPositionAccess;
-import appeng.api.behaviors.ContainerItemStrategies;
-import appeng.api.behaviors.EmptyingAction;
+import appeng.menu.me.interaction.StackInteractions;
+import appeng.menu.me.interaction.EmptyingAction;
 import appeng.api.config.ActionItems;
 import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
@@ -37,9 +37,10 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import appeng.client.gui.me.common.RepoSlot;
@@ -59,7 +60,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             new EnumMap<>(TianshuEncodingMode.class);
     private final TianshuClosedLoopEncodingPanel closedLoopPanel;
     private final List<ProcessingMultiplierButton> processingModeButtons;
-    private final AE2Button advancedEncoding;
     private final AE2Button overloadEncoding;
     private final RepoSlot networkBlankPatternSlot;
     private final Item blankPatternItem;
@@ -107,9 +107,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 addProcessingMultiplierButton("processingMultiply5", 5, 10),
                 addProcessingMultiplierButton("processingDivide2", -2, -4),
                 addProcessingMultiplierButton("processingDivide5", -5, -10));
-        advancedEncoding = addCompactButton("advancedEncodingButton",
-                Component.translatable("ae2lt.tianshu.terminal.encoding.advanced.short"),
-                () -> switchToScreen(new TianshuAdvancedPatternConfigScreen<>(this)));
         overloadEncoding = addCompactButton("overloadEncodingButton",
                 Component.translatable("ae2lt.tianshu.terminal.encoding.overload.short"),
                 () -> switchToScreen(new TianshuOverloadPatternConfigScreen<>(this)));
@@ -155,7 +152,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         modeTabs.put(mode, tab);
     }
 
-    @Override
     protected PageAnchor getHelpTopic() {
         String fragment = switch (menu.tianshuMode) {
             case PROCESSING -> "processing-patterns";
@@ -190,8 +186,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                     shifted ? control.shiftedFactor() : control.factor()));
         });
         boolean hasDraftInput = hasProcessingDraftInput();
-        updateEncodingButton(advancedEncoding, ProcessingPatternEncodingType.ADVANCED,
-                processing && AdvancedAECompat.canEncode(), hasDraftInput, "advanced");
         updateEncodingButton(overloadEncoding, ProcessingPatternEncodingType.OVERLOAD,
                 processing, hasDraftInput, "overload");
         boolean closedLoop = selected == TianshuEncodingMode.CLOSED_LOOP;
@@ -215,7 +209,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         button.setMessage(Component.translatable(
                 "ae2lt.tianshu.terminal.encoding." + key + ".short")
                 .withStyle(armed ? ChatFormatting.GREEN : ChatFormatting.WHITE));
-        button.setTooltip(Tooltip.create(Component.translatable(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(button, Tooltip.create(Component.translatable(
                 "ae2lt.tianshu.terminal.encoding." + key + (armed ? ".armed" : ""))));
     }
 
@@ -306,7 +300,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+    protected void renderTooltip(PoseStack graphics, int x, int y) {
         var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
                 x - leftPos, y - topPos);
         if (menu.getCarried().isEmpty() && multiplierTooltip != null) {
@@ -319,7 +313,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             return;
         }
         if (menu.getCarried().isEmpty() && menu.canModifyAmountForSlot(hoveredSlot)) {
-            var itemTooltip = new ArrayList<>(getTooltipFromContainerItem(hoveredSlot.getItem()));
+            var itemTooltip = new ArrayList<>(getTooltipFromItem(hoveredSlot.getItem()));
             var unwrapped = GenericStack.fromItemStack(hoveredSlot.getItem());
             if (unwrapped != null) {
                 itemTooltip.add(Tooltips.getAmountTooltip(ButtonToolTips.Amount, unwrapped));
@@ -328,7 +322,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             drawTooltip(graphics, x, y, itemTooltip);
         } else if (menu.getCarried().isEmpty() && isClosedLoopMemberSlot(hoveredSlot)
                 && hoveredSlot.hasItem()) {
-            var itemTooltip = new ArrayList<>(getTooltipFromContainerItem(hoveredSlot.getItem()));
+            var itemTooltip = new ArrayList<>(getTooltipFromItem(hoveredSlot.getItem()));
             TianshuClosedLoopEncodingPanel.appendMemberTooltip(itemTooltip, menu,
                     hoveredSlot.getContainerSlot(), hoveredSlot.getItem(), minecraft.level);
             itemTooltip.add(Tooltips.getSetAmountTooltip());
@@ -346,7 +340,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     @Override
     protected EmptyingAction getEmptyingAction(Slot slot, ItemStack carried) {
         if (menu.isProcessingPatternSlot(slot)) {
-            var emptyingAction = ContainerItemStrategies.getEmptyingAction(carried);
+            var emptyingAction = StackInteractions.getEmptyingAction(carried);
             if (emptyingAction != null) {
                 return emptyingAction;
             }
@@ -355,21 +349,21 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     @Override
-    public void renderSlot(GuiGraphics graphics, Slot slot) {
+    public void renderSlot(PoseStack graphics, Slot slot) {
         if (slot == networkBlankPatternSlot && !slot.hasItem()) {
             Icon.BACKGROUND_BLANK_PATTERN.getBlitter()
                     .dest(slot.x, slot.y)
-                    .blit(graphics);
+                    .blit(graphics, 0);
         }
 
         if (isClosedLoopMemberSlot(slot) && slot.hasItem()) {
             // Render only the pattern icon here. The standard slot decoration would add the
             // display stack's amount (1) in the same corner as the per-cycle copy count below.
-            graphics.renderItem(slot.getItem().copyWithCount(1), slot.x, slot.y);
+            LegacyGui.renderItem(graphics, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(slot.getItem(), 1), slot.x, slot.y);
             long copies = Math.max(1L,
                     menu.closedLoopDraftSync.copies(slot.getContainerSlot()));
             if (copies > 1L) {
-                var poseStack = graphics.pose();
+                var poseStack = graphics;
                 poseStack.pushPose();
                 // Items render at z=100; keep the authoritative per-cycle count above the icon.
                 poseStack.translate(0, 0, 100);
@@ -382,7 +376,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
 
         if (shouldShowCraftableIndicatorForSlot(slot)) {
-            var poseStack = graphics.pose();
+            var poseStack = graphics;
             poseStack.pushPose();
             poseStack.translate(0, 0, 100);
             StackSizeRenderer.renderSizeLabel(graphics, font, slot.x - 11, slot.y - 11, "+", false);
@@ -392,8 +386,8 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     @Override
-    protected List<Component> getTooltipFromContainerItem(ItemStack stack) {
-        var lines = super.getTooltipFromContainerItem(stack);
+    public List<Component> getTooltipFromItem(ItemStack stack) {
+        var lines = super.getTooltipFromItem(stack);
         if (hoveredSlot != null && shouldShowCraftableIndicatorForSlot(hoveredSlot)) {
             lines = new ArrayList<>(lines);
             lines.add(ButtonToolTips.Craftable.text().withStyle(ChatFormatting.DARK_GRAY));
@@ -407,7 +401,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 || semantic == SlotSemantics.PROCESSING_INPUTS
                 || semantic == SlotSemantics.SMITHING_TABLE_ADDITION
                 || semantic == SlotSemantics.SMITHING_TABLE_BASE
-                || semantic == SlotSemantics.SMITHING_TABLE_TEMPLATE
                 || semantic == SlotSemantics.STONECUTTING_INPUT) {
             var slotContent = GenericStack.fromItemStack(slot.getItem());
             return slotContent != null && repo.isCraftable(slotContent.what());
@@ -467,10 +460,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
 
         @Override
-        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        public void renderButton(PoseStack graphics, int mouseX, int mouseY, float partialTick) {
             var message = getMessage();
             setMessage(Component.empty());
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            super.renderButton(graphics, mouseX, mouseY, partialTick);
             setMessage(message);
 
             var font = Minecraft.getInstance().font;
@@ -479,7 +472,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             if (!active) {
                 color = 0xFF413F54;
                 yOffset = -1;
-            } else if (isHovered()) {
+            } else if (isHovered) {
                 color = 0xFF517497;
                 yOffset = 0;
             } else {
@@ -491,11 +484,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             float virtualHeight = getHeight() / TEXT_SCALE;
             float textX = (virtualWidth - font.width(message)) / 2.0F;
             float textY = (virtualHeight - 9.0F) / 2.0F + 1.0F - yOffset / TEXT_SCALE;
-            var pose = graphics.pose();
+            var pose = graphics;
             pose.pushPose();
             pose.translate(getX(), getY(), 10.0F);
             pose.scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
-            graphics.drawString(font, message, Math.round(textX), Math.round(textY), color, false);
+            LegacyGui.drawString(graphics, font, message, Math.round(textX), Math.round(textY), color, false);
             pose.popPose();
         }
     }

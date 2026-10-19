@@ -17,7 +17,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.gametest.framework.GameTest;
@@ -51,7 +51,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class RainbowPigmeeRecolorGameTests {
     private static Item item(String id) {
-        return BuiltInRegistries.ITEM.getOptional(new ResourceLocation(id)).orElseThrow();
+        return Registry.ITEM.getOptional(new ResourceLocation(id)).orElseThrow();
     }
 
     private static ItemStack named(Item item, int count) {
@@ -365,10 +365,10 @@ public final class RainbowPigmeeRecolorGameTests {
         var registryAware = new ShapelessRecipe(valid.getId(), "", CraftingBookCategory.MISC,
                 new ItemStack(Items.RED_WOOL, 2), valid.getIngredients()) {
             @Override
-            public ItemStack getResultItem(RegistryAccess registries) {
+            public ItemStack getResultItem() {
                 h.assertTrue(registries == h.getLevel().registryAccess(),
                         "Inference must pass the actual crafting registry access to modded recipes");
-                return super.getResultItem(registries);
+                return super.getResultItem();
             }
         };
         manager.replaceRecipes(List.of(holder, registryAware));

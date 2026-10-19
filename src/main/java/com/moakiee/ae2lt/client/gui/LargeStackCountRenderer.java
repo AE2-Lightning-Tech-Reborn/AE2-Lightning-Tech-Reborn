@@ -2,12 +2,13 @@ package com.moakiee.ae2lt.client.gui;
 
 import java.util.List;
 
-import org.joml.Matrix4f;
+import com.mojang.math.Matrix4f;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 
@@ -34,7 +35,7 @@ public final class LargeStackCountRenderer {
      * Renders the abbreviated stack count on a slot if it is a
      * {@link LargeStackAppEngSlot} with a count greater than 1.
      */
-    public static void renderSlotCount(GuiGraphics guiGraphics, Font font, Slot slot) {
+    public static void renderSlotCount(PoseStack guiGraphics, Font font, Slot slot) {
         if (!(slot instanceof LargeStackAppEngSlot)) {
             return;
         }
@@ -56,7 +57,7 @@ public final class LargeStackCountRenderer {
      * instance, but we still want to reuse the exact same large-stack count
      * visuals as the machine GUI.
      */
-    public static void renderCountAt(GuiGraphics guiGraphics, Font font, int slotX, int slotY, long count) {
+    public static void renderCountAt(PoseStack guiGraphics, Font font, int slotX, int slotY, long count) {
         if (count <= 1) {
             return;
         }
@@ -132,12 +133,12 @@ public final class LargeStackCountRenderer {
         return Math.round(value) + suffix;
     }
 
-    private static void renderLabel(GuiGraphics guiGraphics, Font font, int slotX, int slotY, String text) {
+    private static void renderLabel(PoseStack guiGraphics, Font font, int slotX, int slotY, String text) {
         float inverseScale = 1.0F / SCALE;
         int drawX = (int) ((slotX + 18.0F - font.width(text) * SCALE) * inverseScale);
         int drawY = (int) ((slotY + 16.0F - 5.0F * SCALE) * inverseScale);
 
-        var pose = guiGraphics.pose();
+        var pose = guiGraphics;
         pose.pushPose();
         pose.translate(0, 0, 300);
         pose.scale(SCALE, SCALE, SCALE);
@@ -155,9 +156,9 @@ public final class LargeStackCountRenderer {
         // combined with other mods that assume blend remains enabled).
         var buffer = Minecraft.getInstance().renderBuffers().bufferSource();
         font.drawInBatch(text, x + 1, y + 1, SHADOW_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
+                false, 0, 15728880);
         font.drawInBatch(text, x, y, TEXT_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
+                false, 0, 15728880);
         buffer.endBatch();
     }
 }

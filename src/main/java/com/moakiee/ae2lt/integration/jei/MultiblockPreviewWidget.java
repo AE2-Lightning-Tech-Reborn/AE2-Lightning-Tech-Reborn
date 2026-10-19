@@ -6,12 +6,12 @@ import java.util.List;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 
 import mezz.jei.api.gui.widgets.IRecipeWidget;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.navigation.ScreenPosition;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -32,7 +32,7 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
     private static final float SCALE_MARGIN = 0.92F;
     private static final float ROTATION_PER_FRAME = 0.4F;
 
-    private final ScreenPosition position;
+    private final Rect2i position;
     private final int width;
     private final int height;
     private final List<Entry> blocks;
@@ -45,7 +45,7 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
     private float rotation;
 
     private MultiblockPreviewWidget(int x, int y, int width, int height, List<Entry> blocks) {
-        this.position = new ScreenPosition(x, y);
+        this.position = new Rect2i(x, y, width, height);
         this.width = width;
         this.height = height;
         this.blocks = blocks;
@@ -101,12 +101,12 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
     }
 
     @Override
-    public ScreenPosition getPosition() {
+    public Rect2i getArea() {
         return position;
     }
 
     @Override
-    public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    public void drawWidget(PoseStack guiGraphics, double mouseX, double mouseY) {
         if (blocks.isEmpty() || scale <= 0F) {
             return;
         }
@@ -114,7 +114,7 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
         Minecraft client = Minecraft.getInstance();
         var bufferSource = client.renderBuffers().bufferSource();
         var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = guiGraphics;
 
         float cx = width / 2F;
         float cy = height / 2F;
@@ -123,8 +123,8 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
             pose.pushPose();
             pose.translate(cx, cy, 400);
             pose.scale(scale, -scale, scale);
-            pose.mulPose(Axis.XP.rotationDegrees(X_ROTATION_DEG));
-            pose.mulPose(Axis.YP.rotationDegrees(225 + rotation));
+            pose.mulPose(Vector3f.XP.rotationDegrees(X_ROTATION_DEG));
+            pose.mulPose(Vector3f.YP.rotationDegrees(225 + rotation));
             pose.translate(
                     -0.5F + entry.offset.getX() - centerX,
                     -0.5F + entry.offset.getY() - centerY,

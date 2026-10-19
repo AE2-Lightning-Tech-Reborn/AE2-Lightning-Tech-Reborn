@@ -5,7 +5,7 @@ import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -143,7 +143,7 @@ public interface CelestweaveArmorSubmodule extends OverloadDeviceSubmodule {
      * wanting to react to workbench install / uninstall should do so in
      * {@link #onInstalled}/{@link #onUninstalled}; this accessor is for querying state.
      */
-    default boolean isInstalled(ItemStack armor, HolderLookup.Provider registries) {
+    default boolean isInstalled(ItemStack armor, RegistryAccess registries) {
         return CelestweaveArmorState.isSubmoduleInstalled(armor, registries, id());
     }
 

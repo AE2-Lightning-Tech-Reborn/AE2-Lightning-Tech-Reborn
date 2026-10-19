@@ -28,7 +28,7 @@ import com.moakiee.ae2lt.menu.TianshuSeedStorageMenu;
 import com.moakiee.ae2lt.menu.VoidCellMenu;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -37,7 +37,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public final class ModMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, AE2LightningTech.MODID);
+            DeferredRegister.create(Registry.MENU_REGISTRY, AE2LightningTech.MODID);
 
     public static final RegistryObject<MenuType<OverloadedPatternProviderMenu>>
             OVERLOADED_PATTERN_PROVIDER = MENU_TYPES.register(

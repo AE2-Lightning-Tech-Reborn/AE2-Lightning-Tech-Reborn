@@ -19,7 +19,7 @@ final class PigmeeCuriosCompatibilityContractTest {
     @Test
     void allFourPigmeesShareTheStandardCuriosHeadSlot() throws Exception {
         JsonObject tag = readJson("curios/tags/items/head.json");
-        Set<String> values = tag.getAsJsonArray("values").asList().stream()
+        Set<String> values = java.util.stream.StreamSupport.stream(tag.getAsJsonArray("values").spliterator(), false)
                 .map(element -> element.getAsString())
                 .collect(Collectors.toSet());
 
@@ -57,7 +57,7 @@ final class PigmeeCuriosCompatibilityContractTest {
         assertTrue(bridge.contains("ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ModFumos.CREATIVE_PIGMEE_FUMO_ITEM.get()"));
         assertTrue(bridge.contains("ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get()"));
-        assertTrue(bridge.contains("ItemDisplayContext.HEAD"));
+        assertTrue(bridge.contains("TransformType.HEAD"));
         assertTrue(bridge.contains("CustomHeadLayer.translateToHead"));
     }
 

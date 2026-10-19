@@ -266,7 +266,7 @@ public abstract class AdvCraftingCpuLogicMixin {
             var finalOutputKey = finalOutput != null ? finalOutput.what() : null;
             CraftingLink link = ae2lt$getJobLink(job);
             if (link != null) {
-                UUID craftingId = link.getCraftingID();
+                UUID craftingId = com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID());
                 OverloadCpuStateManager.INSTANCE.registerExpectedOutputs(
                         this,
                         craftingId,
@@ -301,7 +301,7 @@ public abstract class AdvCraftingCpuLogicMixin {
             if (link != null) {
                 OverloadCpuStateManager.INSTANCE.readFromTag(
                         this,
-                        link.getCraftingID(),
+                        com.moakiee.thunderbolt.core.crafting.batch.LegacyCraftingIds.toUuid(link.getCraftingID()),
                         data.getCompound("ae2ltOverloadState"));
             }
         }

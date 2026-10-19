@@ -35,7 +35,7 @@ public record WirelessJeiSupplyPacket(int containerId, int requestId, boolean ta
             if (stack.isEmpty() || stack.getCount() > WirelessJeiInventoryPlan.MAX_COUNT)
                 throw new IllegalArgumentException("Invalid JEI ingredient count");
             // Vanilla's item codec stores a signed byte count; recipe totals can exceed 127.
-            buffer.writeItemStack(stack.copyWithCount(1), false);
+            buffer.writeItemStack(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1), false);
             buffer.writeVarInt(stack.getCount());
         }
     }
@@ -49,7 +49,7 @@ public record WirelessJeiSupplyPacket(int containerId, int requestId, boolean ta
             int count = buffer.readVarInt();
             if (stack.isEmpty() || count <= 0 || count > WirelessJeiInventoryPlan.MAX_COUNT)
                 throw new IllegalArgumentException("Invalid JEI ingredient count");
-            stacks.add(stack.copyWithCount(count));
+            stacks.add(com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, count));
         }
         return List.copyOf(stacks);
     }

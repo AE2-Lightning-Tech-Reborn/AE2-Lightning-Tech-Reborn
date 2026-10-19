@@ -2,10 +2,9 @@ package com.moakiee.ae2lt.celestweave.module;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,7 +33,7 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
             "ae2lt.celestweave.feature.laser_protection.desc");
 
     private final String id;
-    private final ResourceKey<DamageType> damageType;
+    private final String damageType;
     private final String nameKey;
     private final String descriptionKey;
 
@@ -44,9 +43,7 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
             String nameKey,
             String descriptionKey) {
         this.id = id;
-        this.damageType = ResourceKey.create(
-                Registries.DAMAGE_TYPE,
-                new ResourceLocation("mekanism", mekanismDamageType));
+        this.damageType = mekanismDamageType;
         this.nameKey = nameKey;
         this.descriptionKey = descriptionKey;
     }
@@ -56,7 +53,7 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
         return id;
     }
 
-    public ResourceKey<DamageType> damageType() {
+    public String damageType() {
         return damageType;
     }
 

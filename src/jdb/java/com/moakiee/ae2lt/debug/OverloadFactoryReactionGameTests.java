@@ -117,8 +117,8 @@ public final class OverloadFactoryReactionGameTests {
             }
         });
         manager.replaceRecipes(loaded);
-        var processor = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation("appgen:origination_processor"));
-        var block = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation("appgen:ember_block"));
+        var processor = net.minecraft.core.registries.Registry.ITEM.get(new ResourceLocation("appgen:origination_processor"));
+        var block = net.minecraft.core.registries.Registry.ITEM.get(new ResourceLocation("appgen:ember_block"));
         var derived = OverloadProcessingRecipeCatalog.displayRecipes(manager).stream()
                 .filter(h -> h.itemResults().stream().anyMatch(stack -> stack.is(processor))).findFirst().orElseThrow();
         var recipe = derived;
@@ -163,7 +163,7 @@ public final class OverloadFactoryReactionGameTests {
         helper.assertTrue(changed.totalEnergy() == 123456, "KJS energy edit was overwritten");
         helper.assertTrue(catalog.stream().noneMatch(h -> h.getId().getPath().startsWith(
                 "derived/inscriber/ae2lt_overload/inscriber/removed_processor_fixture/")), "deleted wrapper was regenerated");
-        var calculation = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation("ae2:calculation_processor"));
+        var calculation = net.minecraft.core.registries.Registry.ITEM.get(new ResourceLocation("ae2:calculation_processor"));
         helper.assertTrue(catalog.stream().noneMatch(h -> h.itemResults().stream().anyMatch(s -> s.is(calculation))),
                 "deleted manual calculation processor recipe was replaced with a fallback");
     }

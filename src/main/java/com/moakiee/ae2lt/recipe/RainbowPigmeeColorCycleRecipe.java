@@ -7,7 +7,6 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
@@ -16,8 +15,8 @@ import net.minecraft.world.level.Level;
 public final class RainbowPigmeeColorCycleRecipe extends CustomRecipe {
     private RainbowPigmeeColoring coloring = RainbowPigmeeColoring.EMPTY;
 
-    public RainbowPigmeeColorCycleRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    public RainbowPigmeeColorCycleRecipe(ResourceLocation id) {
+        super(id);
     }
 
     void setColoring(RainbowPigmeeColoring coloring) {
@@ -30,8 +29,8 @@ public final class RainbowPigmeeColorCycleRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer input, RegistryAccess registries) {
-        return coloring.next(findTarget(input), registries);
+    public ItemStack assemble(CraftingContainer input) {
+        return coloring.next(findTarget(input));
     }
 
     @Override
@@ -50,7 +49,7 @@ public final class RainbowPigmeeColorCycleRecipe extends CustomRecipe {
         for (int slot = 0; slot < input.getContainerSize(); slot++) {
             var stack = input.getItem(slot);
             if (stack.is(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get())) {
-                remaining.set(slot, stack.copyWithCount(1));
+                remaining.set(slot, com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, 1));
             }
         }
         return remaining;

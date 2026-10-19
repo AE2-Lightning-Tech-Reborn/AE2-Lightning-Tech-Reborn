@@ -24,7 +24,7 @@ class OverloadedInterfaceSlotKeyCacheTest {
     @BeforeAll
     static void bootstrapMinecraft() {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test
@@ -39,7 +39,7 @@ class OverloadedInterfaceSlotKeyCacheTest {
         assertNull(cache.keyForSlot(0, ItemStack.EMPTY));
         cache.prepareSlots(27);
         assertSame(first, cache.keyForSlot(0, new ItemStack(Items.STONE, 32)));
-        assertEquals(1, first.getReadOnlyStack().getCount(), "AE2 15 normalizes key snapshots to one item");
+        assertEquals(1, first.toStack().getCount(), "AE2 15 normalizes key snapshots to one item");
     }
 
     @Test

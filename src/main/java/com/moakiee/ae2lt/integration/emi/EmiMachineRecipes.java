@@ -134,7 +134,7 @@ final class EmiLightningTransformRecipe extends EmiBackedRecipe<LightningTransfo
     EmiLightningTransformRecipe(ResourceLocation id, LightningTransformRecipe recipe) {
         super(AE2LTEmiCategories.LIGHTNING_TRANSFORM, id, recipe, WIDTH, 66);
         recipe.inputs().forEach(input -> inputs.add(EmiRecipeWidgets.ingredient(input.ingredient(), input.count())));
-        outputs.add(EmiStack.of(recipe.getResultItem(Minecraft.getInstance().level.registryAccess())));
+        outputs.add(EmiStack.of(recipe.getResultItem()));
     }
 
     @Override

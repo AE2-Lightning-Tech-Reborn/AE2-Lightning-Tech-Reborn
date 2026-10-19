@@ -47,7 +47,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /** AE2-style cell queues with a bounded, round-robin resource-key transfer driver. */
-public class OverloadedIOPortBlockEntity extends AENetworkInvBlockEntity
+public class OverloadedIOPortBlockEntity extends com.moakiee.ae2lt.compat.LegacyNetworkInvBlockEntity
         implements IUpgradeableObject, IConfigurableObject, IGridTickable {
     public static final int CELL_SLOTS = 6;
     public static final int UPGRADE_SLOTS = 5;
@@ -134,7 +134,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkInvBlockEntity
         return super.getSubInventory(id);
     }
     @Override protected InternalInventory getExposedInventoryForSide(Direction side) {
-        return side == getTop() || side == getTop().getOpposite() ? inputExternal : outputExternal;
+        return side == getUp() || side == getUp().getOpposite() ? inputExternal : outputExternal;
     }
     @Override public void onChangeInventory(InternalInventory inv, int slot) {
         if (inv == filter) {
@@ -372,8 +372,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkInvBlockEntity
         for (var stack : filter) if (!stack.isEmpty()) drops.add(stack);
         for (var stack : matrix) if (!stack.isEmpty()) drops.add(stack);
     }
-    @Override public void clearContent() {
-        super.clearContent(); upgrades.clear(); filter.clear(); matrix.clear(); pending = null;
+    public void clearContent() {
+         com.moakiee.ae2lt.compat.LegacyInventories.clear(upgrades); com.moakiee.ae2lt.compat.LegacyInventories.clear(filter); com.moakiee.ae2lt.compat.LegacyInventories.clear(matrix); pending = null;
         java.util.Arrays.fill(scans, null);
     }
     @Override public void onMainNodeStateChanged(IGridNodeListener.State reason) {

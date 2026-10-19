@@ -4,7 +4,8 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -21,23 +22,23 @@ public class LargeStackJeiItemRenderer implements IIngredientRenderer<ItemStack>
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, ItemStack ingredient) {
+    public void render(PoseStack guiGraphics, ItemStack ingredient) {
         render(guiGraphics, ingredient, 0, 0);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, ItemStack ingredient, int posX, int posY) {
+    public void render(PoseStack guiGraphics, ItemStack ingredient, int posX, int posY) {
         if (ingredient == null || ingredient.isEmpty()) {
             return;
         }
 
         // Intentionally do NOT toggle RenderSystem.enableDepthTest / disableBlend here.
-        // GuiGraphics#renderFakeItem and Font#drawInBatch already manage their own
+        // PoseStack#renderFakeItem and Font#drawInBatch already manage their own
         // depth / blend state via their RenderTypes; toggling them here would leave
         // the GL state machine in an unexpected configuration for the next JEI
         // ingredient (one of the patterns the optimization report flags as
         // GL state-machine pollution).
-        guiGraphics.renderFakeItem(ingredient, posX, posY);
+        LegacyGui.renderFakeItem(guiGraphics, ingredient, posX, posY);
         LargeStackCountRenderer.renderCountAt(guiGraphics, getFontRenderer(Minecraft.getInstance(), ingredient), posX, posY, ingredient.getCount());
     }
 

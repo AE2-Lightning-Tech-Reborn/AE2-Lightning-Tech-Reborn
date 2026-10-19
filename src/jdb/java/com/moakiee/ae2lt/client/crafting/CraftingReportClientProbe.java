@@ -35,7 +35,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -86,7 +86,7 @@ public final class CraftingReportClientProbe {
                     AEConfig.instance().setTerminalStyle(TerminalStyle.MEDIUM);
                     menu = new UiMenu(mc.player.getInventory());
                     var used = new KeyCounter();
-                    BuiltInRegistries.ITEM.stream().filter(item -> item != Items.AIR).limit(36)
+                    Registry.ITEM.stream().filter(item -> item != Items.AIR).limit(36)
                             .forEach(item -> used.set(AEItemKey.of(item), 35));
                     used.set(AEItemKey.of(Items.IRON_ORE), 35);
                     menu.setPlan(ThunderboltCraftingPlanSummary.fromPlan(new CraftingPlan(

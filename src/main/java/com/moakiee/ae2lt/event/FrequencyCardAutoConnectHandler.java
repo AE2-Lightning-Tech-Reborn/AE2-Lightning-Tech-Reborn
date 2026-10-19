@@ -42,7 +42,7 @@ public final class FrequencyCardAutoConnectHandler {
             registry.queueClusterTopologyChange(level, event.getPos());
         }
         if (event.getEntity() instanceof ServerPlayer player) {
-            registry.queueAutoConnect(player, player.level().dimension(), event.getPos(), null, 2);
+            registry.queueAutoConnect(player, player.level.dimension(), event.getPos(), null, 2);
         }
     }
 
@@ -66,7 +66,7 @@ public final class FrequencyCardAutoConnectHandler {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(player.level() instanceof ServerLevel level)) {
+                || !(player.level instanceof ServerLevel level)) {
             return;
         }
         var registry = WirelessLinkRegistry.get();
@@ -78,7 +78,7 @@ public final class FrequencyCardAutoConnectHandler {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onWrenchDisassemble(PlayerInteractEvent.RightClickBlock event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(player.level() instanceof ServerLevel level)
+                || !(player.level instanceof ServerLevel level)
                 || !InteractionUtil.isInAlternateUseMode(player)
                 || !InteractionUtil.canWrenchDisassemble(event.getItemStack())) {
             return;
@@ -112,7 +112,7 @@ public final class FrequencyCardAutoConnectHandler {
         if (card.isEmpty() || !OverloadedFrequencyCardItem.getData(card).isBound()) {
             return;
         }
-        if (!(player.level() instanceof ServerLevel level)) {
+        if (!(player.level instanceof ServerLevel level)) {
             return;
         }
         var pos = event.getPos();
@@ -148,18 +148,17 @@ public final class FrequencyCardAutoConnectHandler {
         }
         var placement = PartPlacement.getPartPlacement(
                 player,
-                player.level(),
+                player.level,
                 event.getItemStack(),
                 event.getPos(),
-                clickedFace,
-                event.getHitVec().getLocation());
+                clickedFace);
         if (placement == null) {
             return;
         }
         var target = toAutoConnectTarget(event.getPos(), clickedFace, placement);
         var registry = WirelessLinkRegistry.get();
         if (registry != null) {
-            if (player.level() instanceof ServerLevel level) {
+            if (player.level instanceof ServerLevel level) {
                 registry.queueClusterTopologyChange(level, target.pos());
             }
             var partId = IPartItem.getId(partItem);
@@ -168,7 +167,7 @@ public final class FrequencyCardAutoConnectHandler {
                     ICablePart.class.isAssignableFrom(partItem.getPartClass()));
             registry.queuePartAutoConnect(
                     player,
-                    player.level().dimension(),
+                    player.level.dimension(),
                     target.pos(),
                     target.side(),
                     partId.toString(),

@@ -8,8 +8,8 @@ import java.util.Objects;
 
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -45,7 +45,7 @@ public final class SourcePatternSnapshot {
         this.customDataTag = customDataTag == null ? null : customDataTag.copy();
     }
 
-    public static SourcePatternSnapshot fromItemStack(ItemStack stack, HolderLookup.Provider registries) {
+    public static SourcePatternSnapshot fromItemStack(ItemStack stack, RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return fromItemStack(stack);
     }
@@ -56,7 +56,7 @@ public final class SourcePatternSnapshot {
             throw new IllegalArgumentException("source pattern stack must not be empty");
         }
 
-        var itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        var itemId = Registry.ITEM.getKey(stack.getItem());
         var stackTag = stack.save(new CompoundTag());
         return new SourcePatternSnapshot(itemId, stackTag, null);
     }
@@ -105,7 +105,7 @@ public final class SourcePatternSnapshot {
     /**
      * Recreates an equivalent plain-pattern stack for future reparsing.
      */
-    public ItemStack toItemStack(HolderLookup.Provider registries) {
+    public ItemStack toItemStack(RegistryAccess registries) {
         Objects.requireNonNull(registries, "registries");
         return toItemStack();
     }
@@ -117,7 +117,7 @@ public final class SourcePatternSnapshot {
 
         // Backward compatibility for older overload patterns that only stored
         // item id + custom data.
-        var item = BuiltInRegistries.ITEM.get(itemId);
+        var item = Registry.ITEM.get(itemId);
         var stack = new ItemStack(item);
         if (customDataTag != null && !customDataTag.isEmpty()) {
             stack.getOrCreateTag().merge(customDataTag.copy());

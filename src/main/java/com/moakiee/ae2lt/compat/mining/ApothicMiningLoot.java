@@ -5,7 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -17,7 +17,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 /** Forge 1.20.1 Apotheosis Earth's Boon, without firing block events or spawning drops. */
 public final class ApothicMiningLoot {
     private static final ResourceLocation BOON = new ResourceLocation("apotheosis", "earths_boon");
-    private static final TagKey<Item> DROPS = TagKey.create(Registries.ITEM,
+    private static final TagKey<Item> DROPS = TagKey.create(Registry.ITEM_REGISTRY,
             new ResourceLocation("apotheosis", "boon_drops"));
     private ApothicMiningLoot() {}
 

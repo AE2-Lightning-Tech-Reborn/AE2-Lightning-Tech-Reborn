@@ -11,13 +11,14 @@ import com.moakiee.ae2lt.network.TianshuControllerActionPacket;
 
 import java.util.Locale;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Tooltip;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
+import com.moakiee.ae2lt.client.compat.Tooltip;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.compat.TabButton;
 import appeng.core.sync.network.NetworkHandler;
 import appeng.core.sync.packets.SwitchGuisPacket;
 import appeng.menu.implementations.PriorityMenu;
@@ -39,16 +40,16 @@ public class TianshuSupercomputerControllerScreen
         var build = new TextureToggleButton(
                 TextureToggleButton.ButtonType.QUICK_BUILD,
                 state -> sendAction(TianshuControllerActionPacket.Action.AUTO_BUILD));
-        build.setTooltip(Tooltip.create(Component.translatable("ae2lt.tianshu.gui.build")));
-        build.setPosition(x, y);
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(build, Tooltip.create(Component.translatable("ae2lt.tianshu.gui.build")));
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(build, x, y);
         addRenderableWidget(build);
 
         var selection = new TextureToggleButton(
                 TextureToggleButton.ButtonType.CPU_SELECTION,
                 state -> sendAction(TianshuControllerActionPacket.Action.OPEN_ALGORITHM_SELECTION));
-        selection.setTooltip(Tooltip.create(Component.translatable(
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(selection, Tooltip.create(Component.translatable(
                 "ae2lt.tianshu.gui.algorithm_selection")));
-        selection.setPosition(x, y + 22);
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(selection, x, y + 22);
         addRenderableWidget(selection);
 
         var cpuPriorityLabel = Component.translatable("ae2lt.tianshu.gui.cpu_priority");
@@ -57,8 +58,8 @@ public class TianshuSupercomputerControllerScreen
                 cpuPriorityLabel,
                 ignored -> NetworkHandler.instance().sendToServer(
                         SwitchGuisPacket.openSubMenu(PriorityMenu.TYPE)));
-        priority.setTooltip(Tooltip.create(cpuPriorityLabel));
-        priority.setPosition(leftPos + 185, topPos - 5);
+        com.moakiee.ae2lt.client.compat.LegacyTooltips.set(priority, Tooltip.create(cpuPriorityLabel));
+        com.moakiee.ae2lt.client.compat.LegacyWidgets.position(priority, leftPos + 185, topPos - 5);
         addRenderableWidget(priority);
     }
 
@@ -68,7 +69,7 @@ public class TianshuSupercomputerControllerScreen
     }
 
     @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(PoseStack graphics, int mouseX, int mouseY) {
         drawTitle(graphics);
 
         if (!menu.isFormed()) {

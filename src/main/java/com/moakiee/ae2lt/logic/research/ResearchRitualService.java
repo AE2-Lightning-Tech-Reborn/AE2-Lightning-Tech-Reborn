@@ -18,7 +18,7 @@ import com.moakiee.ae2lt.registry.ModItems;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -108,7 +108,7 @@ public final class ResearchRitualService {
         }
 
         List<ResourceLocation> thrownSequence = candidates.stream()
-                .map(itemEntity -> BuiltInRegistries.ITEM.getKey(itemEntity.getItem().getItem()))
+                .map(itemEntity -> Registry.ITEM.getKey(itemEntity.getItem().getItem()))
                 .toList();
         LOG.debug("[ae2lt/ritual] tryHandleIonizer: thrown sequence (oldest->newest) = {}", thrownSequence);
         if (!sameMultiset(thrownSequence, note.recipeItems())) {
@@ -231,7 +231,7 @@ public final class ResearchRitualService {
             }
 
             List<ResourceLocation> actualTickGroup = orderedCandidates.subList(start, end).stream()
-                    .map(itemEntity -> BuiltInRegistries.ITEM.getKey(itemEntity.getItem().getItem()))
+                    .map(itemEntity -> Registry.ITEM.getKey(itemEntity.getItem().getItem()))
                     .toList();
             if (!sameMultiset(actualTickGroup, expectedOrder.subList(start, end))) {
                 return false;

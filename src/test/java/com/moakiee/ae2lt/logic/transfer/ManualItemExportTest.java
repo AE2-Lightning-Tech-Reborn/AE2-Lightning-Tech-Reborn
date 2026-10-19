@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
-import appeng.api.orientation.BlockOrientation;
-import appeng.api.orientation.RelativeSide;
+import com.moakiee.ae2lt.compat.orientation.BlockOrientation;
+import com.moakiee.ae2lt.compat.orientation.RelativeSide;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
@@ -31,7 +31,7 @@ class ManualItemExportTest {
     @BeforeAll static void bootstrap() {
         if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test bootstrap", null, List.of()));
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        com.moakiee.ae2lt.test.MinecraftTestBootstrap.ensureInitialized();
     }
 
     @Test void disabledOrUnconfiguredExportNeverResolvesTargets() {

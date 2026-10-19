@@ -1,7 +1,8 @@
 package com.moakiee.ae2lt.integration.recipeviewer.multiblock;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.moakiee.ae2lt.client.compat.LegacyGui;
 import net.minecraft.network.chat.Component;
 
 /** Code-drawn controls shared by recipe-viewer multiblock previews. */
@@ -22,7 +23,7 @@ final class MultiblockPreviewControls {
     private static final int INSET_FACE_COLOR = 0xFF303030;
 
     static void drawIconButton(
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             int x,
             int y,
             int width,
@@ -40,7 +41,7 @@ final class MultiblockPreviewControls {
     }
 
     static void drawTextButton(
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             Font font,
             int x,
             int y,
@@ -58,11 +59,11 @@ final class MultiblockPreviewControls {
         int textX = x + (width - font.width(value)) / 2;
         int textY = y + (height - font.lineHeight) / 2 + 1;
         int color = hovered ? HOVER_ICON_COLOR : ICON_COLOR;
-        guiGraphics.drawString(font, value, textX, textY, color, false);
+        LegacyGui.drawString(guiGraphics, font, value, textX, textY, color, false);
     }
 
     static void drawInsetLabel(
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             Font font,
             int x,
             int y,
@@ -71,12 +72,12 @@ final class MultiblockPreviewControls {
             Component label) {
         int right = x + width;
         int bottom = y + height;
-        guiGraphics.fill(x, y, right, bottom, BORDER_COLOR);
-        guiGraphics.fill(x + 1, y + 1, right - 1, bottom - 1, INSET_FACE_COLOR);
-        guiGraphics.fill(x + 1, y + 1, right - 1, y + 2, DARK_EDGE_COLOR);
-        guiGraphics.fill(x + 1, y + 1, x + 2, bottom - 1, DARK_EDGE_COLOR);
-        guiGraphics.fill(x + 1, bottom - 2, right - 1, bottom - 1, LIGHT_EDGE_COLOR);
-        guiGraphics.fill(right - 2, y + 1, right - 1, bottom - 1, LIGHT_EDGE_COLOR);
+        LegacyGui.fill(guiGraphics, x, y, right, bottom, BORDER_COLOR);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, right - 1, bottom - 1, INSET_FACE_COLOR);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, right - 1, y + 2, DARK_EDGE_COLOR);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, x + 2, bottom - 1, DARK_EDGE_COLOR);
+        LegacyGui.fill(guiGraphics, x + 1, bottom - 2, right - 1, bottom - 1, LIGHT_EDGE_COLOR);
+        LegacyGui.fill(guiGraphics, right - 2, y + 1, right - 1, bottom - 1, LIGHT_EDGE_COLOR);
 
         String value = label.getString();
         int maxWidth = Math.max(0, width - 6);
@@ -85,11 +86,11 @@ final class MultiblockPreviewControls {
         }
         int textX = x + (width - font.width(value)) / 2;
         int textY = y + (height - font.lineHeight) / 2 + 1;
-        guiGraphics.drawString(font, value, textX, textY, ICON_COLOR, false);
+        LegacyGui.drawString(guiGraphics, font, value, textX, textY, ICON_COLOR, false);
     }
 
     private static void drawButtonFrame(
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             int x,
             int y,
             int width,
@@ -108,16 +109,16 @@ final class MultiblockPreviewControls {
                 ? DISABLED_DARK_EDGE_COLOR
                 : pressed ? PRESSED_LIGHT_EDGE_COLOR : DARK_EDGE_COLOR;
 
-        guiGraphics.fill(x, y, right, bottom, border);
-        guiGraphics.fill(x + 1, y + 1, right - 1, bottom - 1, face);
-        guiGraphics.fill(x + 1, y + 1, right - 1, y + 2, topLeft);
-        guiGraphics.fill(x + 1, y + 1, x + 2, bottom - 1, topLeft);
-        guiGraphics.fill(x + 1, bottom - 2, right - 1, bottom - 1, bottomRight);
-        guiGraphics.fill(right - 2, y + 1, right - 1, bottom - 1, bottomRight);
+        LegacyGui.fill(guiGraphics, x, y, right, bottom, border);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, right - 1, bottom - 1, face);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, right - 1, y + 2, topLeft);
+        LegacyGui.fill(guiGraphics, x + 1, y + 1, x + 2, bottom - 1, topLeft);
+        LegacyGui.fill(guiGraphics, x + 1, bottom - 2, right - 1, bottom - 1, bottomRight);
+        LegacyGui.fill(guiGraphics, right - 2, y + 1, right - 1, bottom - 1, bottomRight);
     }
 
     private static void drawPixelIcon(
-            GuiGraphics guiGraphics,
+            PoseStack guiGraphics,
             int x,
             int y,
             int width,
@@ -129,7 +130,7 @@ final class MultiblockPreviewControls {
         double pressOffset = contentPressed ? 0.5D : 0.0D;
         double startX = x + (width - icon.inkWidth) / 2.0D - icon.minX + pressOffset;
         double startY = y + (height - icon.inkHeight) / 2.0D - icon.minY + pressOffset;
-        var pose = guiGraphics.pose();
+        var pose = guiGraphics;
         pose.pushPose();
         pose.translate(startX, startY, 0.0D);
 
@@ -145,7 +146,7 @@ final class MultiblockPreviewControls {
                 while (runEnd < line.length() && line.charAt(runEnd) == '#') {
                     runEnd++;
                 }
-                guiGraphics.fill(
+                LegacyGui.fill(guiGraphics,
                         runStart,
                         row,
                         runEnd,

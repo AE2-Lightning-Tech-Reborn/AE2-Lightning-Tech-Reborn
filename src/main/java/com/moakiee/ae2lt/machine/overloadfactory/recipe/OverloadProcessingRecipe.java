@@ -256,7 +256,7 @@ public final class OverloadProcessingRecipe implements Recipe<OverloadProcessing
 
     public List<ItemStack> getScaledItemResults(int operations) {
         return itemResults.stream()
-                .map(stack -> stack.copyWithCount(multiplyExactToInt(stack.getCount(), operations)))
+                .map(stack -> com.moakiee.ae2lt.compat.LegacyStacks.copyWithCount(stack, multiplyExactToInt(stack.getCount(), operations)))
                 .toList();
     }
 
@@ -268,7 +268,7 @@ public final class OverloadProcessingRecipe implements Recipe<OverloadProcessing
     }
 
     @Override
-    public ItemStack assemble(OverloadProcessingRecipeInput input, RegistryAccess registries) {
+    public ItemStack assemble(OverloadProcessingRecipeInput input) {
         return itemResults.isEmpty() ? ItemStack.EMPTY : itemResults.get(0).copy();
     }
 
@@ -278,7 +278,7 @@ public final class OverloadProcessingRecipe implements Recipe<OverloadProcessing
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registries) {
+    public ItemStack getResultItem() {
         return itemResults.isEmpty() ? ItemStack.EMPTY : itemResults.get(0).copy();
     }
 

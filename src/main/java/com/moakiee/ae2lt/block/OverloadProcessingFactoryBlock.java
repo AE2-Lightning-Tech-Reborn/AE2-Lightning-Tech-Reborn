@@ -25,8 +25,8 @@ import net.minecraftforge.fluids.FluidType;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 
-import appeng.api.orientation.IOrientationStrategy;
-import appeng.api.orientation.OrientationStrategies;
+import com.moakiee.ae2lt.compat.orientation.IOrientationStrategy;
+import com.moakiee.ae2lt.compat.orientation.OrientationStrategies;
 import appeng.menu.locator.MenuLocators;
 import appeng.util.InteractionUtil;
 
@@ -36,7 +36,7 @@ public class OverloadProcessingFactoryBlock extends AE2LTBaseEntityBlock<Overloa
     public static final BooleanProperty WORKING = BooleanProperty.create("working");
 
     public OverloadProcessingFactoryBlock() {
-        super(metalProps().noOcclusion().forceSolidOn());
+        super(metalProps().noOcclusion());
         registerDefaultState(defaultBlockState()
                 .setValue(WORKING, false)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));

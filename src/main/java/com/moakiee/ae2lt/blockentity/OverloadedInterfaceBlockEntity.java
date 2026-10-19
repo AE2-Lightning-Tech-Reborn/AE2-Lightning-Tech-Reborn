@@ -75,7 +75,8 @@ import appeng.api.storage.cells.ICellWorkbenchItem;
 import appeng.api.util.AECableType;
 import appeng.blockentity.misc.InterfaceBlockEntity;
 import appeng.block.crafting.PatternProviderBlock;
-import appeng.block.crafting.PushDirection;
+import com.moakiee.ae2lt.compat.PushDirection;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.core.definitions.AEItems;
 import appeng.helpers.InterfaceLogic;
@@ -87,7 +88,7 @@ import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
 import appeng.parts.automation.StackWorldBehaviors;
 
-public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
+public class OverloadedInterfaceBlockEntity extends com.moakiee.ae2lt.compat.LegacyInterfaceBlockEntity
         implements FrequencyBindingHost {
 
     public static final int SLOT_COUNT = 36;
@@ -179,7 +180,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
         public static WirelessConnection fromTag(CompoundTag tag) {
             var dim = ResourceKey.create(
-                    net.minecraft.core.registries.Registries.DIMENSION,
+                    net.minecraft.core.Registry.DIMENSION_REGISTRY,
                     ResourceLocation.tryParse(tag.getString(TAG_DIM)));
             return new WirelessConnection(
                     dim, BlockPos.of(tag.getLong(TAG_POS)),
@@ -283,7 +284,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             // clear() preserves AE2's per-primary maps. Remove primary types
             // absent from this target, otherwise unrelated machines slowly
             // enlarge every following clear/iteration.
-            scanned.removeEmptySubmaps();
+            scanned.removeZeros();
             if (scanned.size() > MAX_RETAINED_KEYS) {
                 counter = new KeyCounter();
             }
@@ -1113,7 +1114,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     /** The native AE2 wrench direction controls normal item, fluid and energy I/O. */
     public @Nullable Direction getTargetDirection() {
-        return getBlockState().getOptionalValue(PatternProviderBlock.PUSH_DIRECTION)
+        return getBlockState().getOptionalValue(com.moakiee.ae2lt.compat.PushDirection.PROPERTY)
                 .orElse(PushDirection.ALL).getDirection();
     }
 
@@ -1938,7 +1939,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                     transfer.untilTick = now + 1;
                 } else if (now >= transfer.untilTick) {
                     long inserted = directItemHandler != null && entry.key() instanceof AEItemKey itemKey
-                            && entry.maxAmount() <= itemKey.getMaxStackSize()
+                            && entry.maxAmount() <= itemKey.toStack().getMaxStackSize()
                             ? exportItemKey(transfer, entry, directItemHandler, me, src, energyAccess, now,
                             stock != null ? stock.get(entry.key()) : -1)
                             : exportKey(transfer, entry, wrapper, me, src, energyAccess, now,
@@ -2075,7 +2076,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     private static long barrelSlotRoom(IItemHandler handler, int slot, AEItemKey key, long requested) {
         var stack = handler.getStackInSlot(slot);
-        var requestedStack = key.getReadOnlyStack();
+        var requestedStack = key.toStack();
         // Forge deliberately treats absent and empty NBT as stack-compatible,
         // and includes capability compatibility. Strict AE-key equality is not
         // the public InvWrapper insertion contract.
@@ -2650,7 +2651,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         int count = data.readVarInt();
         var newConnections = new ArrayList<WirelessConnection>(Math.min(count, MAX_WIRELESS_CONNECTIONS));
         for (int i = 0; i < count; i++) {
-            var dim = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
+            var dim = ResourceKey.create(net.minecraft.core.Registry.DIMENSION_REGISTRY,
                     data.readResourceLocation());
             var pos = data.readBlockPos();
             var face = Direction.from3DDataValue(data.readByte());

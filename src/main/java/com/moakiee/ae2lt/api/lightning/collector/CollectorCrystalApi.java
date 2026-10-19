@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.api.lightning.collector;
 
 import com.moakiee.ae2lt.logic.extension.ItemExtensionRegistry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.ApiStatus;
@@ -17,7 +17,7 @@ public final class CollectorCrystalApi {
     }
 
     public static @Nullable CollectorCrystalBehavior find(ItemStack stack) {
-        return stack.isEmpty() ? null : BEHAVIORS.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        return stack.isEmpty() ? null : BEHAVIORS.get(Registry.ITEM.getKey(stack.getItem()));
     }
 
     @ApiStatus.Internal

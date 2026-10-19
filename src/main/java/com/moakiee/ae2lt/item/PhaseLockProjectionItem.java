@@ -54,7 +54,7 @@ public final class PhaseLockProjectionItem extends ArmorItem {
     public SoundEvent getEquipSound() {
         // Projections are a hidden server-owned implementation detail. A client inventory echo or
         // another mod replacing the equivalent stack must not sound like armor being equipped.
-        return SoundEvents.EMPTY;
+        return com.moakiee.ae2lt.registry.ModSounds.SILENT.get();
     }
 
     @Override
@@ -97,7 +97,7 @@ public final class PhaseLockProjectionItem extends ArmorItem {
                     player.getX(),
                     player.getY(),
                     player.getZ(),
-                    SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(),
+                    SoundEvents.RESPAWN_ANCHOR_DEPLETE,
                     SoundSource.PLAYERS,
                     0.8F,
                     0.7F);
@@ -132,12 +132,12 @@ public final class PhaseLockProjectionItem extends ArmorItem {
         tooltip.add(Component.translatable("item.ae2lt.phase_lock_projection.desc"));
     }
 
-    private static ArmorItem.Type armorType(EquipmentSlot slot) {
+    private static net.minecraft.world.entity.EquipmentSlot armorType(EquipmentSlot slot) {
         return switch (slot) {
-            case HEAD -> ArmorItem.Type.HELMET;
-            case CHEST -> ArmorItem.Type.CHESTPLATE;
-            case LEGS -> ArmorItem.Type.LEGGINGS;
-            case FEET -> ArmorItem.Type.BOOTS;
+            case HEAD -> net.minecraft.world.entity.EquipmentSlot.HEAD;
+            case CHEST -> net.minecraft.world.entity.EquipmentSlot.CHEST;
+            case LEGS -> net.minecraft.world.entity.EquipmentSlot.LEGS;
+            case FEET -> net.minecraft.world.entity.EquipmentSlot.FEET;
             default -> throw new IllegalArgumentException("Phase-lock projections require an armor slot");
         };
     }

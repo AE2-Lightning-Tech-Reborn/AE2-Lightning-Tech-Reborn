@@ -86,7 +86,7 @@ public final class ModEntityRenderers {
     }
 
     @SubscribeEvent
-    public static void wrapFumoItemModels(ModelEvent.ModifyBakingResult event) {
+    public static void wrapFumoItemModels(ModelEvent.BakingCompleted event) {
         wrapFumoItemModel(event, "moakiee_fumo");
         wrapFumoItemModel(event, "cystrysu_fumo");
         wrapFumoItemModel(event, "pigmee_fumo");
@@ -95,7 +95,7 @@ public final class ModEntityRenderers {
         wrapFumoItemModel(event, "hyperdimensional_pigmee_fumo");
     }
 
-    private static void wrapFumoItemModel(ModelEvent.ModifyBakingResult event, String itemId) {
+    private static void wrapFumoItemModel(ModelEvent.BakingCompleted event, String itemId) {
         ResourceLocation id = new ResourceLocation(AE2LightningTech.MODID, itemId);
         ModelResourceLocation modelId = new ModelResourceLocation(id, "inventory");
         event.getModels().computeIfPresent(modelId, (ignored, model) ->

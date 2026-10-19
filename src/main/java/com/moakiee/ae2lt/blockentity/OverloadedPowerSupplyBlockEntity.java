@@ -7,7 +7,7 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -30,6 +30,7 @@ import appeng.api.storage.StorageCells;
 import appeng.api.storage.cells.ISaveProvider;
 import appeng.api.storage.cells.StorageCell;
 import appeng.api.util.AECableType;
+import com.moakiee.ae2lt.compat.LegacyNetworkBlockEntity;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
@@ -50,7 +51,7 @@ import com.moakiee.ae2lt.menu.OverloadedPowerSupplyMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
-public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
+public class OverloadedPowerSupplyBlockEntity extends LegacyNetworkBlockEntity
         implements InternalInventoryHost, FrequencyBindingHost {
 
     public static final int MAX_WIRELESS_CONNECTIONS = 64;
@@ -86,7 +87,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
         }
 
         public static WirelessConnection fromTag(CompoundTag tag) {
-            var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(tag.getString(TAG_DIM)));
+            var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, ResourceLocation.tryParse(tag.getString(TAG_DIM)));
             var pos = BlockPos.of(tag.getLong(TAG_POS));
             int rawFace = tag.getInt(TAG_FACE);
             var face = (rawFace >= 0 && rawFace < Direction.values().length)
@@ -525,7 +526,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
     @Override
     public void clearContent() {
         super.clearContent();
-        cellInv.clear();
+        com.moakiee.ae2lt.compat.LegacyInventories.clear(cellInv);
         connections.clear();
     }
 
@@ -631,7 +632,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
         int count = data.readVarInt();
         var newConnections = new ArrayList<WirelessConnection>(Math.min(count, MAX_WIRELESS_CONNECTIONS));
         for (int i = 0; i < count; i++) {
-            var dim = ResourceKey.create(Registries.DIMENSION, data.readResourceLocation());
+            var dim = ResourceKey.create(Registry.DIMENSION_REGISTRY, data.readResourceLocation());
             var pos = data.readBlockPos();
             int rawFace = data.readByte();
             var face = (rawFace >= 0 && rawFace < Direction.values().length)
