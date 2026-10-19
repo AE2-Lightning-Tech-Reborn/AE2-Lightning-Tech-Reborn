@@ -16,8 +16,12 @@ import org.jetbrains.annotations.Nullable;
 
 /** Menu contract used by both wired/wireless terminal families and maintenance packets. */
 public interface TianshuMaintenanceMenu {
-    @Nullable java.math.BigInteger getBigStock(AEKey key);
-    void applyBigStock(Map<AEKey, java.math.BigInteger> changes);
+    @Nullable default java.math.BigInteger getBigStock(AEKey key) {
+        return ((com.moakiee.ae2lt.crafting.big.BigTerminalMenu) maintenanceMenu()).ae2lt$getBigStock(key);
+    }
+    default void applyBigStock(Map<AEKey, java.math.BigInteger> changes) {
+        ((com.moakiee.ae2lt.crafting.big.BigTerminalMenu) maintenanceMenu()).ae2lt$applyBigStock(changes);
+    }
     MEStorageMenu maintenanceMenu();
     TianshuMaintenanceSession getMaintenanceSession();
     int getTianshuSelectionRevision();

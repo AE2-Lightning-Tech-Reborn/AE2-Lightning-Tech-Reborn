@@ -1,0 +1,38 @@
+// Requires an existing disposable Forge GameTest world; run with runClient.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/JeiMultiblockLayoutClientProbe.java'])
+        tasks.named('compileJdbJava').configure {
+            source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/JeiMultiblockLayoutClientProbe.java')
+        }
+        // Exercise the JEI-only gate without WTLib or EMI taking over recipe browsing.
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                            'io.github.llamalad7'])
+        }
+        def probeDirectory = project.file('build/jei-multiblock-layout-' + project.jei_version)
+        def sourceWorld = project.file('build/phase-flight-lock-forge/world')
+        def clientWorld = new File(probeDirectory, 'saves/MultiblockLayoutQA')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.multiblockLayoutProbe', 'true'
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'MultiblockLayoutQA', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(probeDirectory, 'multiblock-layout-result.txt').delete()
+                if (!clientWorld.isDirectory()) {
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run the phase flight GameTests first.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(probeDirectory, 'multiblock-layout-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Multiblock layout probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

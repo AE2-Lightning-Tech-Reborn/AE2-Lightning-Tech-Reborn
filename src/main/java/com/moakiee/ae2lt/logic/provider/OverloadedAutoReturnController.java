@@ -118,11 +118,10 @@ final class OverloadedAutoReturnController {
         sweep.clear();
     }
 
-    private List<ProviderTarget> currentTargets(
+    private List<? extends ProviderTarget> currentTargets(
             ServerLevel providerLevel, long gameTick) {
         if (environment.provider().getProviderMode() == ProviderMode.WIRELESS) {
-            return new ArrayList<>(environment.validConnections(
-                    providerLevel, gameTick));
+            return environment.validConnections(providerLevel, gameTick);
         }
         var targets = new ArrayList<ProviderTarget>();
         for (var direction : environment.normalTargetDirections()) {

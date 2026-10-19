@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.machine.lightningassembly.recipe;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.minecraft.resources.ResourceLocation;
@@ -25,10 +26,9 @@ public final class LightningAssemblyRecipeService {
             .thenComparing(Comparator.comparingInt(LightningAssemblyRecipe::totalInputCount).reversed())
             .thenComparing(recipe -> recipe.getId().toString());
 
-    private static Object cachedRawRecipeList;
     private static RecipeManager cachedRecipeManager;
     private static List<LightningAssemblyRecipe> sortedRecipeCache;
-    private static int cachedRecipeOrderFingerprint;
+    private static Map<ResourceLocation, LightningAssemblyRecipe> cachedRecipeSnapshot;
 
     private LightningAssemblyRecipeService() {
     }
@@ -36,36 +36,30 @@ public final class LightningAssemblyRecipeService {
     private static synchronized List<LightningAssemblyRecipe> getSortedRecipes(Level level) {
         RecipeManager recipeManager = level.getRecipeManager();
         var raw = RecipeManagerByTypeAccess.byType(recipeManager, ModRecipeTypes.LIGHTNING_ASSEMBLY_TYPE.get());
-        int orderFingerprint = computeRecipeOrderFingerprint(raw);
+        return getSortedRecipes(recipeManager, raw);
+    }
+
+    static synchronized List<LightningAssemblyRecipe> getSortedRecipes(
+            RecipeManager recipeManager, Map<ResourceLocation, LightningAssemblyRecipe> raw) {
         if (recipeManager != cachedRecipeManager
-                || raw != cachedRawRecipeList
-                || orderFingerprint != cachedRecipeOrderFingerprint
+                || !raw.equals(cachedRecipeSnapshot)
                 || sortedRecipeCache == null) {
-            sortedRecipeCache = new ArrayList<>(raw.values());
-            sortedRecipeCache.sort(RECIPE_ORDER);
+            // Recipe IDs and ordering fields can stay unchanged when a datapack or runtime
+            // integration replaces ingredients, outputs or costs in the same map. Compare
+            // the actual recipe instances, not a lossy hash of their ordering fields.
+            var sorted = new ArrayList<>(raw.values());
+            sorted.sort(RECIPE_ORDER);
+            sortedRecipeCache = List.copyOf(sorted);
             cachedRecipeManager = recipeManager;
-            cachedRawRecipeList = raw;
-            cachedRecipeOrderFingerprint = orderFingerprint;
+            cachedRecipeSnapshot = Map.copyOf(raw);
         }
         return sortedRecipeCache;
     }
 
-    private static int computeRecipeOrderFingerprint(java.util.Map<ResourceLocation, LightningAssemblyRecipe> recipes) {
-        int hash = 1;
-        for (var recipe : recipes.values()) {
-            hash = 31 * hash + recipe.getId().hashCode();
-            hash = 31 * hash + recipe.priority();
-            hash = 31 * hash + recipe.inputs().size();
-            hash = 31 * hash + recipe.totalInputCount();
-        }
-        return hash;
-    }
-
     public static synchronized void invalidateSortedRecipeCache() {
-        cachedRawRecipeList = null;
         cachedRecipeManager = null;
         sortedRecipeCache = null;
-        cachedRecipeOrderFingerprint = 0;
+        cachedRecipeSnapshot = null;
     }
 
     public static Optional<LightningAssemblyRecipeCandidate> findFirstProcessable(

@@ -190,16 +190,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     /** Exact encoded stack that still represents one blank pattern extracted by this menu. */
     private ItemStack refundableEncodedPattern = ItemStack.EMPTY;
 
-    private final com.moakiee.ae2lt.crafting.big.BigTerminalStock bigStock =
-            new com.moakiee.ae2lt.crafting.big.BigTerminalStock();
 
-    public java.math.BigInteger getBigStock(appeng.api.stacks.AEKey key) {
-        return bigStock.get(key);
-    }
-
-    public void applyBigStock(java.util.Map<appeng.api.stacks.AEKey, java.math.BigInteger> changes) {
-        if (isClientSide()) bigStock.apply(changes);
-    }
 
     public TianshuPatternEncodingTermMenu(
             int id, Inventory inventory, TianshuPatternTerminalHost host) {
@@ -212,8 +203,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         this.tianshuHost = host;
         this.maintenanceSession = new TianshuMaintenanceSession(this, this::resolveBoundTianshu,
                 () -> tianshuSelectionRevision, action -> sendClientAction("maintenanceAction", action));
-        var inheritedBlankPatternSlot = (AppEngSlot) getSlots(SlotSemantics.BLANK_PATTERN).get(0);
-        inheritedBlankPatternSlot.setSlotEnabled(false);
+        // GTO supplies blank patterns without a physical slot. Disable inherited
+        // slots only when present; both sides must construct the same menu.
+        for (var slot : getSlots(SlotSemantics.BLANK_PATTERN)) {
+            if (slot instanceof AppEngSlot inheritedBlankPatternSlot) {
+                inheritedBlankPatternSlot.setSlotEnabled(false);
+            }
+        }
         this.closedLoopMemberInventory = new AppEngInternalInventory(new InternalInventoryHost() {
             @Override
             public void onChangeInventory(InternalInventory inv, int slot) {
@@ -334,7 +330,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         broadcastParentChanges();
         if (isServerSide()) {
             maintenanceSession.sendMaintenanceSummaryIfNeeded();
-            bigStock.sync(this, tianshuHost);
         }
     }
 

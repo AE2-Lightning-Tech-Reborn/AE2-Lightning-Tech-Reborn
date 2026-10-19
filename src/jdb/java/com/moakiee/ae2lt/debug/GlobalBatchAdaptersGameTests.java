@@ -52,6 +52,8 @@ public final class GlobalBatchAdaptersGameTests {
 
     @GameTest(template = "empty")
     public static void optionalAdaptersRegisterAndNeoEcoAcceptsPartialBatch(GameTestHelper helper) throws Exception {
+        helper.assertTrue(!Boolean.getBoolean("ae2lt.neoecoBatchTestRequired")
+                || net.minecraftforge.fml.ModList.get().isLoaded("neoecoae"), "required NeoECO runtime loaded");
         for (var mapping : Map.of("neoecoae", "neoeco", "extendedae_plus", "extendedae_plus").entrySet()) {
             if (net.minecraftforge.fml.ModList.get().isLoaded(mapping.getKey())) {
                 helper.assertTrue(BatchProviderAdapters.entries().stream().anyMatch(e -> e.id().toString().equals("thunderbolt:" + mapping.getValue())),
@@ -59,52 +61,64 @@ public final class GlobalBatchAdaptersGameTests {
             }
         }
         if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) { helper.succeed(); return; }
-        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider");
-        var prepared = Class.forName(type.getName() + "$Preparation");
-        var preparationConstructor = Arrays.stream(prepared.getConstructors())
-                .filter(c -> c.getParameterCount() == 4).findFirst().orElseThrow();
-        long[] accepted = new long[1];
-        int[] ordinary = new int[1];
-        boolean[] fail = new boolean[1];
-        var uncertain = (RuntimeException) Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOIndeterminateBatchException")
-                .getConstructor(String.class, Throwable.class).newInstance("uncertain test submit", new IllegalStateException());
-        java.util.function.Predicate<Object> submit = batch -> {
-            if (fail[0]) throw uncertain;
-            try { accepted[0] += (long) batch.getClass().getMethod("craftCount").invoke(batch); }
-            catch (ReflectiveOperationException e) { throw new AssertionError(e); }
-            return true;
-        };
+        runNeoEco(helper, false);
+        runNeoEco(helper, true);
+        helper.succeed();
+    }
+
+    private static void runNeoEco(GameTestHelper helper, boolean uncertain) throws Exception {
+        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider");
+        Class<?> admission;
+        try { admission = Class.forName("cn.dancingsnow.neoecoae.crafting.execution.batch.ECOBatchAdmission"); }
+        catch (ClassNotFoundException atomic) { admission = null; }
+        final var receiptType = admission;
+        var pattern = new Pattern();
+        var job = new Job(helper.getLevel(), pattern);
+        int[] calls = {0}, ordinary = {0};
         var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
                 new Class<?>[] {ICraftingProvider.class, type}, (p, method, args) -> switch (method.getName()) {
                     case "isBusy" -> false;
-                    case "getAvailablePatterns" -> List.of();
-                    case "eco$prepareFastPath" -> preparationConstructor.newInstance(3L, null, false, submit);
+                    case "getAvailablePatterns" -> List.of(pattern);
+                    case "hashCode" -> System.identityHashCode(p);
+                    case "equals" -> p == args[0];
+                    case "eco$getBatchCapacity" -> uncertain || receiptType != null ? 8L : 3L;
+                    case "eco$pushBatch", "eco$pushBatchAdmission" -> {
+                        calls[0]++;
+                        var context = args[0];
+                        var contextType = context.getClass();
+                        helper.assertTrue(job.craftingId().equals(contextType.getMethod("craftingJobId").invoke(context)), "NeoECO job identity");
+                        var inputs = (KeyCounter[]) contextType.getMethod("inputCounters").invoke(context);
+                        helper.assertTrue(inputs[0].get(AEItemKey.of(Items.STONE)) == 1, "NeoECO context contains one copy");
+                        if (uncertain) {
+                            if (receiptType == null) throw new IllegalStateException("uncertain native batch");
+                            yield receiptType.getMethod("indeterminate").invoke(null);
+                        }
+                        yield receiptType == null ? true
+                                : receiptType.getMethod("accepted", long.class, boolean.class).invoke(null, 3L, false);
+                    }
                     case "pushPattern" -> { ordinary[0]++; yield false; }
-                    default -> null;
+                    default -> throw new AssertionError(method);
                 });
-        var raw = helper.getLevel().getRecipeManager().byKey(new ResourceLocation("oak_planks")).orElseThrow();
-        var holder = (net.minecraft.world.item.crafting.CraftingRecipe) raw;
-        var inputs = new net.minecraft.world.item.ItemStack[9]; Arrays.fill(inputs, net.minecraft.world.item.ItemStack.EMPTY);
-        inputs[0] = new net.minecraft.world.item.ItemStack(Items.OAK_LOG);
-        var pattern = appeng.api.crafting.PatternDetailsHelper.decodePattern(
-                appeng.api.crafting.PatternDetailsHelper.encodeCraftingPattern(holder, inputs, new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 4), false, false), helper.getLevel());
-        var entry = BatchProviderAdapters.entries().stream().filter(e -> e.id().toString().equals("thunderbolt:neoeco")).findFirst().orElseThrow();
-        var endpoint = entry.adapter().adapt(provider, pattern, null);
-        helper.assertTrue(endpoint != null, "native NeoECO protocol recognized");
-        var template = new KeyCounter(); template.add(AEItemKey.of(Items.OAK_LOG), 1);
-        var job = new Job(helper.getLevel(), pattern);
-        helper.assertTrue(endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job) == 5, "NeoECO partial capacity returned five copies");
-        helper.assertTrue(accepted[0] == 3 && ordinary[0] == 0, "three accepted via real NeoECO FastPath facade");
-        helper.assertTrue(template.get(AEItemKey.of(Items.OAK_LOG)) == 1, "NeoECO did not mutate template");
-        fail[0] = true;
-        try {
-            endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job);
-            throw new AssertionError("indeterminate submit must propagate");
-        } catch (RuntimeException expected) {
-            helper.assertTrue(expected == uncertain, "preserved NeoECO uncertain ownership signal");
+        var energy = (IEnergyService) Proxy.newProxyInstance(IEnergyService.class.getClassLoader(),
+                new Class<?>[] {IEnergyService.class}, (p, m, a) -> m.getName().equals("extractAEPower") ? a[0] : null);
+        var service = new CraftingService(proxy(IGrid.class), proxy(IStorageService.class), energy) {
+            @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) { return List.of(provider); }
+        };
+        var inventory = new ListCraftingInventory(key -> {});
+        inventory.insert(AEItemKey.of(Items.STONE), 8, Actionable.MODULATE);
+        var schedule = new TickProviderDispatchSchedule(); schedule.beginTick(1);
+        var result = BatchExecutor.runBatchOnly(8, BatchCpuAccounting.Mode.LINEAR, service, energy, job,
+                inventory, new HashMap<>(), () -> {}, Map.of(), 8, 8, false, schedule);
+        helper.assertTrue(calls[0] == 1 && ordinary[0] == 0, "one native submit without ordinary replay");
+        if (uncertain) {
+            helper.assertTrue("AMBIGUOUS_BATCH_PROVIDER_OWNERSHIP".equals(job.failure), "uncertain NeoECO ownership halts CPU");
+            helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 0, "uncertain inputs are not refunded");
+            helper.assertTrue(job.waitingFor.list.isEmpty(), "uncertain output is not confirmed");
+        } else {
+            helper.assertTrue(job.failure == null && result.dispatchedCopies() == 3, "three native copies accepted");
+            helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 5, "only three inputs owned by NeoECO");
+            helper.assertTrue(job.task.count == 5 && job.waitingFor.list.get(AEItemKey.of(Items.SAND)) == 6, "partial task/output settlement");
         }
-        helper.assertTrue(ordinary[0] == 0, "uncertain NeoECO submission was not replayed");
-        helper.succeed();
     }
 
     private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,
@@ -204,11 +218,12 @@ public final class GlobalBatchAdaptersGameTests {
     private static final class Job implements BatchJobView {
         final Level level; final Task task; final ArrayList<BatchTaskHandle> tasks = new ArrayList<>();
         final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure;
+        final UUID craftingId = UUID.randomUUID();
         Job(Level level, IPatternDetails pattern) { this.level = level; task = new Task(pattern); tasks.add(task); }
         @Override public Level level() { return level; }
         @Override public Iterator<BatchTaskHandle> taskIterator() { return tasks.iterator(); }
         @Override public ListCraftingInventory waitingFor() { return waitingFor; }
-        @Override public UUID craftingId() { return null; }
+        @Override public UUID craftingId() { return craftingId; }
         @Override public void addContainerMaxItems(long count, AEKeyType type) {}
         @Override public void failDispatch(String reason, Throwable cause) { failure = reason; }
     }

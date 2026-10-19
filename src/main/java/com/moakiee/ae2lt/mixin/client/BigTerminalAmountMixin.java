@@ -10,7 +10,7 @@ import appeng.menu.me.common.MEStorageMenu;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moakiee.ae2lt.compat.gto.GtoTerminalAmounts;
-import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
+import com.moakiee.ae2lt.crafting.big.BigTerminalMenu;
 import com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter;
 import gto_ae.hooks.gui.menu.IRepoSlot;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,7 +32,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
     private void ae2lt$amount(IRepoSlot slot, GuiGraphics graphics, Repo repo, boolean large, boolean craftOnly,
             Operation<Void> original) {
         var entry = slot.getEntry();
-        var exact = menu instanceof TianshuMaintenanceMenu m && entry != null ? m.getBigStock(entry.getWhat()) : null;
+        var exact = menu instanceof BigTerminalMenu m && entry != null ? m.ae2lt$getBigStock(entry.getWhat()) : null;
         GtoTerminalAmounts.with(entry != null ? entry.getWhat() : null, exact,
                 () -> original.call(slot, graphics, repo, large, craftOnly));
     }
@@ -43,7 +43,7 @@ public abstract class BigTerminalAmountMixin extends AEBaseScreen<MEStorageMenu>
             IRepoSlot.TooltipHandler emptyDrawer, IRepoSlot.TooltipHandler itemDrawer, boolean craftOnly,
             Operation<Void> original) {
         var entry = slot.getEntry();
-        var exact = menu instanceof TianshuMaintenanceMenu m && entry != null ? m.getBigStock(entry.getWhat()) : null;
+        var exact = menu instanceof BigTerminalMenu m && entry != null ? m.ae2lt$getBigStock(entry.getWhat()) : null;
         if (exact != null) {
             var previousDrawer = itemDrawer;
             var key = entry.getWhat();

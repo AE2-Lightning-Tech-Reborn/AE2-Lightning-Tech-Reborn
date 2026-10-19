@@ -85,7 +85,7 @@ public record BigCraftingPlan(
                                                     .max(BigInteger.ZERO)));
             for (var block : exact.program().blocks())
                 for (var step : block.steps()) {
-                    var recipe = (BigMatrixRecipe) step.recipe().source();
+                    var recipe = (BigCraftingRecipe) step.recipe().source();
                     var copies = step.copies().multiply(block.repetitions());
                     crafted.merge(
                             recipe.pattern().output(),

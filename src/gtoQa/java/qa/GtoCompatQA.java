@@ -46,6 +46,14 @@ public final class GtoCompatQA {
     private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
     private static final java.util.concurrent.atomic.AtomicInteger ENGINE_CALLS = new java.util.concurrent.atomic.AtomicInteger();
     public GtoCompatQA() {
+        if (Boolean.getBoolean("ae2lt.emiMultiblockProbe")) {
+            try {
+                Class.forName("com.moakiee.ae2lt.integration.emi.EmiMultiblockClientProbe")
+                        .getMethod("register").invoke(null);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("Cannot register the EMI client probe", failure);
+            }
+        }
         CraftingPlanningEngines.register(new CraftingPlanningEngine() {
             public net.minecraft.resources.ResourceLocation id(){return QA_ENGINE_ID;}
             public boolean check(IGrid grid,PlanningRequest request){return true;}
@@ -60,15 +68,55 @@ public final class GtoCompatQA {
     }
     private void start(ServerStartedEvent e) {
         try {
+            // GTO skips all CraftingService ticks until a player has joined.
+            // Headless fixtures must enable that scheduling gate to exercise
+            // native waiting-key refresh and output routing without a client.
+            if (!"none".equals(System.getProperty("ae2lt.gtoQaSuite", "base"))) {
+                appeng.hooks.ticking.TickHandler.instance().playerJoined = true;
+            }
             try { checkCpu(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA CPU FAIL",failure); }
             try { checkStorage(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA STORAGE FAIL",failure); }
             try { checkPlanner(e.getServer()); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA PLANNER FAIL",failure); }
-            GameTestRegistry.register(GtoCpuGameTests.class);
-            GameTestRegistry.register(TimeWheelCraftingStatusGameTests.class);
-            GameTestRegistry.register(ClosedLoopSharedSeedBatchGameTests.class);
-            tests = GameTestRunner.runTests(GameTestRegistry.getAllTestFunctions(), new BlockPos(0,100,0),
-                    Rotation.NONE,e.getServer().overworld(),ticker,4);
-            LOGGER.info("GTO_COMPAT_QA START tests="+tests.size());
+            var suite = System.getProperty("ae2lt.gtoQaSuite", "base");
+            switch (suite) {
+                case "base" -> {
+                    GameTestRegistry.register(GtoCpuGameTests.class);
+                    GameTestRegistry.register(TimeWheelCraftingStatusGameTests.class);
+                    GameTestRegistry.register(ClosedLoopSharedSeedBatchGameTests.class);
+                }
+                case "exact" -> {
+                    GameTestRegistry.register(com.moakiee.ae2lt.debug.BigIntegerPipelineGameTests.class);
+                    GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigMixedProviderGameTests.class);
+                }
+                case "interfaces" -> GameTestRegistry.register(
+                        com.moakiee.ae2lt.blockentity.OverloadedInterfaceExportFairnessGameTests.class);
+                case "recipes" -> GameTestRegistry.register(GtoRecipeGameTests.class);
+                case "content" -> GameTestRegistry.register(GtoContentGameTests.class);
+                case "content-recipes" -> {
+                    GameTestRegistry.register(GtoContentGameTests.class);
+                    GameTestRegistry.register(GtoRecipeGameTests.class);
+                }
+                case "batch" -> GameTestRegistry.register(com.moakiee.ae2lt.debug.GlobalBatchAdaptersGameTests.class);
+                case "none" -> { }
+                default -> throw new IllegalArgumentException("Unknown GTO QA suite: " + suite);
+            }
+            // Some fixtures construct multiblocks beyond the small empty template. Give every
+            // test its own area so concurrently ticking fixtures cannot overwrite one another.
+            tests = new ArrayList<>();
+            int index = 0;
+            for (var function : GameTestRegistry.getAllTestFunctions()) {
+                var name = function.getTestName().toLowerCase(Locale.ROOT);
+                if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")
+                        && (name.contains("neoeconativereceipts") || name.contains("optionaladaptersregister"))) {
+                    LOGGER.info("GTO_COMPAT_QA SKIP " + function.getTestName() + " (NeoECO absent)");
+                    continue;
+                }
+                if (!Boolean.getBoolean("ae2lt.exportFairnessBenchmark")
+                        && function.getTestName().toLowerCase(Locale.ROOT).contains("benchmark")) continue;
+                tests.addAll(GameTestRunner.runTests(List.of(function), new BlockPos(index++ * 1024,100,0),
+                        Rotation.NONE,e.getServer().overworld(),ticker,1));
+            }
+            LOGGER.info("GTO_COMPAT_QA START suite="+suite+" tests="+tests.size());
         } catch(Throwable failure) { LOGGER.error("QA failure",failure); LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure); }
     }
     private void tick(TickEvent.ServerTickEvent e) {

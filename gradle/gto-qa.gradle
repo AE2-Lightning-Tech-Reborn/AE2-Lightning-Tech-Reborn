@@ -2,13 +2,66 @@
 sourceSets.create('gtoQa') {
     compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
     runtimeClasspath += output + compileClasspath
+    java {
+        srcDir 'src/jdb/java'
+        include 'qa/**'
+        include '**/BigMixedProviderGameTests.java'
+        include '**/BigIntegerPipelineGameTests.java'
+        include '**/GlobalBatchAdaptersGameTests.java'
+        include '**/OverloadedInterfaceExportFairnessGameTests.java'
+        include '**/BigTerminalClientProbe.java'
+        include '**/JeiMultiblockLayoutClientProbe.java'
+        include '**/EmiMultiblockClientProbe.java'
+    }
+    resources {
+        srcDir 'src/jdb/resources'
+        include 'META-INF/mods.toml', 'pack.mcmeta'
+        include 'data/ae2lt_migration/structures/migration_test.nbt'
+        include 'data/ae2lt_global_batch/structures/empty.nbt'
+        include 'data/ae2lt_io/structures/wireless_io_empty.nbt'
+        include 'data/ae2lt_qa/recipes/**'
+    }
+}
+// The reobfuscator resolves inherited Minecraft members from JAR libraries.
+// Source output directories alone are not accepted by its library scanner.
+tasks.register('gtoQaMainClassesJar', Jar) {
+    archiveFileName = 'gto-qa-main-dev.jar'
+    from(sourceSets.main.output)
+    destinationDirectory = layout.buildDirectory.dir('gto-qa')
 }
 tasks.register('gtoQaJar', Jar) {
     group = 'verification'
     description = 'Builds the disposable GTO server/client integration test mod.'
     archiveFileName = 'gto-compat-qa.jar'
-    from sourceSets.gtoQa.output
+    from(sourceSets.gtoQa.output) {
+        include 'qa/**', 'META-INF/mods.toml', 'pack.mcmeta'
+    }
     destinationDirectory = layout.buildDirectory.dir('gto-qa')
 }
-reobf { gtoQaJar {} }
+reobf { gtoQaJar { libraries.from(tasks.named('gtoQaMainClassesJar')) } }
 tasks.named('gtoQaJar').configure { finalizedBy 'reobfGtoQaJar' }
+
+// Fixtures need LT's package-private dispatch APIs. Keep them in LT's module rather
+// than creating split packages across the two Forge modules on Java 21.
+tasks.register('gtoQaFixturesJar', Jar) {
+    archiveFileName = 'gto-qa-fixtures.jar'
+    from(sourceSets.gtoQa.output) { include 'com/**', 'data/**' }
+    destinationDirectory = layout.buildDirectory.dir('gto-qa')
+}
+reobf { gtoQaFixturesJar { libraries.from(tasks.named('gtoQaMainClassesJar')) } }
+tasks.named('gtoQaFixturesJar').configure { finalizedBy 'reobfGtoQaFixturesJar' }
+
+tasks.register('gtoQaLtJar', Jar) {
+    group = 'verification'
+    description = 'Adds disposable fixtures to the unchanged production LT classes.'
+    dependsOn 'reobfJarJar', 'reobfGtoQaFixturesJar'
+    archiveFileName = 'ae2lt-gto-qa-instrumented.jar'
+    from({ zipTree(tasks.named('jarJar').get().archiveFile.get().asFile) }) {
+        exclude 'META-INF/MANIFEST.MF'
+    }
+    from({ zipTree(tasks.named('gtoQaFixturesJar').get().archiveFile.get().asFile) }) {
+        include 'com/**', 'data/**'
+    }
+    manifest { attributes(tasks.named('jar').get().manifest.attributes) }
+    destinationDirectory = layout.buildDirectory.dir('gto-qa')
+}

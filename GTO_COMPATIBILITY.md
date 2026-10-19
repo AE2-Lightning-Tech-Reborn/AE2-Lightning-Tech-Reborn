@@ -17,6 +17,20 @@
 
 客户端与服务端一起替换对应的 TB/LT JAR，移除同 mod ID 的旧版本。GTOCore、GTOLib 与 GTO 自带 AE2 均使用原件；无需修改 GTO。不要把这两个包放进普通 AE2 整合包，也不要把普通 LTPP/其他依赖旧 AE2 API 的附属兼容性视为本次验证范围。
 
+## 同步 1.20.1 分支
+
+当前工作树已移植 `1.20.1` 分支 `2228757b` 相对共同基点 `fd043629` 的 7 个提交：
+
+- 接口导出调度与供应器派发、回收快照优化。
+- 普通和批量供应器混合执行精确订单，保留真实投料、返回、取消和存档的数量归属。
+- 原生终端菜单的大数库存同步与显示，以及天枢多方块布局、顶部端口和 JEI 预览调整。
+- EMI 运行兼容下限放宽至 `1.1.22+1.20.1`。
+
+保留上表中的 Forge、AE2-GTO 和 Thunderbolt 版本，不切换为普通 AE2 或 Thunderbolt beta3。
+缺少的 `BigLongSlice` 移植到 LT 自有兼容包，并沿用 GTO Thunderbolt 的三参数精确报告 API。
+终端数量显示继续使用 GTO 的 `IRepoSlot` 渲染入口；实体 CPU 拆除时同时回收普通库存和产物缓冲。
+原生终端同步协议更新为 `12`，客户端与服务端必须一起更新。
+
 ## 不支持混用最新 AE2 源码依赖
 
 公开 GTOCore 26.10.5 原件的 `CreativeCellInventoryMixin` 仍要求 `configured: java.util.Set`。外置 AE2-GTO 15.2610.10 已将其改为 `AEKeySet`，该组合会在 GTO 自身的客户端 Mixin 中失败。因此此构建的编译依赖与运行版本均锁定 15.2610.8；不要单独覆盖 GTO 自带 AE2。本次没有修改 GTO 来绕过这个错误。
@@ -55,12 +69,30 @@ LT 编译时下载公开 GTOCore 26.10.5 原件，并校验 SHA-256 `8e6260ac596
 LT 保存了可选测试源集 `src/gtoQa`：
 
 ```sh
-./gradlew -PgtoQa gtoQaJar
+./gradlew -PgtoQa gtoQaJar gtoQaLtJar
 ```
 
-将 `build/gto-qa/gto-compat-qa.jar` 与本次两个主 JAR 放入**隔离测试用** GTO 服务端/客户端。测试模组会在服务端启动后于 `(0,100,0)` 附近放置测试结构并自动运行用例；客户端进入世界后检查界面与数量格式、保存截图并自动退出。不要放入正常游戏存档。它不包含在 TB/LT 主 JAR 中。
+在**隔离测试用** GTO 服务端/客户端放入配套 TB 主 JAR、`build/gto-qa/gto-compat-qa.jar` 和 `build/gto-qa/ae2lt-gto-qa-instrumented.jar`。后者替代 LT 主 JAR，保留所有生产类字节并附加测试夹具，避免 Java 21 的模块分包冲突。`gto-qa-fixtures.jar` 和 `gto-qa-main-dev.jar` 均为构建中间件，不能单独放入 mods。正式游戏使用 `build/libs` 的 LT 主 JAR。
 
-服务端需出现 CPU、STORAGE、PLANNER 三个 PASS，以及 `GTO_COMPAT_QA PASS total=9 failed=0 startupFailures=0`；客户端需出现 `GTO_CLIENT_QA PASS`。测试覆盖真实 Mixin 后的计算入口、原生回退、共享库存去重、大数库存、挂载顺序、实体 CPU 超载投料/暂停/存档恢复/变体返回/普通任务切换，以及 8 个时轮状态和共享种子循环测试。它不等于整个整合包所有配方和所有可选附属的穷举测试。
+测试模组会在服务端启动后放置结构并自动运行用例；用 `-Dae2lt.gtoQaSuite=base|exact|interfaces|batch|recipes|content|content-recipes|none` 选择测试组，每次使用独立的新存档。`recipes`、`content` 及两者合并的 `content-recipes` 可直接配合正式 LT 主包使用；其余组中的包内夹具需要上述 instrumented 包。测试夹具为超出模板的多方块保持区块加载，并打开 GTO 的玩家加入后合成更新条件；精确配方测试使用自有测试配方，不改 GTO 缓存的配方表。不要在正常游戏存档中运行。
+
+客户端使用 `-Dae2lt.gtoQaSuite=none`，进入测试世界后默认检查界面与数量格式、保存截图并自动退出。附加 `-Dae2lt.bigTerminalProbe=true` 验证原生/天枢终端的大数库存与提示；`-Dae2lt.emiMultiblockProbe=true` 验证 GTO 默认 EMI 预览；原生 JEI 环境可用 `-Dae2lt.multiblockLayoutProbe=true`。GTO 的 EMI/JEMI 会接管 JEI 界面，不能把 JEMI 界面强转为原生 JEI。
+
+服务端需出现 CPU、STORAGE、PLANNER 三个 PASS，以及 `GTO_COMPAT_QA PASS total=11 failed=0 startupFailures=0`；客户端需出现 `GTO_CLIENT_QA PASS`。测试覆盖真实 Mixin 后的计算入口、原生回退、共享库存去重、大数库存、挂载顺序、实体 CPU 超载投料/暂停/存档恢复/变体返回/普通任务切换、满库存下运行中及空闲 CPU 拆除时普通库存与产物缓冲的完整回收和重复调用防复制，以及 8 个时轮状态和共享种子循环测试。它不等于整个整合包所有配方和所有可选附属的穷举测试。
+
+## 本轮验证记录
+
+- `compileJava`、`compileTestJava`、`compileGtoQaJava` 及可选游戏测试/客户端探针源文件均编译通过。
+- `check`：1489 个单元测试，1484 个通过、5 个跳过、0 个失败；包括 5 个精确数量切片边界测试。
+- `jarJar` 与 `gtoQaJar` 完成打包和重混淆。
+- 独立字节码探针验证了 AE2-GTO 15.2610.8 上的 CPU 拆除注入，以及原生终端接口和单次库存同步注入。
+- 已在隔离的完整 GTO 整合包中运行专用服游戏测试和真实图形客户端；发现并修复了 GTO 不提供空白样板槽时天枢编码终端打开越界的问题。
+- GTO 接管 EMI/JEI 插件发现，LT 通过 GTO 的公开插件事件注册自身分类与转移处理器。
+- 专用服四组共 34 项实测通过；真实客户端的原生/天枢大数终端、EMI 交互预览与正式包独立联机均通过。两项 NeoECO 用例因未安装该附属跳过。
+- 实测范围、通过数量、原始日志、截图及排查边界见 [2026-10-19 实机测试记录](GTO_REAL_TEST_2026-10-19.md)。
+- 补充审计检查了 5202 处外部成员引用、1866 个具体类及真实客户端的 73 个 Mixin 目标类；关键 JEI/EMI 配方转移断言通过。条件跳过和配方输入重叠提示见 [兼容性补充审计](GTO_COMPATIBILITY_AUDIT_2026-10-19.md)。
+- 后续修复组装室在原配方映射内替换内容时沿用旧对象的缓存缺陷。完整 `check` 更新为 1491 项，1486 通过、5 跳过，0 失败；新正式包的 9 项专用服配方用例通过，覆盖 7 个提示配方及两种指定混合投料。新制品 SHA-256 为 `9e90bf5ba86c0dca0a5248a87ffc8032657176b7a86095972962687d31fb23e2`，详细结果见上述补充审计。
+- 全面复查又修复共享机器合成执行器的部分扣料漏退、闪电提取回调填满输出槽后可能留下免费产物两处缺陷。完整 `check` 为 1495 项，1490 通过、5 跳过，0 失败；正式包的 13 项整包用例、349 条配方网络往返、真实客户端及 73 个 Mixin 目标类检查均通过。当前正式包 SHA-256 为 `ec64cf561010d84fec7f5f70291eb0b88b40b62c1032b51b9460674426be2d29`。本轮覆盖及证据见 [全面复查记录](GTO_FULL_AUDIT_2026-10-19.md)。上述旧制品结果保留为历史记录。
 
 ## 来源
 

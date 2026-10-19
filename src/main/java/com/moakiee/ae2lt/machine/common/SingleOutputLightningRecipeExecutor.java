@@ -52,11 +52,13 @@ public final class SingleOutputLightningRecipeExecutor {
             }
 
             ItemStack extracted = inventory.extractItem(slot, toConsume);
+            // A short extraction still transfers ownership of the returned items.
+            // Include this slot in rollback before checking whether it fulfilled the plan.
+            extractedInputs[slot] = extracted;
             if (extracted.getCount() != toConsume) {
                 rollbackInputs(inputStartSlot, inputEndSlot, extractedInputs, inventory);
                 return false;
             }
-            extractedInputs[slot] = extracted;
         }
 
         long extractedLightning = lightning.extract(plan.key(), plan.amount());
@@ -68,7 +70,10 @@ public final class SingleOutputLightningRecipeExecutor {
             return false;
         }
 
-        if (!inventory.insertOutput(result).isEmpty()) {
+        // Lightning extraction can invoke external storage callbacks. Recheck output space
+        // after those callbacks so a newly filled slot cannot keep a partial output while
+        // the recipe's inputs and lightning are refunded.
+        if (!inventory.canAcceptOutput(result) || !inventory.insertOutput(result).isEmpty()) {
             lightning.insert(plan.key(), extractedLightning);
             rollbackInputs(inputStartSlot, inputEndSlot, extractedInputs, inventory);
             return false;

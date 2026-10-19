@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.compat.gto;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -15,10 +16,12 @@ import appeng.crafting.execution.ElapsedTimeTracker;
 import appeng.crafting.inv.ListCraftingInventory;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import appeng.me.service.CraftingService;
+import appeng.util.Platform;
 import com.gtocore.api.ae2.crafting.OptimizedCraftingCpuLogic;
 import com.moakiee.ae2lt.crafting.timewheel.*;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
@@ -105,6 +108,19 @@ public final class GtoCompatibleCraftingCpuLogic extends OptimizedCraftingCpuLog
         listeners.remove(listener); super.removeListener(listener); if (usesLt()) lt().removeListener(listener);
     }
     public long getRemainingOutputAmount() { return usesLt() ? lt().getRemainingOutputAmount() : GtoCpuJobAccess.remaining(this); }
+
+    /** Reclaim both LT inventories before AE2's breakCluster path drops its ordinary inventory. */
+    public void dropStoredItemsForRemoval(Level level, BlockPos pos) {
+        var cpu = ltCpu;
+        if (cpu == null) return;
+        var drops = new ArrayList<net.minecraft.world.item.ItemStack>();
+        cpu.addRemovalDrops(level, pos, drops);
+        // Spawning entities and destroying the remaining cluster blocks can reenter breakCluster.
+        // Transfer ownership to the drop list before either can visit the same CPU again.
+        cpu.clearRemovedContent();
+        Platform.spawnDrops(level, pos, drops);
+    }
+
     @Override public void writeToNBT(CompoundTag data) {
         if (usesLt()) {
             data.remove("job"); data.remove("inventory");

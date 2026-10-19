@@ -12,6 +12,7 @@ import appeng.api.storage.MEStorage;
 import appeng.blockentity.crafting.CraftingBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import appeng.crafting.CraftingPlan;
+import appeng.crafting.inv.ListCraftingInventory;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import appeng.me.service.CraftingService;
 import appeng.me.storage.NetworkStorage;
@@ -25,12 +26,83 @@ import net.minecraft.gametest.framework.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.gametest.*;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 @GameTestHolder("ae2lt")
 @PrefixGameTestTemplate(false)
 public class GtoCpuGameTests {
+    @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty", timeoutTicks = 100)
+    public static void physicalGtoCpuDropsBufferedOutputsOnceOnRemoval(GameTestHelper helper) {
+        checkRemovalDrops(helper, true);
+    }
+
+    @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty", timeoutTicks = 100)
+    public static void idlePhysicalGtoCpuDropsRestoredBufferedOutputsOnceOnRemoval(GameTestHelper helper) {
+        checkRemovalDrops(helper, false);
+    }
+
+    private static void checkRemovalDrops(GameTestHelper helper, boolean activeJob) {
+        helper.setBlock(new BlockPos(0, 2, 0), AEBlocks.CRAFTING_STORAGE_64K.block());
+        helper.setBlock(new BlockPos(0, 1, 0), AEBlocks.CREATIVE_ENERGY_CELL.block());
+        helper.runAfterDelay(20, () -> {
+            var fixture = new Fixture(helper);
+            try {
+                var save = new CompoundTag();
+                if (activeJob) {
+                    fixture.startAndReload(); // One input dispatched, two remain in CPU inventory.
+                    fixture.logic.writeToNBT(save);
+                } else {
+                    var inventory = new ListCraftingInventory(key -> { });
+                    inventory.insert(fixture.input, 2, Actionable.MODULATE);
+                    var state = new CompoundTag();
+                    state.put("inventory", inventory.writeToNBT());
+                    save.put("ae2ltGtoOverloadCpu", state);
+                }
+                var remainders = new ListCraftingInventory(key -> { });
+                remainders.insert(fixture.input, 5, Actionable.MODULATE);
+                remainders.insert(fixture.actual, 7, Actionable.MODULATE);
+                save.getCompound("ae2ltGtoOverloadCpu").put(
+                        "deferredDeliveryRemainders", remainders.writeToNBT());
+                fixture.stock.acceptsInsertion = false;
+                fixture.logic = new GtoCompatibleCraftingCpuLogic(fixture.cpu);
+                fixture.cpu.craftingLogic = fixture.logic;
+                fixture.logic.readFromNBT(save);
+                var link = fixture.logic.getLastLink();
+                var block = (CraftingBlockEntity) helper.getBlockEntity(new BlockPos(0, 2, 0));
+                var pos = block.getBlockPos();
+
+                block.breakCluster();
+                assertDroppedAmount(helper, pos, fixture.input, 7);
+                assertDroppedAmount(helper, pos, fixture.actual, 7);
+                helper.assertFalse(fixture.logic.hasJob(), "removal cleared all LT persistent state");
+                if (link != null) helper.assertTrue(link.isCanceled(), "removed CPU canceled its job link");
+
+                // A repeated visit must not reproduce either ordinary stock or buffered outputs.
+                block.breakCluster();
+                fixture.logic.dropStoredItemsForRemoval(helper.getLevel(), pos);
+                assertDroppedAmount(helper, pos, fixture.input, 7);
+                assertDroppedAmount(helper, pos, fixture.actual, 7);
+                helper.succeed();
+            } catch (Exception failure) {
+                throw new RuntimeException(failure);
+            } finally {
+                fixture.service.removeNode(fixture.providerNode);
+                fixture.network.unmount(fixture.stock);
+            }
+        });
+    }
+
+    private static void assertDroppedAmount(GameTestHelper helper, BlockPos pos, AEItemKey key, long expected) {
+        long actual = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(4)).stream()
+                .map(ItemEntity::getItem)
+                .filter(stack -> key.equals(AEItemKey.of(stack)))
+                .mapToLong(ItemStack::getCount).sum();
+        helper.assertTrue(actual == expected, "dropped " + key + ": expected " + expected + ", got " + actual);
+    }
+
     @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=100)
     public static void physicalGtoCpuPreservesOverloadPauseSaveReturnAndNativeFallback(GameTestHelper helper) {
         helper.setBlock(new BlockPos(0,2,0),AEBlocks.CRAFTING_STORAGE_64K.block());
@@ -109,15 +181,18 @@ public class GtoCpuGameTests {
             h.assertTrue(linkOwner.invoke(logic.getLastLink())==cpu,"crafting link retains physical CPU identity");
             logic.tickCraftingLogic(grid.getEnergyService(),service);
             h.assertTrue(pushes==1,"paused job did not dispatch");
-            acceptReturn();logic.setPaused(false);
+            // The real grid also ticks this physical CPU between delayed GameTest callbacks.
+            // Keep it paused outside each explicitly measured operation budget.
+            acceptReturn();
         }
-        void step(){logic.tickCraftingLogic(grid.getEnergyService(),service);h.assertTrue(pushes==returns+1,"next physical operation dispatched: pushes="+pushes+" returns="+returns+" remaining="+logic.getRemainingOutputAmount()+" stored="+logic.getStored(input)+" pending="+logic.getPendingOutputs(expected)+" waiting="+logic.getWaitingFor(expected)+" paused="+logic.isPaused()+" active="+cpu.isActive());acceptReturn();}
+        void step(){logic.setPaused(false);logic.tickCraftingLogic(grid.getEnergyService(),service);h.assertTrue(pushes==returns+1,"next physical operation dispatched: pushes="+pushes+" returns="+returns+" remaining="+logic.getRemainingOutputAmount()+" stored="+logic.getStored(input)+" pending="+logic.getPendingOutputs(expected)+" waiting="+logic.getWaitingFor(expected)+" paused="+logic.isPaused()+" active="+cpu.isActive());acceptReturn();logic.setPaused(true);}
         void acceptReturn(){
             long accepted=logic.insert(actual,1,Actionable.MODULATE);
             stock.insert(actual,1-accepted,Actionable.MODULATE,IActionSource.empty());returns++;
             h.assertTrue(logic.getRemainingOutputAmount()==3-returns,"same-ID variant reduced remaining output exactly once");
         }
         void finish(){
+            logic.setPaused(false);
             h.assertTrue(!logic.hasJob(),"overload job finished");
             h.assertTrue(stock.counts.get(input)==0 && stock.counts.get(actual)==3,"three inputs consumed and three actual outputs retained");
             var emitted=new KeyCounter();emitted.add(input,1);
@@ -131,8 +206,9 @@ public class GtoCpuGameTests {
     }
     private static final class Stock implements MEStorage {
         final KeyCounter counts=new KeyCounter();
+        boolean acceptsInsertion = true;
         public Component getDescription(){return Component.literal("QA stock");}
-        public long insert(AEKey key,long amount,Actionable mode,IActionSource source){if(mode==Actionable.MODULATE)counts.add(key,amount);return amount;}
+        public long insert(AEKey key,long amount,Actionable mode,IActionSource source){if(!acceptsInsertion)return 0;if(mode==Actionable.MODULATE)counts.add(key,amount);return amount;}
         public long extract(AEKey key,long amount,Actionable mode,IActionSource source){long got=Math.min(amount,Math.max(0,counts.get(key)));if(mode==Actionable.MODULATE)counts.remove(key,got);return got;}
         public void getAvailableStacks(KeyCounter out){out.addAll(counts);}
     }

@@ -1,0 +1,21 @@
+// Focused Forge 1.20.1 exact crafting regressions.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+            '**/BigIntegerPipelineGameTests.java', '**/BigMixedProviderGameTests.java'
+        ])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/bigint-gametest-forge')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_bigint,ae2lt_migration'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = project.file('build/bigint-gametest-forge/logs/latest.log').text
+                def passed = log =~ /All (\d+) required tests passed/
+                if (!passed.find() || passed.group(1).toInteger() < 13)
+                    throw new GradleException('Expected all 13 exact crafting GameTests to execute.')
+            }
+        }
+    }
+}

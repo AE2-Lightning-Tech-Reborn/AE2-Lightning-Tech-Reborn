@@ -63,3 +63,13 @@ They use LT-owned packages because the GTO AE2 fork no longer includes the JEI h
 
 GTOCore is a compile-only dependency for its public CPU superclass. Its classes and GTOLib
 implementation are not redistributed in this mod. The installed GTOCore supplies them.
+
+## Thunderbolt — exact provider transfers
+
+`compat/gto/BigLongSlice` is adapted from Thunderbolt Core Reborn's `1.20.1`
+branch (revision `a49351a`). It keeps physical transfers within the `long`
+boundary while preserving exact order counts with the pinned GTO Thunderbolt API.
+
+- Upstream: https://github.com/AE2-Lightning-Tech-Reborn/Thunderbolt-Core-Reborn
+- License: GNU Lesser General Public License version 3
+- Modifications: moved to an LT-owned compatibility package.
