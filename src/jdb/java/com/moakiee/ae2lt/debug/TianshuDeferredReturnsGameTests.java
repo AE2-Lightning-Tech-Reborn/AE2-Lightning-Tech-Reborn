@@ -63,6 +63,253 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt_deferred")
 @PrefixGameTestTemplate(false)
 public final class TianshuDeferredReturnsGameTests {
+    @GameTest(template = "empty", timeoutTicks = 80)
+    public static void nativeSubstitutionWaitsForAlternativeMaterialsWithoutPeriodicAttempts(GameTestHelper h) throws Exception {
+        var details = pattern(h.getLevel(), "stick", new ItemStack(Items.STICK, 4),
+                Map.of(0, new ItemStack(Items.OAK_PLANKS), 3, new ItemStack(Items.OAK_PLANKS)), true);
+        h.assertTrue(details.getInputs()[0].getPossibleInputs().length > 1, "real alternative ingredient list");
+        var fixture = new Fixture(h.getLevel(), true, List.of(details));
+        var oak = AEItemKey.of(Items.OAK_PLANKS);
+        var birch = AEItemKey.of(Items.BIRCH_PLANKS);
+        submitMaterialTest(fixture, details, Map.of(oak, 2L));
+        var inventory = fixture.cpu.getCraftingLogic().getInventory();
+        inventory.extract(oak, 2, Actionable.MODULATE);
+        fixture.run(32);
+        int first = fixture.providerQueries;
+        for (int tick = 1; tick <= 40; tick++) h.runAfterDelay(tick, () -> fixture.run(32));
+        h.runAfterDelay(41, () -> {
+            h.assertTrue(fixture.providerQueries == first, "substitution must not keep probing providers");
+            inventory.insert(AEItemKey.of(Items.EMERALD), 1, Actionable.MODULATE);
+            fixture.run(32);
+            inventory.insert(birch, 1, Actionable.MODULATE);
+            fixture.run(32);
+            h.assertTrue(fixture.providerQueries == first, "unrelated or insufficient alternative return stays parked");
+            inventory.insert(oak, 1, Actionable.MODULATE);
+            h.assertTrue(fixture.run(32) == 1, "two alternative plank types must unlock one native craft");
+            h.assertTrue(fixture.disk.items.get(AEItemKey.of(Items.STICK)) == 4 && !fixture.cpu.isBusy(),
+                    "native mixed-alternative recipe completed");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 80)
+    public static void idOnlyOverloadWakesForANewComponentVariant(GameTestHelper h) throws Exception {
+        var captured = new ItemStack(Items.IRON_INGOT, 2);
+        captured.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("encoded"));
+        var variant = new ItemStack(Items.IRON_INGOT);
+        variant.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("returned"));
+        var sourceKey = AEItemKey.of(captured);
+        var actual = AEItemKey.of(variant);
+        var output = AEItemKey.of(Items.DIAMOND);
+        var source = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(sourceKey, 2)), List.of(new GenericStack(output, 1))), h.getLevel());
+        var parsed = new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternDefinition(
+                new com.moakiee.ae2lt.overload.runtime.pattern.SourcePatternSnapshot(
+                        ResourceLocation.fromNamespaceAndPath("ae2lt", "material_wake_test"), null, null),
+                List.of(new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternInput(0, captured)),
+                List.of(new com.moakiee.ae2lt.overload.runtime.pattern.ParsedPatternOutput(
+                        0, new ItemStack(Items.DIAMOND), true)));
+        var metadata = com.moakiee.ae2lt.overload.runtime.model.EncodedOverloadPattern.builder()
+                .input(0, com.moakiee.ae2lt.overload.runtime.model.MatchMode.ID_ONLY).build();
+        var details = new com.moakiee.ae2lt.overload.runtime.pattern.Ae2OverloadPatternDetails(
+                AEItemKey.of(Items.PAPER),
+                new com.moakiee.ae2lt.overload.runtime.pattern.OverloadPatternDetails(parsed, metadata), source);
+        var fixture = new Fixture(h.getLevel(), true, List.of(details));
+        fixture.externalProvider = new ICraftingProvider() {
+            public List<IPatternDetails> getAvailablePatterns() { return List.of(details); }
+            public boolean isBusy() { return false; }
+            public boolean pushPattern(IPatternDetails p, KeyCounter[] inputs) {
+                h.assertTrue(inputs[0].get(actual) == 2, "actual returned components must reach provider unchanged");
+                return true;
+            }
+        };
+        submitMaterialTest(fixture, details, Map.of(sourceKey, 2L));
+        var inventory = fixture.cpu.getCraftingLogic().getInventory();
+        inventory.extract(sourceKey, 2, Actionable.MODULATE);
+        fixture.run(32);
+        int first = fixture.providerQueries;
+        for (int tick = 1; tick <= 40; tick++) h.runAfterDelay(tick, () -> fixture.run(32));
+        h.runAfterDelay(41, () -> {
+            h.assertTrue(fixture.providerQueries == first, "ID_ONLY missing input must not keep probing");
+            inventory.insert(actual, 1, Actionable.MODULATE);
+            fixture.run(32);
+            h.assertTrue(fixture.providerQueries == first, "partial same-id return must remain parked");
+            inventory.insert(actual, 1, Actionable.MODULATE);
+            h.assertTrue(fixture.run(32) == 1, "new component variant must unlock ID_ONLY input");
+            h.assertTrue(fixture.cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE) == 1,
+                    "physical output accepted");
+            fixture.run(32);
+            h.assertTrue(!fixture.cpu.isBusy(), "ID_ONLY task completed");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 80)
+    public static void unknownCandidateChangesRefreshWithoutRepeatedExtraction(GameTestHelper h) throws Exception {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var output = AEItemKey.of(Items.DIAMOND);
+        var choices = new GenericStack[][]{{new GenericStack(iron, 1)}};
+        var matches = new int[1];
+        var worldAllows = new boolean[]{false};
+        var details = new IPatternDetails() {
+            public IInput[] getInputs() { return new IInput[]{new IInput() {
+                public GenericStack[] getPossibleInputs() { return choices[0]; }
+                public long getMultiplier() { return 1; }
+                public boolean isValid(AEKey key, Level level) {
+                    matches[0]++;
+                    return worldAllows[0]
+                            && Arrays.stream(choices[0]).anyMatch(option -> option.what().equals(key));
+                }
+                public AEKey getRemainingKey(AEKey key) { return null; }
+            }}; }
+            public List<GenericStack> getOutputs() { return List.of(new GenericStack(output, 1)); }
+            public AEItemKey getDefinition() { return AEItemKey.of(Items.PAPER); }
+        };
+        var fixture = new Fixture(h.getLevel(), true, List.of(details));
+        var pushes = new int[1];
+        fixture.externalProvider = new ICraftingProvider() {
+            public List<IPatternDetails> getAvailablePatterns() { return List.of(details); }
+            public boolean isBusy() { return false; }
+            public boolean pushPattern(IPatternDetails p, KeyCounter[] inputs) { pushes[0]++; return true; }
+        };
+        // No iron has arrived yet; gold is already held when the candidate definition later changes.
+        submitMaterialTest(fixture, details, Map.of(gold, 1L));
+        fixture.providerQueries = 0;
+        matches[0] = 0;
+        for (int tick = 1; tick <= 73; tick++) h.runAfterDelay(tick, () -> fixture.run(32));
+        h.runAfterDelay(40, () -> {
+            h.assertTrue(matches[0] == 0 && fixture.providerQueries == 0,
+                    "safety refresh must not call native matching, extraction or providers");
+            choices[0] = new GenericStack[]{new GenericStack(gold, 1)};
+        });
+        h.runAfterDelay(66, () -> {
+            h.assertTrue(matches[0] > 0 && pushes[0] == 0,
+                    "funded candidate must still obey dynamic native validity");
+            worldAllows[0] = true;
+        });
+        h.runAfterDelay(74, () -> {
+            h.assertTrue(pushes[0] == 1,
+                    "candidate and world-state changes must unlock already-held material without a return");
+            h.assertTrue(fixture.cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE) == 1,
+                    "physical dynamic output accepted");
+            fixture.run(32);
+            h.assertTrue(!fixture.cpu.isBusy(), "dynamic task completed");
+            h.succeed();
+        });
+    }
+
+    private static void submitMaterialTest(Fixture fixture, IPatternDetails details, Map<AEKey, Long> stock) {
+        var used = new KeyCounter();
+        stock.forEach(used::add);
+        fixture.disk.items.addAll(used);
+        var plan = new CraftingPlan(details.getPrimaryOutput(), 100,
+                false, false, used, new KeyCounter(), new KeyCounter(), Map.of(details, 1L));
+        if (!fixture.cpu.getCraftingLogic().trySubmitJob(
+                fixture.host.getGrid(), plan, IActionSource.empty(), null).successful()) {
+            throw new AssertionError("material test submission failed");
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void asynchronousReceiptListenerCannotDispatchBeforeReceiptCompletes(GameTestHelper helper) throws Exception {
+        var fixture = new Fixture(helper.getLevel(), true);
+        var raw = AEItemKey.of(Items.IRON_INGOT);
+        var intermediate = AEItemKey.of(Items.GOLD_INGOT);
+        var output = AEItemKey.of(Items.DIAMOND);
+        var first = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(raw, 1)), List.of(new GenericStack(intermediate, 1))), helper.getLevel());
+        var second = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeProcessingPattern(
+                List.of(new GenericStack(intermediate, 1)), List.of(new GenericStack(output, 1))), helper.getLevel());
+        fixture.externalProvider = new ICraftingProvider() {
+            public List<IPatternDetails> getAvailablePatterns() { return List.of(first, second); }
+            public boolean isBusy() { return false; }
+            public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs) { return true; }
+        };
+        var used = new KeyCounter();
+        used.add(raw, 1);
+        fixture.disk.items.add(raw, 1);
+        var plan = new CraftingPlan(new GenericStack(output, 1), 100,
+                false, false, used, new KeyCounter(), new KeyCounter(), Map.of(first, 1L, second, 1L));
+        helper.assertTrue(fixture.cpu.getCraftingLogic().trySubmitJob(
+                fixture.host.getGrid(), plan, IActionSource.empty(), null).successful(), "submitted chain");
+        helper.assertTrue(fixture.run(32) == 1, "upstream dispatched before physical return");
+        var callbacks = new int[1];
+        java.util.function.Consumer<AEKey> listener = key -> {
+            callbacks[0]++;
+            helper.assertTrue(fixture.run(32) == 0, "receipt callback must not recursively dispatch downstream");
+        };
+        fixture.cpu.getCraftingLogic().addListener(listener);
+        helper.assertTrue(fixture.cpu.getCraftingLogic().insert(intermediate, 1, Actionable.MODULATE) == 1,
+                "physical intermediate accepted");
+        fixture.cpu.getCraftingLogic().removeListener(listener);
+        helper.assertTrue(callbacks[0] > 0, "receipt must actually invoke listeners");
+        helper.assertTrue(fixture.run(32) == 1, "downstream runs after receipt completes");
+        helper.assertTrue(fixture.cpu.getCraftingLogic().insert(output, 1, Actionable.MODULATE) == 1,
+                "physical final output accepted");
+        fixture.run(32);
+        helper.assertTrue(!fixture.cpu.isBusy() && fixture.disk.items.get(output) == 1, "one conserved output");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 80)
+    public static void missingMaterialWaitsForRelevantSufficientInventoryChange(GameTestHelper helper) throws Exception {
+        var fixture = new Fixture(helper.getLevel(), true);
+        fixture.submitProcessingJob(helper.getLevel());
+        var inventory = fixture.cpu.getCraftingLogic().getInventory();
+        var raw = AEItemKey.of(Items.OAK_LOG);
+        helper.assertTrue(inventory.extract(raw, 2, Actionable.MODULATE) == 2, "remove funded material");
+        fixture.providerQueries = 0;
+        helper.assertTrue(fixture.run(32) == 0, "missing material cannot dispatch");
+        int firstAttempt = fixture.providerQueries;
+        for (int tick = 1; tick <= 40; tick++) {
+            helper.runAfterDelay(tick, () -> fixture.run(32));
+        }
+        helper.runAfterDelay(41, () -> {
+            helper.assertTrue(fixture.providerQueries == firstAttempt,
+                    "no periodic provider/extraction probes after initial attempt: " + fixture.providerQueries);
+            inventory.insert(AEItemKey.of(Items.EMERALD), 1, Actionable.MODULATE);
+            fixture.run(32);
+            helper.assertTrue(fixture.providerQueries == firstAttempt, "unrelated inventory change must not wake");
+            inventory.insert(raw, 1, Actionable.MODULATE);
+            fixture.run(32);
+            helper.assertTrue(fixture.providerQueries == firstAttempt, "partial receipt must remain parked");
+            // The inventory hook also covers input refunds; no explicit machine-return wake call.
+            inventory.insert(raw, 1, Actionable.MODULATE);
+            helper.assertTrue(fixture.run(32) == 1, "sufficient refund wakes immediately");
+            fixture.deliverProcessingOutputs();
+            fixture.run(32);
+            helper.assertTrue(!fixture.cpu.isBusy(), "woken task completes");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void busyPowerAndRejectionRetryWithoutMaterialReturns(GameTestHelper helper) throws Exception {
+        var fixture = new Fixture(helper.getLevel(), true);
+        fixture.submitProcessingJob(helper.getLevel());
+        fixture.providerBusy = true;
+        helper.assertTrue(fixture.run(32) == 0, "busy provider waits");
+        helper.runAfterDelay(1, () -> {
+            fixture.providerBusy = false;
+            fixture.energyAvailable = false;
+            helper.assertTrue(fixture.run(32) == 0, "unpowered provider waits");
+        });
+        helper.runAfterDelay(5, () -> {
+            fixture.energyAvailable = true;
+            fixture.providerRejects = true;
+            helper.assertTrue(fixture.run(32) == 0, "rejected input must be refunded");
+        });
+        helper.runAfterDelay(10, () -> {
+            fixture.providerRejects = false;
+            helper.assertTrue(fixture.run(32) == 1, "cooldown must retry without any machine return");
+            fixture.deliverProcessingOutputs();
+            fixture.run(32);
+            helper.assertTrue(!fixture.cpu.isBusy(), "retry task completes");
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = "empty")
     public static void globalAdapterRunsThroughActualTimeWheelCpu(GameTestHelper helper) throws Exception {
         var fixture = new Fixture(helper.getLevel(), true);
@@ -341,6 +588,9 @@ public final class TianshuDeferredReturnsGameTests {
         final appeng.me.storage.NetworkStorage network = new appeng.me.storage.NetworkStorage();
         final KeyCounter processingOutputs = new KeyCounter();
         ICraftingProvider externalProvider;
+        int providerQueries;
+        boolean providerBusy, providerRejects;
+        boolean energyAvailable = true;
         final KeyCounter returnedSeeds = new KeyCounter();
         final IEnergyService energy;
         final CraftingService service;
@@ -366,7 +616,8 @@ public final class TianshuDeferredReturnsGameTests {
                                     8, new ItemStack(Items.STICK))));
             energy = (IEnergyService) Proxy.newProxyInstance(IEnergyService.class.getClassLoader(),
                     new Class<?>[]{IEnergyService.class}, (p, method, args) ->
-                            method.getName().equals("extractAEPower") ? args[0] : defaultValue(method.getReturnType()));
+                            method.getName().equals("extractAEPower")
+                                    ? (energyAvailable ? args[0] : 0D) : defaultValue(method.getReturnType()));
             network.mount(0, disk);
             var storage = proxy(IStorageService.class, Map.of("getInventory", network, "getCachedInventory", disk.items));
             var gridValues = new HashMap<String, Object>();
@@ -405,6 +656,7 @@ public final class TianshuDeferredReturnsGameTests {
             };
             service = new CraftingService(grid, storage, energy) {
                 @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) {
+                    providerQueries++;
                     return List.of(externalProvider != null ? externalProvider : port);
                 }
             };
@@ -437,8 +689,9 @@ public final class TianshuDeferredReturnsGameTests {
                             new GenericStack(AEItemKey.of(Items.STICK), 2))), level);
             externalProvider = new ICraftingProvider() {
                 @Override public List<IPatternDetails> getAvailablePatterns() { return List.of(pattern); }
-                @Override public boolean isBusy() { return false; }
+                @Override public boolean isBusy() { return providerBusy; }
                 @Override public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs) {
+                    if (providerRejects) return false;
                     if (inputs[0].get(AEItemKey.of(Items.OAK_LOG)) != 2) {
                         throw new AssertionError("processing recipe must receive both logs");
                     }
@@ -544,13 +797,18 @@ public final class TianshuDeferredReturnsGameTests {
 
     private static IPatternDetails pattern(ServerLevel level, String id, ItemStack output,
                                             Map<Integer, ItemStack> slots) {
+        return pattern(level, id, output, slots, false);
+    }
+
+    private static IPatternDetails pattern(ServerLevel level, String id, ItemStack output,
+                                            Map<Integer, ItemStack> slots, boolean substitute) {
         var raw = level.getRecipeManager().byKey(ResourceLocation.withDefaultNamespace(id)).orElseThrow();
         var holder = new RecipeHolder<>(raw.id(), (CraftingRecipe) raw.value());
         var inputs = new ItemStack[9];
         Arrays.fill(inputs, ItemStack.EMPTY);
         slots.forEach((slot, stack) -> inputs[slot] = stack);
         return PatternDetailsHelper.decodePattern(
-                PatternDetailsHelper.encodeCraftingPattern(holder, inputs, output, false, false), level);
+                PatternDetailsHelper.encodeCraftingPattern(holder, inputs, output, substitute, substitute), level);
     }
 
     private static final class Disk implements MEStorage {

@@ -1,0 +1,12 @@
+// Use together with bigint-gametest.init.gradle, passing -Pae2ltUselessBigintJar=/path/to/2.4.6.jar.
+allprojects {
+    afterEvaluate {
+        def jarPath = providers.gradleProperty('ae2ltUselessBigintJar').get()
+        if (!file(jarPath).isFile()) throw new GradleException("Missing Useless Mod test JAR: ${jarPath}")
+        dependencies.add('runtimeOnly', files(jarPath))
+        sourceSets.jdb.java.include('com/moakiee/ae2lt/crafting/big/UselessBigIntegerGameTests.java')
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('bigint-useless-gametest').get().asFile
+        }
+    }
+}
