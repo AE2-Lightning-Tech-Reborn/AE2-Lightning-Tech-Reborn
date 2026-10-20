@@ -126,7 +126,7 @@ public record BigCraftingPlan(
         var summary = new CraftingPlanSummary(0, simulation(), List.copyOf(entries));
         ExactPlanReports.attach(
                 summary,
-                new ExactPlanReport(BigInteger.ZERO, precise, exact == null || !exact.verified(), false));
+                new ExactPlanReport(BigInteger.ZERO, precise, exact == null || !exact.verified()));
         return summary;
     }
 }

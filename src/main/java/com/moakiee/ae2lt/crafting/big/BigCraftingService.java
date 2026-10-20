@@ -176,7 +176,6 @@ public final class BigCraftingService {
 
     public void cancel() {
         if (job != null) {
-            com.moakiee.thunderbolt.compat.neoeco.NeoEcoFastPathCompat.cancelJob(host.getLevel(), job.id);
             job.cancel();
             changed();
             tick();

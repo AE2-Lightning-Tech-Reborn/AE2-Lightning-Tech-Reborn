@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.crafting.big;
 import appeng.api.stacks.AEKey;
 
 import com.moakiee.thunderbolt.core.crafting.big.BigExecutionProgram;
-import com.moakiee.thunderbolt.core.crafting.big.BigLongSlice;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
 import net.minecraft.core.HolderLookup;
@@ -89,10 +88,6 @@ public final class BigCraftingJob {
     }
 
     /** Register ownership before invoking a provider, so synchronous returns are also real receipts. */
-    public void reserve(BigLongSlice<AEKey> slice) {
-        reserve(BigCraftingTransfer.from(slice));
-    }
-
     void reserve(BigCraftingTransfer slice) {
         if (!streamingBlock || returning || dispatchFailed || slice.copies().signum() <= 0
                 || slice.copies().compareTo(remainingStepCopies()) > 0)
@@ -108,10 +103,6 @@ public final class BigCraftingJob {
     }
 
     /** Refund only confirmed rejections; an indeterminate provider result must never be retried. */
-    public void settle(BigLongSlice<AEKey> offered, BigLongSlice<AEKey> accepted) {
-        settle(BigCraftingTransfer.from(offered), BigCraftingTransfer.from(accepted));
-    }
-
     void settle(BigCraftingTransfer offered, BigCraftingTransfer accepted) {
         if (accepted.copies().signum() < 0 || accepted.copies().compareTo(offered.copies()) > 0)
             throw new IllegalArgumentException("Invalid accepted copies");
