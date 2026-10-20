@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.item;
 
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.component.CustomData;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 
+import com.moakiee.ae2lt.registry.ModDataComponents;
 import com.moakiee.thunderbolt.core.storage.cell.IIndexedStorageCellItem;
 import com.moakiee.thunderbolt.core.storage.cell.IndexedCellSummary;
 import com.moakiee.thunderbolt.core.storage.cell.IndexedStorage;
@@ -46,14 +49,10 @@ public final class InfiniteStorageCellItem extends Item implements IIndexedStora
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        // 空壳(创造物品栏里的初始 cell)上显示 "0 types / 0 B" 只是噪音,
-        // 完全没带 ae2lt:types / ae2lt:bytes 数据时直接不画 tooltip。
-        if (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes")) {
-            return;
-        }
-        int types = tag.getInt("ae2lt:types");
-        long bytes = tag.getLong("ae2lt:bytes");
+        var summary = readSummary(stack);
+        if (summary == null) return;
+        int types = summary.totalTypes();
+        long bytes = summary.usedBytes();
 
         tooltipComponents.add(Component.translatable(
                 "tooltip.ae2lt.infinite_cell.types", String.format("%,d", types))
@@ -109,9 +108,26 @@ public final class InfiniteStorageCellItem extends Item implements IIndexedStora
 
     @Override
     public void writeSummary(ItemStack stack, IndexedCellSummary summary) {
-        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-            tag.putInt("ae2lt:types", summary.totalTypes());
-            tag.putLong("ae2lt:bytes", summary.usedBytes());
-        });
+        var component = ModDataComponents.INFINITE_CELL_SUMMARY.get();
+        if (!stack.has(component)) {
+            var legacy = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+            if (legacy.contains("ae2lt:types") || legacy.contains("ae2lt:bytes")) {
+                CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
+                    tag.remove("ae2lt:types");
+                    tag.remove("ae2lt:bytes");
+                });
+            }
+        }
+        stack.set(component, summary);
+    }
+
+    /** Reads legacy display data without changing the stack or its UUID. */
+    public static @Nullable IndexedCellSummary readSummary(ItemStack stack) {
+        var summary = stack.get(ModDataComponents.INFINITE_CELL_SUMMARY.get());
+        if (summary != null) return summary;
+        var legacy = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+        if (!legacy.contains("ae2lt:types") && !legacy.contains("ae2lt:bytes")) return null;
+        CompoundTag tag = legacy.copyTag();
+        return new IndexedCellSummary(tag.getInt("ae2lt:types"), tag.getLong("ae2lt:bytes"));
     }
 }

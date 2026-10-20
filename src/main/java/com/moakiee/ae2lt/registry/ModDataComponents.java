@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.celestweave.phase.PhaseLockEnergySnapshot;
@@ -8,10 +9,12 @@ import com.moakiee.ae2lt.celestweave.phase.PhaseLockProjectionLink;
 import com.moakiee.ae2lt.celestweave.state.CelestweaveModuleContainer;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleEntries;
 import com.moakiee.ae2lt.item.railgun.RailgunSettings;
+import com.moakiee.thunderbolt.core.storage.cell.IndexedCellSummary;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -29,6 +32,20 @@ public final class ModDataComponents {
 
     public static final DeferredRegister.DataComponents DATA_COMPONENTS =
             DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, AE2LightningTech.MODID);
+
+    /** Display summary only; the cell UUID and world inventory retain their existing storage. */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<IndexedCellSummary>>
+            INFINITE_CELL_SUMMARY = DATA_COMPONENTS.registerComponentType("infinite_cell_summary", builder -> builder
+                    .persistent(RecordCodecBuilder.create(i -> i.group(
+                            Codec.intRange(0, Integer.MAX_VALUE).fieldOf("types")
+                                    .forGetter(IndexedCellSummary::totalTypes),
+                            Codec.LONG.fieldOf("bytes")
+                                    .forGetter(IndexedCellSummary::usedBytes)
+                    ).apply(i, IndexedCellSummary::new)))
+                    .networkSynchronized(StreamCodec.composite(
+                            ByteBufCodecs.VAR_INT, IndexedCellSummary::totalTypes,
+                            ByteBufCodecs.VAR_LONG, IndexedCellSummary::usedBytes,
+                            IndexedCellSummary::new)));
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<CustomData>>
             IO_PORT_PENDING = DATA_COMPONENTS.registerComponentType("io_port_pending", builder -> builder
