@@ -92,7 +92,8 @@ final class BigProviderDispatcher {
                     ? batch.pushBatch(details, recipe.template(), slice.copies(), view)
                     : (provider instanceof DeferredCraftingProvider deferred
                             ? deferred.pushPattern(details, recipe.template(), transaction.outputSink())
-                            : provider.pushPattern(details, recipe.template())) ? 0 : slice.copies();
+                            : com.moakiee.thunderbolt.compat.neoeco.NeoEcoFastPathCompat.pushPattern(
+                                    provider, details, recipe.template(), job.id)) ? 0 : slice.copies();
             if (leftover < 0 || leftover > slice.copies())
                 throw new IllegalStateException("Provider returned an invalid accepted count");
             long received = slice.copies() - leftover;

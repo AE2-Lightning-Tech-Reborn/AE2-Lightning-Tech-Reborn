@@ -176,6 +176,7 @@ public final class BigCraftingService {
 
     public void cancel() {
         if (job != null) {
+            com.moakiee.thunderbolt.compat.neoeco.NeoEcoFastPathCompat.cancelJob(host.getLevel(), job.id);
             job.cancel();
             changed();
             tick();
@@ -333,6 +334,9 @@ public final class BigCraftingService {
         }
         for (var provider : nativeCrafting.getProviders(details)) {
             if (!takeWork()) break;
+            if (NeoEcoBigIntegerCompat.dispatch(job, recipe, details, provider,
+                    host.getLevel(), host.getGrid().getEnergyService(), this::changed)) return true;
+            if (job.returning || job.dispatchFailed) return false;
             long received = providerDispatcher.dispatch(job, recipe, details, provider,
                     host.getLevel(), host.getGrid().getEnergyService(), now, this::changed);
             if (job.returning || job.dispatchFailed) return false;
@@ -369,11 +373,16 @@ public final class BigCraftingService {
     }
 
     public long insert(AEKey key, long amount, Actionable mode) {
+        if (amount <= 0) return 0;
+        return insertExact(key, BigInteger.valueOf(amount), mode).longValueExact();
+    }
+
+    public BigInteger insertExact(AEKey key, BigInteger amount, Actionable mode) {
         boolean ownsGuard = execution.tryEnter();
         try {
-            if (job == null) return 0;
-            long accepted = job.receive(key, amount, mode);
-            if (accepted > 0 && mode == Actionable.MODULATE) changed();
+            if (job == null) return BigInteger.ZERO;
+            var accepted = job.receiveBig(key, amount, mode);
+            if (accepted.signum() > 0 && mode == Actionable.MODULATE) changed();
             return accepted;
         } finally {
             if (ownsGuard) execution.leave();
