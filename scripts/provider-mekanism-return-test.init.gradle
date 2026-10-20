@@ -1,0 +1,33 @@
+// ./gradlew -I scripts/provider-mekanism-return-test.init.gradle runGameTestServer
+// Optional: -Pae2ltProviderReturnThunderboltJar=/path/to/the/matching/thunderbolt.jar
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                'com/moakiee/ae2lt/debug/ProviderMekanismReturnGameTests.java',
+                'com/moakiee/ae2lt/debug/ProviderReturnFilterGameTests.java'])
+        sourceSets.test.java.setIncludes([
+                'com/moakiee/ae2lt/integration/mekanism/**',
+                'com/moakiee/ae2lt/logic/provider/**'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'com.lowdragmc.ldlib2', 'top.theillusivec4.curios', 'de.mari_023']
+                    || dep.name in ['thunderbolt-core-1631756', 'mekanism-268560',
+                                    'mekanism-extras-1026040'])
+        }
+        dependencies.add('runtimeOnly', 'curse.maven:mekanism-more-machine-1275257:8659501')
+
+        def localThunderbolt = providers.gradleProperty('ae2ltProviderReturnThunderboltJar').orNull
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { dep ->
+                    dep.group == 'com.moakiee.thunderbolt' || dep.name == 'thunderbolt-core-1631756'
+                }
+                dependencies.add(name, files(localThunderbolt))
+            }
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('provider-mekanism-return-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_provider_mekanism,ae2lt'
+        }
+    }
+}

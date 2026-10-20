@@ -34,6 +34,8 @@ import appeng.parts.automation.StackWorldBehaviors;
 
 import com.google.common.util.concurrent.Runnables;
 
+import com.moakiee.ae2lt.integration.mekanism.MekanismOutputItemHandler;
+
 /**
  * Built-in fallback {@link MachineAdapter} that handles any target reachable
  * through AE2's native APIs:
@@ -89,12 +91,15 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
     private static final class StorageCacheEntry {
         private final WeakReference<BlockEntity> blockEntityRef;
         private final Map<AEKeyType, ExternalStorageStrategy> strategies;
+        private final Direction face;
         private Map<AEKeyType, MEStorage> wrappers;
         private long wrapperCreatedTick;
 
-        StorageCacheEntry(BlockEntity be, Map<AEKeyType, ExternalStorageStrategy> strategies) {
+        StorageCacheEntry(BlockEntity be, Map<AEKeyType, ExternalStorageStrategy> strategies,
+                          Direction face) {
             this.blockEntityRef = new WeakReference<>(be);
             this.strategies = strategies;
+            this.face = face;
         }
 
         boolean isValid(BlockEntity currentBE) {
@@ -117,6 +122,13 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
             var map = new IdentityHashMap<AEKeyType, MEStorage>(strategies.size());
             for (var entry : strategies.entrySet()) {
                 var wrapper = entry.getValue().createWrapper(false, Runnables.doNothing());
+                var blockEntity = blockEntityRef.get();
+                if (wrapper != null && entry.getKey() == AEKeyType.items()
+                        && blockEntity != null
+                        && net.neoforged.fml.ModList.get() != null
+                        && net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
+                    wrapper = MekanismOutputItemHandler.restrict(blockEntity, face, wrapper);
+                }
                 if (wrapper != null) {
                     map.put(entry.getKey(), wrapper);
                 }
@@ -515,7 +527,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
                 storageCache.remove(cacheKey);
                 return null;
             }
-            cached = new StorageCacheEntry(blockEntity, strategies);
+            cached = new StorageCacheEntry(blockEntity, strategies, face);
             storageCache.put(cacheKey, cached);
         }
 
