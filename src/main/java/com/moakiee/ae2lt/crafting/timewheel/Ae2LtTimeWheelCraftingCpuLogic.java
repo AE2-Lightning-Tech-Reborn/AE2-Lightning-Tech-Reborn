@@ -1013,7 +1013,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             var returns = provider instanceof DeferredCraftingProvider ? deferredOutputSink() : null;
             boolean accepted = returns != null
                     ? ((DeferredCraftingProvider) provider).pushPattern(resolvedProvider.pattern(), inputs, returns)
-                    : provider.pushPattern(resolvedProvider.pattern(), inputs);
+                    : com.moakiee.thunderbolt.compat.neoeco.NeoEcoFastPathCompat.pushPattern(
+                            provider, resolvedProvider.pattern(), inputs,
+                            job == null ? null : job.link.getCraftingID());
             if (!accepted) {
                 dispatchSchedule.recordFailure(resolvedProvider.pattern(), provider);
                 return false;
