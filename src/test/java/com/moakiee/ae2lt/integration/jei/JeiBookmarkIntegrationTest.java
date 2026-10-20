@@ -18,9 +18,11 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.neoforge.NeoForgeTypes;
+import mezz.jei.api.runtime.IBookmarkManager;
 import mezz.jei.api.runtime.IBookmarkOverlay;
 import mezz.jei.api.runtime.IIngredientManager;
 import mezz.jei.api.runtime.IJeiRuntime;
@@ -252,6 +254,13 @@ class JeiBookmarkIntegrationTest {
 
     private static IJeiRuntime runtime(FakeOverlay overlay) {
         var loader = JeiBookmarkIntegrationTest.class.getClassLoader();
+        var bookmarks = overlay == null ? null : (IBookmarkManager) Proxy.newProxyInstance(loader,
+                new Class<?>[] {IBookmarkManager.class}, (proxy, method, arguments) -> {
+                    if (method.getName().equals("add") && arguments.length == 1) {
+                        return overlay.bookmarkList.add(new FakeBookmark((ITypedIngredient<?>) arguments[0]));
+                    }
+                    throw new UnsupportedOperationException(method.getName());
+                });
         var manager = (IIngredientManager) Proxy.newProxyInstance(loader,
                 new Class<?>[] {IIngredientManager.class}, (proxy, method, arguments) -> {
                     if (method.getName().equals("createTypedIngredient")) {
@@ -262,6 +271,7 @@ class JeiBookmarkIntegrationTest {
         return (IJeiRuntime) Proxy.newProxyInstance(loader, new Class<?>[] {IJeiRuntime.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
                     case "getBookmarkOverlay" -> overlay;
+                    case "getBookmarkManager" -> bookmarks;
                     case "getIngredientManager" -> manager;
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
@@ -281,6 +291,11 @@ class JeiBookmarkIntegrationTest {
         @Override
         public T getIngredient() {
             return ingredient;
+        }
+
+        @Override
+        public ITypedIngredient<T> normalize(IIngredientHelper<T> ingredientHelper) {
+            return new TypedIngredient<>(type, ingredientHelper.normalizeIngredient(ingredient));
         }
     }
 

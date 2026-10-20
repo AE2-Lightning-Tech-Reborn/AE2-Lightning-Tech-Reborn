@@ -18,7 +18,7 @@ repositories {
     if (githubPackagesUser && githubPackagesToken) {
         maven {
             name = 'ThunderboltGitHubPackages'
-            url = uri('https://maven.pkg.github.com/ae2lt/Thunderbolt-Core')
+            url = uri('https://maven.pkg.github.com/AE2-Lightning-Tech-Reborn/Thunderbolt-Core-Reborn')
             credentials {
                 username = githubPackagesUser
                 password = githubPackagesToken
@@ -512,9 +512,9 @@ def enableVeilDevRuntime = providers.gradleProperty('ae2ltEnableVeilDevRuntime')
 
 dependencies {
     // Thunderbolt Core — the extracted AE2 infrastructure layer (fast crafting planner,
-    // channel/batch/cell/matrix algorithms). The published mod jar is also the compile classpath;
-    // CurseMaven exposes it without GitHub Packages credentials.
-    def thunderbolt = "curse.maven:thunderbolt-core-${thunderbolt_curse_project_id}:${thunderbolt_curse_file_id}"
+    // channel/batch/cell/matrix algorithms). Release CI stages this exact version from
+    // GitHub Release assets; local development can use publishToMavenLocal.
+    def thunderbolt = "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
     compileOnly thunderbolt
     runtimeOnly thunderbolt
     testRuntimeOnly thunderbolt
