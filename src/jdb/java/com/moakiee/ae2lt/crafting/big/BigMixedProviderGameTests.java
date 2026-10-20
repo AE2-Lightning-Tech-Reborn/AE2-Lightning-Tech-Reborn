@@ -9,6 +9,7 @@ import com.moakiee.thunderbolt.api.crafting.batch.*;
 import com.moakiee.thunderbolt.ae2.crafting.*;
 import com.moakiee.thunderbolt.core.crafting.big.*;
 import com.moakiee.thunderbolt.core.crafting.planner.*;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import io.netty.buffer.Unpooled;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -61,6 +62,63 @@ public final class BigMixedProviderGameTests {
             if (fail) throw new IllegalStateException("provider failed after taking ownership");
             return accept;
         }
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void deferredSingleProviderReturnsAfterExactDispatchAccounting(GameTestHelper h) {
+        var details = details(h); var recipe = recipe(h, details); var job = job(recipe, BigInteger.ONE);
+        class Deferred extends Provider implements DeferredCraftingProvider {
+            Deferred() { super(details); }
+            public boolean pushPattern(IPatternDetails p, KeyCounter[] input, OutputSink sink) {
+                require(job.acceptedCopies.signum() == 0, "count committed before provider result");
+                var outputs = new KeyCounter(); outputs.add(output(), 3);
+                require(sink.enqueue(outputs), "deferred output rejected");
+                require(!job.escrow.containsKey(output()), "output delivered before dispatch committed");
+                return true;
+            }
+            public boolean pushPattern(IPatternDetails p, KeyCounter[] input) {
+                throw new AssertionError("deferred single contract bypassed");
+            }
+        }
+        long tick = h.getLevel().getGameTime();
+        require(new BigProviderDispatcher().dispatch(job, recipe, details, new Deferred(), h.getLevel(),
+                power(100), tick, () -> {}) == 1, "single deferred dispatch failed");
+        require(job.acceptedCopies.equals(BigInteger.ONE) && job.waiting.isEmpty(), "return missing after accounting");
+        require(job.advanceStreaming() && job.returning, "completed single dispatch still waiting");
+        require(job.escrow.equals(Map.of(output(), BigInteger.valueOf(3))), "deferred output changed");
+        require(tick == h.getLevel().getGameTime(), "return crossed tick");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public static void deferredPartialBatchAndCancellationRetainEveryPhysicalOutput(GameTestHelper h) {
+        var details = details(h); var recipe = recipe(h, details); var job = job(recipe, N);
+        class DeferredBatch extends Provider implements IBatchCraftingProvider {
+            DeferredBatch() { super(details); }
+            public long getBatchCapacity(IPatternDetails p) { return 10; }
+            public long pushBatch(IPatternDetails p, KeyCounter[] input, long count) {
+                throw new AssertionError("job context was lost");
+            }
+            public long pushBatch(IPatternDetails p, KeyCounter[] input, long count, BatchJobView view) {
+                require(view instanceof DeferredCraftingProvider.Job, "exact job cannot receive deferred output");
+                var sink = ((DeferredCraftingProvider.Job) view).deferredOutputSink();
+                var outputs = new KeyCounter(); outputs.add(output(), 21);
+                require(sink != null && sink.enqueue(outputs), "batch output rejected");
+                require(!job.escrow.containsKey(output()), "batch returned before partial acceptance settled");
+                job.cancel();
+                return count - 7;
+            }
+        }
+        require(new BigProviderDispatcher().dispatch(job, recipe, details, new DeferredBatch(), h.getLevel(),
+                power(1000), 1, () -> {}) == 7, "cancel during dispatch broke settlement");
+        require(job.returning && !job.dispatchFailed, "cancelled batch became indeterminate");
+        require(job.escrow.get(raw()).equals(N.multiply(BigInteger.TWO).subtract(BigInteger.valueOf(14))),
+                "cancel refunded accepted input");
+        require(job.escrow.get(output()).equals(BigInteger.valueOf(21)), "cancel lost deferred physical output");
+        require(job.waiting.isEmpty(), "cancelled batch recreated waiting ownership");
+        var restored = BigCraftingJob.load(job.save(h.getLevel().registryAccess()), h.getLevel().registryAccess());
+        require(restored.escrow.equals(job.escrow), "cancelled physical output lost after reload");
+        h.succeed();
     }
     private static final class Batch extends Provider implements IBatchCraftingProvider {
         long offered, accepted = 7;

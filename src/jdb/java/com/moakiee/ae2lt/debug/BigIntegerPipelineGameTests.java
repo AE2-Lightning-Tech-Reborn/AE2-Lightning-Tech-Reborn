@@ -154,6 +154,29 @@ public final class BigIntegerPipelineGameTests {
                         decoded, List.of(Map.of(AEItemKey.of(Items.OAK_LOG), 1L)), h.getLevel()));
     }
 
+    @GameTest(template = "empty")
+    public static void matrixDefinitionIndexRefreshesInsidePatternMutationBatch(GameTestHelper h) {
+        var storage = new MatrixPatternStorageBlockEntity(BlockPos.ZERO,
+                ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1.get().defaultBlockState());
+        storage.setLevel(h.getLevel());
+        var recipe = planks(h);
+        storage.getInventory().setStackInSlot(0, recipe.definition().toStack());
+        var snapshot = storage.getPatternsByDefinition(recipe.definition());
+        h.assertTrue(snapshot.size() == 1 && recipe.matches(snapshot.getFirst(), h.getLevel()), "initial index");
+        storage.beginPatternBatch();
+        try {
+            storage.getInventory().setStackInSlot(0, ItemStack.EMPTY);
+            h.assertTrue(storage.getPatternsByDefinition(recipe.definition()).isEmpty(),
+                    "dirty contents must invalidate before batched network notification");
+            h.assertTrue(snapshot.size() == 1, "published snapshots must remain immutable");
+            storage.getInventory().setStackInSlot(0, recipe.definition().toStack());
+            h.assertTrue(storage.getPatternsByDefinition(recipe.definition()).size() == 1, "same-tick replacement");
+        } finally {
+            storage.endPatternBatch();
+        }
+        h.succeed();
+    }
+
     @GameTest(template = "empty", timeoutTicks = 20)
     public static void actualRecipePlanRestartCommitAndRefundKeepEveryUnit(GameTestHelper h) {
         var recipe = planks(h);
@@ -207,11 +230,24 @@ public final class BigIntegerPipelineGameTests {
         formedMachines(h, true);
     }
 
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void hugeThreeLayerMatrixChainFinishesInOneTick(GameTestHelper h) {
+        formedMachines(h, false, true);
+    }
+
     private static void formedMachines(GameTestHelper h, boolean mixed) {
+        formedMachines(h, mixed, false);
+    }
+
+    private static void formedMachines(GameTestHelper h, boolean mixed, boolean zeroTick) {
         var level = h.getLevel();
         var direction = Direction.EAST;
-        var cpuPos = h.absolutePos(new BlockPos(4, 10, mixed ? 100 : 4));
-        var matrixPos = h.absolutePos(new BlockPos(22, 12, mixed ? 100 : 4));
+        var cpuPos = h.absolutePos(new BlockPos(4, 10, zeroTick ? 200 : mixed ? 100 : 4));
+        var matrixPos = h.absolutePos(new BlockPos(22, 12, zeroTick ? 200 : mixed ? 100 : 4));
+        for (var center : List.of(cpuPos, matrixPos))
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                    level.setChunkForced((center.getX() >> 4) + dx, (center.getZ() >> 4) + dz, true);
         for (int x = 0; x < 7; x++)
             for (int y = 0; y < 7; y++)
                 for (int z = 0; z < 7; z++) {
@@ -299,7 +335,7 @@ public final class BigIntegerPipelineGameTests {
                     };
             place(h, world, state);
         }
-        var drivePos = h.absolutePos(new BlockPos(14, 10, mixed ? 100 : 4));
+        var drivePos = h.absolutePos(new BlockPos(14, 10, zeroTick ? 200 : mixed ? 100 : 4));
         var powerPos = drivePos.above();
         place(h, drivePos, AEBlocks.DRIVE.block().defaultBlockState());
         place(h, powerPos, AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
@@ -339,6 +375,10 @@ public final class BigIntegerPipelineGameTests {
                                 require(
                                         cpu.bigCrafting().available(),
                                         "CPU exact service inactive");
+                                if (zeroTick) {
+                                    runZeroTick(h, cpu, patterns);
+                                    return;
+                                }
                                 if (mixed) {
                                     runMixed(h, cpu, cpuPort);
                                     return;
@@ -426,17 +466,15 @@ public final class BigIntegerPipelineGameTests {
                                                 phase[0] = 2;
                                             }
                                             if (phase[0] == 2) {
-                                                h.assertTrue(
-                                                        service.job() != null
-                                                                && service.job().readyAt >= 0,
-                                                        "waiting for matrix acceptance");
-                                                service.load(
-                                                        service.save(level.registryAccess()),
-                                                        level.registryAccess());
-                                                removedCell[0] =
-                                                        drive.getInternalInventory()
-                                                                .extractItem(0, 1, false);
-                                                startedAt[0] = level.getGameTime();
+                                                removedCell[0] = drive.getInternalInventory().extractItem(0, 1, false);
+                                                long tick = level.getGameTime();
+                                                service.tick();
+                                                require(service.job() != null && service.job().returning,
+                                                        "matrix batch did not settle in its dispatch tick");
+                                                require(service.job().readyAt < 0 && level.getGameTime() == tick,
+                                                        "matrix still scheduled a delayed commit");
+                                                service.load(service.save(level.registryAccess()), level.registryAccess());
+                                                startedAt[0] = tick;
                                                 phase[0] = 3;
                                             }
                                             if (phase[0] == 3) {
@@ -512,6 +550,54 @@ public final class BigIntegerPipelineGameTests {
                                         });
                             });
                 });
+    }
+
+    private static ItemStack pattern(GameTestHelper h, String id, ItemStack output, Map<Integer, ItemStack> slots) {
+        var holder = h.getLevel().getRecipeManager().byKey(ResourceLocation.withDefaultNamespace(id)).orElseThrow();
+        var grid = new ItemStack[9];
+        Arrays.fill(grid, ItemStack.EMPTY);
+        slots.forEach((slot, stack) -> grid[slot] = stack);
+        return PatternDetailsHelper.encodeCraftingPattern(
+                new RecipeHolder<>(holder.id(), (CraftingRecipe) holder.value()), grid, output, false, false);
+    }
+
+    private static void runZeroTick(GameTestHelper h, TianshuSupercomputerControllerBlockEntity cpu,
+                                    MatrixPatternStorageBlockEntity patterns) {
+        patterns.getInventory().setStackInSlot(1, pattern(h, "stick", new ItemStack(Items.STICK, 4),
+                Map.of(0, new ItemStack(Items.OAK_PLANKS), 3, new ItemStack(Items.OAK_PLANKS))));
+        patterns.getInventory().setStackInSlot(2, pattern(h, "ladder", new ItemStack(Items.LADDER, 3),
+                Map.of(0, new ItemStack(Items.STICK), 2, new ItemStack(Items.STICK),
+                        3, new ItemStack(Items.STICK), 4, new ItemStack(Items.STICK), 5, new ItemStack(Items.STICK),
+                        6, new ItemStack(Items.STICK), 8, new ItemStack(Items.STICK))));
+        var raw = AEItemKey.of(Items.OAK_LOG);
+        var target = AEItemKey.of(Items.LADDER);
+        var amount = N.multiply(BigInteger.valueOf(24));
+        var storage = cpu.getGrid().getStorageService().getInventory();
+        require(BigStorageOps.insert(storage, raw, N.multiply(BigInteger.valueOf(7)), Actionable.MODULATE, SOURCE)
+                .equals(N.multiply(BigInteger.valueOf(7))), "huge chain funding failed");
+        // Let AE2 publish the two newly installed patterns before taking the graph snapshot.
+        h.runAfterDelay(5, () -> {
+            var future = cpu.bigCrafting().preview(target, amount, SOURCE);
+            h.succeedWhen(() -> {
+                h.assertTrue(future.isDone(), "waiting for huge chain plan");
+                var plan = future.join();
+                require(plan.executable(), "huge three-layer chain failed planning");
+                var service = cpu.bigCrafting();
+                require(service.submit(target, amount, plan, SOURCE), "huge chain submit rejected");
+                service.load(service.save(h.getLevel().registryAccess()), h.getLevel().registryAccess());
+                long tick = h.getLevel().getGameTime();
+                service.tick();
+                require(!service.busy(), "three-layer exact chain did not complete in one dispatch tick");
+                require(tick == h.getLevel().getGameTime(), "game time advanced");
+                var stock = BigStorageOps.snapshot(storage, SOURCE);
+                require(amount.equals(stock.get(target)), "huge final output truncated");
+                require(stock.getOrDefault(raw, BigInteger.ZERO).signum() == 0, "raw duplicated");
+                require(stock.getOrDefault(AEItemKey.of(Items.OAK_PLANKS), BigInteger.ZERO).signum() == 0,
+                        "intermediate planks leaked");
+                require(stock.getOrDefault(AEItemKey.of(Items.STICK), BigInteger.ZERO).signum() == 0,
+                        "intermediate sticks leaked");
+            });
+        });
     }
 
     private static void runMixed(GameTestHelper h, TianshuSupercomputerControllerBlockEntity cpu,

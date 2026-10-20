@@ -5,7 +5,10 @@ allprojects {
         // whose signatures require optional mods removed from this isolated runtime.
         sourceSets.jdb.java.setIncludes([
             'com/moakiee/ae2lt/debug/BigIntegerPipelineGameTests.java',
-            'com/moakiee/ae2lt/crafting/big/BigMixedProviderGameTests.java'
+            'com/moakiee/ae2lt/crafting/big/BigMixedProviderGameTests.java',
+            'com/moakiee/ae2lt/crafting/big/BigServiceTestFixture.java',
+            'com/moakiee/ae2lt/crafting/big/BigCandidateIndexGameTests.java',
+            'com/moakiee/ae2lt/crafting/big/BigZeroTickGameTests.java'
         ])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')

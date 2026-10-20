@@ -1,4 +1,4 @@
-package com.moakiee.ae2lt.crafting.timewheel;
+package com.moakiee.ae2lt.crafting.runtime;
 
 import java.util.function.ObjLongConsumer;
 
@@ -7,7 +7,7 @@ import appeng.api.stacks.KeyCounter;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 
 /** One dispatch's physical returns. Closing the sink before draining prevents reentrant enqueue. */
-final class DeferredCraftingOutputs implements DeferredCraftingProvider.OutputSink {
+public final class DeferredCraftingOutputs implements DeferredCraftingProvider.OutputSink {
     private final KeyCounter pending = new KeyCounter();
     private boolean closed;
 
@@ -24,7 +24,7 @@ final class DeferredCraftingOutputs implements DeferredCraftingProvider.OutputSi
         return true;
     }
 
-    void drain(ObjLongConsumer<AEKey> receiver, ObjLongConsumer<AEKey> fallback) {
+    public void drain(ObjLongConsumer<AEKey> receiver, ObjLongConsumer<AEKey> fallback) {
         closed = true;
         try {
             for (var entry : pending) {

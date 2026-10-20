@@ -66,6 +66,8 @@ tmp_extae/
 appeng/
 net/
 META-INF/
+!src/main/resources/META-INF/
+!src/main/resources/META-INF/recipesearch-attribution.txt
 
 #log
 DevLog/
