@@ -2,7 +2,7 @@
 allprojects {
     afterEvaluate {
         configurations.runtimeOnly.dependencies.removeIf { dep ->
-            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'dev.emi']
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'dev.emi', 'mezz.jei']
                 || dep.name in ['jei-238222', 'ae2-jei-integration-1074338'])
         }
         neoForge.runs.client {

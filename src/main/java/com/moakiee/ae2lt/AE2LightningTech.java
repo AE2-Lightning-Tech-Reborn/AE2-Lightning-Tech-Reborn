@@ -345,7 +345,6 @@ public class AE2LightningTech {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PIGMEE_TAB =
             CREATIVE_MODE_TABS.register("pigmee", () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.ae2lt.pigmee"))
-                    .withTabsAfter(MAIN_TAB.getKey())
                     .icon(() -> ModFumos.PIGMEE_FUMO_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());

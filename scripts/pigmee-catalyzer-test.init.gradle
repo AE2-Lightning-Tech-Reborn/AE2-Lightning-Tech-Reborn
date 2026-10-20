@@ -8,6 +8,7 @@ allprojects {
             !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics']
                     || (!project.hasProperty('pigmeeHeadless')
                         && (dep.group == 'dev.emi'
+                            || dep.group == 'mezz.jei'
                             || dep.name in ['jei-238222', 'ae2-jei-integration-1074338', 'jade-324717'])))
         }
         neoForge.runs.gameTestServer {

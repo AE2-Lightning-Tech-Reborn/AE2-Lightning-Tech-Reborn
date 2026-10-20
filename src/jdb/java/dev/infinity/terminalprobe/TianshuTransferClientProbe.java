@@ -22,7 +22,8 @@ import java.util.List;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.common.Internal;
-import mezz.jei.common.transfer.RecipeTransferUtil;
+import mezz.jei.common.transfer.RecipeTransferService;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -581,14 +582,14 @@ public final class TianshuTransferClientProbe {
         } else if (command.equals("feedback") || command.equals("transfer")) {
             var runtime = Internal.getJeiRuntime();
             var layout = layout();
-            var menu = mc.player.containerMenu;
-            var handler = runtime.getRecipeTransferManager().getRecipeTransferHandler(menu, layout.getRecipeCategory()).orElseThrow();
-            var error = RecipeTransferUtil.getTransferRecipeError(runtime.getRecipeTransferManager(), menu, layout, mc.player).orElse(null);
+            var handler = runtime.getRecipeTransferManager().getRecipeTransferHandler(mc.player.containerMenu, layout.getRecipeCategory()).orElseThrow();
+            if (!(mc.screen instanceof AbstractContainerScreen<?> screen)) throw new IllegalStateException("JEI transfer requires an open container screen");
+            var service = new RecipeTransferService(runtime.getRecipeTransferManager());
+            var error = service.getTransferRecipeError(screen, layout, mc.player).orElse(null);
             report = "handler=" + handler.getClass().getName() + "; ctrl=" + Screen.hasControlDown()
                     + "; error=" + (error == null ? "null" : error.getType() + "/" + error.getClass().getName()
                     + "; color=" + Integer.toHexString(error.getButtonHighlightColor()) + "; missing=" + error.getMissingCountHint());
-            if (command.equals("transfer")) report += "; transfer=" + RecipeTransferUtil.transferRecipe(
-                    runtime.getRecipeTransferManager(), menu, layout, mc.player, false);
+            if (command.equals("transfer")) report += "; transfer=" + service.transferRecipe(screen, layout, mc.player, false);
         } else if (command.equals("confirm")) {
             var menu = (appeng.menu.me.crafting.CraftConfirmMenu) mc.player.containerMenu;
             report = "confirm noCPU=" + menu.hasNoCPU() + "; plan=" + menu.getPlan();

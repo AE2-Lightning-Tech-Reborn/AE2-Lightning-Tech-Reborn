@@ -3,79 +3,53 @@ package com.moakiee.ae2lt.integration.emi;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Scene;
+import com.lowdragmc.lowdraglib2.utils.data.BlockInfo;
+import com.lowdragmc.lowdraglib2.utils.virtuallevel.TrackedDummyWorld;
+
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
 import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
 
-/** EMI counterpart of the JEI lightning-strike isometric preview widget. */
+/** EMI counterpart of the JEI lightning-strike preview, rendered by LDLib2. */
 final class EmiLightningStrikePreviewWidget extends Widget {
-    private static final float X_ROTATION_DEG = 30.0F;
-    private static final float SCALE_MARGIN = 0.92F;
     private static final float ROTATION_DEGREES_PER_MS = 0.024F;
 
     private final Bounds bounds;
-    private final List<Entry> blocks;
-    private final float centerX;
-    private final float centerY;
-    private final float centerZ;
-    private final float scale;
+    private final Scene scene = new Scene();
+    private final float baseYaw;
 
     private EmiLightningStrikePreviewWidget(int x, int y, int width, int height, List<Entry> blocks) {
         this.bounds = new Bounds(x, y, width, height);
-        this.blocks = blocks;
 
-        float minX = Float.POSITIVE_INFINITY;
-        float maxX = Float.NEGATIVE_INFINITY;
-        float minY = Float.POSITIVE_INFINITY;
-        float maxY = Float.NEGATIVE_INFINITY;
-        float minZ = Float.POSITIVE_INFINITY;
-        float maxZ = Float.NEGATIVE_INFINITY;
+        TrackedDummyWorld world = new TrackedDummyWorld();
+        List<BlockPos> positions = new ArrayList<>();
         for (Entry entry : blocks) {
-            minX = Math.min(minX, entry.offset.getX() - 0.5F);
-            maxX = Math.max(maxX, entry.offset.getX() + 0.5F);
-            minY = Math.min(minY, entry.offset.getY() - 0.5F);
-            maxY = Math.max(maxY, entry.offset.getY() + 0.5F);
-            minZ = Math.min(minZ, entry.offset.getZ() - 0.5F);
-            maxZ = Math.max(maxZ, entry.offset.getZ() + 0.5F);
-        }
-        centerX = (minX + maxX) * 0.5F;
-        centerY = (minY + maxY) * 0.5F;
-        centerZ = (minZ + maxZ) * 0.5F;
-
-        float xRotCos = (float) Math.cos(Math.toRadians(X_ROTATION_DEG));
-        float xRotSin = (float) Math.sin(Math.toRadians(X_ROTATION_DEG));
-        float horizontalRadius = 0F;
-        float verticalRadius = 0F;
-        for (float xv : new float[] {minX - centerX, maxX - centerX}) {
-            for (float yv : new float[] {minY - centerY, maxY - centerY}) {
-                for (float zv : new float[] {minZ - centerZ, maxZ - centerZ}) {
-                    float horizontal = (float) Math.hypot(xv, zv);
-                    horizontalRadius = Math.max(horizontalRadius, horizontal);
-                    verticalRadius = Math.max(
-                            verticalRadius,
-                            Math.abs(yv) * xRotCos + horizontal * xRotSin);
-                }
+            positions.add(entry.offset);
+            try {
+                world.addBlock(entry.offset, BlockInfo.fromBlockState(entry.block.defaultBlockState()));
+            } catch (RuntimeException ignored) {
+                world.addBlock(entry.offset, new BlockInfo(entry.block.defaultBlockState()));
             }
         }
-        scale = horizontalRadius <= 0F || verticalRadius <= 0F
-                ? 0F
-                : Math.min(
-                                width * 0.5F / horizontalRadius,
-                                height * 0.5F / verticalRadius)
-                        * SCALE_MARGIN;
+        scene.createScene(world);
+        scene.useOrtho(true);
+        scene.setRenderFacing(false);
+        scene.setRenderSelect(false);
+        scene.setIntractable(false);
+        scene.setCameraYawAndPitch(225.0F, 30.0F);
+        if (!positions.isEmpty()) {
+            scene.setRenderedCore(positions, null, true);
+            scene.setZoom(scene.getZoom() * 0.62F);
+            scene.setCenter(new org.joml.Vector3f(scene.getCenter()).add(0.0F, -2.05F, 0.0F));
+        }
+        baseYaw = scene.getRotationYaw();
+        scene.getRenderer().setOnLookingAt(ignored -> {
+            // Required for the renderer to update its trace result.
+        });
     }
 
     @Override
@@ -85,47 +59,18 @@ final class EmiLightningStrikePreviewWidget extends Widget {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        if (blocks.isEmpty() || scale <= 0F) {
+        var renderer = scene.getRenderer();
+        if (renderer == null) {
             return;
         }
-        var client = Minecraft.getInstance();
-        var bufferSource = client.renderBuffers().bufferSource();
-        var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = graphics.pose();
-        float rotation = (Util.getMillis() * ROTATION_DEGREES_PER_MS) % 360F;
-
-        for (Entry entry : blocks) {
-            pose.pushPose();
-            pose.translate(
-                    bounds.x() + bounds.width() / 2F,
-                    bounds.y() + bounds.height() / 2F,
-                    400);
-            pose.scale(scale, -scale, scale);
-            pose.mulPose(Axis.XP.rotationDegrees(X_ROTATION_DEG));
-            pose.mulPose(Axis.YP.rotationDegrees(225 + rotation));
-            pose.translate(
-                    -0.5F + entry.offset.getX() - centerX,
-                    -0.5F + entry.offset.getY() - centerY,
-                    -0.5F + entry.offset.getZ() - centerZ);
-            RenderSystem.runAsFancy(() -> {
-                if (entry.state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
-                    blockRenderer.renderSingleBlock(
-                            entry.state,
-                            pose,
-                            bufferSource,
-                            LightTexture.FULL_BRIGHT,
-                            OverlayTexture.NO_OVERLAY);
-                }
-            });
-            pose.popPose();
-        }
-        if (bufferSource instanceof MultiBufferSource.BufferSource source) {
-            source.endBatch();
-        }
-        Lighting.setupFor3DItems();
+        scene.setCameraYawAndPitch(
+                baseYaw + (Util.getMillis() * ROTATION_DEGREES_PER_MS) % 360.0F,
+                scene.getRotationPitch());
+        graphics.flush();
+        renderer.render(graphics.pose(), bounds.x(), bounds.y(), bounds.width(), bounds.height(), mouseX, mouseY);
     }
 
-    private record Entry(BlockState state, BlockPos offset) {
+    private record Entry(Block block, BlockPos offset) {
     }
 
     static final class Builder {
@@ -143,8 +88,8 @@ final class EmiLightningStrikePreviewWidget extends Widget {
         }
 
         Builder addBlock(Block block, BlockPos offset) {
-            if (block != null) {
-                blocks.add(new Entry(block.defaultBlockState(), offset));
+            if (block != null && offset != null) {
+                blocks.add(new Entry(block, offset));
             }
             return this;
         }
