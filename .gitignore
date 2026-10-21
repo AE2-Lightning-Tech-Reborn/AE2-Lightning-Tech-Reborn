@@ -21,6 +21,9 @@ docs/*
 !docs/tianshu-deferred-matrix-returns.md
 !docs/addon-api-alpha.md
 !docs/alpha-vs-main-2026-10-05.md
+!docs/io-simplification-20261015.md
+!docs/io-simplification-20261015.json
+!docs/provider-machine-adaptation.zh-CN.md
 
 # Bundled source mirrors / references
 Source Code/
@@ -64,6 +67,8 @@ tmp_extae/
 appeng/
 net/
 META-INF/
+!src/main/resources/META-INF/
+!src/main/resources/META-INF/recipesearch-attribution.txt
 
 #log
 DevLog/

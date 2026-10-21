@@ -1,0 +1,50 @@
+// Optional real Tweakerge + MaFgLib jars: -Pae2ltJdbProbeMods=<jar>:<jar>
+// Seed save: -PphaseFreecamSeedWorld=<directory>; only level.dat is copied.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseFreecamClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        def variant = providers.gradleProperty('phaseFreecamVariant').getOrElse('base')
+        def probeDirectory = project.layout.buildDirectory.dir("phase-freecam-client-${variant}").get().asFile
+        def reportDirectory = project.layout.buildDirectory.dir("reports/phase-freecam-client-${variant}").get().asFile
+        def seedFile = new File(project.file(providers.gradleProperty('phaseFreecamSeedWorld').get()), 'level.dat')
+        neoForge.runs.client {
+            gameDirectory = probeDirectory
+            systemProperty 'ae2lt.phaseFreecamClientProbe', 'true'
+            systemProperty 'ae2lt.phaseFreecamOutput', reportDirectory.absolutePath
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+            programArguments.addAll '--username', 'PhaseFreecamQA', '--quickPlaySingleplayer', 'PhaseFreecamQA',
+                    '--width', '960', '--height', '540'
+        }
+        def prepareWorld = tasks.register('preparePhaseFreecamWorld') {
+            doLast {
+                def seed = seedFile.toPath()
+                if (!java.nio.file.Files.isRegularFile(seed)) throw new GradleException('Seed save has no level.dat')
+                def destination = probeDirectory.toPath().resolve('saves/PhaseFreecamQA/level.dat')
+                java.nio.file.Files.createDirectories(destination.parent)
+                if (!java.nio.file.Files.exists(destination)) java.nio.file.Files.copy(seed, destination)
+                def options = new File(probeDirectory, 'options.txt')
+                if (!options.exists()) options.text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\n'
+                // Keep the fixture independent of an ME lightning supply; FE and module sync remain real.
+                def config = new File(probeDirectory, 'config/ae2lt-common.toml')
+                config.parentFile.mkdirs()
+                config.text = 'configVersion = 3\n[overloadArmor.lightningCosts]\nflightHvPerTick = 0\nphaseFlightHvPerTick = 0\n'
+                reportDirectory.mkdirs()
+                new File(reportDirectory, 'result.txt').delete()
+            }
+        }
+        tasks.named('runClient').configure {
+            dependsOn prepareWorld
+            doLast {
+                def result = new File(reportDirectory, 'result.txt')
+                if (!result.isFile() || !result.readLines().any { it.startsWith('PASS:') }
+                        || result.readLines().any { it.startsWith('FAIL:') }) {
+                    throw new GradleException("Freecam probe failed; inspect ${result}")
+                }
+            }
+        }
+    }
+}

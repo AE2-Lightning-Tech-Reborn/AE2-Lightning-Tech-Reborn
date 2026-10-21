@@ -70,7 +70,8 @@ final class OverloadedAutoReturnController {
                         targetLevel,
                         allowedOutputs,
                         environment.actionSource(),
-                        outputSink);
+                        outputSink,
+                        provider.isMachineAdaptationEnabled());
             }
             sweep.recordPeriodic(target, gameTick, result);
         }
@@ -97,7 +98,8 @@ final class OverloadedAutoReturnController {
                     targetLevel,
                     allowedOutputs,
                     environment.actionSource(),
-                    outputSink);
+                    outputSink,
+                    environment.provider().isMachineAdaptationEnabled());
         }
         // Demand is activity even if the machine has not produced an output yet.
         // It must never advance the idle sweep backoff.
@@ -118,11 +120,10 @@ final class OverloadedAutoReturnController {
         sweep.clear();
     }
 
-    private List<ProviderTarget> currentTargets(
+    private List<? extends ProviderTarget> currentTargets(
             ServerLevel providerLevel, long gameTick) {
         if (environment.provider().getProviderMode() == ProviderMode.WIRELESS) {
-            return new ArrayList<>(environment.validConnections(
-                    providerLevel, gameTick));
+            return environment.validConnections(providerLevel, gameTick);
         }
         var targets = new ArrayList<ProviderTarget>();
         for (var direction : environment.normalTargetDirections()) {

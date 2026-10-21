@@ -77,6 +77,9 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     @GuiSync(22011)
     public int machineParallelism = 1;
 
+    @GuiSync(22012)
+    public int machineAdaptationEnabled = 1;
+
     @GuiSync(22004)
     public int currentPage;
 
@@ -102,6 +105,7 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
         registerClientAction("toggleWirelessDispatchMode", this::toggleWirelessDispatchMode);
         registerClientAction("toggleWirelessSpeedMode", this::toggleWirelessSpeedMode);
         registerClientAction("toggleFilteredImport", this::toggleFilteredImport);
+        registerClientAction("toggleMachineAdaptation", this::toggleMachineAdaptation);
         registerClientAction("toggleAdaptiveBatch", this::toggleAdaptiveBatch);
         registerClientAction("setMachineParallelism", Integer.class, this::setMachineParallelism);
         registerClientAction("cycleBlockingMode", this::cycleBlockingMode);
@@ -137,6 +141,7 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
             providerMode = be.getProviderMode().ordinal();
             returnMode = be.getReturnMode().ordinal();
             filteredImport = be.isFilteredImport() ? 1 : 0;
+            machineAdaptationEnabled = be.isMachineAdaptationEnabled() ? 1 : 0;
             wirelessDispatchMode = be.getWirelessDispatchMode().ordinal();
             wirelessSpeedMode = be.getWirelessSpeedMode().ordinal();
             blockingMode = getBlockingState(be);
@@ -186,6 +191,20 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
             var current = be.getWirelessSpeedMode();
             be.setWirelessSpeedMode(values[(current.ordinal() + 1) % values.length]);
         }
+    }
+
+    private void toggleMachineAdaptation() {
+        if (isServerSide() && host instanceof OverloadedPatternProviderBlockEntity be) {
+            be.setMachineAdaptationEnabled(!be.isMachineAdaptationEnabled());
+        }
+    }
+
+    public void clientToggleMachineAdaptation() {
+        sendClientAction("toggleMachineAdaptation");
+    }
+
+    public boolean isMachineAdaptationEnabled() {
+        return machineAdaptationEnabled != 0;
     }
 
     private void toggleFilteredImport() {

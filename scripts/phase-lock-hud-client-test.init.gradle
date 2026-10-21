@@ -1,0 +1,30 @@
+// Run with -PphaseLockHudSeedWorld=<save directory>; only its level.dat is copied.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseLockHudClientProbe.java'])
+        def probeDirectory = project.file('.codex-tmp/phase-lock-hud-client')
+        def reportDirectory = project.layout.buildDirectory.dir('reports/phase-lock-hud-client').get().asFile
+        def seedPath = project.providers.gradleProperty('phaseLockHudSeedWorld').getOrElse('')
+        def seedFile = seedPath.isEmpty() ? null : new File(project.file(seedPath), 'level.dat')
+        neoForge.runs.client {
+            gameDirectory = probeDirectory
+            systemProperty 'ae2lt.phaseLockHudClientProbe', 'true'
+            systemProperty 'ae2lt.phaseLockHudOutput', reportDirectory.absolutePath
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+            programArguments.addAll '--username', 'PhaseLockHudQA', '--quickPlaySingleplayer', 'PhaseLockHudQA',
+                    '--width', '1280', '--height', '720'
+        }
+        def prepareWorld = tasks.register('preparePhaseLockHudWorld') {
+            doLast {
+                if (seedPath.isEmpty()) throw new GradleException('Specify -PphaseLockHudSeedWorld=<save directory>')
+                def seed = seedFile.toPath()
+                if (!java.nio.file.Files.isRegularFile(seed)) throw new GradleException('Seed save has no level.dat')
+                def destination = probeDirectory.toPath().resolve('saves/PhaseLockHudQA/level.dat')
+                java.nio.file.Files.createDirectories(destination.parent)
+                if (!java.nio.file.Files.exists(destination)) java.nio.file.Files.copy(seed, destination)
+                reportDirectory.mkdirs()
+            }
+        }
+        tasks.named('runClient').configure { dependsOn prepareWorld }
+    }
+}

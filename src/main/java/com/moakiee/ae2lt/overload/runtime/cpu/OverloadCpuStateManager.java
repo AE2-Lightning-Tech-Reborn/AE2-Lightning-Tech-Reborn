@@ -59,7 +59,12 @@ public final class OverloadCpuStateManager {
     public synchronized OverloadCpuState getOrCreate(Object logic, UUID craftingId) {
         Objects.requireNonNull(logic, "logic");
         Objects.requireNonNull(craftingId, "craftingId");
-        return states.computeIfAbsent(logic, ignored -> new OverloadCpuState(OverloadCpuOwner.from(craftingId, logic)));
+        var state = states.get(logic);
+        if (state == null || !state.owner().craftingId().equals(craftingId)) {
+            state = new OverloadCpuState(OverloadCpuOwner.from(craftingId, logic));
+            states.put(logic, state);
+        }
+        return state;
     }
 
     public synchronized Optional<OverloadCpuState> get(CraftingCpuLogic logic) {

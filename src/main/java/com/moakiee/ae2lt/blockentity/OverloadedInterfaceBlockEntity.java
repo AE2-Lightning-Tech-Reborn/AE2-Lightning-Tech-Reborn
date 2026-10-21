@@ -409,6 +409,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     static final class ExportTransferState {
         long untilTick;
         int preferredSlot = -1;
+        boolean waitingForSpace;
         private final CooldownTracker poller = new CooldownTracker();
         private StockBudget budget;
         private long capacity;
@@ -418,6 +419,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         }
 
         void accepted(long now, long amount, boolean requestLimited, IOSpeedMode mode, long stockBefore) {
+            waitingForSpace = false;
             poller.onSuccess(now, mode);
             untilTick = poller.cooldownUntil();
             if (mode == IOSpeedMode.NORMAL) {
@@ -432,12 +434,14 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         }
 
         void rejected(long now, IOSpeedMode mode, long stock) {
+            waitingForSpace = true;
             if (stock >= 0) capacity = stock;
             poller.onFail(now, mode);
             untilTick = poller.cooldownUntil();
         }
 
         void unavailable(long now, IOSpeedMode mode) {
+            waitingForSpace = false;
             // Shortage is not evidence that the target is full or consuming slowly.
             if (budget != null) budget.reset();
             capacity = 0;
@@ -458,7 +462,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         final Map<AEKeyType, CooldownTracker> importCDs = new IdentityHashMap<>();
         final Map<AEKeyType, CooldownTracker> exportCDs = new IdentityHashMap<>();
         final Map<AEKey, ExportTransferState> exportTransfers = new HashMap<>();
-        final Map<AEKeyType, ExportPlan> exportPlans = new IdentityHashMap<>();
+        final Map<AEKeyType, InterfaceExportPlan> exportPlans = new IdentityHashMap<>();
         final ImportSlotKeyCache importSlotKeys = new ImportSlotKeyCache();
 
         @Nullable WeakReference<BlockEntity> storageBERef;
@@ -482,10 +486,10 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             exportStockTick = Long.MIN_VALUE;
         }
 
-        ExportPlan exportPlan(AEKeyType type, List<ExportConfigEntry> entries) {
+        InterfaceExportPlan exportPlan(AEKeyType type, List<ExportConfigEntry> entries) {
             var existing = exportPlans.get(type);
             if (existing != null && existing.entries() == entries) return existing;
-            // Evict once before building the whole immutable plan. Eviction in
+            // Evict once before building the whole indexed plan. Eviction in
             // exportState halfway through could split duplicate keys into two
             // cooldown states and detach earlier entries from the live cache.
             var keys = new HashSet<AEKey>();
@@ -500,7 +504,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             for (int i = 0; i < entries.size(); i++) {
                 transfers[i] = exportTransfers.computeIfAbsent(entries.get(i).key(), ignored -> new ExportTransferState());
             }
-            var plan = new ExportPlan(entries, transfers);
+            var plan = new InterfaceExportPlan(entries, transfers);
             exportPlans.put(type, plan);
             return plan;
         }
@@ -568,7 +572,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     private record IoEntryKey(WirelessConnection conn, AEKeyType keyType, IoDirection direction) {}
     record ExportConfigEntry(AEKey key, long maxAmount) {}
-    record ExportPlan(List<ExportConfigEntry> entries, ExportTransferState[] transfers) {}
 
     record ImportBufferFlushResult(
             long lastFlushTick,
@@ -1196,14 +1199,16 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                 connections, invalidConnectionScanCursor, maxChecks,
                 serverLevel, getBlockPos());
         invalidConnectionScanCursor = result.nextCursor();
-        if (result.removed() > 0) {
-            invalidateConnectionCache();
-            refreshEjectRegistrations();
-            recomputeIdlePower();
-            saveChanges();
-            markForUpdate();
-        }
+        if (result.removed() > 0) onConnectionsPruned();
         return result.removed();
+    }
+
+    private void onConnectionsPruned() {
+        invalidateConnectionCache();
+        refreshEjectRegistrations();
+        recomputeIdlePower();
+        saveChanges();
+        markForUpdate();
     }
 
     private void tickWirelessConnectionCleanup(ServerLevel level) {
@@ -1284,13 +1289,15 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!connectionsDirty
                 && gameTick - validConnectionsCacheTick < VALIDATE_INTERVAL)
             return validConnectionsCache;
-        clearInvalidConnections();
         var valid = new ArrayList<WirelessConnection>();
-        for (var c : connections) {
-            if (WirelessConnectionValidator.validate(sl, getBlockPos(), c)
-                    == WirelessConnectionValidator.Status.VALID) {
-                valid.add(c);
-            }
+        boolean removed = connections.removeIf(connection -> {
+            var status = WirelessConnectionValidator.validate(sl, getBlockPos(), connection);
+            if (status == WirelessConnectionValidator.Status.VALID) valid.add(connection);
+            return status == WirelessConnectionValidator.Status.REMOVE;
+        });
+        if (removed) {
+            invalidConnectionScanCursor = 0;
+            onConnectionsPruned();
         }
         var newCache = List.copyOf(valid);
         if (!newCache.equals(validConnectionsCache)) {
@@ -1856,6 +1863,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         var entries = exportEntriesForType(keyType, now);
         KeyCounter stock = null;
         IItemHandler directItemHandler = null;
+        IItemHandler itemHandler = null;
         long moved = 0;
         long next = Long.MAX_VALUE;
         // References are scoped to this target pass. Power balances and external
@@ -1867,6 +1875,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                     && wrapper instanceof ExternalStorageFacade) {
                 var handler = state.resolveItemHandler();
                 if (handler != null) {
+                    itemHandler = handler;
                     var target = state.storageBERef != null ? state.storageBERef.get() : null;
                     if (ioSpeedMode == IOSpeedMode.FAST && target != null
                             && target.getClass() == BarrelBlockEntity.class
@@ -1883,16 +1892,22 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                     }
                 }
             }
-            for (int index = 0; index < entries.size(); index++) {
+            plan.prepare(itemHandler, me, src, now);
+            for (int offset = 0; offset < entries.size(); offset++) {
+                int index = plan.indexAt(offset);
                 var entry = entries.get(index);
                 var transfer = plan.transfers()[index];
-                if (now >= transfer.untilTick) {
-                    moved += directItemHandler != null && entry.key() instanceof AEItemKey itemKey
+                if (plan.shouldYield(index)) {
+                    transfer.untilTick = now + 1;
+                } else if (now >= transfer.untilTick) {
+                    long inserted = directItemHandler != null && entry.key() instanceof AEItemKey itemKey
                             && entry.maxAmount() <= itemKey.getMaxStackSize()
                             ? exportItemKey(transfer, entry, directItemHandler, me, src, energyAccess, now,
                             stock != null ? stock.get(entry.key()) : -1)
                             : exportKey(transfer, entry, wrapper, me, src, energyAccess, now,
                                     stock != null ? stock.get(entry.key()) : -1);
+                    moved += inserted;
+                    if (inserted > 0) plan.transferred(index, itemHandler, inserted, now);
                 }
                 next = Math.min(next, transfer.untilTick);
             }

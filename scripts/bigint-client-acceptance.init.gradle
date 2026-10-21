@@ -1,0 +1,17 @@
+// Native client widgets, menu callbacks and real packets in an isolated acceptance world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+            'com/moakiee/ae2lt/debug/BigIntegerNativeUiProbe.java',
+            'com/moakiee/ae2lt/debug/BigIntegerClientAcceptanceProbe.java'
+        ])
+        configurations.runtimeOnly.dependencies.removeIf { dep -> !(dep.group in ['com.moakiee.thunderbolt','org.appliedenergistics']) }
+        neoForge.runs.client {
+            gameDirectory = project.layout.buildDirectory.dir('bigint-client-acceptance').get().asFile
+            systemProperty 'ae2lt.bigClientAcceptance','true'
+            systemProperty 'ae2lt.bigClientActions','true'
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp') })
+            programArguments.addAll '--quickPlaySingleplayer','BigIntProbe','--width','1280','--height','900'
+        }
+    }
+}

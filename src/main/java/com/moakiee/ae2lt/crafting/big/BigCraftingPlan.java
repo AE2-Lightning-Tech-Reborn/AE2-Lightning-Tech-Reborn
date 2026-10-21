@@ -28,6 +28,12 @@ public record BigCraftingPlan(
         return 0;
     } // Multidimensional CPUs have no byte reservation.
 
+    /** Report the calculation cost independently of the CPU's unbounded reservation policy. */
+    public BigInteger reportBytes() {
+        return exact == null || exact.diagnostic() == null ? BigInteger.ZERO
+                : exact.diagnostic().byteCost(key -> key.getType().getAmountPerByte(), Set.of());
+    }
+
     public boolean simulation() {
         return exact == null || !exact.executable();
     }
@@ -85,7 +91,7 @@ public record BigCraftingPlan(
                                                     .max(BigInteger.ZERO)));
             for (var block : exact.program().blocks())
                 for (var step : block.steps()) {
-                    var recipe = (BigMatrixRecipe) step.recipe().source();
+                    var recipe = (BigCraftingRecipe) step.recipe().source();
                     var copies = step.copies().multiply(block.repetitions());
                     crafted.merge(
                             recipe.pattern().output(),
@@ -123,10 +129,11 @@ public record BigCraftingPlan(
                 Comparator.comparing(
                                 (CraftingPlanSummaryEntry e) -> precise.get(e.getWhat()).missing())
                         .reversed());
-        var summary = new CraftingPlanSummary(0, simulation(), List.copyOf(entries));
+        var bytes = reportBytes();
+        var summary = new CraftingPlanSummary(ExactPlanReport.project(bytes), simulation(), List.copyOf(entries));
         ExactPlanReports.attach(
                 summary,
-                new ExactPlanReport(BigInteger.ZERO, precise, exact == null || !exact.verified()));
+                new ExactPlanReport(bytes, precise, exact == null || !exact.verified(), false));
         return summary;
     }
 }

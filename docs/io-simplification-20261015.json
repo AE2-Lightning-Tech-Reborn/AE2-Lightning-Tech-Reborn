@@ -1,0 +1,417 @@
+{
+  "baseline": "1e7686ed4468ae2b855654edb0b13d37af0c56b9",
+  "game": "Minecraft 1.21.1 / NeoForge 21.1.220",
+  "java": "GraalVM 21.0.12",
+  "sequence": "ABBA, sequential fresh JVMs and fresh worlds",
+  "nativeRuns": [
+    {
+      "version": "baseline",
+      "sequence": 1,
+      "workload": {
+        "scenario": "io-simplification-baseline-1",
+        "targets": 256,
+        "keys": 27,
+        "batch": 512,
+        "samples": 1200,
+        "plannedEvents": 307200,
+        "completedEvents": 307200,
+        "minimumTargetThroughput": 1.0,
+        "minimumWindowThroughput": 1.0,
+        "maxKeyWait": 210,
+        "consumedItems": 183238656,
+        "ownershipVerified": true,
+        "bufferedItems": 0
+      },
+      "tickMs": {
+        "mean": 0.979554,
+        "p50": 0.880167,
+        "p95": 1.785,
+        "p99": 2.375834,
+        "max": 4.270167
+      },
+      "wirelessIoMs": {
+        "mean": 0.684239,
+        "p50": 0.567958,
+        "p95": 1.432083,
+        "p99": 1.849708,
+        "max": 3.798792
+      },
+      "gcCollections": 5,
+      "gcMillis": 9,
+      "peakUsedHeapBytes": 505785480,
+      "ticksOver50Ms": 0,
+      "partial": false
+    },
+    {
+      "version": "candidate",
+      "sequence": 2,
+      "workload": {
+        "scenario": "io-simplification-candidate-2",
+        "targets": 256,
+        "keys": 27,
+        "batch": 512,
+        "samples": 1200,
+        "plannedEvents": 307200,
+        "completedEvents": 307200,
+        "minimumTargetThroughput": 1.0,
+        "minimumWindowThroughput": 1.0,
+        "maxKeyWait": 210,
+        "consumedItems": 183238656,
+        "ownershipVerified": true,
+        "bufferedItems": 0
+      },
+      "tickMs": {
+        "mean": 0.765328,
+        "p50": 0.621375,
+        "p95": 1.472791,
+        "p99": 2.145583,
+        "max": 5.028583
+      },
+      "wirelessIoMs": {
+        "mean": 0.543474,
+        "p50": 0.437084,
+        "p95": 1.19,
+        "p99": 1.66925,
+        "max": 3.919708
+      },
+      "gcCollections": 5,
+      "gcMillis": 8,
+      "peakUsedHeapBytes": 522367152,
+      "ticksOver50Ms": 0,
+      "partial": false
+    },
+    {
+      "version": "candidate",
+      "sequence": 3,
+      "workload": {
+        "scenario": "io-simplification-candidate-3",
+        "targets": 256,
+        "keys": 27,
+        "batch": 512,
+        "samples": 1200,
+        "plannedEvents": 307200,
+        "completedEvents": 307200,
+        "minimumTargetThroughput": 1.0,
+        "minimumWindowThroughput": 1.0,
+        "maxKeyWait": 210,
+        "consumedItems": 183238656,
+        "ownershipVerified": true,
+        "bufferedItems": 0
+      },
+      "tickMs": {
+        "mean": 0.863922,
+        "p50": 0.738917,
+        "p95": 1.619167,
+        "p99": 2.1505,
+        "max": 5.193333
+      },
+      "wirelessIoMs": {
+        "mean": 0.617506,
+        "p50": 0.508042,
+        "p95": 1.306459,
+        "p99": 1.657,
+        "max": 4.688
+      },
+      "gcCollections": 5,
+      "gcMillis": 8,
+      "peakUsedHeapBytes": 520364056,
+      "ticksOver50Ms": 0,
+      "partial": false
+    },
+    {
+      "version": "baseline",
+      "sequence": 4,
+      "workload": {
+        "scenario": "io-simplification-baseline-4",
+        "targets": 256,
+        "keys": 27,
+        "batch": 512,
+        "samples": 1200,
+        "plannedEvents": 307200,
+        "completedEvents": 307200,
+        "minimumTargetThroughput": 1.0,
+        "minimumWindowThroughput": 1.0,
+        "maxKeyWait": 210,
+        "consumedItems": 183238656,
+        "ownershipVerified": true,
+        "bufferedItems": 0
+      },
+      "tickMs": {
+        "mean": 0.813541,
+        "p50": 0.655875,
+        "p95": 1.543834,
+        "p99": 2.35175,
+        "max": 4.403166
+      },
+      "wirelessIoMs": {
+        "mean": 0.585921,
+        "p50": 0.46375,
+        "p95": 1.276042,
+        "p99": 1.820291,
+        "max": 3.992875
+      },
+      "gcCollections": 5,
+      "gcMillis": 8,
+      "peakUsedHeapBytes": 507045232,
+      "ticksOver50Ms": 0,
+      "partial": false
+    }
+  ],
+  "candidateSourceSha256": {
+    "src/main/java/com/moakiee/ae2lt/blockentity/OverloadedInterfaceBlockEntity.java": "13fd2742560f15621b964618ec5ee9f1499cb353b1b40fb5ec4eca06a7fe1f9e",
+    "src/main/java/com/moakiee/ae2lt/logic/provider/OverloadedAutoReturnController.java": "4f8f6cfa8b3fdf6556c8e2ff6a9a829037da36f212ef7ad2a0da90081139323d",
+    "src/main/java/com/moakiee/ae2lt/logic/provider/OverloadedPatternProviderLogic.java": "88510226ebc05e0277d15bb0f91ccf771ce645b531b40e2ce711fe9287ada2c6",
+    "src/main/java/com/moakiee/ae2lt/logic/provider/ProviderReturnSweep.java": "716378b351ace4522df9dfc4e1daa8f98f3e64bbca1ab9880a87031d018a953a",
+    "src/main/java/com/moakiee/ae2lt/logic/provider/ProviderWirelessDispatch.java": "7e1b38d3da47b8da3a3ae787b10c0f1df77e1ebc5f49a957d978e24e4b817ef8",
+    "src/main/java/com/moakiee/ae2lt/blockentity/InterfaceExportPlan.java": "67cf99244ca6859cd9a156d082c82cb36751741202af64233654eea8cb4ca8e9"
+  },
+  "providerWarmABBA": [
+    {
+      "run": "provider-warm-baseline-1",
+      "samples": [
+        {
+          "measurement": "return-snapshot",
+          "round": 0,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 13459,
+          "bytes/call": 65736.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 1,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 12987,
+          "bytes/call": 65674.5,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 2,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 12837,
+          "bytes/call": 65632.0,
+          "due": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 0,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 152772,
+          "bytes/visit": 181.75,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 1,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 153522,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 2,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 154492,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        }
+      ]
+    },
+    {
+      "run": "provider-warm-baseline-4",
+      "samples": [
+        {
+          "measurement": "return-snapshot",
+          "round": 0,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 13225,
+          "bytes/call": 65736.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 1,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 13001,
+          "bytes/call": 65664.4,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 2,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 12817,
+          "bytes/call": 65632.0,
+          "due": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 0,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 150348,
+          "bytes/visit": 181.78,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 1,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 154502,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 2,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 153600,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        }
+      ]
+    },
+    {
+      "run": "provider-warm-candidate-2",
+      "samples": [
+        {
+          "measurement": "return-snapshot",
+          "round": 0,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 13,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 1,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 9,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 2,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 10,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 0,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 153279,
+          "bytes/visit": 181.75,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 1,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 154450,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 2,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 154520,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        }
+      ]
+    },
+    {
+      "run": "provider-warm-candidate-3",
+      "samples": [
+        {
+          "measurement": "return-snapshot",
+          "round": 0,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 11,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 1,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 10,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "return-snapshot",
+          "round": 2,
+          "targets": 1024,
+          "calls": 10000,
+          "ns/call": 10,
+          "bytes/call": 0.0,
+          "due": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 0,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 153249,
+          "bytes/visit": 181.78,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 1,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 157005,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        },
+        {
+          "measurement": "dispatch-cost",
+          "round": 2,
+          "targets": 512,
+          "ticks": 5000,
+          "ns/tick": 156429,
+          "bytes/visit": 181.72,
+          "patternHashCalls": 0
+        }
+      ]
+    }
+  ],
+  "artifact": {
+    "file": "ae2lt-2.1.2-beta3.jar",
+    "sha256": "9eb058ac5486da5efc342c0a260f2344573b439171cf18a429c551b117173694",
+    "matchingCompiledClasses": 2045
+  },
+  "unitTests": {
+    "tests": 1499,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  }
+}

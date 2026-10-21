@@ -18,7 +18,7 @@ repositories {
     if (githubPackagesUser && githubPackagesToken) {
         maven {
             name = 'ThunderboltGitHubPackages'
-            url = uri('https://maven.pkg.github.com/ae2lt/Thunderbolt-Core')
+            url = uri('https://maven.pkg.github.com/AE2-Lightning-Tech-Reborn/Thunderbolt-Core-Reborn')
             credentials {
                 username = githubPackagesUser
                 password = githubPackagesToken
@@ -120,7 +120,8 @@ neoForge {
     runs {
         client {
             client()
-            jvmArguments.add '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
+            // Do not add -agentlib:jdwp here. The IDE launch already injects it, and a
+            // second copy makes the JVM abort with "Cannot load this JVM TI agent twice".
             if (System.getProperty('os.name').toLowerCase().contains('mac')) {
                 jvmArguments.addAll '-Xdock:name=Minecraft AE2LT Dev', '-Dapple.awt.application.name=Minecraft AE2LT Dev'
             }
@@ -504,11 +505,12 @@ def enableVeilDevRuntime = providers.gradleProperty('ae2ltEnableVeilDevRuntime')
 
 dependencies {
     // Thunderbolt Core — the extracted AE2 infrastructure layer (fast crafting planner,
-    // channel/batch/cell/matrix algorithms). Provided at runtime as a separate mod jar in the modpack,
-    // so compileOnly here. Published to mavenLocal via `./gradlew publishToMavenLocal` in Thunderbolt Core.
-    compileOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
-    runtimeOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
-    testRuntimeOnly "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
+    // channel/batch/cell/matrix algorithms). Release CI stages this exact version from
+    // GitHub Release assets; local development can use publishToMavenLocal.
+    def thunderbolt = "com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}"
+    compileOnly thunderbolt
+    runtimeOnly thunderbolt
+    testRuntimeOnly thunderbolt
     jdbProbeModPaths.each { runtimeOnly files(it) }
 
     implementation "curse.maven:applied-energistics-2-223794:7027323"
@@ -543,8 +545,8 @@ dependencies {
     compileOnly("org.anti_ad.mc:InventoryProfilesNext-neoforge-1.21.1:${ipn_version}") {
         transitive = false
     }
-    compileOnly "curse.maven:jei-238222:7391682"
-    runtimeOnly "curse.maven:jei-238222:7391682"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     // Optional Polymorphic Energistics integration. Only the Polymorph client API is needed at
     // compile time; the compatibility bootstrap never loads API-backed classes unless both mods
     // are installed by the modpack.
@@ -569,6 +571,9 @@ dependencies {
     runtimeOnly "curse.maven:applied-flux-965012:7429565"
     compileOnly "dev.technici4n:GrandPower:3.0.0"
     compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
+    // Optional Industrial Foregoing fluid role/side metadata; never bundled.
+    compileOnly "curse.maven:titanium-287342:8760562"
+    testRuntimeOnly "curse.maven:titanium-287342:8760562"
     compileOnly "curse.maven:flux-networks-248020:6089446"
     compileOnly "curse.maven:ae2-jei-integration-1074338:7727898"
     // Optional Omniversal Pattern support. The mod is never bundled or required at runtime.

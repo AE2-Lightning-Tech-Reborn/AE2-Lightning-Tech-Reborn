@@ -17,6 +17,9 @@ import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInven
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipeInput;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
+import com.mojang.authlib.GameProfile;
 import com.moakiee.ae2lt.registry.*;
 import net.minecraft.core.*;
 import net.minecraft.core.component.*;
@@ -26,10 +29,12 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.*;
 
 @GameTestHolder("ae2lt")
@@ -697,6 +702,51 @@ public final class OverloadedIOPortGameTests {
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void menuRemovalRestoresBaseThroughput(GameTestHelper h) {
+        fixture(h,be->{
+            var player=FakePlayerFactory.get(h.getLevel(),new GameProfile(UUID.randomUUID(),"IoMatrixRemoval"));
+            for (var click : List.of(ClickType.PICKUP,ClickType.QUICK_MOVE,ClickType.SWAP,ClickType.THROW)) {
+                player.getInventory().clearContent();
+                be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+                var menu=new OverloadedIOPortMenu(7,player.getInventory(),be);
+                player.containerMenu=menu;
+                var slot=menu.getSlots(Ae2ltSlotSemantics.OVERLOADED_IO_MATRIX).getFirst();
+                menu.broadcastChanges();
+                h.assertTrue(menu.transferCap==Long.MAX_VALUE && menu.batchLimit==16,"installed matrices update menu");
+                menu.clicked(slot.index,click==ClickType.THROW?1:0,click,player);
+                menu.broadcastChanges();
+                h.assertTrue(be.getMatrixInventory().isEmpty() && be.getMatrixCount()==0,
+                        click+" removes matrices from the real server inventory");
+                h.assertTrue(be.getTransferCap()==BASE_CAP && be.getBatchLimit()==4
+                        && menu.transferCap==BASE_CAP && menu.batchLimit==4,
+                        click+" restores server and menu limits");
+                menu.setCarried(ItemStack.EMPTY);
+                menu.removed(player);
+                player.containerMenu=player.inventoryMenu;
+            }
+            h.succeed();
+        });
+    }
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void reloadingEmptyMatrixSlotClearsPreviousBonus(GameTestHelper h) {
+        fixture(h,be->{
+            var registries=h.getLevel().registryAccess();
+            var empty=new CompoundTag();be.saveAdditional(empty,registries);
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));
+            var boosted=new CompoundTag();be.saveAdditional(boosted,registries);
+            var restored=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());
+            restored.loadTag(boosted,registries);
+            h.assertTrue(restored.getTransferCap()==Long.MAX_VALUE,"load boosted state first");
+            restored.loadTag(empty,registries);
+            h.assertTrue(restored.getMatrixInventory().isEmpty() && restored.getMatrixCount()==0
+                    && restored.getTransferCap()==BASE_CAP && restored.getBatchLimit()==4,
+                    "empty saved slot must replace previously installed matrices and their bonus");
+            h.assertTrue(restored.getFilterInventory().isEmpty(),"empty saved filter must also replace old rules");
+            h.succeed();
+        });
+    }
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void matrixChangesPreserveCooldownAndUpdateAmountCap(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -755,10 +805,10 @@ public final class OverloadedIOPortGameTests {
         inputs.setStackInSlot(0,new ItemStack(AEBlocks.IO_PORT.block(),4));
         inputs.setStackInSlot(1,AEItems.ENGINEERING_PROCESSOR.stack(64));
         inputs.setStackInSlot(2,new ItemStack(ModBlocks.OVERLOAD_MACHINE_FRAME.get(),2));
-        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),"ultimate overload core is required");
-        inputs.setStackInSlot(3,new ItemStack(ModItems.ULTIMATE_OVERLOAD_CORE.get()));
+        h.assertTrue(!recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),"overload singularity is required");
+        inputs.setStackInSlot(3,new ItemStack(ModItems.OVERLOAD_SINGULARITY.get()));
         h.assertTrue(recipe.matches(LightningAssemblyRecipeInput.fromInventory(inputs),h.getLevel()),
-                "four IO ports, sixty-four engineering processors, two frames and one ultimate core match");
+                "four IO ports, sixty-four engineering processors, two frames and one overload singularity match");
         h.assertTrue(ModMenuTypes.OVERLOADED_IO_PORT.get()==com.moakiee.ae2lt.menu.OverloadedIOPortMenu.TYPE,"menu registered");
         fixture(h,be->{h.assertTrue(h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,be.getBlockPos(),Direction.UP)!=null,"item capability registered");h.succeed();});
     }

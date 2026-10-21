@@ -22,7 +22,7 @@ import java.util.List;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.common.Internal;
-import mezz.jei.common.transfer.RecipeTransferUtil;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -581,14 +581,14 @@ public final class TianshuTransferClientProbe {
         } else if (command.equals("feedback") || command.equals("transfer")) {
             var runtime = Internal.getJeiRuntime();
             var layout = layout();
-            var menu = mc.player.containerMenu;
-            var handler = runtime.getRecipeTransferManager().getRecipeTransferHandler(menu, layout.getRecipeCategory()).orElseThrow();
-            var error = RecipeTransferUtil.getTransferRecipeError(runtime.getRecipeTransferManager(), menu, layout, mc.player).orElse(null);
+            var handler = runtime.getRecipeTransferManager().getRecipeTransferHandler(mc.player.containerMenu, layout.getRecipeCategory()).orElseThrow();
+            @SuppressWarnings("unchecked")
+            var errors = (java.util.Optional<mezz.jei.api.recipe.transfer.IRecipeTransferError>) transfer("getTransferRecipeError", layout);
+            var error = errors.orElse(null);
             report = "handler=" + handler.getClass().getName() + "; ctrl=" + Screen.hasControlDown()
                     + "; error=" + (error == null ? "null" : error.getType() + "/" + error.getClass().getName()
                     + "; color=" + Integer.toHexString(error.getButtonHighlightColor()) + "; missing=" + error.getMissingCountHint());
-            if (command.equals("transfer")) report += "; transfer=" + RecipeTransferUtil.transferRecipe(
-                    runtime.getRecipeTransferManager(), menu, layout, mc.player, false);
+            if (command.equals("transfer")) report += "; transfer=" + transfer("transferRecipe", layout, false);
         } else if (command.equals("confirm")) {
             var menu = (appeng.menu.me.crafting.CraftConfirmMenu) mc.player.containerMenu;
             report = "confirm noCPU=" + menu.hasNoCPU() + "; plan=" + menu.getPlan();
@@ -617,6 +617,37 @@ public final class TianshuTransferClientProbe {
             int lt = mc.getItemColors().getColor(new ItemStack(ModItems.TIANSHU_CRAFTING_TERMINAL.get()), 3);
             report = "icon tint3 AE=" + Integer.toHexString(ae) + "; LT=" + Integer.toHexString(lt);
         } else if (command.equals("close")) { if (mc.screen != null) mc.screen.onClose(); }
+    }
+
+    private static Object transfer(String method, IRecipeLayoutDrawable<?> layout, boolean... maximum) {
+        var mc = Minecraft.getInstance();
+        var manager = Internal.getJeiRuntime().getRecipeTransferManager();
+        var types = new java.util.ArrayList<Class<?>>();
+        var args = new java.util.ArrayList<Object>();
+        try {
+            Class<?> entry;
+            Object service;
+            try {
+                entry = Class.forName("mezz.jei.common.transfer.RecipeTransferService");
+                service = entry.getConstructor(mezz.jei.api.recipe.transfer.IRecipeTransferManager.class).newInstance(manager);
+                if (!(mc.screen instanceof AbstractContainerScreen<?> screen)) throw new IllegalStateException("JEI transfer requires an open container screen");
+                types.add(AbstractContainerScreen.class);
+                args.add(screen);
+            } catch (ClassNotFoundException legacy) {
+                entry = Class.forName("mezz.jei.common.transfer.RecipeTransferUtil");
+                service = null;
+                types.add(mezz.jei.api.recipe.transfer.IRecipeTransferManager.class);
+                args.add(manager);
+                types.add(net.minecraft.world.inventory.AbstractContainerMenu.class);
+                args.add(mc.player.containerMenu);
+            }
+            types.add(IRecipeLayoutDrawable.class); args.add(layout);
+            types.add(net.minecraft.world.entity.player.Player.class); args.add(mc.player);
+            if (maximum.length > 0) { types.add(boolean.class); args.add(maximum[0]); }
+            return entry.getMethod(method, types.toArray(Class<?>[]::new)).invoke(service, args.toArray());
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("Cannot invoke JEI transfer probe", error);
+        }
     }
 
     public static String status() {

@@ -36,6 +36,8 @@ import appeng.crafting.execution.CraftingSubmitResult;
 import appeng.me.service.CraftingService;
 import appeng.hooks.ticking.TickHandler;
 
+import com.moakiee.ae2lt.crafting.runtime.CraftingExecutionState;
+import com.moakiee.ae2lt.crafting.runtime.CraftingTickBudget;
 import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
 import com.moakiee.thunderbolt.api.crafting.cpu.ExtendedCraftingCpuCluster;
@@ -62,6 +64,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
     private boolean fastPlanningEnabled = true;
     private long remainingStorage;
     private boolean cpuListChanged;
+    private final CraftingExecutionState execution = new CraftingExecutionState();
+    private final CraftingTickBudget tickBudget = new CraftingTickBudget();
     private final TickProviderDispatchSchedule dispatchSchedule = new TickProviderDispatchSchedule();
 
     public TimeWheelCraftingCpuPool(TimeWheelCraftingCpuPoolHost host,
@@ -146,11 +150,22 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
             throw new IllegalArgumentException(
                     "TimeWheel requires AE2's concrete CraftingService implementation");
         }
+        if (!execution.tryEnter()) return Long.MIN_VALUE;
+        try {
+            return tickCraftingLogicGuarded(energyService, concreteCraftingService);
+        } finally {
+            execution.leave();
+        }
+    }
+
+    private long tickCraftingLogicGuarded(IEnergyService energyService, CraftingService craftingService) {
         resolvePendingLoad();
         var latestChange = new long[] {Long.MIN_VALUE};
         int successfulDispatchBudget = sharedCoProcessors >= Integer.MAX_VALUE - 1
                 ? Integer.MAX_VALUE : sharedCoProcessors + 1;
-        dispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
+        long now = TickHandler.instance().getCurrentTick();
+        tickBudget.begin(now, successfulDispatchBudget, Long.MAX_VALUE);
+        dispatchSchedule.beginTick(now);
 
         var scheduledCpus = new ArrayList<ScheduledCpu>(activeCpus.size());
         for (var entry : List.copyOf(activeCpus.values())) {
@@ -161,13 +176,13 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
 
         try {
             ProductiveDispatchScheduler.run(
-                    successfulDispatchBudget,
+                    tickBudget.remainingOperations(),
                     PRODUCTIVE_DISPATCH_QUANTUM,
                     scheduledCpus,
                     (scheduled, allowance) -> {
                         if (scheduled.remainingCopies <= 0L) return 0;
                         var usage = tickScheduledCpu(
-                                scheduled, allowance, energyService, concreteCraftingService);
+                                scheduled, allowance, energyService, craftingService);
                         latestChange[0] = Math.max(
                                 latestChange[0],
                                 scheduled.entry.cpu().getCraftingLogic().getWaitingKeysModifiedOnTick());
@@ -182,6 +197,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         }
         rotateSchedulingOrder();
         removeDrainedCpus();
+        var bigService = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (bigService != null) latestChange[0] = Math.max(latestChange[0], bigService.waitingChangedAt());
         return latestChange[0];
     }
 
@@ -190,18 +207,26 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
             int dispatchBudget,
             IEnergyService energyService,
             CraftingService craftingService) {
-        var usage = scheduled.entry.cpu().getCraftingLogic().tickCraftingLogic(
-                energyService,
-                craftingService,
-                dispatchBudget,
-                scheduled.remainingCopies,
-                dispatchSchedule);
-        if (scheduled.remainingCopies != Long.MAX_VALUE) {
-            scheduled.remainingCopies = Math.max(
-                    0L,
-                    scheduled.remainingCopies - usage.dispatchedCopies());
+        var logic = scheduled.entry.cpu().getCraftingLogic();
+        long now = TickHandler.instance().getCurrentTick();
+        int before = logic.successfulDispatchesInTick(now);
+        try {
+            var usage = logic.tickCraftingLogic(
+                    energyService,
+                    craftingService,
+                    dispatchBudget,
+                    scheduled.remainingCopies,
+                    dispatchSchedule);
+            if (scheduled.remainingCopies != Long.MAX_VALUE) {
+                scheduled.remainingCopies = Math.max(
+                        0L,
+                        scheduled.remainingCopies - usage.dispatchedCopies());
+            }
+            return usage;
+        } finally {
+            // A notification may throw after dispatch accounting. That work still spent CPU time.
+            tickBudget.consume(logic.successfulDispatchesInTick(now) - before, 0);
         }
-        return usage;
     }
 
     private void rotateSchedulingOrder() {
@@ -220,6 +245,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         for (var entry : activeCpus.values()) {
             entry.cpu().getCraftingLogic().getAllWaitingFor(waitingKeys);
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null) service.addWaitingKeys(waitingKeys);
     }
 
     @Override
@@ -231,6 +258,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
             }
             inserted += entry.cpu().getCraftingLogic().insert(what, amount - inserted, mode);
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null && inserted < amount) inserted += service.insert(what, amount - inserted, mode);
         return inserted;
     }
 
@@ -240,6 +269,8 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
         for (var entry : activeCpus.values()) {
             requested = saturatingAdd(requested, entry.cpu().getCraftingLogic().getWaitingFor(what));
         }
+        var service = com.moakiee.ae2lt.crafting.big.BigCraftingMenus.service(this);
+        if (service != null) requested = saturatingAdd(requested, service.requested(what));
         return requested;
     }
 

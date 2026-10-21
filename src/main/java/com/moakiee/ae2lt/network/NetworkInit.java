@@ -32,7 +32,7 @@ public final class NetworkInit {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar(AE2LightningTech.MODID);
+        var registrar = event.registrar("2");
         registrar.playToServer(ReturnToDeviceManagementPacket.TYPE, ReturnToDeviceManagementPacket.STREAM_CODEC, ReturnToDeviceManagementPacket::handle);
         registrar.playToServer(NetworkManagementRequestPacket.TYPE, NetworkManagementRequestPacket.STREAM_CODEC, NetworkManagementRequestPacket::handle);
         registrar.playToClient(NetworkManagementSyncPacket.TYPE, NetworkManagementSyncPacket.STREAM_CODEC, NetworkManagementSyncPacket::handle);

@@ -29,6 +29,6 @@ public record InventoryMaintenanceRule(
     }
 
     public long nextRequestAmount(long currentStock) {
-        return Math.max(0L, Math.min(amountPerJob, upperThreshold - Math.max(0L, currentStock)));
+        return Math.max(0L, currentStock) < upperThreshold ? amountPerJob : 0L;
     }
 }

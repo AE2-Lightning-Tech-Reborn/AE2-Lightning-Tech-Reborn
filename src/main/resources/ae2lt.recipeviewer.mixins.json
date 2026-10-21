@@ -8,9 +8,12 @@
     "useless.OmniversalPatternJeiTransferMixin",
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
+    "jei.JeiMultiblockLayoutMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",
-    "jeisupply.JeiWirelessSupplyMixin"
+    "jeisupply.JeiWirelessSupplyMixin",
+    "jeisupply.JeiWirelessSupplyServiceMixin",
+    "jeisupply.JeiWirelessSupplyContextAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

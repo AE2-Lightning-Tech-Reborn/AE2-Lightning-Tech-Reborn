@@ -61,8 +61,8 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
 
     public void ae2lt$planBig(AEKey key, BigInteger n) {
         if (isClientSide()) return;
-        var service = BigCraftingMenus.available(getHost());
-        if (service == null) return;
+        var context = BigCraftingMenus.context(getHost());
+        if (context == null) return;
         if (job != null) job.cancel(true);
         clearError();
         setPlan(null);
@@ -74,7 +74,7 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
         ae2lt$failure = "";
         try {
             job =
-                    service.preview(key, n, getActionSource())
+                    BigCraftingService.preview(context.grid(), context.level(), key, n, getActionSource())
                             .handle(
                                     (p, error) ->
                                             new BigCraftingPlan(
@@ -96,7 +96,7 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
             var finished = job.get();
             if (!ae2lt$isBig
                     && ExactPlanReports.isPreview(finished)
-                    && BigCraftingMenus.available(getHost()) != null) {
+                    && BigCraftingMenus.context(getHost()) != null) {
                 ae2lt$planBig(whatToCraft, BigInteger.valueOf(amount));
             } else if (finished instanceof BigCraftingPlan big) {
                 ae2lt$failure = big.failure();

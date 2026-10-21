@@ -94,7 +94,7 @@ class ProviderSchedulerRetentionTest {
         var dispatch = new ProviderWirelessDispatch();
         var targets = targets(1);
         var pattern = new Pattern();
-        dispatch.prepare(targets, 0, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(targets, 0, false);
         try (var pass = dispatch.beginFairPass(pattern, 0)) {
             var target = pass.poll();
             dispatch.maintain(101);
@@ -132,7 +132,7 @@ class ProviderSchedulerRetentionTest {
 
     static void dispatchTick(ProviderWirelessDispatch dispatch, List<WirelessConnection> targets,
                              IPatternDetails pattern, long tick) {
-        dispatch.prepare(targets, tick, false, WirelessDispatchMode.EVEN_DISTRIBUTION);
+        dispatch.prepare(targets, tick, false);
         long remaining = dispatch.dispatchBatch(WirelessDispatchMode.EVEN_DISTRIBUTION,
                 pattern, targets.size(), tick, false,
                 (target, allowance, exploratory, preserve) -> {

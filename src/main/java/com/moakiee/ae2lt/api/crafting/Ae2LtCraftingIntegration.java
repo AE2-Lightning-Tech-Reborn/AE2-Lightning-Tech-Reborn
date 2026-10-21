@@ -5,13 +5,22 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
+import appeng.api.stacks.KeyCounter;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuStateManager;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadPatternReference;
+import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuInsertSupport;
+import com.moakiee.ae2lt.overload.runtime.cpu.OverloadClaimResult;
+import com.moakiee.ae2lt.overload.runtime.cpu.PendingOverloadClaim;
+import com.moakiee.ae2lt.overload.runtime.cpu.OverloadConsumerCredit;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
+import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 
 /** Stable, implementation-neutral integration surface for external crafting engines. */
@@ -20,7 +29,8 @@ public final class Ae2LtCraftingIntegration {
 
     public static OverloadRegistration prepareOverload(Object cpuLogic, IPatternDetails pattern,
             UUID craftingId, @Nullable AEKey finalOutput) {
-        if (!(pattern instanceof OverloadedProviderOnlyPatternDetails overload)) {
+        var providerPattern = CraftingPatternDelegates.forProviderLookup(pattern);
+        if (!(providerPattern instanceof OverloadedProviderOnlyPatternDetails overload)) {
             return OverloadRegistration.ordinary();
         }
         var details = overload.overloadPatternDetailsView();
@@ -32,8 +42,91 @@ public final class Ae2LtCraftingIntegration {
                 pattern.getOutputs(), finalOutput);
     }
 
+    /** Also validates collisions against an external CPU's exact waiting ledger before inputs move. */
+    public static OverloadRegistration prepareOverload(Object cpuLogic, IPatternDetails pattern,
+            UUID craftingId, @Nullable AEKey finalOutput, KeyCounter waiting) {
+        var providerPattern = CraftingPatternDelegates.forProviderLookup(pattern);
+        if (providerPattern instanceof OverloadedProviderOnlyPatternDetails overload) {
+            if (OverloadCpuInsertSupport.hasStrictCollisionWithOverloadPattern(
+                    cpuLogic, pattern, overload, waiting)) return OverloadRegistration.blocked();
+        } else if (OverloadCpuInsertSupport.hasPendingCollisionWithOrdinaryPattern(cpuLogic, pattern)) {
+            return OverloadRegistration.blocked();
+        }
+        return prepareOverload(cpuLogic, pattern, craftingId, finalOutput);
+    }
+
+    /** Keeps exact ID_ONLY templates out of ordinary matching so both ledgers retire together. */
+    public static long strictOutputMatch(Object owner, AEKey actual, long rawMatch, long exactWaiting) {
+        return OverloadCpuStateManager.INSTANCE.hasExactPending(owner, actual)
+                ? OverloadCpuInsertSupport.nativeStrictMatch(owner, actual, rawMatch, exactWaiting) : rawMatch;
+    }
+
+    /**
+     * Claims only registered outputs of this job. The CPU callback receives the reserved expected
+     * key; the actual key is supplied by the caller. SIMULATE is pure. MODULATE must accept the
+     * probed amount and retain any delivery remainder before invoking other callbacks.
+     * Pending state is retired before physical delivery, preventing reentrant duplicate claims.
+     */
+    public static long claimOverloadOutput(Object owner, UUID craftingId, AEKey actual, long amount,
+            Actionable mode, BiFunction<GenericStack, Actionable, Long> receiver) {
+        var states = OverloadCpuStateManager.INSTANCE;
+        var preview = states.claim(owner, actual, amount, Actionable.SIMULATE);
+        long accepted = 0;
+        for (var claim : preview.claims()) {
+            if (!craftingId.equals(claim.key().craftingId())) continue;
+            long limit = receiver.apply(new GenericStack(claim.exactExpectedKey(), claim.claimedAmount()),
+                    Actionable.SIMULATE);
+            if (limit < 0 || limit > claim.claimedAmount())
+                throw new IllegalStateException("Invalid external CPU claim preview");
+            if (limit == 0) continue;
+            if (mode == Actionable.SIMULATE) {
+                accepted = Math.addExact(accepted, limit);
+                continue;
+            }
+            var credits = OverloadConsumerCredit.limit(claim.consumerCredits(), limit);
+            var limited = new PendingOverloadClaim(claim.key(), limit, claim.routesToRequester(),
+                    Math.min(claim.requesterAmount(), limit - OverloadConsumerCredit.total(credits)),
+                    claim.exactExpectedKey(), credits, claim.sharedReusableSeedPool());
+            var committed = states.commitPreview(owner, new OverloadClaimResult(limit, List.of(limited)));
+            if (!committed.claimedAnything()) continue;
+            long received = receiver.apply(new GenericStack(claim.exactExpectedKey(), committed.claimedAmount()), mode);
+            if (received != committed.claimedAmount())
+                throw new IllegalStateException("External CPU changed an accepted output claim");
+            accepted = Math.addExact(accepted, received);
+        }
+        return accepted;
+    }
+
+    /** Public per-job persistence; external engines do not inspect implementation fields. */
+    public static CompoundTag saveOverloadState(Object owner, UUID craftingId, HolderLookup.Provider registries) {
+        for (var pending : OverloadCpuStateManager.INSTANCE.snapshotPending(owner)) {
+            if (!craftingId.equals(pending.key().craftingId()))
+                throw new IllegalStateException("Overload state belongs to another crafting job");
+        }
+        var result = new CompoundTag();
+        result.putUUID("craftingId", craftingId);
+        var state = OverloadCpuStateManager.INSTANCE.writeToTag(owner, registries);
+        if (state != null) result.put("state", state);
+        return result;
+    }
+
+    public static void loadOverloadState(Object owner, UUID craftingId, CompoundTag data,
+            HolderLookup.Provider registries) {
+        if (data.hasUUID("craftingId") && !craftingId.equals(data.getUUID("craftingId")))
+            throw new IllegalArgumentException("Overload checkpoint belongs to another crafting job");
+        OverloadCpuStateManager.INSTANCE.readFromTag(owner, craftingId, data.getCompound("state"), registries);
+    }
+
+    public static void clearOverloadState(Object owner) {
+        OverloadCpuStateManager.INSTANCE.clear(owner);
+    }
+
     public static long insertCpuOutput(ICraftingCPU cpu, UUID craftingId, AEKey key,
             long amount, Actionable mode) {
+        if (amount <= 0L) return 0L;
+        if (cpu instanceof com.moakiee.ae2lt.crafting.big.BigCraftingCpu big) {
+            return big.insertForJob(craftingId, key, amount, mode);
+        }
         if (!(cpu instanceof TimeWheelCraftingCPU timeWheel)) return 0L;
         var logic = timeWheel.getCraftingLogic();
         var link = logic.getLastLink();
@@ -48,6 +141,12 @@ public final class Ae2LtCraftingIntegration {
             return offered;
         }
         return inserted;
+    }
+
+    public static java.math.BigInteger insertExactCpuOutput(ICraftingCPU cpu, UUID craftingId,
+            AEKey key, java.math.BigInteger amount, Actionable mode) {
+        return cpu instanceof com.moakiee.ae2lt.crafting.big.BigCraftingCpu big
+                ? big.insertExactForJob(craftingId, key, amount, mode) : java.math.BigInteger.ZERO;
     }
 
     public static final class OverloadRegistration {
