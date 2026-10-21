@@ -37,6 +37,7 @@ import java.util.*;
 @GameTestHolder("ae2lt_bigint")
 @PrefixGameTestTemplate(false)
 public final class BigIntegerPipelineGameTests {
+    private static final Set<net.minecraft.world.level.ChunkPos> FORCED_CHUNKS = new HashSet<>();
     private static final BigInteger N = BigInteger.TEN.pow(100);
     private static final IActionSource SOURCE = IActionSource.empty();
 
@@ -197,12 +198,12 @@ public final class BigIntegerPipelineGameTests {
         h.succeed();
     }
 
-    @GameTest(template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 300)
+    @GameTest(batch = "exact_machines", template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 300)
     public static void formedMultidimensionalMachinesRunAnExactOrder(GameTestHelper h) {
         formedMachines(h, false);
     }
 
-    @GameTest(template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 300)
+    @GameTest(batch = "exact_machines", template = "migration_test", templateNamespace = "ae2lt_migration", timeoutTicks = 300)
     public static void matrixAndOrdinaryProviderCompleteThroughNativeNetworkAndRestart(GameTestHelper h) {
         formedMachines(h, true);
     }
@@ -420,6 +421,9 @@ public final class BigIntegerPipelineGameTests {
                                                 require(
                                                         service.job().escrow.get(raw).equals(N),
                                                         "waiting lost escrow");
+                                                // Final dispatch settles matrix work immediately. Remove output storage
+                                                // before making the recipe available so return ownership stays observable.
+                                                removedCell[0] = drive.getInternalInventory().extractItem(0, 1, false);
                                                 patterns.getInventory()
                                                         .setStackInSlot(
                                                                 0, recipe.definition().toStack());
@@ -428,14 +432,11 @@ public final class BigIntegerPipelineGameTests {
                                             if (phase[0] == 2) {
                                                 h.assertTrue(
                                                         service.job() != null
-                                                                && service.job().readyAt >= 0,
-                                                        "waiting for matrix acceptance");
+                                                                && service.job().returning,
+                                                        "waiting for matrix completion");
                                                 service.load(
                                                         service.save(level.registryAccess()),
                                                         level.registryAccess());
-                                                removedCell[0] =
-                                                        drive.getInternalInventory()
-                                                                .extractItem(0, 1, false);
                                                 startedAt[0] = level.getGameTime();
                                                 phase[0] = 3;
                                             }
@@ -609,7 +610,18 @@ public final class BigIntegerPipelineGameTests {
         });
     }
 
+    @AfterBatch(batch = "exact_machines")
+    public static void releaseFixtureChunks(net.minecraft.server.level.ServerLevel level) {
+        for (var chunk : FORCED_CHUNKS) level.setChunkForced(chunk.x, chunk.z, false);
+        FORCED_CHUNKS.clear();
+    }
+
     private static void place(GameTestHelper h, BlockPos pos, BlockState state) {
+        var chunk = new net.minecraft.world.level.ChunkPos(pos);
+        if (!h.getLevel().getForcedChunks().contains(chunk.toLong())) {
+            h.getLevel().setChunkForced(chunk.x, chunk.z, true);
+            FORCED_CHUNKS.add(chunk);
+        }
         h.getLevel().getChunkAt(pos);
         h.getLevel().setBlock(pos, state, 3);
     }
