@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.item;
 
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -43,14 +45,10 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        CompoundTag tag = com.moakiee.ae2lt.util.ItemStackTagSupport.getTagCopy(stack);
-        // 空壳(创造物品栏里的初始 cell)上显示 "0 types / 0 B" 只是噪音,
-        // 完全没带 ae2lt:types / ae2lt:bytes 数据时直接不画 tooltip。
-        if (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes")) {
-            return;
-        }
-        int types = tag.getInt("ae2lt:types");
-        long bytes = tag.getLong("ae2lt:bytes");
+        var summary = readSummary(stack);
+        if (summary == null) return;
+        int types = summary.totalTypes();
+        long bytes = summary.usedBytes();
 
         tooltipComponents.add(Component.translatable(
                 "tooltip.ae2lt.infinite_cell.types", String.format("%,d", types))
@@ -106,9 +104,15 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
 
     @Override
     public void writeSummary(ItemStack stack, IndexedCellSummary summary) {
-        com.moakiee.ae2lt.util.ItemStackTagSupport.updateTag(stack, tag -> {
-            tag.putInt("ae2lt:types", summary.totalTypes());
-            tag.putLong("ae2lt:bytes", summary.usedBytes());
-        });
+        var tag = stack.getOrCreateTag();
+        tag.putInt("ae2lt:types", summary.totalTypes());
+        tag.putLong("ae2lt:bytes", summary.usedBytes());
+    }
+
+    /** Reads the Forge NBT summary without copying unrelated item data. */
+    public static @Nullable IndexedCellSummary readSummary(ItemStack stack) {
+        var tag = stack.getTag();
+        if (tag == null || (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes"))) return null;
+        return new IndexedCellSummary(tag.getInt("ae2lt:types"), tag.getLong("ae2lt:bytes"));
     }
 }
