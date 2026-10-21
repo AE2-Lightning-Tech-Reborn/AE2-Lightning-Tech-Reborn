@@ -128,6 +128,56 @@ class DispatchFairnessSchedulerTest {
     }
 
     @Test
+    void normalRefillWaitDoesNotAddAverageCreditOrHideTheLeastServedTarget() {
+        var scheduler = new DispatchFairnessScheduler<String, String>();
+        var targets = List.of("a", "b", "c");
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 0L)) {
+            for (int i = 0; i < 3; i++) {
+                var target = pass.poll();
+                pass.raiseAllowance(target, 100);
+                pass.successAndCover(target, 100, 1);
+            }
+        }
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 1L)) {
+            for (int i = 0; i < 3; i++) {
+                var target = pass.poll();
+                pass.successAndCover(target, target.equals("c") ? 1 : 100, 1);
+            }
+        }
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 2L)) {
+            assertEquals("c", pass.poll());
+            assertEquals(101, pass.allowance("c"));
+            assertEquals(101, scheduler.dispatchCount(PATTERN, "c", 2L));
+        }
+    }
+
+    @Test
+    void coveredTargetStillBoundsNewAllocationsUntilItsWindowCountsExpire() {
+        var scheduler = new DispatchFairnessScheduler<String, String>();
+        var targets = List.of("a", "b");
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 0L)) {
+            for (int i = 0; i < 2; i++) {
+                var target = pass.poll();
+                pass.raiseAllowance(target, 100);
+                pass.successAndCover(target, 100, target.equals("a") ? 20 : 1);
+            }
+        }
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 1L)) {
+            assertEquals("b", pass.poll());
+            assertEquals(100, pass.allowance("b"));
+            assertEquals(100, pass.raiseRampAllowance("b", 1000));
+            pass.successAndCover("b", 100, 1);
+        }
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 2L)) {
+            assertEquals(null, pass.poll(), "b already has twice a's window count");
+        }
+        try (var pass = scheduler.beginPass(PATTERN, targets, 1L, 100L)) {
+            assertEquals("a", pass.poll());
+            assertEquals(2, pass.allowance("a"));
+        }
+    }
+
+    @Test
     void everyAcceptedAllocationKeepsActiveMaximumWithinTwiceMinimum() {
         var scheduler = new DispatchFairnessScheduler<Integer, String>();
         var targets = java.util.stream.IntStream.range(0, 32)

@@ -23,10 +23,11 @@ import appeng.api.crafting.IPatternDetails;
  * <p>Successfully owned pattern copies are counted in 100-tick accounting windows.
  * A pass always leases the least-served active targets first and leases every
  * target at most once. Targets in rejection cooldown or provider-owned overflow
- * are excluded from both the active average and the priority queue.
+ * are excluded from both the window average and the priority queue. Normal
+ * refill waits only defer polling; their owned copies remain in the window.
  *
  * <p>A target that becomes eligible midway through a window starts at the
- * current active average. This is deliberately a scheduling credit rather than
+ * current window average. This is deliberately a scheduling credit rather than
  * a fabricated physical dispatch: unavailable machines do not accumulate debt
  * that would otherwise monopolize all work when they return.
  */
@@ -186,15 +187,15 @@ final class DispatchFairnessScheduler<T, P> {
         if (state.lastAdvancedTick != Long.MIN_VALUE
                 && gameTick < state.lastAdvancedTick) {
             state.history.clear();
-            state.activeSum = 0L;
-            state.activeCountFrequencies.clear();
+            state.windowSum = 0L;
+            state.windowCountFrequencies.clear();
             for (var targetState : state.targets.values()) {
                 targetState.ownedCopies = 0L;
                 targetState.schedulingCredit = 0L;
                 targetState.leased = false;
                 targetState.leasedAllowance = 0L;
                 targetState.queueVersion++;
-                if (targetState.active) {
+                if (targetState.participatesInWindow()) {
                     addFrequency(state, 0L);
                     offer(state, targetState);
                 }
@@ -230,16 +231,16 @@ final class DispatchFairnessScheduler<T, P> {
             if (amount <= 0L) {
                 continue;
             }
-            if (targetState.active) {
+            if (targetState.participatesInWindow()) {
                 removeFrequency(state, targetState.effectiveCount());
-                state.activeSum -= amount;
+                state.windowSum -= amount;
             }
             if (schedulingCredit) {
                 targetState.schedulingCredit -= amount;
             } else {
                 targetState.ownedCopies -= amount;
             }
-            if (targetState.active) {
+            if (targetState.participatesInWindow()) {
                 addFrequency(state, targetState.effectiveCount());
                 offer(state, targetState);
             }
@@ -302,28 +303,37 @@ final class DispatchFairnessScheduler<T, P> {
     private void activateAtCurrentAverage(
             PatternState<T> state,
             TargetState<T> targetState) {
-        long baseline = ceilingAverage(state.activeSum, state.activeCount);
-        if (targetState.effectiveCount() < baseline) {
+        long baseline = ceilingAverage(state.windowSum, state.windowTargetCount);
+        // A planned refill delay is still normal participation in the window.
+        // Crediting it as unavailable repeatedly hides real dispatch imbalance.
+        if (!targetState.refillCoverage && targetState.effectiveCount() < baseline) {
             addSchedulingCredit(
                     state, targetState, baseline - targetState.effectiveCount());
         }
+        if (!targetState.refillCoverage) {
+            state.windowTargetCount++;
+            state.windowSum = saturatingAdd(state.windowSum, targetState.effectiveCount());
+            addFrequency(state, targetState.effectiveCount());
+        }
         targetState.cooldownUntil = Long.MIN_VALUE;
+        targetState.refillCoverage = false;
         targetState.active = true;
         targetState.leased = false;
         state.activeCount++;
-        state.activeSum = saturatingAdd(
-                state.activeSum, targetState.effectiveCount());
-        addFrequency(state, targetState.effectiveCount());
         offer(state, targetState);
     }
 
     private void deactivate(PatternState<T> state, TargetState<T> targetState) {
         if (targetState.active) {
             state.activeCount--;
-            state.activeSum -= targetState.effectiveCount();
+        }
+        if (targetState.participatesInWindow()) {
+            state.windowTargetCount--;
+            state.windowSum -= targetState.effectiveCount();
             removeFrequency(state, targetState.effectiveCount());
         }
         targetState.active = false;
+        targetState.refillCoverage = false;
         targetState.leased = false;
         targetState.leasedAllowance = 0L;
         targetState.queueVersion++;
@@ -341,7 +351,7 @@ final class DispatchFairnessScheduler<T, P> {
         removeFrequency(state, targetState.effectiveCount());
         targetState.ownedCopies = saturatingAdd(
                 targetState.ownedCopies, ownedCopies);
-        state.activeSum = saturatingAdd(state.activeSum, ownedCopies);
+        state.windowSum = saturatingAdd(state.windowSum, ownedCopies);
         addFrequency(state, targetState.effectiveCount());
         addHistory(state, targetState, ownedCopies, false);
         targetState.lastSuccessfulSequence = ++sequence;
@@ -356,7 +366,7 @@ final class DispatchFairnessScheduler<T, P> {
         }
         if (targetState.active) {
             removeFrequency(state, targetState.effectiveCount());
-            state.activeSum = saturatingAdd(state.activeSum, credit);
+            state.windowSum = saturatingAdd(state.windowSum, credit);
         }
         targetState.schedulingCredit = saturatingAdd(
                 targetState.schedulingCredit, credit);
@@ -390,18 +400,18 @@ final class DispatchFairnessScheduler<T, P> {
     }
 
     private static <T> void addFrequency(PatternState<T> state, long count) {
-        state.activeCountFrequencies.addTo(count, 1);
+        state.windowCountFrequencies.addTo(count, 1);
     }
 
     private static <T> void removeFrequency(PatternState<T> state, long count) {
-        var occurrences = state.activeCountFrequencies.get(count);
+        var occurrences = state.windowCountFrequencies.get(count);
         if (occurrences == 0) {
             return;
         }
         if (occurrences <= 1) {
-            state.activeCountFrequencies.remove(count);
+            state.windowCountFrequencies.remove(count);
         } else {
-            state.activeCountFrequencies.put(count, occurrences - 1);
+            state.windowCountFrequencies.put(count, occurrences - 1);
         }
     }
 
@@ -487,12 +497,15 @@ final class DispatchFairnessScheduler<T, P> {
     final class Pass implements AutoCloseable {
         private final PatternState<T> state;
         private final long gameTick;
+        private final boolean balancedWindow;
         private final ArrayList<TargetState<T>> leased = new ArrayList<>();
         private boolean closed;
 
         private Pass(PatternState<T> state, long gameTick) {
             this.state = state;
             this.gameTick = gameTick;
+            this.balancedWindow = state.windowCountFrequencies.size() <= 1
+                    && state.activeCount == state.windowTargetCount;
         }
 
         int activeTargetsAtStart() {
@@ -512,9 +525,8 @@ final class DispatchFairnessScheduler<T, P> {
         }
 
         long raiseAllowance(T target, long minimumAllowance) {
-            // A long-idle target may retain a proven physical batch after its
-            // 100-tick fairness count expires. Keep the target ordering fair,
-            // but do not truncate that already-proven batch back to one copy.
+            // Explicit grouping and balanced batch ramps can reserve more than
+            // the incremental window allowance while retaining target order.
             var targetState = requireLeased(target);
             targetState.leasedAllowance = Math.max(
                     targetState.leasedAllowance,
@@ -522,14 +534,22 @@ final class DispatchFairnessScheduler<T, P> {
             return targetState.leasedAllowance;
         }
 
+        long raiseRampAllowance(T target, long requestedAllowance) {
+            // Equal window counts can grow together using the caller's equal
+            // shares. Otherwise, growth must obey the existing 2:1 limit.
+            return balancedWindow || state.windowTargetCount <= 1
+                    ? raiseAllowance(target, requestedAllowance)
+                    : allowance(target);
+        }
+
         private long allowanceFor(
                 PatternState<T> patternState,
                 TargetState<T> targetState) {
             long averageCeiling = doubledAverageFloor(
-                    patternState.activeSum, patternState.activeCount);
-            long minimum = patternState.activeCountFrequencies.isEmpty()
+                    patternState.windowSum, patternState.windowTargetCount);
+            long minimum = patternState.windowCountFrequencies.isEmpty()
                     ? 0L
-                    : patternState.activeCountFrequencies.firstLongKey();
+                    : patternState.windowCountFrequencies.firstLongKey();
             long ratioCeiling = saturatingAdd(
                     Math.max(1L, minimum),
                     Math.max(1L, minimum));
@@ -584,7 +604,14 @@ final class DispatchFairnessScheduler<T, P> {
             var targetState = requireLeased(target);
             int boundedCoverage = Math.max(1, coverageTicks);
             long delay = boundedCoverage;
-            deactivate(state, targetState);
+            // Keep this target in the fairness window while skipping physical
+            // probes until its learned refill time.
+            state.activeCount--;
+            targetState.active = false;
+            targetState.leased = false;
+            targetState.leasedAllowance = 0L;
+            targetState.queueVersion++;
+            targetState.refillCoverage = true;
             targetState.cooldownUntil = saturatingAdd(gameTick, delay);
             targetState.cooldownVersion++;
             state.cooldowns.add(new CooldownEntry<>(
@@ -652,12 +679,13 @@ final class DispatchFairnessScheduler<T, P> {
                         .thenComparingLong(entry -> entry.tieSequence));
         private final PriorityQueue<CooldownEntry<T>> cooldowns =
                 new PriorityQueue<>(Comparator.comparingLong(entry -> entry.retryAfter));
-        private final Long2IntAVLTreeMap activeCountFrequencies = new Long2IntAVLTreeMap();
+        private final Long2IntAVLTreeMap windowCountFrequencies = new Long2IntAVLTreeMap();
         private final ArrayDeque<WindowBucket<T>> history = new ArrayDeque<>();
         private long lastAdvancedTick = Long.MIN_VALUE;
         private long topologyVersion = Long.MIN_VALUE;
-        private long activeSum;
+        private long windowSum;
         private int activeCount;
+        private int windowTargetCount;
         private boolean passOpen;
     }
 
@@ -671,6 +699,7 @@ final class DispatchFairnessScheduler<T, P> {
         private long cooldownUntil = Long.MIN_VALUE;
         private long leasedAllowance;
         private boolean active;
+        private boolean refillCoverage;
         private boolean leased;
 
         private TargetState(T target) {
@@ -679,6 +708,10 @@ final class DispatchFairnessScheduler<T, P> {
 
         private long effectiveCount() {
             return saturatingAdd(ownedCopies, schedulingCredit);
+        }
+
+        private boolean participatesInWindow() {
+            return active || refillCoverage;
         }
     }
 
