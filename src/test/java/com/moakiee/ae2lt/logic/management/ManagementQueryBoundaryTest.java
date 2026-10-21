@@ -8,6 +8,22 @@ import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Test;
 
 class ManagementQueryBoundaryTest {
+    @Test void emptyTokensIncludeIdleOfflineAndCrossDimensionRowsInEveryMode() {
+        var locations = List.of(
+                new DeviceLocation("minecraft:overworld", BlockPos.ZERO, -1, "minecraft:air", ""),
+                new DeviceLocation("minecraft:the_nether", new BlockPos(-30000000, -64, 30000000), 5,
+                        "ae2:interface", "主工厂 İSTANBUL"));
+        for (var mode : ManagementMode.values()) {
+            var q = ManagementQuery.initial(mode);
+            for (var target : locations) {
+                for (var kind : List.of("device", "connection", "wireless", "induction", "accessor", "lt_output")) {
+                    assertTrue(q.matches(target, null, kind));
+                    for (var source : locations) assertTrue(q.matches(target, source, kind));
+                }
+            }
+        }
+    }
+
     private static ManagementQuery query(List<String> expanded, String search, List<ManagementQuery.Token> tokens,
                                          int serial, int sort, int window, int offset) {
         return new ManagementQuery(serial, ManagementMode.ENERGY, false, expanded, search, tokens, sort, false, window, offset);

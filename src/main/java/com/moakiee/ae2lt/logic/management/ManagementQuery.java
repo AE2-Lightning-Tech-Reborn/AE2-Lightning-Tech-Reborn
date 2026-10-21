@@ -42,6 +42,7 @@ public record ManagementQuery(int serial, ManagementMode mode, boolean grouped, 
         return new ManagementQuery(serial, mode, grouped, expandedTypes, search, tokens, sort, descending, window, offset);
     }
     public boolean matches(DeviceLocation target, DeviceLocation source, String kind) {
+        if (tokens.isEmpty()) return true;
         String haystack = searchable(target) + " " + searchable(source) + " " + kind;
         for (var token : tokens) {
             if (!haystack.contains(token.text.toLowerCase(Locale.ROOT))

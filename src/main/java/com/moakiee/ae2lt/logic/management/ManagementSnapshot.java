@@ -22,6 +22,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Nameable;
 
 public record ManagementSnapshot(int total, int devices, int offset, double[] totals, boolean limited, List<ManagementRow> rows) {
+    // Fixed-width hexadecimal UUID strings sort by unsigned bits, unlike UUID.compareTo.
+    static final Comparator<ManagementRow> ID_ORDER = Comparator.comparing(ManagementRow::id, (left, right) -> {
+        int most = Long.compareUnsigned(left.getMostSignificantBits(), right.getMostSignificantBits());
+        return most != 0 ? most : Long.compareUnsigned(left.getLeastSignificantBits(), right.getLeastSignificantBits());
+    });
+
     public static ManagementSnapshot build(ServerPlayer player, WirelessOverloadedControllerBlockEntity host, ManagementQuery query) {
         long now = player.server.getTickCount();
         var grid = host.getMainNode().getGrid();
@@ -44,7 +50,7 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
             default -> Comparator.comparing(r -> (r.target().name().isEmpty() ? r.target().type() : r.target().name()).toLowerCase(Locale.ROOT));
         };
         if (query.descending()) comparator = comparator.reversed();
-        result.sort(comparator.thenComparing(r -> r.id().toString()));
+        result.sort(comparator.thenComparing(ID_ORDER));
         if (!query.energy() && query.grouped()) {
             // Flatten the tree before paging so every header keeps its children together.
             // Group order follows the first matching device in the selected sort order.
