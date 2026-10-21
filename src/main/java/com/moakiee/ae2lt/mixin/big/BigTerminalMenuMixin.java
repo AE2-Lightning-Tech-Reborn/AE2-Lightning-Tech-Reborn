@@ -29,6 +29,10 @@ public abstract class BigTerminalMenuMixin implements BigTerminalMenu {
 
     @Inject(method = "broadcastChanges", at = @At("TAIL"))
     private void ae2lt$syncBigStock(CallbackInfo ci) {
-        ae2lt$bigStock.sync((MEStorageMenu) (Object) this, getPreviousAvailableStacks());
+        var menu = (MEStorageMenu) (Object) this;
+        // Addon menus can broadcast on the client (e.g. WCWT clears its encoding slots).
+        // AE2's available-stack getter is server-only, so guard before evaluating it.
+        if (menu.isClientSide()) return;
+        ae2lt$bigStock.sync(menu, getPreviousAvailableStacks());
     }
 }
