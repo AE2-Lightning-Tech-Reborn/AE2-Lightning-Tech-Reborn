@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.crafting.big;
 import appeng.api.stacks.AEKey;
 
 import com.moakiee.thunderbolt.core.crafting.big.BigExecutionProgram;
-import com.moakiee.thunderbolt.core.crafting.big.BigLongSlice;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
 import net.minecraft.core.HolderLookup;
@@ -20,6 +19,8 @@ public final class BigCraftingJob {
     public final BigExecutionProgram<AEKey> program;
     public final Map<AEKey, BigInteger> escrow = new LinkedHashMap<>();
     public final Map<AEKey, BigInteger> waiting = new LinkedHashMap<>();
+    // Derived from the current step and escrow; deliberately rebuilt after loading a snapshot.
+    private final Set<AEKey> missingMaterials = new HashSet<>();
     public int blockIndex;
     public int acceptedStep;
     public BigInteger acceptedCopies = BigInteger.ZERO;
@@ -61,6 +62,7 @@ public final class BigCraftingJob {
 
     private void finishBlock() {
         if (!waiting.isEmpty()) throw new IllegalStateException("Unreceived physical outputs");
+        missingMaterials.clear();
         blockIndex++;
         acceptedStep = 0;
         acceptedCopies = BigInteger.ZERO;
@@ -86,9 +88,9 @@ public final class BigCraftingJob {
     }
 
     /** Register ownership before invoking a provider, so synchronous returns are also real receipts. */
-    public void reserve(BigLongSlice<AEKey> slice) {
-        if (!streamingBlock || returning || dispatchFailed || slice.copies() <= 0
-                || BigInteger.valueOf(slice.copies()).compareTo(remainingStepCopies()) > 0)
+    void reserve(BigCraftingTransfer slice) {
+        if (!streamingBlock || returning || dispatchFailed || slice.copies().signum() <= 0
+                || slice.copies().compareTo(remainingStepCopies()) > 0)
             throw new IllegalStateException("Invalid physical dispatch");
         var inventory = new LinkedHashMap<AEKey, BigInteger>();
         slice.inputs().forEach((key, n) -> inventory.put(key,
@@ -101,14 +103,14 @@ public final class BigCraftingJob {
     }
 
     /** Refund only confirmed rejections; an indeterminate provider result must never be retried. */
-    public void settle(BigLongSlice<AEKey> offered, BigLongSlice<AEKey> accepted) {
-        if (accepted.copies() < 0 || accepted.copies() > offered.copies())
+    void settle(BigCraftingTransfer offered, BigCraftingTransfer accepted) {
+        if (accepted.copies().signum() < 0 || accepted.copies().compareTo(offered.copies()) > 0)
             throw new IllegalArgumentException("Invalid accepted copies");
         var expected = new LinkedHashMap<AEKey, BigInteger>();
         offered.outputs().forEach((key, n) -> {
             var rejected = n.subtract(accepted.outputs().getOrDefault(key, BigInteger.ZERO));
             if (rejected.signum() < 0) throw new IllegalArgumentException("Invalid accepted outputs");
-            expected.put(key, BigAmounts.nonNegative(
+            if (!returning) expected.put(key, BigAmounts.nonNegative(
                     waiting.getOrDefault(key, BigInteger.ZERO).subtract(rejected)));
         });
         var inventory = new LinkedHashMap<AEKey, BigInteger>();
@@ -117,30 +119,64 @@ public final class BigCraftingJob {
             if (rejected.signum() < 0) throw new IllegalArgumentException("Invalid accepted inputs");
             inventory.put(key, BigAmounts.nonNegative(escrow.getOrDefault(key, BigInteger.ZERO).add(rejected)));
         });
-        var copies = BigAmounts.nonNegative(acceptedCopies.add(BigInteger.valueOf(accepted.copies())));
+        var copies = BigAmounts.nonNegative(acceptedCopies.add(accepted.copies()));
         if (copies.compareTo(currentStep().copies()) > 0)
             throw new IllegalStateException("Dispatched more than the exact order");
         expected.forEach((key, n) -> put(waiting, key, n));
-        inventory.forEach((key, n) -> put(escrow, key, n));
+        inventory.forEach((key, n) -> {
+            if (n.compareTo(escrow.getOrDefault(key, BigInteger.ZERO)) > 0) materialChanged(key);
+            put(escrow, key, n);
+        });
         acceptedCopies = copies;
     }
 
     public long receive(AEKey key, long amount, appeng.api.config.Actionable mode) {
-        if (returning || amount <= 0) return 0;
+        if (amount <= 0) return 0;
+        return receiveBig(key, BigInteger.valueOf(amount), mode).longValueExact();
+    }
+
+    public BigInteger receiveBig(AEKey key, BigInteger amount, appeng.api.config.Actionable mode) {
+        if (returning || amount.signum() <= 0) return BigInteger.ZERO;
         var requested = waiting.getOrDefault(key, BigInteger.ZERO);
         var existing = escrow.getOrDefault(key, BigInteger.ZERO);
         var room = BigInteger.ONE.shiftLeft(BigAmounts.MAX_BITS).subtract(BigInteger.ONE).subtract(existing);
-        var accepted = requested.min(BigInteger.valueOf(amount)).min(room).max(BigInteger.ZERO);
+        var accepted = requested.min(amount).min(room).max(BigInteger.ZERO);
         if (mode == appeng.api.config.Actionable.MODULATE && accepted.signum() > 0) {
             put(waiting, key, requested.subtract(accepted));
             escrow.put(key, existing.add(accepted));
+            materialChanged(key);
         }
-        return accepted.longValueExact();
+        return accepted;
+    }
+
+    void retainOutput(AEKey key, BigInteger amount) {
+        if (amount.signum() > 0) {
+            escrow.put(key, BigAmounts.nonNegative(escrow.getOrDefault(key, BigInteger.ZERO).add(amount)));
+            materialChanged(key);
+        }
+    }
+
+    boolean waitForMaterials(Map<AEKey, BigInteger> required) {
+        missingMaterials.clear();
+        required.forEach((key, count) -> {
+            if (escrow.getOrDefault(key, BigInteger.ZERO).compareTo(count) < 0) missingMaterials.add(key);
+        });
+        return waitingForMaterials();
+    }
+
+    boolean waitingForMaterials() {
+        return !missingMaterials.isEmpty();
+    }
+
+    private void materialChanged(AEKey key) {
+        // Recheck all quantities on the next visit; a partial receipt may still be insufficient.
+        if (missingMaterials.contains(key)) missingMaterials.clear();
     }
 
     public boolean advanceStreaming() {
         if (!streamingBlock || !waiting.isEmpty() || readyAt >= 0
                 || acceptedCopies.compareTo(currentStep().copies()) != 0) return false;
+        missingMaterials.clear();
         acceptedCopies = BigInteger.ZERO;
         acceptedStep++;
         if (acceptedStep == current().steps().size()) {
@@ -183,6 +219,7 @@ public final class BigCraftingJob {
         // Inputs already handed to a machine are never refunded as if they were still ours.
         // Its later outputs return to network storage through the normal insertion path.
         waiting.clear();
+        missingMaterials.clear();
         status = "returning";
     }
 

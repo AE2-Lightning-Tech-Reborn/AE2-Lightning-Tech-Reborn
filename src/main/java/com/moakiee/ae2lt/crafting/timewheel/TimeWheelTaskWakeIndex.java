@@ -74,4 +74,8 @@ final class TimeWheelTaskWakeIndex<T> {
     boolean isEmpty() {
         return keysByTask.isEmpty();
     }
+
+    boolean isParked(T task) {
+        return keysByTask.containsKey(task);
+    }
 }

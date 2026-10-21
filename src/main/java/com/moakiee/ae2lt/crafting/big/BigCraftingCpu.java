@@ -3,6 +3,8 @@ package com.moakiee.ae2lt.crafting.big;
 import appeng.api.config.CpuSelectionMode;
 import appeng.api.networking.crafting.*;
 import appeng.api.stacks.GenericStack;
+import appeng.api.stacks.AEKey;
+import appeng.api.config.Actionable;
 
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
@@ -23,6 +25,17 @@ public final class BigCraftingCpu implements ICraftingCPU, ICraftingLink {
 
     public BigCraftingJob job() {
         return job;
+    }
+
+    /** Directed machine returns must never be credited to a replacement exact order. */
+    public long insertForJob(UUID craftingId, AEKey key, long amount, Actionable mode) {
+        return isBusy() && job.id.equals(craftingId) ? service.insert(key, amount, mode) : 0L;
+    }
+
+    public java.math.BigInteger insertExactForJob(UUID craftingId, AEKey key,
+            java.math.BigInteger amount, Actionable mode) {
+        return isBusy() && job.id.equals(craftingId)
+                ? service.insertExact(key, amount, mode) : java.math.BigInteger.ZERO;
     }
 
     public boolean isBusy() {

@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.crafting.timewheel;
 import static org.junit.jupiter.api.Assertions.*;
 
 import appeng.api.stacks.KeyCounter;
+import com.moakiee.ae2lt.crafting.runtime.DeferredCraftingOutputs;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import org.junit.jupiter.api.Test;
 

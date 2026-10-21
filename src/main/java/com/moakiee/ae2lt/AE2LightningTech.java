@@ -882,6 +882,7 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
