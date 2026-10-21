@@ -1,0 +1,43 @@
+// Opt-in real WCWT regression. Requires -Pae2ltJdbProbeMods=<wcwt.jar>
+// and -PwcwtSeedWorld=<disposable seed save containing level.dat>.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/WcwtClearPatternClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        def variant = providers.gradleProperty('wcwtProbeVariant').getOrElse('fixed')
+        def directory = layout.buildDirectory.dir("wcwt-clear-${variant}").get().asFile
+        def report = new File(directory, 'result.txt')
+        def seed = new File(project.file(providers.gradleProperty('wcwtSeedWorld').get()), 'level.dat')
+        neoForge.runs.client {
+            gameDirectory = directory
+            systemProperty 'ae2lt.wcwtClearProbe', 'true'
+            systemProperty 'ae2lt.wcwtClearReport', report.absolutePath
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+            programArguments.addAll '--username', 'WcwtQA', '--quickPlaySingleplayer', 'WcwtQA',
+                    '--width', '1280', '--height', '900'
+        }
+        def prepare = tasks.register('prepareWcwtProbeWorld') {
+            doLast {
+                if (!seed.isFile()) throw new GradleException('WCWT probe seed has no level.dat')
+                def target = new File(directory, 'saves/WcwtQA/level.dat')
+                target.parentFile.mkdirs()
+                if (!target.exists()) java.nio.file.Files.copy(seed.toPath(), target.toPath())
+                def options = new File(directory, 'options.txt')
+                if (!options.exists()) options.text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\n'
+                report.delete()
+            }
+        }
+        tasks.named('runClient').configure {
+            dependsOn prepare
+            doLast {
+                if (!report.isFile() || !report.readLines().contains('PASS: WCWT regression complete')
+                        || report.readLines().any { it.startsWith('FAIL:') }) {
+                    throw new GradleException("WCWT clear regression failed; inspect ${report}")
+                }
+            }
+        }
+    }
+}
