@@ -346,6 +346,8 @@ public class OverloadedIOPortBlockEntity extends AENetworkInvBlockEntity
         super.loadTag(tag);
         settings.readFromNBT(tag);
         upgrades.readFromNBT(tag, "upgrades");
+        filter.clear();
+        matrix.clear();
         filter.readFromNBT(tag, FILTER);
         matrix.readFromNBT(tag, MATRIX);
         rebuildFilter();

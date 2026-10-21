@@ -696,6 +696,24 @@ public final class OverloadedIOPortGameTests {
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void reloadingEmptyMatrixSlotClearsPreviousBonus(GameTestHelper h) {
+        fixture(h,be->{
+            var empty=be.saveWithoutMetadata();
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));
+            var boosted=be.saveWithoutMetadata();
+            var restored=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());
+            restored.loadTag(boosted);
+            h.assertTrue(restored.getTransferCap()==Long.MAX_VALUE,"load boosted state first");
+            restored.loadTag(empty);
+            h.assertTrue(restored.getMatrixInventory().isEmpty() && restored.getMatrixCount()==0
+                    && restored.getTransferCap()==BASE_CAP && restored.getBatchLimit()==4,
+                    "empty saved slot must replace previously installed matrices and their bonus");
+            h.assertTrue(restored.getFilterInventory().isEmpty(),"empty saved filter must also replace old rules");
+            h.succeed();
+        });
+    }
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void matrixChangesPreserveCooldownAndUpdateAmountCap(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();

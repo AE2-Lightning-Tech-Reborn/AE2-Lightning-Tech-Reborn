@@ -122,7 +122,8 @@ public final class PhaseFlightMovementGuard {
             return false;
         }
         if (player.level().isClientSide()) {
-            return CelestweaveArmorState.getClientPhaseLockBlockExternalForces();
+            return PhaseFlightPlayerState.isLocalClientPlayer(player)
+                    && CelestweaveArmorState.getClientPhaseLockBlockExternalForces();
         }
         ServerSettings settings = SERVER_SETTINGS.get(player.getUUID());
         return settings != null && settings.owner() == player && settings.blockForces();
@@ -163,7 +164,8 @@ public final class PhaseFlightMovementGuard {
             return false;
         }
         if (player.level().isClientSide()) {
-            return CelestweaveArmorState.isAnyClientFlightControlActive()
+            return PhaseFlightPlayerState.isLocalClientPlayer(player)
+                    && CelestweaveArmorState.isAnyClientFlightControlActive()
                     && CelestweaveArmorState.getClientPhaseMode().allows(
                             PhaseFlightPlayerState.isFlying(player),
                             PhaseWingFlight.isFlightActive(player));
