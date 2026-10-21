@@ -29,14 +29,14 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     int simulations;
     int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor;
     boolean drain, instantTrash, unknown;
-    Runnable duringTick = () -> {}, afterReceive = () -> {};
+    Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {};
     ProbeStorage energy = makeStorage();
     ProbeStorage makeStorage() { return new ProbeStorage(); }
     final class ProbeStorage extends EnergyStorage {
         ProbeStorage() { super(100000, 100000, 0); }
         void prime(int value) { energy = value; }
         @Override public int receiveEnergy(int amount, boolean simulate) {
-            if (simulate) simulations++;
+            if (simulate) { simulations++; duringSimulation.run(); }
             int limit = simulate ? receiveLimit : Math.min(receiveLimit, actualLimit);
             int accepted = instantTrash ? Math.min(amount, limit) : super.receiveEnergy(Math.min(amount, limit), simulate);
             if (!simulate) { receiveCalls++; received += accepted; setChanged(); afterReceive.run(); }

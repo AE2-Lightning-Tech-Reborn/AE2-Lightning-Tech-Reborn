@@ -365,6 +365,83 @@ public final class WirelessAeFallbackGameTests {
                     0, "merge refreshed exhausted budget"); h.succeed();
         });
     }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void disablingExperimentNeverSpendsFeOrConvertedAe(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            f.fillFe(50000); f.emptyAe(); f.fe().credit(1); f.ae().convert(f.fe(), 1, .5);
+            long before = f.storedFe(); boolean old = WirelessEnergySettings.runningNetworkFeFallback.get();
+            try {
+                WirelessEnergySettings.runningNetworkFeFallback.set(false);
+                close(h, f.request(.125, Actionable.SIMULATE), 0, "disabled simulation advertised FE");
+                close(h, f.request(.125, Actionable.MODULATE), 0, "disabled experiment paid AE");
+                close(h, f.ae().available(), .5, "disabled experiment spent converted AE");
+                h.assertTrue(f.storedFe() == before, "disabled experiment withdrew FE");
+            } finally { WirelessEnergySettings.runningNetworkFeFallback.set(old); }
+            close(h, f.request(.125, Actionable.MODULATE), .125, "reenabled experiment did not resume"); h.succeed();
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void zeroNewFeBudgetStillPaysAlreadyConvertedAeWithoutStorageCalls(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(100000); f.emptyAe(); f.fe().credit(1); f.ae().convert(f.fe(), 1, .5);
+            int old = WirelessEnergySettings.networkFe.get();
+            try {
+                WirelessEnergySettings.networkFe.set(0);
+                close(h, f.request(.125, Actionable.SIMULATE), .125, "simulation ignored owned converted AE");
+                close(h, f.request(.125, Actionable.MODULATE), .125, "owned converted AE incorrectly needs a new FE budget");
+                close(h, f.ae().available(), .375, "converted payment not charged exactly");
+                h.assertTrue(store.extractCalls == 0 && store.insertCalls == 0 && store.fe == 100000, "zero grant performed storage IO");
+            } finally { WirelessEnergySettings.networkFe.set(old); }
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void unresolvedJournalBlocksBothSimulationAndRealPayment(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(100000); f.emptyAe(); f.fe().credit(7); f.ae().beginWithdrawal(17);
+            for (int i = 0; i < 100; i++) {
+                close(h, f.request(.125, Actionable.SIMULATE), 0, "unresolved journal advertised power");
+                close(h, f.request(.125, Actionable.MODULATE), 0, "unresolved journal replayed withdrawal");
+            }
+            h.assertTrue(store.extractCalls == 0 && store.insertCalls == 0 && f.fe().available() == 7
+                    && f.ae().pendingFeWithdrawal() == 17, "unresolved journal or owned FE mutated"); h.succeed();
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void ordinaryAeRestorationStopsFeUseImmediately(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(100000); f.emptyAe();
+            close(h, f.request(10, Actionable.MODULATE), 10, "FE did not initially supplement");
+            int calls = store.extractCalls; long remaining = store.fe;
+            f.controller.setInternalCurrentPower(100000);
+            close(h, f.request(10, Actionable.MODULATE), 10, "ordinary AE restoration unavailable");
+            h.assertTrue(store.extractCalls == calls && store.fe == remaining, "FE still withdrawn after ordinary AE returned"); h.succeed();
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 180)
+    public static void topologyChangeDuringRefundRetainsConvertedButUnreturnedAe(GameTestHelper h) {
+        var f = fixture(h);
+        ready(h, f, () -> {
+            var store = f.mount(0); f.emptyAe(); f.fe().credit(100);
+            double rate = PowerUnit.FE.convertTo(PowerUnit.AE, 1);
+            store.onInsert = () -> h.setBlock(POS.west(), Blocks.AIR);
+            close(h, f.request(rate, Actionable.MODULATE), 0, "topology-changing refund paid stale AE");
+            close(h, f.ae().available(), rate, "refund callback erased converted but unreturned AE");
+            h.assertTrue(store.fe == 99 && f.fe().available() == 0 && f.fe().uncertain() == 0, "refund duplicated or lost FE ownership");
+            store.onInsert = () -> {};
+            close(h, f.request(rate, Actionable.MODULATE), rate, "stable grid could not reuse already converted AE");
+            h.assertTrue(store.fe == 99 && store.extractCalls == 0, "retained AE payment withdrew FE again"); h.succeed();
+        });
+    }
+
     private static final class Store implements MEStorage {
         long fe, limit = Long.MAX_VALUE; int extractCalls, insertCalls; boolean reject;
         Runnable onExtract = () -> {};

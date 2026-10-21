@@ -4,7 +4,7 @@ allprojects {
         def restartPhase = project.findProperty('wirelessRestartPhase')
         sourceSets.jdb.java.setIncludes(restartPhase
                 ? ['com/moakiee/ae2lt/logic/energy/WirelessEnergyRestartGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java']
-                : ['com/moakiee/ae2lt/logic/energy/WirelessEnergyGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyAdmissionGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java', 'com/moakiee/ae2lt/logic/energy/NetworkManagementGameTests.java', 'com/moakiee/ae2lt/logic/energy/RemoteDeviceGameTests.java', 'com/moakiee/ae2lt/logic/energy/FrequencyCardGameTests.java'])
+                : ['com/moakiee/ae2lt/logic/energy/WirelessEnergyGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyAdmissionGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java', 'com/moakiee/ae2lt/logic/energy/NetworkManagementGameTests.java', 'com/moakiee/ae2lt/logic/energy/RemoteDeviceGameTests.java', 'com/moakiee/ae2lt/logic/energy/FrequencyCardGameTests.java', 'com/moakiee/ae2lt/logic/energy/WirelessEnergyBoundaryGameTests.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics']
                     || dep.name in ['applied-flux-965012', 'glodium-957920'])

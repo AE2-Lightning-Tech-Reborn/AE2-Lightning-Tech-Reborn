@@ -6,7 +6,8 @@ allprojects {
                 ? ['com/moakiee/ae2lt/logic/energy/WirelessAeFallbackRestartGameTests.java']
                 : ['com/moakiee/ae2lt/logic/energy/WirelessAeFallbackGameTests.java'])
         neoForge.runs.gameTestServer {
-            gameDirectory = project.layout.buildDirectory.dir(phase ? 'wireless-ae-restart-gametest' : 'wireless-ae-fallback-gametest').get().asFile
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('wirelessAeGameTestDirectory')
+                    .getOrElse(phase ? 'wireless-ae-restart-gametest' : 'wireless-ae-fallback-gametest')).get().asFile
             if (phase) systemProperty 'ae2lt.energy.aeRestartPhase', phase
         }
     }
