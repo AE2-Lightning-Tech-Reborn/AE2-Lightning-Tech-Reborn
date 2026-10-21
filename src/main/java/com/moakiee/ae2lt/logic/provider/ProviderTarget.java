@@ -996,6 +996,12 @@ public class ProviderTarget extends TargetAddress {
             AllowedOutputFilter allowedOutputs,
             IActionSource source,
             MachineAdapter.OutputSink sink) {
+        return returnOutputs(level, allowedOutputs, source, sink, true);
+    }
+
+    public final OutputReturnResult returnOutputs(
+            ServerLevel level, AllowedOutputFilter allowedOutputs, IActionSource source,
+            MachineAdapter.OutputSink sink, boolean machineAdaptationEnabled) {
         var resolvedAdapter = resolveAdapter(level);
         return resolvedAdapter == null
                 ? OutputReturnResult.UNAVAILABLE
@@ -1005,7 +1011,8 @@ public class ProviderTarget extends TargetAddress {
                         boundFace(),
                         allowedOutputs,
                         source,
-                        sink);
+                        sink,
+                        machineAdaptationEnabled);
     }
 
     /**

@@ -257,6 +257,7 @@ dependencies {
     }
 
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
+    compileOnly fg.deobf("maven.modrinth:titanium:${titanium_version}")
     if ((findProperty('enable_mekanism_runtime') ?: 'true').toBoolean()) {
         runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     }
@@ -322,6 +323,8 @@ dependencies {
     // Keep portable resource and pure-logic regressions executable on the Forge 1.20.1 port.
     testImplementation platform("org.junit:junit-bom:5.10.2")
     testImplementation "org.junit.jupiter:junit-jupiter"
+    testImplementation fg.deobf("maven.modrinth:titanium:${titanium_version}")
+    testImplementation fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     testImplementation fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
     testImplementation(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false

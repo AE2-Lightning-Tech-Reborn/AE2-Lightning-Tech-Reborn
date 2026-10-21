@@ -155,8 +155,7 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
         this.autoReturnButton.setStateIndex(this.menu.getReturnModeOrdinal());
 
         this.adaptiveBatchButton.setState(this.menu.isAdaptiveBatchEnabled());
-        this.advancedSettingsButton.setVisibility(
-                this.menu.isWirelessTuningVisible() || this.menu.isFilteredImportVisible());
+        this.advancedSettingsButton.setVisibility(true);
 
         this.pageButton.setPage(this.menu.getCurrentPage(), this.menu.getTotalPages());
     }
