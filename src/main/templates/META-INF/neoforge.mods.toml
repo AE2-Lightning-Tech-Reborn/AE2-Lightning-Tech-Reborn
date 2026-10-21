@@ -126,15 +126,6 @@ versionRange = "${thunderbolt_version_range}"
 ordering = "AFTER"
 side = "BOTH"
 
-# LDLib2 supplies the multiblock scene renderer. The CurseForge/Modrinth project is still
-# named LDLib, but the 1.21 mod id is ldlib2.
-[[dependencies."${mod_id}"]]
-modId = "ldlib2"
-type = "required"
-versionRange = "${ldlib2_version_range}"
-ordering = "AFTER"
-side = "BOTH"
-
 [[dependencies."${mod_id}"]]
 modId = "neoecoae"
 type = "optional"

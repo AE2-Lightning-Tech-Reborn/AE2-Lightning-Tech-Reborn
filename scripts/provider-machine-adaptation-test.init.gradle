@@ -14,7 +14,7 @@ allprojects {
                 'com/moakiee/ae2lt/logic/config/MemoryCardModeCodecTest.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
-                    'com.lowdragmc.ldlib2', 'top.theillusivec4.curios', 'de.mari_023']
+                    'top.theillusivec4.curios', 'de.mari_023']
                     || dep.name in ['thunderbolt-core-1631756', 'mekanism-268560',
                                     'mekanism-extras-1026040'])
         }
