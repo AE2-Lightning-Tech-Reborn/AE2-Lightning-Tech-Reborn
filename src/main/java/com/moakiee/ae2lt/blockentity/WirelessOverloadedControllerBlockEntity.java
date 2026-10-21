@@ -308,6 +308,6 @@ public class WirelessOverloadedControllerBlockEntity extends OverloadedControlle
         super.importSettings(mode, input, player);
         // setFrequency guards against duplicates on transmitters and reverts on conflict,
         // so the paste is a no-op if the target frequency is already bound elsewhere.
-        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
+        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency, player, this);
     }
 }

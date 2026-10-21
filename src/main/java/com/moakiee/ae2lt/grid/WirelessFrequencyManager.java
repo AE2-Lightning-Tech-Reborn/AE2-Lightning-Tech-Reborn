@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -155,9 +157,20 @@ public final class WirelessFrequencyManager extends SavedData {
 
     // ── Frequency CRUD ──
 
+    public long countOwnedFrequencies(UUID playerId) {
+        return frequencies.values().stream()
+                .filter(frequency -> frequency.getPlayerAccess(playerId) == FrequencyAccessLevel.OWNER)
+                .count();
+    }
+
+    public boolean canOwnAnotherFrequency(UUID playerId) {
+        return countOwnedFrequencies(playerId) < AE2LTCommonConfig.maxOwnedFrequenciesPerPlayer();
+    }
+
     @Nullable
     public WirelessFrequency createFrequency(ServerPlayer creator, String name, int color,
                                               FrequencySecurityLevel security, String password) {
+        if (!canOwnAnotherFrequency(creator.getUUID())) return null;
         do {
             uniqueId++;
             if (uniqueId < 0) uniqueId = 1;

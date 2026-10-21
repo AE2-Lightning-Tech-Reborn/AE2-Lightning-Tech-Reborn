@@ -66,6 +66,7 @@ public record ChangeMemberPacket(
 
             int responseCode = switch (result) {
                 case WirelessFrequency.RESPONSE_NO_PERMISSION -> FrequencyResponsePacket.NO_PERMISSION;
+                case WirelessFrequency.RESPONSE_OWNER_LIMIT -> FrequencyResponsePacket.OWNER_LIMIT;
                 default -> FrequencyResponsePacket.REJECTED;
             };
             PacketDistributor.sendToPlayer(player, new FrequencyResponsePacket(responseCode));

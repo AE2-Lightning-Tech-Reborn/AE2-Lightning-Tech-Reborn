@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.block.OverloadedInterfaceBlock;
 import com.moakiee.ae2lt.block.OverloadedPowerSupplyBlock;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
@@ -70,6 +72,8 @@ public record WirelessConnectorUsePacket(
         ItemStack stack = player.getItemInHand(hand);
         if (!(stack.getItem() instanceof OverloadedWirelessConnectorItem)) return;
         if (!player.canInteractWithBlock(pos, 1.0D)) return;
+        if (!PlayerWorldActions.mayInteract(player, level, pos,
+                hand, face, net.minecraft.world.phys.Vec3.atCenterOf(pos))) return;
 
         var state = level.getBlockState(pos);
         var targetBe = level.getBlockEntity(pos);
@@ -155,6 +159,8 @@ public record WirelessConnectorUsePacket(
             return;
         }
 
+        if (!PlayerWorldActions.mayInteract(player, level, provider.getProviderPos())) return;
+
         if (level.getBlockEntity(pos) instanceof WirelessPatternProviderHost) {
             player.displayClientMessage(
                     Component.translatable("ae2lt.connector.cannot_bind_provider")
@@ -187,12 +193,14 @@ public record WirelessConnectorUsePacket(
                 WirelessConnectionRef::boundFace);
 
         for (var targetPos : plan.disconnect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (provider.removeConnection(targetDim, targetPos)) {
                 disconnected.add(targetPos.immutable());
             }
         }
 
         for (var targetPos : plan.update()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (!WirelessConnectionRange.isConnectorLinkInRange(
                     level, provider.getProviderPos(), targetPos)) {
                 skippedOutOfRange++;
@@ -204,6 +212,7 @@ public record WirelessConnectorUsePacket(
         }
 
         for (var targetPos : plan.connect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (!WirelessConnectionRange.isConnectorLinkInRange(
                     level, provider.getProviderPos(), targetPos)) {
                 skippedOutOfRange++;
@@ -306,6 +315,8 @@ public record WirelessConnectorUsePacket(
             return;
         }
 
+        if (!PlayerWorldActions.mayInteract(player, level, iface.getBlockPos())) return;
+
         if (level.getBlockEntity(pos) instanceof OverloadedInterfaceBlockEntity) {
             player.displayClientMessage(
                     Component.translatable("ae2lt.connector.cannot_bind_provider")
@@ -337,12 +348,14 @@ public record WirelessConnectorUsePacket(
                 OverloadedInterfaceBlockEntity.WirelessConnection::boundFace);
 
         for (var targetPos : plan.disconnect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (iface.removeConnection(targetDim, targetPos, face)) {
                 disconnected.add(targetPos.immutable());
             }
         }
 
         for (var targetPos : plan.connect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (!WirelessConnectionRange.isConnectorLinkInRange(
                     level, iface.getBlockPos(), targetPos)) {
                 skippedOutOfRange++;
@@ -371,6 +384,8 @@ public record WirelessConnectorUsePacket(
             OverloadedWirelessConnectorItem.clearSelection(stack);
             return;
         }
+
+        if (!PlayerWorldActions.mayInteract(player, level, powerSupply.getBlockPos())) return;
 
         if (level.getBlockEntity(pos) instanceof OverloadedPowerSupplyBlockEntity) {
             player.displayClientMessage(
@@ -403,12 +418,14 @@ public record WirelessConnectorUsePacket(
         int skippedOutOfRange = 0;
 
         for (var targetPos : plan.disconnect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (powerSupply.removeConnection(targetDim, targetPos)) {
                 disconnected.add(targetPos.immutable());
             }
         }
 
         for (var targetPos : plan.update()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (!WirelessConnectionRange.isConnectorLinkInRange(
                     level, powerSupply.getBlockPos(), targetPos)) {
                 skippedOutOfRange++;
@@ -420,6 +437,7 @@ public record WirelessConnectorUsePacket(
         }
 
         for (var targetPos : plan.connect()) {
+            if (!PlayerWorldActions.mayInteract(player, level, targetPos)) continue;
             if (!WirelessConnectionRange.isConnectorLinkInRange(
                     level, powerSupply.getBlockPos(), targetPos)) {
                 skippedOutOfRange++;

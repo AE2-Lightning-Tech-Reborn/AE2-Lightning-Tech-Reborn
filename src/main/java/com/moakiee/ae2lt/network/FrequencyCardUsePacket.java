@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.FrequencyDisplayName;
@@ -77,6 +79,8 @@ public record FrequencyCardUsePacket(
 
         var be = level.getBlockEntity(pos);
         if (shiftDown || player.isShiftKeyDown()) {
+            if (!PlayerWorldActions.mayInteract(player, level, pos,
+                    hand, face, new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ))) return;
             var data = OverloadedFrequencyCardItem.getData(stack);
             if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
                 message(player, "ae2lt.frequency_card.card_owner_mismatch", ChatFormatting.RED);
@@ -92,7 +96,7 @@ public record FrequencyCardUsePacket(
             return;
         }
 
-        tryLinkWithCard(player, stack, level, pos, face,
+        tryLinkWithCard(player, hand, stack, level, pos, face,
                 new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ));
     }
 
@@ -110,6 +114,12 @@ public record FrequencyCardUsePacket(
             BlockPos pos,
             Direction face,
             net.minecraft.world.phys.Vec3 hitVec) {
+        tryLinkWithCard(player, InteractionHand.MAIN_HAND, card, level, pos, face, hitVec);
+    }
+
+    public static void tryLinkWithCard(
+            ServerPlayer player, InteractionHand hand, net.minecraft.world.item.ItemStack card,
+            ServerLevel level, BlockPos pos, Direction face, net.minecraft.world.phys.Vec3 hitVec) {
         var data = OverloadedFrequencyCardItem.getData(card);
         if (!data.isBound()) {
             message(player, "ae2lt.frequency_card.unbound_message", ChatFormatting.RED);
@@ -133,7 +143,8 @@ public record FrequencyCardUsePacket(
                 level,
                 pos,
                 face,
-                hitVec);
+                hitVec,
+                hand);
         player.displayClientMessage(
                 Component.translatable(feedback.translationKey(), feedback.args())
                         .withStyle(feedback.style()),

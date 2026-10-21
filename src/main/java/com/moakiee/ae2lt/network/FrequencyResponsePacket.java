@@ -17,6 +17,7 @@ public record FrequencyResponsePacket(int responseCode) implements CustomPacketP
     public static final int INVALID_FREQUENCY = 3;
     public static final int REJECTED = 4;
     public static final int FREQUENCY_IN_USE = 5;
+    public static final int OWNER_LIMIT = 6;
 
     public static final Type<FrequencyResponsePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath("ae2lt", "frequency_response"));
@@ -43,6 +44,7 @@ public record FrequencyResponsePacket(int responseCode) implements CustomPacketP
             case NO_PERMISSION -> Component.translatable("ae2lt.gui.error.no_permission");
             case INVALID_FREQUENCY -> Component.translatable("ae2lt.gui.error.invalid_frequency");
             case FREQUENCY_IN_USE -> Component.translatable("ae2lt.gui.error.frequency_in_use");
+            case OWNER_LIMIT -> Component.translatable("ae2lt.gui.error.frequency_owner_limit");
             default -> Component.translatable("ae2lt.gui.error.rejected");
         };
     }
