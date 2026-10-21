@@ -18,7 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.common.Internal;
-import mezz.jei.common.transfer.RecipeTransferUtil;
+import mezz.jei.common.transfer.RecipeTransferService;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -109,20 +110,31 @@ public final class JeiWirelessSupplyClientProbe {
     private static boolean preview() {
         var mc = Minecraft.getInstance();
         var before = WirelessJeiInventoryPlan.copy(mc.player.getInventory().items);
-        var error = RecipeTransferUtil.getTransferRecipeError(Internal.getJeiRuntime().getRecipeTransferManager(),
-                mc.player.containerMenu, layout, mc.player);
+        var error = transferService().getTransferRecipeError(containerScreen(mc), layout, mc.player);
         check(java.util.stream.IntStream.range(0, 36).allMatch(i -> ItemStack.matches(before.get(i), mc.player.getInventory().getItem(i))),
                 "JEI client preview must restore every stack");
         return error.isEmpty() || error.get().getType().allowsTransfer;
     }
     private static void fill(boolean maximum) {
         var mc = Minecraft.getInstance();
-        var manager = Internal.getJeiRuntime().getRecipeTransferManager();
-        boolean transferred = RecipeTransferUtil.transferRecipe(manager, mc.player.containerMenu, layout, mc.player, maximum);
+        var service = transferService();
+        var screen = containerScreen(mc);
+        boolean transferred = service.transferRecipe(screen, layout, mc.player, maximum);
         check(!transferred, "wireless refill waits for server before normal JEI transfer");
-        check(!RecipeTransferUtil.transferRecipe(manager, mc.player.containerMenu, layout, mc.player, maximum), "rapid second click remains pending");
+        check(!service.transferRecipe(screen, layout, mc.player, maximum), "rapid second click remains pending");
         delay = 30; timeout = 0; phase++;
     }
+    private static RecipeTransferService transferService() {
+        return new RecipeTransferService(Internal.getJeiRuntime().getRecipeTransferManager());
+    }
+
+    private static AbstractContainerScreen<?> containerScreen(Minecraft minecraft) {
+        if (minecraft.screen instanceof AbstractContainerScreen<?> screen) {
+            return screen;
+        }
+        throw new IllegalStateException("JEI transfer requires an open container screen");
+    }
+
     private static void passed(String message) {
         report = message;
         System.out.println("JEI_WIRELESS_CLIENT_PASS " + message);
