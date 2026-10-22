@@ -1,0 +1,181 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 240,
+    "height": 208
+  },
+  "text": {
+    "dialog_title": {
+      "position": {
+        "left": 8,
+        "top": 7
+      }
+    }
+  },
+  "widgets": {
+    "search": {
+      "left": 8,
+      "top": 37,
+      "width": 224,
+      "height": 12
+    },
+    "sort": {
+      "left": 8,
+      "top": 51,
+      "width": 90,
+      "height": 16
+    },
+    "direction": {
+      "left": 100,
+      "top": 51,
+      "width": 18,
+      "height": 16
+    },
+    "group": {
+      "left": 122,
+      "top": 51,
+      "width": 110,
+      "height": 16
+    },
+    "window": {
+      "left": 122,
+      "top": 51,
+      "width": 110,
+      "height": 16
+    },
+    "scrollbar": {
+      "left": 220,
+      "top": 69,
+      "height": 105
+    },
+    "row0": {
+      "left": 8,
+      "top": 69,
+      "width": 184,
+      "height": 21
+    },
+    "row1": {
+      "left": 8,
+      "top": 90,
+      "width": 184,
+      "height": 21
+    },
+    "row2": {
+      "left": 8,
+      "top": 111,
+      "width": 184,
+      "height": 21
+    },
+    "row3": {
+      "left": 8,
+      "top": 132,
+      "width": 184,
+      "height": 21
+    },
+    "row4": {
+      "left": 8,
+      "top": 153,
+      "width": 184,
+      "height": 21
+    },
+    "disconnect": {
+      "left": 150,
+      "top": 188,
+      "width": 82,
+      "height": 16
+    },
+    "configure": {
+      "left": 150,
+      "top": 188,
+      "width": 82,
+      "height": 16
+    },
+    "locate0": {
+      "left": 196,
+      "top": 70,
+      "width": 18,
+      "height": 18
+    },
+    "locate1": {
+      "left": 196,
+      "top": 91,
+      "width": 18,
+      "height": 18
+    },
+    "locate2": {
+      "left": 196,
+      "top": 112,
+      "width": 18,
+      "height": 18
+    },
+    "locate3": {
+      "left": 196,
+      "top": 133,
+      "width": 18,
+      "height": 18
+    },
+    "locate4": {
+      "left": 196,
+      "top": 154,
+      "width": 18,
+      "height": 18
+    },
+    "navigation_home": {
+      "left": 8,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    },
+    "navigation_selection": {
+      "left": 32,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    },
+    "navigation_member": {
+      "left": 56,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    },
+    "navigation_setting": {
+      "left": 104,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    },
+    "navigation_devices": {
+      "left": 80,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    },
+    "mode_devices": {
+      "left": 8,
+      "top": 19,
+      "width": 72,
+      "height": 16
+    },
+    "mode_energy": {
+      "left": 84,
+      "top": 19,
+      "width": 64,
+      "height": 16
+    },
+    "mode_connections": {
+      "left": 152,
+      "top": 19,
+      "width": 80,
+      "height": 16
+    },
+    "return_to_terminal": {
+      "left": -18,
+      "top": -24,
+      "width": 22,
+      "height": 22
+    }
+  }
+}

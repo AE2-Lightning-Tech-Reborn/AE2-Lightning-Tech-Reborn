@@ -298,19 +298,19 @@ public final class WirelessEnergyDistributor {
     }
 
     /**
-     * Flush any cached FE back to the ME network and zero the buffer. Safe
-     * to call on any lifecycle boundary; FE the network refuses is dropped
-     * (there is no persistent storage on this side by design).
+     * Attempt to refund to the current source. Refused FE stays in its persistent
+     * node-owned escrow even if this distributor or the grid disappears.
      */
     public void flushBufferToNetwork() {
         var feKey = AppFluxBridge.FE_KEY;
         if (bufferedStorage == null) {
             return;
         }
-        if (feKey != null) {
+        if (feKey != null && host.getMainNode().getGrid() != null
+                && host.getMainNode().getGrid().getStorageService() == delegateStorageService) {
             bufferedStorage.flushAll(feKey, host.actionSource());
         }
-        bufferedStorage.clearBuffer();
+
     }
 
     public void persistCellCache() {
@@ -490,7 +490,7 @@ public final class WirelessEnergyDistributor {
                 demand = sim > perCallLimit ? perCallLimit : sim;
             }
             demands[i] = demand;
-            totalDemand += demand;
+            totalDemand = demand > Long.MAX_VALUE - totalDemand ? Long.MAX_VALUE : totalDemand + demand;
         }
 
         if (totalDemand <= 0L) {
@@ -795,9 +795,11 @@ public final class WirelessEnergyDistributor {
                 flushBufferToNetwork();
             }
             bufferedStorage = new BufferedMEStorage(
-                    storageService.getInventory(),
+                    new GuardedEnergyStorage(storageService.getInventory(),
+                            () -> host.getMainNode().getGrid() == grid && !host.isHostRemoved()),
                     host.getCellStorageSupplier(),
-                    host.getCellPersistCallback());
+                    host.getCellPersistCallback(),
+                    grid.getService(WirelessEnergyGridService.class).escrow(host.getMainNode().getNode()));
             storageProxy = new BufferedStorageService(storageService, bufferedStorage);
             delegateStorageService = storageService;
         }

@@ -32,7 +32,10 @@ public final class NetworkInit {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("2");
+        var registrar = event.registrar("3");
+        registrar.playToServer(ReturnToDeviceManagementPacket.TYPE, ReturnToDeviceManagementPacket.STREAM_CODEC, ReturnToDeviceManagementPacket::handle);
+        registrar.playToServer(NetworkManagementRequestPacket.TYPE, NetworkManagementRequestPacket.STREAM_CODEC, NetworkManagementRequestPacket::handle);
+        registrar.playToClient(NetworkManagementSyncPacket.TYPE, NetworkManagementSyncPacket.STREAM_CODEC, NetworkManagementSyncPacket::handle);
         registrar.playToClient(com.moakiee.ae2lt.network.tianshu.BigStockPacket.TYPE,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket.STREAM_CODEC,
                 com.moakiee.ae2lt.network.tianshu.BigStockPacket::handle);
@@ -50,7 +53,7 @@ public final class NetworkInit {
                 WirelessConnectorUsePacket.TYPE,
                 WirelessConnectorUsePacket.STREAM_CODEC,
                 WirelessConnectorUsePacket::handle);
-        registrar.playToServer(
+        registrar.versioned("2").playToServer(
                 FrequencyCardUsePacket.TYPE,
                 FrequencyCardUsePacket.STREAM_CODEC,
                 FrequencyCardUsePacket::handle);

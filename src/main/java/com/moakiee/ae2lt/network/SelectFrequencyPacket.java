@@ -6,10 +6,8 @@ import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardData;
-import com.moakiee.ae2lt.item.TerminalCardAccess;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -59,8 +57,7 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            // Card mode: the menu targets a frequency card installed in a
-            // wireless terminal's upgrade slot rather than a block entity.
+            // Card mode targets the exact held card or the terminal upgrade slot.
             if (menu.isCardMode()) {
                 handleCardSelect(player, menu, pkt.frequencyId, pkt.password);
                 return;
@@ -71,8 +68,8 @@ public record SelectFrequencyPacket(
                 return;
             }
 
-            var level = player.serverLevel();
-            var be = level.getBlockEntity(pkt.blockPos);
+            var be = menu.getConfiguredBlockEntity(player);
+            if (be == null || !(be.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
 
             // Resolve the device's CURRENT frequency so the block-op
             // access gate below knows what permission to verify. Any
@@ -181,21 +178,14 @@ public record SelectFrequencyPacket(
     /**
      * Card-mode variant of the block-entity selection flow above: reuses the
      * same permission / password / auto-enroll gating, but binds (or clears) the
-     * frequency card installed in the player's open terminal instead of a block
-     * entity. The card's bound frequency is then synced back to the screen via
+     * held frequency card or the card installed in the player's open terminal. The card's bound frequency is then synced back to the screen via
      * the menu's DataSlot.
      */
     private static void handleCardSelect(ServerPlayer player, FrequencyMenu menu, int targetFreqId, String password) {
-        ItemStack terminal = menu.resolveTerminalStack();
-        if (!TerminalCardAccess.hasCard(terminal)) {
-            PacketDistributor.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
-            return;
-        }
-
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
 
-        int currentFreqId = TerminalCardAccess.readCardData(terminal).frequencyId();
+        int currentFreqId = menu.readCardData().frequencyId();
         boolean changingBinding = targetFreqId != currentFreqId;
         if (changingBinding && currentFreqId > 0) {
             var currentFreq = manager.getFrequency(currentFreqId);
@@ -208,7 +198,7 @@ public record SelectFrequencyPacket(
 
         // disconnect
         if (targetFreqId <= 0) {
-            TerminalCardAccess.updateCard(terminal, OverloadedFrequencyCardData::clearFrequency);
+            menu.updateCard(OverloadedFrequencyCardData::clearFrequency);
             return;
         }
 
@@ -242,7 +232,7 @@ public record SelectFrequencyPacket(
         }
 
         final int boundId = targetFreqId;
-        TerminalCardAccess.updateCard(terminal, data -> data.bindFrequency(
+        menu.updateCard(data -> data.bindFrequency(
                 boundId,
                 player.level().dimension().location().toString(),
                 player.blockPosition().asLong(),

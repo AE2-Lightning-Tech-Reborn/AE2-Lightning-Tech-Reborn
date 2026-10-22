@@ -112,6 +112,9 @@ public final class ModMenuTypes {
                     "atmospheric_ionizer",
                     () -> AtmosphericIonizerMenu.TYPE);
 
+    public static final DeferredHolder<MenuType<?>, MenuType<com.moakiee.ae2lt.menu.NetworkManagementMenu>>
+            NETWORK_MANAGEMENT = MENU_TYPES.register("network_management", () -> com.moakiee.ae2lt.menu.NetworkManagementMenu.TYPE);
+
     public static final DeferredHolder<MenuType<?>, MenuType<FrequencyMenu>>
             FREQUENCY_MENU = MENU_TYPES.register(
                     "frequency_menu",

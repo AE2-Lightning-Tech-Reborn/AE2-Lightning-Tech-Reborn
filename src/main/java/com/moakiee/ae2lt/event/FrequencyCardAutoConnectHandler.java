@@ -27,8 +27,9 @@ public final class FrequencyCardAutoConnectHandler {
     private FrequencyCardAutoConnectHandler() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        if (event.isCanceled()) return;
         if (!(event.getLevel() instanceof ServerLevelAccessor levelAccessor)) {
             return;
         }
@@ -43,6 +44,7 @@ public final class FrequencyCardAutoConnectHandler {
         }
         if (event.getEntity() instanceof ServerPlayer player) {
             registry.queueAutoConnect(player, player.level().dimension(), event.getPos(), null, 2);
+            com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.placed(player, level, event.getPos());
         }
     }
 
@@ -117,7 +119,9 @@ public final class FrequencyCardAutoConnectHandler {
         }
         var pos = event.getPos();
         var registry = WirelessLinkRegistry.get(level.getServer());
-        if (registry == null || !registry.isPotentialLinkTarget(level, pos)) {
+        if (registry == null || (!registry.isPotentialLinkTarget(level, pos)
+                && (event.getFace() == null || !com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer())
+                        .isPotentialTarget(level, pos, event.getFace())))) {
             return;
         }
 

@@ -26,6 +26,8 @@ The card only links targets. The frequency itself must still be transmitted by a
 
 A bound card can only be used by the player who bound it. **Shift + right-click air** clears the binding, while keeping the auto-connect setting.
 
+Hold the card in either hand and **right-click air** to open its frequency screen. Frequency selection, disconnection, and auto connect are saved to that card. Replacing the held card invalidates the old screen.
+
 ## Manual Linking
 
 Hold a bound frequency card and right-click a supported ME network device, selectable part, or cable body to toggle the entire physical ME cluster.
@@ -36,17 +38,26 @@ Controllers and blocks without an available grid node still cannot be selected. 
 
 If the card reports that the frequency is temporarily unavailable, the transmitter is usually not loaded. The link will recover once the Advanced Wireless Overloaded Controller is loaded again.
 
+## Wireless FE Power
+
+With AppliedFlux installed, an Advanced Wireless Overloaded Controller can also send FE stored in its ME network to devices that accept FE. Right-click a device with the bound card to toggle power. The clicked face is checked first, followed by the other five faces, stopping at the first input. For a device supporting both ME and FE, an ordinary right-click handles both connections. Interfaces and Pattern Providers, including their panel versions, cannot receive wireless FE through this feature; their ME links remain available.
+
+Hold **Ctrl + right-click** to toggle a group of devices. The group follows face-adjacent blocks of the **same block type**, including different orientations. If the clicked device is powered by this frequency, the group is disconnected; otherwise, the group is connected. Each device selects its own FE input face. Devices on another frequency or without permission are skipped, and the result reports counts. This action changes FE only and preserves ME links. It also works while holding a wireless terminal with the card installed.
+
+Only loaded chunks are traversed. A group larger than 8192 matching blocks cancels the entire operation.
+
 ## Auto Connect
 
-When auto connect is enabled, placing blocks or AE2 parts will try to link the new target with an available carried frequency card.
+The card overview has two independent switches:
 
-Ways to toggle auto connect:
+* **Auto frequency** connects compatible blocks or AE2 parts to wireless ME channels when placed.
+* **Auto FE power** verifies a placed machine's FE input before connecting wireless power.
 
-* Hold the card, then hold **Shift** and scroll the mouse wheel
-* Use the “Toggle Frequency Card Auto Connect” keybind
-* Install the card in a supported wireless terminal and use the terminal screen's auto-connect button
+Turning a switch off only stops future automatic connections. Existing links remain connected. Disconnect existing wireless power from the controller's **Network management → Power** view. Old cards retain their previous auto-connect state; the two preferences are saved independently after migration.
 
-If you carry multiple auto-connect cards at once, the system may not know which one to use. When this happens, hold the target card or disable auto connect on the others.
+Open the held card or its configuration inside a terminal to change either setting. Supported wireless terminals also provide two separate toolbar switches. **Shift-scroll** and the **Toggle Frequency Card Auto Connect** keybind change frequency auto connect only, leaving FE unchanged.
+
+Each automatic connection type considers only cards with its corresponding switch enabled. If several cards qualify, hold the intended card or turn off the corresponding setting on the others.
 
 ## Curios Slot
 

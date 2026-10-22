@@ -3,6 +3,7 @@
 // JEI 19.64 requires -PjeiVersion=19.64.0.453 -Pneo_version=21.1.238 for its test runtime.
 allprojects {
     afterEvaluate {
+        sourceSets.jdb.java.setExcludes([])
         sourceSets.jdb.java.setIncludes(['**/JeiWirelessSupplyExtendedCraftingProbe.java'])
         tasks.named('compileJdbJava').configure {
             source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/JeiWirelessSupplyExtendedCraftingProbe.java')
