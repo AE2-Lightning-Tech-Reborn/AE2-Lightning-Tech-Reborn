@@ -64,12 +64,20 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 public final class TianshuDeferredReturnsGameTests {
     @GameTest(template = "empty", timeoutTicks = 80)
     public static void nativeSubstitutionWaitsForAlternativeMaterialsWithoutPeriodicAttempts(GameTestHelper h) throws Exception {
+        int[] remainingCases = {18};
+        for (int attempt = 0; attempt < 18; attempt++) nativeSubstitutionMaterialWakeCase(h, remainingCases, attempt);
+    }
+
+    private static void nativeSubstitutionMaterialWakeCase(GameTestHelper h, int[] remainingCases, int attempt) throws Exception {
         var details = pattern(h.getLevel(), "stick", new ItemStack(Items.STICK, 4),
                 Map.of(0, new ItemStack(Items.OAK_PLANKS), 3, new ItemStack(Items.OAK_PLANKS)), true);
         h.assertTrue(details.getInputs()[0].getPossibleInputs().length > 1, "real alternative ingredient list");
         var fixture = new Fixture(h.getLevel(), true, List.of(details));
         var oak = AEItemKey.of(Items.OAK_PLANKS);
-        var birch = AEItemKey.of(Items.BIRCH_PLANKS);
+        var alternatives = new net.minecraft.world.item.Item[]{Items.BIRCH_PLANKS, Items.SPRUCE_PLANKS,
+                Items.JUNGLE_PLANKS, Items.ACACIA_PLANKS, Items.DARK_OAK_PLANKS,
+                Items.MANGROVE_PLANKS, Items.CHERRY_PLANKS, Items.CRIMSON_PLANKS, Items.WARPED_PLANKS};
+        var birch = AEItemKey.of(alternatives[attempt % alternatives.length]);
         submitMaterialTest(fixture, details, Map.of(oak, 2L));
         var inventory = fixture.cpu.getCraftingLogic().getInventory();
         inventory.extract(oak, 2, Actionable.MODULATE);
@@ -91,16 +99,39 @@ public final class TianshuDeferredReturnsGameTests {
             long birchBefore = inventory.list.get(birch);
             int dispatched = fixture.run(32);
             String afterState = materialWaitState(fixture, details);
-            com.mojang.logging.LogUtils.getLogger().info("GTO_MATERIAL_WAIT partial={} ready={} after={}", partialState, readyState, afterState);
             h.assertTrue(dispatched == 1, "two alternative plank types must unlock one native craft"
-                    + "; dispatched=" + dispatched + "; before=" + oakBefore + "/" + birchBefore
+                    + "; alternative=" + birch + "; dispatched=" + dispatched + "; before=" + oakBefore + "/" + birchBefore
                     + "; after=" + inventory.list.get(oak) + "/" + inventory.list.get(birch)
                     + "; queries=" + fixture.providerQueries + "; busy=" + fixture.cpu.isBusy()
                     + "; partial=" + partialState + "; ready=" + readyState + "; after=" + afterState);
             h.assertTrue(fixture.disk.items.get(AEItemKey.of(Items.STICK)) == 4 && !fixture.cpu.isBusy(),
                     "native mixed-alternative recipe completed");
-            h.succeed();
+            if (--remainingCases[0] == 0) h.succeed();
         });
+    }
+
+    @GameTest(template = "empty")
+    public static void nativeSubstitutionCacheMissDoesNotRejectAnUntestedItem(GameTestHelper h) {
+        var details = (appeng.crafting.pattern.AECraftingPattern) pattern(h.getLevel(), "validity_cache",
+                new ItemStack(Items.STICK, 4),
+                Map.of(0, new ItemStack(Items.OAK_PLANKS), 3, new ItemStack(Items.OAK_PLANKS)), true);
+        h.assertTrue(details.isItemValid(0, AEItemKey.of(Items.OAK_PLANKS), h.getLevel()), "prime the native cache");
+        h.assertTrue(details.isItemValid(0, AEItemKey.of(Items.BIRCH_PLANKS), h.getLevel()),
+                "an untested substitute must run native validation");
+        h.assertTrue(!details.isItemValid(0, AEItemKey.of(Items.EMERALD), h.getLevel()), "reject invalid material");
+        h.assertTrue(details.isItemValid(0, AEItemKey.of(Items.SPRUCE_PLANKS), h.getLevel()),
+                "a cached rejection must not poison the next candidate");
+        h.assertTrue(!details.isItemValid(0, AEItemKey.of(Items.EMERALD), h.getLevel()), "retain the cached rejection");
+        var named = new ItemStack(Items.BIRCH_PLANKS);
+        named.setHoverName(Component.literal("returned variant"));
+        h.assertTrue(details.isItemValid(0, AEItemKey.of(named), h.getLevel()), "tagged variants retain native validation");
+        h.succeed();
+    }
+
+    private static Object reflectedField(Object target, String name) throws ReflectiveOperationException {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static String materialWaitState(Fixture fixture, IPatternDetails details) {
@@ -116,6 +147,16 @@ public final class TianshuDeferredReturnsGameTests {
             var state = new java.util.LinkedHashMap<String, Object>();
             state.put("missing", ((Set<?>) missing.invoke(probe, details)).size());
             state.put("queued", ((Set<?>) queued.get(logic)).size());
+            state.put("queries", fixture.providerQueries);
+            state.put("matrixBusy", fixture.cluster.isBusy());
+            state.put("matrixCapacity", fixture.cluster.availableCapacity());
+            var budgetField = logic.getClass().getDeclaredField("tickBudget");
+            budgetField.setAccessible(true);
+            var budget = (com.moakiee.ae2lt.crafting.runtime.CraftingTickBudget) budgetField.get(logic);
+            state.put("opsLeft", budget.remainingOperations());
+            state.put("copiesLeft", budget.remainingCopies());
+            state.put("blocked", ((com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule)
+                    reflectedField(logic, "standaloneDispatchSchedule")).blockedCount(details));
             state.put("now", appeng.hooks.ticking.TickHandler.instance().getCurrentTick());
             for (var name : List.of("wheelCursor", "schedulerTick", "batchTick", "execution")) {
                 var field = logic.getClass().getDeclaredField(name);

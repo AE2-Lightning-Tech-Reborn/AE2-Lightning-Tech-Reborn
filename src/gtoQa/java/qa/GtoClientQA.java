@@ -17,11 +17,13 @@ public final class GtoClientQA {
     private static int ticks;
     private static int loading;
     private static int menuTicks;
+    private static int successfulConnections;
     private static boolean connecting;
     private static boolean done;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if(event.phase!=TickEvent.Phase.END || done) return;
         var mc=Minecraft.getInstance();
+        if (loading % 100 == 0) GtoNetworkDiagnostics.inspect(mc.screen);
         String connect = System.getProperty("ae2lt.gtoQaConnect");
         String world = System.getProperty("ae2lt.gtoQaWorld");
         if (connect == null && world != null && !connecting
@@ -73,6 +75,20 @@ public final class GtoClientQA {
             Class.forName("com.moakiee.ae2lt.client.tianshu.TianshuMaintenanceTermScreen");
             Screenshot.grab(mc.gameDirectory,"gto-compat-client.png",mc.getMainRenderTarget(),message->{});
             LOGGER.info("GTO_CLIENT_QA PASS connected world rendered; exact terminal formatting; screen transforms");
+            if (connect != null) {
+                int attempts = Math.max(1, Integer.getInteger("ae2lt.gtoQaConnectionAttempts", 1));
+                if (++successfulConnections < attempts) {
+                    LOGGER.info("GTO_CLIENT_QA RECONNECT completed={} target={}", successfulConnections, attempts);
+                    mc.level.disconnect();
+                    mc.clearLevel(new net.minecraft.client.gui.screens.TitleScreen());
+                    ticks = 0;
+                    menuTicks = 380;
+                    connecting = false;
+                    done = false;
+                    return;
+                }
+                LOGGER.info("GTO_CLIENT_QA CONNECTIONS_COMPLETE total={}", successfulConnections);
+            }
         } catch(Throwable failure) {LOGGER.error("QA failure",failure);LOGGER.info("GTO_CLIENT_QA FAIL "+failure);}
         mc.stop();
     }

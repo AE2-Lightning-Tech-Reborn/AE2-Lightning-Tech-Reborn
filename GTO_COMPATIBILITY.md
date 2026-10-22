@@ -13,9 +13,9 @@
 | GTOCore | 26.10.5 |
 | AE2-GTO | 15.2610.8（使用 GTOCore 26.10.5 原包内嵌版本） |
 | Thunderbolt | 2.0.3-gto.5 |
-| AE2LT | 2.1.2-gto.7 |
+| AE2LT | 2.1.2-gto.8 |
 
-当前同版本更新、测试结果与配套成品见 [gto.7 移植记录](GTO_FORGE_UPDATE_GTO7_2026-10-22.md)。此前终端、派发公平性与权限修复见 [gto.6 移植记录](GTO_UPSTREAM_FIXES_GTO6_2026-10-21.md)。
+当前替代材料与联机修复见 [gto.8 修复记录](GTO_RUNTIME_FIXES_GTO8_2026-10-22.md)。同版本更新、测试结果与配套成品见 [gto.7 移植记录](GTO_FORGE_UPDATE_GTO7_2026-10-22.md)。此前终端、派发公平性与权限修复见 [gto.6 移植记录](GTO_UPSTREAM_FIXES_GTO6_2026-10-21.md)。
 
 客户端与服务端一起替换对应的 TB/LT JAR，移除同 mod ID 的旧版本。GTOCore、GTOLib 与 GTO 自带 AE2 均使用原件；无需修改 GTO。不要把这两个包放进普通 AE2 整合包，也不要把普通 LTPP/其他依赖旧 AE2 API 的附属兼容性视为本次验证范围。
 
@@ -120,6 +120,6 @@ LT 保存了可选测试源集 `src/gtoQa`：
 
 历史 `gto.5` 按要求清除 NeoECO 专用合成、样板迁移、配方和配套 Core 适配；详情及验证见 [NeoECO 清除记录](GTO_NEOECO_REMOVAL_2026-10-21.md)。
 
-清除前 `gto.4` 的完整检测与原始失败见 [2026-10-21 全面测试记录](GTO_COMPREHENSIVE_TEST_2026-10-21.md)。替代材料返回后的合成唤醒失败在 `gto.5` 仍可复现，未解决。
+清除前 `gto.4` 的完整检测与原始失败见 [2026-10-21 全面测试记录](GTO_COMPREHENSIVE_TEST_2026-10-21.md)。替代材料返回后的合成唤醒失败在 `gto.5` 仍可复现，后续在 `gto.8` 定位为 AE2-GTO 有效性缓存未命中误判并修复；历史失败记录保留。
 
-`gto.6` / Core `2.0.3-gto.5` 移植终端服务端广播保护、跨补料周期公平分配、玩家方块权限与自动建造回滚、频率 OWNER 上限和密码限流。详情见 [gto.6 移植记录](GTO_UPSTREAM_FIXES_GTO6_2026-10-21.md)。当前 `gto.7` 保留上述修复并补齐普通 1.20.1 分支的 JEI 更新。NeoECO 继续不兼容；Core 仍使用清除后的 gto.5，无需重建新 Core 版本。`permissions` QA 组检查权限事件、放置回滚和频率限制。
+`gto.6` / Core `2.0.3-gto.5` 移植终端服务端广播保护、跨补料周期公平分配、玩家方块权限与自动建造回滚、频率 OWNER 上限和密码限流。详情见 [gto.6 移植记录](GTO_UPSTREAM_FIXES_GTO6_2026-10-21.md)。当前 `gto.8` 保留上述修复及 gto.7 的 JEI 更新，并修复 AE2-GTO 替代材料缓存与 Krypton 登录阶段发送刷新。NeoECO 继续不兼容；Core 仍使用清除后的 gto.5，无需重建新 Core 版本。`permissions` QA 组检查权限事件、放置回滚和频率限制。

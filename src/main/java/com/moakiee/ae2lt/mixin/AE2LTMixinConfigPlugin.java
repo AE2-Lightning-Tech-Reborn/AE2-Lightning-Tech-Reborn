@@ -13,6 +13,7 @@ import net.minecraftforge.fml.loading.LoadingModList;
 /** Keeps mixins that target optional addons out of Mixin's target-resolution pass. */
 public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     private static final Map<String, String> REQUIRED_MODS = Map.of(
+            "GtoCraftingPatternValidityCacheMixin", "gtocore",
             "AdvCraftingCpuAccessor", "advanced_ae",
             "AdvCraftingCpuLogicMixin", "advanced_ae",
             "InterfaceEnergyDistributionMixin", "appflux",
@@ -32,6 +33,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         int separator = mixinClassName.lastIndexOf('.');
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
+        if (simpleName.equals("GtoLoginPacketFlushMixin")) {
+            return isModLoaded("gtocore") && isModLoaded("krypton");
+        }
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
     }

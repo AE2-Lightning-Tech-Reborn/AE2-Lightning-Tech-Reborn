@@ -46,6 +46,10 @@ public final class GtoCompatQA {
     private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
     private static final java.util.concurrent.atomic.AtomicInteger ENGINE_CALLS = new java.util.concurrent.atomic.AtomicInteger();
     public GtoCompatQA() {
+        if (Boolean.getBoolean("ae2lt.gtoLoginTrace")) {
+            org.apache.logging.log4j.core.config.Configurator.setLevel("net.minecraftforge.network", org.apache.logging.log4j.Level.DEBUG);
+            org.apache.logging.log4j.core.config.Configurator.setLevel("net.minecraft.network.Connection", org.apache.logging.log4j.Level.DEBUG);
+        }
         if ("infinite".equals(System.getProperty("ae2lt.gtoQaSuite"))) {
             net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus()
                     .addListener((net.minecraftforge.registries.RegisterEvent event) -> {
@@ -158,7 +162,10 @@ public final class GtoCompatQA {
             LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure);
         }
     }
+    private int loginTraceTicks;
     private void tick(TickEvent.ServerTickEvent e) {
+        if (e.phase == TickEvent.Phase.END && ++loginTraceTicks % 100 == 0)
+            GtoNetworkDiagnostics.inspect(e.getServer().getConnection());
         if(e.phase!=TickEvent.Phase.END || tests==null || reported) return;
         ticker.tick();
         if(tests.stream().allMatch(GameTestInfo::isDone)) {
