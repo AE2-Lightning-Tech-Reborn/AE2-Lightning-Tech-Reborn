@@ -80,10 +80,7 @@ final class DispatchFairnessScheduler<T, P> {
         deactivate(patternState, targetState);
         targetState.cooldownUntil = Math.max(gameTick + 1L, retryAfter);
         targetState.cooldownVersion++;
-        patternState.cooldowns.add(new CooldownEntry<>(
-                targetState.cooldownUntil,
-                targetState.cooldownVersion,
-                targetState));
+        queueCooldown(patternState, targetState);
     }
 
     void pauseTarget(T target) {
@@ -186,7 +183,7 @@ final class DispatchFairnessScheduler<T, P> {
 
         if (state.lastAdvancedTick != Long.MIN_VALUE
                 && gameTick < state.lastAdvancedTick) {
-            state.history.clear();
+            while (!state.history.isEmpty()) recycleHistory(state, state.history.removeFirst());
             state.windowSum = 0L;
             state.windowCountFrequencies.clear();
             for (var targetState : state.targets.values()) {
@@ -209,6 +206,7 @@ final class DispatchFairnessScheduler<T, P> {
             var expired = state.history.removeFirst();
             expireAmounts(state, expired.ownedCopies, false);
             expireAmounts(state, expired.schedulingCredits, true);
+            recycleHistory(state, expired);
         }
     }
 
@@ -289,11 +287,14 @@ final class DispatchFairnessScheduler<T, P> {
                 && state.cooldowns.peek().retryAfter <= gameTick) {
             var due = state.cooldowns.poll();
             var targetState = due.targetState;
-            if (due.cooldownVersion != targetState.cooldownVersion
+            boolean stale = due.cooldownVersion != targetState.cooldownVersion
                     || due.retryAfter != targetState.cooldownUntil
                     || !state.targets.containsKey(targetState.target)
                     || pausedTargets.contains(targetState.target)
-                    || targetState.active) {
+                    || targetState.active;
+            due.targetState = null;
+            state.freeCooldowns.addLast(due);
+            if (stale) {
                 continue;
             }
             activateAtCurrentAverage(state, targetState);
@@ -387,7 +388,10 @@ final class DispatchFairnessScheduler<T, P> {
         }
         WindowBucket<T> bucket = state.history.peekLast();
         if (bucket == null || bucket.gameTick != state.lastAdvancedTick) {
-            bucket = new WindowBucket<>(state.lastAdvancedTick);
+            bucket = state.spareHistory;
+            state.spareHistory = null;
+            if (bucket == null) bucket = new WindowBucket<>();
+            bucket.gameTick = state.lastAdvancedTick;
             state.history.addLast(bucket);
         }
         var amounts = schedulingCredit
@@ -397,6 +401,25 @@ final class DispatchFairnessScheduler<T, P> {
                 targetState,
                 amount,
                 DispatchFairnessScheduler::saturatingAdd);
+    }
+
+    private static <T> void recycleHistory(PatternState<T> state, WindowBucket<T> bucket) {
+        // One spare is enough for the next writing tick. After a long idle gap,
+        // release the other expired buckets instead of retaining a full window.
+        if (state.spareHistory == null) {
+            bucket.ownedCopies.clear();
+            bucket.schedulingCredits.clear();
+            state.spareHistory = bucket;
+        }
+    }
+
+    private static <T> void queueCooldown(PatternState<T> state, TargetState<T> target) {
+        var entry = state.freeCooldowns.pollFirst();
+        if (entry == null) entry = new CooldownEntry<>();
+        entry.retryAfter = target.cooldownUntil;
+        entry.cooldownVersion = target.cooldownVersion;
+        entry.targetState = target;
+        state.cooldowns.add(entry);
     }
 
     private static <T> void addFrequency(PatternState<T> state, long count) {
@@ -420,12 +443,7 @@ final class DispatchFairnessScheduler<T, P> {
             return;
         }
         long version = ++targetState.queueVersion;
-        state.ready.add(new ReadyEntry<>(
-                targetState.effectiveCount(),
-                targetState.lastSuccessfulSequence,
-                ++sequence,
-                version,
-                targetState));
+        queueReady(state, targetState, version);
         compactReadyIfNeeded(state);
     }
 
@@ -436,19 +454,33 @@ final class DispatchFairnessScheduler<T, P> {
         if (state.ready.size() <= threshold) {
             return;
         }
+        for (var entry : state.ready) recycleReady(state, entry);
         state.ready.clear();
         for (var targetState : state.targets.values()) {
             if (!targetState.active || targetState.leased) {
                 continue;
             }
             long version = ++targetState.queueVersion;
-            state.ready.add(new ReadyEntry<>(
-                    targetState.effectiveCount(),
-                    targetState.lastSuccessfulSequence,
-                    ++sequence,
-                    version,
-                    targetState));
+            queueReady(state, targetState, version);
         }
+    }
+
+    private void queueReady(PatternState<T> state, TargetState<T> target, long version) {
+        var entry = state.freeReady.pollFirst();
+        if (entry == null) entry = new ReadyEntry<>();
+        // A queued entry remains an immutable snapshot until it leaves the heap.
+        // Reusing only detached entries preserves stale-version and tie ordering.
+        entry.dispatchCount = target.effectiveCount();
+        entry.lastSuccessfulSequence = target.lastSuccessfulSequence;
+        entry.tieSequence = ++sequence;
+        entry.queueVersion = version;
+        entry.targetState = target;
+        state.ready.add(entry);
+    }
+
+    private static <T> void recycleReady(PatternState<T> state, ReadyEntry<T> entry) {
+        entry.targetState = null;
+        state.freeReady.addLast(entry);
     }
 
     @Nullable
@@ -456,10 +488,12 @@ final class DispatchFairnessScheduler<T, P> {
         while (!state.ready.isEmpty()) {
             var entry = state.ready.poll();
             var targetState = entry.targetState;
-            if (entry.queueVersion != targetState.queueVersion
+            boolean stale = entry.queueVersion != targetState.queueVersion
                     || !targetState.active
                     || targetState.leased
-                    || !state.targets.containsKey(targetState.target)) {
+                    || !state.targets.containsKey(targetState.target);
+            recycleReady(state, entry);
+            if (stale) {
                 continue;
             }
             targetState.leased = true;
@@ -498,12 +532,13 @@ final class DispatchFairnessScheduler<T, P> {
         private final PatternState<T> state;
         private final long gameTick;
         private final boolean balancedWindow;
-        private final ArrayList<TargetState<T>> leased = new ArrayList<>();
+        private final ArrayList<TargetState<T>> leased;
         private boolean closed;
 
         private Pass(PatternState<T> state, long gameTick) {
             this.state = state;
             this.gameTick = gameTick;
+            this.leased = state.leased;
             this.balancedWindow = state.windowCountFrequencies.size() <= 1
                     && state.activeCount == state.windowTargetCount;
         }
@@ -614,10 +649,7 @@ final class DispatchFairnessScheduler<T, P> {
             targetState.refillCoverage = true;
             targetState.cooldownUntil = saturatingAdd(gameTick, delay);
             targetState.cooldownVersion++;
-            state.cooldowns.add(new CooldownEntry<>(
-                    targetState.cooldownUntil,
-                    targetState.cooldownVersion,
-                    targetState));
+            queueCooldown(state, targetState);
         }
 
         void cooldown(T target, long retryAfter) {
@@ -626,10 +658,7 @@ final class DispatchFairnessScheduler<T, P> {
             deactivate(state, targetState);
             targetState.cooldownUntil = Math.max(gameTick + 1L, retryAfter);
             targetState.cooldownVersion++;
-            state.cooldowns.add(new CooldownEntry<>(
-                    targetState.cooldownUntil,
-                    targetState.cooldownVersion,
-                    targetState));
+            queueCooldown(state, targetState);
         }
 
         void remove(T target) {
@@ -652,6 +681,7 @@ final class DispatchFairnessScheduler<T, P> {
                     offer(state, targetState);
                 }
             }
+            leased.clear();
             state.passOpen = false;
         }
 
@@ -679,8 +709,12 @@ final class DispatchFairnessScheduler<T, P> {
                         .thenComparingLong(entry -> entry.tieSequence));
         private final PriorityQueue<CooldownEntry<T>> cooldowns =
                 new PriorityQueue<>(Comparator.comparingLong(entry -> entry.retryAfter));
+        private final ArrayDeque<ReadyEntry<T>> freeReady = new ArrayDeque<>();
+        private final ArrayDeque<CooldownEntry<T>> freeCooldowns = new ArrayDeque<>();
+        private final ArrayList<TargetState<T>> leased = new ArrayList<>();
         private final Long2IntAVLTreeMap windowCountFrequencies = new Long2IntAVLTreeMap();
         private final ArrayDeque<WindowBucket<T>> history = new ArrayDeque<>();
+        private WindowBucket<T> spareHistory;
         private long lastAdvancedTick = Long.MIN_VALUE;
         private long topologyVersion = Long.MIN_VALUE;
         private long windowSum;
@@ -715,29 +749,25 @@ final class DispatchFairnessScheduler<T, P> {
         }
     }
 
-    private record ReadyEntry<T>(
-            long dispatchCount,
-            long lastSuccessfulSequence,
-            long tieSequence,
-            long queueVersion,
-            TargetState<T> targetState) {
+    private static final class ReadyEntry<T> {
+        private long dispatchCount;
+        private long lastSuccessfulSequence;
+        private long tieSequence;
+        private long queueVersion;
+        private TargetState<T> targetState;
     }
 
-    private record CooldownEntry<T>(
-            long retryAfter,
-            long cooldownVersion,
-            TargetState<T> targetState) {
+    private static final class CooldownEntry<T> {
+        private long retryAfter;
+        private long cooldownVersion;
+        private TargetState<T> targetState;
     }
 
     private static final class WindowBucket<T> {
-        private final long gameTick;
+        private long gameTick;
         private final Reference2LongOpenHashMap<TargetState<T>> ownedCopies =
                 new Reference2LongOpenHashMap<>();
         private final Reference2LongOpenHashMap<TargetState<T>> schedulingCredits =
                 new Reference2LongOpenHashMap<>(0);
-
-        private WindowBucket(long gameTick) {
-            this.gameTick = gameTick;
-        }
     }
 }

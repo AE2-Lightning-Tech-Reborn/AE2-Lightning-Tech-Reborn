@@ -183,6 +183,37 @@ class OverloadedInterfaceExportFairnessTest {
         assertFalse(iron.matches(model.handler.getStackInSlot(0)));
     }
 
+    @Test void componentRejectionMatchesAe2AfterEveryInPlaceMutation() {
+        var random = new java.util.Random(20261022);
+        for (int variant = 0; variant < 16; variant++) {
+            var expected = new ItemStack(Items.IRON_PICKAXE);
+            if ((variant & 1) != 0) expected.set(DataComponents.CUSTOM_NAME, Component.literal("expected"));
+            if ((variant & 2) != 0) expected.set(DataComponents.DAMAGE, 9);
+            if ((variant & 4) != 0) expected.remove(DataComponents.MAX_DAMAGE);
+            if ((variant & 8) != 0) expected.set(DataComponents.UNBREAKABLE,
+                    new net.minecraft.world.item.component.Unbreakable(true));
+            var key = AEItemKey.of(expected);
+            var matcher = new InterfaceExportPlan.ItemMatcher(key);
+            var live = expected.copy();
+            assertTrue(matcher.matches(live));
+            for (int mutation = 0; mutation < 300; mutation++) {
+                switch (random.nextInt(7)) {
+                    case 0 -> live.set(DataComponents.CUSTOM_NAME, Component.literal("name-" + random.nextInt(4)));
+                    case 1 -> live.remove(DataComponents.CUSTOM_NAME);
+                    case 2 -> live.set(DataComponents.DAMAGE, random.nextInt(12));
+                    case 3 -> live.remove(DataComponents.DAMAGE);
+                    case 4 -> live.setCount(random.nextInt(4));
+                    case 5 -> live.set(DataComponents.REPAIR_COST, random.nextInt(10));
+                    case 6 -> live = expected.copy();
+                }
+                assertEquals(key.matches(live), matcher.matches(live),
+                        "variant " + variant + " mutation " + mutation);
+            }
+            assertFalse(matcher.matches(new ItemStack(Items.DIAMOND_PICKAXE)));
+            assertFalse(matcher.matches(ItemStack.EMPTY));
+        }
+    }
+
     @Test void planChangesAndModeResetCannotRetainRemovedWaiters() {
         var model = new Model(List.of(iron, gold), 64);
         model.tick(0, IOSpeedMode.FAST);

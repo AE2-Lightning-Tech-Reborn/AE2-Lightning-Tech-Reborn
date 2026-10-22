@@ -213,6 +213,67 @@ class DispatchFairnessSchedulerTest {
         assertEquals(0L, scheduler.minimumActiveDispatchCount(PATTERN, 199L));
     }
 
+    @Test
+    void recycledWindowsAndQueueEntriesPreservePhysicalCountsAcrossLifecycleChanges() {
+        var scheduler = new DispatchFairnessScheduler<Integer, String>();
+        var targets = java.util.stream.IntStream.range(0, 24).boxed().toList();
+        var receipts = new java.util.ArrayList<long[]>();
+        var random = new java.util.Random(20261022);
+        long tick = 0;
+        for (int step = 0; step < 1800; step++) {
+            long next = step % 173 == 172 ? tick - 150 : tick + random.nextInt(4);
+            if (next < tick) receipts.clear();
+            tick = next;
+            long now = tick;
+            receipts.removeIf(receipt -> receipt[0] <= now - 100);
+            int changed = random.nextInt(targets.size());
+            if (step % 11 == 0) {
+                scheduler.removeTarget(changed);
+                receipts.removeIf(receipt -> receipt[1] == changed);
+            }
+            if (step % 7 == 0) scheduler.pauseTarget(changed);
+            if (step % 9 == 0) scheduler.resumeTarget(changed, tick);
+            try (var pass = scheduler.beginPass(PATTERN, targets, step, tick)) {
+                Integer target;
+                var visited = new java.util.HashSet<Integer>();
+                while ((target = pass.poll()) != null) {
+                    assertTrue(visited.add(target), "one pass leased a target twice");
+                    if (random.nextInt(5) == 0) {
+                        pass.cooldown(target, tick + 1 + random.nextInt(12));
+                    } else {
+                        long copies = 1 + random.nextInt(100);
+                        pass.raiseAllowance(target, copies);
+                        if (random.nextBoolean()) pass.successAndCover(target, copies, 1 + random.nextInt(8));
+                        else pass.success(target, copies);
+                        receipts.add(new long[]{tick, target, copies});
+                    }
+                }
+            }
+            for (int target : targets) {
+                long expected = 0;
+                for (var receipt : receipts) if (receipt[1] == target) expected += receipt[2];
+                assertEquals(expected, scheduler.dispatchCount(PATTERN, target, tick),
+                        "physical receipt ledger differs at step " + step + " target " + target);
+            }
+        }
+    }
+
+    @Test
+    void recycledCooldownEntryCannotWakeAnObsoleteTargetOrDeadline() {
+        var scheduler = new DispatchFairnessScheduler<String, String>();
+        for (int tick = 0; tick < 300; tick++) {
+            scheduler.excludeUntil(PATTERN, "a", tick + 1, tick);
+            scheduler.excludeUntil(PATTERN, "a", tick + 20, tick);
+            assertEquals(0, scheduler.activeTargetCount(PATTERN, tick + 1));
+            scheduler.removeTarget("a");
+            try (var pass = scheduler.beginPass(PATTERN, List.of("a"), tick, tick + 1)) {
+                assertEquals("a", pass.poll());
+                pass.success("a", 1);
+                assertEquals(null, pass.poll());
+            }
+        }
+    }
+
     private static <T> void assertActiveRatio(
             DispatchFairnessScheduler<T, String> scheduler,
             long tick) {
