@@ -102,9 +102,9 @@ public class LargeStackAppEngSlot extends AppEngSlot {
     }
 
     /**
-     * Bound every generic extraction path to one legal carried stack. Repeated
-     * Shift-clicks may drain more, but no individual ItemStack leaving this slot
-     * can exceed its own native maximum.
+     * Bound every generic extraction path to one legal carried stack. A
+     * Shift-click may move several stacks, but each individual extraction must
+     * still respect the item's native maximum.
      */
     @Override
     public ItemStack remove(int amount) {
@@ -297,54 +297,57 @@ public class LargeStackAppEngSlot extends AppEngSlot {
             return;
         }
 
-        ItemStack taken = slot.remove(actual.getMaxStackSize());
-        if (taken.isEmpty()) {
-            return;
-        }
-
-        ItemStack original = taken.copy();
-        ItemStack remainder = moveIntoPlayerInventory(menu, taken);
-        int moved = original.getCount() - remainder.getCount();
-
-        if (!remainder.isEmpty()) {
-            int restored = slot.insertIntoBacking(remainder, remainder.getCount());
-            remainder.shrink(restored);
-            if (!remainder.isEmpty()) {
-                player.drop(remainder, false);
-            }
-        }
-
-        if (moved > 0) {
-            ItemStack movedStack = original.copyWithCount(moved);
-            slot.onTake(player, movedStack);
-            slot.setChanged();
-        }
-    }
-
-    private static ItemStack moveIntoPlayerInventory(AEBaseMenu menu, ItemStack stack) {
         var destinations = new ArrayList<Slot>(menu.getSlots(SlotSemantics.PLAYER_INVENTORY));
         destinations.addAll(menu.getSlots(SlotSemantics.PLAYER_HOTBAR));
 
-        ItemStack remainder = stack;
-        for (Slot destination : destinations) {
-            if (!destination.hasItem()) {
-                continue;
-            }
-            remainder = destination.safeInsert(remainder);
-            if (remainder.isEmpty()) {
-                return ItemStack.EMPTY;
-            }
-        }
+        // Merge first, then fill empty player slots. The work is bounded by the
+        // player inventory size, even for a legacy machine stack near INT_MAX.
         for (Slot destination : destinations) {
             if (destination.hasItem()) {
-                continue;
-            }
-            remainder = destination.safeInsert(remainder);
-            if (remainder.isEmpty()) {
-                return ItemStack.EMPTY;
+                moveIntoPlayerSlot(slot, destination, player);
             }
         }
-        return remainder;
+        for (Slot destination : destinations) {
+            if (!destination.hasItem()) {
+                moveIntoPlayerSlot(slot, destination, player);
+            }
+        }
+    }
+
+    private static void moveIntoPlayerSlot(LargeStackAppEngSlot source, Slot destination, Player player) {
+        ItemStack actual = source.getBackingItem();
+        if (actual.isEmpty() || !destination.mayPlace(actual)) {
+            return;
+        }
+
+        ItemStack existing = destination.getItem();
+        if (!existing.isEmpty() && !ItemStack.isSameItemSameComponents(existing, actual)) {
+            return;
+        }
+
+        int limit = Math.min(actual.getMaxStackSize(), destination.getMaxStackSize(actual));
+        int room = limit - existing.getCount();
+        if (room <= 0) {
+            return;
+        }
+
+        // These destinations are ordinary player inventory/hotbar slots. Debit
+        // only their known free space, then commit that exact extraction. Never
+        // extract a whole stack speculatively: output slots can reject refunds,
+        // and copying the display wrapper or debiting a capped amount after a
+        // larger credit would duplicate items.
+        ItemStack merged = existing.copy();
+        ItemStack taken = source.remove(Math.min(room, actual.getCount()));
+        if (taken.isEmpty()) {
+            return;
+        }
+        if (merged.isEmpty()) {
+            merged = taken.copy();
+        } else {
+            merged.grow(taken.getCount());
+        }
+        destination.setByPlayer(merged);
+        source.onTake(player, taken);
     }
 
     private static void handleThrow(LargeStackAppEngSlot slot, int button, Player player) {
