@@ -225,6 +225,61 @@ public final class FrequencyCardGameTests {
         });
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 110)
+    public static void jadeShowsMeAndFeConnectionsIndependentlyWithoutEnergyIo(GameTestHelper h) {
+        var f = fixture(h);
+        h.setBlock(TARGET, AEBlocks.DRIVE.block());
+        var target = h.absolutePos(TARGET);
+        h.runAfterDelay(35, () -> {
+            use(f, target, false);
+            h.runAfterDelay(12, () -> {
+                var storage = ME_ENERGY.get(h.getLevel().getBlockEntity(target));
+                int before = storage.getEnergyStored();
+                var data = jadeData(f, target, f.player);
+                h.assertTrue(data.contains("AE2LTFrequencyCardWirelessNode")
+                                && data.getCompound("AE2LTWirelessEnergy").getString("State").equals("connected"),
+                        "ME+FE device did not expose separate connection rows: " + data);
+                var rows = new ArrayList<net.minecraft.network.chat.Component>();
+                var accessor = jadeAccessor(f, target, f.player, data);
+                var tooltip = (snownee.jade.api.ITooltip) java.lang.reflect.Proxy.newProxyInstance(
+                        snownee.jade.api.ITooltip.class.getClassLoader(), new Class<?>[] {snownee.jade.api.ITooltip.class},
+                        (proxy, method, args) -> { rows.add((net.minecraft.network.chat.Component) args[0]); return null; });
+                new com.moakiee.ae2lt.integration.jade.FrequencyCardWirelessNodeJadeProvider().appendTooltip(tooltip, accessor, null);
+                new com.moakiee.ae2lt.integration.jade.WirelessEnergyJadeProvider().appendTooltip(tooltip, accessor, null);
+                h.assertTrue(rows.size() == 2, "expected exactly one ME row and one FE row");
+                h.assertTrue(storage.getEnergyStored() == before, "Jade performed energy IO");
+                WirelessEnergyEndpoints.get(h.getLevel().getServer()).setBound(f.player, f.frequency, h.getLevel(), target, Direction.SOUTH, false);
+                var disconnected = jadeData(f, target, f.player);
+                h.assertTrue(disconnected.contains("AE2LTFrequencyCardWirelessNode")
+                                && disconnected.getCompound("AE2LTWirelessEnergy").getString("State").equals("inactive"),
+                        "disconnecting FE changed or hid the ME row");
+                h.assertTrue(!jadeData(f, target, new MenuPlayer(h.getLevel())).contains("AE2LTWirelessEnergy"),
+                        "Jade exposed private FE frequency to an unauthorized viewer");
+                h.succeed();
+            });
+        });
+    }
+    private static net.minecraft.nbt.CompoundTag jadeData(Fixture f, BlockPos pos, MenuPlayer viewer) {
+        var data = new net.minecraft.nbt.CompoundTag();
+        var accessor = jadeAccessor(f, pos, viewer, data);
+        new com.moakiee.ae2lt.integration.jade.FrequencyCardWirelessNodeJadeProvider().appendServerData(data, accessor);
+        new com.moakiee.ae2lt.integration.jade.WirelessEnergyJadeProvider().appendServerData(data, accessor);
+        return data;
+    }
+    private static snownee.jade.api.BlockAccessor jadeAccessor(Fixture f, BlockPos pos, MenuPlayer viewer, net.minecraft.nbt.CompoundTag data) {
+        return (snownee.jade.api.BlockAccessor) java.lang.reflect.Proxy.newProxyInstance(
+                snownee.jade.api.BlockAccessor.class.getClassLoader(), new Class<?>[] {snownee.jade.api.BlockAccessor.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getLevel" -> f.player.serverLevel();
+                    case "getPlayer" -> viewer;
+                    case "getPosition" -> pos;
+                    case "getBlockEntity" -> f.player.serverLevel().getBlockEntity(pos);
+                    case "getSide" -> Direction.NORTH;
+                    case "getHitResult" -> new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false);
+                    case "getServerData" -> data;
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 110)
     public static void meDeviceReceivesFeThroughAnotherFaceAndBulkLeavesItsLinkAlone(GameTestHelper h) {
         var f = fixture(h); h.setBlock(TARGET, AEBlocks.DRIVE.block()); var target = h.absolutePos(TARGET);
         var be = h.getLevel().getBlockEntity(target);

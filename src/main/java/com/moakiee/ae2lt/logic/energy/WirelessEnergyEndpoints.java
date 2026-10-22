@@ -101,6 +101,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (f == null || !f.getPlayerAccess(viewer).canUse()) return List.of();
         return endpoints.values().stream().filter(e -> e.frequency == frequency).map(Endpoint::view).toList();
     }
+    public @Nullable View inspectTarget(ServerLevel level, BlockPos pos, UUID viewer) {
+        var e = endpoints.get(new Location(level.dimension(), pos));
+        if (e == null) return null;
+        var manager = WirelessFrequencyManager.get(level.getServer());
+        var f = manager == null ? null : manager.getFrequency(e.frequency);
+        return f != null && f.getPlayerAccess(viewer).canUse() ? e.view() : null;
+    }
     /** Removes exactly the displayed generation, including unloaded targets, without touching FE accounts. */
     public String disconnect(ServerPlayer player, int frequency, UUID endpointId) {
         var manager = WirelessFrequencyManager.get(player.server);

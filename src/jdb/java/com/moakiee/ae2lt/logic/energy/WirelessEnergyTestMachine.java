@@ -28,7 +28,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     Direction inputFace = Direction.NORTH;
     int simulations;
     int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor;
-    boolean drain, instantTrash, unknown;
+    boolean drain, instantTrash, unknown, inputReady = true;
     Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {};
     ProbeStorage energy = makeStorage();
     ProbeStorage makeStorage() { return new ProbeStorage(); }
@@ -57,15 +57,24 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     }
     @SubscribeEvent public static void register(RegisterEvent event) {
         event.register(Registries.BLOCK, ID, () -> BLOCK = new MachineBlock(BlockBehaviour.Properties.of()));
+        event.register(Registries.ITEM, ID, () -> new net.minecraft.world.item.BlockItem(BLOCK, new net.minecraft.world.item.Item.Properties()));
         event.register(Registries.BLOCK_ENTITY_TYPE, ID, () -> TYPE = BlockEntityType.Builder.of(WirelessEnergyTestMachine::new, BLOCK).build(null));
     }
     @SubscribeEvent public static void capabilities(RegisterCapabilitiesEvent event) {
-        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, TYPE, (be, face) -> face == be.inputFace ? be.energy : null);
+        event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, TYPE,
+                (be, face) -> be.inputReady && face == be.inputFace ? be.energy : null);
     }
     static final class MachineBlock extends BaseEntityBlock {
         MachineBlock(Properties properties) { super(properties); }
         @Override protected MapCodec<? extends BaseEntityBlock> codec() { return simpleCodec(MachineBlock::new); }
         @Override public BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new WirelessEnergyTestMachine(pos, state); }
+        @Override public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moved) {
+            super.onPlace(state, level, pos, oldState, moved);
+            if (level.getBlockEntity(pos) instanceof WirelessEnergyTestMachine machine) {
+                machine.energy = machine.makeStorage();
+                level.invalidateCapabilities(pos);
+            }
+        }
         @Override public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
             return level.isClientSide ? null : (l, p, s, be) -> ((WirelessEnergyTestMachine) be).machineTick();
         }

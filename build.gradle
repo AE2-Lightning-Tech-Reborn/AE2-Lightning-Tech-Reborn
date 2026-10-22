@@ -92,6 +92,8 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 sourceSets {
     jdb {
         java.srcDir 'src/jdb/java'
+        // Enabled by its dedicated init script, which supplies Extended Crafting and Cucumber.
+        java.exclude '**/JeiWirelessSupplyExtendedCraftingProbe.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -573,6 +575,7 @@ dependencies {
     compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
     // Optional Industrial Foregoing fluid role/side metadata; never bundled.
     compileOnly "curse.maven:titanium-287342:8760562"
+    runtimeOnly "curse.maven:titanium-287342:8760562"
     testRuntimeOnly "curse.maven:titanium-287342:8760562"
     compileOnly "curse.maven:flux-networks-248020:6089446"
     compileOnly "curse.maven:ae2-jei-integration-1074338:7727898"

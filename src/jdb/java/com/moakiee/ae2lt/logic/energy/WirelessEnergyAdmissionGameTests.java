@@ -52,6 +52,137 @@ public final class WirelessEnergyAdmissionGameTests {
         return new Fixture(controller, player, frequency.getId(), pos, machine);
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void realPlacementEventUsesEnergyPreferenceAndInitializedCapability(GameTestHelper h) {
+        placementProbe(h, WirelessEnergyTestMachine.BLOCK);
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void mekanismSmelterPlacementReceivesAutomaticProbe(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:energized_smelter")));
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void mekanismInfuserPlacementReceivesAutomaticProbe(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:metallurgic_infuser")));
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void mekanismFactoryPlacementReceivesAutomaticProbe(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:basic_enriching_factory")));
+    }
+    private static void placementProbe(GameTestHelper h, net.minecraft.world.level.block.Block block) {
+        h.assertTrue(block != net.minecraft.world.level.block.Blocks.AIR, "placement test mod is missing");
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var level = h.getLevel();
+            level.removeBlock(f.pos, false);
+            level.setBlockAndUpdate(f.pos.below(), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            var player = new net.neoforged.neoforge.common.util.FakePlayer(level, f.player.getGameProfile()) {
+                @Override public boolean isFakePlayer() { return false; }
+            };
+            // GameTestServer has no profile cache; reproduce the username cache
+            // populated by a normal login so Mekanism can assign machine ownership.
+            try {
+                var remember = net.neoforged.neoforge.common.UsernameCache.class.getDeclaredMethod("setUsername", UUID.class, String.class);
+                remember.setAccessible(true);
+                remember.invoke(null, player.getUUID(), player.getGameProfile().getName());
+            } catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
+            player.setPos(f.pos.getX(), f.pos.getY(), f.pos.getZ() - 1);
+            var card = new ItemStack(com.moakiee.ae2lt.registry.ModItems.OVERLOADED_FREQUENCY_CARD.get());
+            com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.setData(card,
+                    com.moakiee.ae2lt.item.OverloadedFrequencyCardData.empty()
+                            .bindFrequency(f.frequency, level.dimension().location().toString(), f.controller.getBlockPos().asLong(), player.getUUID())
+                            .withAutoConnect(false).withAutoConnectEnergy(true));
+            player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, card);
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(block));
+            var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(f.pos.below()).add(0, 0.5, 0),
+                    Direction.UP, f.pos.below(), false);
+            net.minecraft.world.InteractionResult result;
+            try {
+                result = net.neoforged.neoforge.common.CommonHooks.onPlaceItemIntoWorld(
+                        new net.minecraft.world.item.context.UseOnContext(player, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+            } finally {
+                level.captureBlockSnapshots = false;
+                level.capturedBlockSnapshots.clear();
+            }
+            h.assertTrue(result.consumesAction(), "real item placement failed");
+            h.runAfterDelay(10, () -> {
+                var view = WirelessEnergyAdmissions.get(level.getServer()).inspect(level, f.pos, player.getUUID());
+                h.assertTrue(f.bound(h) && view != null && view.offered() == 100 && view.accepted() == 100,
+                        "real placement hook did not inject its probe independently of ME auto-connect");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void inputInitializedAfterPlacementStillReceivesProbe(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            f.machine.inputReady = false;
+            h.getLevel().invalidateCapabilities(f.pos);
+            f.queue(h);
+            f.machine.duringTick = () -> {
+                f.machine.inputReady = true;
+                h.getLevel().invalidateCapabilities(f.pos);
+                f.machine.duringTick = () -> {};
+            };
+            h.runAfterDelay(10, () -> {
+                h.assertTrue(f.bound(h) && f.view(h).offered() == 100 && f.view(h).accepted() == 100,
+                        "placement before FE initialization lost the automatic probe");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void capabilityInitializedBeforeFirstInputCanBeRefreshed(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            f.queue(h);
+            f.machine.energy = f.machine.makeStorage();
+            h.getLevel().invalidateCapabilities(f.pos);
+            h.runAfterDelay(10, () -> {
+                h.assertTrue(f.bound(h) && f.view(h).accepted() == 100,
+                        "pre-input capability initialization canceled the probe");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void temporarySourceShortfallWaitsWithoutSpendingProbe(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            var inventory = f.controller.getMainNode().getGrid().getStorageService().getInventory();
+            inventory.extract(AppFluxBridge.FE_KEY, Long.MAX_VALUE, Actionable.MODULATE, IActionSource.empty());
+            f.queue(h);
+            h.runAfterDelay(6, () -> {
+                h.assertTrue(f.machine.received == 0, "empty source delivered energy");
+                inventory.insert(AppFluxBridge.FE_KEY, 100000, Actionable.MODULATE, IActionSource.empty());
+                h.runAfterDelay(10, () -> {
+                    h.assertTrue(f.bound(h) && f.view(h).offered() == 100 && f.view(h).accepted() == 100,
+                            "temporary source shortage permanently consumed the automatic opportunity");
+                    h.succeed();
+                });
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void actualZeroReceiptStillConsumesTheSingleProbe(GameTestHelper h) {
+        var f = fixture(h);
+        f.machine.actualLimit = 0;
+        h.runAfterDelay(35, () -> {
+            f.queue(h);
+            h.runAfterDelay(10, () -> {
+                h.assertTrue(f.view(h).state() == WirelessEnergyAdmissions.State.NO_INPUT
+                                && f.view(h).offered() == 100 && f.machine.receiveCalls == 1 && !f.bound(h),
+                        "a real rejected probe was retried");
+                f.machine.actualLimit = 100000;
+                f.queue(h);
+                h.runAfterDelay(8, () -> {
+                    h.assertTrue(f.machine.receiveCalls == 1 && f.machine.received == 0 && !f.bound(h),
+                            "receiver recovery allowed a second probe");
+                    h.succeed();
+                });
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
     public static void retainedEnergyAdmitsOnlyAfterRealTicker(GameTestHelper h) {
         var f = fixture(h);
         h.runAfterDelay(35, () -> {
