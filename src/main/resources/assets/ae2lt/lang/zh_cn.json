@@ -1,7 +1,7 @@
 {
   "ae2lt.matrix.migration.start": "一键迁移样板",
   "ae2lt.matrix.migration.stop": "停止迁移",
-  "ae2lt.matrix.migration.description": "移动同网兼容实体样板，优先矩阵与 F 系列。重复编码样板退回 ME，背包兜底；两处均满则留在原槽。",
+  "ae2lt.matrix.migration.description": "移动同网兼容实体样板，优先装配矩阵。重复编码样板退回 ME，背包兜底；两处均满则留在原槽。",
   "ae2lt.matrix.migration.finished": "样板迁移完成：移入 %s，重复回收 %s",
   "ae2lt.matrix.migration.recovery_summary": "样板待送还：腾出空间后重开界面",
   "ae2lt.matrix.migration.counts": "移入 %s · 回收 %s",
@@ -391,6 +391,9 @@
   "ae2lt.gui.filtered_import.off": "输入过滤：关（允许全部内容）",
   "ae2lt.gui.adaptive_batch.on": "自适应倍增：开",
   "ae2lt.gui.adaptive_batch.off": "自适应倍增：关（每次仅发送一份）",
+  "ae2lt.gui.machine_adaptation.on": "机器适配模式：开启",
+  "ae2lt.gui.machine_adaptation.off": "机器适配模式：关闭",
+  "ae2lt.gui.machine_adaptation.tooltip": "自动回收时保护 Mekanism 物品输入及工业先锋物品/流体输入。关闭后使用通用回收；不影响投料与弹出模式。",
   "ae2lt.gui.provider_advanced.open": "高级设置",
   "ae2lt.gui.provider_advanced.title": "高级设置",
   "ae2lt.gui.provider_advanced.distribution": "无线发配：逐台 / 均分",
@@ -1537,5 +1540,7 @@
   "gui.ae2lt.crafting_report.force_start": "强制下单",
   "gui.ae2lt.crafting_report.force_start.tooltip": "立即提交任务，缺失材料会保留为等待输入，补齐后继续合成。",
   "gui.ae2lt.crafting_report.force_start.hint": "按住 Shift 可强制下单，缺失材料会保留为等待输入。",
-  "jei.ae2lt.crystal_catalyzer.matrix_note": "矩阵：产量 ×%s"
+  "jei.ae2lt.crystal_catalyzer.matrix_note": "矩阵：产量 ×%s",
+  "ae2lt.gui.error.frequency_owner_limit": "该玩家担任所有者的频率数量已达到服务器上限。",
+  "ae2lt.frequency.too_many_password_attempts": "频率密码尝试过于频繁（1 秒内超过 5 次），已断开连接。"
 }

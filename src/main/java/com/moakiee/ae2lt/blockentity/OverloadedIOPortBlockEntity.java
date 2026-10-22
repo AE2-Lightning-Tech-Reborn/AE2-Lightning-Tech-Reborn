@@ -346,6 +346,10 @@ public class OverloadedIOPortBlockEntity extends AENetworkInvBlockEntity
         super.loadTag(tag);
         settings.readFromNBT(tag);
         upgrades.readFromNBT(tag, "upgrades");
+        // AE2 omits empty inventories and readFromNBT only overlays present slots.
+        // Replace the old contents so an empty snapshot cannot retain matrix bonuses or filter rules.
+        filter.clear();
+        matrix.clear();
         filter.readFromNBT(tag, FILTER);
         matrix.readFromNBT(tag, MATRIX);
         rebuildFilter();

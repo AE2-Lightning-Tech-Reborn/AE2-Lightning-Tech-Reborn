@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,12 +47,12 @@ class TimeWheelDispatchBoundaryTest {
 
     @Test
     void ordinaryJobContinuesAfterExhaustingTwoFullPhysicalTicks() throws Exception {
-        runBoundary(false);
+        runBoundary(false, 1, false);
     }
 
     @Test
     void providerRejectionDoesNotPoisonFollowingPhysicalTicks() throws Exception {
-        runBoundary(true);
+        runBoundary(true, 1, false);
     }
 
     @Test
@@ -121,7 +122,12 @@ class TimeWheelDispatchBoundaryTest {
         assertFalse(visible.hasNext());
     }
 
-    private void runBoundary(boolean rejectSecondTick) throws Exception {
+    @Test
+    void multipleJobsAndReentrantPoolVisitsShareOnePhysicalTickBudget() throws Exception {
+        runBoundary(false, 2, true);
+    }
+
+    private void runBoundary(boolean rejectSecondTick, int jobCount, boolean reenterPool) throws Exception {
         if (net.minecraftforge.fml.loading.LoadingModList.get() == null) {
             net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         }
@@ -139,10 +145,8 @@ class TimeWheelDispatchBoundaryTest {
                     "isCpuActive", true, "getActionSource", source, "getCpuLevel", level));
             var pool = new TimeWheelCraftingCpuPool(host, Long.MAX_VALUE,
                     BUDGET - 1, Long.MAX_VALUE, true);
-            var cpu = new TimeWheelCraftingCPU(host, Long.MAX_VALUE,
-                    BUDGET - 1, Long.MAX_VALUE, true);
-            var logic = cpu.getCraftingLogic();
             long amount = 2L * BUDGET + 7;
+            long totalAmount = amount * jobCount;
             var pattern = new IPatternDetails() {
                 @Override public AEItemKey getDefinition() { return null; }
                 @Override public IInput[] getInputs() {
@@ -160,28 +164,37 @@ class TimeWheelDispatchBoundaryTest {
             var plan = proxy(ICraftingPlan.class, Map.of(
                     "finalOutput", new GenericStack(OUTPUT, amount),
                     "emittedItems", new KeyCounter(), "patternTimes", new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(pattern, amount))));
-            var linkData = new CompoundTag();
-            linkData.putUUID("craftId", UUID.randomUUID());
-            linkData.putBoolean("req", false);
-            linkData.putBoolean("standalone", true);
-            var link = new CraftingLink(linkData, cpu);
             var jobClass = Class.forName(Ae2LtTimeWheelCraftingCpuLogic.class.getName() + "$TimeWheelJob");
             var ctor = jobClass.getDeclaredConstructor(ICraftingPlan.class, Consumer.class,
                     CraftingLink.class, Integer.class, ElapsedTimeTracker.class);
             ctor.setAccessible(true);
-            var job = ctor.newInstance(plan, (Consumer<AEKey>) key -> {}, link, null, new Tracker());
-            field(logic.getClass(), "job").set(logic, job);
-            var inventory = (ListCraftingInventory) field(logic.getClass(), "inventory").get(logic);
-            inventory.insert(INPUT, amount, Actionable.MODULATE);
             var entryClass = Class.forName(TimeWheelCraftingCpuPool.class.getName() + "$PoolEntry");
             var entryCtor = entryClass.getDeclaredConstructor(UUID.class, long.class, TimeWheelCraftingCPU.class);
             entryCtor.setAccessible(true);
-            var id = UUID.randomUUID();
             @SuppressWarnings("unchecked")
             var entries = (Map<UUID, Object>) field(pool.getClass(), "activeCpus").get(pool);
-            entries.put(id, entryCtor.newInstance(id, 0L, cpu));
+            var logics = new ArrayList<Ae2LtTimeWheelCraftingCpuLogic>();
+            for (int i = 0; i < jobCount; i++) {
+                var cpu = new TimeWheelCraftingCPU(host, Long.MAX_VALUE,
+                        BUDGET - 1, Long.MAX_VALUE, true);
+                var logic = cpu.getCraftingLogic();
+                logics.add(logic);
+                var linkData = new CompoundTag();
+                linkData.putUUID("craftId", UUID.randomUUID());
+                linkData.putBoolean("req", false);
+                linkData.putBoolean("standalone", true);
+                var link = new CraftingLink(linkData, cpu);
+                var job = ctor.newInstance(plan, (Consumer<AEKey>) key -> {}, link, null, new Tracker());
+                field(logic.getClass(), "job").set(logic, job);
+                var inventory = (ListCraftingInventory) field(logic.getClass(), "inventory").get(logic);
+                inventory.insert(INPUT, amount, Actionable.MODULATE);
+                var id = UUID.randomUUID();
+                entries.put(id, entryCtor.newInstance(id, 0L, cpu));
+            }
             long[] accepted = {0};
             boolean[] reject = {false};
+            boolean[] tryReentry = {false};
+            Runnable[] reentry = {() -> {}};
             var provider = new ICraftingProvider() {
                 @Override public List<IPatternDetails> getAvailablePatterns() { return List.of(pattern); }
                 @Override public boolean isBusy() { return false; }
@@ -189,6 +202,12 @@ class TimeWheelDispatchBoundaryTest {
                     if (reject[0]) return false;
                     assertEquals(1, inputs[0].get(INPUT));
                     accepted[0]++;
+                    if (tryReentry[0]) {
+                        tryReentry[0] = false;
+                        long before = accepted[0];
+                        reentry[0].run();
+                        assertEquals(before, accepted[0], "provider callback must not run another job in the pool");
+                    }
                     return true;
                 }
             };
@@ -201,18 +220,28 @@ class TimeWheelDispatchBoundaryTest {
                     return List.of(provider);
                 }
             };
-            for (int tick = 1; tick <= (rejectSecondTick ? 4 : 3); tick++) {
+            reentry[0] = () -> pool.tickCraftingLogic(energy, service);
+            int ticks = (int) ((totalAmount + BUDGET - 1) / BUDGET) + (rejectSecondTick ? 1 : 0);
+            for (int tick = 1; tick <= ticks; tick++) {
                 clock.setLong(TickHandler.instance(), previousTick + tick);
                 reject[0] = rejectSecondTick && tick == 2;
+                tryReentry[0] = reenterPool;
                 long before = accepted[0];
                 pool.tickCraftingLogic(energy, service);
-                long expected = reject[0] ? 0 : Math.min(BUDGET, amount - before);
+                long expected = reject[0] ? 0 : Math.min(BUDGET, totalAmount - before);
                 assertEquals(expected, accepted[0] - before, "physical tick " + tick);
+                long after = accepted[0];
+                pool.tickCraftingLogic(energy, service);
+                assertEquals(after, accepted[0], "revisiting the pool must not replenish a physical tick");
             }
-            assertEquals(amount, accepted[0]);
-            assertEquals(0, inventory.list.get(INPUT));
-            assertTrue(((Map<?, ?>) field(jobClass, "tasks").get(job)).isEmpty());
-            assertEquals(amount, logic.getWaitingFor(OUTPUT));
+            assertEquals(totalAmount, accepted[0]);
+            for (var logic : logics) {
+                var inventory = (ListCraftingInventory) field(logic.getClass(), "inventory").get(logic);
+                var job = field(logic.getClass(), "job").get(logic);
+                assertEquals(0, inventory.list.get(INPUT));
+                assertTrue(((Map<?, ?>) field(jobClass, "tasks").get(job)).isEmpty());
+                assertEquals(amount, logic.getWaitingFor(OUTPUT));
+            }
         } finally {
             types.set(null, previousTypes);
             clock.setLong(TickHandler.instance(), previousTick);

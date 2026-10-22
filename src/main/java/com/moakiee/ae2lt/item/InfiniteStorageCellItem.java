@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.item;
 
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -43,14 +45,14 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        CompoundTag tag = com.moakiee.ae2lt.util.ItemStackTagSupport.getTagCopy(stack);
+        var summary = readSummary(stack);
         // 空壳(创造物品栏里的初始 cell)上显示 "0 types / 0 B" 只是噪音,
         // 完全没带 ae2lt:types / ae2lt:bytes 数据时直接不画 tooltip。
-        if (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes")) {
+        if (summary == null) {
             return;
         }
-        int types = tag.getInt("ae2lt:types");
-        long bytes = tag.getLong("ae2lt:bytes");
+        int types = summary.totalTypes();
+        long bytes = summary.usedBytes();
 
         tooltipComponents.add(Component.translatable(
                 "tooltip.ae2lt.infinite_cell.types", String.format("%,d", types))
@@ -110,5 +112,12 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
             tag.putInt("ae2lt:types", summary.totalTypes());
             tag.putLong("ae2lt:bytes", summary.usedBytes());
         });
+    }
+
+    /** Read the Forge display summary without copying or changing the cell's NBT/UUID. */
+    public static @Nullable IndexedCellSummary readSummary(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag == null || (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes"))) return null;
+        return new IndexedCellSummary(tag.getInt("ae2lt:types"), tag.getLong("ae2lt:bytes"));
     }
 }

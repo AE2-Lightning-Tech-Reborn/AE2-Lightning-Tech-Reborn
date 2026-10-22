@@ -52,7 +52,6 @@ public final class AE2LTCommonConfig {
                     .filter(Objects::nonNull)
                     .toList());
     private static final List<String> DEFAULT_BATCH_COPY_LIMITED_BLOCKS = List.of(
-            "neoecoae:crafting_pattern_bus",
             "sophisticated*:*");
 
     public static final ForgeConfigSpec SPEC;
@@ -322,6 +321,10 @@ public final class AE2LTCommonConfig {
     public static double overloadExecutionDecayPower() { return VALUES.overloadExecutionDecayPower.get(); }
     public static int overloadExecutionMaxTracked() { return VALUES.overloadExecutionMaxTracked.get(); }
 
+    public static int maxOwnedFrequenciesPerPlayer() {
+        return VALUES.maxOwnedFrequenciesPerPlayer.get();
+    }
+
     public static boolean frequencyCardEnableAutoCleanup() {
         return VALUES.frequencyCardEnableAutoCleanup.get();
     }
@@ -388,6 +391,7 @@ public final class AE2LTCommonConfig {
         private final ForgeConfigSpec.IntValue teslaCoilExtremeHighVoltageInput;
         private final ForgeConfigSpec.IntValue teslaCoilExtremeHighVoltageFe;
         private final ForgeConfigSpec.BooleanValue pigmeeFumoGiftOnFirstJoin;
+        private final ForgeConfigSpec.IntValue maxOwnedFrequenciesPerPlayer;
         private final ForgeConfigSpec.BooleanValue frequencyCardEnableAutoCleanup;
         private final ForgeConfigSpec.IntValue frequencyCardCleanupIntervalSeconds;
         private final ForgeConfigSpec.IntValue frequencyCardInvalidCleanupDelaySeconds;
@@ -820,6 +824,13 @@ public final class AE2LTCommonConfig {
                     .comment("Maximum number of targets whose recorded HP is kept simultaneously on a single railgun.")
                     .defineInRange("maxTracked", 8, 1, 64);
             builder.pop();
+            builder.pop();
+
+            builder.push("wirelessFrequency");
+            maxOwnedFrequenciesPerPlayer = builder
+                    .comment("Maximum number of frequencies in which a player may hold OWNER membership.",
+                            "Applies to creation and owner promotions. Existing memberships are retained when lowered.")
+                    .defineInRange("maxOwnedFrequenciesPerPlayer", 16, 1, Integer.MAX_VALUE);
             builder.pop();
 
             builder.push("frequencyCard");

@@ -21,10 +21,15 @@ public final class GtoClientQA {
     private static boolean done;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if(event.phase!=TickEvent.Phase.END || done) return;
-        if (Boolean.getBoolean("ae2lt.bigTerminalProbe") || Boolean.getBoolean("ae2lt.multiblockLayoutProbe")
-                || Boolean.getBoolean("ae2lt.emiMultiblockProbe")) return;
         var mc=Minecraft.getInstance();
         String connect = System.getProperty("ae2lt.gtoQaConnect");
+        String world = System.getProperty("ae2lt.gtoQaWorld");
+        if (connect == null && world != null && !connecting
+                && mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen && ++menuTicks >= 400) {
+            connecting = true;
+            LOGGER.info("GTO_CLIENT_QA opening isolated world after initial resources and main menu settled");
+            mc.createWorldOpenFlows().loadLevel(mc.screen, world);
+        }
         if (connect != null && !connecting && mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen
                 && ++menuTicks >= 400) {
             connecting = true;
@@ -47,6 +52,9 @@ public final class GtoClientQA {
             mc.stop();
             return;
         }
+        if (Boolean.getBoolean("ae2lt.bigTerminalProbe") || Boolean.getBoolean("ae2lt.multiblockLayoutProbe")
+                || Boolean.getBoolean("ae2lt.emiMultiblockProbe") || Boolean.getBoolean("ae2lt.phaseFreecamClientProbe")
+                || Boolean.getBoolean("ae2lt.providerGuiProbe")) return;
         if(++loading%100==0)LOGGER.info("GTO_CLIENT_QA SCREEN "+(mc.screen==null?"none":mc.screen.getClass().getName())+" world="+(mc.level!=null));
         if(mc.level==null || mc.player==null) return;
         if(++ticks<120)return;

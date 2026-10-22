@@ -37,6 +37,9 @@ docs/
 !docs/
 docs/*
 !docs/forge-1.20.1-alpha-20261009.md
+!docs/patches/
+docs/patches/*
+!docs/patches/core-gto.5-from-upstream.patch
 .claude/
 CLAUDE.local.md
 else/
@@ -71,6 +74,7 @@ Source Code/
 # Port debugging workspace (local only)
 *.ps1
 *.txt
+!src/main/resources/META-INF/recipesearch-attribution.txt
 libs/
 
 # Port debug scratch dirs

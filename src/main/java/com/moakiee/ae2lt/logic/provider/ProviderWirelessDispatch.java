@@ -256,7 +256,10 @@ final class ProviderWirelessDispatch {
             SingleAttempt attempt,
             Predicate<WirelessConnection> alive,
             Consumer<WirelessConnection> targetRemoved) {
-        if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) touchPattern(pattern, gameTick);
+        if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) {
+            return dispatchFairSingleCopy(pattern, gameTick, fastMode, targetAttempts,
+                    attempt, alive, targetRemoved);
+        }
         var readyQueue = ready;
         int scanBudget = Math.min(targetAttempts, readyQueue.size());
         while (scanBudget-- > 0 && !readyQueue.isEmpty()) {
@@ -265,12 +268,6 @@ final class ProviderWirelessDispatch {
                 readyQueue.removeHead();
                 continue;
             }
-            if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION
-                    && retryAfter(connection, pattern, gameTick) > gameTick) {
-                readyQueue.rotateHeadToTail();
-                continue;
-            }
-
             var state = existingState(connection);
             if (state == null || !state.ready) {
                 readyQueue.removeHead();
@@ -284,17 +281,9 @@ final class ProviderWirelessDispatch {
 
             switch (outcome) {
                 case SUCCESS -> {
-                    if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) {
-                        recordSuccess(connection, pattern, gameTick, true);
-                    }
                     recordPushSuccess(state, probing, gameTick);
                     if (blocked.test(connection)) {
-                        if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) {
-                            pauseTarget(connection);
-                        }
                         readyQueue.removeHead();
-                    } else if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) {
-                        readyQueue.rotateHeadToTail();
                     }
                     return true;
                 }
@@ -303,25 +292,88 @@ final class ProviderWirelessDispatch {
                     if (!alive.test(connection)) {
                         removeTarget(connection);
                         targetRemoved.accept(connection);
-                    } else if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) {
-                        readyQueue.offer(connection);
                     }
                 }
                 case SOFT_FAIL -> {
-                    if (mode == WirelessDispatchMode.SINGLE_TARGET) {
-                        readyQueue.removeHead();
-                        recordPushFailure(state, probing, gameTick);
-                        scheduleAfterFailure(
-                                connection, state, fastMode);
-                    } else {
-                        long due = recordRejection(
-                                connection, pattern, gameTick, fastMode);
-                        excludeUntil(pattern, connection, due, gameTick);
-                        readyQueue.rotateHeadToTail();
-                    }
+                    readyQueue.removeHead();
+                    recordPushFailure(state, probing, gameTick);
+                    scheduleAfterFailure(connection, state, fastMode);
                 }
                 case GLOBAL_ABORT -> {
                     return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean dispatchFairSingleCopy(
+            IPatternDetails pattern,
+            long gameTick,
+            boolean fastMode,
+            int targetAttempts,
+            SingleAttempt attempt,
+            Predicate<WirelessConnection> alive,
+            Consumer<WirelessConnection> targetRemoved) {
+        // A provider-wide cursor can pin interleaved recipes to different
+        // machines forever. Account for each recipe's successful copies just
+        // as the batch path does, without imposing a batch refill delay.
+        try (var pass = beginFairPass(pattern, gameTick)) {
+            int budget = Math.min(targetAttempts, pass.activeTargetsAtStart());
+            while (budget-- > 0) {
+                var connection = pass.poll();
+                if (connection == null) break;
+                if (blocked.test(connection)) {
+                    pauseTarget(connection);
+                    continue;
+                }
+                long due = retryAfter(connection, pattern, gameTick);
+                if (due > gameTick) {
+                    pass.cooldown(connection, due);
+                    continue;
+                }
+                var state = existingState(connection);
+                if (state == null) {
+                    pass.remove(connection);
+                    continue;
+                }
+                if (!state.ready) {
+                    pass.cooldown(connection, Math.max(gameTick + 1L, state.cooldownUntil));
+                    continue;
+                }
+
+                boolean probing = isProbing(state, gameTick);
+                var outcome = attempt.push(connection);
+                if (outcome.consumesTargetAttempt()) state.probeArmed = false;
+                switch (outcome) {
+                    case SUCCESS -> {
+                        pass.success(connection, 1L);
+                        recordSuccess(connection, pattern, gameTick, true);
+                        recordPushSuccess(state, probing, gameTick);
+                        if (blocked.test(connection)) {
+                            pauseTarget(connection);
+                            ready.remove(connection);
+                        } else {
+                            long nextPoll = retryAfter(connection, pattern, gameTick);
+                            if (nextPoll > gameTick) pass.cooldown(connection, nextPoll);
+                        }
+                        return true;
+                    }
+                    case HARD_FAIL -> {
+                        if (!alive.test(connection)) {
+                            pass.remove(connection);
+                            removeTarget(connection);
+                            targetRemoved.accept(connection);
+                        } else {
+                            pass.cooldown(connection,
+                                    recordRejection(connection, pattern, gameTick, fastMode));
+                        }
+                    }
+                    case SOFT_FAIL -> pass.cooldown(connection,
+                            recordRejection(connection, pattern, gameTick, fastMode));
+                    case GLOBAL_ABORT -> {
+                        return false;
+                    }
                 }
             }
         }
@@ -482,7 +534,7 @@ final class ProviderWirelessDispatch {
                         && rampAllowance <= equalShareLimit) {
                     share = Math.min(
                             remaining,
-                            pass.raiseAllowance(
+                            pass.raiseRampAllowance(
                                     connection, rampAllowance));
                 }
                 if (!bulkRefill && batchCadence.usesSingleChunkRefill(connection, pattern)

@@ -8,6 +8,7 @@
   "client": [
     "jei.JeiEncodePatternTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
+    "jei.JeiLegacyRecipeTransferButtonMixin",
     "jei.JeiMultiblockLayoutMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",

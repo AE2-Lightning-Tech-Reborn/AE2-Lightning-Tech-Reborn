@@ -2826,7 +2826,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                     unlimitedSlots[i] = (bits & (1L << i)) != 0;
                 }
             }
-            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
             invalidateConnectionCache();
             // Unconditional: eject registration depends on interfaceMode AND
             // importMode, both possibly changed above (idempotent re-register)

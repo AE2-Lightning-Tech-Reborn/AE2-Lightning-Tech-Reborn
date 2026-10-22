@@ -5,12 +5,25 @@ sourceSets.create('gtoQa') {
     java {
         srcDir 'src/jdb/java'
         include 'qa/**'
+        include '**/FrequencyPermissionsGameTests.java'
         include '**/BigMixedProviderGameTests.java'
+        include '**/BigCandidateIndexGameTests.java'
+        include '**/BigZeroTickGameTests.java'
+        include '**/UselessBigIntegerGameTests.java'
+        include '**/BigServiceTestFixture.java'
+        include '**/ProviderMachineAdaptationGameTests.java'
+        include '**/ProviderMekanismReturnGameTests.java'
+        include '**/BigCraftingReportGameTests.java'
+        include '**/TianshuDeferredReturnsGameTests.java'
+        include '**/PhaseFreecamClientProbe.java'
         include '**/BigIntegerPipelineGameTests.java'
         include '**/GlobalBatchAdaptersGameTests.java'
         include '**/OverloadedInterfaceExportFairnessGameTests.java'
+        include '**/OverloadedIOPortGameTests.java'
+        include '**/InfiniteCellRegressionGameTests.java'
         include '**/BigTerminalClientProbe.java'
         include '**/JeiMultiblockLayoutClientProbe.java'
+        include '**/JeiTransferCompatibilityClientProbe.java'
         include '**/EmiMultiblockClientProbe.java'
     }
     resources {
@@ -18,8 +31,16 @@ sourceSets.create('gtoQa') {
         include 'META-INF/mods.toml', 'pack.mcmeta'
         include 'data/ae2lt_migration/structures/migration_test.nbt'
         include 'data/ae2lt_global_batch/structures/empty.nbt'
+        include 'data/ae2lt_frequency_permissions/structures/empty.nbt'
+        include 'data/ae2lt_deferred/structures/empty.nbt'
         include 'data/ae2lt_io/structures/wireless_io_empty.nbt'
         include 'data/ae2lt_qa/recipes/**'
+    }
+}
+tasks.named('processGtoQaResources', ProcessResources).configure {
+    inputs.property 'mod_version', project.mod_version
+    filesMatching('META-INF/mods.toml') {
+        expand(mod_version: project.mod_version)
     }
 }
 // The reobfuscator resolves inherited Minecraft members from JAR libraries.

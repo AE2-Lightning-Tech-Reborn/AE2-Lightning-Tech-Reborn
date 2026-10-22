@@ -29,6 +29,8 @@ public abstract class BigTerminalMenuMixin implements BigTerminalMenu {
 
     @Inject(method = "broadcastChanges()V", at = @At("TAIL"), remap = true)
     private void ae2lt$syncBigStock(CallbackInfo ci) {
-        ae2lt$bigStock.sync((MEStorageMenu) (Object) this, getPreviousAvailableStacks());
+        var menu = (MEStorageMenu) (Object) this;
+        if (menu.isClientSide()) return;
+        ae2lt$bigStock.sync(menu, getPreviousAvailableStacks());
     }
 }

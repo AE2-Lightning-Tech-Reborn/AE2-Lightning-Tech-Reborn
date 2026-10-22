@@ -314,29 +314,6 @@ public final class PatternMigrationGameTests {
         System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS capacity="+capacity);h.succeed();
     }
 
-    @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
-    public static void ecoPhysicalSlotsAndSharedLeaseUseActualApi(GameTestHelper h) throws Exception {
-        if(!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")){System.out.println("MIGRATION_ECO_SKIPPED");h.succeed();return;}
-        var bus=place(h,new BlockPos(3,2,3),"neoecoae:crafting_pattern_bus");
-        var controller=place(h,new BlockPos(4,2,3),"neoecoae:crafting_system_l4");
-        var type=Class.forName("cn.dancingsnow.neoecoae.multiblock.cluster.NECraftingCluster");
-        var cluster=type.getConstructor(BlockPos.class,BlockPos.class).newInstance(bus.getBlockPos(),controller.getBlockPos());
-        setField(cluster,"controller",controller);setField(bus,"cluster",cluster);setField(controller,"cluster",cluster);
-        var physical=(appeng.api.inventories.InternalInventory)MigrationReflection.call(bus,"getTerminalPatternInventory");
-        var adapter=new PatternMigrationSources();var sources=adapter.discover(proxyNode(bus),null);
-        h.assertTrue(sources.size()==1&&sources.get(0).inventory==physical&&sources.get(0).count==physical.size(),"F source uses actual physical view");
-        var encoded = pattern(h, false);
-        physical.setItemDirect(0, encoded.copy());
-        var raw = (appeng.api.inventories.InternalInventory) MigrationReflection.field(bus, "inventory");
-        h.assertTrue(ItemStack.matches(raw.getStackInSlot(0), encoded), "terminal view forwards to physical slots");
-        var extracted = sources.get(0).inventory.extractItem(0, 1, false);
-        h.assertTrue(ItemStack.matches(extracted, encoded) && raw.getStackInSlot(0).isEmpty(), "physical extraction keeps exact NBT");
-        try(var lease=EcoMigrationLease.acquire(new Object(),new Object())) {
-            h.assertTrue(lease!=null&&lease.owned(), "Forge ECO without a coordinator does not block LT migration");
-        }
-        System.out.println("MIGRATION_ECO_ACTUAL_JAR_PASS slots="+physical.size());h.succeed();
-    }
-
     private static net.minecraft.world.level.block.entity.BlockEntity place(GameTestHelper h,BlockPos relative,String id){
         var block=net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new net.minecraft.resources.ResourceLocation(id));
         h.assertTrue(block!=net.minecraft.world.level.block.Blocks.AIR,"optional block exists: "+id);

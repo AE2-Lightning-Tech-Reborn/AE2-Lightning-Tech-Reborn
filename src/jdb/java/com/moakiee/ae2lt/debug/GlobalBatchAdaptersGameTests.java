@@ -51,74 +51,12 @@ public final class GlobalBatchAdaptersGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void optionalAdaptersRegisterAndNeoEcoAcceptsPartialBatch(GameTestHelper helper) throws Exception {
-        helper.assertTrue(!Boolean.getBoolean("ae2lt.neoecoBatchTestRequired")
-                || net.minecraftforge.fml.ModList.get().isLoaded("neoecoae"), "required NeoECO runtime loaded");
-        for (var mapping : Map.of("neoecoae", "neoeco", "extendedae_plus", "extendedae_plus").entrySet()) {
-            if (net.minecraftforge.fml.ModList.get().isLoaded(mapping.getKey())) {
-                helper.assertTrue(BatchProviderAdapters.entries().stream().anyMatch(e -> e.id().toString().equals("thunderbolt:" + mapping.getValue())),
-                        "TB registered adapter for " + mapping.getKey());
-            }
-        }
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) { helper.succeed(); return; }
-        runNeoEco(helper, false);
-        runNeoEco(helper, true);
+    public static void optionalAdaptersRegister(GameTestHelper helper) {
+        boolean installed = net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus");
+        boolean registered = BatchProviderAdapters.entries().stream()
+                .anyMatch(e -> e.id().toString().equals("thunderbolt:extendedae_plus"));
+        helper.assertTrue(installed == registered, "optional ExtendedAE Plus adapter follows mod presence");
         helper.succeed();
-    }
-
-    private static void runNeoEco(GameTestHelper helper, boolean uncertain) throws Exception {
-        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider");
-        Class<?> admission;
-        try { admission = Class.forName("cn.dancingsnow.neoecoae.crafting.execution.batch.ECOBatchAdmission"); }
-        catch (ClassNotFoundException atomic) { admission = null; }
-        final var receiptType = admission;
-        var pattern = new Pattern();
-        var job = new Job(helper.getLevel(), pattern);
-        int[] calls = {0}, ordinary = {0};
-        var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
-                new Class<?>[] {ICraftingProvider.class, type}, (p, method, args) -> switch (method.getName()) {
-                    case "isBusy" -> false;
-                    case "getAvailablePatterns" -> List.of(pattern);
-                    case "hashCode" -> System.identityHashCode(p);
-                    case "equals" -> p == args[0];
-                    case "eco$getBatchCapacity" -> uncertain || receiptType != null ? 8L : 3L;
-                    case "eco$pushBatch", "eco$pushBatchAdmission" -> {
-                        calls[0]++;
-                        var context = args[0];
-                        var contextType = context.getClass();
-                        helper.assertTrue(job.craftingId().equals(contextType.getMethod("craftingJobId").invoke(context)), "NeoECO job identity");
-                        var inputs = (KeyCounter[]) contextType.getMethod("inputCounters").invoke(context);
-                        helper.assertTrue(inputs[0].get(AEItemKey.of(Items.STONE)) == 1, "NeoECO context contains one copy");
-                        if (uncertain) {
-                            if (receiptType == null) throw new IllegalStateException("uncertain native batch");
-                            yield receiptType.getMethod("indeterminate").invoke(null);
-                        }
-                        yield receiptType == null ? true
-                                : receiptType.getMethod("accepted", long.class, boolean.class).invoke(null, 3L, false);
-                    }
-                    case "pushPattern" -> { ordinary[0]++; yield false; }
-                    default -> throw new AssertionError(method);
-                });
-        var energy = (IEnergyService) Proxy.newProxyInstance(IEnergyService.class.getClassLoader(),
-                new Class<?>[] {IEnergyService.class}, (p, m, a) -> m.getName().equals("extractAEPower") ? a[0] : null);
-        var service = new CraftingService(proxy(IGrid.class), proxy(IStorageService.class), energy) {
-            @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) { return List.of(provider); }
-        };
-        var inventory = new ListCraftingInventory(key -> {});
-        inventory.insert(AEItemKey.of(Items.STONE), 8, Actionable.MODULATE);
-        var schedule = new TickProviderDispatchSchedule(); schedule.beginTick(1);
-        var result = BatchExecutor.runBatchOnly(8, BatchCpuAccounting.Mode.LINEAR, service, energy, job,
-                inventory, new HashMap<>(), () -> {}, Map.of(), 8, 8, false, schedule);
-        helper.assertTrue(calls[0] == 1 && ordinary[0] == 0, "one native submit without ordinary replay");
-        if (uncertain) {
-            helper.assertTrue("AMBIGUOUS_BATCH_PROVIDER_OWNERSHIP".equals(job.failure), "uncertain NeoECO ownership halts CPU");
-            helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 0, "uncertain inputs are not refunded");
-            helper.assertTrue(job.waitingFor.list.isEmpty(), "uncertain output is not confirmed");
-        } else {
-            helper.assertTrue(job.failure == null && result.dispatchedCopies() == 3, "three native copies accepted");
-            helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 5, "only three inputs owned by NeoECO");
-            helper.assertTrue(job.task.count == 5 && job.waitingFor.list.get(AEItemKey.of(Items.SAND)) == 6, "partial task/output settlement");
-        }
     }
 
     private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,

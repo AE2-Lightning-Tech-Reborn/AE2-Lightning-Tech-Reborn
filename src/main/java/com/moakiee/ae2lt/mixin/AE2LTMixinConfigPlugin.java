@@ -15,7 +15,6 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     private static final Map<String, String> REQUIRED_MODS = Map.of(
             "AdvCraftingCpuAccessor", "advanced_ae",
             "AdvCraftingCpuLogicMixin", "advanced_ae",
-            "ECOCraftingCpuLogicMixin", "neoecoae",
             "InterfaceEnergyDistributionMixin", "appflux",
             "IpnContainerClickerMixin", "inventoryprofilesnext",
             "EntityConveyorPhaseLockMixin", "mob_grinding_utils");

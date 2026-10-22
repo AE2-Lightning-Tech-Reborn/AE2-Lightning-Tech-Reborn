@@ -31,7 +31,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class BigTerminalClientProbe {
     private static final BigInteger HUGE = BigInteger.TEN.pow(100).add(BigInteger.valueOf(12345));
-    private static final AEItemKey KEY = AEItemKey.of(Items.IRON_INGOT);
+    // Event subscribers load before GTO material registration is complete.
+    private static AEItemKey key() { return AEItemKey.of(Items.IRON_INGOT); }
     private static appeng.blockentity.storage.DriveBlockEntity drive;
     private static final appeng.parts.AEBasePart[] terminals = new appeng.parts.AEBasePart[2];
     private static volatile boolean ready;
@@ -62,7 +63,7 @@ public final class BigTerminalClientProbe {
                 for (var terminal : terminals)
                     GridHelper.createConnection(drive.getMainNode().getNode(), terminal.getMainNode().getNode());
             } else if (serverTicks == 60) {
-                require(BigStorageOps.insert(drive.getMainNode().getGrid().getStorageService().getInventory(), KEY,
+                require(BigStorageOps.insert(drive.getMainNode().getGrid().getStorageService().getInventory(), key(),
                         HUGE, Actionable.MODULATE, IActionSource.empty()).equals(HUGE), "fixture stock");
                 ready = true;
             }
@@ -97,15 +98,15 @@ public final class BigTerminalClientProbe {
                 var menu = ((MEStorageScreen<?>) mc.screen).getMenu();
                 require(menu instanceof BigTerminalMenu, "native menu mixin");
                 var entry = menu.getClientRepo().getAllEntries().stream()
-                        .filter(e -> KEY.equals(e.getWhat())).findFirst().orElseThrow();
-                var exact = ((BigTerminalMenu) menu).ae2lt$getBigStock(KEY);
+                        .filter(e -> key().equals(e.getWhat())).findFirst().orElseThrow();
+                var exact = ((BigTerminalMenu) menu).ae2lt$getBigStock(key());
                 if (phase == 1 || phase == 3) {
                     require(HUGE.equals(exact) && entry.getStoredAmount() == Long.MAX_VALUE, "exact stock packet");
                     if (phase == 1) {
                         require(exactTooltip, "native tooltip must contain every exact digit");
                         Screenshot.grab(mc.gameDirectory, "exact-terminal-" + terminalIndex + ".png", mc.getMainRenderTarget(), ignored -> {});
                         server(p -> require(BigStorageOps.extract(drive.getMainNode().getGrid().getStorageService().getInventory(),
-                                KEY, HUGE.subtract(BigInteger.valueOf(37)), Actionable.MODULATE, IActionSource.empty())
+                                key(), HUGE.subtract(BigInteger.valueOf(37)), Actionable.MODULATE, IActionSource.empty())
                                 .equals(HUGE.subtract(BigInteger.valueOf(37))), "lower stock"));
                     } else {
                         terminalIndex++;
@@ -119,7 +120,7 @@ public final class BigTerminalClientProbe {
                     }
                 } else if (phase == 2) {
                     require(exact == null && entry.getStoredAmount() == 37, "stale exact cache after long decrease");
-                    server(p -> require(BigStorageOps.insert(drive.getMainNode().getGrid().getStorageService().getInventory(), KEY,
+                    server(p -> require(BigStorageOps.insert(drive.getMainNode().getGrid().getStorageService().getInventory(), key(),
                             HUGE.subtract(BigInteger.valueOf(37)), Actionable.MODULATE, IActionSource.empty())
                             .equals(HUGE.subtract(BigInteger.valueOf(37))), "restore exact stock"));
                 }
@@ -138,13 +139,13 @@ public final class BigTerminalClientProbe {
         if (!Boolean.getBoolean("ae2lt.bigTerminalProbe") || phase != 1 || done
                 || !(event.getScreen() instanceof MEStorageScreen<?> screen)) return;
         var entry = screen.getMenu().getClientRepo().getAllEntries().stream()
-                .filter(e -> KEY.equals(e.getWhat())).findFirst().orElse(null);
+                .filter(e -> key().equals(e.getWhat())).findFirst().orElse(null);
         if (entry == null) return;
         try {
             readingTooltip = true;
             for (var slot : screen.getMenu().slots) {
                 if (slot instanceof gto_ae.hooks.gui.menu.IRepoSlot repoSlot
-                        && repoSlot.getEntry() != null && KEY.equals(repoSlot.getEntry().getWhat())) {
+                        && repoSlot.getEntry() != null && key().equals(repoSlot.getEntry().getWhat())) {
                     // Render the actual GTO screen at the entry's mouse position. This
                     // reaches MEStorageScreen.renderTooltip and LT's production wrapper.
                     screen.render(event.getGuiGraphics(), screen.getGuiLeft() + slot.x + 8,

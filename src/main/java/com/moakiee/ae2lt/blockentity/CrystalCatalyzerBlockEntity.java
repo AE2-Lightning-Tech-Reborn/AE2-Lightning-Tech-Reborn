@@ -955,7 +955,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                         abortProcessing();
                     }
                     if (frequencyBinding != null) {
-                        FrequencyBindingHelper.importMemoryFrequency(tag, frequencyBinding::setFrequency);
+                        FrequencyBindingHelper.importMemoryFrequency(tag, frequencyBinding::setFrequency, player, this);
                     }
                     MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
                 },

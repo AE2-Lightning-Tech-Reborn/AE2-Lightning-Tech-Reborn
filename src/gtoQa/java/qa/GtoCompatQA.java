@@ -46,6 +46,15 @@ public final class GtoCompatQA {
     private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
     private static final java.util.concurrent.atomic.AtomicInteger ENGINE_CALLS = new java.util.concurrent.atomic.AtomicInteger();
     public GtoCompatQA() {
+        if ("infinite".equals(System.getProperty("ae2lt.gtoQaSuite"))) {
+            net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus()
+                    .addListener((net.minecraftforge.registries.RegisterEvent event) -> {
+                        var registry = appeng.api.stacks.AEKeyTypesInternal.getRegistry();
+                        if (registry != null && java.util.Objects.equals(event.getForgeRegistry(), registry)) {
+                            com.moakiee.ae2lt.debug.InfiniteCellRegressionGameTests.registerTestChannel();
+                        }
+                    });
+        }
         if (Boolean.getBoolean("ae2lt.emiMultiblockProbe")) {
             try {
                 Class.forName("com.moakiee.ae2lt.integration.emi.EmiMultiblockClientProbe")
@@ -79,17 +88,40 @@ public final class GtoCompatQA {
             try { checkPlanner(e.getServer()); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA PLANNER FAIL",failure); }
             var suite = System.getProperty("ae2lt.gtoQaSuite", "base");
             switch (suite) {
+                case "permissions" -> GameTestRegistry.register(
+                        com.moakiee.ae2lt.network.FrequencyPermissionsGameTests.class);
+                case "machine" -> {
+                    if (net.minecraftforge.fml.ModList.get().isLoaded("industrialforegoing"))
+                        GameTestRegistry.register(com.moakiee.ae2lt.debug.ProviderMachineAdaptationGameTests.class);
+                    else LOGGER.info("GTO_COMPAT_QA SKIP Industrial Foregoing machine tests (mod absent)");
+                    GameTestRegistry.register(com.moakiee.ae2lt.debug.ProviderMekanismReturnGameTests.class);
+                }
+                case "useless" -> {
+                    if (net.minecraftforge.fml.ModList.get().isLoaded("useless_mod"))
+                        GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.UselessBigIntegerGameTests.class);
+                    else LOGGER.info("GTO_COMPAT_QA SKIP Useless Mod bigint tests (mod absent)");
+                }
+                case "dispatch" -> {
+                    GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigCandidateIndexGameTests.class);
+                    GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigZeroTickGameTests.class);
+                    GameTestRegistry.register(com.moakiee.ae2lt.debug.TianshuDeferredReturnsGameTests.class);
+                }
                 case "base" -> {
                     GameTestRegistry.register(GtoCpuGameTests.class);
                     GameTestRegistry.register(TimeWheelCraftingStatusGameTests.class);
                     GameTestRegistry.register(ClosedLoopSharedSeedBatchGameTests.class);
                 }
                 case "exact" -> {
+                    GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigCraftingReportGameTests.class);
                     GameTestRegistry.register(com.moakiee.ae2lt.debug.BigIntegerPipelineGameTests.class);
                     GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigMixedProviderGameTests.class);
                 }
                 case "interfaces" -> GameTestRegistry.register(
                         com.moakiee.ae2lt.blockentity.OverloadedInterfaceExportFairnessGameTests.class);
+                case "io" -> GameTestRegistry.register(
+                        com.moakiee.ae2lt.debug.OverloadedIOPortGameTests.class);
+                case "infinite" -> GameTestRegistry.register(
+                        com.moakiee.ae2lt.debug.InfiniteCellRegressionGameTests.class);
                 case "recipes" -> GameTestRegistry.register(GtoRecipeGameTests.class);
                 case "content" -> GameTestRegistry.register(GtoContentGameTests.class);
                 case "content-recipes" -> {
@@ -106,9 +138,11 @@ public final class GtoCompatQA {
             int index = 0;
             for (var function : GameTestRegistry.getAllTestFunctions()) {
                 var name = function.getTestName().toLowerCase(Locale.ROOT);
-                if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")
-                        && (name.contains("neoeconativereceipts") || name.contains("optionaladaptersregister"))) {
-                    LOGGER.info("GTO_COMPAT_QA SKIP " + function.getTestName() + " (NeoECO absent)");
+                var filter = System.getProperty("ae2lt.gtoQaTestFilter");
+                if (filter != null && !name.contains(filter.toLowerCase(Locale.ROOT))) continue;
+                if (name.contains("infinitereactionfactory") && !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(
+                        new net.minecraft.resources.ResourceLocation("mekanism_extras", "infinite_pressurised_reacting_factory"))) {
+                    LOGGER.info("GTO_COMPAT_QA SKIP " + function.getTestName() + " (optional reaction factory absent)");
                     continue;
                 }
                 if (!Boolean.getBoolean("ae2lt.exportFairnessBenchmark")
@@ -117,7 +151,12 @@ public final class GtoCompatQA {
                         Rotation.NONE,e.getServer().overworld(),ticker,1));
             }
             LOGGER.info("GTO_COMPAT_QA START suite="+suite+" tests="+tests.size());
-        } catch(Throwable failure) { LOGGER.error("QA failure",failure); LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure); }
+        } catch(Throwable failure) {
+            startupFailures++;
+            reported = true;
+            LOGGER.error("QA failure",failure);
+            LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure);
+        }
     }
     private void tick(TickEvent.ServerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END || tests==null || reported) return;

@@ -7,6 +7,8 @@ import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.energy.IEnergyService;
 import appeng.api.stacks.*;
 import appeng.crafting.inv.ListCraftingInventory;
+import com.moakiee.ae2lt.crafting.runtime.CraftingDispatch;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.thunderbolt.api.crafting.batch.*;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchCopyLimitPattern;
 import com.moakiee.ae2lt.compat.gto.BigLongSlice;
@@ -24,7 +26,22 @@ final class BigProviderDispatcher {
     long dispatch(BigCraftingJob job, BigProviderRecipe recipe, IPatternDetails details,
             ICraftingProvider provider, Level level, IEnergyService energy, long tick, Runnable changed) {
         if (job.dispatchFailed || job.returning || job.remainingStepCopies().signum() <= 0) return 0;
-        var view = new View(job, details, level);
+        try (var transaction = new CraftingDispatch((key, amount) -> {
+            long received = job.receive(key, amount, Actionable.MODULATE);
+            job.retainOutput(key, BigInteger.valueOf(amount - received));
+            changed.run();
+        }, (key, amount) -> {
+            job.retainOutput(key, BigInteger.valueOf(amount));
+            changed.run();
+        })) {
+            return dispatch(job, recipe, details, provider, level, energy, tick, changed, transaction);
+        }
+    }
+
+    private long dispatch(BigCraftingJob job, BigProviderRecipe recipe, IPatternDetails details,
+            ICraftingProvider provider, Level level, IEnergyService energy, long tick, Runnable changed,
+            CraftingDispatch transaction) {
+        var view = new View(job, details, level, transaction);
         IBatchCraftingProvider batch;
         long capacity;
         boolean shared;
@@ -73,7 +90,9 @@ final class BigProviderDispatcher {
             // Native batch templates are borrowed; the single-copy API takes ownership of its clone.
             long leftover = prepared != null ? prepared.push(slice.copies()) : batchCall
                     ? batch.pushBatch(details, recipe.template(), slice.copies(), view)
-                    : provider.pushPattern(details, recipe.template()) ? 0 : slice.copies();
+                    : (provider instanceof DeferredCraftingProvider deferred
+                            ? deferred.pushPattern(details, recipe.template(), transaction.outputSink())
+                            : provider.pushPattern(details, recipe.template())) ? 0 : slice.copies();
             if (leftover < 0 || leftover > slice.copies())
                 throw new IllegalStateException("Provider returned an invalid accepted count");
             long received = slice.copies() - leftover;
@@ -82,6 +101,7 @@ final class BigProviderDispatcher {
             job.settle(slice, accepted);
             energy.extractAEPower(power(accepted.inputs()), Actionable.MODULATE, PowerMultiplier.CONFIG);
             changed.run();
+            transaction.accounted();
             return received;
         } catch (RuntimeException uncertain) {
             // A provider might have accepted work before throwing. Refunding/retrying would duplicate it.
@@ -138,7 +158,9 @@ final class BigProviderDispatcher {
         return result;
     }
 
-    private record View(BigCraftingJob job, IPatternDetails details, Level level) implements BatchJobView {
+    private record View(BigCraftingJob job, IPatternDetails details, Level level,
+                        CraftingDispatch transaction) implements DeferredCraftingProvider.Job {
+        public DeferredCraftingProvider.OutputSink deferredOutputSink() { return transaction.outputSink(); }
         public UUID craftingId() { return job.id; }
         public Iterator<BatchTaskHandle> taskIterator() {
             return List.<BatchTaskHandle>of(new BatchTaskHandle() {

@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -438,9 +440,9 @@ public class MatrixControllerBlockEntity extends BlockEntity
         }
 
         boolean placed = pos.equals(worldPosition)
-                ? level.setBlock(pos, getBlockState().setValue(
-                        MatrixMultiblockDirectionalBlock.FACING, autoBuildFacing), Block.UPDATE_ALL)
-                : level.setBlock(pos, state, Block.UPDATE_ALL);
+                ? PlayerWorldActions.placeBlock(player, level, pos,
+                        getBlockState().setValue(MatrixMultiblockDirectionalBlock.FACING, autoBuildFacing))
+                : PlayerWorldActions.placeBlock(player, level, pos, state);
         if (!placed) {
             abortAutoBuildPlacement(player, pos);
             return;
@@ -627,7 +629,11 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     public boolean validateBigRecipe(com.moakiee.ae2lt.crafting.big.BigMatrixRecipe recipe) {
         if (!isBigCraftingAvailable() || level == null) return false;
-        for (var pattern : getAvailablePatterns()) if (recipe.matches(pattern, level)) return true;
+        for (var storage : findPatternStorages()) {
+            for (var pattern : storage.getPatternsByDefinition(recipe.definition())) {
+                if (recipe.matches(pattern, level)) return true;
+            }
+        }
         return false;
     }
 

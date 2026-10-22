@@ -8,6 +8,6 @@ displayName="GTO Compatibility QA"
 [[dependencies.gto_compat_qa]]
 modId="ae2lt"
 mandatory=true
-versionRange="[2.1.2-gto.1]"
+versionRange="[${mod_version}]"
 ordering="AFTER"
 side="BOTH"

@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.api.frequency.FrequencyBindingHost;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
@@ -60,6 +62,11 @@ public record SelectFrequencyPacket(
             }
 
             var level = player.serverLevel();
+            if (!PlayerWorldActions.mayInteract(player, level, pkt.blockPos)) {
+                NetworkInit.sendToPlayer(player,
+                        new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
+                return;
+            }
             var be = level.getBlockEntity(pkt.blockPos);
 
             // Resolve the device's CURRENT frequency so the block-op
@@ -111,6 +118,7 @@ public record SelectFrequencyPacket(
                 return;
             }
 
+            if (!FrequencyPasswordAttempts.allow(player, freq, pkt.password)) return;
             if (!freq.canPlayerAccess(player, pkt.password)) {
                 if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                         && !freq.getPlayerAccess(player).canUse()
@@ -192,6 +200,7 @@ public record SelectFrequencyPacket(
             return;
         }
 
+        if (!FrequencyPasswordAttempts.allow(player, freq, password)) return;
         if (!freq.canPlayerAccess(player, password)) {
             if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                     && !freq.getPlayerAccess(player).canUse()

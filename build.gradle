@@ -144,6 +144,11 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
     maven { url = uri(project.findProperty("thunderbolt_local_repository") ?: "../Thunderbolt-Core-Reborn/repo") }
     maven {
         url = 'https://gtodyssey.com/maven/releases'
@@ -195,13 +200,6 @@ repositories {
         url = "https://maven.theillusivec4.top/"
         content {
             includeGroup "top.theillusivec4.curios"
-        }
-    }
-    maven {
-        name = "Modrinth"
-        url = "https://api.modrinth.com/maven"
-        content {
-            includeGroup "maven.modrinth"
         }
     }
     maven {
@@ -263,6 +261,10 @@ dependencies {
     }
 
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
+    // Optional AUTO-return role metadata; never bundled or required at runtime.
+    compileOnly fg.deobf("maven.modrinth:titanium:LMqbm4db")
+    testImplementation fg.deobf("maven.modrinth:titanium:LMqbm4db")
+    testImplementation fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     if ((findProperty('enable_mekanism_runtime') ?: 'true').toBoolean()) {
         runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     }
@@ -936,6 +938,11 @@ def gtoTestAgent = tasks.register('gtoTestAgent', Jar) {
     dependsOn tasks.named('testClasses')
     archiveClassifier = 'gto-test-agent'
     from(sourceSets.test.output) { include 'com/moakiee/gtotest/GtoTestMixinAgent*.class' }
+    // premain runs before Gradle installs the test class loader. Keep ASM available
+    // even when a filtered test run uses a smaller worker bootstrap classpath.
+    from({ sourceSets.main.runtimeClasspath.findAll { it.name.startsWith('asm-') }
+            .collect { zipTree(it) } }) { include 'org/objectweb/asm/**' }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest { attributes 'Premain-Class': 'com.moakiee.gtotest.GtoTestMixinAgent' }
 }
 tasks.withType(Test).configureEach {

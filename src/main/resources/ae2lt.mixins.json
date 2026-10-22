@@ -58,7 +58,6 @@
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
-    "thunderbolt.ECOCraftingCpuLogicMixin",
     "ControllerValidatorMixin",
     "RecipeManagerMixin",
     "EjectGhostBEMixin",

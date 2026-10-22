@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.grid.wirelesslink;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridConnection;
@@ -580,6 +582,17 @@ public final class WirelessLinkRegistry extends SavedData {
             BlockPos pos,
             Direction face,
             Vec3 hitVec) {
+        return handleManualUse(player, frequencyId, level, pos, face, hitVec,
+                net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
+    public ActionFeedback handleManualUse(
+            ServerPlayer player, int frequencyId, ServerLevel level, BlockPos pos,
+            Direction face, Vec3 hitVec, net.minecraft.world.InteractionHand hand) {
+        if (!PlayerWorldActions.mayInteract(player, level, pos,
+                hand, face, hitVec)) {
+            return ActionFeedback.red("ae2lt.gui.error.no_permission");
+        }
         var nativeFeedback = handleNativeFrequencyHost(frequencyId, level, pos);
         if (nativeFeedback.isPresent()) {
             return nativeFeedback.get();
@@ -1262,6 +1275,8 @@ public final class WirelessLinkRegistry extends SavedData {
             return;
         }
 
+        if (!PlayerWorldActions.mayInteract(
+                player, level, BlockPos.of(pending.posLong()))) return;
         var nativeFeedback = autoConnectNativeFrequencyHost(level, BlockPos.of(pending.posLong()), data.frequencyId());
         if (nativeFeedback.isPresent()) {
             var feedback = nativeFeedback.get();

@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.blockentity;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.moakiee.ae2lt.crafting.runtime.RecipeCandidateIndex;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.logic.craft.MatrixPatternCore;
 import com.moakiee.ae2lt.logic.craft.MatrixPatternStorageTier;
@@ -48,7 +49,9 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
     private final PatternInventory inventory = new PatternInventory();
     private final InternalInventory terminalPatternInventory = new TerminalPatternInventory();
     private final InternalPatternContainerLink terminalLink;
-    private final List<IPatternDetails> cachedPatterns = new ArrayList<>();
+    private List<IPatternDetails> cachedPatterns = List.of();
+    private RecipeCandidateIndex<AEItemKey, IPatternDetails> patternIndex =
+            new RecipeCandidateIndex<>(List.of(), IPatternDetails::getDefinition);
     private BlockPos controllerPos;
     private boolean patternsDirty = true;
     private long patternContentRevision;
@@ -209,7 +212,13 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         if (patternsDirty) {
             rebuildPatternCache();
         }
-        return List.copyOf(cachedPatterns);
+        return cachedPatterns;
+    }
+
+    /** Definition is only a coarse key; exact execution must still validate the returned patterns. */
+    public List<IPatternDetails> getPatternsByDefinition(AEItemKey definition) {
+        if (patternsDirty) rebuildPatternCache();
+        return patternIndex.candidates(definition);
     }
 
     @Override
@@ -220,6 +229,8 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         if (patternsDirty) {
             rebuildPatternCache();
         }
+        if (!patternIndex.candidates(details.getDefinition()).isEmpty()) return true;
+        // Preserve native identity/equals fallback, including custom patterns with no definition.
         for (var pattern : cachedPatterns) {
             if (MatrixPatternCore.samePattern(pattern, details)) {
                 return true;
@@ -232,8 +243,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         if (level == null) {
             return;
         }
-        cachedPatterns.clear();
-        patternsDirty = false;
+        var decoded = new ArrayList<IPatternDetails>();
         for (int slot = 0; slot < capacity(); slot++) {
             var stack = inventory.getStackInSlot(slot);
             if (stack.isEmpty()) {
@@ -241,9 +251,13 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             }
             var details = PatternDetailsHelper.decodePattern(stack, level);
             if (details instanceof IMolecularAssemblerSupportedPattern) {
-                cachedPatterns.add(details);
+                decoded.add(details);
             }
         }
+        var indexed = new RecipeCandidateIndex<>(decoded, IPatternDetails::getDefinition);
+        cachedPatterns = List.copyOf(decoded);
+        patternIndex = indexed;
+        patternsDirty = false;
     }
 
     private MatrixMultiblockComponent component() {

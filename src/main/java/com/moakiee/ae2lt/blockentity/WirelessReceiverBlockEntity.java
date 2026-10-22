@@ -143,6 +143,6 @@ public class WirelessReceiverBlockEntity extends AENetworkBlockEntity
                                net.minecraft.nbt.CompoundTag input,
                                @Nullable net.minecraft.world.entity.player.Player player) {
         super.importSettings(mode, input, player);
-        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
+        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency, player, this);
     }
 }

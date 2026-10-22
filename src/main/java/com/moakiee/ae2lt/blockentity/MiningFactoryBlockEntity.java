@@ -341,7 +341,7 @@ public final class MiningFactoryBlockEntity extends AENetworkBlockEntity impleme
         MemoryCardConfigSupport.importAutoExportSettings(mode, input,
                 enabled -> autoExport = enabled, sides -> allowedOutputs = sides,
                 tag -> {
-                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
                     MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
                 }, () -> {
                     exportTargets.invalidate();

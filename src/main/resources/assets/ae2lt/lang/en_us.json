@@ -1,7 +1,7 @@
 {
   "ae2lt.matrix.migration.start": "Migrate Patterns",
   "ae2lt.matrix.migration.stop": "Stop Migration",
-  "ae2lt.matrix.migration.description": "Move compatible physical patterns on this network, prioritizing matrices and ECO F systems. Return duplicate encoded patterns to ME, then your inventory; leave them in place if both are full.",
+  "ae2lt.matrix.migration.description": "Move compatible physical patterns on this network, prioritizing assembler matrices. Return duplicate encoded patterns to ME, then your inventory; leave them in place if both are full.",
   "ae2lt.matrix.migration.finished": "Pattern migration complete: %s moved, %s duplicates returned",
   "ae2lt.matrix.migration.recovery_summary": "Pattern held: free space and reopen",
   "ae2lt.matrix.migration.counts": "Moved %s · Returned %s",
@@ -437,6 +437,9 @@
   "ae2lt.gui.filtered_import.off": "Filtered Import: OFF (All resources)",
   "ae2lt.gui.adaptive_batch.on": "Adaptive Doubling: ON",
   "ae2lt.gui.adaptive_batch.off": "Adaptive Doubling: OFF (one copy per push)",
+  "ae2lt.gui.machine_adaptation.on": "Machine Adaptation: ON",
+  "ae2lt.gui.machine_adaptation.off": "Machine Adaptation: OFF",
+  "ae2lt.gui.machine_adaptation.tooltip": "Protects Mekanism item inputs and Industrial Foregoing item/fluid inputs during AUTO return. OFF uses generic return. Does not change input delivery or EJECT.",
   "ae2lt.gui.provider_advanced.open": "Advanced Settings",
   "ae2lt.gui.provider_advanced.title": "Advanced Settings",
   "ae2lt.gui.provider_advanced.distribution": "Dispatch: Single / Even",
@@ -1537,5 +1540,7 @@
   "gui.ae2lt.crafting_report.force_start": "Force start",
   "gui.ae2lt.crafting_report.force_start.tooltip": "Submit this job now and wait for missing ingredients. Crafting continues once they arrive.",
   "gui.ae2lt.crafting_report.force_start.hint": "Hold Shift to submit this job and wait for missing ingredients.",
-  "jei.ae2lt.crystal_catalyzer.matrix_note": "Matrix: output ×%s"
+  "jei.ae2lt.crystal_catalyzer.matrix_note": "Matrix: output ×%s",
+  "ae2lt.gui.error.frequency_owner_limit": "This player has reached the server limit for owned frequencies.",
+  "ae2lt.frequency.too_many_password_attempts": "Too many frequency password attempts (more than 5 in 1 second)."
 }

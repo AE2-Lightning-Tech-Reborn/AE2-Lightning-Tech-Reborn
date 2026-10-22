@@ -17,6 +17,9 @@ import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInven
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipeInput;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
+import com.mojang.authlib.GameProfile;
 import com.moakiee.ae2lt.registry.*;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,9 +28,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.*;
 
 @GameTestHolder("ae2lt")
@@ -115,7 +120,7 @@ public final class OverloadedIOPortGameTests {
         return stack;
     }
 
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterEmptyEjectsRealCellAfterAllowedContentsAreDrained(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);
@@ -127,14 +132,22 @@ public final class OverloadedIOPortGameTests {
             be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));
             be.getInternalInventory().setItemDirect(0,stack);tick(be);
             h.assertTrue(target.amounts.getOrDefault(STONE,0L)==1000 && !target.amounts.containsKey(dirt),"only whitelisted type empties");
-            h.assertTrue(be.getInternalInventory().getStackInSlot(0).isEmpty(),"filtered EMPTY ejects once allowed contents are drained");
-            var output=StorageCells.getCellInventory(be.getInternalInventory().getStackInSlot(6),null);
-            h.assertTrue(output!=null && output.getStatus()!=CellState.EMPTY
-                    && output.getAvailableStacks().get(dirt)==128 && output.getAvailableStacks().get(STONE)==0,
-                    "output cell persists excluded contents without retaining allowed contents");h.succeed();
+            var remaining=StorageCells.getCellInventory(stack,null);
+            h.assertTrue(remaining.extract(STONE,Long.MAX_VALUE,Actionable.SIMULATE,SOURCE)==0
+                    && remaining.extract(dirt,Long.MAX_VALUE,Actionable.SIMULATE,SOURCE)==128,
+                    "live cell contents match the completed filtered transfer");
+            // GTO caches real-cell enumeration for the current tick. Wait one normal
+            // IO interval before asserting ejection against the refreshed snapshot.
+            h.runAfterDelay(5,()->{tick(be);
+                h.assertTrue(be.getInternalInventory().getStackInSlot(0).isEmpty(),"filtered EMPTY ejects after the GTO snapshot refresh");
+                var output=StorageCells.getCellInventory(be.getInternalInventory().getStackInSlot(6),null);
+                h.assertTrue(output!=null && output.getStatus()!=CellState.EMPTY
+                        && output.getAvailableStacks().get(dirt)==128 && output.getAvailableStacks().get(STONE)==0
+                        && target.amounts.getOrDefault(STONE,0L)==1000 && !target.amounts.containsKey(dirt),
+                        "output cell persists excluded contents without retaining or transferring allowed contents twice");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterEmptyBlacklistLeavesExcludedContentsInOutputCell(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -147,7 +160,7 @@ public final class OverloadedIOPortGameTests {
                     && target.amounts.getOrDefault(STONE,0L)==1000 && !target.amounts.containsKey(dirt),"blacklisted contents remain owned by the output cell");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterEmptyWithNoMatchingContentsEjectsWithoutTransfer(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -160,7 +173,7 @@ public final class OverloadedIOPortGameTests {
                     && from.amounts.get(dirt)==128,"moving a filtered-empty cell does not move or charge a resource batch");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterEmptyWaitsForRejectedResourcesButHalfStillEjects(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();target.insert=false;mount(be,target);var from=new Store();
@@ -180,7 +193,7 @@ public final class OverloadedIOPortGameTests {
                         && target.amounts.isEmpty(),"blocked HALF output retains both allowed and excluded resources");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void emptyFilterRulesStillRequireAnEntirelyEmptyCell(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();target.insert=false;mount(be,target);var from=new Store();from.amounts.put(STONE,1000L);
@@ -197,7 +210,7 @@ public final class OverloadedIOPortGameTests {
                         && target.amounts.getOrDefault(STONE,0L)==1000,"unrestricted filter ejects after all contents are drained");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filteredEmptyChecksNewContentsAfterMultiTickScan(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -217,7 +230,7 @@ public final class OverloadedIOPortGameTests {
                         && from.amounts.get(iron)==400,"next pass transfers the new key before ejecting with excluded contents");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filteredEmptyInFillModeChecksTheCellNotTheNetwork(GameTestHelper h) {
         fixture(h,be->{
             var network=new Store();mount(be,network);var destination=new Store();var dirt=AEItemKey.of(Items.DIRT);
@@ -233,7 +246,7 @@ public final class OverloadedIOPortGameTests {
                         && destination.amounts.get(dirt)==128,"FILL uses the same filtered cell-empty condition");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterFillBlacklistSkipsUnwantedTypes(GameTestHelper h) {
         fixture(h,be->{
             var network=new Store();var dirt=AEItemKey.of(Items.DIRT);
@@ -246,7 +259,7 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(!be.getInternalInventory().getStackInSlot(0).isEmpty(),"filtered completion does not mean physically full");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterReplacementInvalidatesScanWithoutResettingCooldown(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -266,7 +279,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(10,()->{tick(be);h.assertTrue(from.amounts.isEmpty() && target.amounts.size()==3,"removing filter allows remaining resource");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterSupportsFluidLightningAndExactComponents(GameTestHelper h) {
         var water=AEFluidKey.of(Fluids.WATER);
         var mixed=filter(false,false,water,LightningKey.HIGH_VOLTAGE);
@@ -286,7 +299,7 @@ public final class OverloadedIOPortGameTests {
                 h.assertTrue(target.amounts.getOrDefault(water,0L)==10_000 && target.amounts.getOrDefault(LightningKey.HIGH_VOLTAGE,0L)==200 && !target.amounts.containsKey(STONE),"fluid and lightning move, excluded items remain");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filterInventoryPersistsAndDropsExactlyOnce(GameTestHelper h) {
         fixture(h,be->{
             var configured=filter(true,true,STONE);
@@ -330,7 +343,7 @@ public final class OverloadedIOPortGameTests {
         @Override protected Component computeDisplayName() { return Component.literal("test key"); }
         @Override public void addDrops(long amount,List<ItemStack> drops,net.minecraft.world.level.Level level,BlockPos pos) { throw new UnsupportedOperationException(); }
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void filterCacheUsesIdentityForBothOutcomes(GameTestHelper h) {
         var configured=new CountingKey(1);
         var matcher=OverloadedFilterComponentItem.createMatcher(Set.of(configured),null,false);
@@ -350,7 +363,7 @@ public final class OverloadedIOPortGameTests {
         int coldCalls=variant.structuralCalls;for(int i=0;i<1000;i++)fuzzy.test(variant);
         h.assertTrue(variant.structuralCalls==coldCalls,"fuzzy cache hit avoids repeated rule scans");h.succeed();
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void interfaceFilterRebuildInvalidatesCachedDecisions(GameTestHelper h) {
         h.setBlock(POS,ModBlocks.OVERLOADED_INTERFACE.get());
         OverloadedInterfaceBlockEntity be=(OverloadedInterfaceBlockEntity) h.getBlockEntity(POS);var dirt=AEItemKey.of(Items.DIRT);
@@ -362,7 +375,7 @@ public final class OverloadedIOPortGameTests {
         h.assertTrue(be.isInsertAllowedByFilter(STONE) && be.isInsertAllowedByFilter(dirt),"interface removal discards cached rejection");h.succeed();
     }
 
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void trillionItemsOneBatch(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,1_000_000_000_000L);
         int[] payments={0};var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{payments[0]++;return true;});
@@ -370,13 +383,13 @@ public final class OverloadedIOPortGameTests {
         h.assertTrue(from.amounts.isEmpty()&&to.amounts.get(STONE)==result.inserted(),"exact conservation");
         h.assertTrue(from.extractCalls==2&&to.insertCalls==2&&payments[0]==1,"constant calls and one power payment");h.succeed();
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void nativeLongLimitDoesNotOverflow(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,Long.MAX_VALUE);
         var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
         h.assertTrue(r.inserted()==Long.MAX_VALUE&&from.amounts.isEmpty()&&to.amounts.get(STONE)==Long.MAX_VALUE,"exact native long batch");h.succeed();
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void partialCapacityAndRollback(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,1000L);to.capacity=37;
         var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
@@ -386,7 +399,7 @@ public final class OverloadedIOPortGameTests {
         from.rejectRefund=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
         h.assertTrue(r.remainder()==37&&from.amounts.get(STONE)==926,"unrefundable remainder remains owned");h.succeed();
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void deniedExtractionAndInsufficientPowerDoNotMove(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,999L);from.extract=false;
         var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{throw new AssertionError("paid for denied extraction");});
@@ -394,7 +407,7 @@ public final class OverloadedIOPortGameTests {
         from.extract=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->false);
         h.assertTrue(from.amounts.get(STONE)==999&&to.amounts.isEmpty(),"no power means no mutation");h.succeed();
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void actualItemCellAndDriveTransferAndPersist(GameTestHelper h) {
         h.setBlock(POS.west(),AEBlocks.DRIVE.block());
         var drive=(appeng.blockentity.storage.DriveBlockEntity)h.getBlockEntity(POS.west());
@@ -410,7 +423,7 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(be.getLastBatches()==1,"one resource batch");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void fluidAndLightningUseSameBulkPath(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);
@@ -427,7 +440,7 @@ public final class OverloadedIOPortGameTests {
         });
     }
 
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void registeredOperationUnitsApplyInBothTransferDirections(GameTestHelper h) {
         fixture(h,be->{
             var customType=new AEKeyType(new ResourceLocation("ae2lt","io_test_resource"),
@@ -454,7 +467,7 @@ public final class OverloadedIOPortGameTests {
         });
     }
 
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void maximumNativeAmountTransfersWithoutOverflow(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -465,7 +478,7 @@ public final class OverloadedIOPortGameTests {
                     && from.amounts.isEmpty(),"item and scaled native amounts both reach long maximum without overflow");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void sixCellsShareBudgetAndRotate(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);
@@ -476,7 +489,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.get(STONE)==60_000,"remaining two cells served after the shared interval");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void accelerationShortensIntervalWithoutRaisingBatchLimit(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -495,7 +508,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(1,()->{tick(be);h.assertTrue(target.amounts.size()==8&&from.amounts.size()==192,"maximum speed processes four more types on next tick");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void removingAccelerationCannotResetCooldown(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -513,7 +526,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(5,()->{tick(be);h.assertTrue(target.amounts.size()==6,"new default interval is applied without resetting progress");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=200)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=200)
     public static void blockedPrefixEventuallyReachesLateNetworkKey(GameTestHelper h) {
         fixture(h,be->{
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
@@ -527,7 +540,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(60,()->{h.assertTrue(destination.amounts.getOrDefault(destination.only,0L)==123,"late key reached through rejected prefix");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void filledOutputRetainsInputCell(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);
@@ -538,7 +551,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(5,()->{tick(be);h.assertTrue(be.getInternalInventory().getStackInSlot(0).isEmpty(),"output removal wakes port");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void redstonePauseAndIgnore(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();from.amounts.put(STONE,500L);
@@ -550,7 +563,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(2,()->{tick(be);h.assertTrue(target.amounts.get(STONE)==500,"IGNORE works with redstone card installed");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void fullModeFillAndAutomationSides(GameTestHelper h) {
         fixture(h,be->{
             var network=new Store();network.amounts.put(STONE,1_000_000L);mount(be,network);
@@ -564,7 +577,7 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(!side.extractItem(0,1,false).isEmpty(),"side exposes completed output cell");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void unrefundableContentsSurviveSaveAndDismantle(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();target.rejectActual=true;mount(be,target);var from=new Store();from.amounts.put(STONE,1_000_000L);from.rejectRefund=true;
@@ -588,7 +601,7 @@ public final class OverloadedIOPortGameTests {
             h.runAfterDelay(5,()->{tick(be);h.assertTrue(!be.hasPendingTransfer()&&target.amounts.get(STONE)==1_000_000,"pending retries exactly once even after filter excludes its key");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=200)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=200)
     public static void newlyArrivedTypeIsCheckedBeforeHalfEjection(GameTestHelper h) {
         fixture(h,be->{
             for(int i=0;i<4;i++)be.getUpgrades().setItemDirect(i,AEItems.SPEED_CARD.stack());
@@ -603,7 +616,7 @@ public final class OverloadedIOPortGameTests {
             });
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void nativeEnergyChargeIsPerBatchAndPreservesIdleReserve(GameTestHelper h) {
         h.setBlock(POS,ModBlocks.OVERLOADED_IO_PORT.get());h.setBlock(POS.below(),AEBlocks.ENERGY_CELL.block());
         var battery=(appeng.blockentity.networking.EnergyCellBlockEntity)h.getBlockEntity(POS.below());
@@ -626,7 +639,7 @@ public final class OverloadedIOPortGameTests {
                 });
     }
 
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void matrixInventoryLimitsPersistsAndDrops(GameTestHelper h) {
         fixture(h,be->{
             var matrix=ModItems.LIGHTNING_COLLAPSE_MATRIX.get();
@@ -659,7 +672,7 @@ public final class OverloadedIOPortGameTests {
             be.clearContent();h.assertTrue(be.getMatrixInventory().isEmpty(),"clearing block clears matrix inventory");h.succeed();
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void maximumMatricesShareSixteenAttemptsAcrossSixInputs(GameTestHelper h) {
         fixture(h,be->{
             be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
@@ -681,7 +694,7 @@ public final class OverloadedIOPortGameTests {
                 h.assertTrue(outputStore.extractCalls==0 && outputStore.amounts.get(AEItemKey.of(Items.DIAMOND))==1234,"output slots are never parallel inputs");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void rejectedKeysSpendMatrixBudgetWithoutPrematureHalfEjection(GameTestHelper h) {
         fixture(h,be->{
             be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
@@ -695,7 +708,51 @@ public final class OverloadedIOPortGameTests {
                 h.assertTrue(destination.amounts.getOrDefault(destination.only,0L)==123 && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"next round reaches late key and retains a progressing HALF cell");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
+    public static void menuRemovalRestoresBaseThroughput(GameTestHelper h) {
+        fixture(h,be->{
+            var player=FakePlayerFactory.get(h.getLevel(),new GameProfile(UUID.randomUUID(),"IoMatrixRemoval"));
+            for (var click : List.of(ClickType.PICKUP,ClickType.QUICK_MOVE,ClickType.SWAP,ClickType.THROW)) {
+                player.getInventory().clearContent();
+                be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+                var menu=new OverloadedIOPortMenu(7,player.getInventory(),be);
+                player.containerMenu=menu;
+                var slot=menu.getSlots(Ae2ltSlotSemantics.OVERLOADED_IO_MATRIX).get(0);
+                menu.broadcastChanges();
+                h.assertTrue(menu.transferCap==Long.MAX_VALUE && menu.batchLimit==16,"installed matrices update menu");
+                menu.clicked(slot.index,click==ClickType.THROW?1:0,click,player);
+                menu.broadcastChanges();
+                h.assertTrue(be.getMatrixInventory().isEmpty() && be.getMatrixCount()==0,
+                        click+" removes matrices from the real server inventory");
+                h.assertTrue(be.getTransferCap()==BASE_CAP && be.getBatchLimit()==4
+                        && menu.transferCap==BASE_CAP && menu.batchLimit==4,
+                        click+" restores server and menu limits");
+                menu.setCarried(ItemStack.EMPTY);
+                menu.removed(player);
+                player.containerMenu=player.inventoryMenu;
+            }
+            h.succeed();
+        });
+    }
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
+    public static void reloadingEmptyMatrixSlotClearsPreviousBonus(GameTestHelper h) {
+        fixture(h,be->{
+            var empty=new CompoundTag();be.saveAdditional(empty);
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));
+            var boosted=new CompoundTag();be.saveAdditional(boosted);
+            var restored=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());
+            restored.loadTag(boosted);
+            h.assertTrue(restored.getTransferCap()==Long.MAX_VALUE,"load boosted state first");
+            restored.loadTag(empty);
+            h.assertTrue(restored.getMatrixInventory().isEmpty() && restored.getMatrixCount()==0
+                    && restored.getTransferCap()==BASE_CAP && restored.getBatchLimit()==4,
+                    "empty saved slot must replace previously installed matrices and their bonus");
+            h.assertTrue(restored.getFilterInventory().isEmpty(),"empty saved filter must also replace old rules");
+            h.succeed();
+        });
+    }
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void matrixChangesPreserveCooldownAndUpdateAmountCap(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();
@@ -721,7 +778,7 @@ public final class OverloadedIOPortGameTests {
                         "removal restores both limits for the next round");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void cappedTransfersKeepFilteredCellUntilAllowedResourcesAreGone(GameTestHelper h) {
         fixture(h,be->{
             var target=new Store();mount(be,target);var from=new Store();var stack=cell(from);
@@ -735,7 +792,7 @@ public final class OverloadedIOPortGameTests {
                         && output!=null && output.getAvailableStacks().get(dirt)==128 && output.getAvailableStacks().get(STONE)==0,"final partial batch ejects the real cell with only excluded contents");h.succeed();});
         });
     }
-    @GameTest(template="pigmee_station_empty")
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void cappedTransferRollbackConservesRemainder(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,20_000_000L);to.rejectActual=true;int[] paid={0};
         var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{paid[0]++;return true;},BASE_CAP);
@@ -746,7 +803,7 @@ public final class OverloadedIOPortGameTests {
         h.assertTrue(noWork.inserted()==0 && noWork.remainder()==0,"zero cap does no work");h.succeed();
     }
 
-    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty",timeoutTicks=160)
     public static void recipeAndMenuRegistration(GameTestHelper h) {
         var recipe=(LightningAssemblyRecipe)h.getLevel().getRecipeManager()
                 .byKey(new ResourceLocation("ae2lt:lightning_assembly/overloaded_io_port")).orElseThrow();

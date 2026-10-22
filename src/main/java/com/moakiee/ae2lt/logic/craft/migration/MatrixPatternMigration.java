@@ -53,12 +53,6 @@ public final class MatrixPatternMigration {
         catch (RuntimeException e) { reject(PatternMigrationSnapshot.Reason.ADAPTER_FAILED); return; }
         if (!next.budget.acquire(grid, next)) { reject(PatternMigrationSnapshot.Reason.LEASE_BUSY); return; }
         try {
-            next.ecoLease = EcoMigrationLease.acquire(grid, next);
-            if (next.ecoLease == null) {
-                next.release();
-                reject(PatternMigrationSnapshot.Reason.LEASE_BUSY);
-                return;
-            }
             task = next;
             report = next.snapshot();
         } catch (RuntimeException e) {
@@ -95,7 +89,7 @@ public final class MatrixPatternMigration {
             stop(PatternMigrationSnapshot.Reason.TARGET_CHANGED);
             return;
         }
-        if (!current.budget.isOwner(current.grid, current) || !current.ecoLease.owned()) {
+        if (!current.budget.isOwner(current.grid, current)) {
             stop(PatternMigrationSnapshot.Reason.LEASE_BUSY);
             return;
         }
@@ -242,7 +236,6 @@ public final class MatrixPatternMigration {
         final Map<AEItemKey, Integer> definitions = new HashMap<>();
         final ArrayDeque<TargetSlot> emptySlots = new ArrayDeque<>();
         final Map<MatrixPatternStorageBlockEntity, Long> revisions = new IdentityHashMap<>();
-        EcoMigrationLease ecoLease;
         PatternMigrationSnapshot.Stage stage = PatternMigrationSnapshot.Stage.CHECKING;
         PatternMigrationSnapshot.Reason reason = PatternMigrationSnapshot.Reason.NONE;
         PatternMigrationSnapshot.Stage resumeStage;
@@ -510,7 +503,6 @@ public final class MatrixPatternMigration {
         }
 
         void release() {
-            if (ecoLease != null) ecoLease.close();
             budget.release(grid, this);
         }
 

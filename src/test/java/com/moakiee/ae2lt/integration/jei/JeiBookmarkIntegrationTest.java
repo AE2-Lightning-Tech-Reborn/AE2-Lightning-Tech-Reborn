@@ -18,6 +18,7 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.forge.ForgeTypes;
@@ -254,8 +255,9 @@ class JeiBookmarkIntegrationTest {
             var helper = Proxy.newProxyInstance(loader,
                     new Class<?>[] {mezz.jei.api.ingredients.IIngredientHelper.class},
                     (proxy, method, arguments) -> {
-                        if (method.getName().equals("getUniqueId")) {
+                        if (method.getName().equals("getUniqueId") || method.getName().equals("getUid")) {
                             Object value = arguments[0];
+                            if (value instanceof ITypedIngredient<?> typed) value = typed.getIngredient();
                             return (value instanceof ItemStack item ? AEItemKey.of(item)
                                     : AEFluidKey.of((FluidStack) value)).toString();
                         }
@@ -303,6 +305,20 @@ class JeiBookmarkIntegrationTest {
 
     private static IJeiRuntime runtime(FakeOverlay overlay) {
         var loader = JeiBookmarkIntegrationTest.class.getClassLoader();
+        Object bookmarks;
+        try {
+            var bookmarkType = IJeiRuntime.class.getMethod("getBookmarkManager").getReturnType();
+            bookmarks = overlay == null ? null : Proxy.newProxyInstance(loader,
+                    new Class<?>[] {bookmarkType}, (proxy, method, arguments) -> {
+                        if (method.getName().equals("add") && arguments.length == 1) {
+                            return overlay.bookmarkList.add(new FakeBookmark((ITypedIngredient<?>) arguments[0]));
+                        }
+                        throw new UnsupportedOperationException(method.getName());
+                    });
+        } catch (NoSuchMethodException legacy) {
+            bookmarks = null;
+        }
+        var bookmarkManager = bookmarks;
         var manager = (IIngredientManager) Proxy.newProxyInstance(loader,
                 new Class<?>[] {IIngredientManager.class}, (proxy, method, arguments) -> {
                     if (method.getName().equals("createTypedIngredient")) {
@@ -313,6 +329,7 @@ class JeiBookmarkIntegrationTest {
         return (IJeiRuntime) Proxy.newProxyInstance(loader, new Class<?>[] {IJeiRuntime.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
                     case "getBookmarkOverlay" -> overlay;
+                    case "getBookmarkManager" -> bookmarkManager;
                     case "getIngredientManager" -> manager;
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
@@ -332,6 +349,10 @@ class JeiBookmarkIntegrationTest {
         @Override
         public T getIngredient() {
             return ingredient;
+        }
+
+        public ITypedIngredient<T> normalize(IIngredientHelper<T> ingredientHelper) {
+            return new TypedIngredient<>(type, ingredientHelper.normalizeIngredient(ingredient));
         }
     }
 

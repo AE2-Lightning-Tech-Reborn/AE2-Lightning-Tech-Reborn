@@ -91,7 +91,8 @@ public final class CraftingReportClientProbe {
                     used.set(AEItemKey.of(Items.IRON_ORE), 35);
                     menu.setPlan(ThunderboltCraftingPlanSummary.fromPlan(new CraftingPlan(
                             new GenericStack(AEItemKey.of(Items.IRON_INGOT), 1), 435, false, false,
-                            used, new KeyCounter(), new KeyCounter(), Map.of(treePattern(), 1L))));
+                            used, new KeyCounter(), new KeyCounter(),
+                            new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>(Map.of(treePattern(), 1L)))));
                     mc.player.containerMenu = menu;
                     set(menu, "ae2lt$showReport", true);
                     mc.setScreen(new appeng.client.gui.me.crafting.CraftConfirmScreen(menu,
@@ -204,7 +205,8 @@ public final class CraftingReportClientProbe {
             default -> null;
         });
         var plan = new CraftingPlan(new GenericStack(iron, 1), 435, false, false,
-                new KeyCounter(), new KeyCounter(), new KeyCounter(), Map.of());
+                new KeyCounter(), new KeyCounter(), new KeyCounter(),
+                new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>());
         ICraftingPlan[] submitted = {null};
         var service = proxy(ICraftingService.class, (name, args) -> switch (name) {
             case "beginCraftingCalculation" -> {
@@ -248,7 +250,8 @@ public final class CraftingReportClientProbe {
             var deficit = new KeyCounter();
             deficit.set(iron, 3);
             var simulation = new CraftingPlan(new GenericStack(iron, 1), 8, true, false,
-                    new KeyCounter(), new KeyCounter(), deficit, Map.of());
+                    new KeyCounter(), new KeyCounter(), deficit,
+                    new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>());
             set(serverMenu, "result", simulation);
             serverMenu.getClass().getMethod("eap$clientSetForceCraftStart", boolean.class).invoke(serverMenu, true);
             serverMenu.startJob();
@@ -281,7 +284,8 @@ public final class CraftingReportClientProbe {
         missing.set(AEFluidKey.of(net.minecraft.world.level.material.Fluids.WATER), 1000);
         menu.setPlan(ThunderboltCraftingPlanSummary.fromPlan(new CraftingPlan(
                 new GenericStack(AEItemKey.of(Items.IRON_INGOT), 1), 8, true, false,
-                new KeyCounter(), new KeyCounter(), missing, Map.of())));
+                new KeyCounter(), new KeyCounter(), missing,
+                new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>())));
         report.updateBeforeRender();
         if (net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")) {
             require(com.moakiee.ae2lt.integration.eaep.EaepForceCraftingAccess.isAvailable(menu),
