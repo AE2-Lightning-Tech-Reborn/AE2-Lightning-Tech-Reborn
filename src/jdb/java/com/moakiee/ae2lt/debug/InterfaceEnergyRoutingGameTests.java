@@ -42,7 +42,8 @@ public final class InterfaceEnergyRoutingGameTests {
 
     @SubscribeEvent
     public static void registerSinks(AttachCapabilitiesEvent<BlockEntity> event) {
-        if (event.getObject().getType() != BlockEntityType.BARREL) return;
+        // Use a distinct sink block from the provider energy fixture so both suites can run together.
+        if (event.getObject().getType() != BlockEntityType.CHEST) return;
         var storage = new EnergyStorage(20_000_000);
         var optional = LazyOptional.of(() -> storage);
         event.addCapability(new ResourceLocation("ae2lt", "test_energy"), new ICapabilityProvider() {
@@ -67,8 +68,8 @@ public final class InterfaceEnergyRoutingGameTests {
 
     private static void verify(GameTestHelper h, boolean wireless, boolean bound, boolean nativeAe) {
         h.assertTrue(AppFluxHelper.isAvailable(), "Applied Flux is required");
-        h.setBlock(ADJACENT, Blocks.BARREL);
-        h.setBlock(REMOTE, Blocks.BARREL);
+        h.setBlock(ADJACENT, Blocks.CHEST);
+        h.setBlock(REMOTE, Blocks.CHEST);
         h.setBlock(HOST, nativeAe ? AEBlocks.INTERFACE.block() : ModBlocks.OVERLOADED_INTERFACE.get());
         InterfaceBlockEntity host = (InterfaceBlockEntity) h.getBlockEntity(HOST);
         host.getInterfaceLogic().getUpgrades().setItemDirect(0,

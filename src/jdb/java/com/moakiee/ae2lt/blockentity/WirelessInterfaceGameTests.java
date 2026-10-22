@@ -80,8 +80,8 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_notification", timeoutTicks = 140)
-    public static void fastWirelessImportWakesOnTargetChange(GameTestHelper helper) {
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling", timeoutTicks = 140)
+    public static void fastWirelessImportPollsChangedInventory(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
             return;
@@ -93,10 +93,15 @@ public final class WirelessInterfaceGameTests {
         helper.onEachTick(() -> {
             long tick = helper.getTick();
             if (tick == 80) target.setItem(0, key.toStack(64));
-            if (tick == 84) {
-                require(target.isEmpty(), "notified inventory did not wake within four ticks");
+            // GameTest observes the inventory before this tick's grid work:
+            // allow one tick after the 20-tick cold polling interval.
+            if (tick == 101) {
+                require(target.isEmpty(), "changed inventory exceeded the 20-tick polling bound");
+            }
+            // The persistent import buffer flushes to ME storage every five ticks.
+            if (tick == 106) {
                 require(storedAmount(owner.getMainNode().getGrid().getStorageService().getInventory(), key) == 64,
-                        "notified import did not reach ME storage");
+                        "polled import did not reach ME storage");
                 helper.succeed();
             }
         });

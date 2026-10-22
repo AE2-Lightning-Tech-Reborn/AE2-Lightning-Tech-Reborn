@@ -58,6 +58,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private final Map<TianshuEncodingMode, TabButton> modeTabs =
             new EnumMap<>(TianshuEncodingMode.class);
     private final TianshuClosedLoopEncodingPanel closedLoopPanel;
+    private final TianshuOmniversalEncodingPanel omniversalPanel;
     private final List<ProcessingMultiplierButton> processingModeButtons;
     private final AE2Button advancedEncoding;
     private final AE2Button overloadEncoding;
@@ -101,6 +102,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         closedLoopPanel = new TianshuClosedLoopEncodingPanel(this, widgets,
                 () -> switchToScreen(new TianshuClosedLoopPatternConfigScreen<>(this)));
         widgets.add("closedLoopPanel", closedLoopPanel);
+        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded()) addExtraTab(TianshuEncodingMode.OMNIVERSAL,
+                com.moakiee.ae2lt.integration.useless.UselessModCompat.icon(), Component.translatable("ae2lt.tianshu.terminal.mode.omniversal"), "modeTabButton5");
+        omniversalPanel = new TianshuOmniversalEncodingPanel(this, widgets);
+        widgets.add("omniversalPanel", omniversalPanel);
 
         processingModeButtons = List.of(
                 addProcessingMultiplierButton("processingMultiply2", 2, 4),
@@ -196,6 +201,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 processing, hasDraftInput, "overload");
         boolean closedLoop = selected == TianshuEncodingMode.CLOSED_LOOP;
         closedLoopPanel.setVisible(closedLoop);
+        omniversalPanel.setVisible(selected == TianshuEncodingMode.OMNIVERSAL);
         setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK, true);
     }
 
@@ -242,7 +248,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
                 : TianshuPatternUploadRouting.Route.INVALID;
         switch (route) {
-            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER -> menu.uploadEncodedPattern();
+            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
             case PROCESSING_PROVIDER -> switchToScreen(
                     new TianshuUploadTargetScreen<>(this, directUploadRequested));
             case INVALID -> { }
@@ -304,6 +310,8 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
+        if (menu.getCarried().isEmpty() && omniversalTooltip != null) { drawTooltip(graphics, x, y, omniversalTooltip);return; }
         var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
                 x - leftPos, y - topPos);
         if (menu.getCarried().isEmpty() && multiplierTooltip != null) {

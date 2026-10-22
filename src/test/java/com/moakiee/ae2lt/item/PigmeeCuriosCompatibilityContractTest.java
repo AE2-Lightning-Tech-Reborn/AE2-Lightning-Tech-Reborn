@@ -28,8 +28,7 @@ final class PigmeeCuriosCompatibilityContractTest {
                 "ae2lt:pigmee_fumo",
                 "ae2lt:rainbow_pigmee_fumo",
                 "ae2lt:hyperdimensional_pigmee_fumo",
-                "ae2lt:creative_pigmee_fumo",
-                "ae2lt:rainbow_pigmee_fumo"), values);
+                "ae2lt:creative_pigmee_fumo"), values);
     }
 
     @Test

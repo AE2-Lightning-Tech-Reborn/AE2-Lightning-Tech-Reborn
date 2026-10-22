@@ -8,10 +8,18 @@
   "mixins": [
     "WTMenuHostMixin",
     "WTMenuHostQuantumBridgeMixin",
-    "WirelessTerminalGridAccessor"
+    "WirelessTerminalGridAccessor",
+    "CraftingTerminalHandlerAccessor",
+    "CraftingTerminalHandlerMixin",
+    "WutCraftingPredicateMixin",
+    "TianshuMagnetMenuMixin",
+    "TianshuMagnetHandlerMixin",
+    "TianshuTerminalMergeMixin",
+    "TianshuTerminalRecipeMixin"
   ],
   "client": [
-    "client.AEBaseScreenFrequencyTerminalButtonMixin"
+    "client.AEBaseScreenFrequencyTerminalButtonMixin",
+    "client.TianshuMagnetScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

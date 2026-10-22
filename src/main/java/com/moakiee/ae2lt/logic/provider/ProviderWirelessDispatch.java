@@ -4,12 +4,10 @@ import com.moakiee.ae2lt.logic.transfer.TransferPollSchedule;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.jetbrains.annotations.Nullable;
@@ -41,8 +39,7 @@ final class ProviderWirelessDispatch {
     private final Predicate<WirelessConnection> blocked = overflow::contains;
     private final Map<WirelessConnection, ConnectionState> states = new HashMap<>();
     private final List<WirelessConnection>[] wheel;
-    private final ReadyQueue<WirelessConnection, ConnectionState> singleReady;
-    private final ReadyQueue<WirelessConnection, ConnectionState> evenReady;
+    private final ReadyQueue ready = new ReadyQueue();
     private final DispatchFairnessScheduler<WirelessConnection, IPatternDetails> fairness =
             DispatchFairnessScheduler.forCanonicalPatterns();
     private final WirelessBatchCadence<WirelessConnection> batchCadence =
@@ -76,8 +73,6 @@ final class ProviderWirelessDispatch {
         for (int i = 0; i < wheel.length; i++) {
             wheel[i] = new ArrayList<>();
         }
-        singleReady = new ReadyQueue<>(states::get);
-        evenReady = new ReadyQueue<>(states::get);
     }
 
     WirelessOverflowQueue overflow() {
@@ -92,13 +87,6 @@ final class ProviderWirelessDispatch {
     @Nullable
     ConnectionState existingState(WirelessConnection connection) {
         return states.get(connection);
-    }
-
-    ReadyQueue<WirelessConnection, ConnectionState> readyQueue(
-            WirelessDispatchMode mode) {
-        return mode == WirelessDispatchMode.SINGLE_TARGET
-                ? singleReady
-                : evenReady;
     }
 
     DispatchFairnessScheduler<WirelessConnection, IPatternDetails>.Pass beginFairPass(
@@ -188,8 +176,7 @@ final class ProviderWirelessDispatch {
         removePenalties(target);
         batchCadence.removeTarget(target);
         fairness.removeTarget(target);
-        evenReady.remove(target);
-        singleReady.remove(target);
+        ready.remove(target);
         if (states.remove(target) != null) {
             // A transient hard failure can remove a target while the validated
             // connection list still contains the same address. Force prepare()
@@ -214,17 +201,16 @@ final class ProviderWirelessDispatch {
     void prepare(
             List<WirelessConnection> valid,
             long gameTick,
-            boolean fastMode,
-            WirelessDispatchMode mode) {
+            boolean fastMode) {
         maintain(gameTick);
         if (structuresDirty || valid != validReference) {
             if (!structuresDirty && valid.equals(validReference)) {
                 validReference = valid;
             } else {
-                rebuild(valid, gameTick, mode);
+                rebuild(valid, gameTick);
             }
         }
-        advance(gameTick, fastMode, mode);
+        advance(gameTick, fastMode);
     }
 
     long dispatchBatch(
@@ -271,7 +257,7 @@ final class ProviderWirelessDispatch {
             Predicate<WirelessConnection> alive,
             Consumer<WirelessConnection> targetRemoved) {
         if (mode == WirelessDispatchMode.EVEN_DISTRIBUTION) touchPattern(pattern, gameTick);
-        var readyQueue = readyQueue(mode);
+        var readyQueue = ready;
         int scanBudget = Math.min(targetAttempts, readyQueue.size());
         while (scanBudget-- > 0 && !readyQueue.isEmpty()) {
             var connection = readyQueue.peek();
@@ -326,7 +312,7 @@ final class ProviderWirelessDispatch {
                         readyQueue.removeHead();
                         recordPushFailure(state, probing, gameTick);
                         scheduleAfterFailure(
-                                connection, state, fastMode, mode);
+                                connection, state, fastMode);
                     } else {
                         long due = recordRejection(
                                 connection, pattern, gameTick, fastMode);
@@ -349,7 +335,7 @@ final class ProviderWirelessDispatch {
             BatchAttempt attempt,
             Predicate<WirelessConnection> alive,
             Consumer<WirelessConnection> targetRemoved) {
-        var readyQueue = singleReady;
+        var readyQueue = ready;
         long remaining = maxCopies;
         int attemptBudget = Math.min(1, readyQueue.size());
         for (int attempts = 0;
@@ -392,8 +378,7 @@ final class ProviderWirelessDispatch {
                     readyQueue.removeHead();
                     recordPushFailure(state, probing, gameTick);
                     scheduleAfterFailure(
-                            connection, state, fastMode,
-                            WirelessDispatchMode.SINGLE_TARGET);
+                            connection, state, fastMode);
                 }
                 case GLOBAL_ABORT -> {
                     return remaining;
@@ -555,7 +540,7 @@ final class ProviderWirelessDispatch {
                     recordPushSuccess(state, probing, gameTick);
                     if (blocked.test(connection)) {
                         pauseTarget(connection);
-                        evenReady.remove(connection);
+                        ready.remove(connection);
                     }
                     if (result.outcome == WirelessPushOutcome.GLOBAL_ABORT) {
                         return remaining;
@@ -649,8 +634,7 @@ final class ProviderWirelessDispatch {
     void scheduleAfterFailure(
             WirelessConnection connection,
             ConnectionState state,
-            boolean fastMode,
-            WirelessDispatchMode mode) {
+            boolean fastMode) {
         if (blocked.test(connection)) {
             return;
         }
@@ -658,7 +642,7 @@ final class ProviderWirelessDispatch {
         state.probeArmed = false;
         if (state.cooldownUntil < 0) {
             state.ready = true;
-            enqueue(connection, state, mode);
+            enqueue(connection, state);
             return;
         }
 
@@ -711,7 +695,7 @@ final class ProviderWirelessDispatch {
         for (var slot : wheel) {
             slot.clear();
         }
-        clearReadyQueues();
+        ready.clear();
         patternsChanged();
         patternActivity.clear();
         states.clear();
@@ -796,12 +780,11 @@ final class ProviderWirelessDispatch {
 
     private void rebuild(
             List<WirelessConnection> valid,
-            long gameTick,
-            WirelessDispatchMode mode) {
+            long gameTick) {
         for (var slot : wheel) {
             slot.clear();
         }
-        clearReadyQueues();
+        ready.clear();
         for (var connection : valid) {
             if (blocked.test(connection)) {
                 continue;
@@ -814,7 +797,7 @@ final class ProviderWirelessDispatch {
             } else {
                 state.ready = true;
                 state.probeArmed = false;
-                enqueue(connection, state, mode);
+                enqueue(connection, state);
             }
         }
         validReference = valid;
@@ -825,8 +808,7 @@ final class ProviderWirelessDispatch {
 
     private void advance(
             long gameTick,
-            boolean fastMode,
-            WirelessDispatchMode mode) {
+            boolean fastMode) {
         if (lastWheelTick < 0) {
             lastWheelTick = gameTick - 1;
         }
@@ -862,7 +844,7 @@ final class ProviderWirelessDispatch {
                     iterator.remove();
                     state.ready = true;
                     state.probeArmed = probe;
-                    enqueue(connection, state, mode);
+                    enqueue(connection, state);
                 }
             }
         }
@@ -871,23 +853,14 @@ final class ProviderWirelessDispatch {
 
     private void enqueue(
             WirelessConnection connection,
-            ConnectionState state,
-            WirelessDispatchMode mode) {
+            ConnectionState state) {
         if (!state.ready || blocked.test(connection)) {
             return;
         }
-        readyQueue(mode).offer(connection);
+        ready.offer(connection);
     }
 
-    private void clearReadyQueues() {
-        singleReady.clear();
-        evenReady.clear();
-        for (var state : states.values()) {
-            state.setQueued(false);
-        }
-    }
-
-    static final class ConnectionState implements ReadyQueue.State {
+    static final class ConnectionState {
         long cooldownUntil = -1L;
         int cooldown = COOLDOWN_INIT;
         int searchLow = COOLDOWN_MIN;
@@ -984,15 +957,6 @@ final class ProviderWirelessDispatch {
             return searchHigh - searchLow <= COOLDOWN_NEAR_BAND;
         }
 
-        @Override
-        public boolean isQueued() {
-            return queued;
-        }
-
-        @Override
-        public void setQueued(boolean queued) {
-            this.queued = queued;
-        }
     }
 
     private static final class Penalty {
@@ -1025,46 +989,35 @@ final class ProviderWirelessDispatch {
     }
 
     /** Ready-queue ownership is local because queued state belongs to dispatch. */
-    static final class ReadyQueue<T, S extends ReadyQueue.State> {
-        interface State {
-            boolean isQueued();
+    private final class ReadyQueue {
+        private final ArrayDeque<WirelessConnection> queue = new ArrayDeque<>();
 
-            void setQueued(boolean queued);
-        }
-
-        private final ArrayDeque<T> queue = new ArrayDeque<>();
-        private final Function<T, S> stateLookup;
-
-        ReadyQueue(Function<T, S> stateLookup) {
-            this.stateLookup = stateLookup;
-        }
-
-        boolean offer(T target) {
-            var state = stateLookup.apply(target);
-            if (state == null || state.isQueued()) {
+        boolean offer(WirelessConnection target) {
+            var state = states.get(target);
+            if (state == null || state.queued) {
                 return false;
             }
-            state.setQueued(true);
+            state.queued = true;
             queue.addLast(target);
             return true;
         }
 
-        T peek() {
+        WirelessConnection peek() {
             return queue.peekFirst();
         }
 
-        T removeHead() {
+        WirelessConnection removeHead() {
             var target = queue.pollFirst();
             if (target != null) {
-                var state = stateLookup.apply(target);
+                var state = states.get(target);
                 if (state != null) {
-                    state.setQueued(false);
+                    state.queued = false;
                 }
             }
             return target;
         }
 
-        T rotateHeadToTail() {
+        WirelessConnection rotateHeadToTail() {
             var target = queue.pollFirst();
             if (target != null) {
                 queue.addLast(target);
@@ -1072,13 +1025,13 @@ final class ProviderWirelessDispatch {
             return target;
         }
 
-        boolean remove(T target) {
+        boolean remove(WirelessConnection target) {
             if (!queue.remove(target)) {
                 return false;
             }
-            var state = stateLookup.apply(target);
+            var state = states.get(target);
             if (state != null) {
-                state.setQueued(false);
+                state.queued = false;
             }
             return true;
         }
@@ -1093,12 +1046,8 @@ final class ProviderWirelessDispatch {
 
         void clear() {
             queue.clear();
-        }
-
-        void clear(Collection<S> knownStates) {
-            queue.clear();
-            for (var state : knownStates) {
-                state.setQueued(false);
+            for (var state : states.values()) {
+                state.queued = false;
             }
         }
     }

@@ -1,0 +1,51 @@
+// Starts a disposable copy of the phase-flight QA world and exits after the probe.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PhaseFreecamClientProbe.java'])
+        def fixtureClasses = layout.buildDirectory.dir('classes/java/phase-freecam-client')
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                            'io.github.llamalad7'] || (dep.group == 'maven.modrinth' && dep.name == 'ldlib'))
+        }
+        if (findProperty('ae2ltJdbProbeMods')) {
+            findProperty('ae2ltJdbProbeMods').toString().split(java.io.File.pathSeparator).each { jar ->
+                dependencies.add('runtimeOnly', files(jar))
+            }
+        }
+        def probeDirectory = project.file(findProperty('ae2ltPhaseFreecamDirectory')
+                ?: 'build/phase-freecam-client-forge')
+        def clientWorld = new File(probeDirectory, 'saves/PhaseFreecamQA')
+        def outputDirectory = project.file(findProperty('ae2ltPhaseFreecamOutput')
+                ?: 'build/upstream-fixes-20261021/phase-freecam')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.phaseFreecamClientProbe', 'true'
+            property 'ae2lt.phaseFreecamOutput', outputDirectory.absolutePath
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'PhaseFreecamQA', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(outputDirectory, 'result.txt').delete()
+                def config = new File(probeDirectory, 'config/ae2lt-common.toml')
+                config.parentFile.mkdirs()
+                config.text = 'configVersion = 3\n[overloadArmor.lightningCosts]\nflightHvPerTick = 0\nphaseFlightHvPerTick = 0\n'
+                def options = new File(probeDirectory, 'options.txt')
+                if (!options.exists()) options.text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\n'
+                if (!clientWorld.isDirectory()) {
+                    def sourceWorld = project.file('build/phase-flight-lock-forge/world')
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Phase flight QA world is missing.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(outputDirectory, 'result.txt')
+                if (!result.isFile() || !result.text.contains('PASS:') || result.text.contains('FAIL:'))
+                    throw new GradleException('Phase Freecam probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

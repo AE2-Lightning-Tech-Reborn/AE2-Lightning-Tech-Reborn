@@ -22,11 +22,13 @@ import org.jetbrains.annotations.Nullable;
 final class UniversalEncodePatternTransferHandler<T extends PatternEncodingTermMenu>
         implements IUniversalRecipeTransferHandler<T> {
     private final EncodePatternTransferHandler<T> delegate;
+    private final IRecipeTransferHandlerHelper helper;
 
     UniversalEncodePatternTransferHandler(
             MenuType<T> menuType,
             Class<T> menuClass,
             IRecipeTransferHandlerHelper helper) {
+        this.helper = helper;
         this.delegate = new EncodePatternTransferHandler<>(menuType, menuClass, helper);
     }
 
@@ -49,6 +51,16 @@ final class UniversalEncodePatternTransferHandler<T extends PatternEncodingTermM
             Player player,
             boolean maxTransfer,
             boolean doTransfer) {
+        if (container instanceof com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu menu
+                && com.moakiee.ae2lt.integration.useless.UselessModCompat.isViewerRecipe(recipe)) {
+            var pattern = com.moakiee.ae2lt.integration.useless.UselessModClientTransfer.prepare(menu, recipe);
+            if (pattern.isEmpty()) return helper.createUserErrorWithTooltip(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.omniversal.invalid"));
+            if (doTransfer) {
+                menu.selectOmniversalPattern(pattern);
+                if (net.minecraft.client.gui.screens.Screen.hasAltDown()) menu.encodeAndUploadDirectly();
+            }
+            return null;
+        }
         return delegate.transferRecipe(container, recipe, recipeSlots, player, maxTransfer, doTransfer);
     }
 }

@@ -88,6 +88,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     private WirelessSpeedMode wirelessSpeedMode = WirelessSpeedMode.NORMAL;
     private BlockingMode blockingMode = BlockingMode.NORMAL;
     private boolean filteredImport = false;
+    private boolean machineAdaptationEnabled = true;
     private boolean adaptiveBatchEnabled = false;
     private int machineParallelism = 1;
 
@@ -345,6 +346,18 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         markForUpdate();
     }
 
+    public boolean isMachineAdaptationEnabled() {
+        return machineAdaptationEnabled;
+    }
+
+    public void setMachineAdaptationEnabled(boolean enabled) {
+        if (machineAdaptationEnabled == enabled) return;
+        machineAdaptationEnabled = enabled;
+        notifyLogicStateChanged();
+        saveChanges();
+        markForUpdate();
+    }
+
     public boolean isFilteredImport() {
         return filteredImport;
     }
@@ -531,6 +544,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         data.writeByte(wirelessSpeedMode.ordinal());
         data.writeByte(blockingMode.ordinal());
         data.writeBoolean(filteredImport);
+        data.writeBoolean(machineAdaptationEnabled);
         data.writeBoolean(adaptiveBatchEnabled);
         data.writeVarInt(machineParallelism);
         data.writeVarInt(connections.size());
@@ -560,6 +574,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         var newBlockingMode = blockingOrd >= 0 && blockingOrd < BlockingMode.values().length
                 ? BlockingMode.values()[blockingOrd] : BlockingMode.NORMAL;
         var newFilteredImport = data.readBoolean();
+        var newMachineAdaptationEnabled = data.readBoolean();
         var newAdaptiveBatchEnabled = data.readBoolean();
         int newMachineParallelism = Math.max(1, data.readVarInt());
         int count = data.readVarInt();
@@ -576,6 +591,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                 || newSpeedMode != wirelessSpeedMode
                 || newBlockingMode != blockingMode
                 || newFilteredImport != filteredImport
+                || newMachineAdaptationEnabled != machineAdaptationEnabled
                 || newAdaptiveBatchEnabled != adaptiveBatchEnabled
                 || newMachineParallelism != machineParallelism
                 || !newConns.equals(connections)) {
@@ -585,6 +601,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             wirelessSpeedMode = newSpeedMode;
             blockingMode = newBlockingMode;
             filteredImport = newFilteredImport;
+            machineAdaptationEnabled = newMachineAdaptationEnabled;
             adaptiveBatchEnabled = newAdaptiveBatchEnabled;
             machineParallelism = newMachineParallelism;
             connections.clear();
@@ -606,6 +623,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
     private static final String TAG_WIRELESS_SPEED_MODE = "WirelessSpeedMode";
     private static final String TAG_BLOCKING_MODE = "BlockingMode";
     private static final String TAG_FILTERED_IMPORT = "FilteredImport";
+    private static final String TAG_MACHINE_ADAPTATION = "MachineAdaptationEnabled";
     private static final String TAG_MACHINE_PARALLELISM = "MachineParallelism";
     private static final String TAG_ADAPTIVE_BATCH_ENABLED = "AdaptiveBatchEnabled";
     private static final String TAG_CONNECTIONS = "WirelessConnections";
@@ -619,6 +637,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         data.putString(TAG_WIRELESS_SPEED_MODE, wirelessSpeedMode.name());
         data.putString(TAG_BLOCKING_MODE, blockingMode.name());
         data.putBoolean(TAG_FILTERED_IMPORT, filteredImport);
+        data.putBoolean(TAG_MACHINE_ADAPTATION, machineAdaptationEnabled);
         data.putBoolean(TAG_ADAPTIVE_BATCH_ENABLED, adaptiveBatchEnabled);
         data.putInt(TAG_MACHINE_PARALLELISM, machineParallelism);
 
@@ -667,6 +686,8 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             }
         }
         filteredImport = data.getBoolean(TAG_FILTERED_IMPORT);
+        machineAdaptationEnabled = !data.contains(TAG_MACHINE_ADAPTATION)
+                || data.getBoolean(TAG_MACHINE_ADAPTATION);
         adaptiveBatchEnabled = data.getBoolean(TAG_ADAPTIVE_BATCH_ENABLED);
         machineParallelism = Math.max(1, data.getInt(TAG_MACHINE_PARALLELISM));
         WirelessConnectionLists.readTagList(
@@ -691,6 +712,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_WIRELESS_SPEED_MODE, wirelessSpeedMode);
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_BLOCKING_MODE, blockingMode);
             tag.putBoolean(TAG_FILTERED_IMPORT, filteredImport);
+            tag.putBoolean(TAG_MACHINE_ADAPTATION, machineAdaptationEnabled);
             tag.putBoolean(TAG_ADAPTIVE_BATCH_ENABLED, adaptiveBatchEnabled);
             tag.putInt(TAG_MACHINE_PARALLELISM, machineParallelism);
             FrequencyBindingHelper.writeMemoryFrequency(tag, getFrequencyId());
@@ -715,6 +737,8 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                     tag, TAG_BLOCKING_MODE, BlockingMode.class, this.blockingMode);
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.ifBoolean(tag, TAG_FILTERED_IMPORT,
                     v -> this.filteredImport = v);
+            com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.ifBoolean(tag, TAG_MACHINE_ADAPTATION,
+                    v -> this.machineAdaptationEnabled = v);
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.ifBoolean(tag, TAG_ADAPTIVE_BATCH_ENABLED,
                     v -> this.adaptiveBatchEnabled = v);
             if (tag.contains(TAG_MACHINE_PARALLELISM)) {

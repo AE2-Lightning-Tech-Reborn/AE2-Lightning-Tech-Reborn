@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
+
 import java.util.Set;
 
 import appeng.api.config.Actionable;

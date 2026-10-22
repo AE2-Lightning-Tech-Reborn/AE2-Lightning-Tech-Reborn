@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.provider.ProviderTarget;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;

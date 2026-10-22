@@ -15,8 +15,8 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Shared Pigmee silhouette renderer: portal or rainbow surface, then the face markings.
  */
-final class HyperdimensionalPigmeeItemRenderer extends BlockEntityWithoutLevelRenderer {
-    HyperdimensionalPigmeeItemRenderer(
+public final class HyperdimensionalPigmeeItemRenderer extends BlockEntityWithoutLevelRenderer {
+    public HyperdimensionalPigmeeItemRenderer(
             BlockEntityRenderDispatcher dispatcher, EntityModelSet entityModels) {
         super(dispatcher, entityModels);
     }

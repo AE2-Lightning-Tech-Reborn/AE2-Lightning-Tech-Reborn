@@ -1,23 +1,40 @@
 // Isolated six-face storage regressions using the real Farmer's Delight cutting board.
-// Supply -PpigmeeCuttingBoardJar=/path/to/FarmersDelight.jar when invoking runGameTestServer.
+// Optional -PpigmeeCuttingBoardJar points to an already deobfuscated Forge 1.20.1 development jar.
 allprojects {
     afterEvaluate {
+        // Forge scans BeforeBatch methods even when their test namespace is disabled.
+        // Keep classes from other JDB suites out of this run, including stale outputs.
+        sourceSets.jdb.java.destinationDirectory.set(layout.buildDirectory.dir('classes/java/pigmeeAdjacentStorageGameTest'))
+        tasks.named('compileJdbJava').configure {
+            doFirst {
+                if (sourceSets.jdb.output.classesDirs.files != [destinationDirectory.get().asFile] as Set)
+                    throw new GradleException('Focused JDB compilation and runtime directories differ.')
+            }
+        }
         sourceSets.jdb.java.setIncludes([
-                'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java',
-                'com/moakiee/ae2lt/debug/PigmeeSynthesisStationGameTests.java'
+                'com/moakiee/ae2lt/debug/PigmeeAdjacentStorageGameTests.java'
         ])
         def cuttingBoardJar = providers.gradleProperty('pigmeeCuttingBoardJar').orNull
-        if (cuttingBoardJar == null || !file(cuttingBoardJar).isFile()) {
-            throw new GradleException('Set -PpigmeeCuttingBoardJar to a Farmer\'s Delight 1.21.1 jar.')
+        if (cuttingBoardJar != null) {
+            if (!file(cuttingBoardJar).isFile()) throw new GradleException('Farmer\'s Delight development jar not found.')
+            dependencies.add('runtimeOnly', files(cuttingBoardJar))
+        } else {
+            dependencies.add('runtimeOnly', fg.deobf('maven.modrinth:farmers-delight:1.20.1-1.3.4'))
         }
-        configurations.runtimeOnly.dependencies.removeIf { dep ->
-            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.layout.buildDirectory.dir('pigmee-adjacent-storage-gametest').get().asFile
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_pigmee_storage'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
         }
-        dependencies.add('runtimeOnly', files(cuttingBoardJar))
-        neoForge.runs.gameTestServer {
-            gameDirectory = project.layout.buildDirectory.dir('pigmee-adjacent-storage-gametest').get().asFile
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_pigmee_storage'
-            systemProperty 'ae2lt.pigmeeStorageRegression', 'true'
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doFirst { project.file('build/pigmee-adjacent-storage-gametest/logs/latest.log').delete() }
+            doLast {
+                def log = project.file('build/pigmee-adjacent-storage-gametest/logs/latest.log')
+                if (!log.isFile() || !(log.text =~ /All 10 required tests passed/).find()) {
+                    throw new GradleException('Pigmee adjacent storage GameTests did not complete (expected 10).')
+                }
+            }
         }
     }
 }

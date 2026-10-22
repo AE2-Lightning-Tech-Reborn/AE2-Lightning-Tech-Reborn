@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AAA",
+    " N ",
+    " A "
+  ],
+  "key": {
+    "A": {
+      "item": "ae2lt:overload_alloy"
+    },
+    "N": {
+      "item": "minecraft:anvil"
+    }
+  },
+  "result": {
+    "count": 1,
+    "item": "ae2lt:overload_alloy_anvil"
+  }
+}

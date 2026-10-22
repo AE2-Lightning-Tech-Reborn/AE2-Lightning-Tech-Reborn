@@ -1,0 +1,33 @@
+// Runs only against a copied, disposable test world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/BigTerminalClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'io.github.llamalad7'])
+        }
+        def probeDirectory = project.file('build/big-terminal-client-forge')
+        def clientWorld = new File(probeDirectory, 'saves/BigTerminalQA')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.bigTerminalProbe', 'true'
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'BigTerminalQA', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(probeDirectory, 'big-terminal-result.txt').delete()
+                if (!clientWorld.isDirectory()) {
+                    def sourceWorld = project.file('build/bigint-gametest-forge/world')
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Run exact crafting GameTests first.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(probeDirectory, 'big-terminal-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Exact terminal probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

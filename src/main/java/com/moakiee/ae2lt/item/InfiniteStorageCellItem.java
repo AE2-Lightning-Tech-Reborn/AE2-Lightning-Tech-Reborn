@@ -43,7 +43,8 @@ public final class InfiniteStorageCellItem extends AE2LTItem implements IIndexed
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        CompoundTag tag = com.moakiee.ae2lt.util.ItemStackTagSupport.getTagCopy(stack);
+        CompoundTag tag = stack.getTag();
+        if (tag == null) return;
         // 空壳(创造物品栏里的初始 cell)上显示 "0 types / 0 B" 只是噪音,
         // 完全没带 ae2lt:types / ae2lt:bytes 数据时直接不画 tooltip。
         if (!tag.contains("ae2lt:types") && !tag.contains("ae2lt:bytes")) {

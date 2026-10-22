@@ -124,7 +124,9 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            property 'thunderbolt.mixinAudit', 'true'
+            // A global audit force-loads optional targets, including client classes on servers.
+            // Opt in only for a compatible dependency/side matrix; normal mixin checks still run.
+            property 'thunderbolt.mixinAudit', providers.gradleProperty('ae2ltMixinAudit').getOrElse('false')
 
             mods {
                 "${mod_id}" {
@@ -315,9 +317,23 @@ dependencies {
     }
 
     compileOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
+    testImplementation fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     if ((findProperty('enable_mekanism_runtime') ?: 'true').toBoolean()) {
         runtimeOnly fg.deobf("mekanism:Mekanism:${mekanism_version}:all")
     }
+
+    // Optional Industrial Foregoing output-role metadata is supplied by Titanium.
+    compileOnly(fg.deobf("maven.modrinth:titanium:${titanium_version}")) { transitive = false }
+    testImplementation(fg.deobf("maven.modrinth:titanium:${titanium_version}")) { transitive = false }
+    jdbCompileOnly(fg.deobf("maven.modrinth:industrial-foregoing:${industrial_foregoing_version}")) { transitive = false }
+    if ((findProperty('enable_industrial_foregoing_runtime') ?: 'false').toBoolean()) {
+        runtimeOnly(fg.deobf("maven.modrinth:titanium:${titanium_version}")) { transitive = false }
+        runtimeOnly(fg.deobf("maven.modrinth:industrial-foregoing:${industrial_foregoing_version}")) { transitive = false }
+    }
+
+    // The shared multiblock preview uses Forge LDLib, also supplied by GTL packs.
+    compileOnly(fg.deobf("maven.modrinth:ldlib:${ldlib_version}")) { transitive = false }
+    runtimeOnly(fg.deobf("maven.modrinth:ldlib:${ldlib_version}")) { transitive = false }
 
     // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
     // Provided at runtime as a separate mod jar in the modpack. The GTL branch needs the Thunderbolt
@@ -442,6 +458,7 @@ tasks.named('processResources', ProcessResources).configure {
             thunderbolt_version_range: thunderbolt_version_range,
             ae2wtlib_version_range: ae2wtlib_version_range,
             veil_version_range: veil_version_range,
+            ldlib_version_range: ldlib_version_range,
     ]
 
     inputs.properties replaceProperties
@@ -514,6 +531,15 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << '-Xmaxerrs' << '5000' << '-Xlint:unchecked'
     // Force English javac output so logs are stable across locales.
     options.forkOptions.jvmArgs += ['-Duser.language=en', '-Duser.country=US']
+}
+
+tasks.named('compileJava', JavaCompile).configure {
+    // Mixin's refmap describes the complete source set. An ABI-compatible dependency update
+    // can make Gradle's incremental compiler skip javac after MixinGradle clears that file.
+    options.incremental = false
+    outputs.files(
+            layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json'),
+            layout.buildDirectory.file('tmp/compileJava/compileJava-mappings.tsrg'))
 }
 
 tasks.named('test', Test).configure {

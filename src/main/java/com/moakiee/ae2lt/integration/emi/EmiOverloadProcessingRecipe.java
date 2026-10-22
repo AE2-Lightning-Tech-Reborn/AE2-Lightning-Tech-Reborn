@@ -9,7 +9,7 @@ import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessingRecipe> {
+class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessingRecipe> {
     private static final ResourceLocation TEXTURE =
             EmiRecipeWidgets.texture("guis/overload_processing_factory.png");
     private static final int WIDTH = 168;
@@ -20,7 +20,11 @@ final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessi
     private final EmiStack fluidOutput;
 
     EmiOverloadProcessingRecipe(ResourceLocation id, OverloadProcessingRecipe recipe) {
-        super(AE2LTEmiCategories.OVERLOAD_PROCESSING, id, recipe, WIDTH, 90);
+        this(AE2LTEmiCategories.OVERLOAD_PROCESSING, id, recipe);
+    }
+
+    EmiOverloadProcessingRecipe(dev.emi.emi.api.recipe.EmiRecipeCategory category, ResourceLocation id, OverloadProcessingRecipe recipe) {
+        super(category, id, recipe, WIDTH, 90);
         recipe.itemInputs().forEach(input -> inputs.add(EmiRecipeWidgets.ingredient(input.ingredient(), input.count())));
         fluidInput = recipe.fluidInput().isEmpty()
                 ? EmiStack.EMPTY

@@ -11,12 +11,10 @@ import com.moakiee.ae2lt.menu.LightningCollectorMenu;
 import com.moakiee.ae2lt.menu.LightningSimulationChamberMenu;
 import com.moakiee.ae2lt.menu.MatrixControllerMenu;
 import com.moakiee.ae2lt.menu.MatrixPortMenu;
-import com.moakiee.ae2lt.menu.MiningFactoryMenu;
 import com.moakiee.ae2lt.menu.OverloadPatternEncoderMenu;
 import com.moakiee.ae2lt.menu.OverloadProcessingFactoryMenu;
 import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 import com.moakiee.ae2lt.menu.OverloadedInterfaceMenu;
-import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 import com.moakiee.ae2lt.menu.OverloadedPowerSupplyMenu;
 import com.moakiee.ae2lt.menu.PigmeePatternProviderMenu;
@@ -101,9 +99,6 @@ public final class ModMenuTypes {
                     "lightning_collector",
                     () -> LightningCollectorMenu.TYPE);
 
-    public static final RegistryObject<MenuType<OverloadedIOPortMenu>>
-            OVERLOADED_IO_PORT = MENU_TYPES.register("overloaded_io_port", () -> OverloadedIOPortMenu.TYPE);
-
     public static final RegistryObject<MenuType<MiningFactoryMenu>>
             MINING_FACTORY = MENU_TYPES.register("mining_factory", () -> MiningFactoryMenu.TYPE);
 
@@ -111,9 +106,6 @@ public final class ModMenuTypes {
             OVERLOAD_PROCESSING_FACTORY = MENU_TYPES.register(
                     "overload_processing_factory",
                     () -> OverloadProcessingFactoryMenu.TYPE);
-
-    public static final RegistryObject<MenuType<MiningFactoryMenu>>
-            MINING_FACTORY = MENU_TYPES.register("mining_factory", () -> MiningFactoryMenu.TYPE);
 
     public static final RegistryObject<MenuType<TeslaCoilMenu>>
             TESLA_COIL = MENU_TYPES.register(
@@ -178,6 +170,13 @@ public final class ModMenuTypes {
                                     AE2LightningTech.MODID,
                                     "wireless_tianshu_pattern_encoding_terminal"),
                             ForgeRegistries.MENU_TYPES);
+
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu>> TIANSHU_CRAFTING_TERMINAL =
+            MENU_TYPES.register("tianshu_crafting_terminal", () -> com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE);
+
+    public static final RegistryObject<MenuType<com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu>> TIANSHU_WIRELESS_CRAFTING_TERMINAL = TianshuWirelessTerminalFactory.isAvailable()
+            ? MENU_TYPES.register("wireless_tianshu_crafting_terminal", () -> com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE)
+            : RegistryObject.create(new ResourceLocation(AE2LightningTech.MODID, "wireless_tianshu_crafting_terminal"), ForgeRegistries.MENU_TYPES);
 
     private ModMenuTypes() {
     }

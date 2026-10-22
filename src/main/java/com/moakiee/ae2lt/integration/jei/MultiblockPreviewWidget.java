@@ -3,101 +3,57 @@ package com.moakiee.ae2lt.integration.jei;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.lowdragmc.lowdraglib.gui.widget.SceneWidget;
+import com.lowdragmc.lowdraglib.utils.BlockInfo;
+import com.lowdragmc.lowdraglib.utils.TrackedDummyWorld;
+import com.moakiee.ae2lt.integration.recipeviewer.multiblock.LdlibSceneFraming;
 
 import mezz.jei.api.gui.widgets.IRecipeWidget;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.ScreenPosition;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Renders a small isometric 3D multiblock preview inside a JEI recipe layout.
+ * Small rotating multiblock preview for a JEI recipe layout.
  *
- * <p>Each block is placed at its world-space {@link BlockPos} offset; the widget
- * auto-fits the structure to its rectangle, gently rotates around the Y axis, and
- * uses vanilla {@code BlockRenderDispatcher#renderSingleBlock} so the visual
- * matches what the player sees in-world.</p>
+ * <p>The structure is rendered by an LDLib {@link SceneWidget}. This widget only
+ * advances the yaw; it does not add the interactive toolbar used by the full
+ * structure preview.</p>
  */
 public final class MultiblockPreviewWidget implements IRecipeWidget {
-    private static final float X_ROTATION_DEG = 30.0F;
-    private static final float SCALE_MARGIN = 0.92F;
     private static final float ROTATION_PER_FRAME = 0.4F;
 
     private final ScreenPosition position;
     private final int width;
     private final int height;
-    private final List<Entry> blocks;
-
-    private final float centerX;
-    private final float centerY;
-    private final float centerZ;
-    private final float scale;
-
-    private float rotation;
+    private final SceneWidget scene = new SceneWidget(0, 0, 1, 1, null);
 
     private MultiblockPreviewWidget(int x, int y, int width, int height, List<Entry> blocks) {
         this.position = new ScreenPosition(x, y);
         this.width = width;
         this.height = height;
-        this.blocks = blocks;
 
-        if (blocks.isEmpty()) {
-            this.centerX = 0;
-            this.centerY = 0;
-            this.centerZ = 0;
-            this.scale = 0;
-            return;
-        }
-
-        float minX = Float.POSITIVE_INFINITY, maxX = Float.NEGATIVE_INFINITY;
-        float minY = Float.POSITIVE_INFINITY, maxY = Float.NEGATIVE_INFINITY;
-        float minZ = Float.POSITIVE_INFINITY, maxZ = Float.NEGATIVE_INFINITY;
+        TrackedDummyWorld world = new TrackedDummyWorld();
+        List<BlockPos> positions = new ArrayList<>();
         for (Entry entry : blocks) {
-            minX = Math.min(minX, entry.offset.getX() - 0.5F);
-            maxX = Math.max(maxX, entry.offset.getX() + 0.5F);
-            minY = Math.min(minY, entry.offset.getY() - 0.5F);
-            maxY = Math.max(maxY, entry.offset.getY() + 0.5F);
-            minZ = Math.min(minZ, entry.offset.getZ() - 0.5F);
-            maxZ = Math.max(maxZ, entry.offset.getZ() + 0.5F);
-        }
-        this.centerX = (minX + maxX) * 0.5F;
-        this.centerY = (minY + maxY) * 0.5F;
-        this.centerZ = (minZ + maxZ) * 0.5F;
-
-        float xRotCos = (float) Math.cos(Math.toRadians(X_ROTATION_DEG));
-        float xRotSin = (float) Math.sin(Math.toRadians(X_ROTATION_DEG));
-        float horizontalRadius = 0F;
-        float verticalRadius = 0F;
-        float[] xs = {minX - centerX, maxX - centerX};
-        float[] ys = {minY - centerY, maxY - centerY};
-        float[] zs = {minZ - centerZ, maxZ - centerZ};
-        for (float xv : xs) {
-            for (float yv : ys) {
-                for (float zv : zs) {
-                    float horizontal = (float) Math.hypot(xv, zv);
-                    horizontalRadius = Math.max(horizontalRadius, horizontal);
-                    verticalRadius = Math.max(
-                            verticalRadius,
-                            Math.abs(yv) * xRotCos + horizontal * xRotSin);
-                }
+            positions.add(entry.offset);
+            try {
+                world.addBlock(entry.offset, BlockInfo.fromBlockState(entry.block.defaultBlockState()));
+            } catch (RuntimeException ignored) {
+                world.addBlock(entry.offset, new BlockInfo(entry.block.defaultBlockState()));
             }
         }
-        if (horizontalRadius <= 0F || verticalRadius <= 0F) {
-            this.scale = 0F;
-            return;
-        }
-        float widthScale = width * 0.5F / horizontalRadius;
-        float heightScale = height * 0.5F / verticalRadius;
-        this.scale = Math.min(widthScale, heightScale) * SCALE_MARGIN;
+        scene.createScene(world);
+        scene.useOrtho(true);
+        scene.setRenderFacing(false);
+        scene.setRenderSelect(false);
+        scene.setIntractable(false);
+        scene.setCameraYawAndPitch(30.0F, 225.0F);
+        LdlibSceneFraming.frame(scene, positions, width, height);
+        scene.getRenderer().setOnLookingAt(ignored -> {
+            // Required for the renderer to update its trace result.
+        });
     }
 
     @Override
@@ -107,61 +63,31 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
 
     @Override
     public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
-        if (blocks.isEmpty() || scale <= 0F) {
+        var renderer = scene.getRenderer();
+        if (renderer == null) {
             return;
         }
-
-        Minecraft client = Minecraft.getInstance();
-        var bufferSource = client.renderBuffers().bufferSource();
-        var blockRenderer = client.getBlockRenderer();
-        PoseStack pose = guiGraphics.pose();
-
-        float cx = width / 2F;
-        float cy = height / 2F;
-
-        for (Entry entry : blocks) {
-            pose.pushPose();
-            pose.translate(cx, cy, 400);
-            pose.scale(scale, -scale, scale);
-            pose.mulPose(Axis.XP.rotationDegrees(X_ROTATION_DEG));
-            pose.mulPose(Axis.YP.rotationDegrees(225 + rotation));
-            pose.translate(
-                    -0.5F + entry.offset.getX() - centerX,
-                    -0.5F + entry.offset.getY() - centerY,
-                    -0.5F + entry.offset.getZ() - centerZ);
-
-            RenderSystem.runAsFancy(() -> {
-                if (entry.state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
-                    blockRenderer.renderSingleBlock(
-                            entry.state,
-                            pose,
-                            bufferSource,
-                            LightTexture.FULL_BRIGHT,
-                            OverlayTexture.NO_OVERLAY);
-                }
-            });
-            pose.popPose();
-        }
-
-        // Flush the per-block batches before re-enabling GUI lighting so the
-        // remainder of the recipe layout renders normally.
-        bufferSource.endBatch();
-        Lighting.setupFor3DItems();
+        guiGraphics.flush();
+        renderer.render(
+                guiGraphics.pose(),
+                position.x(),
+                position.y(),
+                width,
+                height,
+                (int) mouseX,
+                (int) mouseY);
     }
 
     @Override
     public void tick() {
-        rotation += ROTATION_PER_FRAME;
-        if (rotation >= 360F) {
-            rotation -= 360F;
-        }
+        scene.setCameraYawAndPitch(scene.getRotationYaw(), scene.getRotationPitch() + ROTATION_PER_FRAME);
     }
 
     public static Builder builder(int x, int y, int width, int height) {
         return new Builder(x, y, width, height);
     }
 
-    private record Entry(BlockState state, BlockPos offset) {}
+    private record Entry(Block block, BlockPos offset) {}
 
     public static final class Builder {
         private final int x;
@@ -178,10 +104,9 @@ public final class MultiblockPreviewWidget implements IRecipeWidget {
         }
 
         public Builder addBlock(Block block, BlockPos offset) {
-            if (block == null) {
-                return this;
+            if (block != null && offset != null) {
+                blocks.add(new Entry(block, offset));
             }
-            blocks.add(new Entry(block.defaultBlockState(), offset));
             return this;
         }
 

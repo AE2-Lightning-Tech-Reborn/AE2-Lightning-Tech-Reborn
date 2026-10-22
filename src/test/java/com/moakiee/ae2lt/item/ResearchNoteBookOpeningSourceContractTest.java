@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
@@ -48,7 +50,7 @@ class ResearchNoteBookOpeningSourceContractTest {
     }
 
     @Test
-    void openPacketRemainsLastInTheCurrentProtocol() throws Exception {
+    void currentProtocolPreservesLegacyIdsAndAppendsNewPackets() throws Exception {
         String network = source("src/main/java/com/moakiee/ae2lt/network/NetworkInit.java");
         List<String> expectedOrder = List.of(
                 "WirelessConnectorUsePacket",
@@ -97,33 +99,35 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "MatrixPatternMigrationActionPacket",
                 "MatrixPatternMigrationStatusPacket",
                 "BigStockPacket",
-                "ConfirmBigAmountPacket");
-        var matcher = Pattern.compile("(?m)^\\s+([A-Za-z0-9]+Packet)\\.class,$").matcher(network);
+                "ConfirmBigAmountPacket",
+                "FrequencyCardLinkShortcutPacket",
+                "WirelessJeiSupplyPacket",
+                "WirelessJeiSupplyResultPacket",
+                "SelectOmniversalPatternPacket");
+        // Match complete registrations, including inline and fully qualified names,
+        // so every discriminator and its own direction participate in the contract.
+        var matcher = Pattern.compile(
+                "CHANNEL\\.registerMessage\\(\\s*nextPacketId\\+\\+,\\s*"
+                        + "(?:[A-Za-z0-9_]+\\.)*([A-Za-z0-9]+Packet)\\.class,"
+                        + "[\\s\\S]*?Optional\\.of\\(NetworkDirection\\.(PLAY_TO_CLIENT|PLAY_TO_SERVER)\\)\\);")
+                .matcher(network);
         List<String> actualOrder = new ArrayList<>();
+        Map<String, String> directions = new HashMap<>();
         while (matcher.find()) {
             actualOrder.add(matcher.group(1));
+            directions.put(matcher.group(1), matcher.group(2));
         }
-        int openPacket = network.indexOf("OpenResearchNotePacket.class");
-        int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"10\""));
-        assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
+        assertTrue(network.contains("PROTOCOL_VERSION = \"14\""));
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable and new packets must stay last");
-
-        int stock = network.indexOf("BigStockPacket.class");
-        int confirm = network.indexOf("ConfirmBigAmountPacket.class");
-        assertTrue(stock > openPacket && confirm > stock,
-                "Exact-quantity packets must append after the existing GTL discriminators");
-        int link = network.indexOf("FrequencyCardLinkShortcutPacket.class");
-        assertTrue(link > confirm,
-                "Frequency-card shortcuts must append after the GTL exact-quantity packets");
-        int jeiRequest = network.indexOf("WirelessJeiSupplyPacket.class");
-        int jeiResult = network.indexOf("WirelessJeiSupplyResultPacket.class");
-        assertTrue(jeiRequest > link && jeiResult > jeiRequest,
-                "JEI supply packets must append after all existing GTL discriminators");
-        assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_SERVER)", jeiRequest) > jeiRequest);
-        assertTrue(network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", jeiResult) > jeiResult);
+        assertEquals("PLAY_TO_CLIENT", directions.get("OpenResearchNotePacket"));
+        assertEquals("PLAY_TO_CLIENT", directions.get("BigStockPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("ConfirmBigAmountPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("FrequencyCardLinkShortcutPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("WirelessJeiSupplyPacket"));
+        assertEquals("PLAY_TO_CLIENT", directions.get("WirelessJeiSupplyResultPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("SelectOmniversalPatternPacket"));
     }
 
     private static String source(String path) throws Exception {

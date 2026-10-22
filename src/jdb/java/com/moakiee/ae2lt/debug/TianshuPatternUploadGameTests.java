@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.ids.AEComponents;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.PartHelper;
 import appeng.api.stacks.AEItemKey;
@@ -15,9 +14,8 @@ import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 import appeng.core.definitions.AEParts;
 import appeng.menu.SlotSemantics;
-import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessPatternEncodingTermMenuHost;
+import com.moakiee.ae2lt.integration.ae2wtlib.TianshuWTMenuHost;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -28,18 +26,18 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.minecraftforge.common.util.FakePlayerFactory;
 
 /** Real terminal encoding and upload against a powered ME network and full provider. */
-@net.neoforged.neoforge.gametest.GameTestHolder("ae2lt_upload_retention")
-@net.neoforged.neoforge.gametest.PrefixGameTestTemplate(false)
+@net.minecraftforge.gametest.GameTestHolder("ae2lt_upload_retention")
+@net.minecraftforge.gametest.PrefixGameTestTemplate(false)
 public final class TianshuPatternUploadGameTests {
-    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt_upload_retention", template = "workstation_test", timeoutTicks = 150)
     public static void wiredFullTargetRetainsEncodedPattern(GameTestHelper helper) {
         fullTarget(helper, false);
     }
 
-    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt_upload_retention", template = "workstation_test", timeoutTicks = 150)
     public static void wirelessFullTargetRetainsEncodedPattern(GameTestHelper helper) {
         fullTarget(helper, true);
     }
@@ -74,17 +72,17 @@ public final class TianshuPatternUploadGameTests {
 
             var item = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
             var stack = new ItemStack(item);
-            stack.set(AEComponents.WIRELESS_LINK_TARGET, GlobalPos.of(level.dimension(), cable.north()));
-            stack.set(AEComponents.STORED_ENERGY, 1000000.0);
+            stack.getOrCreateTag().put("accessPoint", GlobalPos.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE,
+                    GlobalPos.of(level.dimension(), cable.north())).result().orElseThrow());
+            stack.getOrCreateTag().putDouble("internalCurrentPower", 1000000.0);
             player.getInventory().setItem(0, stack);
-            var locator = MenuLocators.forInventorySlot(0);
-            var wirelessHost = wireless ? new TianshuWirelessPatternEncodingTermMenuHost(
-                    item, player, locator, (p, m) -> {}) : null;
+            var wirelessHost = wireless ? new TianshuWTMenuHost(
+                    player, 0, stack, (p, m) -> {}) : null;
             TianshuPatternEncodingTermMenu menu = wireless
                     ? new TianshuWirelessPatternEncodingTermMenu(17, player.getInventory(), wirelessHost)
                     : new TianshuPatternEncodingTermMenu(17, player.getInventory(), terminal);
             player.containerMenu = menu;
-            menu.getSlots(SlotSemantics.CRAFTING_GRID).getFirst().set(new ItemStack(Items.OAK_LOG));
+            menu.getSlots(SlotSemantics.CRAFTING_GRID).get(0).set(new ItemStack(Items.OAK_LOG));
             menu.broadcastChanges();
             menu.encode();
             var encodedInventory = (wireless ? wirelessHost.getLogic() : terminal.getLogic()).getEncodedPatternInv();
@@ -104,8 +102,8 @@ public final class TianshuPatternUploadGameTests {
 
             menu.removed(player);
             player.containerMenu = player.inventoryMenu;
-            var reopenedHost = wireless ? new TianshuWirelessPatternEncodingTermMenuHost(
-                    item, player, locator, (p, m) -> {}) : null;
+            var reopenedHost = wireless ? new TianshuWTMenuHost(
+                    player, 0, player.getInventory().getItem(0), (p, m) -> {}) : null;
             TianshuPatternEncodingTermMenu reopened = wireless
                     ? new TianshuWirelessPatternEncodingTermMenu(18, player.getInventory(), reopenedHost)
                     : new TianshuPatternEncodingTermMenu(18, player.getInventory(), terminal);

@@ -7,11 +7,9 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -55,7 +53,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -153,8 +150,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     private final ImportScanBuffer scanBuffer = new ImportScanBuffer();
     /** Persistent ownership buffer for imported stacks and export overflow. */
-    private final Map<AEKey, Long> importBuffer = new LinkedHashMap<>();
-    private static final String TAG_PASSIVE_INPUT = "ae2ltPassiveInput";
+    private final Object2LongLinkedOpenHashMap<AEKey> importBuffer = new Object2LongLinkedOpenHashMap<>();
     private final BufferedInterfaceInput passiveInput = new BufferedInterfaceInput();
     private final ImportBufferFlushState importBufferFlushState = new ImportBufferFlushState();
     private final PowerCostUtil.EnergyAccess energyAccess = new PowerCostUtil.EnergyAccess();
@@ -475,7 +471,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         final Map<AEKeyType, CooldownTracker> importCDs = new IdentityHashMap<>();
         final Map<AEKeyType, CooldownTracker> exportCDs = new IdentityHashMap<>();
         final Map<AEKey, ExportTransferState> exportTransfers = new HashMap<>();
-        final Map<AEKeyType, ExportPlan> exportPlans = new IdentityHashMap<>();
+        final Map<AEKeyType, InterfaceExportPlan> exportPlans = new IdentityHashMap<>();
         final ImportSlotKeyCache importSlotKeys = new ImportSlotKeyCache();
 
         @Nullable WeakReference<BlockEntity> storageBERef;
@@ -499,7 +495,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             exportStockTick = Long.MIN_VALUE;
         }
 
-        ExportPlan exportPlan(AEKeyType type, List<ExportConfigEntry> entries) {
+        InterfaceExportPlan exportPlan(AEKeyType type, List<ExportConfigEntry> entries) {
             var existing = exportPlans.get(type);
             if (existing != null && existing.entries() == entries) return existing;
             // Evict once before building the whole indexed plan. Eviction in
@@ -517,7 +513,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             for (int i = 0; i < entries.size(); i++) {
                 transfers[i] = exportTransfers.computeIfAbsent(entries.get(i).key(), ignored -> new ExportTransferState());
             }
-            var plan = new ExportPlan(entries, transfers);
+            var plan = new InterfaceExportPlan(entries, transfers);
             exportPlans.put(type, plan);
             return plan;
         }
@@ -588,240 +584,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
     private record IoEntryKey(WirelessConnection conn, AEKeyType keyType, IoDirection direction) {}
     record ExportConfigEntry(AEKey key, long maxAmount) {}
-
-    static final class ExportPlan {
-        private final List<ExportConfigEntry> entries;
-        private final ExportTransferState[] transfers;
-        private final boolean[] yieldRefill;
-        private final int[] order;
-        private final int[] representative;
-        private final int[] nextDuplicate;
-        private final int[] keyOrder;
-        private final long[] lastServed;
-        private final int[] inputSlots;
-        private final int[] claimedSlots;
-        private final ExportDrainObservation[] drains;
-        private IItemHandler observedHandler;
-        private long serviceSequence;
-        private boolean orderDirty;
-
-        ExportPlan(List<ExportConfigEntry> entries, ExportTransferState[] transfers) {
-            this.entries = entries;
-            this.transfers = transfers;
-            boolean unlimited = false;
-            boolean distinct = false;
-            for (var entry : entries) {
-                unlimited |= entry.key() instanceof AEItemKey && entry.maxAmount() == Long.MAX_VALUE;
-                distinct |= !entry.key().equals(entries.get(0).key());
-            }
-            yieldRefill = unlimited && distinct ? new boolean[entries.size()] : null;
-            if (yieldRefill == null) {
-                order = representative = nextDuplicate = keyOrder = inputSlots = claimedSlots = null;
-                lastServed = null;
-                drains = null;
-                return;
-            }
-            int size = entries.size();
-            order = new int[size];
-            representative = new int[size];
-            nextDuplicate = new int[size];
-            java.util.Arrays.fill(nextDuplicate, -1);
-            lastServed = new long[size];
-            inputSlots = new int[size];
-            claimedSlots = new int[size];
-            drains = new ExportDrainObservation[size];
-            var groups = new LinkedHashMap<AEKey, List<Integer>>();
-            for (int i = 0; i < size; i++) groups.computeIfAbsent(entries.get(i).key(), ignored -> new ArrayList<>()).add(i);
-            keyOrder = new int[groups.size()];
-            int position = 0;
-            int group = 0;
-            for (var indices : groups.values()) {
-                keyOrder[group++] = indices.get(0);
-                int previous = -1;
-                for (int index : indices) {
-                    order[position++] = index;
-                    representative[index] = indices.get(0);
-                    if (previous >= 0) nextDuplicate[previous] = index;
-                    previous = index;
-                }
-            }
-        }
-
-        List<ExportConfigEntry> entries() { return entries; }
-        ExportTransferState[] transfers() { return transfers; }
-        int startIndex() { return 0; }
-        boolean shouldYield(int index) { return yieldRefill != null && yieldRefill[index]; }
-
-        int indexAt(int start, int offset) {
-            int position = start + offset;
-            if (position >= entries.size()) position -= entries.size();
-            return order == null ? position : order[position];
-        }
-
-        void transferred(int index) {
-            if (order == null) return;
-            lastServed[representative[index]] = ++serviceSequence;
-            orderDirty = true;
-        }
-
-        private void prepareOrder() {
-            if (!orderDirty) return;
-            // Sort only after service, grouping all duplicate slots as one turn.
-            // An independent ingredient's successful refill cannot reset another
-            // slot's oldest waiting key, as a single rotating cursor would.
-            for (int i = 1; i < keyOrder.length; i++) {
-                int key = keyOrder[i];
-                int position = i;
-                while (position > 0 && lastServed[keyOrder[position - 1]] > lastServed[key]) {
-                    keyOrder[position] = keyOrder[position - 1];
-                    position--;
-                }
-                keyOrder[position] = key;
-            }
-            int position = 0;
-            for (int key : keyOrder) {
-                for (int index = key; index >= 0; index = nextDuplicate[index]) order[position++] = index;
-            }
-            orderDirty = false;
-        }
-
-        void transferred(int index, @Nullable IItemHandler handler, long inserted, long now) {
-            transferred(index);
-            if (drains == null || handler == null) return;
-            int canonical = representative[index];
-            int slot = inputSlot(handler, canonical);
-            if (slot < 0 || !(entries.get(canonical).key() instanceof AEItemKey key)) return;
-            var stack = handler.getStackInSlot(slot);
-            if (!key.matches(stack)) return;
-            var observation = drain(canonical, slot);
-            observation.inserted(stack.getCount(), inserted, now);
-        }
-
-        void prepare(@Nullable IItemHandler handler, MEStorage me, IActionSource source, long now) {
-            if (yieldRefill == null) return;
-            prepareOrder();
-            java.util.Arrays.fill(yieldRefill, false);
-            java.util.Arrays.fill(inputSlots, -2);
-            if (observedHandler != handler) {
-                java.util.Arrays.fill(drains, null);
-                observedHandler = handler;
-            }
-            if (handler == null) return;
-            int claims = 0;
-            for (int offset = 0; offset < entries.size(); offset++) {
-                int index = indexAt(0, offset);
-                if (representative[index] != index) continue;
-                var transfer = transfers[index];
-                if (!transfer.waitingForSpace || !(entries.get(index).key() instanceof AEItemKey waiting)) continue;
-                int slot = inputSlot(handler, index);
-                if (slot < 0) continue;
-                var resident = handler.getStackInSlot(slot);
-                if (waiting.matches(resident)) continue;
-                if (resident.isEmpty()) {
-                    transfer.untilTick = Math.min(transfer.untilTick, now);
-                    continue;
-                }
-                boolean claimed = false;
-                for (int claim = 0; claim < claims; claim++) claimed |= claimedSlots[claim] == slot;
-                if (claimed) {
-                    transfer.untilTick = now + 1;
-                    continue;
-                }
-                int occupying = -1;
-                for (int candidate = 0; candidate < entries.size(); candidate++) {
-                    if (representative[candidate] == candidate && entries.get(candidate).key() instanceof AEItemKey key
-                            && key.matches(resident) && inputSlot(handler, candidate) == slot) {
-                        occupying = candidate;
-                        break;
-                    }
-                }
-                if (occupying < 0) continue;
-                if (me.extract(waiting, 1, Actionable.SIMULATE, source) <= 0) {
-                    transfer.waitingForSpace = false;
-                    continue;
-                }
-                claimedSlots[claims++] = slot;
-                // One live challenger is enough to drain this slot. Other rejected
-                // keys share its next-tick observation without repeating ME probes.
-                transfer.untilTick = now + 1;
-                boolean yield = drain(occupying, slot).shouldYield(resident.getCount(), now);
-                for (int duplicate = occupying; duplicate >= 0; duplicate = nextDuplicate[duplicate]) {
-                    yieldRefill[duplicate] = yield;
-                }
-                transfers[occupying].untilTick = Math.min(transfers[occupying].untilTick, now);
-            }
-        }
-
-        private ExportDrainObservation drain(int index, int slot) {
-            var result = drains[index];
-            if (result == null || result.slot != slot) drains[index] = result = new ExportDrainObservation(slot);
-            return result;
-        }
-
-        private int inputSlot(IItemHandler handler, int index) {
-            int canonical = representative[index];
-            if (inputSlots[canonical] == -2) {
-                inputSlots[canonical] = entries.get(canonical).key() instanceof AEItemKey key
-                        ? singleInputSlot(handler, key) : -1;
-            }
-            return inputSlots[canonical];
-        }
-
-        private static int singleInputSlot(IItemHandler handler, AEItemKey key) {
-            int result = -1;
-            for (int slot = 0; slot < handler.getSlots(); slot++) {
-                if (handler.getSlotLimit(slot) > 0 && handler.isItemValid(slot, key.getReadOnlyStack())) {
-                    if (result >= 0) return -1;
-                    result = slot;
-                }
-            }
-            return result;
-        }
-    }
-
-    static final class ExportDrainObservation {
-        final int slot;
-        private int count;
-        private int quantum;
-        private long lastProgress = Long.MIN_VALUE;
-        private long period = 1;
-
-        ExportDrainObservation(int slot) { this.slot = slot; }
-
-        void inserted(int current, long inserted, long now) {
-            if (lastProgress == Long.MIN_VALUE || current == inserted) lastProgress = now;
-            count = current;
-        }
-
-        boolean shouldYield(int current, long now) {
-            if (lastProgress == Long.MIN_VALUE || now < lastProgress) {
-                lastProgress = now;
-                quantum = 0;
-            } else if (current < count) {
-                int consumed = count - current;
-                quantum = quantum == 0 ? consumed : gcd(quantum, consumed);
-                period = Math.max(1, now - lastProgress);
-                lastProgress = now;
-            } else if (now - lastProgress > Math.max(2, period * 2)) {
-                // A recipe/period change or coupled ingredient may need more input.
-                // An unchanged count is not proof that the machine can drain this tail.
-                quantum = 0;
-            }
-            count = current;
-            // Preserve full-size transfers. A short tail may not satisfy the next
-            // recipe batch, so let normal export refill it rather than forcing a turn.
-            return quantum > 0 && current >= quantum;
-        }
-
-        private static int gcd(int left, int right) {
-            while (right != 0) {
-                int remainder = left % right;
-                left = right;
-                right = remainder;
-            }
-            return left;
-        }
-    }
 
     record ImportBufferFlushResult(
             long lastFlushTick,
@@ -1004,7 +766,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     static final class IoScheduledEntry {
-        final @Nullable OverloadedInterfaceBlockEntity owner;
         final WirelessConnection conn;
         final ConnectionState state;
         final AEKeyType keyType;
@@ -1019,12 +780,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             this.keyType = keyType;
             this.direction = direction;
             this.generation = generation;
-        }
-
-        IoScheduledEntry(WirelessConnection conn, ConnectionState state,
-                         AEKeyType keyType, IoDirection direction,
-                         int generation) {
-            this(null, conn, state, keyType, direction, generation);
         }
     }
 
@@ -1062,9 +817,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     { for (int i = 0; i < IO_WHEEL_SLOTS; i++) ioWheel[i] = new ArrayList<>(); }
     private final Map<IoEntryKey, IoScheduledEntry> ioEntries = new HashMap<>();
     private final List<IoScheduledEntry> dueIoEntries = new ArrayList<>();
-    private final Set<IoScheduledEntry> changedTargets = new HashSet<>();
-    private static final Map<BlockEntity, List<WeakReference<IoScheduledEntry>>> TARGET_CHANGE_LISTENERS =
-            new WeakHashMap<>();
     private final ImportBackpressureWaiters importBackpressureWaiters = new ImportBackpressureWaiters();
     private long lastIOWheelTick = -1;
     private long lastIOEntryRefreshTick = Long.MIN_VALUE;
@@ -1500,14 +1252,16 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                 connections, invalidConnectionScanCursor, maxChecks,
                 serverLevel, getBlockPos());
         invalidConnectionScanCursor = result.nextCursor();
-        if (result.removed() > 0) {
-            invalidateConnectionCache();
-            refreshEjectRegistrations();
-            recomputeIdlePower();
-            saveChanges();
-            markForUpdate();
-        }
+        if (result.removed() > 0) onConnectionsPruned();
         return result.removed();
+    }
+
+    private void onConnectionsPruned() {
+        invalidateConnectionCache();
+        refreshEjectRegistrations();
+        recomputeIdlePower();
+        saveChanges();
+        markForUpdate();
     }
 
     private void tickWirelessConnectionCleanup(ServerLevel level) {
@@ -1547,7 +1301,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             slot.clear();
         }
         dueIoEntries.clear();
-        changedTargets.clear();
         ioEntries.clear();
         importBackpressureWaiters.clear();
         lastIOWheelTick = -1;
@@ -1589,13 +1342,15 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!connectionsDirty
                 && gameTick - validConnectionsCacheTick < VALIDATE_INTERVAL)
             return validConnectionsCache;
-        clearInvalidConnections();
         var valid = new ArrayList<WirelessConnection>();
-        for (var c : connections) {
-            if (WirelessConnectionValidator.validate(sl, getBlockPos(), c)
-                    == WirelessConnectionValidator.Status.VALID) {
-                valid.add(c);
-            }
+        boolean removed = connections.removeIf(connection -> {
+            var status = WirelessConnectionValidator.validate(sl, getBlockPos(), connection);
+            if (status == WirelessConnectionValidator.Status.VALID) valid.add(connection);
+            return status == WirelessConnectionValidator.Status.REMOVE;
+        });
+        if (removed) {
+            invalidConnectionScanCursor = 0;
+            onConnectionsPruned();
         }
         var newCache = List.copyOf(valid);
         if (!newCache.equals(validConnectionsCache)) {
@@ -1684,23 +1439,33 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!(level instanceof ServerLevel sl) || !getMainNode().isActive()) {
             return;
         }
+        var proxy = getInterfaceLogic() instanceof OverloadedInterfaceLogic logic
+                ? logic.getProxiedStorage() : null;
+        if (proxy != null && proxy.isNetworkOperationInProgress()) return;
         flushPassiveInput(sl.getGameTime());
-        if (interfaceMode == InterfaceMode.WIRELESS) {
-            if (WirelessIoPerformanceProbe.shouldMeasureIoBody()) {
-                long started = System.nanoTime();
-                try {
-                    tickWirelessIO(sl);
-                } finally {
-                    WirelessIoPerformanceProbe.recordWirelessInterfaceIo(
-                            System.nanoTime() - started,
-                            connections.size(),
-                            ioSpeedMode == IOSpeedMode.FAST);
-                }
-            } else {
-                tickWirelessIO(sl);
-            }
+        if (proxy != null) {
+            proxy.runWithNetworkGuard(() -> tickAutomaticIo(sl));
         } else {
             tickAutomaticIo(sl);
+        }
+    }
+
+    private void tickAutomaticIo(ServerLevel sl) {
+        boolean measure = interfaceMode == InterfaceMode.WIRELESS && WirelessIoPerformanceProbe.shouldMeasureIoBody();
+        long started = measure ? System.nanoTime() : 0;
+        try (var notifications = com.moakiee.ae2lt.logic.BarrelInventoryNotificationBatch.open()) {
+            if (interfaceMode == InterfaceMode.WIRELESS) {
+                tickWirelessIO(sl);
+            } else {
+                tickNormalIO(sl);
+            }
+        } finally {
+            if (measure) {
+                WirelessIoPerformanceProbe.recordWirelessInterfaceIo(
+                        System.nanoTime() - started,
+                        connections.size(),
+                        ioSpeedMode == IOSpeedMode.FAST);
+            }
         }
     }
 
@@ -1806,7 +1571,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
 
         refreshIOWheel(sl, valid, now, activeImport, activeExport);
         pollIOWheel(now);
-        wakeChangedTargets(now);
         importBackpressureWaiters.resumeReady(keyTypeLockUntil, now, dueIoEntries);
 
         try (var exportStock = new com.moakiee.ae2lt.logic.WirelessExportStockBatch(meStorage, valid.size(), exportOverflowSink)) {
@@ -1901,52 +1665,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         var entry = new IoScheduledEntry(conn, state, keyType, direction, ioScheduleGeneration);
         entry.state.cdFor(keyType, direction).reset(ioSpeedMode);
         ioEntries.put(key, entry);
-        registerTargetChangeListener(entry);
         scheduleEntryAt(entry, now + 1);
-    }
-
-    private void registerTargetChangeListener(IoScheduledEntry entry) {
-        if (entry.direction != IoDirection.IMPORT || entry.state.storageBERef == null) return;
-        var target = entry.state.storageBERef.get();
-        if (target == null || entry.observedTarget != null && entry.observedTarget.get() == target) return;
-        entry.observedTarget = new WeakReference<>(target);
-        TARGET_CHANGE_LISTENERS.computeIfAbsent(target, ignored -> new ArrayList<>())
-                .add(new WeakReference<>(entry));
-    }
-
-    public static void onTargetInventoryChanged(BlockEntity target) {
-        if (!(target.getLevel() instanceof ServerLevel serverLevel)
-                || !serverLevel.getServer().isSameThread() || TARGET_CHANGE_LISTENERS.isEmpty()) return;
-        var listeners = TARGET_CHANGE_LISTENERS.get(target);
-        if (listeners == null) return;
-        listeners.removeIf(reference -> {
-            var entry = reference.get();
-            if (entry == null || entry.owner == null || entry.owner.isRemoved()
-                    || entry.generation != entry.owner.ioScheduleGeneration
-                    || entry.state.storageBERef == null || entry.state.storageBERef.get() != target) return true;
-            if (entry.owner.ioSpeedMode != IOSpeedMode.FAST
-                    || !importChangeNeedsWake(entry.scheduledFor, serverLevel.getGameTime())
-                    || entry.owner.changedTargets.contains(entry)) return false;
-            if (!entry.owner.isEntryStillValid(entry)) return true;
-            entry.owner.changedTargets.add(entry);
-            return false;
-        });
-        if (listeners.isEmpty()) TARGET_CHANGE_LISTENERS.remove(target);
-    }
-
-    static boolean importChangeNeedsWake(long scheduledFor, long now) {
-        return now < Long.MAX_VALUE && scheduledFor > now + 1;
-    }
-
-    private void wakeChangedTargets(long now) {
-        if (changedTargets.isEmpty()) return;
-        for (var entry : changedTargets) {
-            if (!isEntryStillValid(entry) || entry.scheduledFor <= now) continue;
-            ioWheel[(int) (entry.scheduledFor % IO_WHEEL_SLOTS)].remove(entry);
-            entry.scheduledFor = now;
-            dueIoEntries.add(entry);
-        }
-        changedTargets.clear();
     }
 
     private static boolean isWirelessIoKeyType(AEKeyType keyType) {
@@ -2121,7 +1840,10 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         int slots = handler.getSlots();
         cache.prepareSlots(slots);
         boolean batching = ioSpeedMode == IOSpeedMode.NORMAL;
-        var energyAccess = new PowerCostUtil.EnergyAccess();
+        var nativeBarrel = !batching && handler.getClass() == net.minecraftforge.items.wrapper.InvWrapper.class
+                && ((net.minecraftforge.items.wrapper.InvWrapper) handler).getInv() instanceof BarrelBlockEntity barrel
+                && barrel.getClass() == BarrelBlockEntity.class ? barrel : null;
+        energyAccess.beginBatch(getMainNode().getGrid());
         if (batching) cache.prepareBudgets(slots);
         int nextDrain = NORMAL_CD_MAX;
         try {
@@ -2150,17 +1872,14 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             } else {
                 cd.onFail(now, ioSpeedMode);
             }
-            int count = stack.getCount();
-            int capacity = batching ? Math.min(handler.getSlotLimit(slot), stack.getMaxStackSize()) : 0;
-            long extracted = importExtractSlotToBuffer(handler, slot, key, Math.min(count, budget), energyAccess);
-            if (batching) nextDrain = Math.min(nextDrain, cache.drained(slot, now, count, extracted, capacity));
-            moved += extracted;
-            budget -= extracted;
+            return moved;
+        } finally {
+            if (energyAccess.endBatch()) saveImportBufferChanges(now);
         }
     }
 
     private long importExtractSlotToBuffer(IItemHandler handler, int slot, AEItemKey key, long amount,
-                                          PowerCostUtil.EnergyAccess energyAccess) {
+                                          PowerCostUtil.EnergyAccess energyAccess, @Nullable BarrelBlockEntity nativeBarrel) {
         var grid = getMainNode().getGrid();
         long affordable = energyAccess.maxAffordable(grid, key, amount);
         if (affordable <= 0) return 0;
@@ -2277,9 +1996,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                 }
             }
             plan.prepare(itemHandler, me, src, now);
-            int start = plan.startIndex();
             for (int offset = 0; offset < entries.size(); offset++) {
-                int index = plan.indexAt(start, offset);
+                int index = plan.indexAt(offset);
                 var entry = entries.get(index);
                 var transfer = plan.transfers()[index];
                 if (plan.shouldYield(index)) {

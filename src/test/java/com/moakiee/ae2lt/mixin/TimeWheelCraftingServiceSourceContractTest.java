@@ -12,16 +12,13 @@ import org.junit.jupiter.api.Test;
 class TimeWheelCraftingServiceSourceContractTest {
     private static final Path MIXIN = Path.of(
             "src/main/java/com/moakiee/ae2lt/mixin/thunderbolt/TimeWheelCraftingServiceMixin.java");
-    private static final Path POOL = Path.of(
-            "src/main/java/com/moakiee/ae2lt/crafting/timewheel/TimeWheelCraftingCpuPool.java");
     private static final Path MIXINS = Path.of("src/main/resources/ae2lt.mixins.json");
     private static final Pattern PRIORITY = Pattern.compile("priority\\s*=\\s*(\\d+)");
 
     @Test
-    void timeWheelHeadTickOutranksGtlCancelAndSharesASameTickGuardWithThunderbolt()
+    void timeWheelHeadTickOutranksGtlCancelAndPreservesThunderboltWaitingNotifications()
             throws Exception {
         String mixin = Files.readString(MIXIN);
-        String pool = Files.readString(POOL);
         String mixins = Files.readString(MIXINS);
 
         var priorityMatch = PRIORITY.matcher(mixin);
@@ -39,8 +36,5 @@ class TimeWheelCraftingServiceSourceContractTest {
         assertTrue(mixin.contains("TimeWheelCraftingCpuPoolProvider"));
         assertTrue(mixin.contains("IdentityHashMap<TimeWheelCraftingCpuPool, Boolean>"));
         assertTrue(mixins.contains("thunderbolt.TimeWheelCraftingServiceMixin"));
-
-        assertTrue(pool.contains("boolean beginPhysicalTick(long currentTick)"));
-        assertTrue(pool.contains("if (!beginPhysicalTick(TickHandler.instance().getCurrentTick()))"));
     }
 }

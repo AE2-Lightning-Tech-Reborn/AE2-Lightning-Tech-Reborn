@@ -103,7 +103,6 @@ public class LightningAssemblyChamberBlockEntity extends AENetworkBlockEntity
     private long consumedEnergy;
     private int processingTicksSpent;
     private boolean working;
-    private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean powered;
     private final ManualInputTransfer inputTransfer = new ManualInputTransfer();
     private boolean autoExport;

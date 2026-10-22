@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryOutputButton;
+import com.moakiee.ae2lt.client.machine.OutputSidesClearButton;
+
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.core.Direction;

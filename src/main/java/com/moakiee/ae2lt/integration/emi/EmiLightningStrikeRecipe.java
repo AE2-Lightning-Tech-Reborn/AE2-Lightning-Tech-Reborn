@@ -24,7 +24,7 @@ final class EmiLightningStrikeRecipe extends EmiBackedRecipe<LightningStrikeReci
     private final Map<Block, Boolean> blockConsumes = new HashMap<>();
 
     EmiLightningStrikeRecipe(ResourceLocation id, LightningStrikeRecipe recipe) {
-        super(AE2LTEmiCategories.LIGHTNING_STRIKE, id, recipe, WIDTH, 110);
+        super(AE2LTEmiCategories.LIGHTNING_STRIKE, id, recipe, WIDTH, 118);
         inputs.add(EmiStack.of(recipe.centerInput()));
         outputs.add(EmiStack.of(recipe.centerOutput()));
         for (StructureRequirement requirement : recipe.requirements()) {
@@ -60,7 +60,7 @@ final class EmiLightningStrikeRecipe extends EmiBackedRecipe<LightningStrikeReci
                 EmiRecipeWidgets.TEXT_COLOR,
                 false);
 
-        var preview = new EmiLightningStrikePreviewWidget.Builder(4, 14, 96, 92);
+        var preview = new EmiLightningStrikePreviewWidget.Builder(2, 14, 100, 102);
         for (StructureRequirement requirement : recipe.requirements()) {
             preview.addBlock(requirement.block(), requirement.offset());
         }

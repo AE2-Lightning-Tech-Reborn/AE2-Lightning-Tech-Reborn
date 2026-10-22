@@ -41,9 +41,6 @@ class TianshuPatternUploadRoutingTest {
         assertCraftingGroup("expatternprovider", "ex_molecular_assembler");
         assertCraftingGroup("expatternprovider", "assembler_matrix_pattern");
         assertCraftingGroup("extendedae_plus", "assembler_matrix_pattern_plus");
-        assertCraftingGroup("neoecoae", "crafting_system_l4");
-        assertCraftingGroup("neoecoae", "crafting_system_l6");
-        assertCraftingGroup("neoecoae", "crafting_system_l9");
         assertCraftingGroup("ae2cs", "meteorite_pattern_provider");
         assertCraftingGroup("ae2lt", "matter_warping_matrix_controller");
 
@@ -51,8 +48,6 @@ class TianshuPatternUploadRoutingTest {
 
         assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(
                 new ResourceLocation("ae2", "pattern_provider")));
-        assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(
-                new ResourceLocation("neoecoae", "crafting_pattern_bus")));
         assertFalse(TianshuPatternUploadRouting.isCraftingUploadGroupId(null));
     }
 

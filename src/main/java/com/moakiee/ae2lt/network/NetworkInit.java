@@ -37,7 +37,10 @@ public final class NetworkInit {
     // Version 5 adds workstation/JEI packets, seed-return fields, scoped Easter eggs and railgun modes.
     // Version 6 adds the frequency-card link shortcut packet.
     // Version 11 adds wireless JEI crafting requests and craftable ingredient offers.
-    private static final String PROTOCOL_VERSION = "11";
+    // Version 12 restores append-only packet IDs after the GTL port.
+    // Version 13 adds the omniversal pattern selection packet.
+    // Version 14 requires executable exact reports in native AE2 confirmation packets.
+    private static final String PROTOCOL_VERSION = "14";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -55,12 +58,6 @@ public final class NetworkInit {
             return;
         }
         registered = true;
-        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.class,
-                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::read,
-                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.class,
-                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::read,
-                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
 
         CHANNEL.registerMessage(
                 nextPacketId++,
@@ -84,9 +81,6 @@ public final class NetworkInit {
                 ToggleFrequencyCardAutoConnectPacket::decode,
                 ToggleFrequencyCardAutoConnectPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
-                (pkt, buf) -> pkt.write(buf), FrequencyCardLinkShortcutPacket::decode,
-                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         // controller UI: C→S
         CHANNEL.registerMessage(
                 nextPacketId++,
@@ -401,6 +395,19 @@ public final class NetworkInit {
         CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket.class,
                 (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::read,
                 com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        // New packet discriminators append after the existing GTL registrations.
+        CHANNEL.registerMessage(nextPacketId++, FrequencyCardLinkShortcutPacket.class,
+                (pkt, buf) -> pkt.write(buf), FrequencyCardLinkShortcutPacket::decode,
+                FrequencyCardLinkShortcutPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::read,
+                com.moakiee.ae2lt.network.jei.WirelessJeiSupplyResultPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket.class,
+                (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::read,
+                com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static ResourceLocation id(String path) {

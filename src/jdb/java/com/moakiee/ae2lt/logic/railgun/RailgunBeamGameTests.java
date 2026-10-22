@@ -34,6 +34,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -142,6 +143,9 @@ public final class RailgunBeamGameTests {
         player.setPos(base.getX() + .5, base.getY() + 1, base.getZ() + .5);
         player.setYRot(0);
         player.setXRot(8);
+        var targetPos = base.offset(0, 1, 6);
+        // Reused GameTest worlds can retain a previous target on the same beam path.
+        level.getEntitiesOfClass(Cow.class, new AABB(targetPos).inflate(1)).forEach(Cow::discard);
         var cow = new Cow(EntityType.COW, level);
         cow.setNoAi(true);
         cow.setNoGravity(true);
@@ -164,7 +168,10 @@ public final class RailgunBeamGameTests {
             } catch (Throwable failure) {
                 failure.printStackTrace();
                 helper.fail(failure.toString());
-            } finally { service.removeGlobalStorageProvider(provider); }
+            } finally {
+                service.removeGlobalStorageProvider(provider);
+                cow.discard();
+            }
         });
     }
 

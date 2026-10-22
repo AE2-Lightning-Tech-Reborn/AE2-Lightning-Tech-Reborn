@@ -1,6 +1,9 @@
 package com.moakiee.ae2lt.client;
 
-import com.moakiee.ae2lt.client.FrequencyBindingClient;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryProgressWidget;
+import com.moakiee.ae2lt.client.machine.OverloadProcessingFactoryEnergyBar;
+
+import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 
 
 import java.util.List;

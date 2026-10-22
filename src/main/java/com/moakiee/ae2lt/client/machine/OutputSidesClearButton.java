@@ -9,8 +9,8 @@ import net.minecraft.network.chat.Component;
 
 import appeng.client.gui.widgets.ITooltip;
 
-final class OutputSidesClearButton extends Button implements ITooltip {
-    OutputSidesClearButton(Component tooltip, OnPress onPress) {
+public final class OutputSidesClearButton extends Button implements ITooltip {
+    public OutputSidesClearButton(Component tooltip, OnPress onPress) {
         super(0, 0, 8, 8, tooltip, onPress, Button.DEFAULT_NARRATION);
     }
 

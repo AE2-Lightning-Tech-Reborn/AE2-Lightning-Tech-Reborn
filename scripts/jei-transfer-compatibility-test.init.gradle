@@ -2,10 +2,14 @@
 allprojects {
     afterEvaluate {
         sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java'])
+        def fixtureClasses = layout.buildDirectory.dir('classes/java/jei-transfer-client')
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
-                    'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
-                    || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
+                    'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios', 'io.github.llamalad7']
+                    || (dep.group == 'maven.modrinth'
+                        && dep.name in ['applied-energistics-2-wireless-terminals', 'ldlib']))
         }
         def probeDir = project.layout.buildDirectory.dir('jei-transfer-client-' + project.jei_version).get().asFile
         minecraft.runs.client {

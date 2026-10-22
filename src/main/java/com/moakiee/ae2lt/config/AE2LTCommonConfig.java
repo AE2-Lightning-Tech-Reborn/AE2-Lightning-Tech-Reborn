@@ -53,7 +53,6 @@ public final class AE2LTCommonConfig {
                     .filter(Objects::nonNull)
                     .toList());
     private static final List<String> DEFAULT_BATCH_COPY_LIMITED_BLOCKS = List.of(
-            "neoecoae:crafting_pattern_bus",
             "sophisticated*:*");
 
     public static final ForgeConfigSpec SPEC;

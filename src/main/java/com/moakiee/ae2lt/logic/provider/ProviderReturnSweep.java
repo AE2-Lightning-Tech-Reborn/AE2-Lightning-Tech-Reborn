@@ -20,18 +20,24 @@ final class ProviderReturnSweep {
     static final int MAX_INTERVAL = 128;
 
     private final DueTaskQueue<ProviderTarget> due = new DueTaskQueue<>();
+    private List<? extends ProviderTarget> sourceSnapshot;
     private List<ProviderTarget> targets = List.of();
     private Set<ProviderTarget> targetSet = Set.of();
     private final Set<ProviderTarget> remaining = new HashSet<>();
     private int interval = ACTIVE_INTERVAL;
     private boolean roundActive;
 
+    /** The caller must replace the list when its contents change. */
     void synchronize(
             List<? extends ProviderTarget> currentTargets,
             long gameTick) {
+        // Wireless callers publish immutable topology snapshots. Repeated tick and
+        // next-deadline queries must not copy/hash every unchanged endpoint.
+        if (currentTargets == sourceSnapshot) return;
         var distinctSet = new LinkedHashSet<ProviderTarget>();
         distinctSet.addAll(currentTargets);
         var distinct = List.copyOf(distinctSet);
+        sourceSnapshot = currentTargets;
         if (distinct.equals(targets)) {
             return;
         }
@@ -93,6 +99,7 @@ final class ProviderReturnSweep {
 
     void clear() {
         due.clear();
+        sourceSnapshot = null;
         targets = List.of();
         targetSet = Set.of();
         remaining.clear();

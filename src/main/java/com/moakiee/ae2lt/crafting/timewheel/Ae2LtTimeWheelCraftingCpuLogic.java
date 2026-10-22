@@ -68,6 +68,9 @@ import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import com.moakiee.ae2lt.crafting.runtime.api.CraftingTaskPriorities;
 import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.ae2lt.compat.OptionalBatchProviders;
+import com.moakiee.ae2lt.crafting.runtime.CraftingDispatch;
+import com.moakiee.ae2lt.crafting.runtime.CraftingExecutionState;
+import com.moakiee.ae2lt.crafting.runtime.CraftingTickBudget;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.thunderbolt.core.crafting.loop.CraftingTaskPersistenceDefinition;
@@ -127,12 +130,14 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     private static final String NBT_CREDIT_ITEMS = "items";
 
     private final TimeWheelCraftingCPU cpu;
-    private final ListCraftingInventory inventory = new ListCraftingInventory(this::postChange);
+    private final ListCraftingInventory inventory = new ListCraftingInventory(this::onInventoryChange);
+    private final CraftingMaterialReadiness materialReadiness = new CraftingMaterialReadiness(inventory);
     // Already accounted output must never become fresh job input or completion credit again.
     private final ListCraftingInventory directOutputRemainders = new ListCraftingInventory(this::postChange);
-    private boolean executingDispatches;
-    private boolean flushingDirectOutputs;
-    @Nullable private DeferredCraftingOutputs dispatchReturns;
+    private final CraftingExecutionState execution = new CraftingExecutionState();
+    private final CraftingTickBudget tickBudget = new CraftingTickBudget();
+    @Nullable private AEKey stagedDirectOutput;
+    @Nullable private CraftingDispatch dispatchTransaction;
     private final Set<Consumer<AEKey>> listeners = new HashSet<>();
     private final Map<IPatternDetails, IdentityHashMap<ICraftingProvider, Boolean>> batchedByTask = new HashMap<>();
     private final ArrayDeque<IPatternDetails>[] taskWheel = createWheel();
@@ -379,7 +384,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     public void tickCraftingLogic(IEnergyService energyService, CraftingService craftingService) {
-        if (executingDispatches || flushingDirectOutputs) return;
+        if (execution.busy()) return;
         standaloneDispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
         try {
             tickCraftingLogic(
@@ -397,7 +402,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                        CraftingService craftingService,
                                        int maxOps,
                                        long maxCopies) {
-        if (executingDispatches || flushingDirectOutputs) return TickUsage.EMPTY;
+        if (execution.busy()) return TickUsage.EMPTY;
         standaloneDispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
         try {
             return tickCraftingLogic(
@@ -416,7 +421,18 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                        int maxOps,
                                        long maxCopies,
                                        TickProviderDispatchSchedule dispatchSchedule) {
-        if (executingDispatches || flushingDirectOutputs) return TickUsage.EMPTY;
+        if (!execution.tryEnter()) return TickUsage.EMPTY;
+        try {
+            return tickCraftingLogicGuarded(energyService, craftingService, maxOps, maxCopies, dispatchSchedule);
+        } finally {
+            execution.leave();
+        }
+    }
+
+    private TickUsage tickCraftingLogicGuarded(IEnergyService energyService,
+                                              CraftingService craftingService,
+                                              int maxOps, long maxCopies,
+                                              TickProviderDispatchSchedule dispatchSchedule) {
         resolvePendingLoad();
         if (this.pendingJobTag != null) {
             return TickUsage.EMPTY;
@@ -506,9 +522,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     public int executeCrafting(int maxOps, CraftingService craftingService, IEnergyService energyService,
                                Level level) {
-        if (executingDispatches || flushingDirectOutputs) return 0;
-        standaloneDispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
+        if (!execution.tryEnter()) return 0;
         try {
+            standaloneDispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
             return executeCraftingBudgeted(
                     maxOps,
                     cpu.hasUnboundedBatch() ? Long.MAX_VALUE : cpu.getMaxCopiesPerTick(),
@@ -517,6 +533,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     level,
                     standaloneDispatchSchedule).successfulDispatches();
         } finally {
+            execution.leave();
             finishPhysicalSchedulingTick();
         }
     }
@@ -528,7 +545,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                               Level level,
                                               TickProviderDispatchSchedule dispatchSchedule) {
         var activeJob = this.job;
-        if (activeJob == null || maxOps <= 0 || requestedCopyLimit <= 0L || executingDispatches) {
+        if (activeJob == null || maxOps <= 0 || requestedCopyLimit <= 0L) {
             return TickUsage.EMPTY;
         }
 
@@ -537,11 +554,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         int usedOps = 0;
         long usedCopies = 0L;
         long cpuCopyLimit = cpu.hasUnboundedBatch() ? Long.MAX_VALUE : cpu.getMaxCopiesPerTick();
-        long copyLimit = Math.min(cpuCopyLimit, requestedCopyLimit);
+        tickBudget.begin(TickHandler.instance().getCurrentTick(), cpu.getSuccessfulDispatchesPerTick(),
+                cpuCopyLimit);
+        maxOps = Math.min(maxOps, tickBudget.remainingOperations());
+        long copyLimit = Math.min(tickBudget.remainingCopies(), requestedCopyLimit);
         int probes = 0;
         int probeBudget = (int) Math.min(Math.max(1024L, (long) maxOps * 2L), MAX_TASK_PROBES_PER_TICK);
 
-        executingDispatches = true;
         beginStatusChangeBatch();
         try {
             while (job == activeJob && !activeJob.link.isCanceled()
@@ -559,6 +578,18 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 }
 
                 probes++;
+                boolean recheckMaterials = tasksParkedByMissingKey.isParked(details);
+                unparkTask(details);
+                if (recheckMaterials && parkTaskForMissingInputs(activeJob, details)) {
+                    // Unknown inputs may change their candidate list. Refresh only the physical
+                    // shortage proof at their safety deadline, without provider lookup/extraction.
+                    scheduleParkedTask(activeJob, details);
+                    continue;
+                }
+                var transaction = new CraftingDispatch(
+                        (key, amount) -> receiveDeferredOutput(activeJob, key, amount),
+                        this::retainDirectOutput);
+                dispatchTransaction = transaction;
                 try {
                     int remainingOps = maxOps - usedOps;
                     long remainingCopies = copyLimit == Long.MAX_VALUE
@@ -571,10 +602,12 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             energyService,
                             dispatchSchedule);
                     if (batchResult.consumedCpuOps() > 0) {
+                        tickBudget.consume(batchResult.consumedCpuOps(), batchResult.dispatchedCopies());
                         usedOps += batchResult.consumedCpuOps();
                         usedCopies = saturatingAdd(usedCopies, batchResult.dispatchedCopies());
                         preferTaskWhilePending(activeJob, details);
                         rescheduleIfStillPending(activeJob, details, 0);
+                        transaction.accounted();
                         continue;
                     }
 
@@ -589,12 +622,14 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             level,
                             dispatchSchedule);
                     if (bulk != null) {
+                        tickBudget.consume(bulk.dispatched(), bulk.dispatched());
                         usedOps += bulk.dispatched();
                         usedCopies = saturatingAdd(usedCopies, bulk.dispatched());
                         if (bulk.dispatched() > 0) {
                             preferTaskWhilePending(activeJob, details);
                         }
                         rescheduleIfStillPending(activeJob, details, bulk.retryDelayTicks());
+                        transaction.accounted();
                         continue;
                     }
 
@@ -606,6 +641,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             level,
                             dispatchSchedule);
                     if (outcome == DispatchOutcome.PUSHED) {
+                        tickBudget.consume(1, 1);
                         usedOps++;
                         usedCopies = saturatingAdd(usedCopies, 1L);
                         unparkTask(details);
@@ -614,20 +650,17 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                     } else {
                         rescheduleFailedTask(activeJob, details, outcome);
                     }
+                    transaction.accounted();
                 } finally {
-                    // All three dispatch paths have now registered expected outputs, task counts,
-                    // reusable seed ownership and CPU usage. Drain even when that used the last op.
-                    var returns = dispatchReturns;
-                    dispatchReturns = null;
-                    if (returns != null) {
-                        returns.drain((key, amount) -> receiveDeferredOutput(activeJob, key, amount),
-                                this::retainDirectOutput);
+                    dispatchTransaction = null;
+                    try {
+                        transaction.close();
+                    } finally {
                         flushDirectOutputRemainders();
                     }
                 }
             }
         } finally {
-            executingDispatches = false;
             endStatusChangeBatch();
         }
 
@@ -640,11 +673,13 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         public static final TickUsage EMPTY = new TickUsage(0, 0L);
     }
 
+    int successfulDispatchesInTick(long now) {
+        return tickBudget.usedOperations(now);
+    }
+
     @Nullable
     private DeferredCraftingProvider.OutputSink deferredOutputSink() {
-        if (!executingDispatches) return null;
-        if (dispatchReturns == null) dispatchReturns = new DeferredCraftingOutputs();
-        return dispatchReturns;
+        return dispatchTransaction == null ? null : dispatchTransaction.outputSink();
     }
 
     private void retainDirectOutput(AEKey key, long amount) {
@@ -662,10 +697,9 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void flushDirectOutputRemainders() {
-        if (flushingDirectOutputs || directOutputRemainders.list.isEmpty() || cpu.getGrid() == null) return;
-        var storage = cpu.getGrid().getStorageService().getInventory();
-        flushingDirectOutputs = true;
+        if (directOutputRemainders.list.isEmpty() || cpu.getGrid() == null || !execution.tryEnterDelivery()) return;
         try {
+            var storage = cpu.getGrid().getStorageService().getInventory();
             for (var entry : directOutputRemainders.list) {
                 if (entry.getLongValue() <= 0) continue;
                 var previousOutput = requesterOutputInFlight;
@@ -681,7 +715,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             directOutputRemainders.list.removeZeros();
             cpu.markDirty();
         } finally {
-            flushingDirectOutputs = false;
+            execution.leaveDelivery();
         }
     }
 
@@ -992,6 +1026,17 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     public long insert(AEKey what, long amount, Actionable type) {
+        // Native asynchronous receipts also notify listeners midway through bookkeeping.
+        // Nested receipts remain legal; only the outermost owner acquires/releases the run gate.
+        boolean ownsGuard = execution.tryEnter();
+        try {
+            return insertReceived(what, amount, type);
+        } finally {
+            if (ownsGuard) execution.leave();
+        }
+    }
+
+    private long insertReceived(AEKey what, long amount, Actionable type) {
         var activeJob = this.job;
         if (what == null || activeJob == null || amount <= 0) {
             return 0;
@@ -1429,7 +1474,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         if (job == null) {
             storeItems();
         }
-        if (!executingDispatches) flushDirectOutputRemainders();
+        if (!execution.busy()) flushDirectOutputRemainders();
     }
 
     private boolean hasReusableSeedPattern(TimeWheelJob activeJob) {
@@ -1498,6 +1543,15 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     public void storeItems() {
         Preconditions.checkState(job == null, "CPU should not have a job to prevent re-insertion when dumping items");
+        if (!execution.tryEnterDelivery()) return;
+        try {
+            storeItemsGuarded();
+        } finally {
+            execution.leaveDelivery();
+        }
+    }
+
+    private void storeItemsGuarded() {
         if (this.inventory.list.isEmpty()) {
             return;
         }
@@ -1988,6 +2042,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     public void readFromNBT(CompoundTag data, HolderLookup.Provider registries) {
+        materialReadiness.clear();
         this.inventory.readFromNBT(data.getList(TAG_INVENTORY, Tag.TAG_COMPOUND));
         this.directOutputRemainders.readFromNBT(data.getList(TAG_DIRECT_OUTPUTS, Tag.TAG_COMPOUND));
         this.job = null;
@@ -2716,38 +2771,38 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void scheduleRebuiltTask(TimeWheelJob activeJob, IPatternDetails details) {
-        if (!hasOnlyExactInputs(details)) {
-            scheduleTask(details, 0);
-            return;
-        }
-
-        var missingKeys = findMissingExactInputKeys(details);
+        var missingKeys = materialReadiness.missing(details);
         if (missingKeys.isEmpty()) {
             scheduleTask(details, 0);
             return;
         }
 
         if (parkTaskForMissingInputs(details, missingKeys)) {
-            rescheduleIfStillPending(activeJob, details, PARKED_TASK_SAFETY_DELAY_TICKS);
+            scheduleParkedTask(activeJob, details);
         } else {
             scheduleTask(details, 0);
         }
     }
 
-    private boolean hasOnlyExactInputs(IPatternDetails details) {
-        for (var input : details.getInputs()) {
-            var possibles = input.getPossibleInputs();
-            if (possibles.length != 1) {
-                return false;
+    private void scheduleParkedTask(TimeWheelJob activeJob, IPatternDetails details) {
+        // Only unknown candidate definitions need a safety refresh. Fuzzy native inputs also have
+        // stable candidate families, so enabling substitution does not re-enable periodic attempts.
+        if (!CraftingMaterialReadiness.stableInputs(details)) {
+            boolean singleTemplates = true;
+            for (var input : details.getInputs()) {
+                if (input.getPossibleInputs().length != 1) {
+                    singleTemplates = false;
+                    break;
+                }
             }
-            if (possibles[0].what() == null) {
-                return false;
-            }
+            // Keep the previous deadline: exact-shaped custom inputs used 32t, alternatives 4t.
+            rescheduleIfStillPending(activeJob, details,
+                    singleTemplates ? PARKED_TASK_SAFETY_DELAY_TICKS : RETRY_DELAY_TICKS);
         }
-        return true;
     }
 
     private void clearTaskWheel() {
+        materialReadiness.clear();
         for (var bucket : taskWheel) {
             bucket.clear();
         }
@@ -2770,6 +2825,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private void unscheduleTask(IPatternDetails details) {
+        if (!queuedTasks.contains(details)) return;
         boolean removed = false;
         for (var bucket : taskWheel) {
             for (var iterator = bucket.iterator(); iterator.hasNext(); ) {
@@ -2785,11 +2841,11 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     }
 
     private boolean parkTaskForMissingInputs(TimeWheelJob activeJob, IPatternDetails details) {
-        if (!activeJob.tasks.containsKey(details) || !hasOnlyExactInputs(details)) {
+        if (!activeJob.tasks.containsKey(details)) {
             return false;
         }
 
-        return parkTaskForMissingInputs(details, findMissingExactInputKeys(details));
+        return parkTaskForMissingInputs(details, materialReadiness.missing(details));
     }
 
     private boolean parkTaskForMissingInputs(IPatternDetails details, Set<AEKey> missingKeys) {
@@ -2811,35 +2867,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     private void clearParkedTasks() {
         tasksParkedByMissingKey.clear();
-    }
-
-    private Set<AEKey> findMissingExactInputKeys(IPatternDetails details) {
-        var exactRequired = new HashMap<AEKey, Long>();
-
-        for (var input : details.getInputs()) {
-            long multiplier = input.getMultiplier();
-            var possibles = input.getPossibleInputs();
-            if (possibles.length != 1) {
-                return Set.of();
-            }
-
-            var possible = possibles[0];
-            var key = possible.what();
-            long perCopy = multiplySaturated(possible.amount(), multiplier);
-            if (key == null || perCopy <= 0) {
-                continue;
-            }
-            exactRequired.merge(key, perCopy, Ae2LtTimeWheelCraftingCpuLogic::addSaturated);
-        }
-
-        var missing = new HashSet<AEKey>();
-        for (var entry : exactRequired.entrySet()) {
-            long required = entry.getValue();
-            if (required > 0 && inventory.extract(entry.getKey(), required, Actionable.SIMULATE) < required) {
-                missing.add(entry.getKey());
-            }
-        }
-        return missing;
     }
 
     @Nullable
@@ -2868,7 +2895,6 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             }
         }
         queuedTasks.remove(selected);
-        unparkTask(selected);
         return selected;
     }
 
@@ -2903,7 +2929,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     private void rescheduleFailedTask(TimeWheelJob activeJob, IPatternDetails details, DispatchOutcome outcome) {
         if (outcome == DispatchOutcome.RETRY_MISSING_INPUT && parkTaskForMissingInputs(activeJob, details)) {
-            rescheduleIfStillPending(activeJob, details, PARKED_TASK_SAFETY_DELAY_TICKS);
+            scheduleParkedTask(activeJob, details);
             return;
         }
 
@@ -2956,7 +2982,20 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         for (var details : tasksToWake) {
             unparkTask(details);
             unscheduleTask(details);
-            scheduleTask(details, 0);
+            // Includes alternative items, same-id component variants and fluids. Insufficient
+            // partial returns only update the dependency index, without attempting extraction.
+            scheduleRebuiltTask(this.job, details);
+        }
+    }
+
+    private void onInventoryChange(@Nullable AEKey what) {
+        materialReadiness.onInventoryChange(what);
+        try {
+            postChange(what);
+        } finally {
+            // Includes rejected-provider refunds and restored inventory, not just machine returns.
+            // ListCraftingInventory calls this after changing its quantities.
+            wakeSchedulerForReturnedInput(what);
         }
     }
 

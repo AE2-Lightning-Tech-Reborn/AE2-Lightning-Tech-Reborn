@@ -307,6 +307,15 @@ public final class ModItems {
                             TianshuPatternEncodingTerminalPart.class,
                             TianshuPatternEncodingTerminalPart::new));
 
+    static { PartModels.registerModels(PartModelsHelper.createModels(com.moakiee.ae2lt.part.TianshuCraftingTerminalPart.class)); }
+    public static final RegistryObject<PartItem<com.moakiee.ae2lt.part.TianshuCraftingTerminalPart>> TIANSHU_CRAFTING_TERMINAL =
+            ITEMS.register("tianshu_crafting_terminal", () -> new PartItem<>(new Item.Properties(),
+                    com.moakiee.ae2lt.part.TianshuCraftingTerminalPart.class, com.moakiee.ae2lt.part.TianshuCraftingTerminalPart::new));
+
+    public static final RegistryObject<Item> TIANSHU_WIRELESS_CRAFTING_TERMINAL = TianshuWirelessTerminalFactory.isAvailable()
+            ? ITEMS.register("wireless_tianshu_crafting_terminal", com.moakiee.ae2lt.integration.ae2wtlib.Ae2wtlibIntegration::craftingTerminal)
+            : RegistryObject.create(new ResourceLocation(AE2LightningTech.MODID, "wireless_tianshu_crafting_terminal"), ForgeRegistries.ITEMS);
+
     // Forge has no conditional DeferredRegister entry. Use a non-bound RegistryObject when
     // AE2WTLib is absent so the item id genuinely stays out of the item registry.
     public static final RegistryObject<Item>

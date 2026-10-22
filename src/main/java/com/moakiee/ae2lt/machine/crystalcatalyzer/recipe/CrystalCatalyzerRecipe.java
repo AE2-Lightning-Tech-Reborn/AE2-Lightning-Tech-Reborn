@@ -162,19 +162,6 @@ public final class CrystalCatalyzerRecipe implements Recipe<CrystalCatalyzerReci
         return id;
     }
 
-    public FluidStack fluidInput() {
-        return fluidInput.copy();
-    }
-
-    public boolean isWaterRecipe() {
-        return fluidInput.getFluid() == Fluids.WATER;
-    }
-
-    public boolean fluidMatches(FluidStack available) {
-        return fluidInput.isFluidEqual(available)
-                && available.getAmount() >= fluidInput.getAmount();
-    }
-
     public boolean catalystMatches(ItemStack stack) {
         if (catalyst.isEmpty()) {
             return stack.isEmpty();

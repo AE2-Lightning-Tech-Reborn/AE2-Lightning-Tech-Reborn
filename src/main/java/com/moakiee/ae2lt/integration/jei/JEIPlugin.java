@@ -29,7 +29,6 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModFumos;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.RecipeManagerByTypeAccess;
-import com.moakiee.ae2lt.registry.ModFumos;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiClickableArea;
@@ -215,6 +214,10 @@ public class JEIPlugin implements IModPlugin {
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
         var helper = registration.getTransferHelper();
+        registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE, helper));
+        if (TianshuWirelessTerminalFactory.isAvailable()) registration.addUniversalRecipeTransferHandler(new TianshuCraftingTransferHandler<>(
+                com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.class, com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu.TYPE, helper));
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
@@ -233,6 +236,11 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class, new TianshuCraftingGhostHandler<>());
+        if (TianshuWirelessTerminalFactory.isAvailable()) {
+            registration.addGhostIngredientHandler(com.moakiee.ae2lt.client.tianshu.TianshuWirelessCraftingTermScreen.class, new TianshuCraftingGhostHandler<>());
+            registration.addGhostIngredientHandler(com.moakiee.ae2lt.integration.ae2wtlib.client.TianshuEnhancedWirelessCraftingScreen.class, new TianshuCraftingGhostHandler<>());
+        }
         registration.addGuiContainerHandler(LightningAssemblyChamberScreen.class,
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,

@@ -63,13 +63,13 @@
     },
     "previousCell": {
       "left": 43,
-      "bottom": 108,
+      "bottom": 104,
       "width": 8,
       "height": 8
     },
     "nextCell": {
       "left": 85,
-      "bottom": 108,
+      "bottom": 104,
       "width": 8,
       "height": 8
     },
@@ -134,25 +134,25 @@
     },
     "previousUpgrade": {
       "left": 118,
-      "bottom": 108,
+      "bottom": 104,
       "width": 8,
       "height": 8
     },
     "nextUpgrade": {
       "left": 128,
-      "bottom": 108,
+      "bottom": 104,
       "width": 8,
       "height": 8
     },
     "cellFuzzy": {
       "left": 12,
-      "bottom": 144,
+      "bottom": 140,
       "width": 16,
       "height": 16
     },
     "cellKeepConfig": {
       "left": 12,
-      "bottom": 126,
+      "bottom": 122,
       "width": 16,
       "height": 16
     }

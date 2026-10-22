@@ -1,0 +1,22 @@
+// Requires the default WTLib runtime. Tests paid-pattern retention and manual retries.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.destinationDirectory.set(layout.buildDirectory.dir('classes/java/tianshuPatternUploadGameTest'))
+        sourceSets.jdb.java.setIncludes(['**/TianshuPatternUploadGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.layout.buildDirectory.dir('tianshu-pattern-upload-gametest').get().asFile
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_upload_retention'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doFirst { project.file('build/tianshu-pattern-upload-gametest/logs/latest.log').delete() }
+            doLast {
+                def log = project.file('build/tianshu-pattern-upload-gametest/logs/latest.log')
+                if (!log.isFile() || !(log.text =~ /All 2 required tests passed/).find()) {
+                    throw new GradleException('Tianshu pattern upload GameTests did not complete (expected 2).')
+                }
+            }
+        }
+    }
+}

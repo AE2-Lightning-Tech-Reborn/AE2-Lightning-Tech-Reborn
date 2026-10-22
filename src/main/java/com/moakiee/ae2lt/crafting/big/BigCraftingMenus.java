@@ -4,7 +4,9 @@ import appeng.api.networking.crafting.ICraftingCPU;
 
 import com.moakiee.ae2lt.blockentity.*;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPool;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost;
+import appeng.api.networking.IGrid;
+import appeng.api.networking.security.IActionHost;
+import net.minecraft.world.level.Level;
 
 public final class BigCraftingMenus {
     private BigCraftingMenus() {}
@@ -22,11 +24,22 @@ public final class BigCraftingMenus {
     }
 
     public static BigCraftingService available(Object host) {
-        if (!(host instanceof TianshuPatternTerminalHost terminal)) return null;
-        for (var port : terminal.getAvailableTianshu()) {
+        var context = context(host);
+        if (context == null) return null;
+        for (var port : context.grid().getActiveMachines(TianshuSupercomputerPortBlockEntity.class)) {
             var c = port.getController();
-            if (c != null && c.bigCrafting().available()) return c.bigCrafting();
+            if (port.isLinkActive() && c != null && c.bigCrafting().available()) return c.bigCrafting();
         }
         return null;
     }
+
+    /** Native amount/confirmation menus only need an actionable grid, not a terminal subtype. */
+    public static Context context(Object host) {
+        if (!(host instanceof IActionHost actionHost)) return null;
+        var node = actionHost.getActionableNode();
+        return node != null && node.isActive() && node.getGrid() != null
+                ? new Context(node.getGrid(), node.getLevel()) : null;
+    }
+
+    public record Context(IGrid grid, Level level) {}
 }

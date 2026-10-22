@@ -28,20 +28,6 @@ public record CelestweaveModuleContainer(
     public static final CelestweaveModuleContainer EMPTY = new CelestweaveModuleContainer(
             Optional.empty(), List.of(), Map.of(), Map.of(), Optional.empty());
 
-    public static boolean needsMigration(CompoundTag tag) {
-        if (tag.getCompound("toggles").contains("undying")
-                || tag.getCompound("submodule_data").contains("undying")) return true;
-        boolean overload = false;
-        boolean absorbedShield = false;
-        for (var entry : tag.getList("modules", Tag.TAG_COMPOUND)) {
-            String id = ((CompoundTag) entry).getString("id");
-            if (id.equals("ae2lt:module_undying")) return true;
-            overload |= id.equals("ae2lt:module_overload_protection");
-            absorbedShield |= id.equals("ae2lt:module_phase_shield") || id.equals("ae2lt:module_defense_matrix");
-        }
-        return overload && absorbedShield;
-    }
-
     // 1.20.1 移植：无 ItemStack Codec/StreamCodec（CODEC/STREAM_CODEC 已删除），改用手动 NBT 往返。
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();

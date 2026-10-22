@@ -4,10 +4,10 @@ import com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata;
 import com.moakiee.ae2lt.client.tianshu.TianshuDirectUploadClient;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
-import mezz.jei.gui.recipes.RecipeTransferButton;
 import mezz.jei.gui.recipes.RecipesGui;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,31 +19,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * open so multiple patterns can be encoded consecutively; an ambiguous target still falls back to
  * the normal terminal picker.
  */
-@Mixin(value = RecipeTransferButton.class, remap = false)
+@Pseudo
+@Mixin(targets = "mezz.jei.gui.recipes.RecipeTransferButtonController", remap = false)
 public abstract class JeiRecipeTransferButtonControllerMixin {
     @Accessor("recipeLayout")
     protected abstract IRecipeLayoutDrawable<?> ae2lt$getRecipeLayout();
 
     @Inject(
-            method = {
-                    "onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z",
-                    "onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"
-            },
+            method = "transferRecipe(ZZ)Z",
             at = {@At("HEAD"), @At("RETURN")},
             require = 1)
     private void ae2lt$clearRecipeTransferMetadata(CallbackInfoReturnable<Boolean> cir) {
         JeiRecipeTransferMetadata.clear();
     }
 
-    // JEI 15 moved UserInput and replaced parentContainer with a screen supplier. The layout
-    // is read only after simulated clicks and missing transfer targets have been rejected.
+    // JEI 15.68 routes button and keyboard input through transferRecipe. Read the layout
+    // only for the real transfer, after simulated clicks and missing targets are rejected.
     @Inject(
-            method = {
-                    "onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z",
-                    "onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"
-            },
-            at = @At(value = "FIELD",
-                    target = "Lmezz/jei/gui/recipes/RecipeTransferButton;recipeLayout:Lmezz/jei/api/gui/IRecipeLayoutDrawable;"),
+            method = "transferRecipe(ZZ)Z",
+            at = @At(value = "INVOKE",
+                    target = "Lmezz/jei/common/transfer/RecipeTransferService;transferRecipe(Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;Lmezz/jei/api/gui/IRecipeLayoutDrawable;Lnet/minecraft/world/entity/player/Player;Z)Z"),
             require = 1)
     private void ae2lt$beginRecipeTransferMetadata(CallbackInfoReturnable<Boolean> cir) {
         var player = Minecraft.getInstance().player;
@@ -53,10 +48,7 @@ public abstract class JeiRecipeTransferButtonControllerMixin {
     }
 
     @Redirect(
-            method = {
-                    "onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z",
-                    "onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"
-            },
+            method = "transferRecipe(ZZ)Z",
             at = @At(
                     value = "INVOKE",
                     target = "Ljava/lang/Runnable;run()V"),

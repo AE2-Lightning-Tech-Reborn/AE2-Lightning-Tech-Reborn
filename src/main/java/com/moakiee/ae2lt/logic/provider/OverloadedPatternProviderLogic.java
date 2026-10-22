@@ -609,7 +609,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         var dispatchMode = overloadedHost.getWirelessDispatchMode();
         boolean fastMode = overloadedHost.getWirelessSpeedMode()
                 == OverloadedPatternProviderBlockEntity.WirelessSpeedMode.FAST;
-        wirelessDispatch.prepare(valid, gameTick, fastMode, dispatchMode);
+        wirelessDispatch.prepare(valid, gameTick, fastMode);
 
         return pushWirelessBatchTargets(
                 pattern, patternHandle, oneCopyTemplate, maxCraft,
@@ -898,7 +898,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         boolean fastMode = overloadedHost.getWirelessSpeedMode()
                 == OverloadedPatternProviderBlockEntity.WirelessSpeedMode.FAST;
 
-        wirelessDispatch.prepare(valid, gameTick, fastMode, dispatchMode);
+        wirelessDispatch.prepare(valid, gameTick, fastMode);
 
         return wirelessDispatch.dispatchSingleCopy(
                 dispatchMode,

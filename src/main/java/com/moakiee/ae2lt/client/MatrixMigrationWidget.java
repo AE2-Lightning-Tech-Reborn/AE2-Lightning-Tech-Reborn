@@ -1,6 +1,6 @@
 package com.moakiee.ae2lt.client;
 
-import com.moakiee.ae2lt.client.TextureToggleButton;
+import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot;
 import com.moakiee.ae2lt.menu.MatrixMigrationMenu;
 import com.moakiee.ae2lt.network.MatrixPatternMigrationActionPacket;

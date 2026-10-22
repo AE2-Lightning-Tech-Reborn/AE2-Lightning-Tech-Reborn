@@ -55,6 +55,10 @@ public final class LightningCompatibilityGameTests {
     public static void artificialSubclassTransformsItems(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
+        var area = new AABB(pos).inflate(3);
+        // The tiny vanilla template does not clear this entire observation area.
+        // Remove outputs retained in the reused test world before spawning inputs.
+        level.getEntitiesOfClass(ItemEntity.class, area).forEach(ItemEntity::discard);
         var blank = new ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy_blank")), 3));
         var dust = new ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
@@ -68,11 +72,13 @@ public final class LightningCompatibilityGameTests {
         level.addFreshEntity(lightning);
         helper.runAfterDelay(2, () -> {
             var output = BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy"));
-            int count = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(3)).stream()
+            var outputs = level.getEntitiesOfClass(ItemEntity.class, area);
+            int count = outputs.stream()
                     .filter(item -> item.getItem().is(output))
                     .mapToInt(item -> item.getItem().getCount()).sum();
-            helper.assertTrue(count == 1, "Artificial subclass lightning must produce exactly one alloy");
+            helper.assertTrue(count == 1, "Artificial subclass lightning must produce exactly one alloy, got " + count);
             helper.assertTrue(!blank.isAlive() && !dust.isAlive(), "The recipe must consume both inputs");
+            outputs.forEach(ItemEntity::discard);
             helper.succeed();
         });
     }

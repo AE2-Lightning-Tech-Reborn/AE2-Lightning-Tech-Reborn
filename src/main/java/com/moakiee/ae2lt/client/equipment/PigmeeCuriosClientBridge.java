@@ -29,7 +29,6 @@ final class PigmeeCuriosClientBridge {
     }
 
     static void registerRenderers() {
-        CuriosRendererRegistry.register(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(), PigmeeHeadRenderer::new);
         CuriosRendererRegistry.register(ModFumos.PIGMEE_FUMO_ITEM.get(), PigmeeHeadRenderer::new);
         CuriosRendererRegistry.register(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(), PigmeeHeadRenderer::new);
         CuriosRendererRegistry.register(

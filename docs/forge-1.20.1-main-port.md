@@ -1,5 +1,9 @@
 # Forge 1.20.1 GTL upstream port
 
+NeoECO support was removed on October 21 at the user's request. The paired cleanup, regression checks and GTL replacement/restart results are recorded in [the removal report](neoeco-removal-20261021.zh-CN.md); earlier validation below remains historical evidence.
+
+Current focused Forge tests, optional API limits and the opt-in global Mixin audit are documented in [compatibility checks](forge-compatibility-checks.md).
+
 October 9 selected main/alpha backports and the upgraded GTL dependency are documented in [the follow-up port record](forge-1.20.1-upstream-backports-20261009.md). The pinned Forge baseline and earlier validation below remain historical records.
 
 Reference: `origin/1.20.1` at `877672e`. Incremental review date: 2026-10-08. The original full-tree comparison used `a9037fdc4777beca94d6eb9a169904e43d5de3bc` against GTL `4a854c4` on 2026-10-06, followed by the October 7 port through `f66ea67`. Incremental validation and baseline optimization results are recorded below. This supersedes the earlier selective-port and placeholder-resource status in this document.
@@ -10,7 +14,7 @@ The 15 commits and 99 changed paths from `f66ea67..877672e` are adapted into the
 
 - Overloaded interface crafting now aggregates demands for the same key, subtracts stock and remaining in-flight output, and applies cooldown after failed plans/submissions. Extraction wakeups use this shared policy after storage caches update.
 - Normal item, fluid and Applied Flux I/O share AE2's native wrench direction. Automatic adjacent scanning excludes protected same-grid storage providers, pattern providers and interfaces; an explicit direction permits the player's selected target.
-- Matrix controllers and ports gain server-authorized physical pattern migration. Migration leases, source identity checks, cooperative work limits, deferred catalog refreshes, duplicate refunds, persisted recovery custody and cancellation are ported with Forge packets/NBT. Optional ExtendedAE, ExtendedAE Plus and NeoECO adapters remain isolated.
+- Matrix controllers and ports gain server-authorized physical pattern migration. Migration leases, source identity checks, cooperative work limits, deferred catalog refreshes, duplicate refunds, persisted recovery custody and cancellation are ported with Forge packets/NBT. Optional ExtendedAE and ExtendedAE Plus adapters remain isolated.
 - The overloaded I/O port recipe uses an overload singularity; the Pigmee synthesis station uses diamonds and an anvil. Upstream display names, oriented interface textures/models, button textures, guides and bilingual translations are included.
 - Version `2.1.2-beta` and platform-tag extraction are aligned with upstream. Release-type/changelog handling, dependency staging validation and workflow validation are ported.
 
@@ -88,15 +92,7 @@ Client-only pagination, IPN swipe behavior and beam appearance have compile/cont
 
 ## Runtime target
 
-<<<<<<< HEAD
-- Provider cache/dispatch ownership fixes, live input allocation, closed-loop seed handling and manual Tianshu CPU selection across CPU-list changes.
-- Machine energy recharge batching, standalone main-core compute budgets, updated multiblock recipes, tooltips and guides.
-- Arbitrary-precision storage/crafting integration using Thunderbolt 2.0.0, with bounded Forge SimpleChannel messages and extensions to the existing AE2 menus.
-- Guarded NeoECO integration. Forge NeoECO 20.3.0 lacks the allocated FastPath facade: ordinary dispatch remains active. The adapter links reflectively only when the complete public allocated API exists; no NeoForge dependency is required.
-- Official Useless 1.20.1 lacks the BigInteger and Smart Doubling APIs. The inactive Thunderbolt adapters and the corresponding LT protocol probe were removed after the 2026-10-04 source audit; ordinary machine execution remains in use.
-=======
-Java 17, Minecraft 1.20.1, Forge 47.1.47, AE2 15, and the project's GTL-compatible Thunderbolt dependency. Forge registry/bootstrap behavior, NBT codecs, array-based pattern outputs, optional-mod boundaries, licenses and attribution are retained. The completed port is prepared as a single summary commit for review; development evidence and scratch files remain local.
->>>>>>> e381ebc0 (feat(forge): port upstream 1.20.1 to GTL and harden manual exports (#14))
+Java 17, Minecraft 1.20.1, Forge 47.1.47, AE2 15.4.10, and the project's GTL-compatible Thunderbolt dependency. Forge registry/bootstrap behavior, NBT codecs, array-based pattern outputs, optional-mod boundaries, licenses and attribution are retained. The port includes provider dispatch ownership, live input allocation, closed-loop seed handling, manual Tianshu CPU selection and bounded Forge SimpleChannel messages for arbitrary-precision crafting. The current dependency version and validation results are recorded in the latest acceptance report. Development evidence and scratch files remain local.
 
 ## Included behavior
 
@@ -117,7 +113,7 @@ Java 17, Minecraft 1.20.1, Forge 47.1.47, AE2 15, and the project's GTL-compatib
 - GTLCore planning locks and the V2 / CP-SAT / vanilla exclusive algorithm controls remain authoritative. The V2 engine accepts a node-less requester only when its planning service belongs to the same grid and the grid actively locks V2. Unlocked and cross-grid requests retain the engine's normal rejection.
 - GTL crafting menus, wired/wireless Tianshu terminals, CPU status integration, pushed-copy accounting and physical-tick deduplication are preserved. The upstream terminal deletion is not applied to these GTL features.
 - Package moves are resolved through imports and existing compatibility facades. Equivalent local implementations, including the ritual burst client handler, need not copy an upstream class name or package layout.
-- Optional Useless/NeoECO adapters retain their resolver cache policies. Registered batch adapters take precedence only while present; removing them restores the original resolver. Forge NeoECO versions lacking the allocated FastPath facade use normal dispatch.
+- The optional Useless adapter retains its resolver cache policy. Registered batch adapters take precedence only while present; removing them restores the original resolver.
 - The V2 and batch-provider hot paths reuse one planning decision per request and stable adapter wrappers. Overloaded-interface display and advertised-stock caches now invalidate on configuration, upgrade, node-state and real network I/O changes; passive input guards also invalidate safely after exceptional writes.
 - Planning also reuses immutable option/candidate lists, checks CP-SAT registration live, and selects exclusive locks in one node pass without collecting an intermediate list. Service locks retain precedence over owner locks, and equal priorities retain encounter order.
 - Passive-input buffering uses primitive long maps and rotates blocked or partially accepted keys in place. The five-tick cadence, 128-key flush budget, round-robin fairness, per-type shared capacity and persisted encounter order are preserved.

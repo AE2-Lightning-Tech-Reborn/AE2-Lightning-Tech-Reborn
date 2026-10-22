@@ -4,6 +4,8 @@ import appeng.helpers.IPatternTerminalMenuHost;
 import org.jetbrains.annotations.Nullable;
 
 public interface TianshuPatternTerminalHost extends IPatternTerminalMenuHost, TianshuTerminalHost {
+    default OmniversalPatternDraft getOmniversalPatternDraft() { return OmniversalPatternDraft.empty(); }
+    default void setOmniversalPatternDraft(OmniversalPatternDraft draft) {}
     TianshuEncodingMode getTianshuEncodingMode();
     void setTianshuEncodingMode(TianshuEncodingMode mode);
 

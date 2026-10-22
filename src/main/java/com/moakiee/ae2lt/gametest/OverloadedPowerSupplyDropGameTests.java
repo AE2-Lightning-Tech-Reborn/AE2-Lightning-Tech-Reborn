@@ -34,6 +34,11 @@ public final class OverloadedPowerSupplyDropGameTests {
         }
 
         var relativePos = BlockPos.ZERO;
+        var absolutePos = helper.absolutePos(relativePos);
+        var dropArea = new AABB(absolutePos).inflate(2.0D);
+        // The observation area extends beyond the tiny template. Clear retained
+        // drops so a reused world still measures only this block destruction.
+        helper.getLevel().getEntitiesOfClass(ItemEntity.class, dropArea).forEach(ItemEntity::discard);
         var block = ModBlocks.OVERLOADED_POWER_SUPPLY.get();
         helper.setBlock(relativePos, block);
 
@@ -51,12 +56,11 @@ public final class OverloadedPowerSupplyDropGameTests {
                 "The real AppFlux FE cell must be accepted by the power supply");
         powerSupply.getCellInventory().setItemDirect(0, cellStack);
 
-        var absolutePos = helper.absolutePos(relativePos);
         helper.assertTrue(helper.getLevel().destroyBlock(absolutePos, true),
                 "The placed power supply must be destroyable");
 
         var itemEntities = helper.getLevel().getEntitiesOfClass(
-                ItemEntity.class, new AABB(absolutePos).inflate(2.0D));
+                ItemEntity.class, dropArea);
         int blockItemCount = itemEntities.stream()
                 .map(ItemEntity::getItem)
                 .filter(stack -> stack.is(block.asItem()))
@@ -72,6 +76,7 @@ public final class OverloadedPowerSupplyDropGameTests {
                 "Expected exactly one overloaded power supply from its actual loot table, got " + itemEntities);
         helper.assertTrue(cellItemCount == 1,
                 "Expected exactly one installed FE cell from AE2's additional-drop hook, got " + itemEntities);
+        itemEntities.forEach(ItemEntity::discard);
         helper.succeed();
     }
 }

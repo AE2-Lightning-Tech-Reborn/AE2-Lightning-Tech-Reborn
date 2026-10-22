@@ -17,14 +17,12 @@ public final class ModFumos {
     public static RegistryObject<FumoBlock> CYSTRYSU_FUMO;
     public static RegistryObject<FumoBlock> RAINBOW_PIGMEE_FUMO;
     public static RegistryObject<FumoBlock> PIGMEE_FUMO;
-    public static RegistryObject<FumoBlock> RAINBOW_PIGMEE_FUMO;
     public static RegistryObject<FumoBlock> CREATIVE_PIGMEE_FUMO;
     public static RegistryObject<FumoBlock> HYPERDIMENSIONAL_PIGMEE_FUMO;
     public static RegistryObject<BlockItem> MOAKIEE_FUMO_ITEM;
     public static RegistryObject<BlockItem> CYSTRYSU_FUMO_ITEM;
     public static RegistryObject<FumoBlockItem> RAINBOW_PIGMEE_FUMO_ITEM;
     public static RegistryObject<FumoBlockItem> PIGMEE_FUMO_ITEM;
-    public static RegistryObject<FumoBlockItem> RAINBOW_PIGMEE_FUMO_ITEM;
     public static RegistryObject<FumoBlockItem> CREATIVE_PIGMEE_FUMO_ITEM;
     public static RegistryObject<FumoBlockItem> HYPERDIMENSIONAL_PIGMEE_FUMO_ITEM;
 

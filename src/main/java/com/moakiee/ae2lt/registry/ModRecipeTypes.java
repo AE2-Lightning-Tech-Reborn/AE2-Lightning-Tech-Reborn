@@ -118,18 +118,6 @@ public final class ModRecipeTypes {
                     RECIPE_SERIALIZERS.register("rainbow_pigmee_color_cycle",
                             () -> new SimpleCraftingRecipeSerializer<>(RainbowPigmeeColorCycleRecipe::new));
 
-    public static final RegistryObject<RecipeSerializer<PigmeeBuildingRecipe>> PIGMEE_BUILDING_SERIALIZER =
-            RECIPE_SERIALIZERS.register("pigmee_building", PigmeeBuildingRecipe.Serializer::new);
-
-    public static final RegistryObject<RecipeSerializer<RainbowPigmeeDyeRecipe>>
-            RAINBOW_PIGMEE_DYE_SERIALIZER =
-                    RECIPE_SERIALIZERS.register("rainbow_pigmee_dye", RainbowPigmeeDyeRecipe.Serializer::new);
-
-    public static final RegistryObject<RecipeSerializer<RainbowPigmeeColorCycleRecipe>>
-            RAINBOW_PIGMEE_COLOR_CYCLE_SERIALIZER =
-                    RECIPE_SERIALIZERS.register("rainbow_pigmee_color_cycle",
-                            () -> new SimpleCraftingRecipeSerializer<>(RainbowPigmeeColorCycleRecipe::new));
-
     private ModRecipeTypes() {
     }
 }

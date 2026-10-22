@@ -16,12 +16,10 @@ import com.moakiee.ae2lt.blockentity.LightningSimulationChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPatternStorageBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
-import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadDeviceWorkbenchBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadProcessingFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
-import com.moakiee.ae2lt.blockentity.OverloadedIOPortBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
 import com.moakiee.ae2lt.blockentity.PigmeeMentalmathUnitBlockEntity;
@@ -103,13 +101,6 @@ public final class ModBlockEntities {
                             ModBlocks.OVERLOAD_PROCESSING_FACTORY.get())
                             .build(null));
 
-    public static final RegistryObject<BlockEntityType<MiningFactoryBlockEntity>>
-            MINING_FACTORY = BLOCK_ENTITY_TYPES.register(
-                    "mining_factory",
-                    () -> BlockEntityType.Builder.of(
-                            MiningFactoryBlockEntity::new,
-                            ModBlocks.MINING_FACTORY.get()).build(null));
-
     public static final RegistryObject<BlockEntityType<TeslaCoilBlockEntity>>
             TESLA_COIL = BLOCK_ENTITY_TYPES.register(
                     "tesla_coil",
@@ -173,13 +164,6 @@ public final class ModBlockEntities {
                             OverloadedInterfaceBlockEntity::new,
                             ModBlocks.OVERLOADED_INTERFACE.get())
                             .build(null));
-
-    public static final RegistryObject<BlockEntityType<OverloadedIOPortBlockEntity>>
-            OVERLOADED_IO_PORT = BLOCK_ENTITY_TYPES.register(
-                    "overloaded_io_port",
-                    () -> BlockEntityType.Builder.of(
-                            OverloadedIOPortBlockEntity::new,
-                            ModBlocks.OVERLOADED_IO_PORT.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<OverloadedPowerSupplyBlockEntity>>
             OVERLOADED_POWER_SUPPLY = ModBlocks.hasOverloadedPowerSupply()

@@ -1,0 +1,33 @@
+// Isolated Forge 1.20.1 AUTO return tests. Add -Penable_industrial_foregoing_runtime=true for IF.
+allprojects {
+    afterEvaluate {
+        def withIf = (findProperty('enable_industrial_foregoing_runtime') ?: 'false').toBoolean()
+        def fixtures = ['**/ProviderMekanismReturnGameTests.java', '**/ProviderReturnFilterGameTests.java']
+        if (withIf) fixtures += '**/ProviderMachineAdaptationGameTests.java'
+        sourceSets.jdb.java.setIncludes(fixtures)
+        def fixtureClasses = layout.buildDirectory.dir('classes/java/provider-machine-' + (withIf ? 'if' : 'mekanism'))
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                            'io.github.llamalad7', 'mekanism']
+                    || (dep.group == 'maven.modrinth' && dep.name in ['ldlib', 'titanium', 'industrial-foregoing']))
+        }
+        def probeDirectory = project.file('build/provider-machine-' + (withIf ? 'if' : 'mekanism') + '-forge')
+        minecraft.runs.gameTestServer {
+            workingDirectory probeDirectory
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_io,ae2lt_provider_mekanism,ae2lt_machine_adaptation'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = new File(probeDirectory, 'logs/latest.log').text
+                def passed = log =~ /All (\d+) required tests passed/
+                def expected = withIf ? 26 : 10
+                if (!passed.find() || passed.group(1).toInteger() != expected)
+                    throw new GradleException('Expected all ' + expected + ' machine return GameTests to execute.')
+            }
+        }
+    }
+}

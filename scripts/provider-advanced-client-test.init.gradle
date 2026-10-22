@@ -1,0 +1,44 @@
+// Real UI/network acceptance in a disposable copy of the phase-flight QA world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ProviderAdvancedClientProbe.java'])
+        def fixtureClasses = layout.buildDirectory.dir('classes/java/provider-advanced-client')
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                            'io.github.llamalad7'] || (dep.group == 'maven.modrinth' && dep.name == 'ldlib'))
+        }
+        def probeDirectory = project.file(findProperty('ae2ltProviderAdvancedDirectory')
+                ?: 'build/provider-advanced-client-forge')
+        def clientWorld = new File(probeDirectory, 'saves/ProviderAdvancedQA')
+        def outputDirectory = project.file(findProperty('ae2ltProviderAdvancedOutput')
+                ?: 'build/upstream-fixes-20261021/acceptance-20261021/provider-ui')
+        minecraft.runs.client {
+            workingDirectory probeDirectory
+            property 'ae2lt.providerAdvancedProbe', 'true'
+            property 'ae2lt.providerAdvancedOutput', outputDirectory.absolutePath
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'ProviderAdvancedQA', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                new File(outputDirectory, 'result.txt').delete()
+                probeDirectory.mkdirs()
+                def options = new File(probeDirectory, 'options.txt')
+                options.text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\nlang:en_us\n'
+                if (!clientWorld.isDirectory()) {
+                    def sourceWorld = project.file('build/phase-flight-lock-forge/world')
+                    if (!sourceWorld.isDirectory()) throw new GradleException('Phase flight QA seed world is missing.')
+                    project.copy { from sourceWorld; into clientWorld }
+                }
+            }
+            doLast {
+                def result = new File(outputDirectory, 'result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:'))
+                    throw new GradleException('Provider UI probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

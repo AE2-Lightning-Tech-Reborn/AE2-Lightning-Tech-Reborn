@@ -24,7 +24,7 @@ class TianshuJeiDirectUploadSourceContractTest {
     void jeiTransferSupportsBothInputPackagesWithoutUsingRemovedContainerField() throws Exception {
         String mixin = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/"
-                        + "JeiRecipeTransferButtonControllerMixin.java"));
+                        + "JeiLegacyRecipeTransferButtonMixin.java"));
 
         assertTrue(mixin.contains("onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z"));
         assertTrue(mixin.contains("onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"));

@@ -41,7 +41,7 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void ae2lt$init(int id, Inventory inv, ISubMenuHost host, CallbackInfo ci) {
-        if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.available(host) != null;
+        if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.context(host) != null;
     }
 
     public boolean ae2lt$bigAvailable() {
@@ -59,20 +59,16 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
     public void ae2lt$confirm(BigInteger amount, boolean missing, boolean autoStart) {
         if (!(getPlayer() instanceof ServerPlayer player)
                 || !stillValid(player)
-                || BigCraftingMenus.available(getHost()) == null
+                || BigCraftingMenus.context(getHost()) == null
                 || getWhatToCraft() == null) return;
         BigAmounts.nonNegative(amount);
         var key = getWhatToCraft().what();
         if (amount.signum() <= 0) return;
         if (missing) {
-            var terminal =
-                    (com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternTerminalHost) getHost();
+            var context = BigCraftingMenus.context(getHost());
             var stock =
                     BigStorageOps.snapshot(
-                            terminal.getActionableNode()
-                                    .getGrid()
-                                    .getStorageService()
-                                    .getInventory(),
+                            context.grid().getStorageService().getInventory(),
                             getActionSource());
             amount = amount.subtract(stock.getOrDefault(key, BigInteger.ZERO));
         }

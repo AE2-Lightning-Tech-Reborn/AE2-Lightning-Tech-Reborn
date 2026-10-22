@@ -11,7 +11,7 @@ import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
 /**
  * Closed-loop jobs belong on a TimeWheel host. Thunderbolt's GTL leftover path
  * may still hand a {@link LoopCraftingPlan} to vanilla, Transfinite, Advanced AE
- * or ECO CPUs; those implementations extract {@code plan.usedItems()} and never
+ * CPUs; those implementations extract {@code plan.usedItems()} and never
  * honor host reusable seeds. Rejecting at {@code trySubmitJob} HEAD turns the
  * leftover into {@code CPU_OFFLINE} (Tianshu maintenance {@code WAITING_CPU})
  * instead of a foreign CPU starting the job.

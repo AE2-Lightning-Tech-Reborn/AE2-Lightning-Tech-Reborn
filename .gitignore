@@ -71,6 +71,7 @@ Source Code/
 # Port debugging workspace (local only)
 *.ps1
 *.txt
+!/src/main/resources/META-INF/recipesearch-attribution.txt
 libs/
 
 # Port debug scratch dirs

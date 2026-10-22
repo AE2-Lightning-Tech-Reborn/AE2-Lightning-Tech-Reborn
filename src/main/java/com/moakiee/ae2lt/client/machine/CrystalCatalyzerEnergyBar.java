@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.client.machine;
 
 import java.util.List;
-import java.util.function.LongSupplier;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -20,8 +19,7 @@ public class CrystalCatalyzerEnergyBar extends AbstractWidget implements IToolti
 
     public CrystalCatalyzerEnergyBar(CrystalCatalyzerMenu menu, Blitter fill) {
         super(0, 0, fill.getSrcWidth(), fill.getSrcHeight(), Component.empty());
-        this.storedEnergy = storedEnergy;
-        this.energyCapacity = energyCapacity;
+        this.menu = menu;
         this.fill = fill.copy();
     }
 

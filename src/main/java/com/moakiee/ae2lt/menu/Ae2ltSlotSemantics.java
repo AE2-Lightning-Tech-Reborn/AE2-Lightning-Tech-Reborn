@@ -70,11 +70,6 @@ public final class Ae2ltSlotSemantics {
             SlotSemantics.register("AE2LT_OVERLOADED_POWER_SUPPLY_CELL", false);
     public static final SlotSemantic OVERLOADED_INTERFACE_FILTER =
             SlotSemantics.register("AE2LT_OVERLOADED_INTERFACE_FILTER", false);
-    public static final SlotSemantic OVERLOADED_IO_FILTER =
-            SlotSemantics.register("AE2LT_OVERLOADED_IO_FILTER", false);
-    public static final SlotSemantic OVERLOADED_IO_MATRIX =
-            SlotSemantics.register("AE2LT_OVERLOADED_IO_MATRIX", false);
-
     // Tianshu closed-loop authoring. These slots are positioned only by the
     // closed-loop editor sub-screen; the terminal screen keeps them hidden.
     public static final SlotSemantic TIANSHU_CLOSED_LOOP_MEMBER =
@@ -93,6 +88,17 @@ public final class Ae2ltSlotSemantics {
             SlotSemantics.register("AE2LT_OVERLOAD_DEVICE_WORKBENCH_CORE", false);
     public static final SlotSemantic OVERLOAD_DEVICE_WORKBENCH_MODULE =
             SlotSemantics.register("AE2LT_OVERLOAD_DEVICE_WORKBENCH_MODULE", false);
+
+    public static final SlotSemantic TIANSHU_SMITHING = SlotSemantics.register("AE2LT_TIANSHU_SMITHING", false);
+    public static final SlotSemantic TIANSHU_ANVIL = SlotSemantics.register("AE2LT_TIANSHU_ANVIL", false);
+    public static final SlotSemantic TIANSHU_STONECUTTING = SlotSemantics.register("AE2LT_TIANSHU_STONECUTTING", false);
+    public static final SlotSemantic TIANSHU_CELL = SlotSemantics.register("AE2LT_TIANSHU_CELL", false);
+    public static final SlotSemantic TIANSHU_CELL_UPGRADE = SlotSemantics.register("AE2LT_TIANSHU_CELL_UPGRADE", false);
+    public static final SlotSemantic TIANSHU_CELL_CONFIG = SlotSemantics.register("AE2LT_TIANSHU_CELL_CONFIG", false);
+
+    public static final SlotSemantic TIANSHU_OMNIVERSAL_INPUTS = SlotSemantics.register("AE2LT_TIANSHU_OMNIVERSAL_INPUTS", false);
+    public static final SlotSemantic TIANSHU_OMNIVERSAL_OUTPUTS = SlotSemantics.register("AE2LT_TIANSHU_OMNIVERSAL_OUTPUTS", false);
+    public static final SlotSemantic TIANSHU_OMNIVERSAL_MOLDS = SlotSemantics.register("AE2LT_TIANSHU_OMNIVERSAL_MOLDS", false);
 
     private Ae2ltSlotSemantics() {
     }

@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.client;
 
+import com.moakiee.ae2lt.client.render.HyperdimensionalPigmeeItemRenderer;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;

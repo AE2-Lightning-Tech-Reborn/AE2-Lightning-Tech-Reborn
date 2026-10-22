@@ -17,6 +17,9 @@ import com.moakiee.ae2lt.machine.lightningassembly.LightningAssemblyChamberInven
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipeInput;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
+import com.moakiee.ae2lt.menu.OverloadedIOPortMenu;
+import com.mojang.authlib.GameProfile;
 import com.moakiee.ae2lt.registry.*;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,9 +28,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.*;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.*;
 
 @GameTestHolder("ae2lt")
@@ -693,6 +698,50 @@ public final class OverloadedIOPortGameTests {
             h.assertTrue(destination.probes==16 && destination.amounts.isEmpty() && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"sixteen rejected types exhaust budget without completing HALF");
             h.runAfterDelay(5,()->{tick(be);
                 h.assertTrue(destination.amounts.getOrDefault(destination.only,0L)==123 && !be.getInternalInventory().getStackInSlot(0).isEmpty(),"next round reaches late key and retains a progressing HALF cell");h.succeed();});
+        });
+    }
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void menuRemovalRestoresBaseThroughput(GameTestHelper h) {
+        fixture(h,be->{
+            var player=FakePlayerFactory.get(h.getLevel(),new GameProfile(UUID.randomUUID(),"IoMatrixRemoval"));
+            for (var click : List.of(ClickType.PICKUP,ClickType.QUICK_MOVE,ClickType.SWAP,ClickType.THROW)) {
+                player.getInventory().clearContent();
+                be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+                var menu=new OverloadedIOPortMenu(7,player.getInventory(),be);
+                player.containerMenu=menu;
+                var slot=menu.getSlots(Ae2ltSlotSemantics.OVERLOADED_IO_MATRIX).get(0);
+                menu.broadcastChanges();
+                h.assertTrue(menu.transferCap==Long.MAX_VALUE && menu.batchLimit==16,"installed matrices update menu");
+                menu.clicked(slot.index,click==ClickType.THROW?1:0,click,player);
+                menu.broadcastChanges();
+                h.assertTrue(be.getMatrixInventory().isEmpty() && be.getMatrixCount()==0,
+                        click+" removes matrices from the real server inventory");
+                h.assertTrue(be.getTransferCap()==BASE_CAP && be.getBatchLimit()==4
+                        && menu.transferCap==BASE_CAP && menu.batchLimit==4,
+                        click+" restores server and menu limits");
+                menu.setCarried(ItemStack.EMPTY);
+                menu.removed(player);
+                player.containerMenu=player.inventoryMenu;
+            }
+            h.succeed();
+        });
+    }
+    @GameTest(template="pigmee_station_empty",timeoutTicks=160)
+    public static void reloadingEmptyMatrixSlotClearsPreviousBonus(GameTestHelper h) {
+        fixture(h,be->{
+            var empty=new CompoundTag();be.saveAdditional(empty);
+            be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
+            be.getFilterInventory().setItemDirect(0,filter(false,false,STONE));
+            var boosted=new CompoundTag();be.saveAdditional(boosted);
+            var restored=new OverloadedIOPortBlockEntity(be.getBlockPos(),be.getBlockState());
+            restored.loadTag(boosted);
+            h.assertTrue(restored.getTransferCap()==Long.MAX_VALUE,"load boosted state first");
+            restored.loadTag(empty);
+            h.assertTrue(restored.getMatrixInventory().isEmpty() && restored.getMatrixCount()==0
+                    && restored.getTransferCap()==BASE_CAP && restored.getBatchLimit()==4,
+                    "empty saved slot must replace previously installed matrices and their bonus");
+            h.assertTrue(restored.getFilterInventory().isEmpty(),"empty saved filter must also replace old rules");
+            h.succeed();
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)

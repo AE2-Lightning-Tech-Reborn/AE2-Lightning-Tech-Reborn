@@ -1,0 +1,58 @@
+// Forge 1.20.1 GTL regression suites; fixtures remain outside the release source set.
+// gradlew -I scripts/gtl-regression-test.init.gradle runGameTestServer -Pae2ltRegressionSuite=exact
+// The machines suite also needs -Penable_industrial_foregoing_runtime=true.
+allprojects { afterEvaluate {
+    def profile = providers.gradleProperty('ae2ltRegressionSuite').getOrElse('default')
+    def suites = [
+        'default': [[], 'ae2lt,minecraft'],
+        'io': [['**/*Interface*GameTests.java', '**/ManualItemExportReceiptGameTests.java'],
+               'ae2lt_io,ae2lt_interface_input,ae2lt_machine_recharge'],
+        'exact': [['**/BigIntegerPipelineGameTests.java', '**/BigMixedProviderGameTests.java'],
+                  'ae2lt_bigint,ae2lt_migration'],
+        'machines': [['**/ProviderMekanismReturnGameTests.java', '**/ProviderReturnFilterGameTests.java',
+                      '**/ProviderMachineAdaptationGameTests.java'],
+                     'ae2lt_io,ae2lt_provider_mekanism,ae2lt_machine_adaptation'],
+        'backport': [['**/ForgeCraftingInput.java', '**/MiningFactoryGameTests.java',
+                     '**/OverloadedIOPortGameTests.java', '**/RainbowPigmeeGameTests.java',
+                     '**/PigmeeBuildingGameTests.java', '**/ProviderReturnFilterGameTests.java',
+                     '**/PhaseLockCreativeRecoveryGameTests.java', '**/PhaseFlightAndLockGameTests.java',
+                     '**/PhaseFlightGroundCrouchGameTests.java', '**/OverloadProcessingRecipeSyncGameTests.java',
+                     '**/TianshuWirelessBindingGameTests.java'],
+                     'ae2lt,ae2lt_mining,ae2lt_io,ae2lt_phase,ae2lt_phase_lock,ae2lt_main_fixes,ae2lt_wireless_binding'],
+        'crafting': [['**/ArmorProtectionGameTests.java', '**/CrystalCatalyzerFluidGameTests.java',
+                     '**/PigmeeCrystalCatalyzerGameTests.java', '**/GlobalBatchAdaptersGameTests.java',
+                     '**/TianshuDeferredReturnsGameTests.java', '**/OverloadFactoryReactionGameTests.java',
+                     '**/TianshuPatternUploadGameTests.java', '**/TianshuQuantumBridgeGameTests.java'],
+                    'ae2lt_protection,ae2lt_catalyzer,ae2lt_global_batch,ae2lt_deferred,ae2lt_overload,ae2lt_upload_retention,ae2lt_quantum']
+    ]
+    if (!suites.containsKey(profile)) throw new GradleException('Unknown GTL regression suite: ' + profile)
+    if (profile == 'machines' && !(findProperty('enable_industrial_foregoing_runtime') ?: 'false').toBoolean())
+        throw new GradleException('The machines suite requires enable_industrial_foregoing_runtime=true')
+    def suite = suites[profile]
+    sourceSets.jdb.java.setIncludes(suite[0])
+    // Gradle interprets an empty include set as all files.
+    sourceSets.jdb.java.setExcludes(profile == 'default' ? ['**/*'] : [])
+    sourceSets.jdb.resources.setSrcDirs(['src/jdb/resources', 'src/overloadTest/resources'])
+    def fixtureClasses = layout.buildDirectory.dir('classes/java/gtl-regression-' + profile)
+    sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+    tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+    def runDir = providers.gradleProperty('ae2ltRegressionDirectory').isPresent()
+            ? project.file(providers.gradleProperty('ae2ltRegressionDirectory').get())
+            : layout.buildDirectory.dir('gtl-regression/' + profile).get().asFile
+    minecraft.runs.gameTestServer {
+        workingDirectory runDir
+        jvmArgs '-Xms512m', '-Xmx3g'
+        property 'forge.enabledGameTestNamespaces', suite[1]
+        property 'forge.logging.console.level', 'info'
+        mods { ae2lt { source sourceSets.jdb } }
+    }
+    tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+        doLast {
+            def logFile = new File(runDir, 'logs/latest.log')
+            def log = logFile.isFile() ? logFile.text : ''
+            def passed = log =~ /All (\d+) required tests passed/
+            if (!passed.find() || passed.group(1).toInteger() == 0)
+                throw new GradleException('GTL regression suite did not execute and pass: ' + profile)
+        }
+    }
+} }

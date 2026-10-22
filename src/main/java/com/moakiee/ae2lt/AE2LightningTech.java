@@ -244,6 +244,9 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.CLOSED_LOOP_PATTERN_STORAGE);
                         acceptCreative(output, ModBlocks.CLOSED_LOOP_SEED_STORAGE);
                         acceptCreative(output, ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL);
+                        acceptCreative(output, ModItems.TIANSHU_CRAFTING_TERMINAL);
+                        acceptCreative(output, ModBlocks.OVERLOAD_ALLOY_ANVIL);
+                        ModItems.TIANSHU_WIRELESS_CRAFTING_TERMINAL.ifPresent(output::accept);
                         ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.ifPresent(output::accept);
 
                         // 天枢物质扭曲矩阵
@@ -885,6 +888,7 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);

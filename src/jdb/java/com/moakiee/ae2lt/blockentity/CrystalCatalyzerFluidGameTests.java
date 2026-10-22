@@ -179,7 +179,12 @@ public final class CrystalCatalyzerFluidGameTests {
 
     private static void fullCycle(GameTestHelper h, String path, int expectedCount) {
         var candidate = find(h, path);
-        if (candidate.isEmpty()) { h.succeed(); return; }
+        if (candidate.isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: fullCycle/{} (recipe absent)", path);
+            h.succeed();
+            return;
+        }
         var recipe = candidate.get().recipe();
         var host = powered(h, 10);
         h.runAfterDelay(20, () -> supply(host, recipe));
@@ -389,7 +394,12 @@ public final class CrystalCatalyzerFluidGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void ae2csSingleMotherRockProducesEight(GameTestHelper h) {
         var candidate = find(h, "ae2cs/quantum_mother_rock");
-        if (candidate.isEmpty()) { h.succeed(); return; }
+        if (candidate.isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: ae2csSingleMotherRockProducesEight (recipe absent)");
+            h.succeed();
+            return;
+        }
         var recipe = candidate.get().recipe();
         var host = powered(h, 10);
         h.runAfterDelay(20, () -> {
@@ -410,7 +420,12 @@ public final class CrystalCatalyzerFluidGameTests {
     @GameTest(template = "empty", timeoutTicks = 200)
     public static void pigmeeAe2csMotherRockRemainsReusable(GameTestHelper h) {
         var candidate = find(h, "ae2cs/quantum_mother_rock");
-        if (candidate.isEmpty()) { h.succeed(); return; }
+        if (candidate.isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: pigmeeAe2csMotherRockRemainsReusable (recipe absent)");
+            h.succeed();
+            return;
+        }
         var recipe = candidate.get().recipe();
         var host = machine(h, true);
         check(host.getInventory().getSlotLimit(OUTPUT) == 64, "Pigmee output cap must be 64");

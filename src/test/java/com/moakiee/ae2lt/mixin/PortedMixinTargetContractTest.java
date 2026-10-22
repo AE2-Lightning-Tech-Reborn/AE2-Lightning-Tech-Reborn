@@ -50,14 +50,13 @@ class PortedMixinTargetContractTest {
         String targetName = value != null ? ((Type) ((List<?>) value).get(0)).getInternalName()
                 : ((String) ((List<?>) value(declaration, "targets")).get(0)).replace('.', '/');
         var target = read(targetName);
-        var runtime = readRuntime(targetName);
         boolean classRemap = remap(declaration, true);
         for (var handler : mixin.methods) {
             for (var annotation : annotations(handler.visibleAnnotations, handler.invisibleAnnotations)) {
                 Object selectors = value(annotation, "method");
                 if (!(selectors instanceof List<?> methods)) continue;
                 boolean methodRemap = remap(annotation, classRemap);
-                var binary = methodRemap ? target : runtime;
+                var binary = methodRemap ? target : readRuntime(targetName);
                 for (Object selector : methods) {
                     String text = (String) selector;
                     String methodName = text.contains("(") ? text.substring(0, text.indexOf('(')) : text;

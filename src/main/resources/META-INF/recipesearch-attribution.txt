@@ -1,0 +1,17 @@
+Recipe search design attribution
+
+RecipeSearch / Fast Recipe Search:
+  Author: nutant233 (Git history: nutant / mutan)
+  https://github.com/GregTech-Odyssey/RecipeSearch
+  Reviewed baseline: 3c4360aad469315f2d612d04cbd40164f5e2f67b
+  https://github.com/nutant233/Fast-Recipe-Search
+
+Also reviewed: GregTech-Odyssey/GTO's RecipeDB integration, which compiles coarse
+candidate indexes, invalidates them on catalog/input changes and retains full
+native matching at admission.
+
+AE2LT independently applies that index-then-validate design to known pattern
+definitions. It preserves source candidate order, uses native provider mutation
+revisions or local dirty flags, and revalidates physical recipes on every lookup.
+No RecipeSearch trie implementation or third-party source code is copied or
+embedded. This attribution does not relicense the upstream projects.

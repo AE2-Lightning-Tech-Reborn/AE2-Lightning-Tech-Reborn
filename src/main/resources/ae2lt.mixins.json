@@ -6,12 +6,12 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ae2lt.refmap.json",
   "mixins": [
+    "ExtendedAeOptionalLootMixin",
     "PatternMigrationProviderBatchMixin",
     "PatternMigrationEaeBatchMixin",
     "PatternMigrationEaepBatchMixin",
     "PatternMigrationRefundMixin",
     "PatternMigrationStorageMountMixin",
-
     "appflux.InterfaceEnergyDistributionMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
@@ -64,23 +64,24 @@
     "thunderbolt.ThunderboltV2NodeLessRequesterMixin",
     "thunderbolt.TimeWheelCraftingServiceMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
-    "thunderbolt.ECOCraftingCpuLogicMixin",
     "gtlcore.TransfiniteCraftingLogicMixin",
     "gtlcore.TransfiniteComputationArrayMachineMixin",
     "gtlcore.MECraftingCPUInterfacePartMachineMixin",
     "ControllerValidatorMixin",
     "RecipeManagerMixin",
-    "InscriberProcessorRecipeLoaderMixin",
-    "RainbowPigmeeRecipeManagerMixin",
     "EjectGhostBEMixin",
     "MenuTypeBuilderAccessor",
     "AEBaseMenuAccessor",
     "ShulkerBulletMixin",
+    "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "OverloadAlloyAnvilMenuMixin",
+    "OverloadAlloyAnvilFallingMixin",
+    "TianshuStonecutterMenuMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -105,7 +106,8 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.EncodingHelperAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -6,7 +6,8 @@ ServerEvents.recipes(event => {
         const id = String(recipe.getId());
         if (id.startsWith('ae2lt:derived/inscriber/ae2lt_overload/inscriber/processor_fixture/')) {
             const json = recipe.json;
-            json.addProperty('totalEnergy', 123456);
+            // Keep this a JSON number; Rhino can select addProperty's String overload.
+            json.add('totalEnergy', Java.loadClass('com.google.gson.JsonParser').parseString('123456'));
             event.remove({ id: id });
             event.custom(json).id(id);
             modified++;

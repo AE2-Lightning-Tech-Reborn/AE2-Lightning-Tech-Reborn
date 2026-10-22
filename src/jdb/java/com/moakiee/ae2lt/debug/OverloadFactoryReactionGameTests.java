@@ -87,7 +87,12 @@ public final class OverloadFactoryReactionGameTests {
 
     @GameTest(template = "empty")
     public static void derivesRealAppGenProcessorWhenManualCompatibilityIsMissing(GameTestHelper helper) {
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("appgen")) { helper.succeed(); return; }
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("appgen")) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: derivesRealAppGenProcessorWhenManualCompatibilityIsMissing (appgen absent)");
+            helper.succeed();
+            return;
+        }
         var manager = new net.minecraft.world.item.crafting.RecipeManager(net.minecraftforge.common.crafting.conditions.ICondition.IContext.EMPTY);
         var original = helper.getLevel().getRecipeManager().getRecipes();
         var manual = new ResourceLocation("ae2lt:overload_processing/appgen_origination_processor");
@@ -141,7 +146,12 @@ public final class OverloadFactoryReactionGameTests {
 
     @GameTest(template = "empty", timeoutTicks = 2000)
     public static void kubeJsEditsRemainAuthoritativeAfterReload(GameTestHelper helper) {
-        if (!Boolean.getBoolean("ae2lt.inscriberScriptTest")) { helper.succeed(); return; }
+        if (!Boolean.getBoolean("ae2lt.inscriberScriptTest")) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: kubeJsEditsRemainAuthoritativeAfterReload (script fixture disabled)");
+            helper.succeed();
+            return;
+        }
         assertScriptResults(helper);
         helper.runAfterDelay(80, () -> {
             var server = helper.getLevel().getServer();
@@ -164,8 +174,16 @@ public final class OverloadFactoryReactionGameTests {
         helper.assertTrue(catalog.stream().noneMatch(h -> h.getId().getPath().startsWith(
                 "derived/inscriber/ae2lt_overload/inscriber/removed_processor_fixture/")), "deleted wrapper was regenerated");
         var calculation = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation("ae2:calculation_processor"));
-        helper.assertTrue(catalog.stream().noneMatch(h -> h.itemResults().stream().anyMatch(s -> s.is(calculation))),
+        helper.assertTrue(manager.byKey(new ResourceLocation("ae2lt:overload_processing/ae2_calculation_processor")).isEmpty(),
+                "KJS did not remove the manual calculation processor recipe");
+        helper.assertTrue(OverloadProcessingRecipeCatalog.displayRecipes(manager).stream()
+                        .noneMatch(h -> h.itemResults().stream().anyMatch(s -> s.is(calculation))),
                 "deleted manual calculation processor recipe was replaced with a fallback");
+        var borrowed = new ResourceLocation("advanced_ae:calculation_processor_chamber");
+        if (manager.byKey(borrowed).isPresent()) {
+            helper.assertTrue(catalog.stream().anyMatch(h -> h.getId().equals(borrowed)),
+                    "removing an AE2LT recipe must retain the independent AdvancedAE reaction");
+        }
     }
 
     @GameTest(template = "empty", timeoutTicks = 250)

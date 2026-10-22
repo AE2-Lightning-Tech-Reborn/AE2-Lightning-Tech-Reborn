@@ -1,5 +1,10 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.provider.CanonicalPatternMaps;
+
+import com.moakiee.ae2lt.logic.provider.ProviderTarget;
+import com.moakiee.ae2lt.logic.transfer.TransferCadence;
+
 import java.util.HashMap;
 import java.util.Map;
 

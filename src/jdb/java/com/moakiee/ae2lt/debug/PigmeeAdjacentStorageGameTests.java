@@ -4,13 +4,14 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
-import appeng.core.network.serverbound.FillCraftingGridFromRecipePacket;
+import appeng.core.sync.packets.FillCraftingGridFromRecipePacket;
 import appeng.helpers.InventoryAction;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.CraftingTermSlot;
 import appeng.parts.reporting.CraftingTerminalPart;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
+import com.moakiee.ae2lt.gametest.PigmeeSynthesisStationGameTests;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.mojang.authlib.GameProfile;
 import java.util.EnumMap;
@@ -29,48 +30,61 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
 
 /** Opt-in real-world regressions; never included in the published jar. */
 @GameTestHolder("ae2lt_pigmee_storage")
 @PrefixGameTestTemplate(false)
-@EventBusSubscriber(modid = "ae2lt", bus = EventBusSubscriber.Bus.MOD)
 public final class PigmeeAdjacentStorageGameTests {
     private static final BlockPos STATION = new BlockPos(2, 2, 2);
     private static final IActionSource ACTION = IActionSource.empty();
     private static final Map<BlockPos, IItemHandler> ITEM_PORTS = new HashMap<>();
     private static final Map<BlockPos, IFluidHandler> FLUID_PORTS = new HashMap<>();
 
-    @SubscribeEvent
-    public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        if (!Boolean.getBoolean("ae2lt.pigmeeStorageRegression")) {
-            return;
+    private static final class TestPort extends BarrelBlockEntity {
+        TestPort(BlockPos pos) {
+            super(pos, Blocks.BARREL.defaultBlockState());
         }
-        event.registerBlock(Capabilities.ItemHandler.BLOCK,
-                (level, pos, state, be, side) -> ITEM_PORTS.get(pos), Blocks.STRUCTURE_VOID);
-        event.registerBlock(Capabilities.FluidHandler.BLOCK,
-                (level, pos, state, be, side) -> FLUID_PORTS.get(pos), Blocks.STRUCTURE_VOID);
+
+        @Override
+        public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
+            if (isRemoved()) return LazyOptional.empty();
+            if (capability == ForgeCapabilities.ITEM_HANDLER) {
+                var handler = ITEM_PORTS.get(getBlockPos());
+                return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler).cast();
+            }
+            if (capability == ForgeCapabilities.FLUID_HANDLER) {
+                var handler = FLUID_PORTS.get(getBlockPos());
+                return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler).cast();
+            }
+            // This controlled port exposes only the handlers installed by this fixture.
+            // Other suites attach FE/fluid capabilities to every BarrelBlockEntity;
+            // inheriting those would leave a live storage after our handlers are revoked.
+            return LazyOptional.empty();
+        }
     }
 
     private static PigmeeSynthesisStationBlockEntity station(GameTestHelper helper) {
+        // Other fixtures can place blocks beyond their declared structure bounds.
+        // These tests require exactly the neighbours they install below, including empty ports.
+        for (var side : Direction.values()) helper.setBlock(STATION.relative(side), Blocks.AIR);
         helper.setBlock(STATION, ModBlocks.PIGMEE_SYNTHESIS_STATION.get());
-        return helper.getBlockEntity(STATION);
+        return (PigmeeSynthesisStationBlockEntity) helper.getBlockEntity(STATION);
     }
 
     private static BarrelBlockEntity barrel(GameTestHelper helper, Direction side, ItemStack stack) {
         helper.setBlock(STATION.relative(side), Blocks.BARREL);
-        BarrelBlockEntity barrel = helper.getBlockEntity(STATION.relative(side));
+        BarrelBlockEntity barrel = (BarrelBlockEntity) helper.getBlockEntity(STATION.relative(side));
         barrel.setItem(0, stack);
         return barrel;
     }
@@ -79,8 +93,8 @@ public final class PigmeeAdjacentStorageGameTests {
         var pos = helper.absolutePos(STATION.relative(side));
         if (items != null) ITEM_PORTS.put(pos, items);
         if (fluids != null) FLUID_PORTS.put(pos, fluids);
-        helper.setBlock(STATION.relative(side), Blocks.STRUCTURE_VOID);
-        helper.getLevel().invalidateCapabilities(pos);
+        helper.setBlock(STATION.relative(side), Blocks.BARREL);
+        helper.getLevel().setBlockEntity(new TestPort(pos));
     }
 
     private static void clearPorts(GameTestHelper helper) {
@@ -88,26 +102,27 @@ public final class PigmeeAdjacentStorageGameTests {
             var pos = helper.absolutePos(STATION.relative(side));
             ITEM_PORTS.remove(pos);
             FLUID_PORTS.remove(pos);
-            helper.getLevel().invalidateCapabilities(pos);
+            var entity = helper.getLevel().getBlockEntity(pos);
+            if (entity instanceof TestPort) entity.invalidateCaps();
         }
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void existingStorageAndPowerContract(GameTestHelper helper) {
         PigmeeSynthesisStationGameTests.liveStorageAndPower(helper);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void existingMeExclusionContract(GameTestHelper helper) {
         PigmeeSynthesisStationGameTests.rejectsMeInterface(helper);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void existingCraftingAndPersistenceContract(GameTestHelper helper) {
         PigmeeSynthesisStationGameTests.menuCraftingAndPersistence(helper);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void allSixSidesAndSplitItemTransfers(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -139,11 +154,11 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void cuttingBoardAndNativeRecipeFill(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
-        var board = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("farmersdelight:cutting_board"));
+        var board = BuiltInRegistries.BLOCK.get(new ResourceLocation("farmersdelight:cutting_board"));
         helper.assertTrue(board != Blocks.AIR, "This suite requires the real Farmer's Delight jar");
         var north = barrel(helper, Direction.NORTH, new ItemStack(Items.OAK_PLANKS, 2));
         var east = barrel(helper, Direction.EAST, new ItemStack(Items.OAK_PLANKS, 1));
@@ -156,8 +171,8 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.assertTrue(storage.getAvailableStacks().get(AEItemKey.of(Items.OAK_PLANKS)) == 3,
                 "Empty cutting board must not hide side inventories");
         helper.assertTrue(matrix.getStackInSlot(0).getCount() == 7, "Placement preserves crafting slots");
-        var boardItems = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
-                helper.absolutePos(STATION.above()), Direction.DOWN);
+        var boardItems = helper.getBlockEntity(STATION.above())
+                .getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.DOWN).orElse(null);
         helper.assertTrue(boardItems != null && boardItems.insertItem(0, new ItemStack(Items.CARROT), false).isEmpty(),
                 "Real cutting board inventory accepts fixture item");
         helper.assertTrue(storage.getAvailableStacks().get(AEItemKey.of(Items.CARROT)) == 1
@@ -178,15 +193,22 @@ public final class PigmeeAdjacentStorageGameTests {
         for (int slot : new int[] {3, 5, 6, 8}) template.set(slot, new ItemStack(Items.COBBLESTONE));
         template.set(4, new ItemStack(Items.IRON_INGOT));
         template.set(7, new ItemStack(Items.REDSTONE));
-        new FillCraftingGridFromRecipePacket(ResourceLocation.parse("minecraft:piston"), template, false).handleOnServer(player);
+        var payload = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        payload.writeBoolean(false);
+        payload.writeInt(template.size());
+        template.forEach(payload::writeItem);
+        payload.writeBoolean(true);
+        var packet = new FillCraftingGridFromRecipePacket(payload);
+        payload.release();
+        packet.serverPacketData(player);
         for (int slot = 0; slot < 9; slot++) {
-            helper.assertTrue(ItemStack.isSameItemSameComponents(matrix.getStackInSlot(slot), template.get(slot))
+            helper.assertTrue(ItemStack.isSameItemSameTags(matrix.getStackInSlot(slot), template.get(slot))
                     && matrix.getStackInSlot(slot).getCount() == 1, "Native recipe fill slot " + slot);
         }
         for (var barrel : new BarrelBlockEntity[] {north, east, south, west, down}) {
             helper.assertTrue(barrel.isEmpty(), "Recipe fill debits each physical source");
         }
-        var output = menu.getSlots(SlotSemantics.CRAFTING_RESULT).getFirst();
+        var output = menu.getSlots(SlotSemantics.CRAFTING_RESULT).get(0);
         helper.assertTrue(output.getItem().is(Items.PISTON), "Native menu resolves the filled recipe");
         ((CraftingTermSlot) output).doClick(InventoryAction.CRAFT_ITEM, player);
         helper.assertTrue(menu.getCarried().is(Items.PISTON) && menu.getCarried().getCount() == 1,
@@ -195,7 +217,7 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void liveRemovalAndReplacement(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -210,11 +232,11 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.assertTrue(storage.extract(iron, 99, Actionable.MODULATE, ACTION) == 27, "No stale source can be extracted");
         helper.setBlock(STATION.north(), Blocks.AIR);
         helper.setBlock(STATION.east(), Blocks.AIR);
-        helper.assertTrue(!host.getLinkStatus().connected(), "Disconnect when all sources are removed");
+        helper.assertTrue(!host.hasAdjacentStorage(), "Disconnect when all sources are removed");
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void sharedHandlersCountAndSimulateOnce(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -242,8 +264,6 @@ public final class PigmeeAdjacentStorageGameTests {
             ITEM_PORTS.remove(helper.absolutePos(STATION.north()));
             FLUID_PORTS.remove(helper.absolutePos(STATION.north()));
             helper.setBlock(STATION.north(), Blocks.AIR);
-            // This test-only capability has no block entity to invalidate it on removal.
-            helper.getLevel().invalidateCapabilities(helper.absolutePos(STATION.north()));
             helper.assertTrue(storage.getAvailableStacks().get(water) == 4000, "Remaining port still exposes shared storage");
             helper.succeed();
         } finally {
@@ -251,7 +271,7 @@ public final class PigmeeAdjacentStorageGameTests {
         }
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void silentMultiblockHandlerReplacementAndRemoval(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -293,8 +313,10 @@ public final class PigmeeAdjacentStorageGameTests {
             helper.assertTrue(storage.insert(iron, 1, Actionable.MODULATE, ACTION) == 0
                     && storage.extract(water, 4000, Actionable.MODULATE, ACTION) == 0,
                     "Revoked capabilities must immediately reject writes and extraction");
-            helper.assertTrue(storage.getAvailableStacks().isEmpty() && !host.getLinkStatus().connected(),
-                    "Revoked multiblock must disappear without reopening");
+            helper.assertTrue(storage.getAvailableStacks().isEmpty() && !host.hasAdjacentStorage(),
+                    "Revoked multiblock must disappear without reopening: "
+                            + java.util.Arrays.stream(Direction.values()).map(side -> side + "="
+                            + helper.getBlockState(STATION.relative(side))).toList());
             helper.assertTrue(oldItems.getStackInSlot(0).getCount() == 16 && oldFluid.getFluidAmount() == 2000,
                     "Detached inventories must never be read as live stock or mutated");
             helper.assertTrue(newItems.getStackInSlot(0).isEmpty() && newFluid.getFluidAmount() == 1000,
@@ -305,7 +327,7 @@ public final class PigmeeAdjacentStorageGameTests {
         }
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void removedHostAndRemovedNeighbourRejectAccess(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -328,7 +350,7 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt_pigmee_storage", template = "empty")
     public static void independentFluidTanksCombine(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();

@@ -51,59 +51,25 @@ public final class GlobalBatchAdaptersGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void optionalAdaptersRegisterAndNeoEcoAcceptsPartialBatch(GameTestHelper helper) throws Exception {
-        for (var mapping : Map.of("neoecoae", "neoeco", "extendedae_plus", "extendedae_plus").entrySet()) {
-            if (net.minecraftforge.fml.ModList.get().isLoaded(mapping.getKey())) {
-                helper.assertTrue(BatchProviderAdapters.entries().stream().anyMatch(e -> e.id().toString().equals("thunderbolt:" + mapping.getValue())),
-                        "TB registered adapter for " + mapping.getKey());
+    public static void extendedAePlusAdapterRegistersWhenPresent(GameTestHelper helper) {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")) {
+            boolean registered = BatchProviderAdapters.entries().stream()
+                    .anyMatch(e -> e.id().toString().equals("thunderbolt:extendedae_plus"));
+            try {
+                Class.forName("com.extendedae_plus.api.crafting.ScaledMolecularAssemblerPattern");
+                Class.forName("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity");
+                helper.assertTrue(registered, "TB registered the available ExtendedAE Plus matrix adapter");
+            } catch (ClassNotFoundException absentApi) {
+                helper.assertTrue(!registered, "EAEP without the matrix API must not register its batch adapter");
+                helper.assertTrue(com.moakiee.thunderbolt.compat.extendedaeplus.ExtendedAePlusBatchAdapter
+                        .createAdapter() == null, "EAEP without the matrix API must retain the ordinary-provider fallback");
+                org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                        "EAEP_BATCH_FALLBACK_VERIFIED: installed EAEP has no super-matrix batch API");
             }
+        } else {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
+                    "AE2LT_OPTIONAL_NOT_EXECUTED: extendedAePlusAdapterRegistersWhenPresent (extendedae_plus absent)");
         }
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) { helper.succeed(); return; }
-        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider");
-        var prepared = Class.forName(type.getName() + "$Preparation");
-        var preparationConstructor = Arrays.stream(prepared.getConstructors())
-                .filter(c -> c.getParameterCount() == 4).findFirst().orElseThrow();
-        long[] accepted = new long[1];
-        int[] ordinary = new int[1];
-        boolean[] fail = new boolean[1];
-        var uncertain = (RuntimeException) Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOIndeterminateBatchException")
-                .getConstructor(String.class, Throwable.class).newInstance("uncertain test submit", new IllegalStateException());
-        java.util.function.Predicate<Object> submit = batch -> {
-            if (fail[0]) throw uncertain;
-            try { accepted[0] += (long) batch.getClass().getMethod("craftCount").invoke(batch); }
-            catch (ReflectiveOperationException e) { throw new AssertionError(e); }
-            return true;
-        };
-        var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
-                new Class<?>[] {ICraftingProvider.class, type}, (p, method, args) -> switch (method.getName()) {
-                    case "isBusy" -> false;
-                    case "getAvailablePatterns" -> List.of();
-                    case "eco$prepareFastPath" -> preparationConstructor.newInstance(3L, null, false, submit);
-                    case "pushPattern" -> { ordinary[0]++; yield false; }
-                    default -> null;
-                });
-        var raw = helper.getLevel().getRecipeManager().byKey(new ResourceLocation("oak_planks")).orElseThrow();
-        var holder = (net.minecraft.world.item.crafting.CraftingRecipe) raw;
-        var inputs = new net.minecraft.world.item.ItemStack[9]; Arrays.fill(inputs, net.minecraft.world.item.ItemStack.EMPTY);
-        inputs[0] = new net.minecraft.world.item.ItemStack(Items.OAK_LOG);
-        var pattern = appeng.api.crafting.PatternDetailsHelper.decodePattern(
-                appeng.api.crafting.PatternDetailsHelper.encodeCraftingPattern(holder, inputs, new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 4), false, false), helper.getLevel());
-        var entry = BatchProviderAdapters.entries().stream().filter(e -> e.id().toString().equals("thunderbolt:neoeco")).findFirst().orElseThrow();
-        var endpoint = entry.adapter().adapt(provider, pattern, null);
-        helper.assertTrue(endpoint != null, "native NeoECO protocol recognized");
-        var template = new KeyCounter(); template.add(AEItemKey.of(Items.OAK_LOG), 1);
-        var job = new Job(helper.getLevel(), pattern);
-        helper.assertTrue(endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job) == 5, "NeoECO partial capacity returned five copies");
-        helper.assertTrue(accepted[0] == 3 && ordinary[0] == 0, "three accepted via real NeoECO FastPath facade");
-        helper.assertTrue(template.get(AEItemKey.of(Items.OAK_LOG)) == 1, "NeoECO did not mutate template");
-        fail[0] = true;
-        try {
-            endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job);
-            throw new AssertionError("indeterminate submit must propagate");
-        } catch (RuntimeException expected) {
-            helper.assertTrue(expected == uncertain, "preserved NeoECO uncertain ownership signal");
-        }
-        helper.assertTrue(ordinary[0] == 0, "uncertain NeoECO submission was not replayed");
         helper.succeed();
     }
 
@@ -204,11 +170,12 @@ public final class GlobalBatchAdaptersGameTests {
     private static final class Job implements BatchJobView {
         final Level level; final Task task; final ArrayList<BatchTaskHandle> tasks = new ArrayList<>();
         final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure;
+        final UUID craftingId = UUID.randomUUID();
         Job(Level level, IPatternDetails pattern) { this.level = level; task = new Task(pattern); tasks.add(task); }
         @Override public Level level() { return level; }
         @Override public Iterator<BatchTaskHandle> taskIterator() { return tasks.iterator(); }
         @Override public ListCraftingInventory waitingFor() { return waitingFor; }
-        @Override public UUID craftingId() { return null; }
+        @Override public UUID craftingId() { return craftingId; }
         @Override public void addContainerMaxItems(long count, AEKeyType type) {}
         @Override public void failDispatch(String reason, Throwable cause) { failure = reason; }
     }

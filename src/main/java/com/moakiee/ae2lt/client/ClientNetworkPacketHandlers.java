@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.client;
 
 import com.moakiee.ae2lt.client.easteregg.EasterEggOverlay;
 import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
+import com.moakiee.ae2lt.crafting.big.BigTerminalMenu;
 
 import java.util.List;
 
@@ -219,9 +220,11 @@ public final class ClientNetworkPacketHandlers {
     }
 
     public static void handleBigStock(BigStockPacket packet) {
-        TianshuMaintenanceMenu menu = getMaintenanceMenu(packet.containerId());
-        if (menu != null) {
-            menu.applyBigStock(packet.changed());
+        var player = Minecraft.getInstance().player;
+        if (player == null) return;
+        if (player.containerMenu instanceof BigTerminalMenu menu
+                && player.containerMenu.containerId == packet.containerId()) {
+            menu.ae2lt$applyBigStock(packet.changed());
         }
     }
 

@@ -629,7 +629,11 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     public boolean validateBigRecipe(com.moakiee.ae2lt.crafting.big.BigMatrixRecipe recipe) {
         if (!isBigCraftingAvailable() || level == null) return false;
-        for (var pattern : getAvailablePatterns()) if (recipe.matches(pattern, level)) return true;
+        for (var storage : findPatternStorages()) {
+            for (var pattern : storage.getPatternsByDefinition(recipe.definition())) {
+                if (recipe.matches(pattern, level)) return true;
+            }
+        }
         return false;
     }
 

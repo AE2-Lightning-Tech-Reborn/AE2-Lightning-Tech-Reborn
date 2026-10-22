@@ -32,6 +32,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayerFactory;
@@ -69,6 +70,10 @@ public final class RailgunCombatGameTests {
         return stack;
     }
     private static Cow target(GameTestHelper helper, BlockPos pos) {
+        // A reused GameTest world can retain a target at this position.
+        // Clear it before spawning so it cannot intercept the next beam.
+        helper.getLevel().getEntitiesOfClass(Cow.class, new AABB(pos).inflate(1))
+                .forEach(Cow::discard);
         var cow = new Cow(EntityType.COW, helper.getLevel());
         cow.setNoAi(true);
         cow.setNoGravity(true);
@@ -281,6 +286,7 @@ public final class RailgunCombatGameTests {
                 ModDataComponents.RAILGUN_SETTINGS.set(g, settings.withEhvBeam(true));
                 RailgunModuleStorage.INSTANCE.uninstallOne(g, "ehv_beam");
                 check(!RailgunBeamProfile.resolve(RailgunModuleStorage.entryData(g), ModDataComponents.RAILGUN_SETTINGS.get(g)).ehv(), "removing module disables EHV even with stored switch on");
+                cow.discard();
                 helper.succeed();
             } catch (Throwable failure) {
                 failure.printStackTrace();

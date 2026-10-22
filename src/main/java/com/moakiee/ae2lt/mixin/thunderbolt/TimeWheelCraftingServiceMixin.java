@@ -32,8 +32,8 @@ import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPoolProvider;
  * earlier mixin is outermost. This mixin must stay below GTLCore's default
  * 1000: TimeWheel ticks first, GTL may then cancel the original. Waiting keys
  * are left to Thunderbolt's FIELD injector on uncancelled ticks so AE2's
- * snapshot/rebuild still notifies watchers. The pool's same-tick guard no-ops
- * Thunderbolt's FIELD visit on that remaining tick.
+ * snapshot/rebuild still notifies watchers. The pool shares its physical-tick
+ * budget with Thunderbolt's FIELD visit so both visits cannot exceed capacity.
  */
 @Mixin(value = CraftingService.class, remap = false, priority = 900)
 public abstract class TimeWheelCraftingServiceMixin {

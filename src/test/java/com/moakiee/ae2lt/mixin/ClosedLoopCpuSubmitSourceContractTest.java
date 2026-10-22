@@ -15,8 +15,6 @@ class ClosedLoopCpuSubmitSourceContractTest {
             "src/main/java/com/moakiee/ae2lt/mixin/thunderbolt/CraftingCpuLogicClosedLoopSubmitMixin.java");
     private static final Path ADV = Path.of(
             "src/main/java/com/moakiee/ae2lt/mixin/thunderbolt/AdvCraftingCpuLogicMixin.java");
-    private static final Path ECO = Path.of(
-            "src/main/java/com/moakiee/ae2lt/mixin/thunderbolt/ECOCraftingCpuLogicMixin.java");
     private static final Path TRANSFINITE = Path.of(
             "src/main/java/com/moakiee/ae2lt/mixin/gtlcore/TransfiniteCraftingLogicMixin.java");
     private static final Path PLUGIN = Path.of(
@@ -29,7 +27,6 @@ class ClosedLoopCpuSubmitSourceContractTest {
         String vanilla = Files.readString(VANILLA);
         String leftover = Files.readString(LEFTOVER);
         String adv = Files.readString(ADV);
-        String eco = Files.readString(ECO);
         String transfinite = Files.readString(TRANSFINITE);
         String plugin = Files.readString(PLUGIN);
         String mixins = Files.readString(MIXINS);
@@ -48,8 +45,6 @@ class ClosedLoopCpuSubmitSourceContractTest {
 
         assertTrue(adv.contains("method = \"trySubmitJob\""));
         assertTrue(adv.contains("ClosedLoopCpuSubmitGuard.rejectIfClosedLoop(plan, cir)"));
-        assertTrue(eco.contains("method = \"trySubmitJob\""));
-        assertTrue(eco.contains("ClosedLoopCpuSubmitGuard.rejectIfClosedLoop(plan, cir)"));
 
         assertTrue(transfinite.contains("@Pseudo"));
         assertTrue(transfinite.contains(

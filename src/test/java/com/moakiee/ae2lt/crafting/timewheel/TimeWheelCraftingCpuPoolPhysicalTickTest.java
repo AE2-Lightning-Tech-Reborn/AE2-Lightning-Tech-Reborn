@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 class TimeWheelCraftingCpuPoolPhysicalTickTest {
     @Test
-    void secondVisitOnTheSamePhysicalTickIsRejectedAndTheNextTickStartsAgain() {
+    void physicalTickBudgetResetsOnlyWhenTheTickChanges() {
         var pool = new TimeWheelCraftingCpuPool(null, 1L, 0, 1L, false);
 
         assertTrue(pool.beginPhysicalTick(1L));

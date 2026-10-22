@@ -1,14 +1,22 @@
 // ./gradlew -I scripts/lightning-collector-test.init.gradle runGameTestServer
 allprojects {
     afterEvaluate {
+        sourceSets.jdb.java.destinationDirectory.set(layout.buildDirectory.dir('classes/java/lightningCollectorGameTest'))
         sourceSets.jdb.java.setIncludes(['**/LightningCollectorGameTests.java'])
-        configurations.runtimeOnly.dependencies.removeIf { dep ->
-            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
-                    'de.mari_023', 'top.theillusivec4.curios'])
+        minecraft.runs.gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_collector'
+            property 'forge.logging.console.level', 'info'
+            workingDirectory project.layout.buildDirectory.dir('lightning-collector-gametest').get().asFile
+            mods { ae2lt { source sourceSets.jdb } }
         }
-        neoForge.runs.gameTestServer {
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_collector'
-            gameDirectory = project.layout.buildDirectory.dir('lightning-collector-gametest').get().asFile
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doFirst { project.file('build/lightning-collector-gametest/logs/latest.log').delete() }
+            doLast {
+                def log = project.file('build/lightning-collector-gametest/logs/latest.log')
+                if (!log.isFile() || !(log.text =~ /All 10 required tests passed/).find()) {
+                    throw new GradleException('Lightning collector GameTests did not complete (expected 10).')
+                }
+            }
         }
     }
 }

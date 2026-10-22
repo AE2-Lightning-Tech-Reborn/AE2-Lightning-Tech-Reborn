@@ -41,6 +41,13 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
+modId = "ldlib"
+mandatory = true
+versionRange = "${ldlib_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
 modId = "jade"
 mandatory = false
 versionRange = "${jade_version_range}"

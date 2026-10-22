@@ -99,6 +99,13 @@ public final class TianshuWTMenuHost extends WTMenuHost
         saveChanges();
     }
 
+    @Override public com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft getOmniversalPatternDraft() {
+        return terminalState.getOmniversalDraft();
+    }
+    @Override public void setOmniversalPatternDraft(com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft draft) {
+        if (terminalState.setOmniversalDraft(draft)) markForSave();
+    }
+
     @Override
     public TianshuEncodingMode getTianshuEncodingMode() {
         return terminalState.getEncodingMode();

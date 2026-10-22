@@ -18,9 +18,6 @@ public final class TianshuPatternUploadRouting {
             new ResourceLocation("expatternprovider", "ex_molecular_assembler"),
             new ResourceLocation("expatternprovider", "assembler_matrix_pattern"),
             new ResourceLocation("extendedae_plus", "assembler_matrix_pattern_plus"),
-            new ResourceLocation("neoecoae", "crafting_system_l4"),
-            new ResourceLocation("neoecoae", "crafting_system_l6"),
-            new ResourceLocation("neoecoae", "crafting_system_l9"),
             new ResourceLocation("ae2cs", "meteorite_pattern_provider"),
             MATTER_WARPING_MATRIX_CONTROLLER_ID);
 
@@ -28,6 +25,7 @@ public final class TianshuPatternUploadRouting {
         CLOSED_LOOP_STORAGE,
         CRAFTING_ASSEMBLER,
         PROCESSING_PROVIDER,
+        OMNIVERSAL_FURNACE,
         INVALID
     }
 
@@ -41,6 +39,7 @@ public final class TianshuPatternUploadRouting {
             case CLOSED_LOOP -> Route.CLOSED_LOOP_STORAGE;
             case CRAFTING, STONECUTTING, SMITHING_TABLE -> Route.CRAFTING_ASSEMBLER;
             case PROCESSING -> Route.PROCESSING_PROVIDER;
+            case OMNIVERSAL -> Route.OMNIVERSAL_FURNACE;
         };
     }
 
@@ -50,6 +49,7 @@ public final class TianshuPatternUploadRouting {
             return item.readPayload(stack, level).isPresent()
                     ? Route.CLOSED_LOOP_STORAGE : Route.INVALID;
         }
+        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) return Route.OMNIVERSAL_FURNACE;
         var details = PatternDetailsHelper.decodePattern(stack, level);
         if (details == null) return Route.INVALID;
         if (!details.supportsPushInputsToExternalInventory()) {

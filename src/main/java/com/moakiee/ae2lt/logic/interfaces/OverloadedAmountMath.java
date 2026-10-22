@@ -2,7 +2,7 @@ package com.moakiee.ae2lt.logic.interfaces;
 
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
-final class OverloadedAmountMath {
+public final class OverloadedAmountMath {
     private OverloadedAmountMath() {
     }
 
@@ -19,7 +19,7 @@ final class OverloadedAmountMath {
                 : Math.min(nonNegativeAvailable, cap);
     }
 
-    static long saturatingAdd(long a, long b) {
+    public static long saturatingAdd(long a, long b) {
         return Long.MAX_VALUE - a < b ? Long.MAX_VALUE : a + b;
     }
 

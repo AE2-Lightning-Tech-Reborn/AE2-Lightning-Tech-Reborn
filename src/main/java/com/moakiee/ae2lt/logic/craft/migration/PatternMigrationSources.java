@@ -23,13 +23,11 @@ final class PatternMigrationSources {
     static final String EAE_PATTERN = "com.glodblock.github.extendedae.common.tileentities.matrix.TileAssemblerMatrixPattern";
     static final String EAEP_MATRIX = "com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity";
     static final String EAEP_CORE = "com.extendedae_plus.content.matrix.PatternCorePlusBlockEntity";
-    static final String ECO_BUS = "cn.dancingsnow.neoecoae.blocks.entity.crafting.ECOCraftingPatternBusBlockEntity";
     static final String EAE_ASSEMBLER = "com.glodblock.github.extendedae.common.tileentities.TileExMolecularAssembler";
     private final Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
     static int priority(Class<?> type) {
-        if (MigrationReflection.isType(type, EAE_PATTERN) || MigrationReflection.isType(type, EAEP_MATRIX)
-                || MigrationReflection.isType(type, ECO_BUS)) return 0;
+        if (MigrationReflection.isType(type, EAE_PATTERN) || MigrationReflection.isType(type, EAEP_MATRIX)) return 0;
         if (MatrixPatternStorageBlockEntity.class.isAssignableFrom(type)
                 || MolecularAssemblerBlockEntity.class.isAssignableFrom(type)) return 1;
         if (PatternProviderLogicHost.class.isAssignableFrom(type)) return 2;
@@ -53,11 +51,6 @@ final class PatternMigrationSources {
                     ? () -> MigrationReflection.call(owner, "eap$getSuperMatrixCluster") == cluster
                             && Boolean.TRUE.equals(MigrationReflection.call(cluster, "hasPendingWork"))
                     : () -> MigrationReflection.call(owner, "getCluster") == cluster && eaeBusy(cluster);
-        }
-        if (MigrationReflection.isType(type, ECO_BUS)) {
-            Object controller = MigrationReflection.call(owner, "getCraftingController");
-            return controller == null ? null : () -> MigrationReflection.call(owner, "getCraftingController") == controller
-                    && ((Number) MigrationReflection.call(controller, "getRunningThreadCount")).longValue() > 0;
         }
         if (MigrationReflection.isType(type, EAE_ASSEMBLER)) return () -> eaeCrafterBusy(owner);
         if (owner instanceof MatrixPatternStorageBlockEntity storage) {
@@ -105,28 +98,6 @@ final class PatternMigrationSources {
         }
         if (!seen.add(owner)) return List.of();
 
-        if (MigrationReflection.isType(type, ECO_BUS)) {
-            var inventory = (InternalInventory) MigrationReflection.call(owner, "getTerminalPatternInventory");
-            var physical = MigrationReflection.field(owner, "inventory");
-            if (!(physical instanceof AppEngInternalInventory)
-                    || !inventory.getClass().getName().equals(ECO_BUS + "$EffectivePatternInventory")) {
-                throw new IllegalStateException("No certified ECO physical inventory adapter");
-            }
-            // NeoECO 20.x batches catalog refreshes with its own PatternBusUpdateScheduler.
-            // Resolve the exact methods now; a mismatched version fails before any extraction.
-            Object originalController = MigrationReflection.call(owner, "getCraftingController");
-            if (originalController == null) return List.of();
-            var source = source(owner, node, inventory,
-                    () -> MigrationReflection.call(owner, "getCraftingController") == originalController
-                            && MigrationReflection.field(owner, "inventory") == physical
-                            ? (InternalInventory) MigrationReflection.call(owner, "getTerminalPatternInventory") : null,
-                    () -> {
-                        Object controller = MigrationReflection.call(owner, "getCraftingController");
-                        return controller == null || ((Number) MigrationReflection.call(controller, "getRunningThreadCount")).longValue() > 0;
-                    }, 0, 0, inventory.size(), false,
-                    () -> {}, () -> {});
-            return List.of(source);
-        }
         if (owner instanceof MatrixPatternStorageBlockEntity storage) {
             var inventory = storage.getTerminalPatternInventory();
             return List.of(source(owner, node, inventory, storage::getTerminalPatternInventory,

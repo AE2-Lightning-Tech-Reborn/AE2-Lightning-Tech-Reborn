@@ -184,6 +184,9 @@ class TimeWheelDispatchBoundaryTest {
                 pool.tickCraftingLogic(energy, service);
                 long expected = reject[0] ? 0 : Math.min(BUDGET, amount - before);
                 assertEquals(expected, accepted[0] - before, "physical tick " + tick);
+                pool.tickCraftingLogic(energy, service);
+                assertEquals(expected, accepted[0] - before,
+                        "the HEAD and Thunderbolt visits must share one physical tick budget");
             }
             assertEquals(amount, accepted[0]);
             assertEquals(0, inventory.list.get(INPUT));

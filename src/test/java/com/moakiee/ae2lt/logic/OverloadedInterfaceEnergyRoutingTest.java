@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.logic;
 
+import com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceTickDecider;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
