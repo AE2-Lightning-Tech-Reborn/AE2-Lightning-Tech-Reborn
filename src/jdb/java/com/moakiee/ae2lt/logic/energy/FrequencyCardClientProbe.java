@@ -152,7 +152,22 @@ public final class FrequencyCardClientProbe {
                     server(() -> require(!TerminalCardAccess.readCardData(player().getMainHandItem()).autoConnect(), "terminal switch not persisted"));
                 }
                 case 24 -> { capture("terminal-card-regression.png"); clickKey(FrequencyPage.TAB_SELECTION.navigationTranslationKey()); }
-                case 25 -> { assertBoundRow(NAME); capture("terminal-card-frequency.png"); finish(null); return; }
+                case 25 -> { assertBoundRow(NAME); capture("terminal-card-frequency.png"); clickKey(FrequencyPage.TAB_HOME.navigationTranslationKey()); }
+                case 26 -> {
+                    require(!menu().isAutoConnect() && !menu().isAutoConnectEnergy(), "terminal card initial independent state");
+                    clickKey("ae2lt.gui.button.auto_connect_energy_off");
+                }
+                case 27 -> {
+                    require(!menu().isAutoConnect() && menu().isAutoConnectEnergy(), "terminal FE setting changed channels");
+                    server(() -> require(TerminalCardAccess.readCardData(player().getMainHandItem()).autoConnectEnergy()
+                            && !TerminalCardAccess.readCardData(player().getMainHandItem()).autoConnect(), "terminal FE setting not persisted"));
+                    capture("terminal-card-fe-only.png");
+                    clickKey("ae2lt.gui.button.auto_connect_off");
+                }
+                case 28 -> {
+                    require(menu().isAutoConnect() && menu().isAutoConnectEnergy(), "terminal channel setting changed FE");
+                    finish(null); return;
+                }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }

@@ -45,7 +45,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private final Scrollbar scrollbar;
     private final AE2Button sortButton, directionButton, groupButton, windowButton, disconnectButton, configureButton;
     private final TabButton managementTab;
-    private final AE2Button modeButton;
+    private final java.util.EnumMap<ManagementMode, AE2Button> modeButtons = new java.util.EnumMap<>(ManagementMode.class);
     private final RowButton[] rowButtons = new RowButton[ManagementQuery.PAGE_SIZE];
     private final LocateButton[] locateButtons = new LocateButton[ManagementQuery.PAGE_SIZE];
     private final List<ItemName> itemNames = new ArrayList<>();
@@ -85,8 +85,12 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         });
         for (var button : navigation) widgets.add(button.page().widgetId(), button);
         managementTab = navigation.stream().filter(b -> b.page() == FrequencyPage.TAB_DEVICES).findFirst().orElseThrow();
-        modeButton = widgets.addButton("mode", Component.empty(), () -> switchMode(mode.next()));
-        modeButton.setTooltip(Tooltip.create(tr("switch_mode_help")));
+        for (var view : ManagementMode.values()) {
+            var button = widgets.addButton("mode_" + view.name().toLowerCase(Locale.ROOT),
+                    tr("view." + view.name().toLowerCase(Locale.ROOT)), () -> switchMode(view));
+            button.setTooltip(Tooltip.create(tr("view_help." + view.name().toLowerCase(Locale.ROOT))));
+            modeButtons.put(view, button);
+        }
         sortButton = widgets.addButton("sort", Component.empty(), () -> { sort = (sort + 1) % (energy() ? 5 : 4); changed(0); });
         directionButton = widgets.addButton("direction", Component.empty(), () -> { descending = !descending; changed(0); });
         groupButton = widgets.addButton("group", Component.empty(), () -> {
@@ -97,14 +101,14 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         windowButton.setTooltip(Tooltip.create(tr("window_help")));
         disconnectButton = widgets.addButton("disconnect", tr("disconnect"), () -> {
             var row = selection();
-            if (row != null && row.canDisconnect()) {
-                menu.clientDisconnect(row.id()); selected = null; changed(3);
+            if (!awaitingResponse && row != null && row.canDisconnect()) {
+                menu.clientDisconnect(row.id()); selected = null; pages.clear(); changed(3, false);
             }
         });
         disconnectButton.setTooltip(Tooltip.create(tr("disconnect_help")));
         configureButton = widgets.addButton("configure", tr("configure"), () -> {
             var row = selection();
-            if (!energy() && row != null && row.canConfigure()) menu.clientConfigure(row.id());
+            if (!awaitingResponse && !energy() && row != null && row.canConfigure()) menu.clientConfigure(row.id());
         });
         configureButton.setTooltip(Tooltip.create(tr("configure_help")));
         for (int i = 0; i < rowButtons.length; i++) {
@@ -178,23 +182,34 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         searchTooBroad = false;
         int payloadBytes = 0;
         if (value.isEmpty()) return List.of();
+        // A complete localized label such as "ME Interface" must not expand "ME" into hundreds of unrelated items.
+        if (value.contains(" ") && itemNames.stream().anyMatch(item -> item.name.equals(value))) {
+            var ids = new ArrayList<>(itemNames.stream().filter(item -> item.name.contains(value)).map(ItemName::id).toList());
+            addSearchAliases(ids, value);
+            if (ids.size() <= 240 && ids.stream().mapToInt(id -> id.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 3).sum() <= 16_000) {
+                return parsedTokens = List.of(new ManagementQuery.Token(value, ids));
+            }
+        }
         for (String word : value.split("\\s+", 8)) {
             var ids = new ArrayList<String>();
             for (var item : itemNames) if (item.name.contains(word)) {
                 if (ids.size() >= 240) { searchTooBroad = true; return List.of(); }
                 ids.add(item.id);
             }
-            for (var kind : PowerTelemetry.Kind.values()) {
-                String key = kind.name().toLowerCase(Locale.ROOT);
-                if (tr("kind." + key).getString().toLowerCase(Locale.ROOT).contains(word)) ids.add("kind:" + key);
-            }
-            for (String dimension : List.of("overworld", "the_nether", "the_end"))
-                if (tr("dimension." + dimension).getString().toLowerCase(Locale.ROOT).contains(word)) ids.add("dimension:minecraft:" + dimension);
+            addSearchAliases(ids, word);
             for (String id : ids) payloadBytes += id.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 3;
             if (payloadBytes > 16_000) { searchTooBroad = true; return List.of(); }
             result.add(new ManagementQuery.Token(word, List.copyOf(ids)));
         }
         return parsedTokens = List.copyOf(result);
+    }
+    private static void addSearchAliases(List<String> ids, String term) {
+        for (var kind : PowerTelemetry.Kind.values()) {
+            String key = kind.name().toLowerCase(Locale.ROOT);
+            if (tr("kind." + key).getString().toLowerCase(Locale.ROOT).contains(term)) ids.add("kind:" + key);
+        }
+        for (String dimension : List.of("overworld", "the_nether", "the_end"))
+            if (tr("dimension." + dimension).getString().toLowerCase(Locale.ROOT).contains(term)) ids.add("dimension:minecraft:" + dimension);
     }
     @Override public void containerTick() {
         super.containerTick();
@@ -245,7 +260,11 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         super.updateBeforeRender();
         managementTab.setSelected(true);
         setTextContent("dialog_title", tr("network"));
-        modeButton.setMessage(Component.translatable(mode.translationKey()).append(" ›"));
+        for (var entry : modeButtons.entrySet()) {
+            var label = tr("view." + entry.getKey().name().toLowerCase(Locale.ROOT));
+            if (entry.getKey() == mode) label.withStyle(net.minecraft.ChatFormatting.BOLD);
+            entry.getValue().setMessage(label);
+        }
         sortButton.setMessage(tr("sort." + SORTS[sort]));
         directionButton.setMessage(Component.literal(descending ? "v" : "^"));
         directionButton.setTooltip(Tooltip.create(tr(descending ? "descending" : "ascending")));
@@ -285,9 +304,16 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     @Override public void drawFG(GuiGraphics graphics, int ox, int oy, int mx, int my) {
         int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-        if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, 76, color, false);
-        else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, 76, color, false);
-        else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, 76, color, false);
+        var activeMode = modeButtons.get(mode);
+        graphics.fill(activeMode.getX() - ox + 4, 41, activeMode.getX() - ox + activeMode.getWidth() - 4, 42, color);
+        if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, 96, color, false);
+        else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, 96, color, false);
+        else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, 96, color, false);
+        var selectedRow = selection();
+        Component selectionLabel = selectedRow == null ? tr("select_device") : displayName(selectedRow.target());
+        graphics.drawString(font, fit(selectionLabel, 182), 9, 234, color, false);
+        if (selectedRow != null && isHovering(8, 230, 184, 16, mx, my))
+            drawTooltip(graphics, mx - ox, my - oy, List.of(tooltip(selectedRow)));
         if (snapshot != null) {
             Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
                     : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
@@ -349,30 +375,38 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             int iconX = x + (tree ? row.group() ? 20 : 36 : 4);
             int textX = iconX + 20;
             int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-            if (row.group()) (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT).getBlitter().dest(x + 3, y + 6).blit(graphics);
+            if (row.group()) (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT).getBlitter().dest(x + 3, y + 4).blit(graphics);
             else if (tree) {
                 graphics.fill(x + 26, y + 3, x + 27, y + height - 3, color);
                 graphics.fill(x + 26, y + 13, x + 33, y + 14, color);
             }
             var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(row.target().type()));
-            if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 6);
-            else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 6).blit(graphics);
+            if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 4);
+            else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 4).blit(graphics);
             Component name = displayName(row.target());
             boolean power = displayedView != null && displayedView.mode() == ManagementMode.ENERGY;
-            String right = row.group() ? "×" + row.count() : power ? rate(row.rates()[window]) + " FE/t"
+            String right = row.group() ? "×" + row.count() : power ? compactRate(row.rates()[window]) + " FE/t"
                     : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
-            int nameWidth = x + width - textX - 6 - font.width(right);
-            graphics.drawString(font, fit(name, nameWidth), textX, y + 4, color, false);
-            graphics.drawString(font, right, x + width - 5 - font.width(right), y + 4, color, false);
+            int nameWidth = x + width - textX - 12 - font.width(right);
+            graphics.drawString(font, fit(name, nameWidth), textX, y + 3, color, false);
+            graphics.drawString(font, right, x + width - 5 - font.width(right), y + 3, color, false);
             Component secondary = row.group() ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count()) : power
                     ? tr("kind." + row.kind()).append(" · ").append(shortAddress(row.target())) : Component.literal(shortAddress(row.target()));
-            graphics.drawString(font, fit(secondary, x + width - textX - 5), textX, y + 15, color, false);
+            graphics.drawString(font, fit(secondary, x + width - textX - 5), textX, y + 13, color, false);
         }
     }
     private Component fit(Component value, int max) {
         String text = value.getString();
         return Component.literal(font.width(text) <= max ? text : font.plainSubstrByWidth(text, Math.max(0, max - font.width("…"))) + "…");
     }
+    private static String compactRate(double amount) {
+        if (amount >= 1e18) return String.format(Locale.ROOT, "%.3g", amount);
+        String[] units = {"", "k", "M", "G", "T", "P"};
+        int unit = 0;
+        while (amount >= 1000 && unit < units.length - 1) { amount /= 1000; unit++; }
+        return RATE.format(amount) + units[unit];
+    }
+
     public static String rate(double amount) {
         if (amount >= 1e15) return String.format(Locale.ROOT, "%.3g", amount);
         return RATE.format(amount);

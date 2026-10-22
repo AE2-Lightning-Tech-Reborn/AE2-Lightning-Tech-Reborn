@@ -47,6 +47,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     public static final MenuType<FrequencyMenu> TYPE = IMenuTypeExtension.create(FrequencyMenu::clientCreate);
     private static final String ACTION_TOGGLE_AUTO_CONNECT = "toggleAutoConnect";
+    private static final String ACTION_TOGGLE_AUTO_CONNECT_ENERGY = "toggleAutoConnectEnergy";
 
     static {
         MenuOpener.addOpener(TYPE, FrequencyMenu::openWithAe2MenuOpener);
@@ -91,6 +92,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     private final DataSlot linkActiveSlot = DataSlot.standalone();
     private final DataSlot usedChannelsSlot = DataSlot.standalone();
     private final DataSlot maxChannelsSlot = DataSlot.standalone();
+    private final DataSlot autoConnectEnergySlot = DataSlot.standalone();
     private final DataSlot autoConnectSlot = DataSlot.standalone();
 
     // channel counts iterate all grid nodes; throttle to once per 10 server ticks
@@ -212,6 +214,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         this.usedChannelsSlot.set(0);
         this.maxChannelsSlot.set(0);
         this.autoConnectSlot.set(cardData.autoConnect() ? 1 : 0);
+        this.autoConnectEnergySlot.set(cardData.autoConnectEnergy() ? 1 : 0);
 
         registerDataSlots();
         registerClientActions();
@@ -250,10 +253,11 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         int used = buf.readInt();
         int max = buf.readInt();
         boolean autoConnect = buf.readBoolean();
+        boolean autoConnectEnergy = buf.readBoolean();
         boolean hasParentMenu = buf.readBoolean();
         FrequencyPage page = buf.readEnum(FrequencyPage.class);
         var menu = new FrequencyMenu(containerId, playerInv, cardMode, pos, controller, advanced, deviceName,
-                freqId, linkActive, used, max, autoConnect, hasParentMenu);
+                freqId, linkActive, used, max, autoConnect, autoConnectEnergy, hasParentMenu);
         menu.initialPage = page.isManagement() ? FrequencyPage.TAB_HOME : page;
         return menu;
     }
@@ -261,7 +265,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     // client-side constructor
     private FrequencyMenu(int containerId, Inventory playerInv, boolean cardMode, BlockPos pos, boolean isController,
                           boolean isAdvanced, String deviceName, int freqId, boolean linkActive, int used, int max,
-                          boolean autoConnect, boolean hasParentMenu) {
+                          boolean autoConnect, boolean autoConnectEnergy, boolean hasParentMenu) {
         super(TYPE, containerId, playerInv, null);
         this.blockPos = pos;
         this.isController = isController;
@@ -279,6 +283,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         this.usedChannelsSlot.set(used);
         this.maxChannelsSlot.set(max);
         this.autoConnectSlot.set(autoConnect ? 1 : 0);
+        this.autoConnectEnergySlot.set(autoConnectEnergy ? 1 : 0);
         registerDataSlots();
         registerClientActions();
     }
@@ -289,10 +294,12 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         addDataSlot(usedChannelsSlot);
         addDataSlot(maxChannelsSlot);
         addDataSlot(autoConnectSlot);
+        addDataSlot(autoConnectEnergySlot);
     }
 
     private void registerClientActions() {
-        registerClientAction(ACTION_TOGGLE_AUTO_CONNECT, this::toggleAutoConnect);
+        registerClientAction(ACTION_TOGGLE_AUTO_CONNECT, () -> toggleAutoConnect(false));
+        registerClientAction(ACTION_TOGGLE_AUTO_CONNECT_ENERGY, () -> toggleAutoConnect(true));
     }
 
     public void openManagement(ServerPlayer player, ManagementQuery view) {
@@ -427,6 +434,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
             buf.writeInt(0);
         }
         buf.writeBoolean(false);
+        buf.writeBoolean(false);
         buf.writeBoolean(hasParentMenu);
         buf.writeEnum(page);
     }
@@ -452,6 +460,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         buf.writeInt(0);
         buf.writeInt(0);
         buf.writeBoolean(cardData.autoConnect());
+        buf.writeBoolean(cardData.autoConnectEnergy());
         buf.writeBoolean(hasParent);
         buf.writeEnum(FrequencyPage.TAB_HOME);
     }
@@ -468,6 +477,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
                     if (usesLocalConnectionList()) SyncFrequencyDetailPacket.sendInitialConnectionsIfNeeded(cardPlayer, real);
                 }
             }
+            autoConnectEnergySlot.set(cardData.autoConnectEnergy() ? 1 : 0);
             int autoConnect = cardData.autoConnect() ? 1 : 0;
             if (autoConnectSlot.get() != autoConnect) {
                 autoConnectSlot.set(autoConnect);
@@ -648,6 +658,14 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         sendClientAction(ACTION_TOGGLE_AUTO_CONNECT);
     }
 
+    public boolean isAutoConnectEnergy() {
+        return autoConnectEnergySlot.get() != 0;
+    }
+
+    public void clientToggleAutoConnectEnergy() {
+        sendClientAction(ACTION_TOGGLE_AUTO_CONNECT_ENERGY);
+    }
+
     public boolean isLinkActive() {
         return linkActiveSlot.get() != 0;
     }
@@ -729,7 +747,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         return true;
     }
 
-    private void toggleAutoConnect() {
+    private void toggleAutoConnect(boolean energy) {
         if (!cardMode || !isServerSide() || cardPlayer == null || !stillValid(cardPlayer)) {
             return;
         }
@@ -737,7 +755,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         if (cardData.isBound() && !cardData.canBeUsedBy(cardPlayer.getUUID())) {
             return;
         }
-        if (updateCard(OverloadedFrequencyCardData::toggleAutoConnect)) {
+        if (updateCard(data -> energy ? data.toggleAutoConnectEnergy() : data.toggleAutoConnect())) {
             autoConnectSlot.set(readCardData().autoConnect() ? 1 : 0);
             broadcastChanges();
         }

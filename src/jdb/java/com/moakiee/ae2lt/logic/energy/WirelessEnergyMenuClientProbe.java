@@ -36,7 +36,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class WirelessEnergyMenuClientProbe {
     private static int ticks, phase;
-    private static boolean done;
+    private static boolean done, checkedFrequencyScroll;
     private static volatile Throwable failure;
     private static volatile int frequency;
     private static com.moakiee.ae2lt.menu.FrequencyPage pendingPage;
@@ -46,7 +46,7 @@ public final class WirelessEnergyMenuClientProbe {
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.wirelessEnergyMenuProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
-        if (++ticks > 2400) { finish(new AssertionError("timeout phase " + phase)); return; }
+        if (++ticks > 3600) { finish(new AssertionError("timeout phase " + phase)); return; }
         if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
         if (mc.screen != null) {
             org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 10, 10);
@@ -98,6 +98,8 @@ public final class WirelessEnergyMenuClientProbe {
                         var controller = (AdvancedWirelessOverloadedControllerBlockEntity) level.getBlockEntity(CONTROLLER);
                         frequency = WirelessFrequencyManager.get(p.server).createFrequency(p, "ME & Power QA", 0xffffff, FrequencySecurityLevel.PRIVATE, "").getId();
                         controller.setFrequency(frequency);
+                        for (int i = 0; i < 8; i++) WirelessFrequencyManager.get(p.server).createFrequency(p,
+                                "ZZ Scroll " + i, 0xffffff, FrequencySecurityLevel.PRIVATE, "");
                         var friend = new net.neoforged.neoforge.common.util.FakePlayer(level,
                                 new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "FrequencyFriend"));
                         WirelessFrequencyManager.get(p.server).getFrequency(frequency).enrollAsUser(friend);
@@ -204,7 +206,22 @@ public final class WirelessEnergyMenuClientProbe {
                     nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION);
                 }
                 case 26 -> {
-                    assertFrame(); var input = (AETextField)frequencyField("selectionSearchField");
+                    assertFrame();
+                    if (!checkedFrequencyScroll) {
+                        checkedFrequencyScroll = true;
+                        var screen = mc.screen;
+                        screen.mouseScrolled(frameLeft + 20, frameTop + 90, 0, -1);
+                        require((int)frequencyField("selectionScroll") == 1, "native frequency wheel scroll");
+                        screen.mouseScrolled(frameLeft + 20, frameTop + 20, 0, -1);
+                        require((int)frequencyField("selectionScroll") == 1, "wheel outside list must not scroll");
+                        screen.mouseScrolled(frameLeft + 20, frameTop + 90, 0, 1);
+                        require(screen.mouseClicked(frameLeft + 289, frameTop + 70, 0), "native scrollbar handle click");
+                        screen.mouseDragged(frameLeft + 289, frameTop + 180, 0, 0, 110);
+                        screen.mouseReleased(frameLeft - 10, frameTop + 180, 0);
+                        require((int)frequencyField("selectionScroll") > 0, "native scrollbar drag updates rows");
+                        return;
+                    }
+                    var input = (AETextField)frequencyField("selectionSearchField");
                     if (input.getValue().isEmpty()) {
                         var bounds = input.getTooltipArea();
                         mc.screen.mouseClicked(bounds.getX() + 10, bounds.getY() + 6, 0);
@@ -315,11 +332,43 @@ public final class WirelessEnergyMenuClientProbe {
                     ((AETextField)frequencyField("selectionSearchField")).setValue("");
                 }
                 case 51 -> {
-                    assertFrame(); capture("frequency-merged-list.png"); finish(null); return;
+                    assertFrame(); capture("frequency-merged-list.png");
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        var card = new ItemStack(com.moakiee.ae2lt.registry.ModItems.OVERLOADED_FREQUENCY_CARD.get());
+                        com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.bindFrequency(card, frequency, player.level().dimension(), CONTROLLER, player.getUUID());
+                        player.setItemInHand(InteractionHand.MAIN_HAND, card);
+                        com.moakiee.ae2lt.menu.FrequencyMenu.openHeldCard(player, InteractionHand.MAIN_HAND);
+                    });
                 }
+                case 52 -> {
+                    assertCardAuto(false, false);
+                    capture("frequency-card-auto-off.png");
+                    clickButton((Button)frequencyField("energyAutoButton"));
+                }
+                case 53 -> { assertCardAuto(false, true); clickButton((Button)frequencyField("channelAutoButton")); }
+                case 54 -> { assertCardAuto(true, true); clickButton((Button)frequencyField("energyAutoButton")); }
+                case 55 -> {
+                    assertCardAuto(true, false); capture("frequency-card-independent-auto.png");
+                    nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION);
+                }
+                case 56 -> nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME);
+                case 57 -> {
+                    assertCardAuto(true, false);
+                    clickButton((Button)frequencyField("channelAutoButton"));
+                }
+                case 58 -> { assertCardAuto(false, false); finish(null); return; }
             }
             phase++;
         } catch (Throwable problem) { finish(problem); }
+    }
+    private static void assertCardAuto(boolean channels, boolean energy) throws Exception {
+        var menu = ((FrequencyScreen)Minecraft.getInstance().screen).getMenu();
+        require(menu.isCardMode() && menu.isAutoConnect() == channels && menu.isAutoConnectEnergy() == energy,
+                "independent card preferences round-trip to client");
+        require(frequencyField("channelAutoButton") instanceof appeng.client.gui.widgets.ToggleButton
+                && frequencyField("energyAutoButton") instanceof appeng.client.gui.widgets.ToggleButton,
+                "automatic settings use AE2 native toggles");
     }
     private static Object frequencyField(String name) throws Exception {
         var field = FrequencyScreen.class.getDeclaredField(name); field.setAccessible(true); return field.get(Minecraft.getInstance().screen);
@@ -329,6 +378,12 @@ public final class WirelessEnergyMenuClientProbe {
         field.setAccessible(true); return field.getInt(Minecraft.getInstance().screen);
     }
     private static void assertFrame() throws Exception {
+        if (Minecraft.getInstance().screen instanceof NetworkManagementScreen) {
+            var tabs = (java.util.Map<?, Button>) field("modeButtons");
+            require(tabs.size() == 3, "all three network views directly selectable");
+            for (var button : tabs.values()) require(Minecraft.getInstance().font.width(button.getMessage()) <= button.getWidth() - 8,
+                    "network view label fits without scrolling or clipping");
+        }
         require(integerField("imageWidth") == 304 && integerField("imageHeight") == 252
                 && integerField("leftPos") == frameLeft && integerField("topPos") == frameTop, "identical centered frame across all subpages");
         var buttons = Minecraft.getInstance().screen.children().stream().filter(e -> e instanceof com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton).toList();
@@ -342,7 +397,10 @@ public final class WirelessEnergyMenuClientProbe {
         var target = pendingPage; var screen = Minecraft.getInstance().screen;
         if (target.isManagement()) {
             if (screen instanceof FrequencyScreen) { click(tr("network")); return false; }
-            if (field("mode") != target.managementMode()) { clickButton((Button)field("modeButton")); return false; }
+            if (field("mode") != target.managementMode()) {
+                clickButton(((java.util.Map<com.moakiee.ae2lt.logic.management.ManagementMode, Button>)field("modeButtons")).get(target.managementMode()));
+                return false;
+            }
             return true;
         }
         if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target) return true;
@@ -428,7 +486,7 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, four-page navigation with nested frequency settings, live disconnect/reconnect from the frequency list, three network modes and one frame, all frequency forms and modals, create/edit round-trips and per-page state restoration"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, four-page navigation with nested frequency settings, live disconnect/reconnect from the frequency list, direct network view selection, independent native channel/FE switches, three network modes and one frame, all frequency forms and modals, create/edit round-trips and per-page state restoration"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}

@@ -55,6 +55,47 @@ public final class FrequencyCardGameTests {
                 ModBlocks.OVERLOADED_INTERFACE.get(), ModBlocks.OVERLOADED_PATTERN_PROVIDER.get());
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
+    public static void autoConnectionPreferencesMigratePersistAndSelectIndependently(GameTestHelper h) {
+        var player = new MenuPlayer(h.getLevel());
+        var card = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
+        var legacy = new net.minecraft.nbt.CompoundTag();
+        legacy.putInt("FrequencyId", 12);
+        legacy.putBoolean("AutoConnect", true);
+        legacy.putString("OwnerUuid", player.getUUID().toString());
+        card.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(legacy));
+        var migrated = OverloadedFrequencyCardItem.getData(card);
+        h.assertTrue(migrated.autoConnect() && migrated.autoConnectEnergy(), "legacy combined setting must survive migration");
+        player.setItemInHand(InteractionHand.MAIN_HAND, card);
+        for (boolean channels : new boolean[] {false, true}) for (boolean energy : new boolean[] {false, true}) {
+            var data = migrated.withAutoConnect(channels).withAutoConnectEnergy(energy);
+            OverloadedFrequencyCardItem.setData(card, data);
+            h.assertTrue(OverloadedFrequencyCardItem.getData(card.copy()).equals(data), "independent flags lost in item persistence");
+            h.assertTrue(OverloadedFrequencyCardItem.findAutoConnectCard(player).isPresent() == channels,
+                    "channel admission consulted the FE preference");
+            h.assertTrue(OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).isPresent() == energy,
+                    "FE admission consulted the channel preference");
+            var rebound = data.clearFrequency().bindFrequency(13, "minecraft:overworld", 0, player.getUUID());
+            h.assertTrue(rebound.autoConnect() == channels && rebound.autoConnectEnergy() == energy,
+                    "rebinding reset independent preferences");
+        }
+        var foreign = migrated.bindFrequency(12, "minecraft:overworld", 0, UUID.randomUUID());
+        OverloadedFrequencyCardItem.setData(card, foreign);
+        h.assertTrue(OverloadedFrequencyCardItem.findAutoConnectCard(player).isEmpty()
+                && OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).isEmpty(), "foreign card admitted automatic connections");
+        var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), h.getLevel().registryAccess());
+        try {
+            for (boolean energy : new boolean[] {false, true}) {
+                var packet = com.moakiee.ae2lt.network.ToggleFrequencyCardAutoConnectPacket.forTerminalCard(energy);
+                packet.write(buffer);
+                h.assertTrue(packet.equals(com.moakiee.ae2lt.network.ToggleFrequencyCardAutoConnectPacket.decode(buffer)),
+                        "toggle target lost in packet roundtrip");
+            }
+        } finally { buffer.release(); }
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
     public static void airUseMainAndOffhandWritesSelectionAndInvalidatesReplacedCard(GameTestHelper h) {
         for (var hand : InteractionHand.values()) {
             var p = new MenuPlayer(h.getLevel()); var card = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
@@ -320,7 +361,7 @@ public final class FrequencyCardGameTests {
             var b = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess());
             try {
                 writer.accept(b); b.readBoolean(); b.readBlockPos(); b.readBoolean(); b.readBoolean(); b.readUtf(256);
-                b.readInt(); b.readBoolean(); b.readInt(); b.readInt(); b.readBoolean(); encodedParent = b.readBoolean();
+                b.readInt(); b.readBoolean(); b.readInt(); b.readInt(); b.readBoolean(); b.readBoolean(); encodedParent = b.readBoolean();
             } finally { b.release(); }
             return OptionalInt.of(id);
         }

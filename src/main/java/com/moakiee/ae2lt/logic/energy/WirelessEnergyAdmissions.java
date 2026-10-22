@@ -70,7 +70,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
     /** Event-only entry: capture the placed instance now, never resolve an old placement against a replacement later. */
     public static void placed(ServerPlayer player, ServerLevel level, BlockPos pos) {
         if (player.isFakePlayer()) return;
-        var card = OverloadedFrequencyCardItem.findAutoConnectCard(player);
+        var card = OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player);
         if (card.isEmpty()) return;
         var data = OverloadedFrequencyCardItem.getData(card.get());
         if (data.isBound() && data.canBeUsedBy(player.getUUID())) get(level.getServer()).queue(player, data.frequencyId(), level, pos, null);

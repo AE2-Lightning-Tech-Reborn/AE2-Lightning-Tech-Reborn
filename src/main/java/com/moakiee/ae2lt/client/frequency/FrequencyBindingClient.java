@@ -1,6 +1,8 @@
 package com.moakiee.ae2lt.client.frequency;
 
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
+import appeng.client.gui.Icon;
+import appeng.client.gui.widgets.ToggleButton;
 
 import java.util.List;
 
@@ -30,12 +32,14 @@ public final class FrequencyBindingClient {
         return button;
     }
 
-    public static TextureToggleButton createCardAutoConnectToolbarButton() {
-        var button = new TextureToggleButton(
-                TextureToggleButton.ButtonType.MODE,
-                ignored -> PacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forTerminalCard()));
-        button.setTooltipOff(List.of(Component.translatable("ae2lt.gui.button.auto_connect_off")));
-        button.setTooltipOn(List.of(Component.translatable("ae2lt.gui.button.auto_connect_on")));
+    public static ToggleButton createCardAutoConnectToolbarButton(boolean energy) {
+        var button = new ToggleButton(
+                Icon.AUTO_EXPORT_ON, Icon.AUTO_EXPORT_OFF,
+                state -> PacketDistributor.sendToServer(ToggleFrequencyCardAutoConnectPacket.forTerminalCard(energy)));
+        String prefix = energy ? "ae2lt.gui.button.auto_connect_energy_" : "ae2lt.gui.button.auto_connect_";
+        var hint = Component.translatable(energy ? "ae2lt.gui.home.auto_energy_hint" : "ae2lt.gui.home.auto_channel_hint");
+        button.setTooltipOff(List.of(Component.translatable(prefix + "off"), hint));
+        button.setTooltipOn(List.of(Component.translatable(prefix + "on"), hint));
         return button;
     }
 }

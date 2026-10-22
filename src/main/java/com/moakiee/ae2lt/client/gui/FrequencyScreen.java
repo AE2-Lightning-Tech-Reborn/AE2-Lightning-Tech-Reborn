@@ -1,18 +1,19 @@
 package com.moakiee.ae2lt.client.gui;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import appeng.client.gui.Icon;
-import appeng.client.gui.style.Color;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.TabButton;
+import appeng.client.gui.widgets.ToggleButton;
+import appeng.client.gui.widgets.Scrollbar;
+import appeng.client.Point;
+import appeng.client.gui.style.StyleManager;
 import appeng.core.network.serverbound.SwitchGuisPacket;
 
 import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
@@ -36,7 +37,6 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -59,7 +59,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private static final int SCROLLBAR_X = 284;
     private static final int SCROLLBAR_Y = LIST_ROW_FIRST_Y;
     private static final int SCROLLBAR_WIDTH = 12;
-    private static final int SCROLLBAR_HANDLE_HEIGHT = 15;
 
     // AE2 standard text tones — matches AE2's own screens such as
     // terminal.png / craftingcpu.png where titles read as dark charcoal
@@ -86,42 +85,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private static final int INPUT_MAX_WIDTH = GUI_WIDTH - 32;
 
-    /**
-     * Minimal {@link ScreenStyle} built once at class-load so
-     * {@link AETextField} can look up its text / selection /
-     * placeholder colours via {@link ScreenStyle#getColor(PaletteColor)}.
-     * AE2 normally loads this from a JSON file attached to the screen;
-     * we don't have one, so we seed the palette via reflection directly
-     * on the private {@code palette} EnumMap populated by the
-     * {@code ScreenStyle} no-arg constructor.
-     */
-    private static final ScreenStyle AE2_STYLE = buildAe2Style();
-
-    @SuppressWarnings("unchecked")
-    private static ScreenStyle buildAe2Style() {
-        ScreenStyle style = new ScreenStyle();
-        try {
-            Field paletteField = ScreenStyle.class.getDeclaredField("palette");
-            paletteField.setAccessible(true);
-            Map<PaletteColor, Color> palette = (Map<PaletteColor, Color>) paletteField.get(style);
-            // AE2 hex order is (a, r, g, b) via Color(r, g, b, a)
-            palette.put(PaletteColor.DEFAULT_TEXT_COLOR,    new Color(0x40, 0x40, 0x40, 0xFF));
-            palette.put(PaletteColor.MUTED_TEXT_COLOR,      new Color(0x7F, 0x7F, 0x7F, 0xFF));
-            palette.put(PaletteColor.SELECTION_COLOR,       new Color(0x78, 0xAA, 0xFF, 0x78));
-            // Text inside AETextField renders over the dark slate interior of
-            // guis/text_field.png — dark-on-dark would be invisible, so we
-            // match AE2's own Quartz Knife field and use near-white text.
-            palette.put(PaletteColor.TEXTFIELD_TEXT,        new Color(0xFF, 0xFF, 0xFF, 0xFF));
-            palette.put(PaletteColor.TEXTFIELD_PLACEHOLDER, new Color(0x60, 0x60, 0x60, 0xFF));
-            palette.put(PaletteColor.TEXTFIELD_SELECTION,   new Color(0x78, 0xAA, 0xFF, 0x78));
-            palette.put(PaletteColor.TEXTFIELD_ERROR,       new Color(0xC8, 0x46, 0x46, 0xFF));
-            palette.put(PaletteColor.ERROR,                 new Color(0xC8, 0x46, 0x46, 0xFF));
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(
-                    "Failed to populate AE2 ScreenStyle palette for FrequencyScreen", e);
-        }
-        return style;
-    }
+    private final ScreenStyle ae2Style = StyleManager.loadStyleDoc("/screens/common/common.json");
+    private ToggleButton channelAutoButton, energyAutoButton;
 
     private FrequencyPage currentTab = FrequencyPage.TAB_HOME;
     /**
@@ -139,7 +104,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      * Currently active list-tab scrollbar widget. {@code null} on Home /
      * Create / Settings tabs (no scrollable content). The screen-level
      * {@link #mouseScrolled} forwards wheel events to this scrollbar so
-     * scrolling works anywhere over the GUI, not just over the handle.
+     * scrolling works over the list, not just over the handle.
      */
     private ScrollbarWidget currentScrollbar;
 
@@ -162,7 +127,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private int lastCacheRevision = -1;
     private int lastFreqId = Integer.MIN_VALUE;
-    private boolean lastAutoConnect;
 
     // popup state for Members tab
     private UUID popupMemberUUID;
@@ -224,7 +188,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         super.init();
         lastCacheRevision = ClientFrequencyCache.revision();
         lastFreqId = freqMenu().getCurrentFrequencyId();
-        lastAutoConnect = freqMenu().isAutoConnect();
         initTabWidgets();
     }
 
@@ -233,11 +196,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         super.containerTick();
         int rev = ClientFrequencyCache.revision();
         int fid = freqMenu().getCurrentFrequencyId();
-        boolean auto = freqMenu().isAutoConnect();
-        if (rev != lastCacheRevision || fid != lastFreqId || auto != lastAutoConnect) {
+        if (currentScrollbar != null) currentScrollbar.tick();
+        if (channelAutoButton != null) updateAutoButtons();
+        if (rev != lastCacheRevision || fid != lastFreqId) {
             lastCacheRevision = rev;
             lastFreqId = fid;
-            lastAutoConnect = auto;
             initTabWidgets();
         }
     }
@@ -263,7 +226,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private class WideTextField extends AETextField {
         private boolean editable = true;
         @Override public void setEditable(boolean editable) { this.editable = editable; super.setEditable(editable); }
-        WideTextField(int x, int y, int width, int height) { super(AE2_STYLE, FrequencyScreen.this.font, x, y, width, height); }
+        WideTextField(int x, int y, int width, int height) { super(ae2Style, FrequencyScreen.this.font, x, y, width, height); }
         @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             if (isVisible()) {
                 var bounds = getTooltipArea();
@@ -382,6 +345,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         // Reset them so the per-tab init below can rebind to fresh widgets.
         currentRowButtons.clear();
         currentScrollbar = null;
+        channelAutoButton = energyAutoButton = null;
         closePopup();
 
         int x0 = leftPos;
@@ -618,16 +582,38 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private void initHomeTab(int x0, int y0) {
         boolean card = freqMenu().isCardMode();
         if (card) {
-            boolean auto = freqMenu().isAutoConnect();
-            addRenderableWidget(new AE2Button(x0 + 8, y0 + 230, 140, 16,
-                    Component.translatable(auto ? "ae2lt.gui.button.auto_connect_on" : "ae2lt.gui.button.auto_connect_off"),
-                    btn -> freqMenu().clientToggleAutoConnect()));
+            channelAutoButton = addAutoButton(x0 + 268, y0 + 142, false);
+            energyAutoButton = addAutoButton(x0 + 268, y0 + 180, true);
+            updateAutoButtons();
         }
         if (freqMenu().usesLocalConnectionList()) {
-            var links = addRenderableWidget(new AE2Button(x0 + (card ? 156 : 104), y0 + 230, card ? 140 : 96, 16,
+            var links = addRenderableWidget(new AE2Button(x0 + 104, y0 + 230, 96, 16,
                     Component.translatable("ae2lt.management.connections"), btn -> switchTab(FrequencyPage.TAB_CONNECTION)));
             links.active = freqMenu().getCurrentFrequencyId() > 0;
         }
+    }
+
+    private ToggleButton addAutoButton(int x, int y, boolean energy) {
+        var button = new ToggleButton(Icon.AUTO_EXPORT_ON, Icon.AUTO_EXPORT_OFF, state -> {
+            if (energy) freqMenu().clientToggleAutoConnectEnergy();
+            else freqMenu().clientToggleAutoConnect();
+        });
+        button.setPosition(x, y);
+        return addRenderableWidget(button);
+    }
+
+    private void updateAutoButtons() {
+        updateAutoButton(channelAutoButton, false, freqMenu().isAutoConnect());
+        updateAutoButton(energyAutoButton, true, freqMenu().isAutoConnectEnergy());
+    }
+
+    private void updateAutoButton(ToggleButton button, boolean energy, boolean enabled) {
+        button.setState(enabled);
+        var label = Component.translatable("ae2lt.gui.button.auto_connect_"
+                + (energy ? "energy_" : "") + (enabled ? "on" : "off"));
+        button.setMessage(label);
+        button.setTooltip(Tooltip.create(label.copy().append("\n").append(Component.translatable(
+                energy ? "ae2lt.gui.home.auto_energy_hint" : "ae2lt.gui.home.auto_channel_hint"))));
     }
 
     /** Cards and remote submenus retain their read-only connection view without opening a nested controller session. */
@@ -1093,7 +1079,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         BackgroundGenerator.draw(GUI_WIDTH, GUI_HEIGHT, g, leftPos, topPos);
         if (popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
-            if (currentTab == FrequencyPage.TAB_HOME) drawInset(g, leftPos + 8, topPos + 30, GUI_WIDTH - 16, 168);
+            if (currentTab == FrequencyPage.TAB_HOME) drawInset(g, leftPos + 8, topPos + 30, GUI_WIDTH - 16, freqMenu().isCardMode() ? 184 : 168);
             else if (currentTab == FrequencyPage.TAB_CONNECTION) {
                 int visible = Math.min(ITEMS_PER_PAGE_LIST,
                         ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size() - connectionScroll);
@@ -1283,66 +1269,36 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     private void renderHomeLabels(GuiGraphics g) {
-        // Five info lines sit inside the wide info shelf baked into
-        // wireless_overloaded_home.png (shelf y=39..111). 14-px row pitch
-        // gives clean spacing between glyphs and avoids touching the
-        // shelf bevel at top/bottom.
-        int y = 43;
         var freq = ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId());
-        if (freq != null) {
-            // Frequency name in its stored RGB colour — the colour the
-            // user picked in Create / Settings. Earlier versions also
-            // appended " (#<id>)" — the numeric id is internal data and
-            // adds noise to a player-facing line, so we drop it here.
-            Component name = Component.literal(freq.name())
-                    .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(freq.color() & 0xFFFFFF)));
-            Component line = Component.translatable("ae2lt.gui.frequency.current")
-                    .append(": ").append(name);
-            drawFlatFitted(g, line, 16, y, imageWidth - 32, AE2_TEXT_BODY);
-        } else {
-            drawFlatFitted(g, Component.translatable("ae2lt.gui.frequency.none"),
-                    16, y, imageWidth - 32, AE2_TEXT_MUTED);
+        drawFlatFitted(g, freq == null ? Component.translatable("ae2lt.gui.frequency.none")
+                        : Component.literal(freq.name()).withStyle(ChatFormatting.BOLD),
+                16, 40, imageWidth - 32, AE2_TEXT_TITLE);
+        drawFlatFitted(g, Component.translatable(freqMenu().getDeviceName()), 16, 60, imageWidth - 32, AE2_TEXT_MUTED);
+        homeValue(g, "ae2lt.gui.home.status", Component.translatable(freqMenu().isLinkActive()
+                ? "ae2lt.gui.home.connected" : "ae2lt.gui.home.disconnected"), 88);
+        if (freqMenu().isCardMode()) {
+            drawFlat(g, Component.translatable("ae2lt.gui.home.auto_section"), 16, 121, AE2_TEXT_TITLE);
+            drawFlatFitted(g, Component.translatable(freqMenu().isAutoConnect()
+                    ? "ae2lt.gui.button.auto_connect_on" : "ae2lt.gui.button.auto_connect_off"), 16, 144, 244, AE2_TEXT_BODY);
+            drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_channel_short"), 16, 159, 244, AE2_TEXT_MUTED);
+            drawFlatFitted(g, Component.translatable(freqMenu().isAutoConnectEnergy()
+                    ? "ae2lt.gui.button.auto_connect_energy_on" : "ae2lt.gui.button.auto_connect_energy_off"), 16, 182, 244, AE2_TEXT_BODY);
+            drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_energy_short"), 16, 197, 244, AE2_TEXT_MUTED);
+            return;
         }
-        y += 32;
+        int used = freqMenu().getUsedChannels(), max = freqMenu().getMaxChannels();
+        Component channels = max < 0 ? Component.translatable("ae2lt.gui.home.grid_channels.infinite", used)
+                : Component.translatable("ae2lt.gui.home.grid_channels.value", used, max, Math.max(0, max - used));
+        drawFlat(g, Component.translatable("ae2lt.gui.home.grid_channels"), 16, 119, AE2_TEXT_MUTED);
+        drawFlatFitted(g, channels, 16, 136, imageWidth - 32, AE2_TEXT_BODY);
+        if (freqMenu().isController()) homeValue(g, "ae2lt.gui.home.cross_dimension", Component.translatable(
+                freqMenu().isAdvanced() ? "ae2lt.gui.home.cross_dimension.yes" : "ae2lt.gui.home.cross_dimension.no"), 176);
+    }
 
-        drawFlatFitted(g, Component.translatable("ae2lt.gui.home.device_type")
-                .append(": ").append(Component.translatable(freqMenu().getDeviceName())),
-                16, y, imageWidth - 32, AE2_TEXT_BODY);
-        y += 32;
-
-        boolean connected = freqMenu().isLinkActive();
-        drawFlatFitted(g, Component.translatable("ae2lt.gui.home.status")
-                        .append(": ")
-                        .append(connected
-                                ? Component.translatable("ae2lt.gui.home.connected")
-                                : Component.translatable("ae2lt.gui.home.disconnected")),
-                16, y, imageWidth - 32, AE2_TEXT_BODY);
-        y += 32;
-
-        int used = freqMenu().getUsedChannels();
-        int max = freqMenu().getMaxChannels();
-        Component channelsValue;
-        if (max < 0) {
-            channelsValue = Component.translatable("ae2lt.gui.home.grid_channels.infinite", used);
-        } else if (max == 0) {
-            channelsValue = Component.translatable("ae2lt.gui.home.grid_channels.value", used, 0, 0);
-        } else {
-            int remain = Math.max(0, max - used);
-            channelsValue = Component.translatable("ae2lt.gui.home.grid_channels.value", used, max, remain);
-        }
-        drawFlatFitted(g, Component.translatable("ae2lt.gui.home.grid_channels")
-                        .append(": ")
-                        .append(channelsValue),
-                16, y, imageWidth - 32, AE2_TEXT_BODY);
-        y += 32;
-
-        if (freqMenu().isController()) {
-            drawFlatFitted(g, Component.translatable("ae2lt.gui.home.cross_dimension")
-                    .append(": ").append(freqMenu().isAdvanced()
-                            ? Component.translatable("ae2lt.gui.home.cross_dimension.yes")
-                            : Component.translatable("ae2lt.gui.home.cross_dimension.no")),
-                    16, y, imageWidth - 32, AE2_TEXT_BODY);
-        }
+    private void homeValue(GuiGraphics g, String label, Component value, int y) {
+        drawFlat(g, Component.translatable(label), 16, y, AE2_TEXT_MUTED);
+        int valueWidth = Math.min(160, font.width(value));
+        drawFlatFitted(g, value, imageWidth - 16 - valueWidth, y, valueWidth, AE2_TEXT_BODY);
     }
 
     private void renderSelectionLabels(GuiGraphics g) {
@@ -1515,9 +1471,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             boolean hover = active && (isHoveredOrFocused());
             BackgroundGenerator.draw(getWidth(), getHeight(), g, getX(), getY());
             if (hover) g.fill(getX() + 3, getY() + 3, getX() + getWidth() - 3, getY() + getHeight() - 3,
-                    AE2_STYLE.getColor(PaletteColor.SELECTION_COLOR).toARGB());
+                    ae2Style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
             if (bound) g.fill(getX() + 2, getY() + 3, getX() + 4, getY() + getHeight() - 3,
-                    AE2_STYLE.getColor(PaletteColor.SELECTION_COLOR).toARGB());
+                    ae2Style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
 
             // Vanilla MC's drawString honours the Component's per-style
             // colour, so the access tint / frequency RGB baked into
@@ -1538,130 +1494,66 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    /**
-     * Lightweight vertical scrollbar reused across the Selection and Member tabs. Draws the vanilla creative-tab scroller handle on top
-     * of the chassis, and supports click-on-track paging, drag-handle, and
-     * mouse-wheel input. Each offset change is reported through
-     * {@link #onScroll} so the owning tab can refresh just the affected row
-     * buttons without rebuilding the scrollbar itself — that lets the
-     * dragging gesture survive across the row-button swap.
-     */
+    /** Bridges the native composite widget into this container screen's event routing. */
     private final class ScrollbarWidget extends AbstractWidget {
-        private final int totalItems;
-        private final int visibleItems;
+        private final Scrollbar delegate = new Scrollbar(Scrollbar.BIG);
         private final java.util.function.IntConsumer onScroll;
-        private int scrollOffset;
-        private boolean dragging;
-        private int dragYOffset;
+        private int lastScroll;
 
-        ScrollbarWidget(int x, int y, int trackHeight,
-                int totalItems, int visibleItems,
-                int initialScroll,
-                java.util.function.IntConsumer onScroll) {
+        ScrollbarWidget(int x, int y, int trackHeight, int totalItems, int visibleItems,
+                int initialScroll, java.util.function.IntConsumer onScroll) {
             super(x, y, SCROLLBAR_WIDTH, trackHeight, Component.empty());
-            this.totalItems = totalItems;
-            this.visibleItems = visibleItems;
             this.onScroll = onScroll;
-            this.scrollOffset = clamp(initialScroll);
+            delegate.setPosition(new Point(x, y));
+            delegate.setHeight(trackHeight);
+            delegate.setRange(0, Math.max(0, totalItems - visibleItems), 1);
+            delegate.setCurrentScroll(initialScroll);
+            lastScroll = delegate.getCurrentScroll();
         }
-
-        int maxOffset() {
-            return Math.max(0, totalItems - visibleItems);
+        private void sync() {
+            int current = delegate.getCurrentScroll();
+            if (current != lastScroll) { lastScroll = current; onScroll.accept(current); }
         }
-
-        private int clamp(int v) {
-            return Math.max(0, Math.min(maxOffset(), v));
+        void tick() { delegate.tick(); sync(); }
+        boolean handleScroll(double delta) {
+            boolean handled = delegate.onMouseWheel(new Point(getX(), getY()), delta);
+            sync(); return handled;
         }
-
-        private void setOffset(int v) {
-            int c = clamp(v);
-            if (c != scrollOffset) {
-                scrollOffset = c;
-                onScroll.accept(c);
-            }
+        @Override protected void renderWidget(GuiGraphics g, int mx, int my, float partialTick) {
+            delegate.drawForegroundLayer(g, delegate.getBounds(), new Point(mx, my));
         }
-
-        /**
-         * Wheel hook called from the screen-level {@link FrequencyScreen#mouseScrolled}.
-         * One row per notch — vertical sign matches vanilla (positive
-         * scrollY = wheel up = scroll towards top).
-         */
-        boolean handleScroll(double scrollY) {
-            if (maxOffset() == 0) return false;
-            int delta = -(int) Math.signum(scrollY);
-            if (delta == 0) return false;
-            int before = scrollOffset;
-            setOffset(scrollOffset + delta);
-            return scrollOffset != before;
+        @Override public boolean mouseClicked(double x, double y, int button) {
+            if (!visible || !active || !isMouseOver(x, y)) return false;
+            boolean handled = delegate.onMouseDown(new Point((int)x, (int)y), button);
+            sync(); return handled;
         }
-
-        @Override
-        protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-            boolean enabled = maxOffset() > 0;
-            ResourceLocation sprite = enabled
-                    ? ResourceLocation.fromNamespaceAndPath("ae2", "big_scroller")
-                    : ResourceLocation.fromNamespaceAndPath("ae2", "big_scroller_disabled");
-            int availH = Math.max(0, getHeight() - SCROLLBAR_HANDLE_HEIGHT);
-            int handleY = enabled
-                    ? getY() + scrollOffset * availH / maxOffset()
-                    : getY();
-            g.blitSprite(sprite, getX(), handleY, SCROLLBAR_WIDTH, SCROLLBAR_HANDLE_HEIGHT);
+        @Override public boolean mouseReleased(double x, double y, int button) {
+            return delegate.onMouseUp(new Point((int)x, (int)y), button);
         }
-
-        @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button != 0 || !visible || !active) return false;
-            if (!isMouseOver(mouseX, mouseY)) return false;
-            if (maxOffset() == 0) return true;
-            int availH = Math.max(0, getHeight() - SCROLLBAR_HANDLE_HEIGHT);
-            int handleY = getY() + scrollOffset * availH / maxOffset();
-            if (mouseY < handleY) {
-                setOffset(scrollOffset - visibleItems);
-            } else if (mouseY < handleY + SCROLLBAR_HANDLE_HEIGHT) {
-                dragging = true;
-                dragYOffset = (int) (mouseY - handleY);
-            } else {
-                setOffset(scrollOffset + visibleItems);
-            }
-            setFocused(true);
-            return true;
+        @Override protected void onDrag(double x, double y, double dx, double dy) {
+            drag(x, y, 0);
         }
-
-        @Override
-        public boolean mouseReleased(double mouseX, double mouseY, int button) {
-            if (button == 0) dragging = false;
-            return super.mouseReleased(mouseX, mouseY, button);
+        boolean drag(double x, double y, int button) {
+            boolean handled = delegate.onMouseDrag(new Point((int)x, (int)y), button);
+            sync(); return handled;
         }
-
-        @Override
-        protected void onDrag(double mouseX, double mouseY, double dx, double dy) {
-            if (!dragging || maxOffset() == 0) return;
-            int availH = getHeight() - SCROLLBAR_HANDLE_HEIGHT;
-            if (availH <= 0) return;
-            double rel = (mouseY - getY() - dragYOffset) / availH;
-            rel = Math.max(0, Math.min(1, rel));
-            setOffset((int) Math.round(rel * maxOffset()));
-        }
-
-        @Override
-        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-            return handleScroll(scrollY);
-        }
-
-        @Override
-        protected void updateWidgetNarration(NarrationElementOutput narration) {}
+        @Override protected void updateWidgetNarration(NarrationElementOutput narration) {}
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        // Forward wheel events anywhere over the GUI to the active list-tab
-        // scrollbar so the user doesn't have to aim at the 12-px gutter —
-        // spinning the wheel while hovering the row buttons or panel chrome
-        // still scrolls the list.
-        if (currentScrollbar != null && currentScrollbar.handleScroll(scrollY)) {
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (currentScrollbar != null && currentScrollbar.drag(x, y, button)) return true;
+        return super.mouseDragged(x, y, button, dx, dy);
     }
 
+    @Override public boolean mouseReleased(double x, double y, int button) {
+        if (currentScrollbar != null) currentScrollbar.mouseReleased(x, y, button);
+        return super.mouseReleased(x, y, button);
+    }
+
+    @Override public boolean mouseScrolled(double x, double y, double dx, double dy) {
+        if (currentScrollbar != null && x >= leftPos + LIST_ROW_X && x < leftPos + GUI_WIDTH
+                && y >= topPos + LIST_ROW_FIRST_Y && y < topPos + LIST_ROW_FIRST_Y + ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT
+                && currentScrollbar.handleScroll(dy)) return true;
+        return super.mouseScrolled(x, y, dx, dy);
+    }
 }

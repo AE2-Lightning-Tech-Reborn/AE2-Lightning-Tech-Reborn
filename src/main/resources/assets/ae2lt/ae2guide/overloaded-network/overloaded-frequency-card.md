@@ -48,16 +48,16 @@ Only loaded chunks are traversed. A group larger than 8192 matching blocks cance
 
 ## Auto Connect
 
-When auto connect is enabled, placing blocks or AE2 parts will try to link the new target with an available carried frequency card.
+The card overview has two independent switches:
 
-Ways to toggle auto connect:
+* **Auto frequency** connects compatible blocks or AE2 parts to wireless ME channels when placed.
+* **Auto FE power** verifies a placed machine's FE input before connecting wireless power.
 
-* Hold the card, then hold **Shift** and scroll the mouse wheel
-* Use the “Toggle Frequency Card Auto Connect” keybind
-* Right-click air with the held card and use its frequency screen
-* Install the card in a supported wireless terminal and use the terminal screen's auto-connect button
+Turning a switch off only stops future automatic connections. Existing links remain connected. Disconnect existing wireless power from the controller's **Network management → Power** view. Old cards retain their previous auto-connect state; the two preferences are saved independently after migration.
 
-If you carry multiple auto-connect cards at once, the system may not know which one to use. When this happens, hold the target card or disable auto connect on the others.
+Open the held card or its configuration inside a terminal to change either setting. Supported wireless terminals also provide two separate toolbar switches. **Shift-scroll** and the **Toggle Frequency Card Auto Connect** keybind change frequency auto connect only, leaving FE unchanged.
+
+Each automatic connection type considers only cards with its corresponding switch enabled. If several cards qualify, hold the intended card or turn off the corresponding setting on the others.
 
 ## Curios Slot
 

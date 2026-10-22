@@ -31,6 +31,7 @@ import appeng.items.materials.UpgradeCardItem;
 public class OverloadedFrequencyCardItem extends UpgradeCardItem {
     private static final String TAG_FREQUENCY_ID = "FrequencyId";
     private static final String TAG_AUTO_CONNECT = "AutoConnect";
+    private static final String TAG_AUTO_CONNECT_ENERGY = "AutoConnectEnergy";
     private static final String TAG_BOUND_CONTROLLER_DIM = "BoundControllerDim";
     private static final String TAG_BOUND_CONTROLLER_POS = "BoundControllerPos";
     private static final String TAG_OWNER_UUID = "OwnerUuid";
@@ -121,6 +122,10 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
                                 : "tooltip.ae2lt.frequency_card.auto_off")
                 .withStyle(data.autoConnect() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
 
+        tooltip.add(Component.translatable(data.autoConnectEnergy()
+                        ? "tooltip.ae2lt.frequency_card.auto_energy_on" : "tooltip.ae2lt.frequency_card.auto_energy_off")
+                .withStyle(data.autoConnectEnergy() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
+
         if (data.isBound()) {
             tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.bound_hint")
                     .withStyle(ChatFormatting.GRAY));
@@ -176,6 +181,10 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         return selectAutoConnectCard(player).selected();
     }
 
+    public static Optional<ItemStack> findAutoConnectEnergyCard(Player player) {
+        return selectCard(player, true, true, true).selected();
+    }
+
     private static String tooltipFrequencyName(int frequencyId) {
         String frequencyName = FMLEnvironment.dist == Dist.CLIENT
                 ? com.moakiee.ae2lt.client.frequency.FrequencyCardClientNames.frequencyName(frequencyId)
@@ -203,33 +212,38 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
             Player player,
             boolean requireAutoConnect,
             boolean requireBound) {
+        return selectCard(player, requireAutoConnect, requireBound, false);
+    }
+
+    private static FrequencyCardCandidateSelector.Selection<ItemStack> selectCard(
+            Player player, boolean requireAutoConnect, boolean requireBound, boolean energy) {
         UUID playerUuid = player.getUUID();
         var candidates = new ArrayList<FrequencyCardCandidateSelector.Candidate<ItemStack>>();
 
         var main = player.getMainHandItem();
         addCandidate(candidates, FrequencyCardCandidateSelector.Source.MAIN_HAND, main, playerUuid,
-                requireAutoConnect, requireBound);
+                requireAutoConnect, requireBound, energy);
 
         var offhand = player.getOffhandItem();
         addCandidate(candidates, FrequencyCardCandidateSelector.Source.OFF_HAND, offhand, playerUuid,
-                requireAutoConnect, requireBound);
+                requireAutoConnect, requireBound, energy);
 
         for (var stack : CuriosFrequencyCardFinder.findFrequencyCards(player)) {
             addCandidate(candidates, FrequencyCardCandidateSelector.Source.CURIOS, stack, playerUuid,
-                    requireAutoConnect, requireBound);
+                    requireAutoConnect, requireBound, energy);
         }
 
         var inventory = player.getInventory();
         for (int slot = 0; slot < 9 && slot < inventory.items.size(); slot++) {
             var stack = inventory.items.get(slot);
             addCandidate(candidates, FrequencyCardCandidateSelector.Source.HOTBAR, stack, playerUuid,
-                    requireAutoConnect, requireBound);
+                    requireAutoConnect, requireBound, energy);
         }
 
         for (int slot = 9; slot < inventory.items.size(); slot++) {
             var stack = inventory.items.get(slot);
             addCandidate(candidates, FrequencyCardCandidateSelector.Source.BACKPACK, stack, playerUuid,
-                    requireAutoConnect, requireBound);
+                    requireAutoConnect, requireBound, energy);
         }
 
         // Cards installed inside a wireless terminal's upgrade slot only feed the
@@ -240,7 +254,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         if (requireAutoConnect) {
             for (var stack : TerminalFrequencyCardFinder.findFrequencyCards(player)) {
                 addCandidate(candidates, FrequencyCardCandidateSelector.Source.WIRELESS_TERMINAL,
-                        stack, playerUuid, requireAutoConnect, requireBound);
+                        stack, playerUuid, requireAutoConnect, requireBound, energy);
             }
         }
 
@@ -253,19 +267,20 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
             ItemStack stack,
             UUID playerUuid,
             boolean requireAutoConnect,
-            boolean requireBound) {
-        if ((requireAutoConnect ? isUsableAutoCard(stack, playerUuid) : isToggleCandidate(stack, playerUuid))
+            boolean requireBound,
+            boolean energy) {
+        if ((requireAutoConnect ? isUsableAutoCard(stack, playerUuid, energy) : isToggleCandidate(stack, playerUuid))
                 && (!requireBound || getData(stack).isBound())) {
             candidates.add(new FrequencyCardCandidateSelector.Candidate<>(source, stack));
         }
     }
 
-    private static boolean isUsableAutoCard(ItemStack stack, UUID playerUuid) {
+    private static boolean isUsableAutoCard(ItemStack stack, UUID playerUuid, boolean energy) {
         if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) {
             return false;
         }
         var data = getData(stack);
-        return data.isBound() && data.autoConnect() && data.canBeUsedBy(playerUuid);
+        return data.isBound() && (energy ? data.autoConnectEnergy() : data.autoConnect()) && data.canBeUsedBy(playerUuid);
     }
 
     private static boolean isToggleCandidate(ItemStack stack, UUID playerUuid) {
@@ -295,7 +310,9 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
                 owner = Optional.empty();
             }
         }
-        return new OverloadedFrequencyCardData(frequencyId, autoConnect, dim, pos, owner);
+        return new OverloadedFrequencyCardData(frequencyId, autoConnect,
+                tag.contains(TAG_AUTO_CONNECT_ENERGY) ? tag.getBoolean(TAG_AUTO_CONNECT_ENERGY) : autoConnect,
+                dim, pos, owner);
     }
 
     private static CompoundTag toTag(OverloadedFrequencyCardData data) {
@@ -306,6 +323,7 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         if (data.autoConnect()) {
             tag.putBoolean(TAG_AUTO_CONNECT, true);
         }
+        tag.putBoolean(TAG_AUTO_CONNECT_ENERGY, data.autoConnectEnergy());
         data.boundControllerDimension().ifPresent(value -> tag.putString(TAG_BOUND_CONTROLLER_DIM, value));
         data.boundControllerPos().ifPresent(value -> tag.putLong(TAG_BOUND_CONTROLLER_POS, value));
         data.ownerUuid().ifPresent(value -> tag.putString(TAG_OWNER_UUID, value.toString()));
