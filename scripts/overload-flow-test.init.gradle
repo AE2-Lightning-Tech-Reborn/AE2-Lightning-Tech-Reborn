@@ -1,0 +1,18 @@
+// Run LT's overload integration tests against a locally built Thunderbolt JAR.
+// Usage: ./gradlew --no-configuration-cache -I scripts/overload-flow-test.init.gradle \
+//   -Pae2ltThunderboltTestJar=/path/to/thunderbolt.jar test --tests '*OverloadPatternPipelineTest'
+allprojects {
+    afterEvaluate {
+        def candidate = providers.gradleProperty('ae2ltThunderboltTestJar').orNull
+        if (candidate == null || !file(candidate).isFile()) {
+            throw new GradleException('ae2ltThunderboltTestJar must point to an existing Thunderbolt JAR')
+        }
+        configurations.configureEach {
+            exclude group: 'com.moakiee.thunderbolt', module: 'thunderbolt-reborn'
+        }
+        def repairedThunderbolt = files(candidate)
+        dependencies.add('compileOnly', repairedThunderbolt)
+        dependencies.add('runtimeOnly', repairedThunderbolt)
+        dependencies.add('testRuntimeOnly', repairedThunderbolt)
+    }
+}
