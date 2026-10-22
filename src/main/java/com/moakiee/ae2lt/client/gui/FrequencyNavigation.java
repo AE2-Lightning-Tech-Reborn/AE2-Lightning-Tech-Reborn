@@ -14,14 +14,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/** Shared AE2 navigation and fixed frame for all four frequency/network pages. */
+/** Shared AE2 navigation and fixed frame for all frequency/network pages. */
 public final class FrequencyNavigation {
     public static final int WIDTH = 240, HEIGHT = 208, TAB_SIZE = 22, TAB_TOP = -24;
     private FrequencyNavigation() {}
 
-    public static int left(FrequencyPage page) {
-        return 8 + FrequencyPage.NAVIGATION.indexOf(page.navigationPage()) * 24;
-    }
     public static List<PageButton> create(int x, int y, FrequencyPage selected, boolean showManagement,
             boolean managementAvailable, Consumer<FrequencyPage> navigate) {
         if (selected.isManagement() && !showManagement) selected = FrequencyPage.TAB_HOME;
@@ -29,7 +26,7 @@ public final class FrequencyNavigation {
         for (var page : FrequencyPage.NAVIGATION) {
             if (page.isManagement() && !showManagement) continue;
             var button = new PageButton(page, ignored -> navigate.accept(page));
-            button.setPosition(x + left(page), y + TAB_TOP);
+            button.setPosition(x + 8 + result.size() * 24, y + TAB_TOP);
             button.setSelected(page == selected.navigationPage());
             button.active = !page.isManagement() || managementAvailable;
             result.add(button);

@@ -216,9 +216,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     @Override public void containerTick() {
         super.containerTick();
-        if (scrollbar.getCurrentScroll() != requestedOffset && snapshot != null) {
-            requestedOffset = scrollbar.getCurrentScroll(); changed(0, false);
-        }
+        readScrollbarChange();
         if (debounce > 0) { debounce--; return; }
         if (--refresh <= 0) {
             refresh = awaitingResponse ? 3 : 20;
@@ -230,10 +228,19 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     public void receive(NetworkManagementSyncPacket packet) {
         if (packet.menuId() != menu.containerId || packet.serial() != serial) return;
+        // Mouse input may move the scrollbar before the next container tick. Do not let an
+        // in-flight refresh restore the old offset before that input becomes a new query.
+        readScrollbarChange();
+        if (packet.serial() != serial) return;
         error = packet.error(); requestedOffset = packet.snapshot().offset();
         showSnapshot(packet.snapshot(), viewKey());
         if (error.isEmpty()) pages.put(viewKey(), snapshot); else pages.clear();
         awaitingResponse = false; refresh = 20;
+    }
+    private void readScrollbarChange() {
+        if (scrollbar.getCurrentScroll() != requestedOffset && snapshot != null) {
+            requestedOffset = scrollbar.getCurrentScroll(); changed(0, false);
+        }
     }
     private void select(int index) {
         if (snapshot == null || awaitingResponse || index >= snapshot.rows().size()) return;

@@ -42,6 +42,61 @@ public final class RemoteDeviceGameTests {
             List.of(new ManagementQuery.Token("interface", List.of())), 2, false, 1, 0);
 
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void nativeIoPortWithoutSubmenuHostOpensRemotely(GameTestHelper h) {
+        standaloneMenu(h, AEBlocks.IO_PORT.block(), appeng.menu.implementations.IOPortMenu.TYPE);
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void nativeOverloadedIoPortWithoutSubmenuHostOpensRemotely(GameTestHelper h) {
+        standaloneMenu(h, ModBlocks.OVERLOADED_IO_PORT.get(), com.moakiee.ae2lt.menu.OverloadedIOPortMenu.TYPE);
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void nativeExtendedAeConnectorWithoutSubmenuHostOpensRemotely(GameTestHelper h) {
+        standaloneMenu(h, net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                net.minecraft.resources.ResourceLocation.parse("extendedae:wireless_connect")),
+                com.glodblock.github.extendedae.container.ContainerWirelessConnector.TYPE);
+    }
+
+    private static void standaloneMenu(GameTestHelper h, net.minecraft.world.level.block.Block block,
+            net.minecraft.world.inventory.MenuType<?> expectedType) {
+        var f = base(h);
+        h.setBlock(TARGET, block);
+        var target = (appeng.blockentity.AEBaseBlockEntity)h.getBlockEntity(TARGET);
+        h.assertTrue(!(target instanceof appeng.api.storage.ISubMenuHost), "fixture already uses submenu-return support");
+        h.runAfterDelay(20, () -> GridHelper.createConnection(f.host.getActionableNode(),
+                ((appeng.api.networking.security.IActionHost)target).getActionableNode()));
+        h.runAfterDelay(40, () -> {
+            var query = new ManagementQuery(19, false, false, List.of(), "", List.of(), 2, false, 1, 0);
+            var row = ManagementSnapshot.build(f.player, f.host, query).rows().stream()
+                    .filter(r -> r.target().pos().equals(target.getBlockPos())).findFirst().orElseThrow();
+            h.assertTrue(row.canConfigure(), "native device was marked unsupported");
+            f.menu.query(f.player, query); f.menu.openConfiguration(row.id());
+            h.assertTrue(f.player.containerMenu.getType() == expectedType, "wrong native device menu");
+            var opened = (AEBaseMenu)f.player.containerMenu;
+            h.assertTrue(opened.getTarget() == target && opened.stillValid(f.player), "wrong host or invalid remote menu");
+            h.assertTrue(f.player.distanceToSqr(target.getBlockPos().getCenter()) > 64, "fixture is not remote");
+            if (target instanceof appeng.api.util.IConfigurableObject configurable) {
+                var settings = configurable.getConfigManager();
+                var setting = settings.getSettings().stream().filter(s -> s.getValues().size() > 1).findFirst().orElseThrow();
+                Object old = settings.getSetting(setting);
+                new ConfigButtonPacket(setting, true).handleOnServer(context(f.player));
+                h.assertTrue(!old.equals(settings.getSetting(setting)), "native settings did not reach the real device");
+            }
+            RemoteDeviceSession.locator(f.player).session().returnToDevices(f.player);
+            h.assertTrue(f.player.containerMenu instanceof NetworkManagementMenu returned
+                    && row.id().equals(returned.initialSelection()) && returned.initialQuery().equals(query),
+                    "native return lost the selected device or query");
+            ((NetworkManagementMenu)f.player.containerMenu).openConfiguration(row.id());
+            h.assertTrue(f.player.containerMenu.getType() == expectedType, "native menu did not reopen");
+            f.frequency.setSecurity(FrequencySecurityLevel.PRIVATE);
+            h.assertTrue(!((AEBaseMenu)f.player.containerMenu).stillValid(f.player)
+                    && !RemoteDeviceSession.acceptPacket(f.player), "revoked access still permits native actions");
+            h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
     public static void nativeConfigurationAndReturnPreserveDeviceView(GameTestHelper h) {
         fixture(h, f -> {
             var row = row(f);

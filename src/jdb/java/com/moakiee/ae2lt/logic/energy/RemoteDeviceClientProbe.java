@@ -50,6 +50,8 @@ public final class RemoteDeviceClientProbe {
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("ae2lt.remoteDeviceClientProbe") || done) return;
         var mc = Minecraft.getInstance(); mc.options.pauseOnLostFocus = false;
+        mc.options.keyAttack.setDown(false);
+        if (mc.gameMode != null) mc.gameMode.stopDestroyBlock();
         if (++ticks > 3600) { finish(new AssertionError("timeout at " + phase)); return; }
         if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) return;
         if (mc.screen != null) {
@@ -85,6 +87,10 @@ public final class RemoteDeviceClientProbe {
                         PartHelper.setPart(level, FAR.east(2), null, player, AEParts.GLASS_CABLE.item(AEColor.TRANSPARENT));
                         PartHelper.setPart(level, FAR.east(2), Direction.SOUTH, player, AEParts.INTERFACE.asItem());
                         level.setBlockAndUpdate(FAR.east(4), ModBlocks.OVERLOADED_PATTERN_PROVIDER.get().defaultBlockState());
+                        level.setBlockAndUpdate(FAR.east(6), AEBlocks.IO_PORT.block().defaultBlockState());
+                        level.setBlockAndUpdate(FAR.east(8), BuiltInRegistries.BLOCK.get(
+                                net.minecraft.resources.ResourceLocation.parse("extendedae:wireless_connect")).defaultBlockState());
+                        level.setBlockAndUpdate(FAR.east(10), ModBlocks.OVERLOADED_IO_PORT.get().defaultBlockState());
                         var frequency = WirelessFrequencyManager.get().createFrequency(player, "Remote Config QA", 0xffffff, FrequencySecurityLevel.PRIVATE, "");
                         ((AdvancedWirelessOverloadedControllerBlockEntity)level.getBlockEntity(C)).setFrequency(frequency.getId());
                     });
@@ -97,6 +103,10 @@ public final class RemoteDeviceClientProbe {
                     GridHelper.createConnection(controller.getActionableNode(), ((InterfaceBlockEntity)nether.getBlockEntity(FAR)).getActionableNode());
                     GridHelper.createConnection(controller.getActionableNode(), PartHelper.getPart(level, FAR.east(2), Direction.SOUTH).getGridNode());
                     GridHelper.createConnection(controller.getActionableNode(), ((appeng.api.networking.security.IActionHost)level.getBlockEntity(FAR.east(4))).getActionableNode());
+                    for (int offset : new int[]{6, 8, 10})
+                        GridHelper.createConnection(controller.getActionableNode(), ((appeng.api.networking.security.IActionHost)level.getBlockEntity(FAR.east(offset))).getActionableNode());
+                    mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID())
+                            .setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 });
                 case 2 -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
                         new BlockHitResult(Vec3.atCenterOf(C), Direction.NORTH, C, false));
@@ -193,7 +203,40 @@ public final class RemoteDeviceClientProbe {
                 }
                 case 34 -> {
                     require(mc.screen instanceof FrequencyScreen, "network management returns directly to frequency list");
-                    capture("frequency-list-final.png"); finish(null); return;
+                    capture("frequency-list-final.png"); click(Component.translatable("ae2lt.gui.tab.setting").getString());
+                }
+                case 35 -> {
+                    require(field(FrequencyScreen.class, "currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING,
+                            "top settings tab opens directly");
+                    capture("frequency-settings-top.png"); click(tr("network"));
+                }
+                case 36 -> search("ae2:io_port");
+                case 37 -> { require(snapshot().devices() == 1, "IO port search"); row(0); }
+                case 38 -> { row(1); capture("remote-io-port-entry.png"); click(tr("configure")); }
+                case 39 -> {
+                    require(nativeMenu() instanceof appeng.menu.implementations.IOPortMenu, "native remote IO port menu");
+                    require(mc.level.getBlockEntity(FAR.east(6)) == null, "IO port client chunk stayed unloaded");
+                    capture("remote-io-port.png"); click(tr("return_devices"));
+                }
+                case 40 -> { require(searchValue().equals("ae2:io_port"), "IO port return view"); search("extendedae:wireless_connect"); }
+                case 41 -> { require(snapshot().devices() == 1, "ExtendedAE connector search"); row(0); }
+                case 42 -> { row(1); capture("remote-wireless-connector-entry.png"); click(tr("configure")); }
+                case 43 -> {
+                    require(nativeMenu() instanceof com.glodblock.github.extendedae.container.ContainerWirelessConnector,
+                            "native remote ExtendedAE connector menu");
+                    require(mc.level.getBlockEntity(FAR.east(8)) == null, "connector client chunk stayed unloaded");
+                    capture("remote-wireless-connector.png"); click(tr("return_devices"));
+                }
+                case 44 -> { require(searchValue().equals("extendedae:wireless_connect"), "connector return view"); search("ae2lt:overloaded_io_port"); }
+                case 45 -> { require(snapshot().devices() == 1, "overloaded IO port search"); row(0); }
+                case 46 -> { row(1); click(tr("configure")); }
+                case 47 -> {
+                    require(nativeMenu() instanceof com.moakiee.ae2lt.menu.OverloadedIOPortMenu, "native remote overloaded IO port menu");
+                    capture("remote-overloaded-io-port.png"); click(tr("return_devices"));
+                }
+                case 48 -> {
+                    require(searchValue().equals("ae2lt:overloaded_io_port"), "overloaded IO port return view");
+                    capture("remote-native-menus-return.png"); finish(null); return;
                 }
             }
             phase++;
@@ -243,7 +286,7 @@ public final class RemoteDeviceClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "REMOTE_DEVICE_CLIENT_PASS: native remote and cross-dimension configuration, priority edits, panel face, LT provider, controller submenu, inline tree expansion/collapse, retained pages and stale response rejection"
+        done = true; String result = problem == null ? "REMOTE_DEVICE_CLIENT_PASS: native remote and cross-dimension configuration, priority edits, panel face, LT provider, controller submenu, inline tree expansion/collapse, retained pages, stale response rejection, top frequency settings, IO port, ExtendedAE wireless connector and overloaded IO port native GUI round-trips"
                 : "REMOTE_DEVICE_CLIENT_FAIL phase=" + phase + ": " + problem;
         System.out.println(result); if (problem != null) problem.printStackTrace();
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("remote-device-result.txt"), result); } catch (Exception ignored) {}

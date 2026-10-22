@@ -171,7 +171,15 @@ public final class WirelessEnergyMenuClientProbe {
                     require(snapshot().total() == 1 && snapshot().rows().getFirst().kind().equals("accessor"), "accessor source filter");
                     search("");
                 }
-                case 16 -> { require(snapshot().total() == 10, "clear search"); ((Scrollbar)field("scrollbar")).setCurrentScroll(5); }
+                case 16 -> {
+                    require(snapshot().total() == 10, "clear search");
+                    var stale = new com.moakiee.ae2lt.network.NetworkManagementSyncPacket(
+                            ((NetworkManagementScreen)mc.screen).getMenu().containerId, (int)field("serial"), "", snapshot());
+                    ((Scrollbar)field("scrollbar")).setCurrentScroll(5);
+                    ((NetworkManagementScreen)mc.screen).receive(stale);
+                    require(((Scrollbar)field("scrollbar")).getCurrentScroll() == 5 && (int)field("requestedOffset") == 5,
+                            "in-flight refresh must not erase pending scrollbar input");
+                }
                 case 17 -> {
                     require(snapshot().offset() == 5 && snapshot().rows().size() == 5, "native scrollbar page");
                     int index = 0; while (!snapshot().rows().get(index).canDisconnect()) index++;
@@ -460,7 +468,7 @@ public final class WirelessEnergyMenuClientProbe {
                     "widget fits compact frame: " + widget.getMessage().getString());
         }
         var buttons = Minecraft.getInstance().screen.children().stream().filter(e -> e instanceof com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton).toList();
-        require(buttons.size() == 4, "four navigation buttons with frequency settings nested");
+        require(buttons.size() == 5, "five navigation buttons including frequency settings");
         require(buttons.stream().filter(e -> ((com.moakiee.ae2lt.client.gui.FrequencyNavigation.PageButton)e).isSelected()).count() == 1, "exactly one selected navigation page");
     }
     private static void nav(com.moakiee.ae2lt.menu.FrequencyPage page) throws Exception {
@@ -477,9 +485,8 @@ public final class WirelessEnergyMenuClientProbe {
             return true;
         }
         if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target) return true;
-        if (target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE || target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING) {
-            if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target.navigationPage()) clickKey(target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING
-                    ? "ae2lt.gui.tab.setting" : target.getTranslationKey());
+        if (target == com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE) {
+            if (screen instanceof FrequencyScreen && frequencyField("currentTab") == target.navigationPage()) clickKey(target.getTranslationKey());
             else clickKey(target.navigationPage().navigationTranslationKey());
         } else clickKey(target.navigationTranslationKey());
         return false;
@@ -488,7 +495,10 @@ public final class WirelessEnergyMenuClientProbe {
         var label = Component.translatable(key).getString();
         return Minecraft.getInstance().screen.children().stream()
                 .filter(e -> e instanceof Button button && button.visible && button.getMessage().getString().equals(label))
-                .map(e -> (Button)e).findFirst().orElseThrow();
+                .map(e -> (Button)e).findFirst().orElseThrow(() -> new AssertionError("button missing " + key
+                        + "; visible=" + Minecraft.getInstance().screen.children().stream()
+                                .filter(e -> e instanceof Button b && b.visible)
+                                .map(e -> ((Button)e).getMessage().getString()).toList()));
     }
     private static void clickKey(String key) { click(Component.translatable(key).getString()); }
     private static void clickContaining(String text) {
@@ -564,11 +574,12 @@ public final class WirelessEnergyMenuClientProbe {
     private static void server(Runnable action) { Minecraft.getInstance().getSingleplayerServer().execute(() -> { try { action.run(); } catch (Throwable t) { failure = t; } }); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     private static void finish(Throwable problem) {
-        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, four-page navigation with nested frequency settings, live disconnect/reconnect from the frequency list, direct network view selection, independent native channel/FE switches, three network modes in a compact management frame, all frequency forms and modals, create/edit round-trips, per-page state restoration, full held/terminal card management, native device GUI round-trip and terminal return"
+        done = true; String result = problem == null ? "NETWORK_MANAGEMENT_CLIENT_PASS: native ME grouping, localized search, inline expansion, inline location, clickable coordinate copy, cross-dimension reporting, power windows/sorting, induction/accessor paths, scrollbar, exact disconnect, selected tabs after focus changes, five-page navigation with top frequency settings, live disconnect/reconnect from the frequency list, direct network view selection, independent native channel/FE switches, three network modes in a compact management frame, all frequency forms and modals, create/edit round-trips, per-page state restoration, full held/terminal card management, native device GUI round-trip and terminal return"
                 : "NETWORK_MANAGEMENT_CLIENT_FAIL phase=" + phase + ": " + problem;
         if (problem == null && Boolean.getBoolean("ae2lt.cardManagementOnly"))
             result = "CARD_MANAGEMENT_CLIENT_PASS: compact overview, independent bottom switches, full held/terminal card management, native device GUI round-trip, restored query and native terminal return";
         System.out.println(result); if (problem != null) problem.printStackTrace();
+        if (problem != null) try { capture("failure-phase-" + phase + ".png"); } catch (Exception ignored) {}
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("wireless-energy-menu-result.txt"), result); } catch (Exception ignored) {}
         Minecraft.getInstance().stop();
     }

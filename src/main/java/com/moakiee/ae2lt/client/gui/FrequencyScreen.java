@@ -373,7 +373,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             checkAutoPasswordPrompt();
         }
 
-        // Keep the frame and navigation stationary when switching between all four main pages.
+        // Keep the frame and navigation stationary when switching between main pages.
         imageHeight = GUI_HEIGHT;
         leftPos = (width - imageWidth) / 2;
         topPos = (height - imageHeight) / 2;
@@ -540,7 +540,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private void buildTopTabs(int x0, int y0) {
         boolean showManagement = freqMenu().supportsManagement();
         for (var button : FrequencyNavigation.create(x0, y0, currentTab, showManagement,
-                managementAvailable(), tab -> { closePopup(); switchTab(tab); })) addRenderableWidget(button);
+                managementAvailable(), tab -> { closePopup(); switchTab(tab); })) {
+            if (button.page() == FrequencyPage.TAB_SETTING)
+                button.active = ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) != null;
+            addRenderableWidget(button);
+        }
         if (freqMenu().hasParentMenu()) {
             var back = new TabButton(Icon.BACK, Component.translatable(freqMenu().isCardMode()
                     ? "ae2lt.gui.button.return_to_terminal" : "ae2lt.gui.button.back"),
@@ -562,8 +566,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         : ManagementViewCache.get(freqMenu().getBlockPos(), freqMenu().getCurrentFrequencyId(), tab.managementMode())).query());
             return;
         }
-        boolean withinFrequency = currentTab.navigationPage() == FrequencyPage.TAB_SELECTION
-                && tab.navigationPage() == FrequencyPage.TAB_SELECTION;
+        boolean withinFrequency = (currentTab.navigationPage() == FrequencyPage.TAB_SELECTION || currentTab == FrequencyPage.TAB_SETTING)
+                && (tab.navigationPage() == FrequencyPage.TAB_SELECTION || tab == FrequencyPage.TAB_SETTING);
         if (tab != currentTab) formPage = null;
         currentTab = tab;
         if (!withinFrequency) {
@@ -690,15 +694,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         rebuildSelectionRows();
         boolean connected = freqMenu().getCurrentFrequencyId() > 0;
-        var disconnect = addRenderableWidget(new AE2Button(x0 + 8, y0 + FOOTER_Y, FOOTER_BUTTON_WIDTH, 16,
+        var disconnect = addRenderableWidget(new AE2Button(x0 + 8, y0 + FOOTER_Y, 96, 16,
                 Component.translatable("ae2lt.gui.button.disconnect"),
                 btn -> PacketDistributor.sendToServer(new SelectFrequencyPacket(token(), freqMenu().getBlockPos(), -1, ""))));
         disconnect.active = connected;
-        var settings = addRenderableWidget(new AE2Button(x0 + 12 + FOOTER_BUTTON_WIDTH, y0 + FOOTER_Y, FOOTER_BUTTON_WIDTH, 16,
-                Component.translatable("ae2lt.gui.tab.setting"), btn -> switchTab(FrequencyPage.TAB_SETTING)));
-        settings.setTooltip(Tooltip.create(Component.translatable("ae2lt.gui.button.current_frequency_settings")));
-        settings.active = connected && ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) != null;
-        addRenderableWidget(new AE2Button(x0 + GUI_WIDTH - 8 - FOOTER_BUTTON_WIDTH, y0 + FOOTER_Y, FOOTER_BUTTON_WIDTH, 16,
+        addRenderableWidget(new AE2Button(x0 + GUI_WIDTH - 104, y0 + FOOTER_Y, 96, 16,
                 Component.translatable("ae2lt.gui.tab.create"), btn -> switchTab(FrequencyPage.TAB_CREATE)));
     }
 

@@ -31,7 +31,7 @@ public final class RemoteDeviceSession implements ISubMenuHost {
     public static boolean supports(Object owner) {
         return blockEntity(owner) instanceof AEBaseBlockEntity
                 && (owner instanceof ISubMenuHost || owner instanceof WirelessOverloadedControllerBlockEntity
-                    || owner instanceof FrequencyBindingHost);
+                    || owner instanceof FrequencyBindingHost || RemoteDeviceMenus.type(owner) != null);
     }
     public static BlockEntity blockEntity(Object owner) {
         return owner instanceof BlockEntity be ? be : owner instanceof AEBasePart part ? part.getBlockEntity() : null;
@@ -61,8 +61,12 @@ public final class RemoteDeviceSession implements ISubMenuHost {
                     public ISubMenuHost getHost() { return host; }
                 });
             } finally { OPENING.remove(); }
-        } else {
+        } else if (owner() instanceof WirelessOverloadedControllerBlockEntity || owner() instanceof FrequencyBindingHost) {
             FrequencyMenu.openRemote(player, blockEntity(owner()), locator);
+        } else {
+            var type = RemoteDeviceMenus.type(owner());
+            if (type == null) return false;
+            appeng.menu.MenuOpener.open(type, player, locator);
         }
         return player.containerMenu instanceof AEBaseMenu menu && menu.getLocator() == locator;
     }
