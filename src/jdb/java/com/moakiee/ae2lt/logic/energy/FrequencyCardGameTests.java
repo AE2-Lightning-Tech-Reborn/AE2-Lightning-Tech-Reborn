@@ -119,6 +119,38 @@ public final class FrequencyCardGameTests {
         h.succeed();
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
+    public static void nonBlockEntityClicksMatchAirUseForBothHandsAndHooks(GameTestHelper h) {
+        for (var block : List.of(Blocks.STONE, Blocks.CRAFTING_TABLE)) {
+            h.setBlock(TARGET, block);
+            var pos = h.absolutePos(TARGET);
+            h.assertTrue(h.getLevel().getBlockEntity(pos) == null, "non-BE fixture has a block entity");
+            for (var hand : InteractionHand.values()) for (boolean first : new boolean[]{true, false}) {
+                var p = new MenuPlayer(h.getLevel());
+                var card = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
+                var item = (OverloadedFrequencyCardItem)card.getItem();
+                p.setItemInHand(hand, card);
+                var use = new net.minecraft.world.item.context.UseOnContext(p, hand,
+                        new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(pos), Direction.NORTH, pos, false));
+                var result = first ? item.onItemUseFirst(card, use) : item.useOn(use);
+                h.assertTrue(result.consumesAction() && p.containerMenu instanceof FrequencyMenu menu
+                        && menu.isCardMode() && menu.stillValid(p), "non-BE click did not open held-card menu");
+                OverloadedFrequencyCardItem.bindFrequency(card, 12, h.getLevel().dimension(), pos, p.getUUID());
+                OverloadedFrequencyCardItem.setData(card, OverloadedFrequencyCardItem.getData(card).withAutoConnectEnergy(true));
+                p.setShiftKeyDown(true);
+                if (first) item.onItemUseFirst(card, use); else item.useOn(use);
+                h.assertTrue(!OverloadedFrequencyCardItem.getData(card).isBound()
+                        && OverloadedFrequencyCardItem.getData(card).autoConnectEnergy(), "shift non-BE use differs from shift-air clear");
+                OverloadedFrequencyCardItem.bindFrequency(card, 12, h.getLevel().dimension(), pos, UUID.randomUUID());
+                var foreign = OverloadedFrequencyCardItem.getData(card);
+                result = first ? item.onItemUseFirst(card, use) : item.useOn(use);
+                h.assertTrue(result == net.minecraft.world.InteractionResult.FAIL
+                        && OverloadedFrequencyCardItem.getData(card).equals(foreign), "non-BE clear bypassed card ownership");
+            }
+        }
+        h.succeed();
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty")
     public static void foreignCardCannotOpenAndPacketPreservesModifier(GameTestHelper h) {
         var p = new MenuPlayer(h.getLevel()); var card = new ItemStack(ModItems.OVERLOADED_FREQUENCY_CARD.get());
         OverloadedFrequencyCardItem.bindFrequency(card, 12, h.getLevel().dimension(), BlockPos.ZERO, UUID.randomUUID());

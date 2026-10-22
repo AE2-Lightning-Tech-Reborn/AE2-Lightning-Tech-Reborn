@@ -89,8 +89,8 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
                 Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> PacketDistributor.sendToServer(
                         appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu())));
         for (var view : ManagementMode.values()) {
-            var button = widgets.addButton("mode_" + view.name().toLowerCase(Locale.ROOT),
-                    tr("view." + view.name().toLowerCase(Locale.ROOT)), () -> switchMode(view));
+            var button = new ModeButton(view);
+            widgets.add("mode_" + view.name().toLowerCase(Locale.ROOT), button);
             button.setTooltip(Tooltip.create(tr("view_help." + view.name().toLowerCase(Locale.ROOT))));
             modeButtons.put(view, button);
         }
@@ -314,9 +314,6 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     @Override public void drawFG(GuiGraphics graphics, int ox, int oy, int mx, int my) {
         int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-        var activeMode = modeButtons.get(mode);
-        int modeBottom = activeMode.getY() - oy + activeMode.getHeight();
-        graphics.fill(activeMode.getX() - ox + 4, modeBottom, activeMode.getX() - ox + activeMode.getWidth() - 4, modeBottom + 1, color);
         int rowTop = rowButtons[0].getY() - oy;
         if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, rowTop + 6, color, false);
         else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, rowTop + 6, color, false);
@@ -349,6 +346,23 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             for (int i = 0; i < 5; i++) text.append("\n" + WINDOWS[i] + ": " + rate(row.rates()[i]) + " FE/t");
         }
         return text;
+    }
+    private final class ModeButton extends AE2Button {
+        private final ManagementMode view;
+        private ModeButton(ManagementMode view) {
+            super(tr("view." + view.name().toLowerCase(Locale.ROOT)), button -> switchMode(view));
+            this.view = view;
+        }
+        @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            // Use AE2's highlighted button sprite for the current view, entirely within its bounds.
+            boolean hovered = isHovered;
+            isHovered |= view == mode;
+            try {
+                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            } finally {
+                isHovered = hovered;
+            }
+        }
     }
     private final class LocateButton extends AE2Button {
         private ManagementRow row;

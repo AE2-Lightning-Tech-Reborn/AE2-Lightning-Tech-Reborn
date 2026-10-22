@@ -57,6 +57,9 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
         }
 
         var level = context.getLevel();
+        if (level.getBlockEntity(context.getClickedPos()) == null) {
+            return use(level, player, context.getHand()).getResult();
+        }
         if (level.isClientSide()) {
             Vec3 hit = context.getClickLocation();
             PacketDistributor.sendToServer(new FrequencyCardUsePacket(
