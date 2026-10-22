@@ -573,6 +573,8 @@ dependencies {
     compileOnly "mekanism:Mekanism:1.21.1-10.7.19.85"
     // Optional Industrial Foregoing fluid role/side metadata; never bundled.
     compileOnly "curse.maven:titanium-287342:8760562"
+    // Output-handler tests instantiate the real Titanium components outside the mod loader.
+    testRuntimeOnly "curse.maven:titanium-287342:8760562"
     compileOnly "curse.maven:flux-networks-248020:6089446"
     compileOnly "curse.maven:ae2-jei-integration-1074338:7727898"
     // Optional Omniversal Pattern support. The mod is never bundled or required at runtime.

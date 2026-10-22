@@ -159,7 +159,8 @@ side = "CLIENT"
 [[dependencies."${mod_id}"]]
 modId = "advanced_ae"
 type = "optional"
-versionRange = "[0,)"
+# Reaction recipes switched from Glodium to AE2AddonLib's IngredientStack in 1.6.7.
+versionRange = "[1.6.7-1.21.1,)"
 ordering = "AFTER"
 side = "BOTH"
 

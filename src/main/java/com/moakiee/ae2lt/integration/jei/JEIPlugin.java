@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.compat.OptionalIntegrationGuard;
 import com.moakiee.ae2lt.client.machine.CrystalCatalyzerScreen;
 import com.moakiee.ae2lt.client.machine.LightningAssemblyChamberScreen;
 import com.moakiee.ae2lt.client.machine.LightningSimulationChamberScreen;
@@ -50,6 +51,8 @@ import tamaized.ae2jeiintegration.integration.modules.jei.transfer.EncodePattern
 
 @JeiPlugin
 public class JEIPlugin implements IModPlugin {
+    private static final OptionalIntegrationGuard ADVANCED_AE_FACTORY =
+            new OptionalIntegrationGuard("AdvancedAE factory JEI integration");
     private static final ResourceLocation ID =
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "jei_plugin");
     private static final String AE2_JEI_INTEGRATION_MODID = "ae2jeiintegration";
@@ -195,7 +198,7 @@ public class JEIPlugin implements IModPlugin {
         registration.addRecipeCatalyst(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.toStack(), LightningSimulationCategory.TYPE);
         registration.addRecipeCatalyst(ModBlocks.OVERLOAD_PROCESSING_FACTORY.toStack(), OverloadProcessingCategory.TYPE);
         if (ModList.get().isLoaded("advanced_ae")) {
-            AdvancedAeFactoryJeiCompat.registerCatalyst(registration);
+            ADVANCED_AE_FACTORY.run(() -> AdvancedAeFactoryJeiCompat.registerCatalyst(registration));
         }
         registration.addRecipeCatalyst(ModBlocks.TESLA_COIL.toStack(), TeslaCoilCategory.TYPE);
         registration.addRecipeCatalyst(ModBlocks.CRYSTAL_CATALYZER.toStack(), CrystalCatalyzerCategory.TYPE);
@@ -257,10 +260,13 @@ public class JEIPlugin implements IModPlugin {
                 clickableAreaHandler(83, 22, 42, 46, LightningAssemblyCategory.TYPE));
         registration.addGuiContainerHandler(LightningSimulationChamberScreen.class,
                 clickableAreaHandler(82, 25, 35, 46, LightningSimulationCategory.TYPE));
+        RecipeType<?>[] factoryTypes = {OverloadProcessingCategory.TYPE};
+        if (ModList.get().isLoaded("advanced_ae")) {
+            factoryTypes = ADVANCED_AE_FACTORY.get(() -> new RecipeType<?>[] {
+                    OverloadProcessingCategory.TYPE, AdvancedAeFactoryJeiCompat.recipeType()}, factoryTypes);
+        }
         registration.addGuiContainerHandler(OverloadProcessingFactoryScreen.class,
-                clickableAreaHandler(84, 46, 31, 10, ModList.get().isLoaded("advanced_ae")
-                        ? new RecipeType<?>[] {OverloadProcessingCategory.TYPE, AdvancedAeFactoryJeiCompat.recipeType()}
-                        : new RecipeType<?>[] {OverloadProcessingCategory.TYPE}));
+                clickableAreaHandler(84, 46, 31, 10, factoryTypes));
         registration.addGuiContainerHandler(TeslaCoilScreen.class,
                 clickableAreaHandler(43, 22, 36, 40, TeslaCoilCategory.TYPE));
         registration.addGuiContainerHandler(CrystalCatalyzerScreen.class,

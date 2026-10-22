@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.compat.OptionalIntegrationGuard;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 import dev.emi.emi.api.EmiRegistry;
@@ -13,6 +14,8 @@ import net.minecraft.world.item.ItemStack;
 
 /** Native EMI categories mirroring the dedicated JEI category layouts. */
 final class AE2LTEmiCategories {
+    private static final OptionalIntegrationGuard ADVANCED_AE_FACTORY =
+            new OptionalIntegrationGuard("AdvancedAE factory EMI integration");
     static final EmiRecipeCategory OVERLOAD_GROWTH = category(
             "overload_growth", EmiStack.of(ModBlocks.OVERLOAD_CRYSTAL_CLUSTER.get()));
     static final EmiRecipeCategory LIGHTNING_ASSEMBLY = category(
@@ -43,7 +46,7 @@ final class AE2LTEmiCategories {
         addCategory(registry, LIGHTNING_SIMULATION, ModBlocks.LIGHTNING_SIMULATION_CHAMBER.toStack());
         addCategory(registry, OVERLOAD_PROCESSING, ModBlocks.OVERLOAD_PROCESSING_FACTORY.toStack());
         if (net.neoforged.fml.ModList.get().isLoaded("advanced_ae")) {
-            AdvancedAeFactoryEmiCompat.registerWorkstation(registry);
+            ADVANCED_AE_FACTORY.run(() -> AdvancedAeFactoryEmiCompat.registerWorkstation(registry));
         }
         addCategory(registry, TESLA_COIL, ModBlocks.TESLA_COIL.toStack());
         addCategory(registry, CRYSTAL_CATALYZER,
