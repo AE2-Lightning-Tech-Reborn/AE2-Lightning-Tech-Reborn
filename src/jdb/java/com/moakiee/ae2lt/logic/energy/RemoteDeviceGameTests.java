@@ -140,6 +140,9 @@ public final class RemoteDeviceGameTests {
         h.getLevel().setBlockAndUpdate(pos, ModBlocks.WIRELESS_RECEIVER.get().defaultBlockState());
         var remote = (com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity) nether.getBlockEntity(pos);
         var decoy = (com.moakiee.ae2lt.blockentity.WirelessReceiverBlockEntity) h.getLevel().getBlockEntity(pos);
+        // The headless GameTest runner does not advance AE2's ready queue in the other dimension.
+        // Initialize this fixture through the same lifecycle hook used by the live client server.
+        remote.onReady();
         h.startSequence()
                 .thenWaitUntil(() -> h.assertTrue(f.host.getActionableNode() != null && remote.getActionableNode() != null,
                         "waiting for both dimensions to initialize their native nodes"))
@@ -195,6 +198,102 @@ public final class RemoteDeviceGameTests {
             h.assertTrue(f.player.containerMenu == restored, "out-of-range controller still navigated");
             h.succeed();
         });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void heldCardOpensFullManagementAndReturnsFromNativeGui(GameTestHelper h) {
+        fixture(h, f -> {
+            var origin = openCard(f, net.minecraft.world.InteractionHand.OFF_HAND);
+            f.player.setPos(f.player.getX() - 40, f.player.getY(), f.player.getZ());
+            origin.openManagement(f.player, VIEW);
+            h.assertTrue(f.player.containerMenu instanceof NetworkManagementMenu, "card did not open full management");
+            var manager = (NetworkManagementMenu) f.player.containerMenu;
+            h.assertTrue(manager.fromCard() && manager.stillValid(f.player)
+                    && manager.initialSnapshot().devices() == 1, "card view lost its device query or remote access");
+            manager.openConfiguration(row(f).id());
+            h.assertTrue(f.player.containerMenu instanceof InterfaceMenu nativeMenu
+                    && nativeMenu.getTarget() == f.target && nativeMenu.stillValid(f.player), "card did not open native device GUI");
+            RemoteDeviceSession.locator(f.player).session().returnToDevices(f.player);
+            var returned = (NetworkManagementMenu) f.player.containerMenu;
+            h.assertTrue(returned.fromCard() && returned.initialQuery().search().equals(VIEW.search()), "native return lost card entry or query");
+            returned.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING.ordinal());
+            h.assertTrue(f.player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu card
+                    && card.isCardMode() && card.stillValid(f.player)
+                    && card.initialPage() == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING, "management returned to controller instead of card");
+            h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void removingHeldCardRevokesNativeGuiActionsImmediately(GameTestHelper h) {
+        fixture(h, f -> {
+            var origin = openCard(f, net.minecraft.world.InteractionHand.MAIN_HAND);
+            origin.openManagement(f.player, VIEW);
+            var manager = (NetworkManagementMenu) f.player.containerMenu;
+            manager.openConfiguration(row(f).id());
+            h.assertTrue(f.player.containerMenu instanceof InterfaceMenu, "native menu missing");
+            var settings = f.target.getConfigManager();
+            var setting = settings.getSettings().stream().filter(s -> s.getValues().size() > 1).findFirst().orElseThrow();
+            Object old = settings.getSetting(setting);
+            f.player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            h.assertTrue(!manager.canAccessFromSubMenu(f.player), "removed card retained management access");
+            new ConfigButtonPacket(setting, true).handleOnServer(context(f.player));
+            h.assertTrue(old.equals(settings.getSetting(setting)), "removed card still changed native GUI settings");
+            h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void terminalCardKeepsReturnRouteAndRevokesOnRemoval(GameTestHelper h) {
+        fixture(h, f -> {
+            var card = boundCard(f);
+            var terminal = appeng.core.definitions.AEItems.WIRELESS_TERMINAL.stack();
+            var upgrades = ((appeng.api.upgrades.IUpgradeableItem)terminal.getItem()).getUpgrades(terminal);
+            upgrades.setItemDirect(0, card);
+            f.player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, terminal);
+            var locator = (appeng.menu.locator.ItemMenuHostLocator) MenuLocators.forInventorySlot(f.player.getInventory().selected);
+            var origin = new com.moakiee.ae2lt.menu.FrequencyMenu(31, f.player.getInventory(), locator);
+            f.player.containerMenu = origin;
+            origin.openManagement(f.player, VIEW);
+            h.assertTrue(f.player.containerMenu instanceof NetworkManagementMenu, "terminal card did not open management");
+            var manager = (NetworkManagementMenu)f.player.containerMenu;
+            h.assertTrue(manager.fromCard() && manager.hasParentMenu() && manager.getHost() != null, "terminal return host missing");
+            manager.openFrequencyPage(com.moakiee.ae2lt.menu.FrequencyPage.TAB_HOME.ordinal());
+            h.assertTrue(f.player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu returned
+                    && returned.isCardMode() && returned.hasParentMenu(), "card overview lost terminal return");
+            upgrades.setItemDirect(0, net.minecraft.world.item.ItemStack.EMPTY);
+            h.assertTrue(!manager.canAccessFromSubMenu(f.player), "removed terminal upgrade retained management access");
+            h.succeed();
+        });
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void reboundCardAndRevokedFrequencyCannotKeepManagementAccess(GameTestHelper h) {
+        fixture(h, f -> {
+            var origin = openCard(f, net.minecraft.world.InteractionHand.MAIN_HAND);
+            origin.openManagement(f.player, VIEW);
+            var manager = (NetworkManagementMenu)f.player.containerMenu;
+            f.frequency.setSecurity(FrequencySecurityLevel.PRIVATE);
+            h.assertTrue(!manager.canAccessFromSubMenu(f.player), "revoked frequency retained card access");
+            f.frequency.setSecurity(FrequencySecurityLevel.PUBLIC);
+            var card = f.player.getMainHandItem();
+            com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.setData(card,
+                    com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.getData(card).clearFrequency());
+            h.assertTrue(!manager.stillValid(f.player), "unbound card retained previous network");
+            h.succeed();
+        });
+    }
+
+    private static net.minecraft.world.item.ItemStack boundCard(Fixture f) {
+        var card = new net.minecraft.world.item.ItemStack(com.moakiee.ae2lt.registry.ModItems.OVERLOADED_FREQUENCY_CARD.get());
+        com.moakiee.ae2lt.item.OverloadedFrequencyCardItem.bindFrequency(card, f.frequency.getId(),
+                f.player.serverLevel().dimension(), f.host.getBlockPos(), f.player.getUUID());
+        return card;
+    }
+    private static com.moakiee.ae2lt.menu.FrequencyMenu openCard(Fixture f, net.minecraft.world.InteractionHand hand) {
+        f.player.setItemInHand(hand, boundCard(f));
+        com.moakiee.ae2lt.menu.FrequencyMenu.openHeldCard(f.player, hand);
+        return (com.moakiee.ae2lt.menu.FrequencyMenu) f.player.containerMenu;
     }
 
     private static ManagementRow row(Fixture f) { return ManagementSnapshot.build(f.player, f.host, VIEW).rows().stream().filter(r -> !r.group()).findFirst().orElseThrow(); }

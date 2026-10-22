@@ -303,10 +303,40 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     }
 
     public void openManagement(ServerPlayer player, ManagementQuery view) {
-        if (view != null && view.valid() && !hasParentMenu && getPlayerInventory().player == player
-                && player.containerMenu == this && stillValid(player)
-                && backingBlockEntity instanceof WirelessOverloadedControllerBlockEntity controller)
+        if (view == null || !view.valid() || getPlayerInventory().player != player
+                || player.containerMenu != this || !stillValid(player)) return;
+        if (cardMode) {
+            NetworkManagementMenu.openFromCard(player, this, view);
+        } else if (!hasParentMenu && backingBlockEntity instanceof WirelessOverloadedControllerBlockEntity controller) {
             NetworkManagementMenu.open(player, controller, view.mode(), view, null);
+        }
+    }
+
+    /** Resolve only a live, loaded advanced controller using the card still present at this entry point. */
+    @Nullable
+    WirelessOverloadedControllerBlockEntity resolveManagementController(ServerPlayer player) {
+        if (!cardMode || player != cardPlayer || !stillValid(player)) return null;
+        var data = readCardData();
+        if (!data.isBound() || !data.canBeUsedBy(player.getUUID())) return null;
+        var node = WirelessFrequencyManager.get(player.server).resolveAdvancedNode(data.frequencyId(), player.server);
+        if (node == null || !(node.getOwner() instanceof WirelessOverloadedControllerBlockEntity controller)
+                || controller.isRemoved() || controller.getLevel() == null
+                || controller.getFrequencyId() != data.frequencyId()) return null;
+        var pos = controller.getBlockPos();
+        var level = player.server.getLevel(controller.getLevel().dimension());
+        var chunk = level == null ? null : level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        return chunk != null && chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK) == controller
+                ? controller : null;
+    }
+
+    void reopenCardPage(ServerPlayer player, FrequencyPage page) {
+        if (!cardMode || player != cardPlayer || !stillValid(player) || page.isManagement()) return;
+        var data = readCardData();
+        player.openMenu(new Ae2StyleFrequencyMenuProvider(Component.translatable(deviceName), (id, inv) -> {
+            var menu = new FrequencyMenu(id, inv, terminalLocator, heldCardHand);
+            menu.initialPage = page;
+            return menu;
+        }, true), buffer -> writeCardExtraData(buffer, data, hasParentMenu, page));
     }
 
     public static void openPage(ServerPlayer player, WirelessOverloadedControllerBlockEntity host, FrequencyPage page) {
@@ -449,6 +479,10 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     }
 
     private static void writeCardExtraData(FriendlyByteBuf buf, OverloadedFrequencyCardData cardData, boolean hasParent) {
+        writeCardExtraData(buf, cardData, hasParent, FrequencyPage.TAB_HOME);
+    }
+
+    private static void writeCardExtraData(FriendlyByteBuf buf, OverloadedFrequencyCardData cardData, boolean hasParent, FrequencyPage page) {
         int freqId = cardData.isBound() ? cardData.frequencyId() : -1;
         buf.writeBoolean(true);
         buf.writeBlockPos(BlockPos.ZERO);
@@ -462,7 +496,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         buf.writeBoolean(cardData.autoConnect());
         buf.writeBoolean(cardData.autoConnectEnergy());
         buf.writeBoolean(hasParent);
-        buf.writeEnum(FrequencyPage.TAB_HOME);
+        buf.writeEnum(page);
     }
 
     @Override
@@ -612,7 +646,8 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
         return !cardMode && stillValid(player) ? backingBlockEntity : null;
     }
 
-    public boolean usesLocalConnectionList() { return !isController || hasParentMenu; }
+    public boolean supportsManagement() { return cardMode || isController && !hasParentMenu; }
+    public boolean usesLocalConnectionList() { return !supportsManagement(); }
     public FrequencyPage initialPage() { return initialPage; }
     public void clientOpenManagement(boolean energy) { clientOpenManagement(ManagementQuery.initial(energy)); }
     public void clientOpenManagement(ManagementQuery view) {

@@ -1669,9 +1669,9 @@
   "ae2lt.management.state.faulted": "Output Fault",
   "ae2lt.management.search_too_broad": "Search too broad; use more specific terms",
   "ae2lt.management.incomplete": "Partial history · ",
-  "ae2lt.management.configure": "Remote Config",
-  "ae2lt.management.configure_help": "Open the device’s native configuration and return to this device list",
-  "ae2lt.management.configure_unavailable": "Cannot configure: unavailable device, insufficient access or unsupported remote menu",
+  "ae2lt.management.configure": "Open GUI",
+  "ae2lt.management.configure_help": "Open the selected device’s native GUI remotely and return to this device list",
+  "ae2lt.management.configure_unavailable": "Cannot open GUI: unavailable device, insufficient access or unsupported remote menu",
   "ae2lt.management.return_devices": "Back to Network Management",
   "ae2lt.management.network": "Network Management",
   "ae2lt.management.connections": "Frequency Links",
@@ -1695,5 +1695,12 @@
   "ae2lt.frequency_card.auto_energy_disabled": "Auto FE power: OFF",
   "ae2lt.management.view.devices": "ME Devices",
   "ae2lt.management.view.energy": "FE Power",
-  "ae2lt.management.view.connections": "Frequency Links"
+  "ae2lt.management.view.connections": "Connections",
+  "ae2lt.gui.home.auto_channel_on": "ME: ON",
+  "ae2lt.gui.home.auto_channel_off": "ME: OFF",
+  "ae2lt.gui.home.auto_energy_on": "FE: ON",
+  "ae2lt.gui.home.auto_energy_off": "FE: OFF",
+  "ae2lt.gui.home.frequency_details": "Frequency Details",
+  "ae2lt.gui.home.access": "Your Access",
+  "ae2lt.gui.home.no_access": "No Access"
 }

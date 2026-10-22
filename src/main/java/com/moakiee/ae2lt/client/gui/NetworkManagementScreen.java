@@ -85,6 +85,9 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         });
         for (var button : navigation) widgets.add(button.page().widgetId(), button);
         managementTab = navigation.stream().filter(b -> b.page() == FrequencyPage.TAB_DEVICES).findFirst().orElseThrow();
+        if (menu.hasParentMenu()) widgets.add("return_to_terminal", new TabButton(Icon.BACK,
+                Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> PacketDistributor.sendToServer(
+                        appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu())));
         for (var view : ManagementMode.values()) {
             var button = widgets.addButton("mode_" + view.name().toLowerCase(Locale.ROOT),
                     tr("view." + view.name().toLowerCase(Locale.ROOT)), () -> switchMode(view));
@@ -124,7 +127,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             mode = view.mode(); grouped = view.grouped(); expandedTypes.addAll(view.expandedTypes()); sort = view.sort();
             descending = view.descending(); window = view.window(); requestedOffset = view.offset();
             serial = view.serial(); selected = menu.initialSelection() != null ? menu.initialSelection()
-                    : ManagementViewCache.get(menu.controllerPos(), menu.frequency(), mode).selection();
+                    : ManagementViewCache.get(menu.viewCachePos(), menu.frequency(), mode).selection();
         }
         if (menu.initialSnapshot() != null) {
             showSnapshot(menu.initialSnapshot(), viewKey());
@@ -136,7 +139,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private void switchMode(ManagementMode next) {
         if (mode == next) return;
         rememberView();
-        var saved = ManagementViewCache.get(menu.controllerPos(), menu.frequency(), next);
+        var saved = ManagementViewCache.get(menu.viewCachePos(), menu.frequency(), next);
         var view = saved.query();
         mode = next; grouped = view.grouped(); expandedTypes.clear(); expandedTypes.addAll(view.expandedTypes());
         search.setValue(view.search()); sort = view.sort(); descending = view.descending(); window = view.window();
@@ -145,7 +148,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     private void rememberView() {
         var terms = tokens();
-        if (!searchTooBroad) ManagementViewCache.remember(menu.controllerPos(), menu.frequency(),
+        if (!searchTooBroad) ManagementViewCache.remember(menu.viewCachePos(), menu.frequency(),
                 new ManagementQuery(serial, mode, grouped, List.copyOf(expandedTypes), search.getValue(), terms,
                         sort, descending, window, requestedOffset), selected);
     }
@@ -282,7 +285,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             rowButtons[i].row = row;
             rowButtons[i].visible = row != null;
             rowButtons[i].active = row != null && !awaitingResponse;
-            rowButtons[i].setWidth(row != null && row.group() ? 270 : 248);
+            rowButtons[i].setWidth(row != null && row.group() ? imageWidth - 34 : imageWidth - 56);
             rowButtons[i].setMessage(row == null ? Component.empty() : displayName(row.target()));
             rowButtons[i].setTooltip(row == null ? null : Tooltip.create(tooltip(row)));
             locateButtons[i].row = row;
@@ -305,21 +308,25 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     @Override public void drawFG(GuiGraphics graphics, int ox, int oy, int mx, int my) {
         int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
         var activeMode = modeButtons.get(mode);
-        graphics.fill(activeMode.getX() - ox + 4, 41, activeMode.getX() - ox + activeMode.getWidth() - 4, 42, color);
-        if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, 96, color, false);
-        else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, 96, color, false);
-        else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, 96, color, false);
+        int modeBottom = activeMode.getY() - oy + activeMode.getHeight();
+        graphics.fill(activeMode.getX() - ox + 4, modeBottom, activeMode.getX() - ox + activeMode.getWidth() - 4, modeBottom + 1, color);
+        int rowTop = rowButtons[0].getY() - oy;
+        if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, rowTop + 6, color, false);
+        else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, rowTop + 6, color, false);
+        else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, rowTop + 6, color, false);
         var selectedRow = selection();
         Component selectionLabel = selectedRow == null ? tr("select_device") : displayName(selectedRow.target());
-        graphics.drawString(font, fit(selectionLabel, 182), 9, 234, color, false);
-        if (selectedRow != null && isHovering(8, 230, 184, 16, mx, my))
+        int footerTop = configureButton.getY() - oy;
+        int selectionWidth = configureButton.getX() - ox - 16;
+        graphics.drawString(font, fit(selectionLabel, selectionWidth), 9, footerTop + 4, color, false);
+        if (selectedRow != null && isHovering(8, footerTop, selectionWidth, 16, mx, my))
             drawTooltip(graphics, mx - ox, my - oy, List.of(tooltip(selectedRow)));
         if (snapshot != null) {
             Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
                     : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
             if (snapshot.limited()) summary = tr("incomplete").append(summary);
-            graphics.drawString(font, fit(summary, 284), 9, 215, color, false);
-            if (snapshot.limited() && isHovering(8, 212, 286, 12, mx, my))
+            graphics.drawString(font, fit(summary, imageWidth - 20), 9, footerTop - 12, color, false);
+            if (snapshot.limited() && isHovering(8, footerTop - 14, imageWidth - 16, 12, mx, my))
                 drawTooltip(graphics, mx - ox, my - oy, List.of(tr("history_limit")));
         }
     }
@@ -372,27 +379,27 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             if (isHoveredOrFocused() || row.id().equals(selected))
                 graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
             boolean tree = displayedView != null && displayedView.mode() != ManagementMode.ENERGY && displayedView.grouped();
-            int iconX = x + (tree ? row.group() ? 20 : 36 : 4);
+            int iconX = x + (tree ? row.group() ? 18 : 28 : 4);
             int textX = iconX + 20;
             int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-            if (row.group()) (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT).getBlitter().dest(x + 3, y + 4).blit(graphics);
+            if (row.group()) (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT).getBlitter().dest(x + 3, y + 2).blit(graphics);
             else if (tree) {
-                graphics.fill(x + 26, y + 3, x + 27, y + height - 3, color);
-                graphics.fill(x + 26, y + 13, x + 33, y + 14, color);
+                graphics.fill(x + 20, y + 3, x + 21, y + height - 3, color);
+                graphics.fill(x + 20, y + 12, x + 25, y + 13, color);
             }
             var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(row.target().type()));
-            if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 4);
-            else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 4).blit(graphics);
+            if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 2);
+            else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 2).blit(graphics);
             Component name = displayName(row.target());
             boolean power = displayedView != null && displayedView.mode() == ManagementMode.ENERGY;
             String right = row.group() ? "×" + row.count() : power ? compactRate(row.rates()[window]) + " FE/t"
                     : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
             int nameWidth = x + width - textX - 12 - font.width(right);
-            graphics.drawString(font, fit(name, nameWidth), textX, y + 3, color, false);
-            graphics.drawString(font, right, x + width - 5 - font.width(right), y + 3, color, false);
+            graphics.drawString(font, fit(name, nameWidth), textX, y + 2, color, false);
+            graphics.drawString(font, right, x + width - 5 - font.width(right), y + 2, color, false);
             Component secondary = row.group() ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count()) : power
                     ? tr("kind." + row.kind()).append(" · ").append(shortAddress(row.target())) : Component.literal(shortAddress(row.target()));
-            graphics.drawString(font, fit(secondary, x + width - textX - 5), textX, y + 13, color, false);
+            graphics.drawString(font, fit(secondary, x + width - textX - 5), textX, y + 11, color, false);
         }
     }
     private Component fit(Component value, int max) {

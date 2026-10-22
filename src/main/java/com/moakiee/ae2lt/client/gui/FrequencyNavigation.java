@@ -14,9 +14,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/** One AE2 frame and tab strip for frequency settings, devices and power. */
+/** Shared AE2 navigation and fixed frame for all four frequency/network pages. */
 public final class FrequencyNavigation {
-    public static final int WIDTH = 304, HEIGHT = 252, TAB_SIZE = 22, TAB_TOP = -24;
+    public static final int WIDTH = 240, HEIGHT = 208, TAB_SIZE = 22, TAB_TOP = -24;
     private FrequencyNavigation() {}
 
     public static int left(FrequencyPage page) {

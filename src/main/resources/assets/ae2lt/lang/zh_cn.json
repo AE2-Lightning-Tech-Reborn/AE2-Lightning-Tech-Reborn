@@ -1669,9 +1669,9 @@
   "ae2lt.management.state.faulted": "供电异常",
   "ae2lt.management.search_too_broad": "搜索范围过广，请补充更具体的词",
   "ae2lt.management.incomplete": "记录不全 · ",
-  "ae2lt.management.configure": "无线配置",
-  "ae2lt.management.configure_help": "远程打开设备原有配置界面，可返回当前设备列表",
-  "ae2lt.management.configure_unavailable": "无法配置：设备不可用、权限不足或不支持远程菜单",
+  "ae2lt.management.configure": "远程打开界面",
+  "ae2lt.management.configure_help": "远程打开选中设备的原生界面，可返回当前设备列表",
+  "ae2lt.management.configure_unavailable": "无法打开界面：设备不可用、权限不足或不支持远程菜单",
   "ae2lt.management.return_devices": "返回网络管理",
   "ae2lt.management.network": "网络管理",
   "ae2lt.management.connections": "频率链接点",
@@ -1695,5 +1695,12 @@
   "ae2lt.frequency_card.auto_energy_disabled": "FE 自动连接：关闭",
   "ae2lt.management.view.devices": "ME 设备",
   "ae2lt.management.view.energy": "FE 供电",
-  "ae2lt.management.view.connections": "频率连接"
+  "ae2lt.management.view.connections": "频率连接",
+  "ae2lt.gui.home.auto_channel_on": "ME 频道：开",
+  "ae2lt.gui.home.auto_channel_off": "ME 频道：关",
+  "ae2lt.gui.home.auto_energy_on": "FE 供电：开",
+  "ae2lt.gui.home.auto_energy_off": "FE 供电：关",
+  "ae2lt.gui.home.frequency_details": "频率信息",
+  "ae2lt.gui.home.access": "我的权限",
+  "ae2lt.gui.home.no_access": "无访问权限"
 }
