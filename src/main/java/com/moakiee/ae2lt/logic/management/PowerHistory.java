@@ -18,8 +18,15 @@ public final class PowerHistory {
     private void advance(long now) {
         if (lastTick == Long.MIN_VALUE || now < lastTick || now - lastTick >= ticks.length) {
             Arrays.fill(ticks, 0);
-        } else {
-            for (long t = lastTick + 1; t <= now; t++) ticks[Math.floorMod(t, ticks.length)] = 0;
+        } else if (now > lastTick) {
+            int start = Math.floorMod(lastTick, ticks.length) + 1;
+            int end = Math.floorMod(now, ticks.length) + 1;
+            if (start > end) {
+                Arrays.fill(ticks, start, ticks.length, 0);
+                Arrays.fill(ticks, 0, end, 0);
+            } else {
+                Arrays.fill(ticks, start, end, 0);
+            }
         }
         lastTick = now;
     }
@@ -29,10 +36,20 @@ public final class PowerHistory {
         advance(now);
         double sum = 0;
         double[] result = new double[WINDOWS.length];
-        int window = 0;
-        for (int age = 1; age <= 1200; age++) {
-            sum += ticks[Math.floorMod(now - age, ticks.length)];
-            if (age == WINDOWS[window]) result[window++] = sum / age;
+        int slot = Math.floorMod(now, ticks.length);
+        int age = 0;
+        // Walk contiguous spans newest-first, preserving addition order without per-sample modulo.
+        for (int window = 0; window < WINDOWS.length; window++) {
+            int remaining = WINDOWS[window] - age;
+            while (remaining > 0) {
+                if (slot == 0) slot = ticks.length;
+                int end = Math.max(0, slot - remaining);
+                for (int i = slot - 1; i >= end; i--) sum += ticks[i];
+                remaining -= slot - end;
+                slot = end;
+            }
+            age = WINDOWS[window];
+            result[window] = sum / age;
         }
         return result;
     }

@@ -128,9 +128,7 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
             List<NetworkDeviceIndex.Device> devices, long now) {
         var rows = new ArrayList<ManagementRow>();
         var endpoints = WirelessEnergyEndpoints.get(player.server).inspect(host.getFrequencyId(), player.getUUID());
-        Map<PowerTelemetry.Target, UUID> boundLocations = new HashMap<>();
-        for (var e : endpoints) boundLocations.put(new PowerTelemetry.Target(e.location().dimension().location().toString(),
-                e.location().pos(), e.face().ordinal()), e.id());
+        Map<PowerTelemetry.Target, UUID> boundLocations = null;
         Map<UUID, double[]> wireless = new HashMap<>();
         Map<UUID, DeviceLocation> sources = new HashMap<>();
         for (var d : devices) {
@@ -139,10 +137,23 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
                 var key = entry.getKey();
                 double[] rates = entry.getValue().rates(now);
                 UUID endpointId = key.endpoint();
-                if (endpointId == null && key.kind() == PowerTelemetry.Kind.WIRELESS) endpointId = boundLocations.get(key.target());
+                if (endpointId == null && key.kind() == PowerTelemetry.Kind.WIRELESS) {
+                    // Explicit endpoint IDs need no secondary location index.
+                    if (boundLocations == null) {
+                        boundLocations = new HashMap<>();
+                        for (var e : endpoints) boundLocations.put(new PowerTelemetry.Target(
+                                e.location().dimension().location().toString(), e.location().pos(), e.face().ordinal()), e.id());
+                    }
+                    endpointId = boundLocations.get(key.target());
+                }
                 if (endpointId != null) {
-                    var total = wireless.computeIfAbsent(endpointId, ignored -> new double[5]);
-                    for (int i = 0; i < 5; i++) total[i] += rates[i];
+                    var total = wireless.putIfAbsent(endpointId, rates);
+                    if (total != null) {
+                        // Meter snapshots are shared; only a combined path needs its own array.
+                        total = total.clone();
+                        for (int i = 0; i < 5; i++) total[i] += rates[i];
+                        wireless.put(endpointId, total);
+                    }
                     sources.put(endpointId, d.location());
                     continue;
                 }
@@ -162,9 +173,10 @@ public record ManagementSnapshot(int total, int devices, int offset, double[] to
             var location = new PowerTelemetry.Target(endpoint.location().dimension().location().toString(), endpoint.location().pos(), endpoint.face().ordinal());
             boolean mayDisconnect = !player.isSpectator() && player.mayBuild() && frequency != null
                     && (endpoint.actor().equals(player.getUUID()) || frequency.getPlayerAccess(player).isManager());
+            var rates = wireless.get(endpoint.id());
             rows.add(new ManagementRow(endpoint.id(), target(player, location, endpoint.block()), sources.get(endpoint.id()),
                     "wireless", 1, endpoint.state().name().toLowerCase(Locale.ROOT), false, mayDisconnect,
-                    wireless.getOrDefault(endpoint.id(), new double[5])));
+                    rates == null ? new double[5] : rates));
         }
         return rows;
     }

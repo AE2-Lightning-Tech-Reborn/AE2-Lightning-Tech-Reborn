@@ -49,7 +49,8 @@ public class BufferedMEStorage implements MEStorage {
     private final Supplier<MEStorage> cellSupplier;
     @Nullable
     private final Runnable cellPersistCallback;
-    private final long[] consumptionHistory = new long[HISTORY_SIZE];
+    @Nullable
+    private final long[] consumptionHistory;
 
     /** Persistent ownership of preload and refunds not currently held by an installed cell. */
     private final EnergyEscrow escrow;
@@ -76,6 +77,8 @@ public class BufferedMEStorage implements MEStorage {
         this.delegate = delegate;
         this.cellSupplier = cellSupplier;
         this.cellPersistCallback = cellPersistCallback;
+        // Only cell refill uses lookahead; endpoint batches never install a cell supplier.
+        this.consumptionHistory = cellSupplier == null ? null : new long[HISTORY_SIZE];
     }
 
     @Override
@@ -280,6 +283,7 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     public void advanceHistory() {
+        if (consumptionHistory == null) return;
         historyPointer = (historyPointer + 1) % consumptionHistory.length;
         consumptionHistory[historyPointer] = 0L;
     }
@@ -371,6 +375,7 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     private long recentConsumptionBeforeCurrentTick() {
+        if (consumptionHistory == null) return 0;
         long sum = 0L;
         for (int i = 0; i < consumptionHistory.length; i++) {
             if (i != historyPointer) {
@@ -381,10 +386,12 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     private void recordConsumption(long amount) {
+        if (consumptionHistory == null) return;
         consumptionHistory[historyPointer] = saturatingAdd(consumptionHistory[historyPointer], amount);
     }
 
     private void recordReturn(long amount) {
+        if (consumptionHistory == null) return;
         consumptionHistory[historyPointer] = Math.max(0L, consumptionHistory[historyPointer] - amount);
     }
 

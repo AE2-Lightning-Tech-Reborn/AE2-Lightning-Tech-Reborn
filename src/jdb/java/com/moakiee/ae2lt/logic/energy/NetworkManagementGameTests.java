@@ -247,6 +247,37 @@ public final class NetworkManagementGameTests {
             h.succeed();
         });
     }
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    public static void wirelessReceiptsWithAndWithoutEndpointIdsShareOnlyTheBoundTarget(GameTestHelper h) {
+        var f = fixture(h);
+        h.setBlock(C.south(3), Blocks.BARREL);
+        var target = h.absolutePos(C.south(3));
+        h.runAfterDelay(35, () -> {
+            f.player.setPos(target.getX() + .5, target.getY(), target.getZ() - 2);
+            var endpoints = WirelessEnergyEndpoints.get(f.player.server);
+            h.assertTrue(endpoints.setBound(f.player, f.frequency, h.getLevel(), target, Direction.NORTH, true)
+                    .equals("connected"), "bind failed");
+            var endpoint = endpoints.inspectTarget(h.getLevel(), target, f.player.getUUID());
+            var location = new PowerTelemetry.Target(h.getLevel().dimension().location().toString(), target, Direction.NORTH.ordinal());
+            var node = f.host.getActionableNode();
+            PowerTelemetry.record(node, PowerTelemetry.Kind.WIRELESS, location, endpoint.id(), 2000);
+            PowerTelemetry.record(node, PowerTelemetry.Kind.WIRELESS, location, null, 1000);
+            PowerTelemetry.record(node, PowerTelemetry.Kind.WIRELESS,
+                    new PowerTelemetry.Target(location.dimension(), target.east(), location.face()), null, 4000);
+        });
+        h.runAfterDelay(40, () -> {
+            var snapshot = ManagementSnapshot.build(f.player, f.host, query(true, false, List.of()));
+            h.assertTrue(snapshot.total() == 2, "bound and unbound wireless paths were merged or duplicated");
+            var bound = snapshot.rows().stream().filter(row -> row.target().pos().equals(target)).findFirst().orElseThrow();
+            h.assertTrue(bound.canDisconnect() && bound.source() != null && bound.rates()[4] == 2.5,
+                    "bound receipts lost identity, source, permissions or exact aggregate");
+            h.assertTrue(Math.abs(snapshot.totals()[4] * 1200 - 7000) < .01, "wireless totals changed");
+            var repeated = ManagementSnapshot.build(f.player, f.host, query(true, false, List.of()));
+            h.assertTrue(java.util.Arrays.equals(snapshot.totals(), repeated.totals()), "aggregation mutated shared meter snapshots");
+            h.succeed();
+        });
+    }
+
     private static ManagementQuery query(boolean power, boolean group, List<ManagementQuery.Token> tokens) {
         return new ManagementQuery(1, power, group, List.of(), "", tokens, power ? 4 : 2, power, 4, 0);
     }

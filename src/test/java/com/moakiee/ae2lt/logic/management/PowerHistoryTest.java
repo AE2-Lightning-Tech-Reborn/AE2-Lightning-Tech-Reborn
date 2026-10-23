@@ -55,4 +55,30 @@ class PowerHistoryTest {
             }
         }
     }
+
+    @Test void sparseReceiptsAndRepeatedQueriesMatchOracleAcrossNegativeTicksAndResets() {
+        var history = new PowerHistory();
+        var receipts = new java.util.HashMap<Long, Long>();
+        var random = new java.util.Random(52719);
+        long now = -4000;
+        for (int step = 0; step < 2500; step++) {
+            if (step == 1250) {
+                now = -8000;
+                receipts.clear();
+            }
+            now += step % 19 == 0 ? 1201 : random.nextInt(80);
+            long amount = random.nextInt(100_000);
+            history.record(now, amount);
+            receipts.merge(now, amount, Long::sum);
+            double[] expected = new double[5];
+            for (int w = 0; w < expected.length; w++) {
+                long sum = 0;
+                for (long tick = now - PowerHistory.WINDOWS[w]; tick < now; tick++)
+                    sum += receipts.getOrDefault(tick, 0L);
+                expected[w] = sum / (double) PowerHistory.WINDOWS[w];
+            }
+            assertArrayEquals(expected, history.rates(now), "tick=" + now);
+            assertArrayEquals(expected, history.rates(now), "repeated tick=" + now);
+        }
+    }
 }
