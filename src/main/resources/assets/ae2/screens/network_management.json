@@ -3,125 +3,125 @@
   "includes": [
     "common/common.json"
   ],
-  "generatedBackground": {
-    "width": 240,
-    "height": 208
+  "background": {
+    "texture": "ae2lt:textures/gui/wireless_network_management.png",
+    "srcRect": [0, 0, 240, 208]
   },
   "text": {
     "dialog_title": {
       "position": {
         "left": 8,
-        "top": 7
+        "top": 6
       }
     }
   },
   "widgets": {
     "search": {
       "left": 8,
-      "top": 37,
+      "top": 35,
       "width": 224,
       "height": 12
     },
     "sort": {
       "left": 8,
-      "top": 51,
-      "width": 90,
-      "height": 16
+      "top": 48,
+      "width": 92,
+      "height": 15
     },
     "direction": {
-      "left": 100,
-      "top": 51,
-      "width": 18,
-      "height": 16
+      "left": 102,
+      "top": 48,
+      "width": 16,
+      "height": 15
     },
     "group": {
       "left": 122,
-      "top": 51,
+      "top": 48,
       "width": 110,
-      "height": 16
+      "height": 15
     },
     "window": {
       "left": 122,
-      "top": 51,
+      "top": 48,
       "width": 110,
-      "height": 16
+      "height": 15
     },
     "scrollbar": {
       "left": 220,
-      "top": 69,
+      "top": 66,
       "height": 105
     },
     "row0": {
       "left": 8,
-      "top": 69,
-      "width": 184,
+      "top": 66,
+      "width": 188,
       "height": 21
     },
     "row1": {
       "left": 8,
-      "top": 90,
-      "width": 184,
+      "top": 87,
+      "width": 188,
       "height": 21
     },
     "row2": {
       "left": 8,
-      "top": 111,
-      "width": 184,
+      "top": 108,
+      "width": 188,
       "height": 21
     },
     "row3": {
       "left": 8,
-      "top": 132,
-      "width": 184,
+      "top": 129,
+      "width": 188,
       "height": 21
     },
     "row4": {
       "left": 8,
-      "top": 153,
-      "width": 184,
+      "top": 150,
+      "width": 188,
       "height": 21
     },
     "disconnect": {
       "left": 150,
-      "top": 188,
+      "top": 184,
       "width": 82,
       "height": 16
     },
     "configure": {
       "left": 150,
-      "top": 188,
+      "top": 184,
       "width": 82,
       "height": 16
     },
     "locate0": {
       "left": 196,
-      "top": 70,
+      "top": 66,
       "width": 18,
-      "height": 18
+      "height": 21
     },
     "locate1": {
       "left": 196,
-      "top": 91,
+      "top": 87,
       "width": 18,
-      "height": 18
+      "height": 21
     },
     "locate2": {
       "left": 196,
-      "top": 112,
+      "top": 108,
       "width": 18,
-      "height": 18
+      "height": 21
     },
     "locate3": {
       "left": 196,
-      "top": 133,
+      "top": 129,
       "width": 18,
-      "height": 18
+      "height": 21
     },
     "locate4": {
       "left": 196,
-      "top": 154,
+      "top": 150,
       "width": 18,
-      "height": 18
+      "height": 21
     },
     "navigation_home": {
       "left": 8,
@@ -157,19 +157,19 @@
       "left": 8,
       "top": 19,
       "width": 72,
-      "height": 16
+      "height": 15
     },
     "mode_energy": {
       "left": 84,
       "top": 19,
-      "width": 64,
-      "height": 16
+      "width": 72,
+      "height": 15
     },
     "mode_connections": {
-      "left": 152,
+      "left": 160,
       "top": 19,
-      "width": 80,
-      "height": 16
+      "width": 72,
+      "height": 15
     },
     "return_to_terminal": {
       "left": -18,

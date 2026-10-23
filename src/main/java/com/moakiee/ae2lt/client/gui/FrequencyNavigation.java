@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** Shared AE2 navigation and fixed frame for all frequency/network pages. */
 public final class FrequencyNavigation {
-    public static final int WIDTH = 240, HEIGHT = 208, TAB_SIZE = 22, TAB_TOP = -24;
+    public static final int WIDTH = 240, HEIGHT = 208, TAB_TOP = -24;
     private FrequencyNavigation() {}
 
     public static List<PageButton> create(int x, int y, FrequencyPage selected, boolean showManagement,
@@ -63,9 +63,9 @@ public final class FrequencyNavigation {
             var background = isSelected() || active && isHoveredOrFocused()
                     ? Icon.TAB_BUTTON_BACKGROUND_FOCUS : Icon.TAB_BUTTON_BACKGROUND;
             background.getBlitter().dest(getX(), getY()).blit(graphics);
-            if (customIcon != null) graphics.blit(customIcon, getX() + 2, getY() + 1, 0, 0, 16, 16, 16, 16);
-            else if (nativeIcon != null) nativeIcon.getBlitter().dest(getX() + 2, getY() + 1).blit(graphics);
-            else if (!itemIcon.isEmpty()) graphics.renderItem(itemIcon, getX() + 2, getY() + 1);
+            if (customIcon != null) graphics.blit(customIcon, getX() + 2, getY() + 2, 0, 0, 16, 16, 16, 16);
+            else if (nativeIcon != null) nativeIcon.getBlitter().dest(getX() + 2, getY() + 2).blit(graphics);
+            else if (!itemIcon.isEmpty()) graphics.renderItem(itemIcon, getX() + 2, getY() + 2);
         }
     }
 }

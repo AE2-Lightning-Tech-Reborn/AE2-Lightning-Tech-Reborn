@@ -2,29 +2,29 @@ package com.moakiee.ae2lt.client.gui;
 
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.Icon;
-import appeng.client.gui.style.PaletteColor;
+import appeng.client.gui.style.Blitter;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
-import com.moakiee.ae2lt.client.render.NetworkDeviceHighlight;
 import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
+import com.moakiee.ae2lt.client.render.NetworkDeviceHighlight;
 import com.moakiee.ae2lt.logic.management.DeviceLocation;
-import com.moakiee.ae2lt.logic.management.ManagementQuery;
 import com.moakiee.ae2lt.logic.management.ManagementMode;
+import com.moakiee.ae2lt.logic.management.ManagementQuery;
 import com.moakiee.ae2lt.logic.management.ManagementRow;
 import com.moakiee.ae2lt.logic.management.ManagementSnapshot;
 import com.moakiee.ae2lt.logic.management.PowerTelemetry;
-import com.moakiee.ae2lt.menu.NetworkManagementMenu;
 import com.moakiee.ae2lt.menu.FrequencyPage;
+import com.moakiee.ae2lt.menu.NetworkManagementMenu;
 import com.moakiee.ae2lt.network.NetworkManagementRequestPacket;
 import com.moakiee.ae2lt.network.NetworkManagementSyncPacket;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.LinkedHashMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import net.minecraft.client.gui.GuiGraphics;
@@ -35,9 +35,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 /** AE2's generated chassis, text field, tabs, buttons, scrollbar and palette. */
 public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagementMenu> {
+    private static final int COL_PRIMARY = 0xFF14161F;
+    private static final int COL_SECONDARY = 0xFF3E445B;
+    private static final int COL_MUTED = 0xFF4A5068;
+    private static final int COL_WELL_HINT = 0xFF363C52;
+    private static final int COL_RATE = 0xFF144673;
+    private static final int COL_LOADED = 0xFF1C6B34;
+    private static final int COL_UNLOADED = 0xFF8F2B23;
+
     private static final String[] WINDOWS = {"1t", "1s", "5s", "30s", "1min"};
     private static final String[] SORTS = {"name", "dimension", "type", "distance", "power"};
     private static final DecimalFormat RATE = new DecimalFormat("#,##0.##");
@@ -89,9 +98,13 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             widgets.add(button.page().widgetId(), button);
         }
         managementTab = navigation.stream().filter(b -> b.page() == FrequencyPage.TAB_DEVICES).findFirst().orElseThrow();
-        if (menu.hasParentMenu()) widgets.add("return_to_terminal", new TabButton(Icon.BACK,
-                Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> PacketDistributor.sendToServer(
-                        appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu())));
+        if (menu.hasParentMenu()) {
+            var back = new TabButton(Icon.BACK,
+                    Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> PacketDistributor.sendToServer(
+                            appeng.core.network.serverbound.SwitchGuisPacket.returnToParentMenu()));
+            back.setStyle(TabButton.Style.BOX);
+            widgets.add("return_to_terminal", back);
+        }
         for (var view : ManagementMode.values()) {
             var button = new ModeButton(view);
             widgets.add("mode_" + view.name().toLowerCase(Locale.ROOT), button);
@@ -99,7 +112,8 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             modeButtons.put(view, button);
         }
         sortButton = widgets.addButton("sort", Component.empty(), () -> { sort = (sort + 1) % (energy() ? 5 : 4); changed(0); });
-        directionButton = widgets.addButton("direction", Component.empty(), () -> { descending = !descending; changed(0); });
+        directionButton = new DirectionButton(() -> { descending = !descending; changed(0); });
+        widgets.add("direction", directionButton);
         groupButton = widgets.addButton("group", Component.empty(), () -> {
             grouped = !grouped;
             changed(0);
@@ -246,6 +260,15 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             requestedOffset = scrollbar.getCurrentScroll(); changed(0, false);
         }
     }
+    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && search.isMouseOver(mouseX, mouseY)) {
+            search.setValue("");
+            setFocused(search);
+            search.setFocused(true);
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
     private void select(int index) {
         if (snapshot == null || awaitingResponse || index >= snapshot.rows().size()) return;
         var row = snapshot.rows().get(index);
@@ -280,7 +303,6 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             entry.getValue().setMessage(label);
         }
         sortButton.setMessage(tr("sort." + SORTS[sort]));
-        directionButton.setMessage(Component.literal(descending ? "v" : "^"));
         directionButton.setTooltip(Tooltip.create(tr(descending ? "descending" : "ascending")));
         groupButton.visible = !energy();
         groupButton.setMessage(tr(grouped ? "grouped" : "individual"));
@@ -296,7 +318,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             rowButtons[i].row = row;
             rowButtons[i].visible = row != null;
             rowButtons[i].active = row != null && !awaitingResponse;
-            rowButtons[i].setWidth(row != null && row.group() ? imageWidth - 34 : imageWidth - 56);
+            rowButtons[i].setWidth(row != null && row.group() ? imageWidth - 34 : imageWidth - 52);
             rowButtons[i].setMessage(row == null ? Component.empty() : displayName(row.target()));
             rowButtons[i].setTooltip(row == null ? null : Tooltip.create(tooltip(row)));
             locateButtons[i].row = row;
@@ -312,29 +334,45 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         int variant = search.isFocused() ? 24 : 0;
         for (int x = 1; x < bounds.getWidth() - 1; x += 126) {
             int width = Math.min(126, bounds.getWidth() - 1 - x);
-            appeng.client.gui.style.Blitter.texture("guis/text_field.png", 128, 128)
+            Blitter.texture("guis/text_field.png", 128, 128)
                     .src(1, variant, width, 12).dest(bounds.getX() + x, bounds.getY()).blit(graphics);
         }
     }
     @Override public void drawFG(GuiGraphics graphics, int ox, int oy, int mx, int my) {
-        int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-        int rowTop = rowButtons[0].getY() - oy;
-        if (searchTooBroad) graphics.drawString(font, tr("search_too_broad"), 10, rowTop + 6, color, false);
-        else if (!error.isEmpty()) graphics.drawString(font, Component.translatable("ae2lt.wireless_energy." + error), 10, rowTop + 6, color, false);
-        else if (snapshot != null && snapshot.rows().isEmpty()) graphics.drawString(font, tr("empty"), 10, rowTop + 6, color, false);
+        int wellCenterX = 8 + 206 / 2;
+        int wellCenterY = 66 + (105 - 8) / 2;
+        if (searchTooBroad) {
+            Component msg = tr("search_too_broad");
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_WELL_HINT, false);
+        } else if (!error.isEmpty()) {
+            Component msg = Component.translatable("ae2lt.wireless_energy." + error);
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_UNLOADED, false);
+        } else if (snapshot != null && snapshot.rows().isEmpty()) {
+            Component msg = tr("empty");
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_WELL_HINT, false);
+        }
+
         var selectedRow = selection();
-        Component selectionLabel = selectedRow == null ? tr("select_device") : displayName(selectedRow.target());
+        Component selectionLabel = selectedRow == null
+                ? tr(energy() ? "disconnect_help" : "select_device")
+                : displayName(selectedRow.target());
         int footerTop = configureButton.getY() - oy;
-        int selectionWidth = configureButton.getX() - ox - 16;
-        graphics.drawString(font, fit(selectionLabel, selectionWidth), 9, footerTop + 4, color, false);
-        if (selectedRow != null && isHovering(8, footerTop, selectionWidth, 16, mx, my))
+        int selectionBoxWidth = 138;
+        if (selectedRow != null) {
+            graphics.fill(9, footerTop + 5, 14, footerTop + 10, 0xFF1864AB);
+            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 14), 18, footerTop + 4, COL_PRIMARY, false);
+        } else {
+            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 4), 9, footerTop + 4, COL_MUTED, false);
+        }
+        if (selectedRow != null && isHovering(8, footerTop, selectionBoxWidth, 16, mx, my))
             drawTooltip(graphics, mx - ox, my - oy, List.of(tooltip(selectedRow)));
+
         if (snapshot != null) {
             Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
                     : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
             if (snapshot.limited()) summary = tr("incomplete").append(summary);
-            graphics.drawString(font, fit(summary, imageWidth - 20), 9, footerTop - 12, color, false);
-            if (snapshot.limited() && isHovering(8, footerTop - 14, imageWidth - 16, 12, mx, my))
+            graphics.drawString(font, fit(summary, imageWidth - 18), 9, footerTop - 10, COL_MUTED, false);
+            if (snapshot.limited() && isHovering(8, footerTop - 12, imageWidth - 16, 12, mx, my))
                 drawTooltip(graphics, mx - ox, my - oy, List.of(tr("history_limit")));
         }
     }
@@ -350,6 +388,18 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             for (int i = 0; i < 5; i++) text.append("\n" + WINDOWS[i] + ": " + rate(row.rates()[i]) + " FE/t");
         }
         return text;
+    }
+    private final class DirectionButton extends AE2Button {
+        private DirectionButton(Runnable action) {
+            super(Component.empty(), button -> action.run());
+        }
+        @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(graphics, mouseX, mouseY, partialTick);
+            var icon = descending ? Icon.S_ARROW_DOWN : Icon.S_ARROW_UP;
+            icon.getBlitter()
+                    .dest(getX() + (width - icon.width) / 2, getY() + (height - icon.height) / 2)
+                    .blit(graphics);
+        }
     }
     private final class ModeButton extends AE2Button {
         private final ManagementMode view;
@@ -377,12 +427,28 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             });
         }
         @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            int x = getX(), y = getY(), cx = x + width / 2, cy = y + height / 2;
-            appeng.client.gui.style.BackgroundGenerator.draw(width, height, graphics, x, y);
-            if (active && isHoveredOrFocused())
-                graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
-            int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-            // Small locator reticle, drawn with the same palette as AE2's other controls.
+            if (row == null || row.group()) return;
+            int x = getX(), y = getY(), cx = x + 9, cy = y + 10;
+            boolean hovered = active && isHoveredOrFocused();
+            boolean rowSelected = row.id().equals(selected);
+            if (rowSelected) {
+                graphics.fill(x, y, x + width, y + height, 0xFF78B0E4);
+                graphics.fill(x, y, x + width, y + 1, 0xFFDAFFFF);
+                graphics.fill(x, y + height - 1, x + width, y + height, 0xFF5282B8);
+                graphics.fill(x, y + 2, x + 1, y + height - 2, 0xFF5282B8);
+            } else {
+                graphics.fill(x, y, x + width, y + height, 0xFF878FA5);
+                graphics.fill(x, y, x + width, y + 1, 0xFFADB4C8);
+                graphics.fill(x, y + height - 1, x + width, y + height, 0xFF565B70);
+                graphics.fill(x, y + 2, x + 1, y + height - 2, 0xFF696D88);
+            }
+            if (hovered) {
+                graphics.fill(cx - 7, cy - 7, cx + 8, cy + 8, 0xFF3E5C82);
+                graphics.fill(cx - 6, cy - 6, cx + 7, cy + 7, 0xFFB8E2FF);
+                graphics.fill(cx - 6, cy - 6, cx + 7, cy - 5, 0xFFE8F8FF);
+            }
+            int color = hovered ? 0xFF0A2E52 : 0xFF242838;
+            // Crisp locator crosshair inside the row action cell.
             graphics.fill(cx - 3, cy - 3, cx + 4, cy - 2, color);
             graphics.fill(cx - 3, cy + 3, cx + 4, cy + 4, color);
             graphics.fill(cx - 3, cy - 2, cx - 2, cy + 3, color);
@@ -400,31 +466,54 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             if (row == null) return;
             int x = getX(), y = getY();
-            appeng.client.gui.style.BackgroundGenerator.draw(width, height, graphics, x, y);
-            if (isHoveredOrFocused() || row.id().equals(selected))
-                graphics.fill(x + 3, y + 3, x + width - 3, y + height - 3, style.getColor(PaletteColor.SELECTION_COLOR).toARGB());
+            boolean hovered = active && isHoveredOrFocused();
+            boolean rowSelected = row.id().equals(selected);
+            if (rowSelected) {
+                graphics.fill(x, y, x + width, y + height, hovered ? 0xFF88C0F4 : 0xFF78B0E4);
+                graphics.fill(x, y, x + width, y + 1, 0xFFDAFFFF);
+                graphics.fill(x, y + height - 1, x + width, y + height, 0xFF5282B8);
+                graphics.fill(x, y, x + 2, y + height, 0xFF1864AB);
+            } else if (hovered) {
+                graphics.fill(x, y, x + width, y + height, 0xFF96C2EC);
+                graphics.fill(x, y, x + width, y + 1, 0xFFDAFFFF);
+                graphics.fill(x, y + height - 1, x + width, y + height, 0xFF5282B8);
+            } else {
+                graphics.fill(x, y, x + width, y + height, 0xFF878FA5);
+                graphics.fill(x, y, x + width, y + 1, 0xFFADB4C8);
+                graphics.fill(x, y + height - 1, x + width, y + height, 0xFF565B70);
+            }
+
             boolean tree = displayedView != null && displayedView.mode() != ManagementMode.ENERGY && displayedView.grouped();
-            int iconX = x + (tree ? row.group() ? 18 : 28 : 4);
-            int textX = iconX + 20;
-            int color = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-            if (row.group()) (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT).getBlitter().dest(x + 3, y + 2).blit(graphics);
-            else if (tree) {
-                graphics.fill(x + 20, y + 3, x + 21, y + height - 3, color);
-                graphics.fill(x + 20, y + 12, x + 25, y + 13, color);
+            int iconX = x + (tree ? row.group() ? 16 : 24 : 4);
+            int textX = iconX + 19;
+            if (row.group()) {
+                (row.state().equals("expanded") ? Icon.ARROW_DOWN : Icon.ARROW_RIGHT)
+                        .getBlitter().dest(x + 1, y + 2).blit(graphics);
+            } else if (tree) {
+                graphics.fill(x + 15, y + 2, x + 16, y + height - 2, COL_MUTED);
+                graphics.fill(x + 15, y + 11, x + 21, y + 12, COL_MUTED);
             }
             var item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(row.target().type()));
             if (item != net.minecraft.world.item.Items.AIR) graphics.renderItem(new ItemStack(item), iconX, y + 2);
             else Icon.LEVEL_ENERGY.getBlitter().dest(iconX, y + 2).blit(graphics);
+
             Component name = displayName(row.target());
             boolean power = displayedView != null && displayedView.mode() == ManagementMode.ENERGY;
             String right = row.group() ? "×" + row.count() : power ? compactRate(row.rates()[window]) + " FE/t"
                     : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
-            int nameWidth = x + width - textX - 12 - font.width(right);
-            graphics.drawString(font, fit(name, nameWidth), textX, y + 2, color, false);
-            graphics.drawString(font, right, x + width - 5 - font.width(right), y + 2, color, false);
-            Component secondary = row.group() ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count()) : power
-                    ? tr("kind." + row.kind()).append(" · ").append(shortAddress(row.target())) : Component.literal(shortAddress(row.target()));
-            graphics.drawString(font, fit(secondary, x + width - textX - 5), textX, y + 11, color, false);
+            int rightColor = row.group() ? COL_PRIMARY
+                    : power ? (row.rates()[window] > 0 ? COL_RATE : COL_SECONDARY)
+                    : row.state().equals("loaded") ? COL_LOADED : COL_UNLOADED;
+            int rightX = x + width - 5 - font.width(right);
+            int leftMaxW = right.isEmpty() ? (x + width - textX - 4) : Math.max(24, rightX - textX - 6);
+            graphics.drawString(font, fit(name, leftMaxW), textX, y + 2, COL_PRIMARY, false);
+            if (!right.isEmpty()) {
+                graphics.drawString(font, right, rightX, y + (height - 8) / 2, rightColor, false);
+            }
+            Component secondary = row.group()
+                    ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count())
+                    : Component.literal(shortAddress(row.target()));
+            graphics.drawString(font, fit(secondary, leftMaxW), textX, y + 11, COL_SECONDARY, false);
         }
     }
     private Component fit(Component value, int max) {
@@ -451,7 +540,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     private static String shortAddress(DeviceLocation d) {
         String dimension = d.dimension();
         if (dimension.startsWith("minecraft:")) dimension = tr("dimension." + dimension.substring(10)).getString();
-        return dimension + " · " + d.pos().getX() + " " + d.pos().getY() + " " + d.pos().getZ();
+        return dimension + " · " + d.pos().getX() + ", " + d.pos().getY() + ", " + d.pos().getZ();
     }
     public static String address(DeviceLocation d) { return d.dimension() + " " + d.pos().getX() + " " + d.pos().getY() + " " + d.pos().getZ(); }
     private static net.minecraft.network.chat.MutableComponent tr(String key, Object... args) { return Component.translatable("ae2lt.management." + key, args); }
