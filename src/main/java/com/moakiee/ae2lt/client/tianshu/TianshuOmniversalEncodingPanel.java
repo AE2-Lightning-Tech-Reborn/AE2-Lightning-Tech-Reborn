@@ -37,6 +37,7 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
     private final TianshuPatternEncodingTermScreen<?> screen;
     private final Scrollbar scrollbar;
     private final ActionButton clearButton;
+    private final ActionButton cycleOutputButton;
     private OmniversalPatternDraft observedDraft;
     private long observedGeneration = Long.MIN_VALUE;
     private UselessModCompat.Preview preview = UselessModCompat.Preview.EMPTY;
@@ -55,6 +56,11 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
         clearButton.setHalfSize(true);
         clearButton.setDisableBackground(true);
         widgets.add("omniversalClear", clearButton);
+        cycleOutputButton = new ActionButton(ActionItems.S_CYCLE_PROCESSING_OUTPUT,
+                action -> menu.cycleOmniversalOutput());
+        cycleOutputButton.setHalfSize(true);
+        cycleOutputButton.setDisableBackground(true);
+        widgets.add("omniversalCycleOutput", cycleOutputButton);
     }
 
     @Override public void setPosition(Point position) { x = position.getX(); y = position.getY(); }
@@ -66,6 +72,7 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
         this.visible = visible;
         scrollbar.setVisible(visible);
         clearButton.setVisibility(visible);
+        cycleOutputButton.setVisibility(visible && menu.canCycleOmniversalOutputs());
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_INPUTS, !visible);
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS, !visible);
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_MOLDS, !visible);

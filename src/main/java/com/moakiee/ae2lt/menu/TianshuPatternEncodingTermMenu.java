@@ -328,6 +328,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         registerClientAction("clearClosedLoopDraft", this::clearClosedLoopDraftServer);
         registerClientAction("encodeTianshu", Boolean.class, this::encodeServerWithOptions);
         registerClientAction("clearOmniversalDraft", this::clearOmniversalDraft);
+        registerClientAction("cycleOmniversalOutput", this::cycleOmniversalOutput);
         registerClientAction("uploadEncodedPattern", Integer.class, this::uploadEncodedPatternServer);
         registerClientAction("setMaintainableView", Boolean.class, this::setMaintainableView);
         registerClientAction("setTerminalViewMode", TianshuTerminalViewMode.class, this::setTerminalViewMode);
@@ -575,6 +576,39 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     public appeng.menu.slot.FakeSlot[] getOmniversalOutputSlots() {
         return omniversalOutputSlots;
+    }
+
+    public boolean canCycleOmniversalOutputs() {
+        return tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                && java.util.Arrays.stream(omniversalOutputSlots).filter(Slot::hasItem).count() > 1;
+    }
+
+    /** Rotate occupied output slots together, preserving exact item/fluid amounts and empty slots. */
+    public void cycleOmniversalOutput() {
+        if (!canCycleOmniversalOutputs()) return;
+        if (isClientSide()) {
+            sendClientAction("cycleOmniversalOutput");
+            return;
+        }
+        var occupied = new ArrayList<Integer>();
+        var outputs = new ArrayList<GenericStack>();
+        for (int i = 0; i < omniversalOutputs.size(); i++) {
+            var output = omniversalOutputs.getStack(i);
+            if (output != null) {
+                occupied.add(i);
+                outputs.add(output);
+            }
+        }
+        omniversalBulkUpdating = true;
+        try {
+            for (int i = 0; i < occupied.size(); i++) {
+                omniversalOutputs.setStack(occupied.get(i), outputs.get((i + 1) % outputs.size()));
+            }
+        } finally {
+            omniversalBulkUpdating = false;
+        }
+        persistOmniversalSlots();
+        broadcastChanges();
     }
 
     public appeng.menu.slot.FakeSlot[] getOmniversalMoldSlots() {
