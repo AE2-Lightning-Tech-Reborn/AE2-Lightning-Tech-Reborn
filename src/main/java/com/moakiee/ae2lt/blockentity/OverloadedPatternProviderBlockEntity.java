@@ -758,7 +758,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             if (tag.contains(TAG_MACHINE_PARALLELISM)) {
                 machineParallelism = Math.max(1, tag.getInt(TAG_MACHINE_PARALLELISM));
             }
-            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
             recomputeIdlePower();
             notifyLogicStateChanged();
             saveChanges();

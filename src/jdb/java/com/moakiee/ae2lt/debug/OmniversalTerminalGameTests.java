@@ -6,6 +6,7 @@ import appeng.api.ids.AEComponents;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.PartHelper;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.util.AEColor;
 import appeng.blockentity.storage.DriveBlockEntity;
@@ -31,6 +32,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -95,8 +97,104 @@ public final class OmniversalTerminalGameTests {
         Native.editable(helper);
     }
 
+    @GameTest(template = "empty", timeoutTicks = 300)
+    public static void cyclePrimaryOutput(GameTestHelper helper) {
+        if (!UselessModCompat.isLoaded()) { helper.succeed(); return; }
+        Native.cycle(helper);
+    }
+
     /** Avoid resolving any optional classes while the test scanner loads the outer class. */
     private static final class Native {
+        static void cycle(GameTestHelper helper) {
+            var fixture = network(helper, new BlockPos(3, 2, 3));
+            helper.runAfterDelay(40, () -> {
+                var pattern = recipe(helper, "multiple_outputs");
+                var original = pattern.get(AEComponents.ENCODED_PROCESSING_PATTERN).sparseOutputs();
+                var rotated = List.of(original.get(1), original.get(2), original.get(0));
+                var wired = open(helper, fixture);
+                wired.setTianshuMode(TianshuEncodingMode.PROCESSING);
+                wired.getProcessingInputSlots()[0].set(new ItemStack(Items.SAND, 3));
+                wired.getProcessingOutputSlots()[0].set(new ItemStack(Items.GLASS, 3));
+                wired.selectOmniversalPattern(pattern);
+                helper.assertTrue(wired.canCycleOmniversalOutputs(), "Multiple outputs enable cycling");
+                wired.cycleOmniversalOutput();
+                assertOutputs(helper, wired, rotated);
+                helper.assertTrue(wired.getProcessingInputSlots()[0].getItem().is(Items.SAND)
+                                && wired.getProcessingOutputSlots()[0].getItem().is(Items.GLASS),
+                        "Cycling the Omniversal draft preserves the ordinary processing draft");
+                wired.encode();
+                var encoded = fixture.terminal().getLogic().getEncodedPatternInv().getStackInSlot(0);
+                helper.assertTrue(wired.triggeredUploadAck == 1
+                                && UselessModCompat.isOmniversalPattern(encoded)
+                                && encoded.get(AEComponents.ENCODED_PROCESSING_PATTERN).sparseOutputs().equals(rotated),
+                        "Native encoding preserves the chosen primary output and all byproducts");
+                wired.removed(fixture.player());
+                var reopened = new TianshuPatternEncodingTermMenu(
+                        21, fixture.player().getInventory(), fixture.terminal());
+                assertOutputs(helper, reopened, rotated);
+                reopened.cycleOmniversalOutput();
+                reopened.cycleOmniversalOutput();
+                assertOutputs(helper, reopened, original);
+
+                var item = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
+                var stack = new ItemStack(item);
+                var host = new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessPatternEncodingTermMenuHost(
+                        item, fixture.player(), appeng.menu.locator.MenuLocators.forStack(stack),
+                        (player, menu) -> { });
+                var wireless = new com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu(
+                        22, fixture.player().getInventory(), host);
+                wireless.selectOmniversalPattern(pattern);
+                wireless.cycleOmniversalOutput();
+                assertOutputs(helper, wireless, rotated);
+                var validated = UselessModCompat.encodeMatchingDraft(wireless.omniversalDraft, helper.getLevel()).pattern();
+                helper.assertTrue(!validated.isEmpty()
+                                && validated.get(AEComponents.ENCODED_PROCESSING_PATTERN).sparseOutputs().equals(rotated),
+                        "Wireless draft keeps native recipe binding after rotating outputs");
+                wireless.removed(fixture.player());
+                var reloaded = ItemStack.parse(helper.getLevel().registryAccess(),
+                        stack.save(helper.getLevel().registryAccess())).orElseThrow();
+                var restoredHost = new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuWirelessPatternEncodingTermMenuHost(
+                        item, fixture.player(), appeng.menu.locator.MenuLocators.forStack(reloaded),
+                        (player, menu) -> { });
+                var restored = new com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu(
+                        23, fixture.player().getInventory(), restoredHost);
+                assertOutputs(helper, restored, rotated);
+                restored.setTianshuMode(TianshuEncodingMode.PROCESSING);
+                helper.assertTrue(!restored.canCycleOmniversalOutputs(), "Other pages cannot cycle this draft");
+                restored.cycleOmniversalOutput();
+                assertOutputs(helper, restored, rotated);
+                restored.setTianshuMode(TianshuEncodingMode.OMNIVERSAL);
+                restored.clearOmniversalDraft();
+                restored.cycleOmniversalOutput();
+                helper.assertTrue(restored.omniversalDraft.isEmpty(), "Empty draft remains empty");
+                var largeFluid = new GenericStack(AEFluidKey.of(Fluids.WATER), 3_000_000_001L);
+                restored.getOmniversalOutputSlots()[0].set(GenericStack.wrapInItemStack(largeFluid));
+                var single = restored.omniversalDraft;
+                restored.cycleOmniversalOutput();
+                helper.assertTrue(!restored.canCycleOmniversalOutputs() && restored.omniversalDraft.equals(single),
+                        "Single output is never deleted by cycling");
+                restored.getOmniversalOutputSlots()[4].set(new ItemStack(Items.DIAMOND, 7));
+                restored.cycleOmniversalOutput();
+                helper.assertTrue(restored.getOmniversalOutputSlots()[0].getItem().is(Items.DIAMOND)
+                                && GenericStack.fromItemStack(restored.getOmniversalOutputSlots()[4].getItem()).equals(largeFluid)
+                                && restored.getOmniversalOutputSlots()[1].getItem().isEmpty(),
+                        "Sparse outputs skip holes and preserve fluid amounts beyond int range");
+                helper.succeed();
+            });
+        }
+
+        private static void assertOutputs(GameTestHelper helper, TianshuPatternEncodingTermMenu menu,
+                                          List<GenericStack> expected) {
+            helper.assertTrue(menu.omniversalDraft.pattern().get(AEComponents.ENCODED_PROCESSING_PATTERN)
+                            .sparseOutputs().equals(expected),
+                    "Persisted output order and exact amounts match the selected primary");
+            for (int i = 0; i < menu.getOmniversalOutputSlots().length; i++) {
+                var actual = GenericStack.fromItemStack(menu.getOmniversalOutputSlots()[i].getItem());
+                helper.assertTrue(java.util.Objects.equals(actual, i < expected.size() ? expected.get(i) : null),
+                        "Synchronized output slot " + i + " matches the draft");
+            }
+        }
+
         static void editable(GameTestHelper helper) {
             var fixture = network(helper, new BlockPos(3, 2, 3));
             helper.runAfterDelay(40, () -> {

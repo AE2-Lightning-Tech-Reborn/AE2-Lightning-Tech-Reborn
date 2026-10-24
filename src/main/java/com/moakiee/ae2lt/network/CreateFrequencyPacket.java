@@ -86,6 +86,9 @@ public record CreateFrequencyPacket(
                 // first Select click (pops the password modal for the
                 // creator of an ENCRYPTED freq they just set up).
                 SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(player, freq.getId());
+            } else {
+                PacketDistributor.sendToPlayer(player,
+                        new FrequencyResponsePacket(FrequencyResponsePacket.OWNER_LIMIT));
             }
         });
     }

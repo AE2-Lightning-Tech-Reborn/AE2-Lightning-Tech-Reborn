@@ -1,0 +1,37 @@
+// ./gradlew -I scripts/frequency-permissions-test.init.gradle test runGameTestServer
+// Optional local copy of the matching released TB: -Pae2ltSecurityThunderboltJar=/path/to/thunderbolt.jar
+// Real-claim integration: -Pae2ltSecurityFtbMods=/path/to/chunks.jar:/path/to/teams.jar:/path/to/library.jar:/path/to/architectury.jar
+// Verified on MC 1.21.1 with Chunks 2101.1.22, Teams 2101.1.11, Library 2101.1.36, Architectury 13.0.11.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/FrequencyPermissionsGameTests.java'])
+        // Supply the four real FTB/Architectury jars separated by File.pathSeparator.
+        def ftbMods = providers.gradleProperty('ae2ltSecurityFtbMods').orNull
+        if (ftbMods) {
+            def jars = ftbMods.split(java.io.File.pathSeparator).collect { project.file(it) }
+            dependencies.add('jdbCompileOnly', project.files(jars))
+            dependencies.add('runtimeOnly', project.files(jars))
+            sourceSets.jdb.java.srcDir 'src/ftbTest/java'
+            sourceSets.jdb.java.include '**/FtbChunksFrequencyGameTests.java'
+        }
+        tasks.named('test', Test) {
+            include '**/*Frequency*Test*.class', '**/*Wireless*Test*.class', '**/*AutoBuild*Test*.class',
+                    '**/*MemoryCard*Test*.class', '**/*PasswordAttempt*Test*.class'
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'com.lowdragmc.ldlib2', 'top.theillusivec4.curios', 'de.mari_023'])
+        }
+        def localThunderbolt = providers.gradleProperty('ae2ltSecurityThunderboltJar').orNull
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+                dependencies.add(name, project.files(project.file(localThunderbolt)))
+            }
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('frequency-permissions-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_frequency_permissions,ae2lt_frequency_ftb,ae2lt'
+        }
+    }
+}

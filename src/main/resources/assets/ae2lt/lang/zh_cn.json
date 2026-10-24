@@ -1679,5 +1679,7 @@
   "ae2lt.gui.home.auto_energy_off": "FE 供电：关",
   "ae2lt.gui.home.frequency_details": "频率信息",
   "ae2lt.gui.home.access": "我的权限",
-  "ae2lt.gui.home.no_access": "无访问权限"
+  "ae2lt.gui.home.no_access": "无访问权限",
+  "ae2lt.gui.error.frequency_owner_limit": "该玩家担任所有者的频率数量已达到服务器上限。",
+  "ae2lt.frequency.too_many_password_attempts": "频率密码尝试过于频繁（1 秒内超过 5 次），已断开连接。"
 }

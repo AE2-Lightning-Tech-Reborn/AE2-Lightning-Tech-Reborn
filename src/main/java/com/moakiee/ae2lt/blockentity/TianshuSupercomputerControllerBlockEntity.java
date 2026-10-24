@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.block.TianshuSupercomputerControllerBlock;
 import com.moakiee.ae2lt.block.TianshuSupercomputerPortBlock;
 import com.moakiee.ae2lt.block.TianshuSupercomputerStructureBlock;
@@ -411,7 +413,7 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
             abortAutoBuildMissingItem(player, consumedItem.getDescription());
             return;
         }
-        if (!level.setBlock(pos, state, Block.UPDATE_ALL)) {
+        if (!PlayerWorldActions.placeBlock(player, level, pos, state)) {
             abortAutoBuildPlacement(player, pos);
             return;
         }

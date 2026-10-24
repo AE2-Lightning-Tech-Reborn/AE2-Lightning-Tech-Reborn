@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.event;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import appeng.api.implementations.parts.ICablePart;
 import appeng.api.parts.IPartItem;
 import appeng.parts.PartPlacement;
@@ -79,6 +81,7 @@ public final class FrequencyCardAutoConnectHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onWrenchDisassemble(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !(player.level() instanceof ServerLevel level)
                 || !InteractionUtil.isInAlternateUseMode(player)
@@ -100,8 +103,9 @@ public final class FrequencyCardAutoConnectHandler {
      * is performed server-side. Runs before {@link #onRightClickBlock}; a
      * terminal is never an {@link IPartItem}, so the two handlers never overlap.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onTerminalCardRightClick(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player) || player.isShiftKeyDown()) {
             return;
         }
@@ -135,11 +139,12 @@ public final class FrequencyCardAutoConnectHandler {
             return;
         }
         FrequencyCardUsePacket.tryLinkWithCard(
-                player, card, level, pos, face, event.getHitVec().getLocation());
+                player, event.getHand(), card, level, pos, face, event.getHitVec().getLocation());
     }
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }

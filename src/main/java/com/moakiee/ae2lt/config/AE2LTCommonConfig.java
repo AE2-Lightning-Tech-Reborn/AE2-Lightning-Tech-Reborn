@@ -320,6 +320,10 @@ public final class AE2LTCommonConfig {
     public static double overloadExecutionDecayPower() { return VALUES.overloadExecutionDecayPower.get(); }
     public static int overloadExecutionMaxTracked() { return VALUES.overloadExecutionMaxTracked.get(); }
 
+    public static int maxOwnedFrequenciesPerPlayer() {
+        return VALUES.maxOwnedFrequenciesPerPlayer.get();
+    }
+
     public static boolean frequencyCardEnableAutoCleanup() {
         return VALUES.frequencyCardEnableAutoCleanup.get();
     }
@@ -386,6 +390,7 @@ public final class AE2LTCommonConfig {
         private final ModConfigSpec.IntValue teslaCoilExtremeHighVoltageInput;
         private final ModConfigSpec.IntValue teslaCoilExtremeHighVoltageFe;
         private final ModConfigSpec.BooleanValue pigmeeFumoGiftOnFirstJoin;
+        private final ModConfigSpec.IntValue maxOwnedFrequenciesPerPlayer;
         private final ModConfigSpec.BooleanValue frequencyCardEnableAutoCleanup;
         private final ModConfigSpec.IntValue frequencyCardCleanupIntervalSeconds;
         private final ModConfigSpec.IntValue frequencyCardInvalidCleanupDelaySeconds;
@@ -816,6 +821,13 @@ public final class AE2LTCommonConfig {
                     .comment("Maximum number of targets whose recorded HP is kept simultaneously on a single railgun.")
                     .defineInRange("maxTracked", 8, 1, 64);
             builder.pop();
+            builder.pop();
+
+            builder.push("wirelessFrequency");
+            maxOwnedFrequenciesPerPlayer = builder
+                    .comment("Maximum number of frequencies in which a player may hold OWNER membership.",
+                            "Applies to creation and owner promotions. Existing memberships are retained when lowered.")
+                    .defineInRange("maxOwnedFrequenciesPerPlayer", 16, 1, Integer.MAX_VALUE);
             builder.pop();
 
             builder.push("frequencyCard");

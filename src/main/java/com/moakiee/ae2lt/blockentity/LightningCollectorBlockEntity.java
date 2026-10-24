@@ -367,7 +367,7 @@ public class LightningCollectorBlockEntity extends AENetworkedBlockEntity
                                net.minecraft.core.component.DataComponentMap input,
                                @org.jetbrains.annotations.Nullable Player player) {
         super.importSettings(mode, input, player);
-        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
+        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency, player, this);
     }
 
     @Override

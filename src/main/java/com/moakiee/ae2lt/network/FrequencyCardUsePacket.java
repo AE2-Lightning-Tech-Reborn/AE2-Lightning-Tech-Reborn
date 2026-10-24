@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.FrequencyDisplayName;
@@ -84,6 +86,8 @@ public record FrequencyCardUsePacket(
 
         var be = level.getBlockEntity(pos);
         if (shiftDown || player.isShiftKeyDown()) {
+            if (!PlayerWorldActions.mayInteract(player, level, pos,
+                    hand, face, new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ))) return;
             var data = OverloadedFrequencyCardItem.getData(stack);
             if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
                 message(player, "ae2lt.frequency_card.card_owner_mismatch", ChatFormatting.RED);
@@ -99,7 +103,7 @@ public record FrequencyCardUsePacket(
             return;
         }
 
-        tryLinkWithCard(player, stack, level, pos, face,
+        tryLinkWithCard(player, hand, stack, level, pos, face,
                 new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ), bulkPower);
     }
 
@@ -122,7 +126,20 @@ public record FrequencyCardUsePacket(
 
     public static void tryLinkWithCard(ServerPlayer player, net.minecraft.world.item.ItemStack card,
             ServerLevel level, BlockPos pos, Direction face, net.minecraft.world.phys.Vec3 hitVec, boolean bulkPower) {
-        if (!validInteraction(player, level, pos, face, hitVec)) return;
+        tryLinkWithCard(player, InteractionHand.MAIN_HAND, card, level, pos, face, hitVec, bulkPower);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, InteractionHand hand,
+            net.minecraft.world.item.ItemStack card, ServerLevel level, BlockPos pos, Direction face,
+            net.minecraft.world.phys.Vec3 hitVec) {
+        tryLinkWithCard(player, hand, card, level, pos, face, hitVec, false);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, InteractionHand hand,
+            net.minecraft.world.item.ItemStack card, ServerLevel level, BlockPos pos, Direction face,
+            net.minecraft.world.phys.Vec3 hitVec, boolean bulkPower) {
+        if (!validInteraction(player, level, pos, face, hitVec)
+                || !PlayerWorldActions.mayInteract(player, level, pos, hand, face, hitVec)) return;
         var data = OverloadedFrequencyCardItem.getData(card);
         if (!data.isBound()) {
             message(player, "ae2lt.frequency_card.unbound_message", ChatFormatting.RED);
@@ -169,14 +186,14 @@ public record FrequencyCardUsePacket(
         boolean feTarget = inputFace != null
                 || energy.isBound(level, pos, data.frequencyId());
         if (!feTarget) {
-            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec);
+            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec, hand);
             player.displayClientMessage(Component.translatable(feedback.translationKey(), feedback.args()).withStyle(feedback.style()), true);
             return;
         }
         boolean bind = !energy.isBound(level, pos, data.frequencyId());
         Component aeFeedback = Component.empty();
         if (aeTarget) {
-            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec);
+            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec, hand);
             aeFeedback = Component.translatable(feedback.translationKey(), feedback.args()).withStyle(feedback.style());
             if (feedback.style() == ChatFormatting.RED) {
                 player.displayClientMessage(aeFeedback, true);

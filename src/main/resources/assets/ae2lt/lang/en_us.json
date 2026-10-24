@@ -1679,5 +1679,7 @@
   "ae2lt.gui.home.auto_energy_off": "FE: OFF",
   "ae2lt.gui.home.frequency_details": "Frequency Details",
   "ae2lt.gui.home.access": "Your Access",
-  "ae2lt.gui.home.no_access": "No Access"
+  "ae2lt.gui.home.no_access": "No Access",
+  "ae2lt.gui.error.frequency_owner_limit": "This player has reached the server limit for owned frequencies.",
+  "ae2lt.frequency.too_many_password_attempts": "Too many frequency password attempts (more than 5 in 1 second)."
 }
