@@ -1592,7 +1592,7 @@
   "ae2lt.wireless_energy.limit": "Wireless energy endpoint limit reached",
   "ae2lt.wireless_energy.unsupported": "This face has no supported FE input",
   "ae2lt.wireless_energy.backfeed": "Cannot feed energy back into the source network",
-  "ae2lt.wireless_energy.auto_no_increment": "No stored energy increase after a machine tick; automatic binding skipped. You can bind manually.",
+  "ae2lt.wireless_energy.auto_no_stored_energy": "No FE remains stored after a machine tick; automatic binding skipped. You can bind manually.",
   "ae2lt.wireless_energy.auto_unverifiable": "Stored energy could not be verified; automatic binding skipped. You can bind manually.",
   "ae2lt.management.devices": "ME Network Devices",
   "ae2lt.management.energy": "Power Management",

@@ -202,19 +202,75 @@ public final class WirelessEnergyAdmissionGameTests {
         });
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
-    public static void immediateTrashGetsAtMostOneProbe(GameTestHelper h) { rejected(h, false, 0, true); }
+    public static void unchangedPositiveStockIsAdmitted(GameTestHelper h) {
+        stockAfterProbe(h, 1000, 1000);
+    }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
-    public static void delayedDestroyerQueuedAfterMachineTickIsRejected(GameTestHelper h) { rejected(h, false, 0, false); }
+    public static void decreasedPositiveStockIsAdmitted(GameTestHelper h) {
+        stockAfterProbe(h, 1000, 1);
+    }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
-    public static void delayedDestroyerQueuedInsideMachineTickIsRejected(GameTestHelper h) { rejected(h, true, 7, false); }
-    private static void rejected(GameTestHelper h, boolean duringTick, int initial, boolean instant) {
-        var f = fixture(h); f.machine.drain = !instant; f.machine.instantTrash = instant; f.machine.retainedFloor = initial;
+    public static void depletedPositiveStockIsRejected(GameTestHelper h) {
+        stockAfterProbe(h, 1000, 0);
+    }
+    private static void stockAfterProbe(GameTestHelper h, int initial, int remaining) {
+        var f = fixture(h);
         h.runAfterDelay(35, () -> {
             f.machine.energy.prime(initial);
+            f.machine.afterReceive = () -> {
+                if (f.machine.receiveCalls == 1) {
+                    h.assertTrue(f.view(h).state() == WirelessEnergyAdmissions.State.WAITING && !f.bound(h),
+                            "existing stock bypassed the post-input machine tick");
+                    f.machine.drain = true;
+                    f.machine.retainedFloor = remaining;
+                }
+            };
+            f.queue(h);
+            h.runAfterDelay(10, () -> {
+                var expected = remaining > 0 ? WirelessEnergyAdmissions.State.ACCEPTED : WirelessEnergyAdmissions.State.NO_STORED_ENERGY;
+                h.assertTrue(f.view(h).state() == expected && f.bound(h) == (remaining > 0),
+                        "admission must follow remaining stock, including unchanged/decreased positive values");
+                h.assertTrue(f.view(h).offered() == 100 && f.view(h).accepted() == 100,
+                        "stock observation changed the single probe receipt");
+                if (remaining == 0) {
+                    f.queue(h);
+                    h.assertTrue(f.machine.receiveCalls == 1 && f.machine.received == 100,
+                            "depleted stock allowed another probe");
+                }
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void zeroCapacityRejectsWithoutProbe(GameTestHelper h) { invalidCapacity(h, 0); }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void negativeCapacityRejectsWithoutProbe(GameTestHelper h) { invalidCapacity(h, -1); }
+    private static void invalidCapacity(GameTestHelper h, int capacity) {
+        var f = fixture(h);
+        f.machine.reportedCapacity = capacity;
+        h.runAfterDelay(35, () -> {
+            f.queue(h);
+            h.runAfterDelay(10, () -> {
+                h.assertTrue(!f.bound(h) && f.view(h).state() == WirelessEnergyAdmissions.State.UNVERIFIED
+                                && f.machine.simulations == 0 && f.machine.receiveCalls == 0,
+                        "invalid capacity was admitted or probed");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void immediateTrashGetsAtMostOneProbe(GameTestHelper h) { rejected(h, false, true); }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void delayedDestroyerQueuedAfterMachineTickIsRejected(GameTestHelper h) { rejected(h, false, false); }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void delayedDestroyerQueuedInsideMachineTickIsRejected(GameTestHelper h) { rejected(h, true, false); }
+    private static void rejected(GameTestHelper h, boolean duringTick, boolean instant) {
+        var f = fixture(h); f.machine.drain = !instant; f.machine.instantTrash = instant;
+        h.runAfterDelay(35, () -> {
             if (duringTick) f.machine.duringTick = () -> { f.queue(h); f.machine.duringTick = () -> {}; };
             else f.queue(h);
             h.runAfterDelay(12, () -> {
-                h.assertTrue(!f.bound(h) && f.view(h).state() == WirelessEnergyAdmissions.State.NO_INCREMENT, "destroyer passed delayed observation");
+                h.assertTrue(!f.bound(h) && f.view(h).state() == WirelessEnergyAdmissions.State.NO_STORED_ENERGY, "destroyer passed delayed observation");
                 for (int i = 0; i < 10; i++) f.queue(h);
                 WirelessEnergyAdmissions.get(h.getLevel().getServer()).queue(f.player, f.frequency, h.getLevel(), f.pos, Direction.SOUTH);
                 h.assertTrue(f.machine.received == 100 && f.machine.receiveCalls == 1, "repeated scan exceeded one 100 FE probe");

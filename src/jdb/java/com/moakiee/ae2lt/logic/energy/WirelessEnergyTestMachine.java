@@ -27,7 +27,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     static BlockEntityType<WirelessEnergyTestMachine> TYPE;
     Direction inputFace = Direction.NORTH;
     int simulations;
-    int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor;
+    int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor, reportedCapacity = 100000;
     boolean drain, instantTrash, unknown, inputReady = true;
     Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {}, duringCapability = () -> {};
     ProbeStorage energy = makeStorage();
@@ -43,6 +43,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
             return accepted;
         }
         @Override public int getEnergyStored() { return unknown ? Integer.MAX_VALUE : super.getEnergyStored(); }
+        @Override public int getMaxEnergyStored() { return reportedCapacity; }
     }
     WirelessEnergyTestMachine(BlockPos pos, BlockState state) { super(TYPE, pos, state); }
     private void machineTick() {

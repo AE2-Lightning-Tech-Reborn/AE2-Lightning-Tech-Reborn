@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 public final class WirelessEnergyAdmissions extends SavedData {
     static final int PROBE_LIMIT = 100;
     private static final int WORLD_LIMIT = 8192, VISITS_PER_TICK = 32, TIMEOUT_TICKS = 100;
-    public enum State { QUEUED, WAITING, ACCEPTED, NO_INCREMENT, NO_INPUT, UNVERIFIED, NO_PERMISSION, MANUAL, FAILED }
+    public enum State { QUEUED, WAITING, ACCEPTED, NO_STORED_ENERGY, NO_INPUT, UNVERIFIED, NO_PERMISSION, MANUAL, FAILED }
     public record View(UUID generation, State state, long offered, long accepted, int frequency) {}
     private static final class Attempt {
         final UUID generation, actor;
@@ -35,7 +35,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
         final int frequency;
         Direction face;
         State state = State.QUEUED;
-        long offered, accepted, before, serial, inputSerial;
+        long offered, accepted, serial, inputSerial;
         int lastMachineTick = Integer.MIN_VALUE, expires;
         BlockEntity expected;
         IEnergyStorage capability;
@@ -191,9 +191,9 @@ public final class WirelessEnergyAdmissions extends SavedData {
         if (a.state == State.WAITING) {
             if (!current(server, a)) { finish(a, State.UNVERIFIED); return; }
             if (a.serial <= a.inputSerial) return;
-            var after = new NativeFeTarget(a.capability).storedEnergyFe();
-            if (after.isEmpty()) { finish(a, State.UNVERIFIED); return; }
-            if (after.getAsLong() <= a.before) { feedback(a, "auto_no_increment"); finish(a, State.NO_INCREMENT); return; }
+            var stored = new NativeFeTarget(a.capability).storedEnergyFe();
+            if (stored.isEmpty()) { finish(a, State.UNVERIFIED); return; }
+            if (stored.getAsLong() == 0) { feedback(a, "auto_no_stored_energy"); finish(a, State.NO_STORED_ENERGY); return; }
             // Called in ServerTick.Post, after the observed dimension's BE tick phase.
             String result = WirelessEnergyEndpoints.get(server).setBound(a.player, a.frequency, level, a.location.pos(), a.face, true, "automatic");
             finish(a, result.equals("connected") ? State.ACCEPTED : State.UNVERIFIED);
@@ -210,10 +210,8 @@ public final class WirelessEnergyAdmissions extends SavedData {
         // shortages may be retried. Afterwards capability identity is immutable.
         a.capability = WirelessEnergyEndpoints.energyInput(level, a.location.pos(), a.face);
         if (a.capability == null || !a.capability.canReceive()) return;
-        var before = new NativeFeTarget(a.capability).storedEnergyFe();
-        if (before.isEmpty()) { feedback(a, "auto_unverifiable"); finish(a, State.UNVERIFIED); return; }
-        a.before = before.getAsLong();
         var access = new NativeFeTarget(a.capability);
+        if (access.storedEnergyFe().isEmpty()) { feedback(a, "auto_unverifiable"); finish(a, State.UNVERIFIED); return; }
         var receipt = new TargetAccess() {
             @Override public long simulateReceive(long amount) { return access.simulateReceive(amount); }
             @Override public long receive(long amount) {
@@ -242,7 +240,9 @@ public final class WirelessEnergyAdmissions extends SavedData {
             if (dim == null || face == null || !row.hasUUID("generation") || !row.hasUUID("actor")) continue;
             var location = new WirelessEnergyEndpoints.Location(ResourceKey.create(Registries.DIMENSION, dim), BlockPos.of(row.getLong("pos")));
             var a = new Attempt(row.getUUID("generation"), row.getUUID("actor"), location, row.getInt("frequency"), face);
-            try { a.state = State.valueOf(row.getString("state")); } catch (IllegalArgumentException ignored) { a.state = State.UNVERIFIED; }
+            String state = row.getString("state");
+            try { a.state = state.equals("NO_INCREMENT") ? State.NO_STORED_ENERGY : State.valueOf(state); }
+            catch (IllegalArgumentException ignored) { a.state = State.UNVERIFIED; }
             if (a.pending()) a.state = State.UNVERIFIED; // no pre-restart observation is comparable
             a.offered = Math.max(0, Math.min(PROBE_LIMIT, row.getLong("offered")));
             a.accepted = Math.max(0, Math.min(a.offered, row.getLong("accepted")));

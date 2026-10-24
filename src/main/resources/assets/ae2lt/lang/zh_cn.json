@@ -1592,7 +1592,7 @@
   "ae2lt.wireless_energy.limit": "已达到无线能源端点数量上限",
   "ae2lt.wireless_energy.unsupported": "此面没有受支持的 FE 输入",
   "ae2lt.wireless_energy.backfeed": "不能向来源网络回灌能源",
-  "ae2lt.wireless_energy.auto_no_increment": "机器运行后未检测到储能增加，已跳过自动绑定；可手动绑定。",
+  "ae2lt.wireless_energy.auto_no_stored_energy": "机器运行后无 FE 存量，已跳过自动绑定；可手动绑定。",
   "ae2lt.wireless_energy.auto_unverifiable": "无法可靠验证储量，已跳过自动绑定；可手动绑定。",
   "ae2lt.management.devices": "ME 网络设备",
   "ae2lt.management.energy": "供电管理",
