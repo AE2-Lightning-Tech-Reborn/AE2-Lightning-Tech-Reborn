@@ -79,7 +79,7 @@ public final class WirelessEnergyBenchmarkGameTests {
         final List<AdvancedWirelessOverloadedControllerBlockEntity> controllers = new ArrayList<>();
         final List<ServerPlayer> players = new ArrayList<>();
         final List<WirelessEnergyTestMachine> machines = new ArrayList<>();
-        final long[] nanos = new long[samples], offered = new long[grids];
+        final long[] nanos = new long[samples];
         final long[] postNanos = new long[samples], tickBytes = new long[samples], postBytes = new long[samples];
         long postStarted, tickAllocated, postAllocated;
         long affinityMask;
@@ -93,11 +93,7 @@ public final class WirelessEnergyBenchmarkGameTests {
         r.affinityMask = configureAffinity();
         h.assertTrue(r.targets >= 0 && r.targets <= 8192 && r.warmup >= 1 && r.samples >= 128
                 && r.warmup + r.samples < 23000 && r.queries >= 0 && r.queries <= 128, "invalid benchmark parameters");
-        if (r.highBudget) {
-            WirelessEnergySettings.globalVisits.set(8192);
-            WirelessEnergySettings.networkTargets.set(1024);
-            WirelessEnergySettings.networkFe.set(Integer.MAX_VALUE);
-        }
+        if (r.highBudget) WirelessEnergySettings.tickBudgetMillis.set(10.0);
         var level = h.getLevel();
         for (int grid = 0; grid < r.grids; grid++) {
             var base = new BlockPos(3200 + grid % 8 * 64, 64, 3200 + grid / 8 * 64);
@@ -123,10 +119,9 @@ public final class WirelessEnergyBenchmarkGameTests {
                 var machine = (WirelessEnergyTestMachine) level.getBlockEntity(pos);
                 machine.drain = !r.saturated;
                 if (r.saturated) machine.energy.prime(100000);
-                final int index = grid;
                 machine.duringSimulation = () -> r.simulations++;
                 machine.afterReceive = () -> {
-                    r.receives++; r.offered[index] += machine.energy.getEnergyStored();
+                    r.receives++;
                     // Each machine is drained before the production post-tick sender.
                     r.totalReceived += machine.energy.getEnergyStored();
                 };
@@ -140,7 +135,7 @@ public final class WirelessEnergyBenchmarkGameTests {
                 h.assertTrue(c.getMainNode().isActive(), "benchmark grid inactive");
                 var inventory = c.getMainNode().getGrid().getStorageService().getInventory();
                 long inserted = inventory.insert(AppFluxBridge.FE_KEY, 1_000_000_000_000L, Actionable.MODULATE, IActionSource.empty());
-                long maxPerTick = Math.min(WirelessEnergySettings.networkFe.get(), 256L * WirelessEnergySettings.targetFe.get());
+                long maxPerTick = Math.min(256, r.targets - grid * 256) * 100000L;
                 h.assertTrue(inserted > (r.warmup + r.samples + 10L) * maxPerTick, "insufficient real FE cell capacity");
                 r.initialFe += inserted;
                 if (r.bind) for (int i = grid * 256; i < Math.min(r.targets, (grid + 1) * 256); i++) {
@@ -156,7 +151,7 @@ public final class WirelessEnergyBenchmarkGameTests {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void beforeTick(ServerTickEvent.Pre event) {
         var r = active; if (r == null || r.ticks >= r.warmup + r.samples) return;
-        r.started = System.nanoTime(); r.simulations = 0; r.receives = 0; Arrays.fill(r.offered, 0);
+        r.started = System.nanoTime(); r.simulations = 0; r.receives = 0;
         r.tickAllocated = allocatedBytes();
         if (r.ticks == r.warmup) { r.gcCount = gc(false); r.gcMs = gc(true); r.sampleReceived = r.totalReceived; }
         if (r.ticks % 20 == 0) for (int q = 0; q < r.queries; q++) {
@@ -184,9 +179,8 @@ public final class WirelessEnergyBenchmarkGameTests {
         }
         r.maxHeap = Math.max(r.maxHeap, Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
         r.maxSimulations = Math.max(r.maxSimulations, r.simulations); r.maxReceives = Math.max(r.maxReceives, r.receives);
-        if (r.simulations > WirelessEnergySettings.globalVisits.get() || r.receives > WirelessEnergySettings.globalVisits.get())
-            r.failure = "global visit budget exceeded";
-        for (long amount : r.offered) if (amount > WirelessEnergySettings.networkFe.get()) r.failure = "grid FE budget exceeded";
+        if (r.simulations > r.targets || r.receives > r.targets)
+            r.failure = "an endpoint was called more than once per tick";
         r.ticks++; r.started = 0;
         if (r.ticks == r.warmup + r.samples) r.sampleDelivered = r.totalReceived - r.sampleReceived;
     }
@@ -225,8 +219,9 @@ public final class WirelessEnergyBenchmarkGameTests {
         report.put("sampleDeliveredFePerTick", r.sampleDelivered / (double) r.samples);
         report.put("totalDeliveredFe", r.totalReceived); report.put("minimumEndpointDeliveredFe", minReceived);
         report.put("maxSimulationCallsPerTick", r.maxSimulations); report.put("maxReceiveCallsPerTick", r.maxReceives);
-        report.put("managementSnapshotBuilds", r.queryCount); report.put("networkFePerTick", WirelessEnergySettings.networkFe.get());
-        report.put("globalVisitsPerTick", WirelessEnergySettings.globalVisits.get()); report.put("conservationAndBudgetsPassed", true);
+        report.put("managementSnapshotBuilds", r.queryCount);
+        report.put("tickBudgetMillis", WirelessEnergySettings.tickBudgetMillis.get());
+        report.put("conservationAndBudgetsPassed", true);
         try {
             var path = Path.of(System.getProperty("ae2lt.feBench.report")); Files.createDirectories(path.toAbsolutePath().getParent());
             Files.writeString(path, new GsonBuilder().setPrettyPrinting().create().toJson(report));

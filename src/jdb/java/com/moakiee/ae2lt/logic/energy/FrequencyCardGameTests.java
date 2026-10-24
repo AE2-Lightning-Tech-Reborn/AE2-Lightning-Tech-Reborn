@@ -326,25 +326,20 @@ public final class FrequencyCardGameTests {
         });
     }
     @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
-    public static void bulkReportsLimitAndPerDevicePermissionWithoutChangingForeignOwnership(GameTestHelper h) {
+    public static void bulkBindsAllDevicesAndRetainsPerDeviceOwnership(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel(); var seed = h.absolutePos(TARGET);
         h.setBlock(TARGET, WirelessEnergyTestMachine.BLOCK); h.setBlock(TARGET.east(), WirelessEnergyTestMachine.BLOCK);
         h.runAfterDelay(35, () -> {
-            int limit = WirelessEnergySettings.endpointLimit.get();
-            try {
-                WirelessEnergySettings.endpointLimit.set(1);
-                use(f, seed, true);
-                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.YELLOW,
-                        "ae2lt.wireless_energy.bulk_reason.limit");
-            } finally { WirelessEnergySettings.endpointLimit.set(limit); }
+            use(f, seed, true);
+            assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.GREEN);
             var endpoints = WirelessEnergyEndpoints.get(level.getServer());
-            h.assertTrue(endpoints.isBound(level, seed, f.frequency) && !endpoints.isBound(level, seed.east(), f.frequency),
-                    "limit must retain the successful subset only");
+            h.assertTrue(endpoints.isBound(level, seed, f.frequency) && endpoints.isBound(level, seed.east(), f.frequency),
+                    "bulk binding skipped a supported endpoint");
             var member = new MenuPlayer(level); aim(member, seed);
             WirelessFrequencyManager.get().getFrequency(f.frequency).enrollAsUser(member);
             var result = endpoints.toggleConnected(member, f.frequency, level, seed, Direction.NORTH);
-            h.assertTrue(result.changed() == 0 && result.unchanged() == 1
-                    && result.skippedReasons().equals(Map.of("no_permission", 1)) && endpoints.isBound(level, seed, f.frequency),
+            h.assertTrue(result.changed() == 0 && result.unchanged() == 0
+                    && result.skippedReasons().equals(Map.of("no_permission", 2)) && endpoints.isBound(level, seed, f.frequency),
                     "member disconnected owner's endpoint or lost permission reason: " + result);
             use(f, seed, true);
             assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.GREEN);

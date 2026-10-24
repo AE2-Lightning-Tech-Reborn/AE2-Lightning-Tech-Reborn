@@ -2,62 +2,56 @@ package com.moakiee.ae2lt.logic.energy;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.HashSet;
 import java.util.function.ToLongFunction;
 
-/**
- * Age-ordered visits with O(1) steady-state rotation. New entries have age zero;
- * every granted turn receives a unique, increasing positive age. Until all zero
- * ages have advanced, the heap preserves the original scheduler's tie ordering.
- */
+/** Constant-time timing wheel. Overdue work stays ahead of newly due endpoints. */
 final class WirelessEnergySchedule<T> {
-    private final ToLongFunction<T> age;
-    private final PriorityQueue<T> initial;
-    private final ArrayDeque<T> ordered = new ArrayDeque<>();
-    private boolean rotating;
+    static final int MAX_DELAY = 20;
+    private static final int SLOTS = 32, MASK = SLOTS - 1;
+    private final ArrayDeque<T> ready = new ArrayDeque<>();
+    private final ArrayDeque<T>[] wheel;
+    private final ToLongFunction<T> due;
+    private long tick;
 
-    WirelessEnergySchedule(ToLongFunction<T> age) {
-        this.age = age;
-        initial = new PriorityQueue<>(Comparator.comparingLong(age));
+    @SuppressWarnings("unchecked")
+    WirelessEnergySchedule(ToLongFunction<T> due) {
+        this.due = due;
+        wheel = new ArrayDeque[SLOTS];
+        for (int i = 0; i < SLOTS; i++) wheel[i] = new ArrayDeque<>();
     }
 
-    void rebuild(Collection<T> entries) {
-        initial.clear();
-        ordered.clear();
-        initial.addAll(entries);
-        rotating = false;
-        startRotation();
-    }
-
-    int size() { return rotating ? ordered.size() : initial.size(); }
-
-    T remove() { return rotating ? ordered.removeFirst() : initial.remove(); }
-
-    /** Reinsert after the whole visit window; no endpoint can run twice in that window. */
-    void requeue(List<T> visited, long previousAge) {
-        if (!rotating) {
-            initial.addAll(visited);
-            startRotation();
-            return;
-        }
-        // Granted turns form a new, increasing suffix. Denied turns retain their
-        // original order ahead of all unvisited entries, even at sweep boundaries.
-        for (int i = 0; i < visited.size(); i++) {
-            T entry = visited.get(i);
-            if (age.applyAsLong(entry) > previousAge) ordered.addLast(entry);
-        }
-        for (int i = visited.size() - 1; i >= 0; i--) {
-            T entry = visited.get(i);
-            if (age.applyAsLong(entry) <= previousAge) ordered.addFirst(entry);
+    void rebuild(Collection<T> entries, long now) {
+        var remaining = new HashSet<>(entries);
+        // A mutation must not move the oldest, unserved backlog behind new work.
+        ready.removeIf(entry -> !remaining.remove(entry));
+        for (var slot : wheel) slot.clear();
+        tick = now;
+        for (T entry : entries) {
+            if (!remaining.remove(entry)) continue;
+            long next = due.applyAsLong(entry);
+            if (next <= now) ready.addLast(entry);
+            else wheel[(int) next & MASK].addLast(entry);
         }
     }
 
-    private void startRotation() {
-        if (!initial.isEmpty() && age.applyAsLong(initial.element()) > 0) {
-            while (!initial.isEmpty()) ordered.addLast(initial.remove());
-            rotating = true;
+    void advance(long now) {
+        // All delays fit in the wheel. A long pause needs only one full rotation.
+        long steps = Math.min(SLOTS, Math.max(0, now - tick));
+        for (int i = 1; i <= steps; i++) {
+            var slot = wheel[(int) (tick + i) & MASK];
+            while (!slot.isEmpty()) ready.addLast(slot.removeFirst());
         }
+        tick = now;
+    }
+
+    int readyCount() { return ready.size(); }
+    T remove() { return ready.removeFirst(); }
+
+    /** Requeue only after dispatch; an endpoint cannot run twice in the same tick. */
+    void schedule(T entry) {
+        long next = due.applyAsLong(entry);
+        if (next <= tick || next - tick > MAX_DELAY) throw new IllegalArgumentException("Invalid endpoint delay");
+        wheel[(int) next & MASK].addLast(entry);
     }
 }

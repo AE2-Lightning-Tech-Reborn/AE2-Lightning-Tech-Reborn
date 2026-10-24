@@ -407,7 +407,7 @@ public final class WirelessEnergyAdmissionGameTests {
         var original = (WirelessEnergyTestMachine) level.getBlockEntity(pos);
         original.energy.prime(0); original.setChanged();
         int before = original.received;
-        h.runAfterDelay(12, () -> {
+        h.runAfterDelay(25, () -> {
             h.assertTrue(original.received > before, "disk fixture not supplied");
             level.getChunkSource().save(true);
             level.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, false);

@@ -259,9 +259,8 @@ public final class WirelessEnergyGameTests {
             check(registry.setBound(f.player, f.frequency, h.getLevel(), f.target, Direction.NORTH, true).equals("connected"), "bind failed");
             var tag = registry.save(new CompoundTag(), h.getLevel().registryAccess());
             var rows = tag.getList("endpoints", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            for (int i = 0; i < rows.size(); i++) if (rows.getCompound(i).getInt("frequency") == f.frequency) {
-                rows.getCompound(i).putString("dimension", "ae2lt:unloaded_test_dimension");
-            }
+            rows.removeIf(row -> ((CompoundTag) row).getInt("frequency") != f.frequency);
+            for (var row : rows) ((CompoundTag) row).putString("dimension", "ae2lt:unloaded_test_dimension");
             var isolated = WirelessEnergyEndpoints.load(tag, h.getLevel().registryAccess());
             isolated.tick(h.getLevel().getServer());
             check(isolated.inspect(f.frequency, f.player.getUUID()).getFirst().state() == WirelessEnergyEndpoints.State.UNLOADED, "unloaded endpoint not paused");
@@ -400,7 +399,8 @@ public final class WirelessEnergyGameTests {
             var level = h.getLevel();
             var registry = WirelessEnergyEndpoints.get(level.getServer());
             var node = f.controller.getMainNode().getNode();
-            node.getGrid().getService(WirelessEnergyGridService.class).escrow(node).credit(4000000);
+            node.getGrid().getService(WirelessEnergyGridService.class).escrow(node)
+                    .credit(count * 100000L + WirelessEnergySettings.reserveFe.get());
             var origin = new BlockPos(3200 + count * 32, 64, saturated ? 3232 : 3200);
             level.setChunkForced(origin.getX() >> 4, origin.getZ() >> 4, true);
             var targets = new java.util.ArrayList<Machine>();

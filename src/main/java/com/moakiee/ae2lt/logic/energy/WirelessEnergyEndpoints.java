@@ -41,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
 public final class WirelessEnergyEndpoints extends SavedData {
     private static final int WORLD_LIMIT = 8192;
     private static final int CLUSTER_LIMIT = 8192;
+    private static final int BATCH_SIZE = 32;
     public record BulkResult(boolean bind, int changed, int unchanged, Map<String, Integer> skippedReasons,
                              boolean unloaded, String error) {
         public BulkResult {
@@ -63,8 +64,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final String block, type;
         String source = "manual";
         State state = State.WAITING;
-        boolean budgetBlocked;
-        long schedulingOrder;
+        int scheduleDelay = 1;
+        long nextVisitTick;
         long lastVisitedTick = Long.MIN_VALUE, lastDelivered, totalDelivered;
         // Registry singletons for the identity check, resolved once per session; null until resolved.
         transient Block blockInstance;
@@ -174,13 +175,14 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
-    private final WirelessEnergySchedule<Endpoint> schedule = new WirelessEnergySchedule<>(e -> e.schedulingOrder);
-    private long schedulingOrder;
+    private final WirelessEnergySchedule<Endpoint> schedule = new WirelessEnergySchedule<>(e -> e.nextVisitTick);
+    private long lastTick = Long.MIN_VALUE;
     private boolean scheduleDirty = true;
     private boolean ticking;
     // Reused across ticks; dispatch contexts and pending lists are rebuilt every tick.
     private final ArrayList<Endpoint> visitScratch = new ArrayList<>();
-    private final HashMap<Integer, DispatchContext> contexts = new HashMap<>();
+    private final Map<Integer, DispatchContext> contexts = new HashMap<>();
+    private final ArrayList<DispatchContext> batches = new ArrayList<>();
     private static WirelessEnergyEndpoints instance;
     private static MinecraftServer owner;
 
@@ -334,7 +336,6 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
         int changed = 0, unchanged = 0;
         var skippedReasons = new LinkedHashMap<String, Integer>();
-        long count = endpoints.values().stream().filter(e -> e.frequency == frequency).count();
         for (var pos : cluster) {
             // Capability callbacks from an earlier target may have changed this position.
             var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
@@ -344,12 +345,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
             boolean before = isBound(level, pos, frequency);
             var face = bind ? findInputFace(level, pos, preferred) : preferred;
             if (face == null) { skippedReasons.merge("unsupported", 1, Integer::sum); continue; }
-            String result = setBound(player, frequency, level, pos, face, bind, "manual", false, count);
+            String result = setBound(player, frequency, level, pos, face, bind, "manual", false);
             if (!result.equals(bind ? "connected" : "disconnected")) {
                 skippedReasons.merge(result, 1, Integer::sum); continue;
             }
             if (before == bind) unchanged++;
-            else { changed++; count += bind ? 1 : -1; }
+            else changed++;
         }
         return new BulkResult(bind, changed, unchanged, skippedReasons, unloaded, "");
     }
@@ -361,10 +362,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
                     boolean bind, String source) {
-        return setBound(player, frequency, level, pos, face, bind, source, true, -1);
+        return setBound(player, frequency, level, pos, face, bind, source, true);
     }
     private String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
-                            boolean bind, String source, boolean requireNearby, long knownCount) {
+                            boolean bind, String source, boolean requireNearby) {
         if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
                 || !level.isLoaded(pos) || (requireNearby && !player.canInteractWithBlock(pos, 1))
                 || !level.mayInteract(player, pos)) return "no_permission";
@@ -382,11 +383,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (be == null || capability == null || !capability.canReceive()) return "unsupported";
         if (old != null) return "connected";
         if (!AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return "unavailable";
-        if (controller(level.getServer(), frequency) == null) return "no_controller";
-        if (endpoints.size() >= WORLD_LIMIT || (knownCount >= 0 ? knownCount : endpoints.values().stream()
-                .filter(e -> e.frequency == frequency).count()) >= WirelessEnergySettings.endpointLimit.get()) return "limit";
         var controller = controller(level.getServer(), frequency);
-        if (controller == null || isBackfeed(be, controller.getMainNode().getGrid())) return "backfeed";
+        if (controller == null) return "no_controller";
+        if (endpoints.size() >= WORLD_LIMIT) return "limit";
+        if (isBackfeed(be, controller.getMainNode().getGrid())) return "backfeed";
         var endpoint = new Endpoint(UUID.randomUUID(), frequency, location, face, player.getUUID(),
                 BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString(),
                 BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
@@ -399,7 +399,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         return "connected";
     }
 
-    /** A single automatic probe uses the same source account, reserve and grid budget as normal output. */
+    /** Automatic admission keeps its small, one-shot probe; normal output follows target demand. */
     long sendProbe(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face, TargetAccess target,
                    java.util.function.BooleanSupplier current) {
         if (!current.getAsBoolean() || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return 0;
@@ -410,8 +410,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var be = loadedBlockEntity(level, pos);
         if (node == null || grid == null || be == null || isBackfeed(be, grid)) return 0;
         var service = grid.getService(WirelessEnergyGridService.class);
-        long limit = service.reserve(level.getServer().getTickCount(), Math.min(WirelessEnergyAdmissions.PROBE_LIMIT, WirelessEnergySettings.targetFe.get()),
-                WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
+        if (service.topologyPaused(level.getServer().getTickCount())) return 0;
+        long limit = WirelessEnergyAdmissions.PROBE_LIMIT;
         long demand = Math.min(limit, Math.max(0, target.simulateReceive(limit)));
         if (demand <= 0 || !current.getAsBoolean()) return 0;
         var inventory = new GuardedEnergyStorage(grid.getStorageService().getInventory(),
@@ -463,46 +463,58 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var node = host == null ? null : host.getGridNode(Direction.UP);
         return node != null && node.getGrid() == grid;
     }
-    /**
-     * Two-phase tick. Phase one walks the schedule in fairness order and does
-     * every per-endpoint validation plus the target-side demand simulation,
-     * collecting demands into per-frequency batches. Phase two performs one
-     * ME-side simulate/pull/refund cycle per frequency so the flux cell is
-     * modulated (and save-chained) once per batch instead of once per visit.
-     */
+    /** Small ME batches share one global time budget, including demand simulation and delivery. */
     public void tick(MinecraftServer server) {
         if (ticking || !AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return;
+        long now = server.getTickCount();
+        if (lastTick == now && !scheduleDirty) return;
+        lastTick = now;
         ticking = true;
+        var work = new WirelessEnergyWorkBudget(WirelessEnergySettings.tickBudgetMillis.get());
         try {
             if (scheduleDirty) {
-                schedule.rebuild(endpoints.values()); scheduleDirty = false;
+                schedule.rebuild(endpoints.values(), now); scheduleDirty = false;
             }
-            int visits = Math.min(schedule.size(), WirelessEnergySettings.globalVisits.get());
+            schedule.advance(now);
+            int remaining = schedule.readyCount();
             var visited = visitScratch;
             visited.clear();
-            contexts.clear();
-            long previousOrder = schedulingOrder;
-            for (int i = 0; i < visits; i++) {
-                Endpoint e = schedule.remove();
-                if (endpoints.get(e.location) != e) continue;
-                e.budgetBlocked = false;
-                e.lastVisitedTick = server.getTickCount();
-                e.lastDelivered = 0;
-                try { planVisit(server, e); }
-                catch (RuntimeException ex) { fault(e, ex); }
-                // Only a granted opportunity advances the endpoint's turn. Budget
-                // denial retains its age, regardless of world size or sweep boundaries.
-                if (!e.budgetBlocked) e.schedulingOrder = ++schedulingOrder;
-                visited.add(e);
+            while (remaining > 0 && (visited.isEmpty() || work.hasTime())) {
+                int count = Math.min(BATCH_SIZE, remaining);
+                for (int i = 0; i < count && (i == 0 || work.hasTime()); i++) {
+                    Endpoint e = schedule.remove();
+                    remaining--;
+                    if (endpoints.get(e.location) != e || e.state == State.FAULTED) continue;
+                    e.lastVisitedTick = now;
+                    e.lastDelivered = 0;
+                    e.state = State.BLOCKED;
+                    visited.add(e);
+                    try { planVisit(server, e); }
+                    catch (RuntimeException ex) { fault(e, ex); }
+                }
+                dispatchBatches(server, work);
+                for (var ctx : batches) { ctx.pending.clear(); ctx.totalDemand = 0; }
+                batches.clear();
             }
-            schedule.requeue(visited, previousOrder);
-            if (!contexts.isEmpty()) dispatchBatches(server);
         } finally {
+            // Deferred deliveries precede serviced endpoints next tick. The ready
+            // backlog already precedes both, so slow grids cannot starve later grids.
+            for (var e : visitScratch) if (e.state == State.WAITING) requeue(e, now);
+            for (var e : visitScratch) if (e.state != State.WAITING) requeue(e, now);
             // Release captured world/capability references even when callbacks fail.
             contexts.clear();
+            batches.clear();
             visitScratch.clear();
             ticking = false;
         }
+    }
+
+    private void requeue(Endpoint e, long now) {
+        if (endpoints.get(e.location) != e || e.state == State.FAULTED) return;
+        e.scheduleDelay = e.state == State.ACTIVE || e.state == State.WAITING
+                ? 1 : Math.min(WirelessEnergySchedule.MAX_DELAY, e.scheduleDelay + 1);
+        e.nextVisitTick = now + e.scheduleDelay;
+        schedule.schedule(e);
     }
 
     private void fault(Endpoint e, RuntimeException ex) {
@@ -538,7 +550,6 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
 
     private void planVisit(MinecraftServer server, Endpoint e) {
-        if (e.state == State.FAULTED) return; // explicit unbind/rebind required after unknown receipt
         var manager = WirelessFrequencyManager.get(server);
         var f = manager == null ? null : manager.getFrequency(e.frequency);
         if (f == null) { remove(e.location); return; }
@@ -559,56 +570,65 @@ public final class WirelessEnergyEndpoints extends SavedData {
             return;
         }
         if (isBackfeed(be, ctx.grid)) { e.state = State.BLOCKED; return; }
-        long limit = ctx.service.reserve(server.getTickCount(), WirelessEnergySettings.targetFe.get(),
-                WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
-        if (limit <= 0) {
-            e.budgetBlocked = !ctx.service.topologyPaused(server.getTickCount())
-                    && WirelessEnergySettings.networkFe.get() > 0 && WirelessEnergySettings.targetFe.get() > 0;
-            e.state = State.BLOCKED; return;
-        }
+        if (ctx.service.topologyPaused(server.getTickCount())) { e.state = State.WAITING; return; }
         // Per-visit freshness gates stay on the validated BE; the capability
         // instance itself comes from the endpoint's invalidation-backed cache.
         if (excludedVisit(be, e.face)) { e.state = State.BLOCKED; return; }
         IEnergyStorage target = cachedEnergyTarget(e, level);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
-        long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
+        long demand;
+        e.access.target = target;
+        try { demand = WirelessEnergyDistributor.simulateNormalDemand(e.access); }
+        finally { e.access.target = null; }
         if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e
                 || ctx.controller.getMainNode().getGrid() != ctx.grid) { e.state = State.BLOCKED; return; }
         // Allocate fixed identity before dispatch allocates the larger histories.
         if (e.telemetryKey == null) e.telemetry();
+        if (ctx.pending.isEmpty()) batches.add(ctx);
         ctx.pending.add(new Pending(e, f, level, be, target, demand));
+        e.state = State.WAITING;
         ctx.totalDemand = saturatingAdd(ctx.totalDemand, demand);
     }
 
-    private void dispatchBatches(MinecraftServer server) {
-        for (var ctx : contexts.values()) {
-            if (ctx.pending.isEmpty()) continue;
-            try { dispatchBatch(server, ctx); }
+    private void dispatchBatches(MinecraftServer server, WirelessEnergyWorkBudget work) {
+        for (var ctx : batches) {
+            if (!work.canDispatch()) break;
+            try { dispatchBatch(server, ctx, work); }
             catch (RuntimeException ex) { faultContext(ctx, ex); }
         }
     }
 
-    private void dispatchBatch(MinecraftServer server, DispatchContext ctx) {
+    private void dispatchBatch(MinecraftServer server, DispatchContext ctx, WirelessEnergyWorkBudget work) {
         var feKey = AppFluxBridge.FE_KEY;
-        long reserve = WirelessEnergySettings.reserveFe.get();
+        long reserve = saturatingAdd(WirelessEnergySettings.reserveFe.get(), ctx.service.maintenanceReserveFe());
         long available = ctx.guarded.extract(feKey, saturatingAdd(ctx.totalDemand, reserve),
                 Actionable.SIMULATE, ctx.source);
         long fromNetwork = Math.max(0, available - reserve);
         long budget = Math.min(Long.MAX_VALUE - fromNetwork, ctx.escrow.available()) + fromNetwork;
         long requested = Math.min(ctx.totalDemand, budget);
         try {
-            long remaining = requested > 0 ? ctx.buffer.beginMemoryBatch(feKey, requested, ctx.source) : 0;
             var manager = WirelessFrequencyManager.get(server);
-            for (int i = 0; i < ctx.pending.size(); i++) {
-                var pending = ctx.pending.get(i);
-                try {
-                    remaining = sendPending(manager, ctx, pending, remaining);
-                } catch (RuntimeException ex) {
-                    fault(pending.endpoint, ex);
-                    // A throwing receipt may already have moved FE into quarantine.
-                    remaining = Math.min(remaining, ctx.escrow.available());
+            WirelessEnergyDistributor.dispatchNormalBatch(ctx.buffer, ctx.source, requested,
+                    new WirelessEnergyDistributor.NormalBatch() {
+                @Override public int size() { return ctx.pending.size(); }
+                @Override public long demand(int i) { return ctx.pending.get(i).demand; }
+                @Override public boolean canContinue() { return work.canDispatch(); }
+                @Override public TargetAccess target(int i) {
+                    work.dispatched();
+                    return resolvePending(manager, ctx, ctx.pending.get(i));
                 }
-            }
+                @Override public void noEnergy(int i) { ctx.pending.get(i).endpoint.state = State.NO_FE; }
+                @Override public void transferred(int i, long delivered) {
+                    var e = ctx.pending.get(i).endpoint;
+                    e.access.target = null;
+                    recordDelivered(ctx, e, delivered);
+                }
+                @Override public void failed(int i, RuntimeException failure) {
+                    var e = ctx.pending.get(i).endpoint;
+                    e.access.target = null;
+                    fault(e, failure);
+                }
+            });
         } finally {
             // Never refund through an inventory captured from an obsolete grid.
             if (ctx.controller.getMainNode().getGrid() == ctx.grid) {
@@ -617,11 +637,9 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
     }
 
-    /** Rejected or skipped offers remain available to later endpoints in visit order. */
-    private long sendPending(WirelessFrequencyManager manager, DispatchContext ctx, Pending p, long remaining) {
+    /** The shared NORMAL sender asks the host to validate its prepared target before each receipt. */
+    private @Nullable TargetAccess resolvePending(WirelessFrequencyManager manager, DispatchContext ctx, Pending p) {
         var e = p.endpoint;
-        if (remaining <= 0L) { e.state = State.NO_FE; return remaining; }
-        long offered = Math.min(p.demand, remaining);
         // ME callbacks may replace/unload a target or move the controller into a new grid.
         if (p.blockEntity.isRemoved() || endpoints.get(e.location) != e
                 || ctx.controller.getMainNode().getGrid() != ctx.grid
@@ -629,20 +647,17 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 || manager == null || manager.getFrequency(e.frequency) != p.frequency
                 || !p.frequency.getPlayerAccess(e.actor).canUse()
                 || ctx.controller.getFrequencyId() != e.frequency) {
-            e.state = State.BLOCKED;
-            return remaining;
+            return null;
         }
-        if (excludedVisit(p.blockEntity, e.face)) { e.state = State.BLOCKED; return remaining; }
+        if (excludedVisit(p.blockEntity, e.face)) return null;
         var fresh = cachedEnergyTarget(e, p.level);
-        if (fresh != p.target) { e.state = State.BLOCKED; return remaining; }
-        long delivered;
+        if (fresh != p.target) return null;
         var access = e.access;
         access.target = p.target;
-        try {
-            delivered = AppFluxBridge.sendToTargetKnownDemand(access, ctx.buffer, ctx.source, offered);
-        } finally {
-            access.target = null;
-        }
+        return access;
+    }
+
+    private void recordDelivered(DispatchContext ctx, Endpoint e, long delivered) {
         if (delivered > 0) {
             // Equivalent to a keyed meter lookup: the handle is dropped exactly
             // when the meter table's own 1200-tick expiry would evict it.
@@ -658,7 +673,6 @@ public final class WirelessEnergyEndpoints extends SavedData {
         e.totalDelivered = Math.min(Long.MAX_VALUE - delivered, e.totalDelivered) + delivered;
         e.state = delivered > 0 ? State.ACTIVE : State.BLOCKED;
         if (delivered > 0) setDirty();
-        return remaining - delivered;
     }
 
     private void faultContext(DispatchContext ctx, RuntimeException ex) {

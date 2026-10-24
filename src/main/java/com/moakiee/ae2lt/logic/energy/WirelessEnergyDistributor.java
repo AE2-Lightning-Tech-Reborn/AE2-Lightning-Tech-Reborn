@@ -452,6 +452,50 @@ public final class WirelessEnergyDistributor {
 
     // ---- NORMAL tick implementation -------------------------------------
 
+    /** Prepared NORMAL work; hosts supply lifecycle checks and scheduling, not another FE sender. */
+    interface NormalBatch {
+        int size();
+        long demand(int index);
+        @Nullable TargetAccess target(int index);
+        void transferred(int index, long amount);
+        void noEnergy(int index);
+        default boolean canContinue() { return true; }
+        default void failed(int index, RuntimeException failure) { throw failure; }
+    }
+
+    static long simulateNormalDemand(TargetAccess target) {
+        long limit = Math.max(0L, AppFluxBridge.TRANSFER_RATE);
+        return Math.min(limit, AppFluxBridge.simulateTarget(target, limit));
+    }
+
+    /**
+     * Shared by NORMAL power supplies, interfaces and controller endpoints.
+     * Callers finish/refund the batch in finally, using their current-grid guard.
+     */
+    static long dispatchNormalBatch(BufferedMEStorage buffer, IActionSource source, long requested,
+                                    NormalBatch batch) {
+        long remaining = requested > 0 ? buffer.beginMemoryBatch(AppFluxBridge.FE_KEY, requested, source) : 0;
+        long total = 0;
+        for (int i = 0; i < batch.size() && batch.canContinue(); i++) {
+            long demand = batch.demand(i);
+            if (demand <= 0) { batch.transferred(i, 0); continue; }
+            if (remaining <= 0) { batch.noEnergy(i); continue; }
+            try {
+                var target = batch.target(i);
+                long delivered = target == null ? 0 : AppFluxBridge.sendToTargetKnownDemand(
+                        target, buffer, source, Math.min(demand, remaining));
+                remaining -= delivered;
+                total += delivered;
+                batch.transferred(i, delivered);
+            } catch (RuntimeException failure) {
+                batch.failed(i, failure);
+                // A throwing receiver may have moved part of the batch into quarantine.
+                remaining = Math.min(remaining, buffer.getBufferedEnergy());
+            }
+        }
+        return total;
+    }
+
     private boolean runNormalTick(ServerLevel serverLevel, BufferedMEStorage buffer) {
         if (normalWheelDirty || normalWheelTargetsVersion != validTargetsVersion) {
             rebuildNormalWheel();
@@ -479,15 +523,13 @@ public final class WirelessEnergyDistributor {
         long[] demands = normalBatchDemand;
         TargetAccess[] resolvedTargets = normalBatchEnergyTargets;
         long totalDemand = 0L;
-        long perCallLimit = Math.max(0L, AppFluxBridge.TRANSFER_RATE);
         for (int i = 0; i < dueSize; i++) {
             BlockEnergyTargetCache cache = caches[dueData[i]];
             TargetAccess energyTarget = cache.resolve(serverLevel);
             resolvedTargets[i] = energyTarget;
             long demand = 0L;
             if (energyTarget != null) {
-                long sim = AppFluxBridge.simulateTarget(energyTarget, perCallLimit);
-                demand = sim > perCallLimit ? perCallLimit : sim;
+                demand = simulateNormalDemand(energyTarget);
             }
             demands[i] = demand;
             totalDemand = demand > Long.MAX_VALUE - totalDemand ? Long.MAX_VALUE : totalDemand + demand;
@@ -504,46 +546,22 @@ public final class WirelessEnergyDistributor {
             return false;
         }
 
-        long pulled = buffer.beginMemoryBatch(feKey, totalDemand, host.actionSource());
-        if (pulled <= 0L) {
-            try {
-                requeueNormalEntriesSoon(due, 0);
-                updateIdleFailureStatus(false, false);
-                return false;
-            } finally {
-                buffer.endBatch(feKey, host.actionSource());
-                Arrays.fill(resolvedTargets, 0, dueSize, null);
-                due.size = 0;
-            }
-        }
-
-        boolean didWork = false;
-        long remainingBudget = pulled;
         IActionSource src = host.actionSource();
+        boolean didWork;
         try {
-            for (int i = 0; i < dueSize; i++) {
-                int targetIndex = dueData[i];
-                long demand = demands[i];
-                if (demand <= 0L) {
-                    adjustAndScheduleNormalEntry(targetIndex, 0L);
-                    continue;
+            didWork = dispatchNormalBatch(buffer, src, totalDemand, new NormalBatch() {
+                @Override public int size() { return dueSize; }
+                @Override public long demand(int i) { return demands[i]; }
+                @Override public TargetAccess target(int i) { return resolvedTargets[i]; }
+                @Override public void noEnergy(int i) {
+                    normalEnergyWheel[(normalWheelPointer + 1) & ENERGY_WHEEL_SLOTS_MASK].add(dueData[i]);
+                    updateIdleFailureStatus(false, false);
                 }
-                if (remainingBudget <= 0L) {
-                    requeueNormalEntriesSoon(due, i);
-                    break;
+                @Override public void transferred(int i, long pushed) {
+                    if (pushed > 0L) { lastStatus = Status.ACTIVE; lastTransferAmount += pushed; }
+                    adjustAndScheduleNormalEntry(dueData[i], pushed);
                 }
-
-                long requested = demand < remainingBudget ? demand : remainingBudget;
-                long pushed = AppFluxBridge.sendToTargetKnownDemand(
-                        resolvedTargets[i], buffer, src, requested);
-                if (pushed > 0L) {
-                    lastStatus = Status.ACTIVE;
-                    lastTransferAmount += pushed;
-                    didWork = true;
-                    remainingBudget -= pushed;
-                }
-                adjustAndScheduleNormalEntry(targetIndex, pushed);
-            }
+            }) > 0;
         } finally {
             buffer.endBatch(feKey, src);
             Arrays.fill(resolvedTargets, 0, dueSize, null);
@@ -695,19 +713,6 @@ public final class WirelessEnergyDistributor {
         int delay = connectionTargetCaches[targetIndex].scheduleDelay;
         int slot = (normalWheelPointer + delay) & ENERGY_WHEEL_SLOTS_MASK;
         normalEnergyWheel[slot].add(targetIndex);
-    }
-
-    private void requeueNormalEntriesSoon(IntWheelSlot due, int startIndex) {
-        if (startIndex >= due.size) {
-            return;
-        }
-        int slotIdx = (normalWheelPointer + 1) & ENERGY_WHEEL_SLOTS_MASK;
-        IntWheelSlot targetSlot = normalEnergyWheel[slotIdx];
-        int[] dueData = due.data;
-        int dueSize = due.size;
-        for (int i = startIndex; i < dueSize; i++) {
-            targetSlot.add(dueData[i]);
-        }
     }
 
     private void rebuildNormalWheel() {
