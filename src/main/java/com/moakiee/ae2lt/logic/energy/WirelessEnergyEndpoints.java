@@ -32,6 +32,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
@@ -70,6 +71,11 @@ public final class WirelessEnergyEndpoints extends SavedData {
         transient BlockEntityType<?> typeInstance;
         transient boolean identityResolved;
         transient PowerTelemetry.Key telemetryKey;
+        // Direct meter handle; re-resolved when stale or when the dispatch context's meter table changed.
+        transient PowerTelemetry.Meter telemetryMeter;
+        transient Map<PowerTelemetry.Key, PowerTelemetry.Meter> telemetryMeterOwner;
+        // Listener-backed FE capability resolution; NeoForge invalidation re-resolves it.
+        transient BlockCapabilityCache<IEnergyStorage, Direction> capabilityCache;
         final transient EndpointTargetAccess access = new EndpointTargetAccess();
         Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
@@ -149,14 +155,16 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final appeng.api.storage.MEStorage inventory;
         final GuardedEnergyStorage guarded;
         final BufferedMEStorage buffer;
+        final Map<PowerTelemetry.Key, PowerTelemetry.Meter> telemetryMeters;
         final ArrayList<Pending> pending = new ArrayList<>();
         long totalDemand;
         DispatchContext(AdvancedWirelessOverloadedControllerBlockEntity controller, int frequency, IGridNode node,
                         IGrid grid, WirelessEnergyGridService service, EnergyEscrow escrow, IActionSource source,
-                        appeng.api.storage.MEStorage inventory, GuardedEnergyStorage guarded, BufferedMEStorage buffer) {
+                        appeng.api.storage.MEStorage inventory, GuardedEnergyStorage guarded, BufferedMEStorage buffer,
+                        Map<PowerTelemetry.Key, PowerTelemetry.Meter> telemetryMeters) {
             this.controller = controller; this.frequency = frequency; this.node = node; this.grid = grid;
             this.service = service; this.escrow = escrow; this.source = source; this.inventory = inventory;
-            this.guarded = guarded; this.buffer = buffer;
+            this.guarded = guarded; this.buffer = buffer; this.telemetryMeters = telemetryMeters;
         }
         boolean valid() {
             if (controller.isRemoved() || controller.getFrequencyId() != frequency) return false;
@@ -249,6 +257,29 @@ public final class WirelessEnergyEndpoints extends SavedData {
     private static boolean excludedInput(@Nullable Object host) {
         return host instanceof appeng.helpers.InterfaceLogicHost
                 || host instanceof appeng.helpers.patternprovider.PatternProviderLogicHost;
+    }
+
+    /** Per-visit freshness gate on the already-validated BE; only the capability instance itself is cached. */
+    private static boolean excludedVisit(@Nullable BlockEntity be, Direction face) {
+        return be == null || be.isRemoved() || excludedInput(be)
+                || (be instanceof appeng.api.parts.IPartHost host && excludedInput(host.getPart(face)));
+    }
+
+    /**
+     * Cached FE capability per endpoint. The chunk lookup plus provider-chain
+     * iteration of {@code Level#getCapability} runs once per invalidation
+     * instead of once per phase per visit; invalidation (block-entity removal,
+     * capability rebuild, chunk unload/load) re-resolves on the next call, so a
+     * replaced capability never keeps its old identity past the next visit.
+     */
+    private static @Nullable IEnergyStorage cachedEnergyTarget(Endpoint e, ServerLevel level) {
+        var cache = e.capabilityCache;
+        if (cache == null || cache.level() != level) {
+            cache = BlockCapabilityCache.create(Capabilities.EnergyStorage.BLOCK, level,
+                    e.location.pos(), e.face);
+            e.capabilityCache = cache;
+        }
+        return cache.getCapability();
     }
 
     /** Select an input without sending or simulating FE; keep the clicked face preferred. */
@@ -476,6 +507,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
 
     private void fault(Endpoint e, RuntimeException ex) {
         e.state = State.FAULTED;
+        e.telemetryMeter = null;
+        e.telemetryMeterOwner = null;
         setDirty();
         com.mojang.logging.LogUtils.getLogger().warn("Wireless FE endpoint {} failed; ambiguous delivery is quarantined", e.id, ex);
     }
@@ -499,7 +532,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var escrow = service.escrow(node);
         var ctx = new DispatchContext(c, frequency, node, grid, service, escrow,
                 IActionSource.ofMachine(c), inventory, guarded,
-                new BufferedMEStorage(guarded, null, null, escrow));
+                new BufferedMEStorage(guarded, null, null, escrow), PowerTelemetry.sourceMeters(node));
         contexts.put(frequency, ctx);
         return ctx;
     }
@@ -518,7 +551,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var be = chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
         if (be == null || !e.matches(be)) { remove(e.location); return; }
         var ctx = contextFor(server, e.frequency);
-        if (ctx == null) { e.state = State.NO_CONTROLLER; return; }
+        if (ctx == null) {
+            // Drop the meter handle so a dead controller's meter table is not pinned.
+            e.state = State.NO_CONTROLLER;
+            e.telemetryMeter = null;
+            e.telemetryMeterOwner = null;
+            return;
+        }
         if (isBackfeed(be, ctx.grid)) { e.state = State.BLOCKED; return; }
         long limit = ctx.service.reserve(server.getTickCount(), WirelessEnergySettings.targetFe.get(),
                 WirelessEnergySettings.networkFe.get(), WirelessEnergySettings.networkTargets.get());
@@ -527,8 +566,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
                     && WirelessEnergySettings.networkFe.get() > 0 && WirelessEnergySettings.targetFe.get() > 0;
             e.state = State.BLOCKED; return;
         }
-        // Resolve on each bounded visit, so invalidated or unloaded capabilities are never retained.
-        IEnergyStorage target = energyInput(level, pos, be, e.face);
+        // Per-visit freshness gates stay on the validated BE; the capability
+        // instance itself comes from the endpoint's invalidation-backed cache.
+        if (excludedVisit(be, e.face)) { e.state = State.BLOCKED; return; }
+        IEnergyStorage target = cachedEnergyTarget(e, level);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
         long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
         if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e
@@ -591,7 +632,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
             e.state = State.BLOCKED;
             return remaining;
         }
-        var fresh = energyInput(p.level, e.location.pos(), p.blockEntity, e.face);
+        if (excludedVisit(p.blockEntity, e.face)) { e.state = State.BLOCKED; return remaining; }
+        var fresh = cachedEnergyTarget(e, p.level);
         if (fresh != p.target) { e.state = State.BLOCKED; return remaining; }
         long delivered;
         var access = e.access;
@@ -601,7 +643,17 @@ public final class WirelessEnergyEndpoints extends SavedData {
         } finally {
             access.target = null;
         }
-        PowerTelemetry.record(ctx.node, e.telemetry(), delivered);
+        if (delivered > 0) {
+            // Equivalent to a keyed meter lookup: the handle is dropped exactly
+            // when the meter table's own 1200-tick expiry would evict it.
+            long now = ctx.node.getLevel().getServer().getTickCount();
+            var meter = e.telemetryMeter;
+            if (!PowerTelemetry.live(meter, now) || e.telemetryMeterOwner != ctx.telemetryMeters) {
+                e.telemetryMeter = meter = PowerTelemetry.meterFor(ctx.telemetryMeters, e.telemetry(), now);
+                e.telemetryMeterOwner = ctx.telemetryMeters;
+            }
+            PowerTelemetry.record(meter, delivered, now);
+        }
         e.lastDelivered = delivered;
         e.totalDelivered = Math.min(Long.MAX_VALUE - delivered, e.totalDelivered) + delivered;
         e.state = delivered > 0 ? State.ACTIVE : State.BLOCKED;

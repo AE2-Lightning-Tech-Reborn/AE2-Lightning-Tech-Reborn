@@ -4,6 +4,71 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class PowerHistoryTest {
+    @Test void constantReceiptsStayExactThroughWrapsQueriesAndIrregularTransitions() {
+        for (long amount : new long[]{4096, 9_007_199_254_740_993L, Long.MAX_VALUE}) {
+            var history = new PowerHistory();
+            var receipts = new java.util.HashMap<Long, Long>();
+            for (long now = -2000; now <= 2000; now++) {
+                history.record(now, amount);
+                receipts.put(now, amount);
+                if (now % 37 == 0) assertMatchesReceipts(history, receipts, now);
+            }
+            // Add to the incomplete tail of a long constant run, saturating before conversion to double.
+            history.record(2000, 123);
+            receipts.compute(2000L, (tick, value) -> Math.min(Long.MAX_VALUE - value, 123) + value);
+            assertMatchesReceipts(history, receipts, 2000);
+            assertMatchesReceipts(history, receipts, 2001);
+            // A gap and a new receipt must keep the old completed ticks and count missing ticks as zero.
+            history.record(2077, 17);
+            receipts.put(2077L, 17L);
+            assertMatchesReceipts(history, receipts, 2078);
+            assertMatchesReceipts(history, receipts, 3200);
+            assertMatchesReceipts(history, receipts, 3278);
+            assertArrayEquals(new double[5], history.rates(-4000));
+            history.record(-4000, 91);
+            assertArrayEquals(new double[]{91, 91 / 20.0, .91, 91 / 600.0, 91 / 1200.0}, history.rates(-3999));
+        }
+    }
+
+    @Test void constantRunExpiresEvenWhenIdleQueriesKeepAdvancingTheClock() {
+        var history = new PowerHistory();
+        var receipts = new java.util.HashMap<Long, Long>();
+        for (long now = 0; now < 2000; now++) {
+            history.record(now, 7);
+            receipts.put(now, 7L);
+        }
+        for (long now = 2000; now <= 3201; now++) assertMatchesReceipts(history, receipts, now);
+        history.record(3201, 19);
+        receipts.put(3201L, 19L);
+        assertMatchesReceipts(history, receipts, 3202);
+    }
+
+    @Test void queryOnlyGapThenChangedReceiptKeepsTheLivePartOfAConstantRun() {
+        var history = new PowerHistory();
+        var receipts = new java.util.HashMap<Long, Long>();
+        for (long now = 0; now < 3000; now++) {
+            history.record(now, 9_007_199_254_740_993L);
+            receipts.put(now, 9_007_199_254_740_993L);
+        }
+        assertMatchesReceipts(history, receipts, 3071);
+        history.record(3080, 13);
+        receipts.put(3080L, 13L);
+        assertMatchesReceipts(history, receipts, 3080);
+        assertMatchesReceipts(history, receipts, 3081);
+        assertMatchesReceipts(history, receipts, 4199);
+    }
+
+    private static void assertMatchesReceipts(PowerHistory history, java.util.Map<Long, Long> receipts, long now) {
+        double[] expected = new double[5];
+        double sum = 0;
+        int window = 0;
+        for (int age = 1; age <= 1200; age++) {
+            sum += receipts.getOrDefault(now - age, 0L);
+            if (age == PowerHistory.WINDOWS[window]) expected[window++] = sum / age;
+        }
+        assertArrayEquals(expected, history.rates(now), "tick=" + now);
+    }
+
     @Test void ignoresIncompleteTickAndUsesFullWindowIncludingIdleTicks() {
         var history = new PowerHistory();
         history.record(10, 1200);

@@ -113,11 +113,32 @@ public final class WirelessEnergyBoundaryGameTests {
         }, 0, WirelessEnergyEndpoints.State.BLOCKED);
     }
 
+    /**
+     * A capability provider that throws during an endpoint's visit must fault
+     * only that endpoint and leave the batch budget to later endpoints. With
+     * the per-endpoint invalidation-backed capability cache the provider chain
+     * runs at visit resolution, so the throw is armed before the tick.
+     */
     @GameTest(template = "wireless_io_empty", batch = "energy_boundary", timeoutTicks = 120)
     public static void capabilityLookupFailureIsIsolatedAndLaterEndpointReceives(GameTestHelper h) {
-        redistribution(h, machine -> machine.duringCapability = () -> {
-            throw new IllegalStateException("intentional capability lookup failure");
-        }, 0, WirelessEnergyEndpoints.State.FAULTED);
+        ready(h, f -> {
+            f.bind(h);
+            var other = bindAnother(h, f);
+            f.machine.receiveLimit = 100;
+            other.receiveLimit = 100;
+            f.machine.duringCapability = () -> {
+                throw new IllegalStateException("intentional capability lookup failure");
+            };
+            f.fill(WirelessEnergySettings.reserveFe.get() + 100L);
+            f.tick(h);
+            h.assertTrue(f.machine.received == 0 && other.received == 100
+                    && f.stored() == WirelessEnergySettings.reserveFe.get(),
+                    "capability lookup failure consumed the batch budget");
+            var view = f.endpoints.inspectTarget(h.getLevel(), f.machine.getBlockPos(), f.player.getUUID());
+            h.assertTrue(view != null && view.state() == WirelessEnergyEndpoints.State.FAULTED,
+                    "unexpected prefix state: " + view);
+            h.succeed();
+        });
     }
 
     @GameTest(template = "wireless_io_empty", batch = "energy_boundary", timeoutTicks = 120)
