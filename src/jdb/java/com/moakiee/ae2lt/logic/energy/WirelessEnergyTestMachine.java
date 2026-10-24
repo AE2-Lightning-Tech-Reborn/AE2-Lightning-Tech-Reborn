@@ -29,7 +29,7 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     int simulations;
     int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor;
     boolean drain, instantTrash, unknown, inputReady = true;
-    Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {};
+    Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {}, duringCapability = () -> {};
     ProbeStorage energy = makeStorage();
     ProbeStorage makeStorage() { return new ProbeStorage(); }
     final class ProbeStorage extends EnergyStorage {
@@ -62,7 +62,10 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     }
     @SubscribeEvent public static void capabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, TYPE,
-                (be, face) -> be.inputReady && face == be.inputFace ? be.energy : null);
+                (be, face) -> {
+                    be.duringCapability.run();
+                    return be.inputReady && face == be.inputFace ? be.energy : null;
+                });
     }
     static final class MachineBlock extends BaseEntityBlock {
         MachineBlock(Properties properties) { super(properties); }

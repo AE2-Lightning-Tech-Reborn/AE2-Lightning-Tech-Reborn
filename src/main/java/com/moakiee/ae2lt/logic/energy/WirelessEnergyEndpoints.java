@@ -126,7 +126,6 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final BlockEntity blockEntity;
         final IEnergyStorage target;
         final long demand;
-        long requested;
         Pending(Endpoint endpoint, com.moakiee.ae2lt.grid.WirelessFrequency frequency, ServerLevel level,
                 BlockEntity blockEntity, IEnergyStorage target, long demand) {
             this.endpoint = endpoint; this.frequency = frequency; this.level = level;
@@ -530,57 +529,47 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
 
     private void dispatchBatches(MinecraftServer server) {
+        for (var ctx : contexts.values()) {
+            if (ctx.pending.isEmpty()) continue;
+            try { dispatchBatch(server, ctx); }
+            catch (RuntimeException ex) { faultContext(ctx, ex); }
+        }
+    }
+
+    private void dispatchBatch(MinecraftServer server, DispatchContext ctx) {
         var feKey = AppFluxBridge.FE_KEY;
         long reserve = WirelessEnergySettings.reserveFe.get();
-        for (var ctx : contexts.values()) {
-            var pendings = ctx.pending;
-            if (pendings.isEmpty()) continue;
-            // One ME simulate per frequency; the greedy per-endpoint allocation below
-            // reproduces the sequential visit-order capping against escrow + network.
-            long available;
-            try {
-                available = ctx.guarded.extract(feKey, saturatingAdd(ctx.totalDemand, reserve),
-                        Actionable.SIMULATE, ctx.source);
-            } catch (RuntimeException ex) {
-                faultContext(ctx, ex);
-                continue;
-            }
-            long fromNetwork = Math.max(0, available - reserve);
-            long budget = Math.min(Long.MAX_VALUE - fromNetwork, ctx.escrow.available()) + fromNetwork;
-            long sumRequested = 0;
-            for (int i = 0; i < pendings.size(); i++) {
-                var p = pendings.get(i);
-                long take = Math.min(p.demand, Math.max(0, budget));
-                budget -= take;
-                p.requested = take;
-                sumRequested = saturatingAdd(sumRequested, take);
-            }
-            long remaining;
-            try {
-                remaining = sumRequested > 0 ? ctx.buffer.beginMemoryBatch(feKey, sumRequested, ctx.source) : 0;
-            } catch (RuntimeException ex) {
-                faultContext(ctx, ex);
-                continue;
-            }
+        long available = ctx.guarded.extract(feKey, saturatingAdd(ctx.totalDemand, reserve),
+                Actionable.SIMULATE, ctx.source);
+        long fromNetwork = Math.max(0, available - reserve);
+        long budget = Math.min(Long.MAX_VALUE - fromNetwork, ctx.escrow.available()) + fromNetwork;
+        long requested = Math.min(ctx.totalDemand, budget);
+        try {
+            long remaining = requested > 0 ? ctx.buffer.beginMemoryBatch(feKey, requested, ctx.source) : 0;
             var manager = WirelessFrequencyManager.get(server);
-            try {
-                for (int i = 0; i < pendings.size(); i++) {
-                    remaining = sendPending(manager, ctx, pendings.get(i), remaining);
+            for (int i = 0; i < ctx.pending.size(); i++) {
+                var pending = ctx.pending.get(i);
+                try {
+                    remaining = sendPending(manager, ctx, pending, remaining);
+                } catch (RuntimeException ex) {
+                    fault(pending.endpoint, ex);
+                    // A throwing receipt may already have moved FE into quarantine.
+                    remaining = Math.min(remaining, ctx.escrow.available());
                 }
-            } finally {
-                // Never refund through an inventory captured from an obsolete grid.
-                if (ctx.controller.getMainNode().getGrid() == ctx.grid) {
-                    ctx.buffer.endBatch(feKey, ctx.source);
-                }
+            }
+        } finally {
+            // Never refund through an inventory captured from an obsolete grid.
+            if (ctx.controller.getMainNode().getGrid() == ctx.grid) {
+                ctx.buffer.endBatch(feKey, ctx.source);
             }
         }
     }
 
-    /** Returns the batch budget left after this pending's offer. */
+    /** Rejected or skipped offers remain available to later endpoints in visit order. */
     private long sendPending(WirelessFrequencyManager manager, DispatchContext ctx, Pending p, long remaining) {
         var e = p.endpoint;
-        if (p.requested <= 0L || remaining <= 0L) { e.state = State.NO_FE; return remaining; }
-        long offered = Math.min(p.requested, remaining);
+        if (remaining <= 0L) { e.state = State.NO_FE; return remaining; }
+        long offered = Math.min(p.demand, remaining);
         // ME callbacks may replace/unload a target or move the controller into a new grid.
         if (p.blockEntity.isRemoved() || endpoints.get(e.location) != e
                 || ctx.controller.getMainNode().getGrid() != ctx.grid
@@ -594,20 +583,19 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var fresh = energyInput(p.level, e.location.pos(), e.face);
         if (fresh != p.target) { e.state = State.BLOCKED; return remaining; }
         long delivered;
+        var access = e.access;
+        access.target = p.target;
         try {
-            var access = e.access;
-            access.target = p.target;
             delivered = AppFluxBridge.sendToTargetKnownDemand(access, ctx.buffer, ctx.source, offered);
-        } catch (RuntimeException ex) {
-            fault(e, ex);
-            return remaining - offered;
+        } finally {
+            access.target = null;
         }
         PowerTelemetry.record(ctx.node, PowerTelemetry.Kind.WIRELESS, e.telemetry(), e.id, delivered);
         e.lastDelivered = delivered;
         e.totalDelivered = Math.min(Long.MAX_VALUE - delivered, e.totalDelivered) + delivered;
         e.state = delivered > 0 ? State.ACTIVE : State.BLOCKED;
         if (delivered > 0) setDirty();
-        return remaining - offered;
+        return remaining - delivered;
     }
 
     private void faultContext(DispatchContext ctx, RuntimeException ex) {
