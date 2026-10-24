@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,7 +30,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -209,10 +212,29 @@ public final class RemoteDeviceGameTests {
             h.assertTrue(rows.size() == 1 && rows.getFirst().target().dimension().equals("minecraft:the_nether"), "wrong receiver indexed");
             f.menu.query(f.player, query); f.menu.openConfiguration(rows.getFirst().id());
             h.assertTrue(f.player.containerMenu instanceof com.moakiee.ae2lt.menu.FrequencyMenu, "remote frequency submenu missing");
-            com.moakiee.ae2lt.network.SelectFrequencyPacket.handle(new com.moakiee.ae2lt.network.SelectFrequencyPacket(
-                    f.player.containerMenu.containerId, pos, f.frequency.getId(), ""), context(f.player));
-            h.assertTrue(remote.getFrequencyId() == f.frequency.getId() && decoy.getFrequencyId() <= 0,
-                    "frequency selection changed the wrong dimension");
+            h.assertTrue(!com.moakiee.ae2lt.logic.world.PlayerWorldActions.mayInteract(f.player, nether, pos),
+                    "physical interaction unexpectedly allowed a different dimension");
+            var packet = new com.moakiee.ae2lt.network.SelectFrequencyPacket(
+                    f.player.containerMenu.containerId, pos, f.frequency.getId(), "");
+            var checks = new AtomicInteger();
+            Consumer<PlayerInteractEvent.RightClickBlock> deny = event -> {
+                if (event.getEntity() == f.player && event.getPos().equals(pos)) {
+                    h.assertTrue(event.getLevel() == nether && f.player.serverLevel() == h.getLevel(),
+                            "remote protection used the player's world or moved the player");
+                    checks.incrementAndGet();
+                    event.setCanceled(true);
+                }
+            };
+            NeoForge.EVENT_BUS.addListener(deny);
+            try {
+                com.moakiee.ae2lt.network.SelectFrequencyPacket.handle(packet, context(f.player));
+                h.assertTrue(checks.get() == 1 && remote.getFrequencyId() <= 0 && decoy.getFrequencyId() <= 0,
+                        "remote configuration skipped target-world protection");
+            } finally { NeoForge.EVENT_BUS.unregister(deny); }
+            com.moakiee.ae2lt.network.SelectFrequencyPacket.handle(packet, context(f.player));
+            h.assertTrue(remote.getFrequencyId() == f.frequency.getId(), "authorized remote frequency selection was rejected");
+            h.assertTrue(decoy.getFrequencyId() <= 0 && f.player.serverLevel() == h.getLevel(),
+                    "remote frequency selection changed the local decoy or moved the player");
             nether.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             h.getLevel().setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             nether.setChunkForced(pos.getX() >> 4, pos.getZ() >> 4, false);

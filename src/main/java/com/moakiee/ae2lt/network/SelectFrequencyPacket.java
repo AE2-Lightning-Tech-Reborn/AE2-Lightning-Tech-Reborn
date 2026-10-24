@@ -72,7 +72,7 @@ public record SelectFrequencyPacket(
 
             var be = menu.getConfiguredBlockEntity(player);
             if (be == null || !(be.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
-            if (!PlayerWorldActions.mayInteract(player, level, pkt.blockPos)) {
+            if (!PlayerWorldActions.mayConfigure(player, level, pkt.blockPos)) {
                 PacketDistributor.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
                 return;

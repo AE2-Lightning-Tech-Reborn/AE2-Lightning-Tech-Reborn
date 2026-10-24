@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -35,13 +36,26 @@ public final class PlayerWorldActions {
 
     public static boolean mayInteract(Player player, Level level, BlockPos pos,
                                       InteractionHand hand, Direction face, Vec3 hit) {
-        if (player == null || !(level instanceof ServerLevel) || player.level() != level
+        return player != null && player.level() == level && checkInteraction(player, level, pos, hand, face, hit);
+    }
+
+    /** The caller must first validate the menu/session that authorizes access to this target. */
+    public static boolean mayConfigure(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        return checkInteraction(player, level, pos, InteractionHand.MAIN_HAND, Direction.UP, Vec3.atCenterOf(pos));
+    }
+
+    private static boolean checkInteraction(Player player, Level level, BlockPos pos,
+                                            InteractionHand hand, Direction face, Vec3 hit) {
+        if (player == null || !(level instanceof ServerLevel targetLevel) || player.getServer() != targetLevel.getServer()
                 || player.isSpectator() || !level.isLoaded(pos) || !level.mayInteract(player, pos)
                 || isCheckingInteraction()) return false;
         CHECKING_INTERACTION.set(true);
         try {
             var event = NeoForge.EVENT_BUS.post(new PlayerInteractEvent.RightClickBlock(
-                    player, hand, pos, new BlockHitResult(hit, face, pos, false)));
+                    player, hand, pos, new BlockHitResult(hit, face, pos, false)) {
+                // Protection listeners must inspect the configured device's world.
+                @Override public Level getLevel() { return level; }
+            });
             return !event.isCanceled() && event.getUseBlock() != TriState.FALSE
                     && event.getUseItem() != TriState.FALSE;
         } finally {
