@@ -9,8 +9,6 @@ import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEn
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.logic.management.PowerTelemetry;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.PriorityQueue;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -167,7 +165,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
-    private final PriorityQueue<Endpoint> schedule = new PriorityQueue<>(Comparator.comparingLong(e -> e.schedulingOrder));
+    private final WirelessEnergySchedule<Endpoint> schedule = new WirelessEnergySchedule<>(e -> e.schedulingOrder);
     private long schedulingOrder;
     private boolean scheduleDirty = true;
     private boolean ticking;
@@ -441,12 +439,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
         ticking = true;
         try {
             if (scheduleDirty) {
-                schedule.clear(); schedule.addAll(endpoints.values()); scheduleDirty = false;
+                schedule.rebuild(endpoints.values()); scheduleDirty = false;
             }
             int visits = Math.min(schedule.size(), WirelessEnergySettings.globalVisits.get());
             var visited = visitScratch;
             visited.clear();
             contexts.clear();
+            long previousOrder = schedulingOrder;
             for (int i = 0; i < visits; i++) {
                 Endpoint e = schedule.remove();
                 if (endpoints.get(e.location) != e) continue;
@@ -460,7 +459,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 if (!e.budgetBlocked) e.schedulingOrder = ++schedulingOrder;
                 visited.add(e);
             }
-            schedule.addAll(visited);
+            schedule.requeue(visited, previousOrder);
             if (!contexts.isEmpty()) dispatchBatches(server);
         } finally { ticking = false; }
     }

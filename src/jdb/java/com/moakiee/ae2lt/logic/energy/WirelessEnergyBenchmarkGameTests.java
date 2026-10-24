@@ -43,6 +43,30 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @EventBusSubscriber(modid = "ae2lt")
 public final class WirelessEnergyBenchmarkGameTests {
     private static Run active;
+    private static final com.sun.management.ThreadMXBean ALLOCATIONS = allocationCounter();
+    private static com.sun.management.ThreadMXBean allocationCounter() {
+        var bean = ManagementFactory.getThreadMXBean();
+        if (!(bean instanceof com.sun.management.ThreadMXBean counter)
+                || !counter.isThreadAllocatedMemorySupported()) return null;
+        if (!counter.isThreadAllocatedMemoryEnabled()) counter.setThreadAllocatedMemoryEnabled(true);
+        return counter;
+    }
+    private static long allocatedBytes() {
+        return ALLOCATIONS == null ? 0 : ALLOCATIONS.getThreadAllocatedBytes(Thread.currentThread().threadId());
+    }
+    private static long configureAffinity() {
+        long mask = Long.getLong("ae2lt.feBench.affinity", 0);
+        if (mask == 0) return 0;
+        if (!com.sun.jna.Platform.isWindows() || mask < 0) throw new IllegalArgumentException("Invalid Windows affinity mask");
+        var kernel = com.sun.jna.platform.win32.Kernel32.INSTANCE;
+        var process = kernel.GetCurrentProcess();
+        var actual = new com.sun.jna.platform.win32.BaseTSD.ULONG_PTRByReference();
+        var system = new com.sun.jna.platform.win32.BaseTSD.ULONG_PTRByReference();
+        if (!kernel.SetProcessAffinityMask(process, new com.sun.jna.platform.win32.BaseTSD.ULONG_PTR(mask))
+                || !kernel.GetProcessAffinityMask(process, actual, system) || actual.getValue().longValue() != mask)
+            throw new IllegalStateException("Cannot apply benchmark process affinity");
+        return mask;
+    }
     private static final class Run {
         final int targets = Integer.getInteger("ae2lt.feBench.targets", 256);
         final int grids = Math.max(1, (targets + 255) / 256);
@@ -56,6 +80,9 @@ public final class WirelessEnergyBenchmarkGameTests {
         final List<ServerPlayer> players = new ArrayList<>();
         final List<WirelessEnergyTestMachine> machines = new ArrayList<>();
         final long[] nanos = new long[samples], offered = new long[grids];
+        final long[] postNanos = new long[samples], tickBytes = new long[samples], postBytes = new long[samples];
+        long postStarted, tickAllocated, postAllocated;
+        long affinityMask;
         long initialFe, totalReceived, sampleReceived, sampleDelivered, gcCount, gcMs, maxHeap, started;
         int ticks, simulations, receives, maxSimulations, maxReceives, queryCount;
         String failure;
@@ -63,6 +90,7 @@ public final class WirelessEnergyBenchmarkGameTests {
     @GameTest(template = "wireless_io_empty", timeoutTicks = 24000)
     public static void sustainedRealFeEndpointsWithServerTickMeasurements(GameTestHelper h) {
         var r = new Run();
+        r.affinityMask = configureAffinity();
         h.assertTrue(r.targets >= 0 && r.targets <= 8192 && r.warmup >= 1 && r.samples >= 128
                 && r.warmup + r.samples < 23000 && r.queries >= 0 && r.queries <= 128, "invalid benchmark parameters");
         if (r.highBudget) {
@@ -129,6 +157,7 @@ public final class WirelessEnergyBenchmarkGameTests {
     public static void beforeTick(ServerTickEvent.Pre event) {
         var r = active; if (r == null || r.ticks >= r.warmup + r.samples) return;
         r.started = System.nanoTime(); r.simulations = 0; r.receives = 0; Arrays.fill(r.offered, 0);
+        r.tickAllocated = allocatedBytes();
         if (r.ticks == r.warmup) { r.gcCount = gc(false); r.gcMs = gc(true); r.sampleReceived = r.totalReceived; }
         if (r.ticks % 20 == 0) for (int q = 0; q < r.queries; q++) {
             int i = q % r.grids;
@@ -137,11 +166,22 @@ public final class WirelessEnergyBenchmarkGameTests {
             r.queryCount++;
         }
     }
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void beforePostTick(ServerTickEvent.Post event) {
+        var r = active; if (r == null || r.started == 0 || r.ticks >= r.warmup + r.samples) return;
+        r.postStarted = System.nanoTime(); r.postAllocated = allocatedBytes();
+    }
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void afterTick(ServerTickEvent.Post event) {
         var r = active; if (r == null || r.started == 0 || r.ticks >= r.warmup + r.samples) return;
         long elapsed = System.nanoTime() - r.started;
-        if (r.ticks >= r.warmup) r.nanos[r.ticks - r.warmup] = elapsed;
+        if (r.ticks >= r.warmup) {
+            int sample = r.ticks - r.warmup;
+            r.nanos[sample] = elapsed;
+            r.postNanos[sample] = System.nanoTime() - r.postStarted;
+            r.tickBytes[sample] = allocatedBytes() - r.tickAllocated;
+            r.postBytes[sample] = allocatedBytes() - r.postAllocated;
+        }
         r.maxHeap = Math.max(r.maxHeap, Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
         r.maxSimulations = Math.max(r.maxSimulations, r.simulations); r.maxReceives = Math.max(r.maxReceives, r.receives);
         if (r.simulations > WirelessEnergySettings.globalVisits.get() || r.receives > WirelessEnergySettings.globalVisits.get())
@@ -169,12 +209,18 @@ public final class WirelessEnergyBenchmarkGameTests {
         report.put("gitHead", System.getProperty("ae2lt.feBench.gitHead", "unknown"));
         report.put("java", System.getProperty("java.runtime.version"));
         report.put("processors", Runtime.getRuntime().availableProcessors());
+        report.put("affinityMask", r.affinityMask);
         report.put("maxHeapBytes", Runtime.getRuntime().maxMemory());
         report.put("targets", r.targets); report.put("grids", r.grids); report.put("bound", r.bind); report.put("saturated", r.saturated);
         report.put("highBudget", r.highBudget);
         report.put("warmupTicks", r.warmup); report.put("sampleTicks", r.samples);
         report.put("tickEventMs", stats(r.nanos)); report.put("rawTickEventNanos", r.nanos);
         report.put("measurement", "HIGHEST ServerTickEvent.Pre through LOWEST ServerTickEvent.Post; excludes sleep, setup and final assertions; includes production post-tick FE and scheduled snapshot builds");
+        report.put("postTickMs", stats(r.postNanos)); report.put("rawPostTickNanos", r.postNanos);
+        report.put("postMeasurement", "HIGHEST through LOWEST ServerTickEvent.Post; includes FE endpoint/admission dispatch and other post-tick subscribers, excludes world ticking and management query builds");
+        report.put("allocationCounterSupported", ALLOCATIONS != null);
+        report.put("meanTickAllocatedBytes", Arrays.stream(r.tickBytes).average().orElseThrow());
+        report.put("meanPostTickAllocatedBytes", Arrays.stream(r.postBytes).average().orElseThrow());
         report.put("gcCollections", gc(false) - r.gcCount); report.put("gcMillis", gc(true) - r.gcMs); report.put("peakUsedHeapBytes", r.maxHeap);
         report.put("sampleDeliveredFePerTick", r.sampleDelivered / (double) r.samples);
         report.put("totalDeliveredFe", r.totalReceived); report.put("minimumEndpointDeliveredFe", minReceived);

@@ -46,6 +46,14 @@ def summarize(output):
                "maxRunMeanMs": max(r["tickEventMs"]["mean"] for r in reports),
                "meanDeliveredFePerTick": statistics.fmean(r["sampleDeliveredFePerTick"] for r in reports),
                "gcMillis": sum(r["gcMillis"] for r in reports)}
+        if all("rawPostTickNanos" in r for r in reports):
+            post = sorted(n / 1e6 for r in reports for n in r["rawPostTickNanos"])
+            row.update({"postMeanMs": statistics.fmean(post),
+                        "postP95Ms": post[(len(post) * 95 + 99) // 100 - 1],
+                        "postP99Ms": post[(len(post) * 99 + 99) // 100 - 1],
+                        "allocationCounterSupported": all(r["allocationCounterSupported"] for r in reports),
+                        "meanTickAllocatedBytes": statistics.fmean(r["meanTickAllocatedBytes"] for r in reports),
+                        "meanPostTickAllocatedBytes": statistics.fmean(r["meanPostTickAllocatedBytes"] for r in reports)})
         rows.append(row)
     (output / "summary.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
     with (output / "summary.csv").open("w", newline="", encoding="utf-8") as csv_file:
@@ -79,10 +87,16 @@ def main():
     parser.add_argument("--warmup", type=int, default=300)
     parser.add_argument("--samples", type=int, default=1200)
     parser.add_argument("--java-home")
+    parser.add_argument("--cpu-affinity", type=lambda value: int(value, 0),
+                        help="Windows CPU affinity mask applied inside each test JVM, e.g. 0xf")
     parser.add_argument("--keep-worlds", action="store_true")
+    parser.add_argument("--jfr", action="store_true", help="Record a separate diagnostic workload; do not mix with timing comparisons")
     args = parser.parse_args()
     if args.repeats < 1 or args.warmup < 1 or args.samples < 128 or args.warmup + args.samples >= 23000:
         parser.error("repeats/warmup must be positive; samples >= 128; total ticks < 23000")
+    if args.cpu_affinity is not None:
+        if os.name != "nt" or args.cpu_affinity <= 0:
+            parser.error("--cpu-affinity requires Windows and a positive mask")
     repo = Path(__file__).resolve().parents[1]
     output = repo / "build" / "reports" / "fe-benchmark" / time.strftime("%Y%m%d-%H%M%S")
     output.mkdir(parents=True, exist_ok=False)
@@ -94,6 +108,7 @@ def main():
                      for p in directory.glob("*.java")}
     manifest = {"gitHead": head, "trackedDiffSha256": hashlib.sha256(diff).hexdigest(),
                 "sourceSha256": source_hashes, "platform": platform.platform(),
+                "cpuAffinity": args.cpu_affinity, "jfr": args.jfr,
                 "warmup": args.warmup, "samples": args.samples, "runs": []}
     env = os.environ.copy()
     if args.java_home:
@@ -116,7 +131,10 @@ def main():
                        f"-PfeBenchSaturated={str(saturated).lower()}", f"-PfeBenchQueries={queries}",
                        f"-PfeBenchHighBudget={str(scenario == 'maxbudget8192').lower()}",
                        f"-PfeBenchWarmup={args.warmup}", f"-PfeBenchSamples={args.samples}",
+                       f"-PfeBenchAffinity={args.cpu_affinity or 0}",
                        "runGameTestServer", "--offline", "--no-daemon", "--no-configuration-cache", "--max-workers=2"]
+            if args.jfr:
+                command.insert(1, f"-PfeBenchJfr={output / (label + '.jfr')}")
             print(f"Running {label}", flush=True)
             with (output / f"{label}.log").open("w", encoding="utf-8") as log:
                 completed = subprocess.run(command, cwd=repo, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
@@ -126,6 +144,7 @@ def main():
             if valid:
                 data = json.loads(report.read_text(encoding="utf-8"))
                 valid = data.get("conservationAndBudgetsPassed") is True and data.get("sampleTicks") == args.samples
+                valid = valid and data.get("affinityMask") == (args.cpu_affinity or 0)
                 row.update({"complete": valid, "tickEventMs": data["tickEventMs"],
                             "deliveredFePerTick": data["sampleDeliveredFePerTick"], "gcMillis": data["gcMillis"]})
             if valid and not args.keep_worlds:
