@@ -7,25 +7,34 @@ public final class PowerHistory {
     public static final int[] WINDOWS = {1, 20, 100, 600, 1200};
     private final long[] ticks = new long[1201];
     private long lastTick = Long.MIN_VALUE;
+    private int currentSlot;
 
     public void record(long tick, long accepted) {
         if (accepted <= 0) return;
         advance(tick);
-        int slot = Math.floorMod(tick, ticks.length);
+        int slot = currentSlot;
         ticks[slot] = Math.min(Long.MAX_VALUE - ticks[slot], accepted) + ticks[slot];
     }
 
     private void advance(long now) {
         if (lastTick == Long.MIN_VALUE || now < lastTick || now - lastTick >= ticks.length) {
             Arrays.fill(ticks, 0);
+            currentSlot = Math.floorMod(now, ticks.length);
         } else if (now > lastTick) {
-            int start = Math.floorMod(lastTick, ticks.length) + 1;
-            int end = Math.floorMod(now, ticks.length) + 1;
-            if (start > end) {
-                Arrays.fill(ticks, start, ticks.length, 0);
-                Arrays.fill(ticks, 0, end, 0);
+            if (now - lastTick == 1) {
+                // Sustained receipts advance one slot; no division or range fill is needed.
+                if (++currentSlot == ticks.length) currentSlot = 0;
+                ticks[currentSlot] = 0;
             } else {
-                Arrays.fill(ticks, start, end, 0);
+                int start = currentSlot + 1;
+                currentSlot = Math.floorMod(now, ticks.length);
+                int end = currentSlot + 1;
+                if (start > end) {
+                    Arrays.fill(ticks, start, ticks.length, 0);
+                    Arrays.fill(ticks, 0, end, 0);
+                } else {
+                    Arrays.fill(ticks, start, end, 0);
+                }
             }
         }
         lastTick = now;
@@ -36,7 +45,7 @@ public final class PowerHistory {
         advance(now);
         double sum = 0;
         double[] result = new double[WINDOWS.length];
-        int slot = Math.floorMod(now, ticks.length);
+        int slot = currentSlot;
         int age = 0;
         // Walk contiguous spans newest-first, preserving addition order without per-sample modulo.
         for (int window = 0; window < WINDOWS.length; window++) {

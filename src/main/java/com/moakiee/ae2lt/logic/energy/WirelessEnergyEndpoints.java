@@ -69,7 +69,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         transient Block blockInstance;
         transient BlockEntityType<?> typeInstance;
         transient boolean identityResolved;
-        transient PowerTelemetry.Target telemetryTarget;
+        transient PowerTelemetry.Key telemetryKey;
         final transient EndpointTargetAccess access = new EndpointTargetAccess();
         Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
@@ -98,12 +98,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
             return block.equals(BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString())
                     && type.equals(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
         }
-        PowerTelemetry.Target telemetry() {
-            var t = telemetryTarget;
+        PowerTelemetry.Key telemetry() {
+            var t = telemetryKey;
             if (t == null) {
-                t = new PowerTelemetry.Target(location.dimension().location().toString(),
-                        location.pos(), face.ordinal());
-                telemetryTarget = t;
+                t = new PowerTelemetry.Key(PowerTelemetry.Kind.WIRELESS,
+                        new PowerTelemetry.Target(location.dimension().location().toString(),
+                                location.pos(), face.ordinal()), id);
+                telemetryKey = t;
             }
             return t;
         }
@@ -235,8 +236,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
         return chunk == null ? null : chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
     }
     static @Nullable IEnergyStorage energyInput(ServerLevel level, BlockPos pos, Direction face) {
-        var be = loadedBlockEntity(level, pos);
-        if (be == null || excludedInput(be)) return null;
+        return energyInput(level, pos, loadedBlockEntity(level, pos), face);
+    }
+
+    /** The sender already validated this loaded instance; capability resolution is still fresh. */
+    private static @Nullable IEnergyStorage energyInput(ServerLevel level, BlockPos pos, @Nullable BlockEntity be, Direction face) {
+        if (be == null || be.isRemoved() || excludedInput(be)) return null;
         if (be instanceof appeng.api.parts.IPartHost host && excludedInput(host.getPart(face))) return null;
         return level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, be.getBlockState(), be, face);
     }
@@ -461,7 +466,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
             }
             schedule.requeue(visited, previousOrder);
             if (!contexts.isEmpty()) dispatchBatches(server);
-        } finally { ticking = false; }
+        } finally {
+            // Release captured world/capability references even when callbacks fail.
+            contexts.clear();
+            visitScratch.clear();
+            ticking = false;
+        }
     }
 
     private void fault(Endpoint e, RuntimeException ex) {
@@ -518,11 +528,13 @@ public final class WirelessEnergyEndpoints extends SavedData {
             e.state = State.BLOCKED; return;
         }
         // Resolve on each bounded visit, so invalidated or unloaded capabilities are never retained.
-        IEnergyStorage target = energyInput(level, pos, e.face);
+        IEnergyStorage target = energyInput(level, pos, be, e.face);
         if (target == null || !target.canReceive()) { e.state = State.BLOCKED; return; }
         long demand = Math.min(limit, Math.max(0, target.receiveEnergy((int) limit, true)));
         if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e
                 || ctx.controller.getMainNode().getGrid() != ctx.grid) { e.state = State.BLOCKED; return; }
+        // Allocate fixed identity before dispatch allocates the larger histories.
+        if (e.telemetryKey == null) e.telemetry();
         ctx.pending.add(new Pending(e, f, level, be, target, demand));
         ctx.totalDemand = saturatingAdd(ctx.totalDemand, demand);
     }
@@ -579,7 +591,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             e.state = State.BLOCKED;
             return remaining;
         }
-        var fresh = energyInput(p.level, e.location.pos(), e.face);
+        var fresh = energyInput(p.level, e.location.pos(), p.blockEntity, e.face);
         if (fresh != p.target) { e.state = State.BLOCKED; return remaining; }
         long delivered;
         var access = e.access;
@@ -589,7 +601,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         } finally {
             access.target = null;
         }
-        PowerTelemetry.record(ctx.node, PowerTelemetry.Kind.WIRELESS, e.telemetry(), e.id, delivered);
+        PowerTelemetry.record(ctx.node, e.telemetry(), delivered);
         e.lastDelivered = delivered;
         e.totalDelivered = Math.min(Long.MAX_VALUE - delivered, e.totalDelivered) + delivered;
         e.state = delivered > 0 ? State.ACTIVE : State.BLOCKED;

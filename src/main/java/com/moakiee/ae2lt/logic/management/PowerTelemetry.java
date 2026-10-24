@@ -49,9 +49,14 @@ public final class PowerTelemetry {
 
     public static void record(IGridNode node, Kind kind, Target target, UUID endpoint, long amount) {
         if (node == null || target == null || amount <= 0) return;
+        record(node, new Key(kind, target, endpoint), amount);
+    }
+
+    /** Fixed endpoint identities can reuse the immutable key without retaining a node or meter. */
+    public static void record(IGridNode node, Key key, long amount) {
+        if (node == null || key == null || key.target() == null || amount <= 0) return;
         long now = node.getLevel().getServer().getTickCount();
         var meters = SOURCES.computeIfAbsent(node, ignored -> new HashMap<>());
-        var key = new Key(kind, target, endpoint);
         var meter = meters.get(key);
         if (meter == null) {
             if (paths >= MAX_PATHS && (lastCleanup == Long.MIN_VALUE || now - lastCleanup >= 20)) {

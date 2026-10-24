@@ -104,6 +104,7 @@ def main():
     diff = subprocess.check_output(["git", "diff", "HEAD"], cwd=repo)
     source_hashes = {str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest()
                      for directory in [repo / "src/main/java/com/moakiee/ae2lt/logic/energy",
+                                       repo / "src/main/java/com/moakiee/ae2lt/logic/management",
                                        repo / "src/jdb/java/com/moakiee/ae2lt/logic/energy"]
                      for p in directory.glob("*.java")}
     manifest = {"gitHead": head, "trackedDiffSha256": hashlib.sha256(diff).hexdigest(),

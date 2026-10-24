@@ -292,6 +292,36 @@ public final class WirelessEnergyBoundaryGameTests {
         });
     }
 
+    @GameTest(template = "wireless_io_empty", batch = "energy_telemetry_expiry", timeoutTicks = 1400)
+    public static void resumedEndpointRecreatesExpiredMeterWithoutOldReceipts(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h); f.fill(WirelessEnergySettings.reserveFe.get() + 50L); f.tick(h);
+            h.assertTrue(f.machine.received == 50, "initial telemetry receipt failed");
+            var node = f.controller.getMainNode().getNode();
+            var endpoint = f.endpoints.inspect(f.frequency, f.player.getUUID()).getFirst();
+            var key = new com.moakiee.ae2lt.logic.management.PowerTelemetry.Key(
+                    com.moakiee.ae2lt.logic.management.PowerTelemetry.Kind.WIRELESS,
+                    new com.moakiee.ae2lt.logic.management.PowerTelemetry.Target(
+                            h.getLevel().dimension().location().toString(), f.pos, Direction.NORTH.ordinal()), endpoint.id());
+            var old = com.moakiee.ae2lt.logic.management.PowerTelemetry.meters(node).get(key);
+            h.assertTrue(old != null, "initial meter missing");
+            h.runAfterDelay(1202, () -> {
+                h.assertTrue(!com.moakiee.ae2lt.logic.management.PowerTelemetry.meters(node).containsKey(key), "idle meter did not expire");
+                f.machine.energy = f.machine.makeStorage();
+                h.getLevel().invalidateCapabilities(f.pos);
+                f.fill(20); f.tick(h);
+                h.runAfterDelay(2, () -> {
+                    var current = com.moakiee.ae2lt.logic.management.PowerTelemetry.meters(node).get(key);
+                    h.assertTrue(current != null && !current.id.equals(old.id), "resumed endpoint reused an expired meter");
+                    h.assertTrue(f.machine.received == 70 && f.stored() == WirelessEnergySettings.reserveFe.get(), "resumed scratch lost or duplicated FE");
+                    h.assertTrue(Math.abs(current.rates(h.getLevel().getServer().getTickCount())[4] * 1200 - 20) < .01,
+                            "expired receipts leaked into the new history");
+                    h.succeed();
+                });
+            });
+        });
+    }
+
     @GameTest(template = "wireless_io_empty", batch = "energy_boundary", timeoutTicks = 120)
     public static void throwingReceiverIsQuarantinedUntilExplicitRebind(GameTestHelper h) {
         ready(h, f -> {
