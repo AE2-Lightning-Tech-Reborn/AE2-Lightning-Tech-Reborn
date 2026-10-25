@@ -4,6 +4,68 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class PowerHistoryTest {
+    @Test void equalSparseReceiptsMatchOracleAcrossWrapsWordBoundariesAndAmountChanges() {
+        for (long amount : new long[]{7, 9_007_199_254_740_993L, Long.MAX_VALUE}) {
+            var history = new PowerHistory();
+            var receipts = new java.util.HashMap<Long, Long>();
+            var random = new java.util.Random(0xFE25);
+            for (long now = -2500; now < 2500; now++) {
+                if (random.nextInt(5) == 0 || now % 64 == 0) {
+                    history.record(now, amount);
+                    receipts.put(now, amount);
+                }
+                if (now % 17 == 0) assertMatchesReceipts(history, receipts, now);
+            }
+            // A second receipt in one tick must saturate before conversion to double.
+            history.record(2500, amount);
+            history.record(2500, amount);
+            receipts.put(2500L, Math.min(Long.MAX_VALUE - amount, amount) + amount);
+            assertMatchesReceipts(history, receipts, 2500);
+            assertMatchesReceipts(history, receipts, 2501);
+            history.record(2503, 13);
+            receipts.put(2503L, 13L);
+            assertMatchesReceipts(history, receipts, 2504);
+            assertMatchesReceipts(history, receipts, 3703);
+            assertMatchesReceipts(history, receipts, 3704);
+        }
+    }
+
+    @Test void sparseConstantHistoryExpiresThroughQueriesAndRestartsAfterClockReset() {
+        var history = new PowerHistory();
+        var receipts = new java.util.HashMap<Long, Long>();
+        for (long now = -1000; now < 3000; now += 3) {
+            history.record(now, 19);
+            receipts.put(now, 19L);
+        }
+        for (long now = 3000; now < 4300; now += 11) assertMatchesReceipts(history, receipts, now);
+        history.record(5000, 23);
+        receipts.put(5000L, 23L);
+        history.record(5007, 23);
+        receipts.put(5007L, 23L);
+        assertMatchesReceipts(history, receipts, 5008);
+        assertArrayEquals(new double[5], history.rates(-7000));
+        history.record(-7000, 31);
+        history.record(-6993, 31);
+        assertArrayEquals(new double[]{31, 62 / 20.0, .62, 62 / 600.0, 62 / 1200.0},
+                history.rates(-6992));
+    }
+
+    @Test void changedAmountAfterQueryOnlyGapKeepsSparseCompletedReceipts() {
+        var history = new PowerHistory();
+        var receipts = new java.util.HashMap<Long, Long>();
+        for (long now = 0; now < 3000; now += 3) {
+            history.record(now, 9_007_199_254_740_993L);
+            receipts.put(now, 9_007_199_254_740_993L);
+        }
+        assertMatchesReceipts(history, receipts, 3071);
+        history.record(3080, 13);
+        receipts.put(3080L, 13L);
+        assertMatchesReceipts(history, receipts, 3080);
+        assertMatchesReceipts(history, receipts, 3081);
+        assertMatchesReceipts(history, receipts, 4199);
+        assertMatchesReceipts(history, receipts, 4280);
+    }
+
     @Test void constantReceiptsStayExactThroughWrapsQueriesAndIrregularTransitions() {
         for (long amount : new long[]{4096, 9_007_199_254_740_993L, Long.MAX_VALUE}) {
             var history = new PowerHistory();

@@ -62,6 +62,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final Direction face;
         final UUID actor;
         final String block, type;
+        // Removal invalidates this generation before any later callback can use it.
+        boolean registered = true;
         String source = "manual";
         State state = State.WAITING;
         int scheduleDelay = 1;
@@ -126,16 +128,20 @@ public final class WirelessEnergyEndpoints extends SavedData {
 
     /** One endpoint's validated demand, awaiting the per-frequency batch dispatch. */
     private static final class Pending {
-        final Endpoint endpoint;
-        final com.moakiee.ae2lt.grid.WirelessFrequency frequency;
-        final ServerLevel level;
-        final BlockEntity blockEntity;
-        final IEnergyStorage target;
-        final long demand;
-        Pending(Endpoint endpoint, com.moakiee.ae2lt.grid.WirelessFrequency frequency, ServerLevel level,
-                BlockEntity blockEntity, IEnergyStorage target, long demand) {
+        Endpoint endpoint;
+        com.moakiee.ae2lt.grid.WirelessFrequency frequency;
+        ServerLevel level;
+        BlockEntity blockEntity;
+        IEnergyStorage target;
+        long demand;
+        void prepare(Endpoint endpoint, com.moakiee.ae2lt.grid.WirelessFrequency frequency, ServerLevel level,
+                     BlockEntity blockEntity, IEnergyStorage target, long demand) {
             this.endpoint = endpoint; this.frequency = frequency; this.level = level;
             this.blockEntity = blockEntity; this.target = target; this.demand = demand;
+        }
+        void clear() {
+            endpoint = null; frequency = null; level = null; blockEntity = null; target = null;
+            demand = 0;
         }
     }
 
@@ -181,6 +187,11 @@ public final class WirelessEnergyEndpoints extends SavedData {
     private boolean ticking;
     // Reused across ticks; dispatch contexts and pending lists are rebuilt every tick.
     private final ArrayList<Endpoint> visitScratch = new ArrayList<>();
+    private final Pending[] pendingScratch = new Pending[BATCH_SIZE];
+    private int pendingCount;
+    {
+        for (int i = 0; i < pendingScratch.length; i++) pendingScratch[i] = new Pending();
+    }
     private final Map<Integer, DispatchContext> contexts = new HashMap<>();
     private final ArrayList<DispatchContext> batches = new ArrayList<>();
     private static WirelessEnergyEndpoints instance;
@@ -203,7 +214,8 @@ public final class WirelessEnergyEndpoints extends SavedData {
         WirelessEnergyAdmissions.onRemoved(level, pos);
     }
     private void remove(Location location) {
-        if (endpoints.remove(location) != null) { scheduleDirty = true; setDirty(); }
+        var removed = endpoints.remove(location);
+        if (removed != null) { removed.registered = false; scheduleDirty = true; setDirty(); }
     }
     public List<View> inspect(int frequency, UUID viewer) {
         var manager = WirelessFrequencyManager.get();
@@ -484,7 +496,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 for (int i = 0; i < count && (i == 0 || work.hasTime()); i++) {
                     Endpoint e = schedule.remove();
                     remaining--;
-                    if (endpoints.get(e.location) != e || e.state == State.FAULTED) continue;
+                    if (!e.registered || e.state == State.FAULTED) continue;
                     e.lastVisitedTick = now;
                     e.lastDelivered = 0;
                     e.state = State.BLOCKED;
@@ -495,6 +507,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
                 dispatchBatches(server, work);
                 for (var ctx : batches) { ctx.pending.clear(); ctx.totalDemand = 0; }
                 batches.clear();
+                clearPending();
             }
         } finally {
             // Deferred deliveries precede serviced endpoints next tick. The ready
@@ -505,12 +518,18 @@ public final class WirelessEnergyEndpoints extends SavedData {
             contexts.clear();
             batches.clear();
             visitScratch.clear();
+            clearPending();
             ticking = false;
         }
     }
 
+    private void clearPending() {
+        for (int i = 0; i < pendingCount; i++) pendingScratch[i].clear();
+        pendingCount = 0;
+    }
+
     private void requeue(Endpoint e, long now) {
-        if (endpoints.get(e.location) != e || e.state == State.FAULTED) return;
+        if (!e.registered || e.state == State.FAULTED) return;
         e.scheduleDelay = e.state == State.ACTIVE || e.state == State.WAITING
                 ? 1 : Math.min(WirelessEnergySchedule.MAX_DELAY, e.scheduleDelay + 1);
         e.nextVisitTick = now + e.scheduleDelay;
@@ -580,12 +599,14 @@ public final class WirelessEnergyEndpoints extends SavedData {
         e.access.target = target;
         try { demand = WirelessEnergyDistributor.simulateNormalDemand(e.access); }
         finally { e.access.target = null; }
-        if (demand == 0 || be.isRemoved() || endpoints.get(e.location) != e
+        if (demand == 0 || be.isRemoved() || !e.registered
                 || ctx.controller.getMainNode().getGrid() != ctx.grid) { e.state = State.BLOCKED; return; }
         // Allocate fixed identity before dispatch allocates the larger histories.
         if (e.telemetryKey == null) e.telemetry();
         if (ctx.pending.isEmpty()) batches.add(ctx);
-        ctx.pending.add(new Pending(e, f, level, be, target, demand));
+        var pending = pendingScratch[pendingCount++];
+        pending.prepare(e, f, level, be, target, demand);
+        ctx.pending.add(pending);
         e.state = State.WAITING;
         ctx.totalDemand = saturatingAdd(ctx.totalDemand, demand);
     }
@@ -641,7 +662,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
     private @Nullable TargetAccess resolvePending(WirelessFrequencyManager manager, DispatchContext ctx, Pending p) {
         var e = p.endpoint;
         // ME callbacks may replace/unload a target or move the controller into a new grid.
-        if (p.blockEntity.isRemoved() || endpoints.get(e.location) != e
+        if (p.blockEntity.isRemoved() || !e.registered
                 || ctx.controller.getMainNode().getGrid() != ctx.grid
                 || !p.level.isLoaded(e.location.pos())
                 || manager == null || manager.getFrequency(e.frequency) != p.frequency
