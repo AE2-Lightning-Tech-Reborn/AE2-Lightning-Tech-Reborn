@@ -76,7 +76,7 @@ Crystal Mode supports the following mother rocks that do not degrade while growi
 
 With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.
 
-AE2CS mother rock products match the corresponding mature clusters: the first ten yield AE2CS purified crystals, while Entro yields the ExtendedAE Entro Crystal and requires ExtendedAE.
+Mother rock products follow the corresponding mature cluster’s actual drops on the server, including datapack overrides and global loot modifiers, using an unenchanted diamond pickaxe. They do not automatically become purified crystals. The base yield remains 16 items. Recipes with no drops or multiple different products are unavailable. Entro requires ExtendedAE.
 
 Each normal cycle uses 1 B water, 100,000 FE and 1 High Voltage Lightning, with the usual parallel and matrix bonuses. One mother rock produces 16 items per second without a matrix, or 128 with a matrix. With a matrix, 128 mother rocks reach 16,384 items per second. Parallelism is capped by the output slot's total capacity: inserting more mother rocks still works, with a maximum of 16,384 items per cycle.
 

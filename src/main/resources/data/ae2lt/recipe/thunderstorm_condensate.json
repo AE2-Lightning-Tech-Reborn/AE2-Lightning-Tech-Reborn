@@ -8,13 +8,13 @@
   ],
   "key": {
     "A": {
-      "item": "ae2lt:overload_crystal"
+      "tag": "c:gems/overload_crystal"
     },
     "B": {
       "item": "ae2lt:overload_alloy"
     },
     "C": {
-      "item": "ae2lt:overload_crystal"
+      "tag": "c:gems/overload_crystal"
     },
     "D": {
       "item": "ae2lt:overload_alloy"
@@ -26,13 +26,13 @@
       "item": "ae2lt:overload_alloy"
     },
     "G": {
-      "item": "ae2lt:overload_crystal"
+      "tag": "c:gems/overload_crystal"
     },
     "H": {
       "item": "ae2lt:overload_alloy"
     },
     "I": {
-      "item": "ae2lt:overload_crystal"
+      "tag": "c:gems/overload_crystal"
     }
   },
   "result": {

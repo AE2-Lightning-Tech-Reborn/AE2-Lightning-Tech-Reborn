@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "ae2lt:overload_crystal",
+    {
+      "id": "ae2cs:purified_overload_crystal",
+      "required": false
+    }
+  ]
+}

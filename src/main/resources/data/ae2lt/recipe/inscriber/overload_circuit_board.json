@@ -2,7 +2,7 @@
   "type": "ae2:inscriber",
   "ingredients": {
     "middle": {
-      "item": "ae2lt:overload_crystal"
+      "tag": "c:gems/overload_crystal"
     },
     "top": {
       "item": "ae2lt:overload_inscriber_press"

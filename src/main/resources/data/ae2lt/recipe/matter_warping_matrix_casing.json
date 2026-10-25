@@ -11,7 +11,7 @@
     "B": { "item": "minecraft:quartz_block" },
     "C": { "item": "minecraft:iron_ingot" },
     "D": { "item": "minecraft:quartz_block" },
-    "E": { "item": "ae2lt:overload_crystal" },
+    "E": { "tag": "c:gems/overload_crystal" },
     "F": { "item": "minecraft:quartz_block" },
     "G": { "item": "minecraft:iron_ingot" },
     "H": { "item": "minecraft:quartz_block" },
