@@ -10,7 +10,7 @@
     },
     {
       "ingredient": {
-        "item": "ae2lt:overload_crystal"
+        "tag": "c:gems/overload_crystal"
       },
       "count": 4
     },
