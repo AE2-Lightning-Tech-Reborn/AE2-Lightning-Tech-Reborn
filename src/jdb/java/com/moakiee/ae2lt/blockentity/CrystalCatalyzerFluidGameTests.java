@@ -400,7 +400,7 @@ public final class CrystalCatalyzerFluidGameTests {
         h.succeed();
     }
 
-    /** Compare upstream loot definitions, before modpack global loot modifiers, including Entro. */
+    /** Compare the actual block-drop path, including modpack global loot modifiers and Entro. */
     @GameTest(template = "empty")
     public static void ae2csMotherRocksMatchNaturalHarvest(GameTestHelper h) {
         var host = machine(h, false);
@@ -426,20 +426,13 @@ public final class CrystalCatalyzerFluidGameTests {
         var recipe = candidate.orElseThrow().recipe().value();
         var clusterId = ResourceLocation.parse(cluster);
         check(BuiltInRegistries.BLOCK.containsKey(clusterId), "upstream cluster is missing: " + path);
-        var rawDrops = new ArrayList<ItemStack>();
-        var lootParams = new net.minecraft.world.level.storage.loot.LootParams.Builder(h.getLevel())
-                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
-                        net.minecraft.world.phys.Vec3.atCenterOf(h.absolutePos(POS)))
-                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
-                        BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState())
-                .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.TOOL,
-                        new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE))
-                .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.BLOCK);
-        h.getLevel().getServer().reloadableRegistries()
-                .getLootTable(BuiltInRegistries.BLOCK.get(clusterId).getLootTable())
-                .getRandomItemsRaw(lootParams, rawDrops::add);
-        check(rawDrops.stream().anyMatch(drop -> ItemStack.isSameItemSameComponents(drop, recipe.getOutputTemplate())),
-                "mature loot definition differs from catalyzer output: " + path + " drops=" + rawDrops);
+        var drops = net.minecraft.world.level.block.Block.getDrops(
+                BuiltInRegistries.BLOCK.get(clusterId).defaultBlockState(), h.getLevel(),
+                h.absolutePos(POS), null, net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(h.getLevel()),
+                new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+        check(!recipe.getOutputTemplate().isEmpty()
+                        && drops.stream().anyMatch(drop -> ItemStack.isSameItemSameComponents(drop, recipe.getOutputTemplate())),
+                "actual mature harvest differs from catalyzer output: " + path + " drops=" + drops);
 
         host.getInventory().setItemDirect(CATALYST,
                 new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.parse(catalyst))));
@@ -449,6 +442,67 @@ public final class CrystalCatalyzerFluidGameTests {
                 "mother rock must produce sixteen items per catalyst: " + path);
         check(recipe.isWaterRecipe() && recipe.fluidInput().getAmount() == 1000,
                 "mother rock must retain the standard water cost: " + path);
+    }
+
+    @GameTest(template = "empty")
+    public static void harvestRecipeJsonAndNetworkRoundTrip(GameTestHelper h) {
+        var serializer = new CrystalCatalyzerRecipe.Serializer();
+        var ops = h.getLevel().registryAccess().createSerializationContext(JsonOps.INSTANCE);
+        var source = find(h, "budding_amethyst").orElseThrow().recipe().value();
+        var encoded = serializer.codec().codec().encodeStart(ops, source).getOrThrow();
+        check(encoded.getAsJsonObject().getAsJsonObject("output").has("harvestBlock"),
+                "JSON lost the harvest source and froze the current item");
+        var restored = serializer.codec().codec().parse(ops, encoded).getOrThrow();
+        ((CrystalHarvestOutput) restored.outputSpec()).resolveHarvest(h.getLevel());
+        check(ItemStack.matches(source.getOutputTemplate(), restored.getOutputTemplate()), "JSON harvest changed");
+        for (var recipe : List.of(restored, new CrystalCatalyzerRecipe(source.catalyst(), 1,
+                new CrystalHarvestOutput(ResourceLocation.parse("ae2lt:missing_cluster"), 16),
+                100000, 1, LightningKey.Tier.HIGH_VOLTAGE, Mode.CRYSTAL))) {
+            var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), h.getLevel().registryAccess());
+            try {
+                serializer.streamCodec().encode(buffer, recipe);
+                var client = serializer.streamCodec().decode(buffer);
+                check(client.outputSpec() instanceof CrystalCatalyzerOutput.OfItem,
+                        "client recipe still needs server loot tables");
+                check(ItemStack.matches(client.getOutputTemplate(), recipe.getOutputTemplate()),
+                        "client viewer differs from server output");
+                check(client.isIncomplete() == recipe.getOutputTemplate().isEmpty(),
+                        "empty harvest did not disable the client recipe");
+            } finally { buffer.release(); }
+        }
+        var missing = new CrystalHarvestOutput(ResourceLocation.parse("ae2lt:missing_cluster"), 16);
+        missing.resolveHarvest(h.getLevel());
+        check(missing.resolve().isEmpty(), "missing cluster substituted another item");
+        var noDrops = new CrystalHarvestOutput(ResourceLocation.parse("minecraft:bedrock"), 16);
+        noDrops.resolveHarvest(h.getLevel());
+        check(noDrops.resolve().isEmpty(), "empty loot substituted another item");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void changedHarvestDoesNotFinishSavedCycle(GameTestHelper h) {
+        var host = machine(h, false);
+        h.runAfterDelay(15, () -> {
+            var candidate = find(h, "budding_amethyst").orElseThrow();
+            var recipe = candidate.recipe().value();
+            var stale = new CrystalCatalyzerLockedRecipe(candidate.recipe().id(),
+                    new ItemStack(net.minecraft.world.item.Items.DIAMOND, 16), 0, 1, 0,
+                    LightningKey.Tier.HIGH_VOLTAGE);
+            var tag = new CompoundTag();
+            host.saveAdditional(tag, h.getLevel().registryAccess());
+            tag.put("LockedRecipe", stale.toTag(h.getLevel().registryAccess()));
+            host.loadTag(tag, h.getLevel().registryAccess());
+            host.getInventory().setItemDirect(CATALYST,
+                    recipe.catalyst().orElseThrow().getItems()[0].copyWithCount(64));
+            host.getTank().setFluid(recipe.fluidInput());
+            check(!host.completeLockedRecipe(stale, candidate), "stale saved product completed");
+            host.getLogic().tickingRequest(host.getActionableNode(), 1);
+            check(!host.hasLockedRecipe(), "stale harvest remained locked");
+            check(host.getFluid().getAmount() == 1000 && host.getInventory().getStackInSlot(OUTPUT).isEmpty(),
+                    "invalidating stale harvest consumed water or produced an item");
+            check(host.lockCurrentRecipe().orElseThrow().matchesHarvestOutput(recipe), "current harvest did not relock");
+            h.succeed();
+        });
     }
 
     @GameTest(template = "empty", timeoutTicks = 200)

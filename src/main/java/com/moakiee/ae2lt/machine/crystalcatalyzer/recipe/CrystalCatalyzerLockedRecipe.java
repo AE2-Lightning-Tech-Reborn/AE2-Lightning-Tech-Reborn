@@ -127,6 +127,11 @@ public final class CrystalCatalyzerLockedRecipe {
                 && fluidInput.getAmount() == required.getAmount();
     }
 
+    public boolean matchesHarvestOutput(CrystalCatalyzerRecipe recipe) {
+        return !(recipe.outputSpec() instanceof CrystalHarvestOutput)
+                || ItemStack.matches(output, recipe.getOutputTemplate());
+    }
+
     public CompoundTag toTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putString(TAG_RECIPE_ID, recipeId.toString());

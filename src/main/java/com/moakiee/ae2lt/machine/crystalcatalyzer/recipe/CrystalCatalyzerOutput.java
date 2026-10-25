@@ -20,25 +20,32 @@ import net.minecraft.world.item.ItemStack;
 /**
  * 水晶催化器配方的产物声明。
  *
- * <p>支持两种 JSON 写法：</p>
+ * <p>支持三种 JSON 写法：</p>
  * <ul>
  *     <li>{@code {"id": "modid:item", "count": N}} —— 直接指定一个物品。</li>
  *     <li>{@code {"tag": "modid:path", "count": N}} —— 引用一个物品 tag，运行时解析为该 tag 内的第一个物品。
  *         若 tag 为空（即装包内没有任何物品被 tag 命中），配方等同于"输出为空"，会被机器和 JEI 跳过。</li>
+ *     <li>{@code {"harvestBlock": "modid:crystal_cluster", "count": N}} —— 使用成熟晶簇的实际采集产物。
+ *         服务器在启动和数据包重载后解析，并将具体物品同步给客户端。</li>
  * </ul>
  *
  * <p>采用 tag 形式可以让多模组装包里"任何一个 amethyst 粉物品"都能被识别，无需为每个潜在模组写一份配方。</p>
  */
 public sealed interface CrystalCatalyzerOutput
-        permits CrystalCatalyzerOutput.OfItem, CrystalCatalyzerOutput.OfTag {
+        permits CrystalCatalyzerOutput.OfItem, CrystalCatalyzerOutput.OfTag, CrystalHarvestOutput {
 
-    Codec<CrystalCatalyzerOutput> CODEC = Codec.either(OfTag.CODEC, ItemStack.STRICT_CODEC)
+    Codec<CrystalCatalyzerOutput> ITEM_OR_TAG_CODEC = Codec.either(OfTag.CODEC, ItemStack.STRICT_CODEC)
             .xmap(
                     either -> either.map(tag -> (CrystalCatalyzerOutput) tag, OfItem::new),
                     output -> switch (output) {
                         case OfTag tag -> Either.left(tag);
                         case OfItem item -> Either.right(item.stack());
+                        case CrystalHarvestOutput ignored -> throw new IllegalArgumentException("Expected item or tag output");
                     });
+
+    Codec<CrystalCatalyzerOutput> CODEC = Codec.either(CrystalHarvestOutput.CODEC, ITEM_OR_TAG_CODEC)
+            .xmap(either -> either.map(harvest -> harvest, output -> output),
+                    output -> output instanceof CrystalHarvestOutput harvest ? Either.left(harvest) : Either.right(output));
 
     StreamCodec<RegistryFriendlyByteBuf, CrystalCatalyzerOutput> STREAM_CODEC =
             StreamCodec.of(CrystalCatalyzerOutput::encode, CrystalCatalyzerOutput::decode);
@@ -52,6 +59,9 @@ public sealed interface CrystalCatalyzerOutput
     int count();
 
     static CrystalCatalyzerOutput ofItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            throw new IllegalArgumentException("output stack cannot be empty");
+        }
         return new OfItem(stack.copy());
     }
 
@@ -63,12 +73,18 @@ public sealed interface CrystalCatalyzerOutput
         switch (output) {
             case OfItem item -> {
                 buf.writeBoolean(false);
-                ItemStack.STREAM_CODEC.encode(buf, item.stack());
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, item.stack());
             }
             case OfTag tag -> {
                 buf.writeBoolean(true);
                 buf.writeResourceLocation(tag.tag().location());
                 ByteBufCodecs.VAR_INT.encode(buf, tag.count());
+            }
+            case CrystalHarvestOutput harvest -> {
+                // Loot tables and global loot modifiers are server-only. Send the resolved
+                // stack using the existing item format so viewers share the machine output.
+                buf.writeBoolean(false);
+                ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, harvest.resolve());
             }
         }
     }
@@ -79,16 +95,15 @@ public sealed interface CrystalCatalyzerOutput
             int count = ByteBufCodecs.VAR_INT.decode(buf);
             return new OfTag(TagKey.create(BuiltInRegistries.ITEM.key(), tagId), count);
         }
-        ItemStack stack = ItemStack.STREAM_CODEC.decode(buf);
+        ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
         return new OfItem(stack);
     }
 
     record OfItem(ItemStack stack) implements CrystalCatalyzerOutput {
         public OfItem {
             stack = stack.copy();
-            if (stack.isEmpty()) {
-                throw new IllegalArgumentException("output stack cannot be empty");
-            }
+            // A disabled harvest recipe can arrive as an empty network snapshot.
+            // JSON item outputs still use STRICT_CODEC; ofItem also rejects empty stacks.
         }
 
         @Override

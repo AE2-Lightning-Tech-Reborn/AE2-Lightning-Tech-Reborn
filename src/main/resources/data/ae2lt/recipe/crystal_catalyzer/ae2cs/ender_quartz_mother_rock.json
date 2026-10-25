@@ -15,7 +15,7 @@
   },
   "catalystCount": 1,
   "output": {
-    "id": "ae2cs:purified_ender_quartz",
+    "harvestBlock": "ae2cs:ender_quartz_crystal_cluster",
     "count": 16
   },
   "energyPerCycle": 100000,
