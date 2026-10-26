@@ -4,7 +4,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
 
 import appeng.client.gui.AEBaseScreen;
-import appeng.client.gui.widgets.ToggleButton;
 
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
@@ -44,13 +43,8 @@ public final class FrequencyTerminalButton {
         // AEBaseScreen.init() will populate the toolbar into renderables after
         // this hook runs.
         var toolbar = ((AEBaseScreenAccessor) screen).ae2lt$getVerticalToolbar();
-        var buttons = new ToolbarButtons(
-                FrequencyBindingClient.createCardToolbarButton(),
-                FrequencyBindingClient.createCardAutoConnectToolbarButton(false),
-                FrequencyBindingClient.createCardAutoConnectToolbarButton(true));
+        var buttons = new ToolbarButtons(FrequencyBindingClient.createCardToolbarButton());
         toolbar.add(buttons.configureButton());
-        toolbar.add(buttons.autoConnectButton());
-        toolbar.add(buttons.autoConnectEnergyButton());
         buttons.update(screen);
         return buttons;
     }
@@ -79,22 +73,10 @@ public final class FrequencyTerminalButton {
         return ItemStack.EMPTY;
     }
 
-    public record ToolbarButtons(TextureToggleButton configureButton, ToggleButton autoConnectButton, ToggleButton autoConnectEnergyButton) {
+    public record ToolbarButtons(TextureToggleButton configureButton) {
         public void update(AEBaseScreen<?> screen) {
             var card = findInstalledFrequencyCard(screen);
-            boolean hasCard = !card.isEmpty();
-            configureButton.setVisibility(hasCard);
-            autoConnectButton.setVisibility(hasCard);
-            autoConnectEnergyButton.setVisibility(hasCard);
-            if (hasCard) {
-                var data = OverloadedFrequencyCardItem.getData(card);
-                autoConnectButton.setState(data.autoConnect());
-                autoConnectEnergyButton.setState(data.autoConnectEnergy());
-                autoConnectButton.setMessage(net.minecraft.network.chat.Component.translatable(
-                        "ae2lt.gui.button.auto_connect_" + (data.autoConnect() ? "on" : "off")));
-                autoConnectEnergyButton.setMessage(net.minecraft.network.chat.Component.translatable(
-                        "ae2lt.gui.button.auto_connect_energy_" + (data.autoConnectEnergy() ? "on" : "off")));
-            }
+            configureButton.setVisibility(!card.isEmpty());
         }
     }
 }

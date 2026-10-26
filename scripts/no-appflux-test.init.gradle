@@ -1,0 +1,40 @@
+// Isolated absence regression: keep AppFlux on the compile classpath, remove it at runtime.
+allprojects {
+    afterEvaluate {
+        boolean withAppFlux = project.findProperty('appFluxPresent') == 'true'
+        def localThunderbolt = project.findProperty('noAppFluxThunderboltJar')
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+                project.dependencies.add(name, project.files(localThunderbolt))
+            }
+        }
+        sourceSets.jdb.java.setIncludes([
+                withAppFlux ? 'com/moakiee/ae2lt/logic/energy/AppFluxAutoConnectGameTests.java'
+                        : 'com/moakiee/ae2lt/logic/energy/NoAppFluxGameTests.java',
+                'com/moakiee/ae2lt/logic/energy/NoAppFluxClientProbe.java',
+                'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'de.mari_023']
+                    || dep.name in ['glodium-957920', 'extendedae-892005']
+                    || withAppFlux && dep.name == 'applied-flux-965012')
+        }
+        if (!withAppFlux) {
+            configurations.matching { it.name in ['runtimeClasspath', 'jdbRuntimeClasspath'] }.configureEach {
+                exclude group: 'curse.maven', module: 'applied-flux-965012'
+            }
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir(withAppFlux ? 'appflux-present-gametest' : 'no-appflux-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+        }
+        neoForge.runs.create('noAppFluxClient') {
+            client()
+            gameDirectory = project.layout.buildDirectory.dir(withAppFlux ? 'appflux-present-client' : 'no-appflux-client').get().asFile
+            programArguments.addAll '--username', 'WirelessEnergyQA', '--quickPlaySingleplayer', 'WirelessEnergyQA'
+            systemProperty 'ae2lt.noAppFluxClientProbe', 'true'
+            systemProperty 'ae2lt.appFluxPresentTest', String.valueOf(withAppFlux)
+            jvmArguments.add '-Xmx1536m'
+        }
+    }
+}

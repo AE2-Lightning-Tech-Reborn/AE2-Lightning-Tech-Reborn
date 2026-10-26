@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.item;
 
 import com.moakiee.ae2lt.grid.FrequencyDisplayName;
+import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 import com.moakiee.ae2lt.network.FrequencyCardUsePacket;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,9 +126,12 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
                                 : "tooltip.ae2lt.frequency_card.auto_off")
                 .withStyle(data.autoConnect() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
 
-        tooltip.add(Component.translatable(data.autoConnectEnergy()
-                        ? "tooltip.ae2lt.frequency_card.auto_energy_on" : "tooltip.ae2lt.frequency_card.auto_energy_off")
-                .withStyle(data.autoConnectEnergy() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
+        boolean energyAvailable = isAutoConnectEnergyAvailable();
+        tooltip.add(Component.translatable(!energyAvailable
+                        ? "ae2lt.frequency_card.auto_energy_requires_appflux"
+                        : data.autoConnectEnergy() ? "tooltip.ae2lt.frequency_card.auto_energy_on"
+                        : "tooltip.ae2lt.frequency_card.auto_energy_off")
+                .withStyle(energyAvailable && data.autoConnectEnergy() ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
 
         if (data.isBound()) {
             tooltip.add(Component.translatable("tooltip.ae2lt.frequency_card.bound_hint")
@@ -185,7 +189,12 @@ public class OverloadedFrequencyCardItem extends UpgradeCardItem {
     }
 
     public static Optional<ItemStack> findAutoConnectEnergyCard(Player player) {
+        if (!isAutoConnectEnergyAvailable()) return Optional.empty();
         return selectCard(player, true, true, true).selected();
+    }
+
+    public static boolean isAutoConnectEnergyAvailable() {
+        return AppFluxBridge.canUseEnergyHandler();
     }
 
     private static String tooltipFrequencyName(int frequencyId) {

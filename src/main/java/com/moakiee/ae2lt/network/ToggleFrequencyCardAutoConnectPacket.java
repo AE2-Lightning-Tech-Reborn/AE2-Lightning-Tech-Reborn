@@ -69,6 +69,11 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
     }
 
     private void handleOnServer(ServerPlayer player) {
+        if (energy && !OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable()) {
+            player.displayClientMessage(Component.translatable("ae2lt.frequency_card.auto_energy_requires_appflux")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
         if (terminalCard) {
             handleTerminalCard(player);
             return;

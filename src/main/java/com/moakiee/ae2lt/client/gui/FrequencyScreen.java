@@ -23,6 +23,7 @@ import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
 import com.moakiee.ae2lt.grid.FrequencyAccessLevel;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
+import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import com.moakiee.ae2lt.menu.FrequencyPage;
 import com.moakiee.ae2lt.network.ChangeMemberPacket;
@@ -473,9 +474,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         @Override
         public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             if (!this.visible) return;
-            int srcX = isHoveredOrFocused() ? 22 : 0;
+            int srcX = this.active && isHoveredOrFocused() ? 22 : 0;
             int srcY = this.selected ? 40 : 28;
             SWITCH_BLITTER.copy().src(srcX, srcY, 22, 12).dest(getX(), getY()).blit(g);
+            if (!this.active) g.fill(getX(), getY(), getX() + this.width, getY() + this.height, 0x66000000);
         }
 
         @Override
@@ -490,12 +492,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     private void updateAutoButton(ToggleButton button, boolean energy, boolean enabled) {
+        boolean available = !energy || OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable();
+        button.active = available;
+        enabled &= available;
         button.setState(enabled);
-        var label = Component.translatable("ae2lt.gui.button.auto_connect_"
-                + (energy ? "energy_" : "") + (enabled ? "on" : "off"));
+        var label = Component.translatable(!available ? "ae2lt.gui.button.auto_connect_energy_unavailable"
+                : "ae2lt.gui.button.auto_connect_" + (energy ? "energy_" : "") + (enabled ? "on" : "off"));
         button.setMessage(label);
         button.setTooltip(Tooltip.create(label.copy().append("\n").append(Component.translatable(
-                energy ? "ae2lt.gui.home.auto_energy_hint" : "ae2lt.gui.home.auto_channel_hint"))));
+                !available ? "ae2lt.frequency_card.auto_energy_requires_appflux"
+                        : energy ? "ae2lt.gui.home.auto_energy_hint" : "ae2lt.gui.home.auto_channel_hint"))));
     }
 
     /** Receivers and remote device submenus retain their read-only connection view. */
@@ -1112,7 +1118,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_channel_" + (chAuto ? "on" : "off")),
                     20, 150, 68, chAuto ? COL_GREEN : AE2_TEXT_LABEL);
             g.fill(125, 152, 129, 156, feAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
-            drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_energy_" + (feAuto ? "on" : "off")),
+            drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_energy_"
+                            + (!OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable() ? "unavailable" : feAuto ? "on" : "off")),
                     132, 150, 68, feAuto ? COL_GREEN : AE2_TEXT_LABEL);
             return;
         }

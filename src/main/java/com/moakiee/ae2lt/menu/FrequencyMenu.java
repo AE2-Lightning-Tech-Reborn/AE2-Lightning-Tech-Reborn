@@ -694,7 +694,7 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
     }
 
     public boolean isAutoConnectEnergy() {
-        return autoConnectEnergySlot.get() != 0;
+        return OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable() && autoConnectEnergySlot.get() != 0;
     }
 
     public void clientToggleAutoConnectEnergy() {
@@ -784,6 +784,10 @@ public class FrequencyMenu extends AEBaseMenu implements ISubMenu {
 
     private void toggleAutoConnect(boolean energy) {
         if (!cardMode || !isServerSide() || cardPlayer == null || !stillValid(cardPlayer)) {
+            return;
+        }
+        if (energy && !OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable()) {
+            cardPlayer.displayClientMessage(Component.translatable("ae2lt.frequency_card.auto_energy_requires_appflux"), true);
             return;
         }
         var cardData = readCardData();

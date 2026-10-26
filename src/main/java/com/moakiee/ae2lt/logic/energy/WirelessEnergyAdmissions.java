@@ -87,6 +87,7 @@ public final class WirelessEnergyAdmissions extends SavedData {
     }
     private void queue(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos,
                        @Nullable Direction preferred, boolean requireNearby) {
+        if (!AppFluxBridge.canUseEnergyHandler()) return;
         var location = new WirelessEnergyEndpoints.Location(level.dimension(), pos);
         if (historyIncomplete || attempts.containsKey(location) || attempts.size() >= WORLD_LIMIT
                 || WirelessEnergyEndpoints.get(level.getServer()).hasEndpoint(location)

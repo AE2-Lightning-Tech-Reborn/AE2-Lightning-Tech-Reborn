@@ -1,4 +1,10 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "appflux"
+    }
+  ],
   "type": "ae2lt:lightning_assembly",
   "priority": 0,
   "inputs": [

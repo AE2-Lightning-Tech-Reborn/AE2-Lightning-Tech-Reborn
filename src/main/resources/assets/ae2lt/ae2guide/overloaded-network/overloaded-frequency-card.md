@@ -61,7 +61,7 @@ The card overview has two independent switches:
 
 Turning a switch off only stops future automatic connections. Existing links remain connected. Select and unbind existing wireless power targets from **Network management → FE power** on the controller or card.
 
-Open the held card or its configuration inside a terminal to change either setting. Supported wireless terminals also provide two separate toolbar switches. **Shift-scroll** and the **Toggle Frequency Card Auto Connect** keybind change frequency auto connect only, leaving FE unchanged.
+Open the held card or use the single frequency-card button in a supported wireless terminal's toolbar. Both switches are on the card's home page. Without Applied Flux, the FE switch is disabled and saved FE preferences do not trigger automatic connections; the preference is kept for when Applied Flux is installed again. **Shift-scroll** and the **Toggle Frequency Card Auto Connect** keybind change frequency auto connect only, leaving FE unchanged.
 
 Bulk placement with **Construction Sticks** also applies the selected card’s ME and FE settings independently. When a machine is placed, a small energy probe is sent to observe its internal storage after running. If no FE remains stored or storage cannot be reliably verified, automatic binding is skipped to ensure safety; manual linking remains available.
 
