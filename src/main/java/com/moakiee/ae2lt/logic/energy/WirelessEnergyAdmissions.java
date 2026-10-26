@@ -228,12 +228,19 @@ public final class WirelessEnergyAdmissions extends SavedData {
             if (a.face == null) return;
             setDirty();
         }
-        // Until the one real receive call, initialization and temporary source
-        // shortages may be retried. Afterwards capability identity is immutable.
+        // Until observation starts, initialization and temporary source shortages
+        // may be retried. Afterwards capability identity is immutable.
         a.capability = WirelessEnergyEndpoints.energyInput(level, a.location.pos(), a.face);
         if (a.capability == null || !a.capability.canReceive()) return;
         var access = new NativeFeTarget(a.capability);
-        if (access.storedEnergyFe().isEmpty()) { feedback(a, "auto_unverifiable"); finish(a, State.UNVERIFIED); return; }
+        var stored = access.storedEnergyFe();
+        if (stored.isEmpty()) { feedback(a, "auto_unverifiable"); finish(a, State.UNVERIFIED); return; }
+        // A full battery cannot accept a probe. Observe its existing stock across
+        // another real machine tick using the same identity and permission checks.
+        if (stored.getAsLong() == a.capability.getMaxEnergyStored() && current(server, a)) {
+            a.state = State.WAITING; a.inputSerial = a.serial; setDirty();
+            return;
+        }
         var receipt = new TargetAccess() {
             @Override public long simulateReceive(long amount) { return access.simulateReceive(amount); }
             @Override public long receive(long amount) {

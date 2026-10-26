@@ -63,7 +63,7 @@ Turning a switch off only stops future automatic connections. Existing links rem
 
 Open the held card or use the single frequency-card button in a supported wireless terminal's toolbar. Both switches are on the card's home page. Without Applied Flux, the FE switch is disabled and saved FE preferences do not trigger automatic connections; the preference is kept for when Applied Flux is installed again. **Shift-scroll** and the **Toggle Frequency Card Auto Connect** keybind change frequency auto connect only, leaving FE unchanged.
 
-Bulk placement with **Construction Sticks** also applies the selected card’s ME and FE settings independently. When a machine is placed, a small energy probe is sent to observe its internal storage after running. If no FE remains stored or storage cannot be reliably verified, automatic binding is skipped to ensure safety; manual linking remains available.
+Bulk placement with **Construction Sticks** also applies the selected card’s ME and FE settings independently. When a machine is placed, a small energy probe is sent to observe its internal storage after an update. A fully charged machine can connect using its existing stored energy without a probe; idle machines can connect too. Once connected, machines keep their connection while fully charged or idle and automatically receive power when needed again. If no FE remains stored or storage cannot be reliably verified during initial admission, automatic binding is skipped; manual linking remains available.
 
 Each automatic connection type considers only cards with its corresponding switch enabled. If several cards qualify, hold the intended card or turn off the corresponding setting on the others.
 

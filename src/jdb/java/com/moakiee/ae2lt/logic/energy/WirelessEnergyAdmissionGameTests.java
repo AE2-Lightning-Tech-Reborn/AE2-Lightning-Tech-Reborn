@@ -67,7 +67,22 @@ public final class WirelessEnergyAdmissionGameTests {
     public static void mekanismFactoryPlacementReceivesAutomaticProbe(GameTestHelper h) {
         placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:basic_enriching_factory")));
     }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void mekanismDigitalMinerPlacementReceivesAutomaticProbe(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:digital_miner")));
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 1600)
+    public static void fullMekanismDigitalMinerStaysConnectedThroughLongIdle(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:digital_miner")), true);
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 1600)
+    public static void fullMekanismSmelterStaysConnectedThroughLongIdle(GameTestHelper h) {
+        placementProbe(h, BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:energized_smelter")), true);
+    }
     private static void placementProbe(GameTestHelper h, net.minecraft.world.level.block.Block block) {
+        placementProbe(h, block, false);
+    }
+    private static void placementProbe(GameTestHelper h, net.minecraft.world.level.block.Block block, boolean full) {
         h.assertTrue(block != net.minecraft.world.level.block.Blocks.AIR, "placement test mod is missing");
         var f = fixture(h);
         h.runAfterDelay(35, () -> {
@@ -91,7 +106,12 @@ public final class WirelessEnergyAdmissionGameTests {
                             .bindFrequency(f.frequency, level.dimension().location().toString(), f.controller.getBlockPos().asLong(), player.getUUID())
                             .withAutoConnect(false).withAutoConnectEnergy(true));
             player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, card);
-            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(block));
+            var stack = new ItemStack(block);
+            if (full) {
+                var energy = mekanism.common.attachments.containers.ContainerType.ENERGY.createHandler(stack).getContainers().getFirst();
+                energy.setEnergy(energy.getMaxEnergy());
+            }
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack);
             var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(f.pos.below()).add(0, 0.5, 0),
                     Direction.UP, f.pos.below(), false);
             net.minecraft.world.InteractionResult result;
@@ -103,11 +123,44 @@ public final class WirelessEnergyAdmissionGameTests {
                 level.capturedBlockSnapshots.clear();
             }
             h.assertTrue(result.consumesAction(), "real item placement failed");
+            if (full) {
+                var endpoints = WirelessEnergyEndpoints.get(level.getServer());
+                var face = endpoints.findInputFace(level, f.pos, null);
+                h.assertTrue(face != null, "full placed machine has no FE input");
+                var input = WirelessEnergyEndpoints.energyInput(level, f.pos, face);
+                h.assertTrue(input.getEnergyStored() > 0 && input.getEnergyStored() == input.getMaxEnergyStored()
+                                && input.receiveEnergy(100, true) == 0,
+                        "placement did not preserve a full battery that rejects the probe");
+            }
             h.runAfterDelay(10, () -> {
                 var view = WirelessEnergyAdmissions.get(level.getServer()).inspect(level, f.pos, player.getUUID());
-                h.assertTrue(f.bound(h) && view != null && view.offered() == 100 && view.accepted() == 100,
-                        "real placement hook did not inject its probe independently of ME auto-connect");
-                h.succeed();
+                int expectedProbe = full ? 0 : 100;
+                h.assertTrue(f.bound(h) && view != null && view.state() == WirelessEnergyAdmissions.State.ACCEPTED
+                                && view.offered() == expectedProbe && view.accepted() == expectedProbe,
+                        "real placement did not admit the machine: " + view);
+                if (full) {
+                    var endpoints = WirelessEnergyEndpoints.get(level.getServer());
+                    var endpointId = endpoints.inspectTarget(level, f.pos, player.getUUID()).id();
+                    var machine = (mekanism.common.tile.base.TileEntityMekanism) level.getBlockEntity(f.pos);
+                    var energy = machine.getEnergyContainers(null).getFirst();
+                    // Cross both the admission timeout and telemetry expiry using
+                    // real server ticks, without operating or draining the machine.
+                    var sequence = h.startSequence();
+                    for (int delay = 20; delay <= 1300; delay += 20) {
+                        sequence.thenIdle(20).thenExecute(() -> {
+                            var endpoint = endpoints.inspectTarget(level, f.pos, player.getUUID());
+                            h.assertTrue(endpoint != null && endpoint.id().equals(endpointId) && endpoint.totalDelivered() == 0
+                                            && energy.getEnergy() == energy.getMaxEnergy(),
+                                    "idle full machine changed: endpoint=" + endpoint + ", expectedId=" + endpointId
+                                            + ", energy=" + energy.getEnergy() + "/" + energy.getMaxEnergy());
+                        });
+                    }
+                    sequence.thenExecute(() -> energy.setEnergy(0)).thenIdle(25).thenExecute(() -> {
+                        var endpoint = endpoints.inspectTarget(level, f.pos, player.getUUID());
+                        h.assertTrue(energy.getEnergy() > 0 && endpoint != null && endpoint.id().equals(endpointId),
+                                "long-idle machine did not resume wireless supply through its original connection");
+                    }).thenSucceed();
+                } else h.succeed();
             });
         });
     }
@@ -204,6 +257,60 @@ public final class WirelessEnergyAdmissionGameTests {
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
     public static void unchangedPositiveStockIsAdmitted(GameTestHelper h) {
         stockAfterProbe(h, 1000, 1000);
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void fullBatteryConnectsWithoutProbeAfterAnotherMachineTick(GameTestHelper h) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            f.machine.energy.prime(f.machine.reportedCapacity);
+            f.queue(h);
+            int initialTicks = f.machine.ticks;
+            f.machine.duringTick = () -> {
+                if (f.machine.ticks <= initialTicks + 2) h.assertTrue(!f.bound(h), "full battery bypassed observation");
+            };
+            h.runAfterDelay(10, () -> {
+                h.assertTrue(f.bound(h) && f.view(h).state() == WirelessEnergyAdmissions.State.ACCEPTED,
+                        "full battery remained pending: " + f.view(h));
+                h.assertTrue(f.view(h).offered() == 0 && f.view(h).accepted() == 0 && f.machine.receiveCalls == 0,
+                        "full battery performed unnecessary energy IO");
+                h.succeed();
+            });
+        });
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void fullBatteryDepletedDuringObservationIsRejected(GameTestHelper h) {
+        interruptedFullBatteryObservation(h, false);
+    }
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
+    public static void fullBatteryCapabilityReplacementInterruptsObservation(GameTestHelper h) {
+        interruptedFullBatteryObservation(h, true);
+    }
+    private static void interruptedFullBatteryObservation(GameTestHelper h, boolean replaceCapability) {
+        var f = fixture(h);
+        h.runAfterDelay(35, () -> {
+            f.machine.energy.prime(f.machine.reportedCapacity);
+            f.queue(h);
+            f.machine.duringTick = () -> {
+                if (f.view(h).state() != WirelessEnergyAdmissions.State.WAITING) return;
+                if (replaceCapability) {
+                    f.machine.energy = f.machine.makeStorage();
+                    f.machine.energy.prime(f.machine.reportedCapacity);
+                    h.getLevel().invalidateCapabilities(f.pos);
+                } else f.machine.energy.prime(0);
+                f.machine.duringTick = () -> {};
+            };
+            h.runAfterDelay(10, () -> {
+                var expected = replaceCapability ? WirelessEnergyAdmissions.State.UNVERIFIED : WirelessEnergyAdmissions.State.NO_STORED_ENERGY;
+                h.assertTrue(!f.bound(h) && f.view(h).state() == expected && f.view(h).offered() == 0
+                                && f.machine.receiveCalls == 0,
+                        "interrupted full battery observation was admitted or probed: " + f.view(h));
+                f.queue(h);
+                h.runAfterDelay(5, () -> {
+                    h.assertTrue(!f.bound(h) && f.machine.receiveCalls == 0, "interrupted full battery observation was retried");
+                    h.succeed();
+                });
+            });
+        });
     }
     @GameTest(template = "wireless_io_empty", timeoutTicks = 160)
     public static void decreasedPositiveStockIsAdmitted(GameTestHelper h) {
