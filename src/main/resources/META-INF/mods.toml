@@ -138,3 +138,10 @@ mandatory = false
 versionRange = "${veil_version_range}"
 ordering = "AFTER"
 side = "CLIENT"
+
+[[dependencies."${mod_id}"]]
+modId = "neoecoae"
+mandatory = false
+versionRange = "[20.5.1,21)"
+ordering = "AFTER"
+side = "BOTH"

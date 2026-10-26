@@ -99,22 +99,33 @@ public final class Ae2LtCraftingIntegration {
 
     /** Public per-job persistence; external engines do not inspect implementation fields. */
     public static CompoundTag saveOverloadState(Object owner, UUID craftingId, HolderLookup.Provider registries) {
+        java.util.Objects.requireNonNull(registries, "registries");
+        return saveOverloadState(owner, craftingId);
+    }
+
+    /** Forge 1.20.1 NBT uses the built-in registries; NeoECO's public attachment API calls this overload. */
+    public static CompoundTag saveOverloadState(Object owner, UUID craftingId) {
         for (var pending : OverloadCpuStateManager.INSTANCE.snapshotPending(owner)) {
             if (!craftingId.equals(pending.key().craftingId()))
                 throw new IllegalStateException("Overload state belongs to another crafting job");
         }
         var result = new CompoundTag();
         result.putUUID("craftingId", craftingId);
-        var state = OverloadCpuStateManager.INSTANCE.writeToTag(owner, registries);
+        var state = OverloadCpuStateManager.INSTANCE.writeToTag(owner);
         if (state != null) result.put("state", state);
         return result;
     }
 
     public static void loadOverloadState(Object owner, UUID craftingId, CompoundTag data,
             HolderLookup.Provider registries) {
+        java.util.Objects.requireNonNull(registries, "registries");
+        loadOverloadState(owner, craftingId, data);
+    }
+
+    public static void loadOverloadState(Object owner, UUID craftingId, CompoundTag data) {
         if (data.hasUUID("craftingId") && !craftingId.equals(data.getUUID("craftingId")))
             throw new IllegalArgumentException("Overload checkpoint belongs to another crafting job");
-        OverloadCpuStateManager.INSTANCE.readFromTag(owner, craftingId, data.getCompound("state"), registries);
+        OverloadCpuStateManager.INSTANCE.readFromTag(owner, craftingId, data.getCompound("state"));
     }
 
     public static void clearOverloadState(Object owner) {

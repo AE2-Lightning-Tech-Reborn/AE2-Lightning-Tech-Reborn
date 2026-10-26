@@ -1,0 +1,16 @@
+// NeoECO is supplied by the isolated test environment; ordinary builds do not download or embed it.
+allprojects { afterEvaluate {
+    def present = providers.gradleProperty('neoecoTestPresent').getOrElse('true').toBoolean()
+    sourceSets.jdb.java.setIncludes(present
+            ? ['**/NeoEcoIntegrationGameTests.java', '**/NeoEcoMigrationGameTests.java', '**/NeoEcoCatalyzerGameTests.java']
+            : ['**/NeoEcoCatalyzerGameTests.java'])
+    sourceSets.jdb.java.setExcludes([])
+    sourceSets.jdb.resources.setSrcDirs(['src/jdb/resources', 'src/overloadTest/resources'])
+    minecraft.runs.gameTestServer {
+        property 'forge.enabledGameTestNamespaces', 'ae2lt_neoeco,ae2lt_machine_recharge'
+        property 'ae2lt.neoecoTestPresent', providers.gradleProperty('neoecoTestPresent').getOrElse('true')
+        property 'forge.logging.console.level', 'info'
+        jvmArgs '-Xms512m', '-Xmx3g'
+        mods { ae2lt { source sourceSets.jdb } }
+    }
+} }

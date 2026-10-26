@@ -53,6 +53,12 @@ public final class MatrixPatternMigration {
         catch (RuntimeException e) { reject(PatternMigrationSnapshot.Reason.ADAPTER_FAILED); return; }
         if (!next.budget.acquire(grid, next)) { reject(PatternMigrationSnapshot.Reason.LEASE_BUSY); return; }
         try {
+            next.ecoLease = EcoMigrationLease.acquire(grid, next);
+            if (next.ecoLease == null) {
+                next.release();
+                reject(PatternMigrationSnapshot.Reason.LEASE_BUSY);
+                return;
+            }
             task = next;
             report = next.snapshot();
         } catch (RuntimeException e) {
@@ -89,7 +95,7 @@ public final class MatrixPatternMigration {
             stop(PatternMigrationSnapshot.Reason.TARGET_CHANGED);
             return;
         }
-        if (!current.budget.isOwner(current.grid, current)) {
+        if (!current.budget.isOwner(current.grid, current) || !current.ecoLease.owned()) {
             stop(PatternMigrationSnapshot.Reason.LEASE_BUSY);
             return;
         }
@@ -212,6 +218,7 @@ public final class MatrixPatternMigration {
         final UUID playerId;
         final List<MatrixPatternStorageBlockEntity> storages;
         final PatternMigrationBudget budget;
+        EcoMigrationLease ecoLease;
         final PatternMigrationSources adapters = new PatternMigrationSources();
         final List<PatternMigrationSource> sources = new ArrayList<>();
         final Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -504,6 +511,7 @@ public final class MatrixPatternMigration {
 
         void release() {
             budget.release(grid, this);
+            if (ecoLease != null) ecoLease.close();
         }
 
         PatternMigrationSnapshot snapshot() {

@@ -52,6 +52,16 @@ adapted portions of ExtendedAE Plus [ClientPlus]. Automatic encoding is intentio
 The adapted implementation has been scoped to the Tianshu pattern terminal and retains
 AE2 Lightning Tech's server-authoritative upload acknowledgement and target validation.
 
+## Neo ECO AE Extension integration
+
+The optional Forge 1.20.1 integration independently calls NeoECO's public allocated-batch
+and migration-coordinator APIs. No NeoECO source, assets or dependency JAR is redistributed.
+
+- Repository: https://github.com/DancingSnow0517/NeoECOAEExtension/tree/1.20.1
+- API revision reviewed: `d1e306c7fbf557fc883f8c804b0d10c22b057f89` (`20.5.1`)
+- Authors: DancingSnow, ZhuRuoLing, Yang120231, y271727uy
+- Upstream license: GNU General Public License version 3
+
 ## MixinExtras
 
 AE2 Lightning Tech bundles MixinExtras for its mixin injection extensions.

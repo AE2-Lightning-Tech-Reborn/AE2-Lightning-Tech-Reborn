@@ -105,6 +105,39 @@ class Ae2LtExternalOverloadAccountingTest {
         assertEquals(0, pending(key));
     }
 
+    @Test void forgeCheckpointRestoresOutstandingOutputsWithoutCrossingJobOwnership() throws Exception {
+        var registryField = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
+        registryField.setAccessible(true);
+        Object previous = registryField.get(null);
+        var name = new ResourceLocation("ae2lt", "external_checkpoint_test_key_types");
+        var create = net.minecraftforge.registries.RegistryManager.class.getDeclaredMethod(
+                "createRegistry", ResourceLocation.class, net.minecraftforge.registries.RegistryBuilder.class);
+        create.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var registry = (net.minecraftforge.registries.IForgeRegistry<AEKeyType>) create.invoke(
+                new net.minecraftforge.registries.RegistryManager("external-checkpoint-test"), name,
+                new net.minecraftforge.registries.RegistryBuilder<AEKeyType>()
+                        .setName(name).disableSaving().disableSync());
+        registry.register(AEKeyType.items().getId(), AEKeyType.items());
+        registryField.set(null, (java.util.function.Supplier<net.minecraftforge.registries.IForgeRegistry<AEKeyType>>) () -> registry);
+        try {
+            var expected = namedKey("checkpoint");
+            register(expected, 7, jobId);
+            var checkpoint = Ae2LtCraftingIntegration.saveOverloadState(owner, jobId);
+            Ae2LtCraftingIntegration.clearOverloadState(owner);
+            assertEquals(0, pending(expected));
+            Ae2LtCraftingIntegration.loadOverloadState(owner, jobId, checkpoint);
+            assertEquals(7, pending(expected));
+            assertThrows(IllegalArgumentException.class, () -> Ae2LtCraftingIntegration.loadOverloadState(
+                    owner, UUID.randomUUID(), checkpoint));
+            assertEquals(7, pending(expected));
+            assertThrows(IllegalStateException.class, () -> Ae2LtCraftingIntegration.saveOverloadState(
+                    owner, UUID.randomUUID()));
+        } finally {
+            registryField.set(null, previous);
+        }
+    }
+
     private void register(AEItemKey output, long copies, UUID id) {
         var registration = Ae2LtCraftingIntegration.prepareOverload(owner, pattern(output), id, null, waiting);
         assertTrue(registration.canDispatch());

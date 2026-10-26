@@ -24,10 +24,12 @@ final class PatternMigrationSources {
     static final String EAEP_MATRIX = "com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity";
     static final String EAEP_CORE = "com.extendedae_plus.content.matrix.PatternCorePlusBlockEntity";
     static final String EAE_ASSEMBLER = "com.glodblock.github.extendedae.common.tileentities.TileExMolecularAssembler";
+    static final String ECO_BUS = "cn.dancingsnow.neoecoae.blocks.entity.crafting.ECOCraftingPatternBusBlockEntity";
     private final Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
     static int priority(Class<?> type) {
-        if (MigrationReflection.isType(type, EAE_PATTERN) || MigrationReflection.isType(type, EAEP_MATRIX)) return 0;
+        if (MigrationReflection.isType(type, EAE_PATTERN) || MigrationReflection.isType(type, EAEP_MATRIX)
+                || MigrationReflection.isType(type, ECO_BUS)) return 0;
         if (MatrixPatternStorageBlockEntity.class.isAssignableFrom(type)
                 || MolecularAssemblerBlockEntity.class.isAssignableFrom(type)) return 1;
         if (PatternProviderLogicHost.class.isAssignableFrom(type)) return 2;
@@ -38,6 +40,7 @@ final class PatternMigrationSources {
     /** Activity-only pass: no pattern catalog, inventory view or decoding is needed to certify idle. */
     static BooleanSupplier executionProbe(Object owner) {
         Class<?> type = owner.getClass();
+        if (MigrationReflection.isType(type, ECO_BUS)) return () -> ecoBusy(owner);
         if (MigrationReflection.isType(type, EAEP_MATRIX)) {
             Object cluster = MigrationReflection.call(owner, "eap$getSuperMatrixCluster");
             return cluster == null ? null : () -> MigrationReflection.call(owner, "eap$getSuperMatrixCluster") == cluster
@@ -97,6 +100,19 @@ final class PatternMigrationSources {
             return result;
         }
         if (!seen.add(owner)) return List.of();
+
+        if (MigrationReflection.isType(type, ECO_BUS)) {
+            var inventory = (InternalInventory) MigrationReflection.call(owner, "getPatternSlotInventory");
+            Object cluster = MigrationReflection.call(owner, "getCluster");
+            if (cluster == null) return List.of();
+            ecoBusy(owner); // Validate before accepting custody of any physical slot.
+            return List.of(source(owner, node, inventory,
+                    () -> MigrationReflection.call(owner, "getCluster") == cluster
+                            ? (InternalInventory) MigrationReflection.call(owner, "getPatternSlotInventory") : null,
+                    () -> ecoBusy(owner), 0, 0, inventory.size(), false,
+                    () -> MigrationReflection.call(owner, "beginPatternBatch"),
+                    () -> MigrationReflection.call(owner, "endPatternBatch")));
+        }
 
         if (owner instanceof MatrixPatternStorageBlockEntity storage) {
             var inventory = storage.getTerminalPatternInventory();
@@ -174,6 +190,22 @@ final class PatternMigrationSources {
                     return now == originalCluster ? (InternalInventory) MigrationReflection.call(owner, "getPatternInventory") : null;
                 },
                 busy, 0, 0, Math.min(limit, inventory.size()), hint, () -> {}, () -> {}));
+    }
+
+    static boolean ecoBusy(Object bus) {
+        Object cluster = MigrationReflection.call(bus, "getCluster");
+        if (cluster == null) return true;
+        Object network = MigrationReflection.call(cluster, "getNetworkCluster");
+        Iterable<?> members = network == null ? List.of(cluster)
+                : (Iterable<?>) MigrationReflection.call(network, "getMembers");
+        for (Object member : members) {
+            for (Object worker : (Iterable<?>) MigrationReflection.call(member, "getWorkers")) {
+                for (Object thread : (Iterable<?>) MigrationReflection.field(worker, "craftingThreads")) {
+                    if (!Boolean.TRUE.equals(MigrationReflection.call(thread, "isFree"))) return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean eaeBusy(Object cluster) {
