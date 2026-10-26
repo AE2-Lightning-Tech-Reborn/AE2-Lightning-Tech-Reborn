@@ -41,12 +41,47 @@ public final class FrequencyCardAutoConnectHandler {
         }
 
         var level = levelAccessor.getLevel();
-        if (registry.isPotentialLinkTarget(level, event.getPos())) {
-            registry.queueClusterTopologyChange(level, event.getPos());
+        ServerPlayer player = event.getEntity() instanceof ServerPlayer p && !p.isFakePlayer() ? p : null;
+        var meCard = player == null ? ItemStack.EMPTY
+                : OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
+        var feCard = player == null ? ItemStack.EMPTY
+                : OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).orElse(ItemStack.EMPTY);
+        int meFrequency = meCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(meCard).frequencyId();
+        int feFrequency = feCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(feCard).frequencyId();
+        if (event instanceof BlockEvent.EntityMultiPlaceEvent multi) {
+            // The inherited event position is only the first snapshot. Wands may report the entire placement here.
+            var seen = new java.util.HashSet<BlockPos>();
+            for (var snapshot : multi.getReplacedBlockSnapshots()) {
+                if (seen.size() >= 8192) break;
+                if (snapshot.getLevel() == level && seen.add(snapshot.getPos())) {
+                    queuePlacedBlock(registry, player, level, snapshot.getPos(), meFrequency, feFrequency);
+                }
+            }
+        } else {
+            queuePlacedBlock(registry, player, level, event.getPos(), meFrequency, feFrequency);
         }
-        if (event.getEntity() instanceof ServerPlayer player) {
-            registry.queueAutoConnect(player, player.level().dimension(), event.getPos(), null, 2);
-            com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.placed(player, level, event.getPos());
+    }
+
+    /** Compatibility entry for tools whose placement event precedes the actual world edit. */
+    public static void onSuccessfulPlacement(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        var registry = WirelessLinkRegistry.get();
+        if (registry == null || player.isFakePlayer()) return;
+        var meCard = OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
+        var feCard = OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).orElse(ItemStack.EMPTY);
+        queuePlacedBlock(registry, player, level, pos,
+                meCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(meCard).frequencyId(),
+                feCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(feCard).frequencyId());
+    }
+
+    private static void queuePlacedBlock(WirelessLinkRegistry registry, ServerPlayer player, ServerLevel level,
+                                        BlockPos pos, int meFrequency, int feFrequency) {
+        if (!level.isLoaded(pos)) return;
+        if (registry.isPotentialLinkTarget(level, pos)) {
+            registry.queueClusterTopologyChange(level, pos);
+            if (player != null && meFrequency > 0) registry.queuePlacedBlockAutoConnect(player, level, pos, meFrequency);
+        }
+        if (player != null && feFrequency > 0) {
+            com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.placed(player, level, pos, feFrequency);
         }
     }
 

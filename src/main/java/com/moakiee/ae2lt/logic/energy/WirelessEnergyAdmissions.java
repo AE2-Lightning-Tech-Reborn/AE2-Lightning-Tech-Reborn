@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 /** One automatic admission per physical placement. Terminal records are never retried or evicted. */
 public final class WirelessEnergyAdmissions extends SavedData {
     static final int PROBE_LIMIT = 100;
-    private static final int WORLD_LIMIT = 8192, VISITS_PER_TICK = 32, TIMEOUT_TICKS = 100;
+    private static final int WORLD_LIMIT = 8192, VISITS_PER_TICK = 128, TIMEOUT_TICKS = 100;
     public enum State { QUEUED, WAITING, ACCEPTED, NO_STORED_ENERGY, NO_INPUT, UNVERIFIED, NO_PERMISSION, MANUAL, FAILED }
     public record View(UUID generation, State state, long offered, long accepted, int frequency) {}
     private static final class Attempt {
@@ -43,11 +43,13 @@ public final class WirelessEnergyAdmissions extends SavedData {
         Attempt(UUID generation, UUID actor, WirelessEnergyEndpoints.Location location, int frequency, Direction face) {
             this.generation = generation; this.actor = actor; this.location = location; this.frequency = frequency; this.face = face;
         }
+        boolean requireNearby = true;
         boolean pending() { return state == State.QUEUED || state == State.WAITING; }
         View view() { return new View(generation, state, offered, accepted, frequency); }
     }
     private final Map<WirelessEnergyEndpoints.Location, Attempt> attempts = new LinkedHashMap<>();
     private final ArrayDeque<Attempt> pending = new ArrayDeque<>();
+    private final ArrayDeque<Attempt> waiting = new ArrayDeque<>();
     private final Map<BlockEntity, Attempt> observing = new java.util.IdentityHashMap<>();
     // If bounded history cannot record a manual generation, no later placement can
     // safely be distinguished from that generation. Persistently fail closed.
@@ -73,35 +75,44 @@ public final class WirelessEnergyAdmissions extends SavedData {
         var card = OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player);
         if (card.isEmpty()) return;
         var data = OverloadedFrequencyCardItem.getData(card.get());
-        if (data.isBound() && data.canBeUsedBy(player.getUUID())) get(level.getServer()).queue(player, data.frequencyId(), level, pos, null);
+        if (data.isBound() && data.canBeUsedBy(player.getUUID())) placed(player, level, pos, data.frequencyId());
+    }
+    /** Only call for positions reported by an accepted player placement event. */
+    public static void placed(ServerPlayer player, ServerLevel level, BlockPos pos, int frequency) {
+        if (!player.isFakePlayer()) get(level.getServer()).queue(player, frequency, level, pos, null, false);
     }
     /** Package-visible so the server GameTests can use a fake player without enabling fake-player placement hooks. */
     void queue(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, @Nullable Direction preferred) {
+        queue(player, frequency, level, pos, preferred, true);
+    }
+    private void queue(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos,
+                       @Nullable Direction preferred, boolean requireNearby) {
         var location = new WirelessEnergyEndpoints.Location(level.dimension(), pos);
         if (historyIncomplete || attempts.containsKey(location) || attempts.size() >= WORLD_LIMIT
                 || WirelessEnergyEndpoints.get(level.getServer()).hasEndpoint(location)
-                || !allowed(player, frequency, level, pos)) return;
+                || !allowed(player, frequency, level, pos, requireNearby)) return;
         var be = WirelessEnergyEndpoints.loadedBlockEntity(level, pos);
         if (be == null) return;
         Direction selected = null;
         IEnergyStorage target = null;
-        // At most six capability reads, no energy IO while choosing the single input face.
-        for (var face : preferred == null ? Direction.values() : new Direction[] { preferred }) {
-            var cap = WirelessEnergyEndpoints.energyInput(level, pos, face);
-            if (cap != null && cap.canReceive()) { selected = face; target = cap; break; }
+        // Placement callbacks defer capability resolution until initialization has completed.
+        if (requireNearby) {
+            for (var face : preferred == null ? Direction.values() : new Direction[] { preferred }) {
+                var cap = WirelessEnergyEndpoints.energyInput(level, pos, face);
+                if (cap != null && cap.canReceive()) { selected = face; target = cap; break; }
+            }
         }
         // Placement events precede onPlace/neighbour notifications. The same BE
         // may expose or replace its FE capability only after initialization.
         var a = new Attempt(UUID.randomUUID(), player.getUUID(), location, frequency, selected);
-        a.expected = be; a.capability = target; a.player = player;
-        a.expires = level.getServer().getTickCount() + TIMEOUT_TICKS;
+        a.expected = be; a.capability = target; a.player = player; a.requireNearby = requireNearby;
         attempts.put(location, a); pending.addLast(a); observing.put(be, a); setDirty();
     }
-    private static boolean allowed(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos) {
+    private static boolean allowed(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, boolean requireNearby) {
         var manager = WirelessFrequencyManager.get(level.getServer());
         var f = manager == null ? null : manager.getFrequency(frequency);
         return player != null && !player.isRemoved() && player.serverLevel() == level && !player.isSpectator()
-                && player.mayBuild() && level.isLoaded(pos) && player.canInteractWithBlock(pos, 1)
+                && player.mayBuild() && level.isLoaded(pos) && (!requireNearby || player.canInteractWithBlock(pos, 1))
                 && level.mayInteract(player, pos) && f != null && f.getPlayerAccess(player.getUUID()).canUse();
     }
     public @Nullable View inspect(ServerLevel level, BlockPos pos, UUID viewer) {
@@ -156,23 +167,26 @@ public final class WirelessEnergyAdmissions extends SavedData {
         if (ticking) return;
         ticking = true;
         try {
-            int visits = Math.min(VISITS_PER_TICK, pending.size());
-            for (int i = 0; i < visits; i++) {
-                var a = pending.removeFirst();
+            // Finish probes promptly even when thousands of new placements are queued behind them.
+            int waitingVisits = Math.min(VISITS_PER_TICK, waiting.size());
+            int visits = waitingVisits + Math.min(VISITS_PER_TICK - waitingVisits, pending.size());
+            long start = System.nanoTime();
+            for (int i = 0; i < visits && (i == 0 || System.nanoTime() - start < 2_000_000L); i++) {
+                var a = i < waitingVisits ? waiting.removeFirst() : pending.removeFirst();
                 if (attempts.get(a.location) != a || !a.pending()) continue;
                 try { visit(server, a); }
                 catch (RuntimeException e) {
                     finish(a, State.FAILED);
                     com.mojang.logging.LogUtils.getLogger().warn("Automatic FE admission {} failed; no replay allowed", a.generation, e);
                 }
-                if (a.pending()) pending.addLast(a);
+                if (a.pending()) (a.state == State.WAITING ? waiting : pending).addLast(a);
             }
         } finally { ticking = false; }
     }
     private boolean currentPlacement(MinecraftServer server, Attempt a) {
         var level = server.getLevel(a.location.dimension());
         return attempts.get(a.location) == a && a.pending() && level != null
-                && allowed(a.player, a.frequency, level, a.location.pos())
+                && allowed(a.player, a.frequency, level, a.location.pos(), a.requireNearby)
                 && !a.expected.isRemoved() && WirelessEnergyEndpoints.loadedBlockEntity(level, a.location.pos()) == a.expected
                 && !WirelessEnergyEndpoints.get(server).hasEndpoint(a.location);
     }
@@ -184,6 +198,12 @@ public final class WirelessEnergyAdmissions extends SavedData {
     private void visit(MinecraftServer server, Attempt a) {
         var level = server.getLevel(a.location.dimension());
         if (!currentPlacement(server, a)) { finish(a, State.UNVERIFIED); return; }
+        if (a.expires == 0) {
+            if (!com.moakiee.ae2lt.logic.world.PlayerWorldActions.mayInteract(a.player, level, a.location.pos())) {
+                finish(a, State.NO_PERMISSION); return;
+            }
+            a.expires = server.getTickCount() + TIMEOUT_TICKS;
+        }
         if (server.getTickCount() >= a.expires) {
             finish(a, State.UNVERIFIED);
             return;
@@ -195,7 +215,8 @@ public final class WirelessEnergyAdmissions extends SavedData {
             if (stored.isEmpty()) { finish(a, State.UNVERIFIED); return; }
             if (stored.getAsLong() == 0) { feedback(a, "auto_no_stored_energy"); finish(a, State.NO_STORED_ENERGY); return; }
             // Called in ServerTick.Post, after the observed dimension's BE tick phase.
-            String result = WirelessEnergyEndpoints.get(server).setBound(a.player, a.frequency, level, a.location.pos(), a.face, true, "automatic");
+            String result = WirelessEnergyEndpoints.get(server).setBound(a.player, a.frequency, level, a.location.pos(), a.face,
+                    true, "automatic", a.requireNearby, a.expected);
             finish(a, result.equals("connected") ? State.ACCEPTED : State.UNVERIFIED);
             return;
         }

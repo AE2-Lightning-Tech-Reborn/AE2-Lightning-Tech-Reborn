@@ -12,6 +12,7 @@
     "WirelessEnergyTargetRemovalMixin",
     "WirelessEnergyMachineTickMixin",
     "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
     "RunningNetworkFeFallbackMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",

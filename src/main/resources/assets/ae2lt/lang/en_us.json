@@ -1,4 +1,7 @@
 {
+  "ae2lt.wireless_energy.bulk_cancelled": "Group operation stopped; completed changes were kept",
+  "ae2lt.wireless_energy.bulk_busy": "A group operation is already running; try again later",
+  "ae2lt.wireless_energy.bulk_queued": "Group power operation queued; processing in batches",
   "ae2lt.gui.frequency.bound": "Bound",
   "ae2lt.wireless_energy.bulk_reason_count": "%s ×%s",
   "ae2lt.wireless_energy.bulk_reason.target_changed": "Target changed",
@@ -1577,8 +1580,8 @@
   "ae2lt.gui.input_transfer.result": "Moved %s · Exported %s · Input slots left %s",
   "ae2lt.gui.input_transfer.cooldown": "Please try again shortly.",
   "jei.ae2lt.rainbow_pigmee.coloring": "Craft with one colorable item to cycle white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red and black. Uncolored items start at white. Replace the four Dye Bases in a dye recipe with four identical stackable items to color all four, keeping Rainbow Pigmee in the center. The Pigmee is reusable. Use single-item cycling for non-stackable items such as armor and shulker boxes. Mixed leather colors continue from the nearest Minecraft dye color. Items with all 16 color variants are supported; uncolored variants are identified from dye recipes with equal input/output quantities. Names, enchantments and stored contents are preserved.",
-  "tooltip.ae2lt.frequency_card.bulk_power": "Ctrl-right-click: toggle power for face-adjacent blocks of the same type",
-  "tooltip.ae2lt.frequency_card.auto_controls": "Shift-scroll or keybind toggles frequency; configure FE auto connect separately in the card menu",
+  "tooltip.ae2lt.frequency_card.bulk_power": "Hold Ctrl + right-click: toggle power for face-adjacent blocks of the same type; release for single targets",
+  "tooltip.ae2lt.frequency_card.auto_controls": "Shift + scroll or keybind toggles automatic ME connections; configure automatic FE connections separately in card settings; supports building wand placement",
   "ae2lt.wireless_energy.bulk_connected": "Group power: connected %s, already connected %s, skipped %s",
   "ae2lt.wireless_energy.bulk_disconnected": "Group power: disconnected %s, already disconnected %s, skipped %s",
   "ae2lt.wireless_energy.bulk_unloaded": "Only connected devices in loaded chunks were processed",

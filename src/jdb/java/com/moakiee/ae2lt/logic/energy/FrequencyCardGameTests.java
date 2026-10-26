@@ -164,7 +164,7 @@ public final class FrequencyCardGameTests {
         } finally { b.release(); }
         h.succeed();
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void bulkTraversesOnlyFaceAdjacentSameBlocksBeyondReachWithPerDeviceInputs(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel();
         for (int i = 0; i < 10; i++) {
@@ -180,22 +180,24 @@ public final class FrequencyCardGameTests {
             aim(f.player, seed);
             h.assertTrue(!f.player.canInteractWithBlock(last, 1), "last device must be beyond reach");
             var beforeGrid = f.controller.getMainNode().getGrid();
-            use(f, seed, true);
-            var views = endpoints.inspect(f.frequency, f.player.getUUID());
-            h.assertTrue(views.size() == 10, "bulk missed remote member or included diagonal/different block: " + views.size());
-            for (int i = 0; i < 10; i++) {
-                final var pos = h.absolutePos(TARGET.east(i)); var direction = i % 2 == 0 ? Direction.SOUTH : Direction.UP;
-                h.assertTrue(views.stream().anyMatch(v -> v.location().pos().equals(pos) && v.face() == direction), "per-machine input face");
-                WirelessEnergyTestMachine m = h.getBlockEntity(TARGET.east(i));
-                h.assertTrue(m.simulations == 0 && m.receiveCalls == 0, "manual cluster performed an FE probe");
-            }
-            h.assertTrue(f.controller.getMainNode().getGrid() == beforeGrid, "bulk modified ME topology");
-            use(f, seed, true);
-            h.assertTrue(endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "bulk disconnect left a member");
-            h.succeed();
+            useBulk(h, f, seed, () -> {
+                var views = endpoints.inspect(f.frequency, f.player.getUUID());
+                h.assertTrue(views.size() == 10, "bulk missed remote member or included diagonal/different block: " + views.size());
+                for (int i = 0; i < 10; i++) {
+                    final var pos = h.absolutePos(TARGET.east(i)); var direction = i % 2 == 0 ? Direction.SOUTH : Direction.UP;
+                    h.assertTrue(views.stream().anyMatch(v -> v.location().pos().equals(pos) && v.face() == direction), "per-machine input face");
+                    var admission = WirelessEnergyAdmissions.get(level.getServer()).inspect(level, pos, f.player.getUUID());
+                    h.assertTrue(admission != null && admission.offered() == 0, "manual cluster performed an automatic FE probe");
+                }
+                h.assertTrue(f.controller.getMainNode().getGrid() == beforeGrid, "bulk modified ME topology");
+                useBulk(h, f, seed, () -> {
+                    h.assertTrue(endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "bulk disconnect left a member");
+                    h.succeed();
+                });
+            });
         });
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void bulkPreservesForeignFrequencyAndRejectsUnreachableSeed(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel();
         h.setBlock(TARGET, WirelessEnergyTestMachine.BLOCK); h.setBlock(TARGET.east(), WirelessEnergyTestMachine.BLOCK);
@@ -208,18 +210,24 @@ public final class FrequencyCardGameTests {
                 h.assertTrue(endpoints.setBound(f.player, other.getId(), level, seed.east(), Direction.NORTH, true).equals("connected"), "foreign binding fixture");
                 f.controller.setFrequency(f.frequency);
                 h.runAfterDelay(5, () -> {
-                    aim(f.player, seed); var result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
-                    h.assertTrue(result.changed() == 1 && result.skipped() == 1 && endpoints.isBound(level, seed.east(), other.getId()), "foreign binding overwritten");
-                    h.assertTrue(result.skippedReasons().equals(Map.of("other_frequency", 1)), "foreign binding reason lost");
-                    use(f, seed, true);
-                    assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.YELLOW,
-                            "ae2lt.wireless_energy.bulk_reason.other_frequency");
-                    use(f, seed, true);
-                    assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.YELLOW,
-                            "ae2lt.wireless_energy.bulk_reason.other_frequency");
-                    aim(f.player, seed.north(20)); result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
-                    h.assertTrue(result.error().equals("no_permission") && endpoints.isBound(level, seed, f.frequency), "remote seed accepted");
-                    h.succeed();
+                    aim(f.player, seed);
+                    bulk(h, f, f.player, seed, result -> {
+                        h.assertTrue(result.changed() == 1 && result.skippedReasons().equals(Map.of("other_frequency", 1))
+                                && endpoints.isBound(level, seed.east(), other.getId()), "foreign binding overwritten");
+                        useBulk(h, f, seed, () -> {
+                            assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.YELLOW,
+                                    "ae2lt.wireless_energy.bulk_reason.other_frequency");
+                            useBulk(h, f, seed, () -> {
+                                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.YELLOW,
+                                        "ae2lt.wireless_energy.bulk_reason.other_frequency");
+                                aim(f.player, seed.north(20));
+                                bulk(h, f, f.player, seed, denied -> {
+                                    h.assertTrue(denied.error().equals("no_permission") && endpoints.isBound(level, seed, f.frequency), "remote seed accepted");
+                                    h.succeed();
+                                });
+                            });
+                        });
+                    });
                 });
             });
         });
@@ -296,15 +304,17 @@ public final class FrequencyCardGameTests {
             use(f, target, false);
             h.assertTrue(endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid,
                     "third ordinary click must restore FE without changing the physical ME grid");
-            use(f, target, true);
-            h.assertTrue(!endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid, "Ctrl changed ME connection");
-            use(f, target, true);
-            h.assertTrue(endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid, "Ctrl failed to restore FE alone");
-            grid.getStorageService().getInventory().insert(AppFluxBridge.FE_KEY, 50000, Actionable.MODULATE, IActionSource.empty());
+            useBulk(h, f, target, () -> {
+                h.assertTrue(!endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid, "Ctrl changed ME connection");
+                useBulk(h, f, target, () -> {
+                    h.assertTrue(endpoints.isBound(h.getLevel(), target, f.frequency) && node.getGrid() == grid, "Ctrl failed to restore FE alone");
+                    grid.getStorageService().getInventory().insert(AppFluxBridge.FE_KEY, 50000, Actionable.MODULATE, IActionSource.empty());
+                });
+            });
         });
         h.runAfterDelay(65, () -> { h.assertTrue(ME_ENERGY.get(be).getEnergyStored() > 0, "same-grid ME machine received no FE"); h.succeed(); });
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void bulkReportsAllFailureReasonsAndNeverShowsFalseSuccess(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel(); var seed = h.absolutePos(TARGET);
         for (int i = 0; i < 3; i++) h.setBlock(TARGET.east(i), WirelessEnergyTestMachine.BLOCK);
@@ -313,40 +323,45 @@ public final class FrequencyCardGameTests {
             f.controller.setFrequency(-1);
             h.runAfterDelay(5, () -> {
                 var endpoints = WirelessEnergyEndpoints.get(level.getServer());
-                var result = endpoints.toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
-                h.assertTrue(result.changed() == 0 && result.skipped() == 3
-                        && result.skippedReasons().equals(Map.of("no_controller", 2, "unsupported", 1)),
-                        "all-failed reasons/counts lost: " + result);
-                use(f, seed, true);
-                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.RED,
-                        "ae2lt.wireless_energy.bulk_reason.no_controller", "ae2lt.wireless_energy.bulk_reason.unsupported");
-                h.assertTrue(endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "failed group created endpoints");
-                h.succeed();
+                bulk(h, f, f.player, seed, result -> {
+                    h.assertTrue(result.changed() == 0 && result.skipped() == 3
+                            && result.skippedReasons().equals(Map.of("no_controller", 2, "unsupported", 1)),
+                            "all-failed reasons/counts lost: " + result);
+                    useBulk(h, f, seed, () -> {
+                        assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.RED,
+                                "ae2lt.wireless_energy.bulk_reason.no_controller", "ae2lt.wireless_energy.bulk_reason.unsupported");
+                        h.assertTrue(endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "failed group created endpoints");
+                        h.succeed();
+                    });
+                });
             });
         });
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void bulkBindsAllDevicesAndRetainsPerDeviceOwnership(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel(); var seed = h.absolutePos(TARGET);
         h.setBlock(TARGET, WirelessEnergyTestMachine.BLOCK); h.setBlock(TARGET.east(), WirelessEnergyTestMachine.BLOCK);
         h.runAfterDelay(35, () -> {
-            use(f, seed, true);
-            assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.GREEN);
-            var endpoints = WirelessEnergyEndpoints.get(level.getServer());
-            h.assertTrue(endpoints.isBound(level, seed, f.frequency) && endpoints.isBound(level, seed.east(), f.frequency),
-                    "bulk binding skipped a supported endpoint");
-            var member = new MenuPlayer(level); aim(member, seed);
-            WirelessFrequencyManager.get().getFrequency(f.frequency).enrollAsUser(member);
-            var result = endpoints.toggleConnected(member, f.frequency, level, seed, Direction.NORTH);
-            h.assertTrue(result.changed() == 0 && result.unchanged() == 0
-                    && result.skippedReasons().equals(Map.of("no_permission", 2)) && endpoints.isBound(level, seed, f.frequency),
-                    "member disconnected owner's endpoint or lost permission reason: " + result);
-            use(f, seed, true);
-            assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.GREEN);
-            h.succeed();
+            useBulk(h, f, seed, () -> {
+                assertFeedback(h, f.player, "bulk_connected", net.minecraft.ChatFormatting.GREEN);
+                var endpoints = WirelessEnergyEndpoints.get(level.getServer());
+                h.assertTrue(endpoints.isBound(level, seed, f.frequency) && endpoints.isBound(level, seed.east(), f.frequency),
+                        "bulk binding skipped a supported endpoint");
+                var member = new MenuPlayer(level); aim(member, seed);
+                WirelessFrequencyManager.get().getFrequency(f.frequency).enrollAsUser(member);
+                bulk(h, f, member, seed, result -> {
+                    h.assertTrue(result.changed() == 0 && result.unchanged() == 0
+                            && result.skippedReasons().equals(Map.of("no_permission", 2)) && endpoints.isBound(level, seed, f.frequency),
+                            "member disconnected owner's endpoint or lost permission reason: " + result);
+                    useBulk(h, f, seed, () -> {
+                        assertFeedback(h, f.player, "bulk_disconnected", net.minecraft.ChatFormatting.GREEN);
+                        h.succeed();
+                    });
+                });
+            });
         });
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void interfacesAndProvidersCannotReceiveManuallyOrAutomatically(GameTestHelper h) {
         var f = fixture(h);
         var blocks = List.of(AEBlocks.INTERFACE.block(), AEBlocks.PATTERN_PROVIDER.block(),
@@ -380,7 +395,7 @@ public final class FrequencyCardGameTests {
         }
         h.succeed();
     }
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 100)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 240)
     public static void bulkStopsAtUnloadedChunksWithoutCreatingTickets(GameTestHelper h) {
         var f = fixture(h); var level = h.getLevel();
         var remote = h.absolutePos(TARGET).offset(100000, 0, 100000);
@@ -390,10 +405,11 @@ public final class FrequencyCardGameTests {
             level.setBlock(seed, WirelessEnergyTestMachine.BLOCK.defaultBlockState(), 18);
             aim(f.player, seed); var next = seed.east();
             h.assertTrue(level.getChunkSource().getChunkNow(next.getX() >> 4, next.getZ() >> 4) == null, "unloaded fixture unexpectedly loaded");
-            var result = WirelessEnergyEndpoints.get(level.getServer()).toggleConnected(f.player, f.frequency, level, seed, Direction.NORTH);
-            h.assertTrue(result.changed() == 1 && result.unloaded(), "loaded boundary member not processed: " + result);
-            h.assertTrue(level.getChunkSource().getChunkNow(next.getX() >> 4, next.getZ() >> 4) == null, "bulk loaded neighbouring chunk");
-            level.setBlock(seed, Blocks.AIR.defaultBlockState(), 18); h.succeed();
+            bulk(h, f, f.player, seed, result -> {
+                h.assertTrue(result.changed() == 1 && result.unloaded(), "loaded boundary member not processed: " + result);
+                h.assertTrue(level.getChunkSource().getChunkNow(next.getX() >> 4, next.getZ() >> 4) == null, "bulk loaded neighbouring chunk");
+                level.setBlock(seed, Blocks.AIR.defaultBlockState(), 18); h.succeed();
+            });
         });
     }
     private static Fixture fixture(GameTestHelper h) {
@@ -414,6 +430,25 @@ public final class FrequencyCardGameTests {
     private static void use(Fixture f, BlockPos pos, boolean bulk) {
         FrequencyCardUsePacket.handle(new FrequencyCardUsePacket(InteractionHand.MAIN_HAND, pos, Direction.NORTH,
                 pos.getX() + .5, pos.getY() + .5, pos.getZ(), false, bulk), context(f.player));
+    }
+    private static void bulk(GameTestHelper h, Fixture f, net.minecraft.server.level.ServerPlayer player,
+                             BlockPos pos, Consumer<WirelessEnergyEndpoints.BulkResult> completed) {
+        var result = new java.util.concurrent.atomic.AtomicReference<WirelessEnergyEndpoints.BulkResult>();
+        var queued = WirelessEnergyEndpoints.get(h.getLevel().getServer()).toggleConnected(
+                player, f.frequency, h.getLevel(), pos, Direction.NORTH, result::set);
+        if (!queued.error().equals("bulk_queued")) { completed.accept(queued); return; }
+        awaitBulk(h, () -> result.get() != null, () -> completed.accept(result.get()));
+    }
+    private static void useBulk(GameTestHelper h, Fixture f, BlockPos pos, Runnable completed) {
+        use(f, pos, true);
+        h.assertTrue(findTranslation(f.player.feedback, "ae2lt.wireless_energy.bulk_queued") != null, "bulk was not queued");
+        awaitBulk(h, () -> findTranslation(f.player.feedback, "ae2lt.wireless_energy.bulk_queued") == null, completed);
+    }
+    private static void awaitBulk(GameTestHelper h, java.util.function.BooleanSupplier done, Runnable completed) {
+        h.runAfterDelay(1, () -> {
+            if (done.getAsBoolean()) completed.run();
+            else awaitBulk(h, done, completed);
+        });
     }
     private record Fixture(AdvancedWirelessOverloadedControllerBlockEntity controller, MenuPlayer player, int frequency) {}
     private static void assertFeedback(GameTestHelper h, MenuPlayer player, String outcome,

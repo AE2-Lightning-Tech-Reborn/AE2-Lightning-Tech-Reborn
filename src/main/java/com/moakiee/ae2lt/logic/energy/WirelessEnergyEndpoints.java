@@ -40,7 +40,6 @@ import org.jetbrains.annotations.Nullable;
 /** FE endpoints never create grid nodes/connections. All access is on the server thread. */
 public final class WirelessEnergyEndpoints extends SavedData {
     private static final int WORLD_LIMIT = 8192;
-    private static final int CLUSTER_LIMIT = 8192;
     private static final int BATCH_SIZE = 32;
     public record BulkResult(boolean bind, int changed, int unchanged, Map<String, Integer> skippedReasons,
                              boolean unloaded, String error) {
@@ -181,6 +180,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
+    private final WirelessEnergyBulkConnections bulkConnections = new WirelessEnergyBulkConnections();
     private final WirelessEnergySchedule<Endpoint> schedule = new WirelessEnergySchedule<>(e -> e.nextVisitTick);
     private long lastTick = Long.MIN_VALUE;
     private boolean scheduleDirty = true;
@@ -314,57 +314,14 @@ public final class WirelessEnergyEndpoints extends SavedData {
         return findInputFace(level, pos, face) != null;
     }
 
-    /** The server derives the entire six-neighbour cluster from a reachable seed; clients never submit remote positions. */
-    public BulkResult toggleConnected(ServerPlayer player, int frequency, ServerLevel level, BlockPos seed, Direction preferred) {
-        boolean bind = !isBound(level, seed, frequency);
-        if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
-                || !player.canInteractWithBlock(seed, 1) || !level.mayInteract(player, seed)
-                || level.getChunkSource().getChunkNow(seed.getX() >> 4, seed.getZ() >> 4) == null)
-            return new BulkResult(bind, 0, 0, Map.of(), false, "no_permission");
-        var manager = WirelessFrequencyManager.get(level.getServer());
-        var f = manager == null ? null : manager.getFrequency(frequency);
-        if (f == null || !f.getPlayerAccess(player).canUse())
-            return new BulkResult(bind, 0, 0, Map.of(), false, "no_permission");
-        if (bind && findInputFace(level, seed, preferred) == null)
-            return new BulkResult(true, 0, 0, Map.of(), false, "unsupported");
-        var block = level.getBlockState(seed).getBlock();
-        var queue = new java.util.ArrayDeque<BlockPos>();
-        var seen = new java.util.HashSet<BlockPos>();
-        var cluster = new ArrayList<BlockPos>();
-        queue.add(seed.immutable()); seen.add(seed.immutable());
-        boolean unloaded = false;
-        while (!queue.isEmpty()) {
-            var pos = queue.removeFirst();
-            var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
-            if (chunk == null) { unloaded = true; continue; }
-            if (!chunk.getBlockState(pos).is(block)) continue;
-            if (cluster.size() == CLUSTER_LIMIT)
-                return new BulkResult(bind, 0, 0, Map.of(), unloaded, "cluster_limit");
-            cluster.add(pos);
-            for (var direction : Direction.values()) {
-                var next = pos.relative(direction);
-                if (!level.isOutsideBuildHeight(next) && seen.add(next)) queue.addLast(next);
-            }
-        }
-        int changed = 0, unchanged = 0;
-        var skippedReasons = new LinkedHashMap<String, Integer>();
-        for (var pos : cluster) {
-            // Capability callbacks from an earlier target may have changed this position.
-            var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
-            if (chunk == null || !chunk.getBlockState(pos).is(block)) {
-                skippedReasons.merge("target_changed", 1, Integer::sum); continue;
-            }
-            boolean before = isBound(level, pos, frequency);
-            var face = bind ? findInputFace(level, pos, preferred) : preferred;
-            if (face == null) { skippedReasons.merge("unsupported", 1, Integer::sum); continue; }
-            String result = setBound(player, frequency, level, pos, face, bind, "manual", false);
-            if (!result.equals(bind ? "connected" : "disconnected")) {
-                skippedReasons.merge(result, 1, Integer::sum); continue;
-            }
-            if (before == bind) unchanged++;
-            else changed++;
-        }
-        return new BulkResult(bind, changed, unchanged, skippedReasons, unloaded, "");
+    /** Queues a server-derived group operation; completion runs on a later server tick. */
+    public BulkResult toggleConnected(ServerPlayer player, int frequency, ServerLevel level, BlockPos seed,
+                                      Direction preferred, java.util.function.Consumer<BulkResult> completion) {
+        return bulkConnections.queue(this, player, frequency, level, seed, preferred, completion);
+    }
+
+    public void tickBulkConnections(MinecraftServer server) {
+        bulkConnections.tick(this, server);
     }
 
     /** Idempotent desired state supports a later link-management UI without replaying card toggles. */
@@ -374,16 +331,18 @@ public final class WirelessEnergyEndpoints extends SavedData {
     }
     String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
                     boolean bind, String source) {
-        return setBound(player, frequency, level, pos, face, bind, source, true);
+        return setBound(player, frequency, level, pos, face, bind, source, true, null);
     }
-    private String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
-                            boolean bind, String source, boolean requireNearby) {
+    String setBound(ServerPlayer player, int frequency, ServerLevel level, BlockPos pos, Direction face,
+                    boolean bind, String source, boolean requireNearby, @Nullable BlockEntity expected) {
         if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
                 || !level.isLoaded(pos) || (requireNearby && !player.canInteractWithBlock(pos, 1))
-                || !level.mayInteract(player, pos)) return "no_permission";
+                || !level.mayInteract(player, pos)
+                || !com.moakiee.ae2lt.logic.world.PlayerWorldActions.mayInteract(player, level, pos)) return "no_permission";
         var manager = WirelessFrequencyManager.get(level.getServer());
         var f = manager == null ? null : manager.getFrequency(frequency);
         if (f == null || !f.getPlayerAccess(player.getUUID()).canUse()) return "no_permission";
+        if (expected != null && (expected.isRemoved() || loadedBlockEntity(level, pos) != expected)) return "target_changed";
         var location = new Location(level.dimension(), pos);
         var old = endpoints.get(location);
         if (old != null && old.frequency != frequency) return "other_frequency";
@@ -393,6 +352,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         BlockEntity be = loadedBlockEntity(level, pos);
         var capability = energyInput(level, pos, face);
         if (be == null || capability == null || !capability.canReceive()) return "unsupported";
+        if (be.isRemoved() || loadedBlockEntity(level, pos) != be) return "target_changed";
         if (old != null) return "connected";
         if (!AppFluxBridge.canUseEnergyHandler() || AppFluxBridge.FE_KEY == null) return "unavailable";
         var controller = controller(level.getServer(), frequency);

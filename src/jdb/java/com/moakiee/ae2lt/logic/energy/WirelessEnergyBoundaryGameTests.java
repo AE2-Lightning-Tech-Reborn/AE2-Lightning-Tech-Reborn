@@ -256,8 +256,28 @@ public final class WirelessEnergyBoundaryGameTests {
                 providers[i] = mounts -> mounts.mount(storage, 100);
                 f.controller.getMainNode().getGrid().getStorageService().addGlobalStorageProvider(providers[i]);
             }
+            a.tick(h);
+            awaitRefundFaults(h, fixtures, storages, providers, 0);
+        }));
+    }
+
+    private static void awaitRefundFaults(GameTestHelper h, Fixture[] fixtures, BatchStorage[] storages,
+                                          IStorageProvider[] providers, int ticks) {
+        h.runAfterDelay(1, () -> {
+            boolean retry = false;
             try {
-                a.tick(h);
+                boolean complete = true;
+                for (var f : fixtures) {
+                    complete &= f.endpoints.inspect(f.frequency, f.player.getUUID()).getFirst().state()
+                            == WirelessEnergyEndpoints.State.FAULTED;
+                    h.assertTrue(f.machine.receiveCalls <= 1, "quarantined delivery was replayed");
+                }
+                if (!complete && ticks < 20) {
+                    awaitRefundFaults(h, fixtures, storages, providers, ticks + 1);
+                    retry = true;
+                    return;
+                }
+                h.assertTrue(complete, "refund failure was not faulted within the work budget");
                 for (int i = 0; i < fixtures.length; i++) {
                     var f = fixtures[i];
                     var escrow = f.controller.getMainNode().getGrid().getService(WirelessEnergyGridService.class)
@@ -265,15 +285,13 @@ public final class WirelessEnergyBoundaryGameTests {
                     h.assertTrue(storages[i].refunds == 1 && f.machine.receiveCalls == 1 && escrow.uncertain() == 100
                             && escrow.available() == 0 && storages[i].fe == WirelessEnergySettings.reserveFe.get(),
                             "refund failure escaped or unresolved FE was replayed");
-                    h.assertTrue(f.endpoints.inspect(f.frequency, f.player.getUUID()).getFirst().state()
-                            == WirelessEnergyEndpoints.State.FAULTED, "refund failure was not faulted");
                 }
                 h.succeed();
             } finally {
-                for (int i = 0; i < fixtures.length; i++) fixtures[i].controller.getMainNode().getGrid()
+                if (!retry) for (int i = 0; i < fixtures.length; i++) fixtures[i].controller.getMainNode().getGrid()
                         .getStorageService().removeGlobalStorageProvider(providers[i]);
             }
-        }));
+        });
     }
 
     @GameTest(template = "wireless_io_empty", batch = "energy_boundary_repeatedbindingandunbindingneverprobesorreusesoldgeneration", timeoutTicks = 120)
@@ -615,7 +633,7 @@ public final class WirelessEnergyBoundaryGameTests {
         });
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "large_cluster_limits", timeoutTicks = 200)
+    @GameTest(template = "wireless_io_empty", batch = "large_cluster_limits", timeoutTicks = 1600)
     public static void oversizedClusterIsAtomicAndExactLimitHonorsEndpointCapacity(GameTestHelper h) {
         ready(h, f -> {
             var level = h.getLevel(); var origin = new BlockPos(8192, 64, 8192);
@@ -631,27 +649,36 @@ public final class WirelessEnergyBoundaryGameTests {
             // Exhausting this history must not disable automatic admission in later test batches.
             storage.set("ae2lt_wireless_energy_admissions", new WirelessEnergyAdmissions());
             WirelessEnergyAdmissions.stop();
-            try {
-                long start = System.nanoTime();
-                var rejected = f.endpoints.toggleConnected(f.player, f.frequency, level, origin, Direction.NORTH);
-                long rejectedNs = System.nanoTime() - start;
+            bulk(h, f, origin, rejected -> {
                 h.assertTrue(rejected.error().equals("cluster_limit") && rejected.changed() == 0
                         && f.endpoints.inspect(f.frequency, f.player.getUUID()).isEmpty(), "oversized cluster partially applied: " + rejected);
                 level.removeBlock(origin.above(8), false);
-                start = System.nanoTime();
-                var accepted = f.endpoints.toggleConnected(f.player, f.frequency, level, origin, Direction.NORTH);
-                long acceptedNs = System.nanoTime() - start;
-                h.assertTrue(accepted.error().isEmpty() && accepted.changed() > 256
-                        && accepted.skippedReasons().getOrDefault("limit", 0) == 8192 - accepted.changed(), "exact cluster limit or endpoint cap incorrect: " + accepted);
-                h.assertTrue(f.endpoints.inspect(f.frequency, f.player.getUUID()).size() == accepted.changed(), "batch count differs from registry");
-                System.out.println("FE_CLUSTER_LIMIT_PASS rejected8193Ms=" + rejectedNs / 1e6 + " accepted8192Ms=" + acceptedNs / 1e6);
-            } finally {
-                for (int i = 0; i < 8193; i++) level.removeBlock(origin.offset(i % 32, i / 1024, i / 32 % 32), false);
-                for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++) level.setChunkForced((origin.getX() >> 4) + x, (origin.getZ() >> 4) + z, false);
-                storage.set("ae2lt_wireless_energy_admissions", admissions);
-                WirelessEnergyAdmissions.stop();
-            }
-            h.succeed();
+                bulk(h, f, origin, accepted -> {
+                    h.assertTrue(accepted.error().isEmpty() && accepted.changed() > 256
+                            && accepted.skippedReasons().getOrDefault("limit", 0) == 8192 - accepted.changed(), "exact cluster limit or endpoint cap incorrect: " + accepted);
+                    h.assertTrue(f.endpoints.inspect(f.frequency, f.player.getUUID()).size() == accepted.changed(), "batch count differs from registry");
+                    for (int i = 0; i < 8193; i++) level.removeBlock(origin.offset(i % 32, i / 1024, i / 32 % 32), false);
+                    for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++) level.setChunkForced((origin.getX() >> 4) + x, (origin.getZ() >> 4) + z, false);
+                    storage.set("ae2lt_wireless_energy_admissions", admissions);
+                    WirelessEnergyAdmissions.stop();
+                    h.succeed();
+                });
+            });
+        });
+    }
+    private static void bulk(GameTestHelper h, Fixture f, BlockPos origin,
+                             java.util.function.Consumer<WirelessEnergyEndpoints.BulkResult> completed) {
+        var result = new java.util.concurrent.atomic.AtomicReference<WirelessEnergyEndpoints.BulkResult>();
+        var queued = f.endpoints.toggleConnected(f.player, f.frequency, h.getLevel(), origin, Direction.NORTH, result::set);
+        h.assertTrue(queued.error().equals("bulk_queued"), "bulk request rejected: " + queued);
+        awaitBulk(h, result, completed);
+    }
+    private static void awaitBulk(GameTestHelper h,
+            java.util.concurrent.atomic.AtomicReference<WirelessEnergyEndpoints.BulkResult> result,
+            java.util.function.Consumer<WirelessEnergyEndpoints.BulkResult> completed) {
+        h.runAfterDelay(1, () -> {
+            if (result.get() == null) awaitBulk(h, result, completed);
+            else completed.accept(result.get());
         });
     }
 }

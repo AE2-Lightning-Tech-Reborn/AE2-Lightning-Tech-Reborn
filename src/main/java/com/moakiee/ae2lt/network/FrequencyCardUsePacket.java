@@ -160,25 +160,9 @@ public record FrequencyCardUsePacket(
         var links = WirelessLinkRegistry.get(level.getServer());
         var energy = com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer());
         if (bulkPower) {
-            var result = energy.toggleConnected(player, data.frequencyId(), level, pos, face);
-            var style = result.skipped() > 0 && result.changed() + result.unchanged() == 0 ? ChatFormatting.RED
-                    : result.skipped() > 0 || result.unloaded() ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
-            Component feedback = result.error().isEmpty()
-                    ? Component.translatable("ae2lt.wireless_energy.bulk_" + (result.bind() ? "connected" : "disconnected"),
-                            result.changed(), result.unchanged(), result.skipped()).withStyle(style)
-                    : Component.translatable("ae2lt.wireless_energy." + result.error()).withStyle(ChatFormatting.RED);
-            if (!result.skippedReasons().isEmpty()) {
-                var reasons = Component.empty();
-                result.skippedReasons().forEach((reason, count) -> {
-                    if (!reasons.getSiblings().isEmpty()) reasons.append(", ");
-                    reasons.append(Component.translatable("ae2lt.wireless_energy.bulk_reason_count",
-                            Component.translatable("ae2lt.wireless_energy.bulk_reason." + reason), count));
-                });
-                feedback = Component.empty().append(feedback).append(" | ").append(reasons.withStyle(style));
-            }
-            if (result.unloaded()) feedback = Component.empty().append(feedback).append(" ")
-                    .append(Component.translatable("ae2lt.wireless_energy.bulk_unloaded").withStyle(ChatFormatting.YELLOW));
-            player.displayClientMessage(feedback, true);
+            var result = energy.toggleConnected(player, data.frequencyId(), level, pos, face,
+                    completed -> displayBulkResult(player, completed));
+            displayBulkResult(player, result);
             return;
         }
         boolean aeTarget = links.isPotentialLinkTarget(level, pos);
@@ -208,6 +192,29 @@ public record FrequencyCardUsePacket(
         Component feFeedback = Component.translatable("ae2lt.wireless_energy." + result)
                 .withStyle(result.equals("connected") || result.equals("disconnected") ? ChatFormatting.GREEN : ChatFormatting.YELLOW);
         player.displayClientMessage(aeTarget ? Component.empty().append(aeFeedback).append(" | FE: ").append(feFeedback) : feFeedback, true);
+    }
+
+    private static void displayBulkResult(ServerPlayer player,
+                                          com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.BulkResult result) {
+        var style = result.skipped() > 0 && result.changed() + result.unchanged() == 0 ? ChatFormatting.RED
+                : result.skipped() > 0 || result.unloaded() ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
+        Component feedback = result.error().isEmpty()
+                ? Component.translatable("ae2lt.wireless_energy.bulk_" + (result.bind() ? "connected" : "disconnected"),
+                        result.changed(), result.unchanged(), result.skipped()).withStyle(style)
+                : Component.translatable("ae2lt.wireless_energy." + result.error()).withStyle(
+                        result.error().equals("bulk_queued") ? ChatFormatting.YELLOW : ChatFormatting.RED);
+        if (!result.skippedReasons().isEmpty()) {
+            var reasons = Component.empty();
+            result.skippedReasons().forEach((reason, count) -> {
+                if (!reasons.getSiblings().isEmpty()) reasons.append(", ");
+                reasons.append(Component.translatable("ae2lt.wireless_energy.bulk_reason_count",
+                        Component.translatable("ae2lt.wireless_energy.bulk_reason." + reason), count));
+            });
+            feedback = Component.empty().append(feedback).append(" | ").append(reasons.withStyle(style));
+        }
+        if (result.unloaded()) feedback = Component.empty().append(feedback).append(" ")
+                .append(Component.translatable("ae2lt.wireless_energy.bulk_unloaded").withStyle(ChatFormatting.YELLOW));
+        player.displayClientMessage(feedback, true);
     }
 
     private static boolean validInteraction(ServerPlayer player, ServerLevel level, BlockPos pos, Direction face,
