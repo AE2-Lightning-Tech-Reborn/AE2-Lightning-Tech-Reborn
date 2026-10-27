@@ -391,24 +391,48 @@ final class LoopSeedLedgerBook {
 
     /** Rekeys only positive credit still waiting in the specified consumer account. */
     void rekeyAvailable(UUID consumer, AEKey expected, AEKey actual, long amount) {
-        if (consumer == null || expected == null || actual == null
-                || expected.equals(actual) || amount <= 0) return;
+        if (consumer == null || expected == null || actual == null || amount <= 0) return;
         long moved = Math.min(amount, Math.max(0L, balance(consumer, expected)));
         if (moved <= 0) return;
         adjust(consumer, expected, -moved);
-        // The concrete return can cancel a loan taken while this planned credit was in flight.
-        // Retire that debt now, otherwise the next producer credit pays the same loan twice.
-        var byPlanned = variantDebts.get(consumer);
-        var byActual = byPlanned == null ? null : byPlanned.get(expected);
-        if (byActual != null) {
-            long debt = byActual.getOrDefault(actual, 0L);
-            long remaining = debt - Math.min(debt, moved);
-            if (remaining > 0) byActual.put(actual, remaining);
-            else byActual.remove(actual);
-            if (byActual.isEmpty()) byPlanned.remove(expected);
-            if (byPlanned.isEmpty()) variantDebts.remove(consumer);
+        // The loan may have used a different accepted variant while this credit was in flight.
+        // Settle that logical debt before reserving the physical return, including exact returns.
+        long remaining = repayVariantDebt(consumer, expected, moved);
+        if (remaining > 0) adjust(consumer, actual, remaining);
+    }
+
+    /** Release a physically present equivalent owned seed when extraction borrowed public stock. */
+    void settleAvailableVariantLoans(ExecuteLoopPattern pattern,
+            appeng.crafting.inv.ICraftingInventory inventory) {
+        var consumer = pattern.seedConsumerId();
+        var debts = variantDebts.get(consumer);
+        var account = ledgers.get(consumer);
+        if (debts == null || account == null) return;
+        var rules = variantRules.getOrDefault(consumer, Map.of());
+        for (var planned : List.copyOf(debts.keySet())) {
+            long bundle = bundleUnits(consumer, planned);
+            if (bundle <= 0) continue;
+            for (var owned : List.copyOf(account.keySet())) {
+                var outstanding = variantDebts.getOrDefault(consumer, Map.of()).get(planned);
+                if (outstanding == null) break;
+                long debt = 0;
+                for (long amount : outstanding.values()) debt = Sat.add(debt, amount);
+                long balance = Math.max(0L, balance(consumer, owned));
+                if (balance <= 0 || !acceptsVariant(consumer, planned, owned)) continue;
+                // A key also required by another logical seed cannot pay this seed's loan.
+                if (rules.entrySet().stream().anyMatch(entry -> !entry.getKey().equals(planned)
+                        && entry.getValue().accepts(owned))) continue;
+                long held = inventory.extract(owned, Long.MAX_VALUE, appeng.api.config.Actionable.SIMULATE);
+                var otherReserved = totalReserved.getOrDefault(owned, BigInteger.ZERO)
+                        .subtract(BigInteger.valueOf(balance)).max(BigInteger.ZERO);
+                long available = BigInteger.valueOf(Math.max(0L, held)).subtract(otherReserved)
+                        .max(BigInteger.ZERO).min(BigInteger.valueOf(balance)).longValueExact();
+                long paid = Math.min(debt, available) / bundle * bundle;
+                if (paid <= 0) continue;
+                adjust(consumer, owned, -paid);
+                repayVariantDebt(consumer, planned, paid);
+            }
         }
-        adjust(consumer, actual, moved);
     }
 
     /**

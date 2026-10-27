@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.*;
 import java.util.jar.JarFile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -185,15 +187,19 @@ class NeoEcoRemoteUiTransformTest {
         return writer.toByteArray();
     }
 
-    @Test void publishedUiRetainsItsProtocolWithoutClientTypesInSharedMethods() throws Exception {
-        Path jar = Path.of("build/neoeco-compat/neoeco-release.jar");
-        org.junit.jupiter.api.Assumptions.assumeTrue(Files.isRegularFile(jar), "requires NeoECO GTO release");
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("com.moakiee.ae2lt.compat.neoeco.NeoEcoPublishedFixtures#releases")
+    void publishedUiRetainsItsProtocolWithoutClientTypesInSharedMethods(NeoEcoPublishedFixtures.Release release) throws Exception {
+        Path jar = release.requireJar();
         try (var archive = new JarFile(jar.toFile())) {
             var type = new ClassNode();
             new ClassReader(archive.getInputStream(archive.getJarEntry(
                     "cn/dancingsnow/neoecoae/compat/ae2/ECORemoteMachineUI$1.class")))
                     .accept(type, 0);
+            byte[] original = bytes(type);
             NeoEcoRemoteUiTransform.isolateClientWorld(type);
+            if (release.upstreamIsolation())
+                assertArrayEquals(original, bytes(type), "preserve the actual upstream guarded UI unchanged");
             int lookups = 0;
             boolean writesHolder = false, createsUi = false;
             for (var method : type.methods) {
@@ -211,7 +217,7 @@ class NeoEcoRemoteUiTransformTest {
                         assertFalse(field.desc.contains("net/minecraft/client/"));
                 }
             }
-            assertEquals(2, lookups);
+            assertEquals(release.upstreamIsolation() ? 0 : 2, lookups);
             assertTrue(writesHolder && createsUi);
             byte[] isolated = bytes(type);
             NeoEcoRemoteUiTransform.isolateClientWorld(type);

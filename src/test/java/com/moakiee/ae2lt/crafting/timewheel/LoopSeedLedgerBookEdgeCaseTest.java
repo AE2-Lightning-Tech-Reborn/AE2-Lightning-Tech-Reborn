@@ -37,6 +37,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.moakiee.thunderbolt.core.crafting.planner.Sat;
 
@@ -988,6 +989,113 @@ class LoopSeedLedgerBookEdgeCaseTest {
         book.recordDispatch(UUID.randomUUID(), new KeyCounter(), Map.of(consumer, counter(planned, 1)), 1);
         assertEquals(0, book.balance(consumer, actual), "the returned variant already repaid this loan");
         assertEquals(1, book.balance(consumer, planned), "the next output keeps its own pending credit");
+    }
+
+    @ParameterizedTest(name = "exactReturn={0}, returned={1}")
+    @CsvSource({"false,1", "false,3", "true,1", "true,3"})
+    void arrivingCreditsRepayBorrowedVariantsBeforeReservingReturnedStock(boolean exactReturn, long returned) {
+        var planned = key("late_loan", "planned");
+        var borrowed = key("late_loan", "borrowed");
+        var incoming = exactReturn ? planned : key("late_loan", "returned");
+        var consumer = UUID.randomUUID();
+        var sibling = UUID.randomUUID();
+        var pattern = loopPattern(consumer, UUID.randomUUID(), new KeyCounter(), counter(planned, 1),
+                stack(planned, 1), stack(borrowed, 1), stack(incoming, 1));
+        var book = new LoopSeedLedgerBook();
+        book.initializeAccounts(Map.of(consumer, Map.of(planned, returned), sibling, Map.of(planned, 1L)));
+        book.registerConsumers(List.of(pattern));
+        book.recordDispatch(pattern, 1, false, List.of(
+                new ExecuteLoopPattern.ActualSeedUse(planned, borrowed, null, null, 1, 0)));
+        assertEquals(-1, book.balance(consumer, borrowed));
+
+        book.rekeyAvailable(consumer, planned, incoming, returned);
+
+        assertEquals(0, book.balance(consumer, borrowed), "a physical return settles the same logical seed loan");
+        assertEquals(returned - 1, book.balance(consumer, incoming), "only excess returns stay privately reserved");
+        assertEquals(1, book.balance(sibling, planned), "another consumer's pending credit remains protected");
+        assertEquals(0, book.totalReserved(borrowed));
+        book.recordDispatch(UUID.randomUUID(), new KeyCounter(), Map.of(consumer, counter(planned, 1)), 1);
+        assertEquals(0, book.balance(consumer, borrowed), "the next producer must not repay this loan twice");
+        assertEquals((exactReturn ? returned - 1 : 0) + 1, book.balance(consumer, planned));
+    }
+
+    @ParameterizedTest(name = "physical={0}, siblingReserve={1}")
+    @CsvSource({"0,0", "1,0", "1,1", "2,1"})
+    void onlyPhysicallyAvailableOwnedSeedsSettleEquivalentVariantLoans(long physical, long siblingReserve) {
+        var planned = key("owned_loan", "planned");
+        var owned = key("owned_loan", "owned");
+        var borrowed = key("owned_loan", "borrowed");
+        var consumer = UUID.randomUUID();
+        var sibling = UUID.randomUUID();
+        var pattern = loopPattern(consumer, UUID.randomUUID(), new KeyCounter(), counter(planned, 1),
+                stack(planned, 1), stack(owned, 1), stack(borrowed, 1));
+        var book = new LoopSeedLedgerBook();
+        book.initializeAccounts(Map.of(consumer, Map.of(owned, 1L), sibling, Map.of(owned, siblingReserve)));
+        book.registerConsumers(List.of(pattern));
+        book.recordDispatch(pattern, 1, false, List.of(
+                new ExecuteLoopPattern.ActualSeedUse(planned, borrowed, null, null, 1, 0)));
+        var inventory = new ListCraftingInventory(ignored -> {});
+        inventory.insert(owned, physical, Actionable.MODULATE);
+
+        book.settleAvailableVariantLoans(pattern, inventory);
+
+        long repaid = physical > siblingReserve ? 1 : 0;
+        assertEquals(-1 + repaid, book.balance(consumer, borrowed));
+        assertEquals(1 - repaid, book.balance(consumer, owned));
+        assertEquals(siblingReserve, book.balance(sibling, owned));
+        assertEquals(physical, inventory.extract(owned, Long.MAX_VALUE, Actionable.SIMULATE),
+                "settlement changes ownership, never physical quantities");
+    }
+
+    @Test
+    void anotherLogicalSeedsOnlyUsableVariantCannotSettleThisLoan() {
+        var planned = key("overlapping_loan", "first");
+        var otherPlanned = key("overlapping_loan", "second");
+        var owned = key("overlapping_loan", "owned");
+        var borrowed = key("overlapping_loan", "borrowed");
+        var consumer = UUID.randomUUID();
+        var group = UUID.randomUUID();
+        var first = loopPattern(consumer, group, new KeyCounter(), counter(planned, 1),
+                stack(planned, 1), stack(owned, 1), stack(borrowed, 1));
+        var second = loopPattern(consumer, group, new KeyCounter(), counter(otherPlanned, 1),
+                stack(otherPlanned, 1), stack(owned, 1));
+        var book = new LoopSeedLedgerBook();
+        book.initializeAccounts(Map.of(consumer, Map.of(owned, 1L)));
+        book.registerConsumers(List.of(first, second));
+        book.recordDispatch(first, 1, false, List.of(
+                new ExecuteLoopPattern.ActualSeedUse(planned, borrowed, null, null, 1, 0)));
+        var inventory = new ListCraftingInventory(ignored -> {});
+        inventory.insert(owned, 1, Actionable.MODULATE);
+
+        book.settleAvailableVariantLoans(first, inventory);
+
+        assertEquals(-1, book.balance(consumer, borrowed));
+        assertEquals(1, book.balance(consumer, owned));
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {1, 2})
+    void equivalentVariantSettlementPreservesWholeSeedBundles(long ownedAmount) {
+        var planned = key("bundle_loan", "planned");
+        var owned = key("bundle_loan", "owned");
+        var borrowed = key("bundle_loan", "borrowed");
+        var consumer = UUID.randomUUID();
+        var pattern = loopPattern(consumer, UUID.randomUUID(), new KeyCounter(), counter(planned, 2),
+                stack(planned, 2), stack(owned, 2), stack(borrowed, 2));
+        var book = new LoopSeedLedgerBook();
+        book.initializeAccounts(Map.of(consumer, Map.of(owned, ownedAmount)));
+        book.registerConsumers(List.of(pattern));
+        book.recordDispatch(pattern, 1, false, List.of(
+                new ExecuteLoopPattern.ActualSeedUse(planned, borrowed, null, null, 2, 0)));
+        var inventory = new ListCraftingInventory(ignored -> {});
+        inventory.insert(owned, ownedAmount, Actionable.MODULATE);
+
+        book.settleAvailableVariantLoans(pattern, inventory);
+
+        long paid = ownedAmount == 2 ? 2 : 0;
+        assertEquals(-2 + paid, book.balance(consumer, borrowed));
+        assertEquals(ownedAmount - paid, book.balance(consumer, owned));
+        assertEquals(ownedAmount, inventory.extract(owned, Long.MAX_VALUE, Actionable.SIMULATE));
     }
 
     private static KeyCounter counter(AEKey key, long amount) {

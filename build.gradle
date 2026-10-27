@@ -950,6 +950,16 @@ tasks.withType(Test).configureEach {
     doFirst { jvmArgs "-javaagent:${gtoTestAgent.get().archiveFile.get().asFile}" }
 }
 
+// Verify an upstream fixed NeoECO release alongside the original local archive.
+tasks.named('test', Test).configure {
+    def fixedNeoEco = providers.gradleProperty('neoeco_fixed_release')
+    if (fixedNeoEco.isPresent()) {
+        def releaseArchive = file(fixedNeoEco.get())
+        inputs.file(releaseArchive).withPropertyName('neoecoFixedRelease')
+        systemProperty 'ae2lt.neoeco.fixedReleaseJar', releaseArchive.absolutePath
+    }
+}
+
 compileJava {
     // The Mixin processor must see all mixins whenever this output is regenerated.
     options.incremental = false

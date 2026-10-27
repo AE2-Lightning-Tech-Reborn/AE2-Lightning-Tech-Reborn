@@ -1665,6 +1665,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
         var changedCredits = loopSeedLedgers.recordDispatch(
                 loopPattern, copies, sharedBatch, actualInputSeed);
+        loopSeedLedgers.settleAvailableVariantLoans(loopPattern, inventory);
         var activeJob = this.job;
         if (sharedBatch && activeJob != null) {
             activeJob.sharedBatchSeedConsumers.recordSuccessfulBatch(

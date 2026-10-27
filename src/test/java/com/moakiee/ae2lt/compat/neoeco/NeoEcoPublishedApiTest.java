@@ -7,12 +7,14 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class NeoEcoPublishedApiTest {
-    @Test void publishedMigrationLeasePreventsTwoOwnersFromMutatingOneGrid() throws Exception {
-        Path jar = Path.of("build/neoeco-compat/neoeco-release.jar");
-        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isRegularFile(jar));
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("com.moakiee.ae2lt.compat.neoeco.NeoEcoPublishedFixtures#releases")
+    void publishedMigrationLeasePreventsTwoOwnersFromMutatingOneGrid(NeoEcoPublishedFixtures.Release release) throws Exception {
+        Path jar = release.requireJar();
         try (var loader = new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()}, getClass().getClassLoader())) {
             var api = new NeoEcoCraftingCompat.Api(loader);
             var lease = api.migrationForGrid.invoke(null, new Object());
@@ -25,10 +27,10 @@ class NeoEcoPublishedApiTest {
             assertEquals(true, api.acquireMigration.invoke(lease, second));
         }
     }
-    @Test void publishedGtoFacadeKeepsExactCountsAndAllowsOnlyOneSubmission() throws Exception {
-        Path jar = Path.of("build/neoeco-compat/neoeco-release.jar");
-        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isRegularFile(jar),
-                "requires the checksum-verified NeoECO 20.5.0-gto.1 release");
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("com.moakiee.ae2lt.compat.neoeco.NeoEcoPublishedFixtures#releases")
+    void publishedGtoFacadeKeepsExactCountsAndAllowsOnlyOneSubmission(NeoEcoPublishedFixtures.Release release) throws Exception {
+        Path jar = release.requireJar();
         try (var loader = new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()}, getClass().getClassLoader())) {
             var api = new NeoEcoCraftingCompat.Api(loader);
             var preparation = loader.loadClass(

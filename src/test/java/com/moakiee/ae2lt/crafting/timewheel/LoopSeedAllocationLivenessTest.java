@@ -72,6 +72,13 @@ class LoopSeedAllocationLivenessTest {
     }
 
     @Test
+    void lateVariantsRemainLiveAcrossDifferentAllocationWitnessOrders() throws Exception {
+        for (int attempt = 0; attempt < 64; attempt++) {
+            new Run(Scenario.LATE_FUZZY_VARIANTS, true, 17).complete();
+        }
+    }
+
+    @Test
     void disablingTheSeparateSeedReservationFixReproducesARealWaitCycle() throws Exception {
         var run = new Run(Scenario.SUBSTITUTE, false, 0, false);
         var failure = assertThrows(AssertionError.class, run::complete);
@@ -304,7 +311,10 @@ class LoopSeedAllocationLivenessTest {
                 if (returned > 0) inventory.insert(entry.getKey(), returned, Actionable.MODULATE);
             }
             if (accepted == 0) return true; // Retryable rejection is not an inventory deadlock.
-            if (loop != null) ledgers.recordDispatch(loop, accepted, false, uses);
+            if (loop != null) {
+                ledgers.recordDispatch(loop, accepted, false, uses);
+                ledgers.settleAvailableVariantLoans(loop, inventory);
+            }
             tasks.put(pattern, tasks.get(pattern) - accepted);
             allocator.onTaskChange(pattern);
             if (names.get(pattern).equals("ordinary")) {

@@ -1,5 +1,7 @@
 # NeoECO 与 Core gto.6 配套验证（2026-10-27）
 
+本记录验证的是 NeoECO `20.5.0-gto.1` 与当时的 LT 制品，保留为历史证据。NeoECO `20.5.2-gto.1`、本轮模糊种子修复及最新制品哈希见 [新版实际包复测](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md)。
+
 Core 的 NeoECO coremod 先将远程 UI 的两处客户端世界读取转换为 `NeoEcoClientLevel.current()`，LT 原转换器随后仍要求找到两处旧读取，抛出 `found 0` 并阻止专服启动。LT 现识别并原样保留完整的 Core 转换，也支持自身转换重复应用；数量、方法描述符、静态调用、辅助类归属或残留客户端引用不符合约定时仍拒绝，不会部分修改字节码。旧正式 NeoECO 的转换路径和上游客户端保护分支均保留。
 
 验证环境为 Minecraft 1.20.1、Java 21.0.10、Forge 47.4.20、GTO 0.6.0-dev-23、GTOCore 26.10.10、AE2-GTO 15.2610.31、LT 2.1.2-gto.9、Core 2.0.3-gto.6，以及未修改的正式 NeoECO 20.5.0-gto.1。

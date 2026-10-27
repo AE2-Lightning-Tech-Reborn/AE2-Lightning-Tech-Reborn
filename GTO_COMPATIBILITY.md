@@ -14,17 +14,19 @@
 | AE2-GTO | 15.2610.31 |
 | Thunderbolt | 2.0.3-gto.6 |
 | AE2LT | 2.1.2-gto.9 |
-| NeoECO（可选） | 20.5.0-gto.1，`1.20.1-GTO` 分支 |
+| NeoECO（可选） | 20.5.0-gto.1 或 20.5.2-gto.1，GTO 发行包 |
 
 客户端与服务端一起更新整套依赖及配套 TB/LT，移除相同 mod ID 的旧包。该组合不能与旧 GTOCore 26.10.5 / AE2 15.2610.8 混用，也不适用于普通版 AE2 或普通版 NeoECO。LT 的加载元数据会明确阻止版本误装。NeoECO 本身仍为可选依赖。
 
-加载约束为 GTOCore `[26.10.10,26.10.11)`、AE2-GTO `[15.2610.31]`、Thunderbolt `[2.0.3-gto.6]`；安装 NeoECO 时要求 `[20.5.0-gto.1]`。这里的最低整包基线不表示这些依赖可以任意升级。旧 Core `2.0.3-gto.1` 不适用于当前 LT。
+加载约束为 GTOCore `[26.10.10,26.10.11)`、AE2-GTO `[15.2610.31]`、Thunderbolt `[2.0.3-gto.6]`；安装 NeoECO 时接受两个精确版本 `[20.5.0-gto.1],[20.5.2-gto.1]`。这里的最低整包基线不表示这些依赖可以任意升级。旧 Core `2.0.3-gto.1` 不适用于当前 LT。
+
+NeoECO `20.5.2-gto.1` 上游发布说明面向 Dev25；本项目的验证环境仍是上表 Dev23 及锁定的 GTOCore/AE2。上游版本声明接受这套依赖，不能据此推定 LT 已支持 Dev25。
 
 本次实现、制品、验证结果和边界见 [NeoECO GTO 兼容记录](GTO_NEOECO_GTO_COMPAT_2026-10-26.md)。历史客户端结果不代表本版已经验证客户端界面或联机。
 
 远程 UI 补丁同时支持 NeoECO 原正式包与上游 `cca7fbb` 的客户端类加载隔离实现，按实际字节码识别，不依赖未变更的 `20.5.0-gto.1` 版本号。更新范围及测试制品边界见 [远程 UI 补丁更新记录](GTO_NEOECO_UI_UPDATE_2026-10-26.md)。
 
-当前补丁还保留 Core `2.0.3-gto.6` 已完成的客户端世界隔离，避免两项目重复转换导致专服启动失败。最新验证为 JUnit 1575 项通过、5 项跳过，以及安装 NeoECO 的 122 项 GameTest 全部通过；当前配套制品哈希、正式包加载与重启结果见 [Core gto.6 配套验证](GTO_NEOECO_CORE_GTO6_2026-10-27.md)。相同版本号的历史制品应按哈希区分。
+当前补丁保留 Core `2.0.3-gto.6` 已完成的客户端世界隔离，避免重复转换导致专服启动失败。新版 NeoECO `20.5.2-gto.1` 的实际包复测为 JUnit 1590 项通过、5 项跳过，122 项 GameTest、6 项压力测试、12 项发行检查通过；正式包安装新版 NeoECO、保存后重启同一世界及不安装 NeoECO 的加载均通过。本轮还修复了全检发现的模糊种子借用等待环。实际制品哈希、失败重试记录与验证边界见 [新版 NeoECO 实包复测](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md)。[此前 Core gto.6 配套验证](GTO_NEOECO_CORE_GTO6_2026-10-27.md) 使用的是 NeoECO `20.5.0-gto.1`；相同 LT 版本号的历史制品应按哈希区分。
 
 ## 适配边界
 
@@ -37,7 +39,7 @@
 
 ## 构建
 
-使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_NEOECO_CORE_GTO6_2026-10-27.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
+使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
 
 1. [gto.5 完整补丁](docs/patches/core-gto.5-from-upstream.patch)
 2. [gto.6 增量补丁](docs/patches/core-gto.6-from-gto.5.patch)
@@ -66,7 +68,7 @@ Core 默认本地仓库路径仍为同级 `../Thunderbolt-Core-Reborn/repo`。LT
 
 使用 `-Dae2lt.gtoQaSuite=neoeco|base|exact|dispatch|batch|interfaces|io|infinite|recipes|content|content-recipes|permissions|none` 选择测试组，每次新建测试世界。测试应同时满足 CPU、STORAGE、PLANNER 三个 PASS 与最终 `GTO_COMPAT_QA PASS total=... failed=0 startupFailures=0`；只出现服务端 Done 或退出码 0 不能证明通过。`neoeco` 组要求安装上表指定的正式 NeoECO。
 
-JUnit 的正式 NeoECO API/字节码测试读取 `build/neoeco-compat/neoeco-release.jar`。放入兼容记录列出的原件并校验哈希后再运行 `check`；缺包时这三项会明确跳过。测试原件不嵌入生产制品。
+JUnit 的旧版 NeoECO API/字节码测试读取 `build/neoeco-compat/neoeco-release.jar`。放入兼容记录列出的原件并校验哈希后再运行 `check`；缺包时这三项会明确跳过。通过 `-Pneoeco_fixed_release=/path/to/neoecoae-20.5.2-gto.1.jar` 同时执行新版的三项实际包检查，覆盖迁移锁、精确数量单次提交及远程 UI 协议。显式配置的新包缺失会失败。测试原件不嵌入生产制品。
 
 以下内容保留历史追溯，涉及的旧版本、数量及兼容限制均以各自日期为准。
 
