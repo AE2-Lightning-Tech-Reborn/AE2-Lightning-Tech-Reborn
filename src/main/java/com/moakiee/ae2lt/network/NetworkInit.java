@@ -229,11 +229,11 @@ public final class NetworkInit {
                 RequestClosedLoopResultPagePacket.TYPE,
                 RequestClosedLoopResultPagePacket.STREAM_CODEC,
                 RequestClosedLoopResultPagePacket::handle);
-        registrar.playToServer(
+        registrar.versioned("upload-target-2").playToServer(
                 UploadPatternToTargetPacket.TYPE,
                 UploadPatternToTargetPacket.STREAM_CODEC,
                 UploadPatternToTargetPacket::handle);
-        registrar.playToClient(
+        registrar.versioned("upload-target-2").playToClient(
                 UploadTargetsSyncPacket.TYPE,
                 UploadTargetsSyncPacket.STREAM_CODEC,
                 UploadTargetsSyncPacket::handle);

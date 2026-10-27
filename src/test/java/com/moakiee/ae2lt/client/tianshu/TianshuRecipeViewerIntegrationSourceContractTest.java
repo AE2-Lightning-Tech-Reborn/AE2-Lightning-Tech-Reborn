@@ -36,10 +36,10 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
 
         assertTrue(emiPlugin.contains("TianshuPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
         assertTrue(emiPlugin.contains("TianshuWirelessPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
     }
 
     @Test
@@ -161,7 +161,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(emi.contains("currentScreen != EmiApi.getHandledScreen()"));
         assertTrue(emi.contains("TianshuDirectUploadClient.holdRecipeScreen("));
         assertTrue(picker.contains("directUploadRequested"));
-        assertTrue(picker.contains("findUniqueCandidate"));
+        assertTrue(picker.contains("automaticCandidate"));
         assertTrue(picker.contains("if (selected != null) select("));
         assertTrue(matcher.contains("findUniqueCandidate"));
         assertTrue(coordinator.contains("TianshuUploadSourceSelection.collect(menu)"));
@@ -178,7 +178,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(terminalScreen.contains("public boolean openDirectUploadFallback()"));
         assertTrue(terminalScreen.contains(
                 "switchToScreen(new TianshuUploadTargetScreen<>(this, true))"));
-        assertTrue(coordinator.contains("menu.uploadTianshuPatternToTarget(target.group())"));
+        assertTrue(coordinator.contains("menu.uploadTianshuPatternToTarget(target.group(), true)"));
         assertTrue(picker.contains("\"ae2lt.tianshu.upload.success_target\""));
         assertTrue(coordinator.contains("\"ae2lt.tianshu.upload.success_target\""));
         assertTrue(coordinator.contains(

@@ -113,12 +113,29 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
         widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
             @Override
+            public boolean mouseClicked(double x, double y, int button) {
+                if (button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT && visible && isMouseOver(x, y)) {
+                    if (hasShiftDown()) {
+                        var selection = TianshuUploadSourceSelection.collect(menu);
+                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
+                    } else menu.undoLastUpload();
+                    return true;
+                }
+                return super.mouseClicked(x, y, button);
+            }
+
+            @Override
             public List<Component> getTooltipMessage() {
-                return menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                var lines = new java.util.ArrayList<Component>(menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
                         && TianshuUploadTriggerClient.shouldTrigger()
                         ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
                                 Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
-                        : super.getTooltipMessage();
+                        : super.getTooltipMessage());
+                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+                lines.add(Component.translatable(menu.canUndoUpload
+                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+                return lines;
             }
         });
 

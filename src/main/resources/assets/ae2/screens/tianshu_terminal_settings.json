@@ -2,7 +2,7 @@
   "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md#settings",
   "$schema": "schema.json",
   "includes": ["common/common.json"],
-  "generatedBackground": { "width": 200, "height": 250 },
+  "generatedBackground": { "width": 200, "height": 202 },
   "text": {
     "dialog_title": {
       "text": { "translate": "ae2lt.tianshu.settings.title" },
@@ -12,7 +12,8 @@
   "widgets": {
     "back": { "left": 176, "top": -5, "width": 20, "height": 20 },
     "uploadTrigger": { "left": 10, "top": 43, "width": 180, "height": 20 },
-    "duplicateEncoding": { "left": 10, "top": 131, "width": 180, "height": 20 },
-    "jeiWirelessSupply": { "left": 10, "top": 215, "width": 180, "height": 20 }
+    "uploadAliases": { "left": 10, "top": 69, "width": 180, "height": 20 },
+    "duplicateEncoding": { "left": 10, "top": 113, "width": 180, "height": 20 },
+    "jeiWirelessSupply": { "left": 10, "top": 171, "width": 180, "height": 20 }
   }
 }
