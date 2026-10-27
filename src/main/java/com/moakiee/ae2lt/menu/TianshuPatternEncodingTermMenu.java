@@ -452,11 +452,17 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return direct;
     }
 
-    public void clearClientUploadSelectionState() {
+    /** Entering alias management must also cancel an encoding acknowledgement still in flight. */
+    public void cancelPendingClientUpload() {
         if (!isClientSide()) return;
         pendingTriggeredUpload = false;
         pendingDirectUpload = false;
         directUploadTargetsRequested = false;
+    }
+
+    public void clearClientUploadSelectionState() {
+        if (!isClientSide()) return;
+        cancelPendingClientUpload();
         uploadTargetGroups = List.of();
         uploadTargetsRevision++;
     }

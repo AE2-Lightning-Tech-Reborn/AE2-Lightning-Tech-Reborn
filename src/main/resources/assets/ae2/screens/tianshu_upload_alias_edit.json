@@ -1,0 +1,68 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json"
+  ],
+  "widgets": {
+    "back": {
+      "left": 276,
+      "top": -5,
+      "width": 20,
+      "height": 20
+    },
+    "source": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "alias": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "save": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "cancel": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "targets": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "refresh": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "clearSource": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "clearAlias": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "matchCheck": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    }
+  }
+}

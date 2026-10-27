@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.api.config.Settings;
 import appeng.api.config.TerminalStyle;
+import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.PaletteColor;
@@ -74,6 +75,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     private boolean configuredAliasInserted;
     private boolean directUploadAttempted;
     private boolean initialAliasSelectionPending;
+    private String aliasBeforeManagement;
     private String configuredAlias = "";
     private String initialAlias = "";
     private Component uploadTargetName = Component.empty();
@@ -94,8 +96,8 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
                 Component.translatable("gui.back"), ignored -> returnToParent()));
         addToLeftToolbar(new AliasActionButton(Icon.ENTER,
                 Component.translatable("ae2lt.tianshu.upload.alias.add"), this::addMapping));
-        addToLeftToolbar(new AliasActionButton(Icon.CLEAR,
-                Component.translatable("ae2lt.tianshu.upload.alias.remove"), this::removeMappings));
+        addToLeftToolbar(new AliasActionButton(Icon.COG,
+                TianshuUploadAliasScreen.text("title"), this::openAliasManagement));
 
         scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
         sourceField = widgets.addTextField("field_search");
@@ -483,12 +485,23 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     private void addMapping() {
+        if (awaitingUpload) return;
+        menu.cancelPendingClientUpload();
+        directUploadAttempted = true;
+        initialAliasSelectionPending = false;
         String source = sourceField.getValue().strip();
         String alias = aliasField.getValue().strip();
+        String previous = AE2LTClientConfig.findUploadAlias(source);
+        if (previous != null && !previous.equals(alias)) {
+            switchToScreen(new TianshuUploadAliasConfirmScreen<>(this,
+                    TianshuUploadAliasScreen.text("replace_confirm", source, previous, alias),
+                    "replace", () -> saveMapping(source, alias)));
+        } else saveMapping(source, alias);
+    }
+
+    private void saveMapping(String source, String alias) {
         if (!AE2LTClientConfig.setUploadAlias(source, alias)) {
-            showMessage(Component.translatable(source.isEmpty()
-                    ? "ae2lt.tianshu.upload.alias.empty_keyword"
-                    : "ae2lt.tianshu.upload.alias.empty_alias"));
+            showMessage(TianshuUploadAliasScreen.text("save_failed_or_invalid"));
             return;
         }
         setConfiguredAlias(alias);
@@ -509,22 +522,29 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         addMapping();
     }
 
-    private void removeMappings() {
-        String alias = aliasField.getValue().strip();
-        if (alias.isEmpty()) {
-            showMessage(Component.translatable("ae2lt.tianshu.upload.alias.empty_alias"));
-            return;
+    private void openAliasManagement() {
+        if (awaitingUpload) return;
+        directUploadAttempted = true;
+        initialAliasSelectionPending = false;
+        aliasBeforeManagement = AE2LTClientConfig.findUploadAlias(sourceField.getValue());
+        switchToScreen(new TianshuUploadAliasManagementScreen<>(this, sourceField.getValue(), aliasField.getValue()));
+    }
+
+    @Override
+    protected <P extends AEBaseScreen<M>> void onReturnFromSubScreen(AESubScreen<M, P> screen) {
+        super.onReturnFromSubScreen(screen);
+        if (!(screen instanceof TianshuUploadAliasManagementScreen<?>)) return;
+        String saved = AE2LTClientConfig.findUploadAlias(sourceField.getValue());
+        if (java.util.Objects.equals(saved, aliasBeforeManagement)) return;
+        clearConfiguredAliasCandidate();
+        if (saved != null) {
+            setConfiguredAlias(saved);
+            aliasField.setValue(saved);
+        } else {
+            aliasField.setValue(defaultAliases.isEmpty() ? "" : defaultAliases.getFirst());
         }
-        int removed = AE2LTClientConfig.removeUploadAliases(alias);
-        if (removed <= 0) {
-            showMessage(Component.translatable("ae2lt.tianshu.upload.alias.not_found", alias));
-            return;
-        }
-        if (configuredAlias.equalsIgnoreCase(alias)) clearConfiguredAliasCandidate();
-        defaultAliasIndex = -1;
-        aliasField.setValue("");
+        defaultAliasIndex = indexOfDefaultAlias(aliasField.getValue());
         queryRefresh = true;
-        showMessage(Component.translatable("ae2lt.tianshu.upload.alias.removed", removed, alias));
     }
 
     private void showMessage(Component message) {

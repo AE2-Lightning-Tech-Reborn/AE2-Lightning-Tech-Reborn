@@ -1,0 +1,50 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json"
+  ],
+  "widgets": {
+    "back": {
+      "left": 276,
+      "top": -5,
+      "width": 20,
+      "height": 20
+    },
+    "search": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "scrollbar": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "add": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "edit": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "delete": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "clear": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    }
+  }
+}

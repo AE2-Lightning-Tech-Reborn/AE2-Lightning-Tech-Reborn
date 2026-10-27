@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.config;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -99,43 +98,34 @@ public final class AE2LTClientConfig {
         return null;
     }
 
-    public static synchronized boolean setUploadAlias(String sourceKey, String alias) {
-        String normalized = normalizeAliasKey(sourceKey);
-        String cleanAlias = alias == null ? "" : alias.strip();
-        if (normalized.isEmpty() || cleanAlias.isEmpty() || cleanAlias.length() > 256) return false;
-
-        var updated = new ArrayList<String>();
-        for (var entry : TIANSHU_UPLOAD_ALIASES.get()) {
-            int separator = entry.indexOf('=');
-            if (separator > 0
-                    && normalizeAliasKey(entry.substring(0, separator)).equals(normalized)) continue;
-            updated.add(entry);
-        }
-        updated.add(normalized + "=" + cleanAlias);
-        TIANSHU_UPLOAD_ALIASES.set(List.copyOf(updated));
-        if (SPEC.isLoaded()) SPEC.save();
-        return true;
+    public static synchronized List<UploadAliasRecords.Entry> uploadAliases() {
+        return UploadAliasRecords.snapshot(TIANSHU_UPLOAD_ALIASES.get());
     }
 
-    public static synchronized int removeUploadAliases(String alias) {
-        String target = alias == null ? "" : alias.strip();
-        if (target.isEmpty()) return 0;
-        var updated = new ArrayList<String>();
-        int removed = 0;
-        for (var entry : TIANSHU_UPLOAD_ALIASES.get()) {
-            int separator = entry.indexOf('=');
-            String storedAlias = separator < 0 ? "" : entry.substring(separator + 1).strip();
-            if (storedAlias.equalsIgnoreCase(target)) {
-                removed++;
-            } else {
-                updated.add(entry);
-            }
+    public static synchronized boolean setUploadAlias(String sourceKey, String alias) {
+        return replaceUploadAlias(null, sourceKey, alias);
+    }
+
+    public static synchronized boolean replaceUploadAlias(String original, String source, String alias) {
+        if (!UploadAliasRecords.valid(source, alias)) return false;
+        return saveUploadAliases(UploadAliasRecords.replace(TIANSHU_UPLOAD_ALIASES.get(), original, source, alias));
+    }
+
+    public static synchronized boolean removeUploadAlias(String source) {
+        return saveUploadAliases(UploadAliasRecords.remove(TIANSHU_UPLOAD_ALIASES.get(), source));
+    }
+
+    private static boolean saveUploadAliases(List<String> updated) {
+        if (!SPEC.isLoaded()) return false;
+        var previous = List.copyOf(TIANSHU_UPLOAD_ALIASES.get());
+        try {
+            TIANSHU_UPLOAD_ALIASES.set(updated);
+            SPEC.save();
+            return true;
+        } catch (RuntimeException failure) {
+            TIANSHU_UPLOAD_ALIASES.set(previous);
+            return false;
         }
-        if (removed > 0) {
-            TIANSHU_UPLOAD_ALIASES.set(List.copyOf(updated));
-            if (SPEC.isLoaded()) SPEC.save();
-        }
-        return removed;
     }
 
     private static String normalizeAliasKey(String sourceKey) {

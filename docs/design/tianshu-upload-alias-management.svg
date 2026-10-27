@@ -51,12 +51,9 @@
   <rect x="728" y="278" width="576" height="36" class="field"/>
   <text x="740" y="303">粉碎工厂</text>
   <rect x="728" y="330" width="148" height="34" class="button"/>
-  <text x="748" y="353">使用当前来源</text>
+  <text x="748" y="353">从分组选择…</text>
   <rect x="888" y="330" width="148" height="34" class="button"/>
-  <text x="908" y="353">从目标选择…</text>
-  <text x="728" y="407">当前网络：匹配 1 个分组</text>
-  <rect x="1228" y="382" width="76" height="34" class="button"/>
-  <text x="1248" y="405">刷新</text>
+  <text x="908" y="353">检查匹配 ▸</text>
   <text x="728" y="441" class="small">匹配检查只作参考，保存不会上传样板。</text>
   <rect x="728" y="502" width="92" height="34" class="button"/>
   <text x="756" y="525">取消</text>

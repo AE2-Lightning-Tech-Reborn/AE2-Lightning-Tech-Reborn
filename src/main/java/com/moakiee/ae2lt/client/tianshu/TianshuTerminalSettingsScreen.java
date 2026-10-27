@@ -34,9 +34,15 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         widgets.add("back", new TabButton(Icon.BACK,
                 Component.translatable("gui.back"), ignored -> returnToParent()));
         if (patternTerminal) {
+            widgets.addButton("uploadAliases", TianshuUploadAliasScreen.text("title"), () ->
+                    switchToScreen(new TianshuUploadAliasManagementScreen<>(this, "", "")));
             triggerButton = widgets.addButton("uploadTrigger", triggerLabel(), this::cycleTrigger);
             duplicateEncodingButton = widgets.addButton(
                     "duplicateEncoding", duplicateEncodingLabel(), this::toggleDuplicateEncoding);
+            triggerButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint")));
+            duplicateEncodingButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint")));
         }
         wirelessSupplyButton = widgets.addButton("jeiWirelessSupply", wirelessSupplyLabel(), () -> {
             AE2LTClientConfig.setJeiWirelessSupply(!AE2LTClientConfig.jeiWirelessSupply());
@@ -99,18 +105,12 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         if (patternTerminal) {
             graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
                     10, 30, 0x404040, false);
-            graphics.drawWordWrap(font,
-                    Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"),
-                    10, 72, 180, 0x666666);
             graphics.drawString(font,
                     Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
-                    10, 118, 0x404040, false);
-            graphics.drawWordWrap(font,
-                    Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"),
-                    10, 160, 180, 0x666666);
+                    10, 100, 0x404040, false);
         }
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
-                10, patternTerminal ? 202 : 30, 0x404040, false);
+                10, patternTerminal ? 158 : 30, 0x404040, false);
     }
 
     @Override

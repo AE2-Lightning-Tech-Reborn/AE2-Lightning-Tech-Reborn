@@ -56,9 +56,23 @@ With a pattern in the encoded-pattern slot, the **Upload** button sends it to it
 * **Processing patterns** open the provider-selection screen: all visible Pattern Providers on the network are listed grouped by name, showing provider counts and free slots per group, with search by name, item, or tooltip.
 * **Closed-loop patterns** upload to the bound Tianshu's Closed-Loop Pattern Storage.
 
-The provider-selection screen also supports **alias mappings**. A JEI/EMI transfer uses the recipe type or viewer category as its source key; without viewer context, the pattern's primary output is used instead. The saved alias becomes the provider filter so similar recipes can locate their target faster. Filtering supports left-anchored item-ID matching, plus contains and wildcard matching for names and tooltips; pinyin matching is also available when Just Enough Characters is installed. Shift + right-click a list entry to bind that machine's name as an alias directly.
-
 The terminal settings configure an **upload trigger**: holding a chosen key (or no key) while encoding automatically enters the matching upload flow; it can also be set to manual upload only. The manual upload button always remains available.
+
+### Manage Upload Aliases
+
+Open **Manage upload aliases** from the provider picker, or from **Terminal Settings → Tianshu Settings → Manage upload aliases**. The settings entry requires no encoded pattern and works for wired and wireless terminals.
+
+1. Click **Add**. A reliable recipe context prefills the source; otherwise enter a recipe type or JEI/EMI category ID. This is not an output item ID. Manually inserted patterns do not supply a recipe source.
+2. Enter an **Upload alias**, or use **Choose group…** to fill a suggestion from the current network. Choosing a group changes only the draft; it neither saves nor uploads.
+3. Optionally select **Check matches** to see the matching group count; **Refresh** updates the snapshot after network changes. Zero matches still allow saving. Without a pattern, this checks groups only and does not classify slots as full.
+4. Click **Save** to return to the list. Adding or moving a source onto an existing mapping asks before replacing it; cancelling preserves the original.
+5. Returning to the provider picker updates the current source's filter. Click a target again to upload. Managing, saving and returning never trigger a pending automatic upload.
+
+Search by source or alias, edit records, or delete one source at a time. Multiple sources may share an alias; deleting one leaves the others intact and restores default candidates for that source. An untouched prefilled form cancels immediately; changed drafts ask before being discarded.
+
+The upload picker still offers **Save current alias**. Shift + right-click a group to bind its custom name, or its icon registry ID when no custom name exists. Replacing a different saved alias asks for confirmation.
+
+Aliases filter groups; they are not machine addresses. Group names support case-insensitive substring and wildcard matching; icon registry IDs use full-value wildcard matching. Pinyin support follows installed compatibility integrations. Mappings are saved locally and shared across worlds and servers.
 
 ### Direct Encoding and Upload from JEI or EMI
 

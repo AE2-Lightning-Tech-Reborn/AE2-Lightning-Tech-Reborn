@@ -1,0 +1,26 @@
+{
+  "$schema": "schema.json",
+  "includes": [
+    "common/common.json"
+  ],
+  "widgets": {
+    "back": {
+      "left": 276,
+      "top": -5,
+      "width": 20,
+      "height": 20
+    },
+    "cancel": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    },
+    "confirm": {
+      "left": 8,
+      "top": 24,
+      "width": 72,
+      "height": 20
+    }
+  }
+}
