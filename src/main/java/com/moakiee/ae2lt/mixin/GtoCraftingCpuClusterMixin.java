@@ -10,12 +10,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Install after GTO's constructor hook. The subclass preserves GTO's public CPU type. */
+/** Wrap the initialized native CPU after GTO and optional NeoECO have installed their hooks. */
 @Mixin(value = CraftingCPUCluster.class, remap = false, priority = 1100)
 public abstract class GtoCraftingCpuClusterMixin {
     @Shadow public CraftingCpuLogic craftingLogic;
     @Inject(method = "<init>", at = @At("TAIL"))
     private void ae2lt$installCompatibleLogic(BlockPos min, BlockPos max, CallbackInfo ci) {
-        craftingLogic = new GtoCompatibleCraftingCpuLogic((CraftingCPUCluster) (Object) this);
+        craftingLogic = new GtoCompatibleCraftingCpuLogic((CraftingCPUCluster) (Object) this, craftingLogic);
     }
 }

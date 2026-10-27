@@ -177,6 +177,7 @@ public final class BigCraftingService {
     public void cancel() {
         if (job != null) {
             job.cancel();
+            com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.cancel(host.getLevel(), job.id);
             changed();
             tick();
         }
@@ -416,6 +417,8 @@ public final class BigCraftingService {
         invalidate();
         if (job.escrow.isEmpty()) {
             status = job.cancelled ? "cancelled" : "complete";
+            if (!job.cancelled)
+                com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.complete(host.getLevel(), job.id);
             job = null;
             patternLookup.clear();
             cpuListChanged = true;

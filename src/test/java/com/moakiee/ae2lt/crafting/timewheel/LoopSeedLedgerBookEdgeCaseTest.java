@@ -971,6 +971,25 @@ class LoopSeedLedgerBookEdgeCaseTest {
         assertEquals(Map.of(planned, 1L), ledgers.positiveSnapshot());
     }
 
+    @Test
+    void arrivingVariantRepaysItsLoanOnlyOnceBeforeTheNextProducerCredit() {
+        var planned = key("arriving_loan", "planned");
+        var actual = key("arriving_loan", "actual");
+        var consumer = UUID.randomUUID();
+        var pattern = loopPattern(consumer, UUID.randomUUID(), new KeyCounter(), counter(planned, 1),
+                stack(planned, 1), stack(actual, 1));
+        var book = new LoopSeedLedgerBook();
+        book.initializeAccounts(Map.of(consumer, Map.of(planned, 1L)));
+        book.registerConsumers(List.of(pattern));
+        book.recordDispatch(pattern, 1, false, List.of(
+                new ExecuteLoopPattern.ActualSeedUse(planned, actual, null, null, 1, 0)));
+        book.rekeyAvailable(consumer, planned, actual, 1);
+        assertEquals(0, book.balance(consumer, actual));
+        book.recordDispatch(UUID.randomUUID(), new KeyCounter(), Map.of(consumer, counter(planned, 1)), 1);
+        assertEquals(0, book.balance(consumer, actual), "the returned variant already repaid this loan");
+        assertEquals(1, book.balance(consumer, planned), "the next output keeps its own pending credit");
+    }
+
     private static KeyCounter counter(AEKey key, long amount) {
         var result = new KeyCounter();
         result.add(key, amount);

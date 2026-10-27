@@ -4,9 +4,9 @@
 
 An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) addon that introduces a lightning energy system, advanced machines, and overloaded network components.
 
-> Requires AE2 and Thunderbolt Core Reborn · Built for Minecraft 1.20.1 / Forge 47.1.3+
+> GTO build · Minimum supported pack: GTO 0.6.0-dev-23 · Minecraft 1.20.1 / Java 21 / Forge 47.4.20+
 
-This branch is the maintained Forge 1.20.1 port. The primary project targets newer Minecraft and NeoForge versions; behavior changes are ported back where the 1.20.1 APIs support them.
+The `gto` branch maintains the Forge 1.20.1 GTO adaptation; the ordinary `1.20.1` branch provides same-version updates for comparison. The current LT version is `2.1.2-gto.9`. See [GTO compatibility notes](GTO_COMPATIBILITY.md) for the complete dependency set and validation limits.
 
 ## Features
 
@@ -23,24 +23,29 @@ This branch is the maintained Forge 1.20.1 port. The primary project targets new
 | Mod | Requirement |
 |-----|-------------|
 | Minecraft 1.20.1 | Required |
-| Forge 47.1.3+ | Required |
-| Applied Energistics 2 15.4.10+ | Required |
-| Thunderbolt Core Reborn 2.0.0-beta.3 to `<2.1.0` | Required |
+| Java 21 / Forge 47.4.20+ | Required |
+| GTO pack 0.6.0-dev-23 | Minimum supported baseline; check dependencies for later releases |
+| GTOCore 26.10.10 | Required; loader range `[26.10.10,26.10.11)` |
+| AE2-GTO 15.2610.31 | Required, exact version |
+| Thunderbolt Core Reborn 2.0.3-gto.6 | Required, exact version |
+| NeoECO GTO 20.5.0-gto.1 | Optional; exact version when installed |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |
 
 Optional integrations are isolated and are not required for normal startup.
 
+Update clients and servers together. GTOCore 26.10.5, AE2 15.2610.8 and Core 2.0.3-gto.1 are incompatible with the current LT release, as are ordinary AE2 and NeoECO editions. The minimum pack version does not imply support for arbitrary newer dependencies.
+
 ## Build
 
-Use Java 17 and run:
+Use Java 21, prepare the matching Core using the [GTO build instructions](GTO_COMPATIBILITY.md#构建), then run:
 
 ```powershell
 .\gradlew.bat test build
 ```
 
-The distributable artifact is `build/libs/ae2lt-forge-1.20.1-2.1.0-beta.4.jar`.
+The distributable artifact is `build/libs/ae2lt-forge-1.20.1-2.1.2-gto.9.jar`.
 The `-slim.jar` artifact is an intermediate development artifact and must not be distributed.
 
 ## Public API

@@ -7,6 +7,7 @@ sourceSets.create('gtoQa') {
         include 'qa/**'
         include '**/FrequencyPermissionsGameTests.java'
         include '**/BigMixedProviderGameTests.java'
+        include '**/NeoEcoGtoGameTests.java'
         include '**/BigCandidateIndexGameTests.java'
         include '**/BigZeroTickGameTests.java'
         include '**/UselessBigIntegerGameTests.java'

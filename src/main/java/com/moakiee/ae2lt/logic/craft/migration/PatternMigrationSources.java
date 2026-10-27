@@ -24,6 +24,7 @@ final class PatternMigrationSources {
     static final String EAEP_MATRIX = "com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity";
     static final String EAEP_CORE = "com.extendedae_plus.content.matrix.PatternCorePlusBlockEntity";
     static final String EAE_ASSEMBLER = "com.glodblock.github.extendedae.common.tileentities.TileExMolecularAssembler";
+    static final String NEOECO_BUS = "cn.dancingsnow.neoecoae.blocks.entity.crafting.ECOCraftingPatternBusBlockEntity";
     private final Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
     static int priority(Class<?> type) {
@@ -38,6 +39,7 @@ final class PatternMigrationSources {
     /** Activity-only pass: no pattern catalog, inventory view or decoding is needed to certify idle. */
     static BooleanSupplier executionProbe(Object owner) {
         Class<?> type = owner.getClass();
+        if (MigrationReflection.isType(type, NEOECO_BUS)) return () -> neoEcoBusy(owner);
         if (MigrationReflection.isType(type, EAEP_MATRIX)) {
             Object cluster = MigrationReflection.call(owner, "eap$getSuperMatrixCluster");
             return cluster == null ? null : () -> MigrationReflection.call(owner, "eap$getSuperMatrixCluster") == cluster
@@ -97,6 +99,17 @@ final class PatternMigrationSources {
             return result;
         }
         if (!seen.add(owner)) return List.of();
+
+        if (MigrationReflection.isType(type, NEOECO_BUS)) {
+            var cluster = MigrationReflection.call(owner, "getCraftingCluster");
+            var inventory = (InternalInventory) MigrationReflection.call(owner, "getPatternSlotInventory");
+            return List.of(source(owner, node, inventory,
+                    () -> MigrationReflection.call(owner, "getCraftingCluster") == cluster
+                            ? (InternalInventory) MigrationReflection.call(owner, "getPatternSlotInventory") : null,
+                    () -> cluster == null || neoEcoBusy(owner), 0, 0, inventory.size(), true,
+                    () -> MigrationReflection.call(owner, "beginPatternBatch"),
+                    () -> MigrationReflection.call(owner, "endPatternBatch")));
+        }
 
         if (owner instanceof MatrixPatternStorageBlockEntity storage) {
             var inventory = storage.getTerminalPatternInventory();
@@ -183,6 +196,20 @@ final class PatternMigrationSources {
         for (String name : List.of("availableCrafters", "busyCrafters")) {
             for (Object crafter : (Iterable<?>) MigrationReflection.field(cluster, name)) {
                 if (eaeCrafterBusy(crafter)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean neoEcoBusy(Object owner) {
+        var cluster = MigrationReflection.call(owner, "getCraftingCluster");
+        if (cluster == null) return true;
+        var network = MigrationReflection.call(cluster, "getNetworkCluster");
+        var members = network == null ? List.of(cluster)
+                : (List<?>) MigrationReflection.call(network, "getMembers");
+        for (var member : members) {
+            for (var worker : (List<?>) MigrationReflection.call(member, "getWorkers")) {
+                if (!((List<?>) MigrationReflection.call(worker, "getThreadSnapshots")).isEmpty()) return true;
             }
         }
         return false;

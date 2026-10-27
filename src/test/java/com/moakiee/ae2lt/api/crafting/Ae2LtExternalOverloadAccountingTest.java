@@ -19,16 +19,33 @@ import net.minecraftforge.fml.loading.LoadingModList;
 import org.junit.jupiter.api.*;
 
 class Ae2LtExternalOverloadAccountingTest {
+    private static java.lang.reflect.Field keyRegistry;
+    private static Object previousRegistry;
     private final Object owner = new Object();
     private final UUID jobId = UUID.randomUUID();
     private final KeyCounter waiting = new KeyCounter();
 
-    @BeforeAll static void bootstrap() {
+    @BeforeAll static void bootstrap() throws Exception {
         if (LoadingModList.get() == null)
             LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        keyRegistry = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
+        keyRegistry.setAccessible(true);
+        previousRegistry = keyRegistry.get(null);
+        var name = new ResourceLocation("ae2lt", "external_overload_test_keys");
+        var create = net.minecraftforge.registries.RegistryManager.class.getDeclaredMethod("createRegistry",
+                ResourceLocation.class, net.minecraftforge.registries.RegistryBuilder.class);
+        create.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var registry = (net.minecraftforge.registries.IForgeRegistry<AEKeyType>) create.invoke(
+                new net.minecraftforge.registries.RegistryManager("external-overload-test"), name,
+                new net.minecraftforge.registries.RegistryBuilder<AEKeyType>().setName(name).disableSaving().disableSync());
+        registry.register(AEItemKey.of(Items.PAPER).getType().getId(), AEItemKey.of(Items.PAPER).getType());
+        keyRegistry.set(null, (java.util.function.Supplier<net.minecraftforge.registries.IForgeRegistry<AEKeyType>>) () -> registry);
     }
+
+    @AfterAll static void restoreRegistry() throws Exception { keyRegistry.set(null, previousRegistry); }
 
     @AfterEach void clear() { Ae2LtCraftingIntegration.clearOverloadState(owner); }
 
@@ -66,6 +83,22 @@ class Ae2LtExternalOverloadAccountingTest {
         assertEquals(0, Ae2LtCraftingIntegration.claimOverloadOutput(owner, jobId, AEItemKey.of(Items.STONE), 4,
                 Actionable.MODULATE, receiver));
         assertEquals(4, pending(key));
+    }
+
+    @Test void forgeCheckpointRoundTripKeepsJobOwnershipAndVariantClaims() {
+        var expected = namedKey("expected");
+        register(expected, 7, jobId);
+        var saved = Ae2LtCraftingIntegration.saveOverloadState(owner, jobId);
+        Ae2LtCraftingIntegration.clearOverloadState(owner);
+        assertEquals(0, pending(expected));
+        assertThrows(IllegalArgumentException.class, () -> Ae2LtCraftingIntegration.loadOverloadState(
+                owner, UUID.randomUUID(), saved));
+        assertEquals(0, pending(expected));
+        Ae2LtCraftingIntegration.loadOverloadState(owner, jobId, saved);
+        assertEquals(7, pending(expected));
+        assertEquals(3, Ae2LtCraftingIntegration.claimOverloadOutput(owner, jobId, namedKey("actual"), 3,
+                Actionable.MODULATE, (stack, mode) -> stack.amount()));
+        assertEquals(4, pending(expected));
     }
 
     @Test void callbackReentryCannotClaimTheCommittedOutputAgain() {

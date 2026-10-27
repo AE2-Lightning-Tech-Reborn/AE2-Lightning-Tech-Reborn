@@ -1,93 +1,76 @@
 # GTO 1.20.1 兼容构建
 
-本分支基于 Reborn `1.20.1`，用于 GTO 整合包，不是普通 AE2 版本。
+本分支面向 Forge 1.20.1 GTO，普通 `1.20.1` 分支用于同版本对照。按用户授权保留并维护指定 **NeoECO GTO 版**的可选兼容；以前的 NeoECO 排除记录只描述旧版本。本地开发约定已按授权同步更新。
 
-## 配套版本
+## 当前配套版本
+
+当前 LT `2.1.2-gto.9` 的最低支持整包基线为 **GTO `0.6.0-dev-23`**，已验证的是该官方发行包的配套环境。低于此基线的整包不在本版支持范围内；更新的整包仍需核对下表依赖，不能仅凭版本号更高判定兼容。
 
 | 组件 | 版本 |
 | --- | --- |
-| Minecraft | 1.20.1 |
-| Java | 21 |
-| Forge | 47.4.20 |
-| GTO 整包基线 | 0.6.0-dev15，公开 0.6.0 包提交 `3650c7d330ade1b744ade0bc303fe5111eac98fa` |
-| GTOCore | 26.10.5 |
-| AE2-GTO | 15.2610.8（使用 GTOCore 26.10.5 原包内嵌版本） |
-| Thunderbolt | 2.0.3-gto.5 |
-| AE2LT | 2.1.2-gto.8 |
+| Minecraft / Java / Forge | 1.20.1 / 21 / 47.4.20 |
+| GTO 整包基线 | 0.6.0-dev-23 官方服务端发行包 |
+| GTOCore | 26.10.10 |
+| AE2-GTO | 15.2610.31 |
+| Thunderbolt | 2.0.3-gto.6 |
+| AE2LT | 2.1.2-gto.9 |
+| NeoECO（可选） | 20.5.0-gto.1，`1.20.1-GTO` 分支 |
 
-当前替代材料与联机修复见 [gto.8 修复记录](GTO_RUNTIME_FIXES_GTO8_2026-10-22.md)。同版本更新、测试结果与配套成品见 [gto.7 移植记录](GTO_FORGE_UPDATE_GTO7_2026-10-22.md)。此前终端、派发公平性与权限修复见 [gto.6 移植记录](GTO_UPSTREAM_FIXES_GTO6_2026-10-21.md)。
+客户端与服务端一起更新整套依赖及配套 TB/LT，移除相同 mod ID 的旧包。该组合不能与旧 GTOCore 26.10.5 / AE2 15.2610.8 混用，也不适用于普通版 AE2 或普通版 NeoECO。LT 的加载元数据会明确阻止版本误装。NeoECO 本身仍为可选依赖。
 
-客户端与服务端一起替换对应的 TB/LT JAR，移除同 mod ID 的旧版本。GTOCore、GTOLib 与 GTO 自带 AE2 均使用原件；无需修改 GTO。不要把这两个包放进普通 AE2 整合包，也不要把普通 LTPP/其他依赖旧 AE2 API 的附属兼容性视为本次验证范围。
+加载约束为 GTOCore `[26.10.10,26.10.11)`、AE2-GTO `[15.2610.31]`、Thunderbolt `[2.0.3-gto.6]`；安装 NeoECO 时要求 `[20.5.0-gto.1]`。这里的最低整包基线不表示这些依赖可以任意升级。旧 Core `2.0.3-gto.1` 不适用于当前 LT。
 
-## 同步 1.20.1 分支
+本次实现、制品、验证结果和边界见 [NeoECO GTO 兼容记录](GTO_NEOECO_GTO_COMPAT_2026-10-26.md)。历史客户端结果不代表本版已经验证客户端界面或联机。
 
-当前工作树已对照 `1.20.1` 分支至 `c568e675`，移植适用更新并保留 GTO 等效实现；NeoECO 专用提交和路径继续排除：
+远程 UI 补丁同时支持 NeoECO 原正式包与上游 `cca7fbb` 的客户端类加载隔离实现，按实际字节码识别，不依赖未变更的 `20.5.0-gto.1` 版本号。更新范围及测试制品边界见 [远程 UI 补丁更新记录](GTO_NEOECO_UI_UPDATE_2026-10-26.md)。
 
-- 接口导出调度与供应器派发、回收快照优化。
-- 普通和批量供应器混合执行精确订单，保留真实投料、返回、取消和存档的数量归属。
-- 原生终端菜单的大数库存同步与显示，以及天枢多方块布局、顶部端口和 JEI 预览调整。
-- EMI 运行兼容下限放宽至 `1.1.22+1.20.1`。
-- 最终合成派发、物理 long 边界、精确回料、无限盘摘要、IO 重读和自由视角隔离。
-- Mekanism / Industrial Foregoing 机器回料适配。
-- JEI 旧/新转移服务、按钮控制器分流，以及旧/新书签 API 测试兼容。
-
-GTO 26.10.5 整包验证使用自带 JEI `15.59.0.212`。其他 JEI 版本的接口测试不能代替整包运行验证；GTO 自身的 JEI Mixin 也会限制可替换版本，详见本轮报告。
-
-保留上表中的 Forge、AE2-GTO 和 Thunderbolt 版本，不切换为普通 AE2 或 Thunderbolt beta3。
-缺少的 `BigLongSlice` 移植到 LT 自有兼容包，并沿用 GTO Thunderbolt 的三参数精确报告 API。
-终端数量显示继续使用 GTO 的 `IRepoSlot` 渲染入口；实体 CPU 拆除时同时回收普通库存和产物缓冲。
-当前网络协议为 `13`（含供应器机器适配开关同步），客户端与服务端必须一起更新。
-
-## 不支持混用最新 AE2 源码依赖
-
-公开 GTOCore 26.10.5 原件的 `CreativeCellInventoryMixin` 仍要求 `configured: java.util.Set`。外置 AE2-GTO 15.2610.10 已将其改为 `AEKeySet`，该组合会在 GTO 自身的客户端 Mixin 中失败。因此此构建的编译依赖与运行版本均锁定 15.2610.8；不要单独覆盖 GTO 自带 AE2。本次没有修改 GTO 来绕过这个错误。
+当前补丁还保留 Core `2.0.3-gto.6` 已完成的客户端世界隔离，避免两项目重复转换导致专服启动失败。最新验证为 JUnit 1575 项通过、5 项跳过，以及安装 NeoECO 的 122 项 GameTest 全部通过；当前配套制品哈希、正式包加载与重启结果见 [Core gto.6 配套验证](GTO_NEOECO_CORE_GTO6_2026-10-27.md)。相同版本号的历史制品应按哈希区分。
 
 ## 适配边界
 
-- TB 在 GTO 的合成提交入口捕获库存快照，在其已有工作线程上执行候选算法。候选算法不适用时，调用原有 GTO 计算任务并保留其返回对象及元数据。取消、候选失败和 CRAFT_LESS 继续经过 TB 的有界执行器。
-- GTO 已删除的 AE2 模拟库存类迁入 TB 自己的包，保留 LGPL 声明，不向 `appeng` 包补回旧类。
-- 普通实体 CPU 任务使用 GTO 原生优化实现。含 LT 超载样板的任务使用 LT 自有调度器，并保留实体 CPU 的容量、协处理器预算、暂停、存档、CraftingLink 身份与产物核算。通过 AE2 CPU 集群安装 GTO 公共 CPU 类的子类，不注入或改写 GTO 类。
-- LT 的 JEI 处理器迁入自有包；更新 GTO 的 GenericStack、菜单、数量显示、FastCollection 与 CraftingPlan API。
-- 直接挂载的 BigMEStorage 保持 BigInteger 精度。经存储总线等连接其他 ME 网络时，使用 GTO 原生去重查询；这条跨网络路径的单次操作和可见数量受 `Long.MAX_VALUE` 限制。不能把多个指向同一库存的连接当作多份库存。
-- AE2-GTO 原生物品键忽略仅 ForgeCaps 不同的身份差异；此构建沿用该语义，不承诺恢复普通 AE2 的 capability-only 区分。
+- 普通实体 CPU 委托给 GTO 原生执行器，并保留 NeoECO 安装的 CPU 包装；含 LT 超载样板的计划继续使用 LT 时轮逻辑，保留实体 CPU 容量、协处理器预算、暂停、存档和产物归属。
+- GTO 26.10.10 随机化部分内部类与方法名。样板解码通过参数和返回类型识别原生调用，CPU 剩余量通过缓存访问器读取其持久化字段契约，不绑定旧公开实现类名。
+- NeoECO 批量准入、任务 UUID、取消、完成和精确数量派发通过其公开 API 接入；模糊回料状态提供不要求注册表参数的 Forge 持久化入口。接收结果不确定时暂停任务并保留资源归属，避免自动重复派发。
+- 样板迁移使用 NeoECO 的真实物理槽位，并检查整个工作站网络是否仍有工作线程持有任务；LT 与 NeoECO 共用每个 ME 网络的迁移锁。
+- NeoECO 远程界面的客户端世界读取隔离到客户端辅助类，避免正式发行包在专用服校验共享 UI 类时加载 ClientLevel。保持原 UI 和同步协议，不修改 NeoECO 原件。
+- TB 候选算法不适用时仍调用 GTO 计算任务。直接 BigMEStorage 保留 BigInteger 精度；经存储总线跨 ME 网络时沿用 GTO 去重与单次 long 数量边界。
 
 ## 构建
 
-使用 Java 21。当前配套 Core 的独立源码、基线与完整补丁见 [NeoECO 清除记录](GTO_NEOECO_REMOVAL_2026-10-21.md)，需使用配套 Core `2.0.3-gto.5`。先构建 TB 并发布到其工作树本地 Maven 仓库：
+使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_NEOECO_CORE_GTO6_2026-10-27.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
+
+1. [gto.5 完整补丁](docs/patches/core-gto.5-from-upstream.patch)
+2. [gto.6 增量补丁](docs/patches/core-gto.6-from-gto.5.patch)
+
+在 Core 源码中运行：
 
 ```sh
 ./gradlew check jarJar verifyReleaseJar publishMavenJavaPublicationToMavenRepository
 ```
 
-再在 LT 仓库构建：
+再构建 LT：
 
 ```sh
-./gradlew check jarJar
+./gradlew -Pthunderbolt_local_repository=/absolute/path/to/core/repo check jarJar
 ```
 
-LT 默认从同级 `../Thunderbolt-Core-Reborn/repo` 查找配套 TB。目录不同时传入 `-Pthunderbolt_local_repository=/绝对路径/repo`。
+Core 默认本地仓库路径仍为同级 `../Thunderbolt-Core-Reborn/repo`。LT 不再需要以 GTOCore 内部 CPU 类作为编译依赖，也不会嵌入 GTOCore 或 NeoECO。只分发 `build/libs` 的正式主 JAR，测试代理、slim、sources 和 QA 包均不是游戏依赖。
 
-LT 编译时下载公开 GTOCore 26.10.5 原件，并校验 SHA-256 `8e6260ac596091ca876506e70b7715249b7198ddbd5d833059c3609ac751e465`。也可传入 `-Pgto_core_jar=/绝对路径/gtocore-forge-1.20.1-26.10.5.jar`，仍执行相同校验。此依赖只用于编译，绝不嵌入 LT。
-
-分发 `build/libs` 中没有 `-slim`、`-sources`、`-gto-test-agent` 后缀的主 JAR。单元测试用 javaagent 仅将 AE2-GTO 的基础身份 mixin 应用于没有 ModLauncher 的 JUnit JVM，不是生产依赖。
-
-## 实机验证复现
-
-LT 保存了可选测试源集 `src/gtoQa`：
+## 隔离游戏测试
 
 ```sh
-./gradlew -PgtoQa gtoQaJar gtoQaLtJar
+./gradlew -Pthunderbolt_local_repository=/absolute/path/to/core/repo -PgtoQa gtoQaJar gtoQaLtJar
 ```
 
-在**隔离测试用** GTO 服务端/客户端放入配套 TB 主 JAR、`build/gto-qa/gto-compat-qa.jar` 和 `build/gto-qa/ae2lt-gto-qa-instrumented.jar`。后者替代 LT 主 JAR，保留所有生产类字节并附加测试夹具，避免 Java 21 的模块分包冲突。`gto-qa-fixtures.jar` 和 `gto-qa-main-dev.jar` 均为构建中间件，不能单独放入 mods。正式游戏使用 `build/libs` 的 LT 主 JAR。
+在隔离 GTO 实例内安装配套 TB、正式 NeoECO GTO、`build/gto-qa/gto-compat-qa.jar`，并以 `ae2lt-gto-qa-instrumented.jar` 替代 LT 主包。该包保留正式生产类并附加测试夹具。其余中间 JAR 不要放入 mods。
 
-测试模组会在服务端启动后放置结构并自动运行用例；用 `-Dae2lt.gtoQaSuite=base|exact|dispatch|useless|interfaces|batch|io|infinite|recipes|content|content-recipes|permissions|none` 选择测试组，每次使用独立的新存档。`recipes`、`content` 及两者合并的 `content-recipes` 可直接配合正式 LT 主包使用；其余组中的包内夹具需要上述 instrumented 包。`io` 执行 40 项过载 IO 测试，包括矩阵空槽重载和四种服务器菜单操作。`infinite` 执行八元件无限存储综合回归，并注册测试通道检查单位变化后的摘要重算。测试夹具为超出模板的多方块保持区块加载，并打开 GTO 的玩家加入后合成更新条件；精确配方测试使用自有测试配方，不改 GTO 缓存的配方表。不要在正常游戏存档中运行。
+使用 `-Dae2lt.gtoQaSuite=neoeco|base|exact|dispatch|batch|interfaces|io|infinite|recipes|content|content-recipes|permissions|none` 选择测试组，每次新建测试世界。测试应同时满足 CPU、STORAGE、PLANNER 三个 PASS 与最终 `GTO_COMPAT_QA PASS total=... failed=0 startupFailures=0`；只出现服务端 Done 或退出码 0 不能证明通过。`neoeco` 组要求安装上表指定的正式 NeoECO。
 
-客户端使用 `-Dae2lt.gtoQaSuite=none`，进入测试世界后默认检查界面与数量格式、保存截图并自动退出。附加 `-Dae2lt.bigTerminalProbe=true` 验证原生/天枢终端的大数库存与提示；`-Dae2lt.emiMultiblockProbe=true` 验证 GTO 默认 EMI 预览；原生 JEI 环境可用 `-Dae2lt.multiblockLayoutProbe=true`。GTO 的 EMI/JEMI 会接管 JEI 界面，不能把 JEMI 界面强转为原生 JEI。
+JUnit 的正式 NeoECO API/字节码测试读取 `build/neoeco-compat/neoeco-release.jar`。放入兼容记录列出的原件并校验哈希后再运行 `check`；缺包时这三项会明确跳过。测试原件不嵌入生产制品。
 
-服务端需出现 CPU、STORAGE、PLANNER 三个 PASS，以及 `GTO_COMPAT_QA PASS total=11 failed=0 startupFailures=0`；客户端需出现 `GTO_CLIENT_QA PASS`。测试覆盖真实 Mixin 后的计算入口、原生回退、共享库存去重、大数库存、挂载顺序、实体 CPU 超载投料/暂停/存档恢复/变体返回/普通任务切换、满库存下运行中及空闲 CPU 拆除时普通库存与产物缓冲的完整回收和重复调用防复制，以及 8 个时轮状态和共享种子循环测试。它不等于整个整合包所有配方和所有可选附属的穷举测试。
+以下内容保留历史追溯，涉及的旧版本、数量及兼容限制均以各自日期为准。
 
-## 本轮验证记录
+## 历史验证记录（gto.8 及更早，不能作为本版结果）
 
 - `compileJava`、`compileTestJava`、`compileGtoQaJava` 及可选游戏测试/客户端探针源文件均编译通过。
 - `check`：1489 个单元测试，1484 个通过、5 个跳过、0 个失败；包括 5 个精确数量切片边界测试。

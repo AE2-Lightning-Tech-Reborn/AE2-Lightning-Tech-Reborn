@@ -965,27 +965,6 @@ compileJava {
     }
 }
 
-// Only the public GTO CPU superclass is referenced. This compile-only dependency is never
-// bundled; the installed, unmodified GTOCore provides it at runtime.
-def gtoCoreApi = layout.buildDirectory.file('compile-only/gtocore-26.10.5.jar')
-def prepareGtoCoreApi = tasks.register('prepareGtoCoreApi') {
-    def suppliedJar = providers.gradleProperty('gto_core_jar')
-    inputs.property('sha256', '8e6260ac596091ca876506e70b7715249b7198ddbd5d833059c3609ac751e465')
-    if (suppliedJar.isPresent()) inputs.file(suppliedJar)
-    outputs.file(gtoCoreApi)
-    doLast {
-        def target = gtoCoreApi.get().asFile
-        target.parentFile.mkdirs()
-        if (suppliedJar.isPresent()) target.bytes = file(suppliedJar.get()).bytes
-        else new URL('https://raw.githubusercontent.com/GregTech-Odyssey/GregTech-Odyssey/3650c7d330ade1b744ade0bc303fe5111eac98fa/mods/gtocore-forge-1.20.1-26.10.5.jar').withInputStream { input ->
-            target.withOutputStream { output -> output << input }
-        }
-        def actual = java.security.MessageDigest.getInstance('SHA-256').digest(target.bytes).encodeHex().toString()
-        if (actual != inputs.properties.sha256) throw new GradleException('GTOCore API JAR checksum mismatch')
-    }
-}
-dependencies { compileOnly files(gtoCoreApi).builtBy(prepareGtoCoreApi) }
-
 if (providers.gradleProperty('gtoQa').isPresent()) {
     apply from: 'gradle/gto-qa.gradle'
 }

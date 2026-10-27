@@ -32,6 +32,7 @@ public final class PatternMigrationBudget {
     public boolean acquire(Object grid, Object owner) {
         var existing = owners.get(grid);
         if (existing != null && existing.get() != null) return existing.get() == owner;
+        if (!com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.acquireMigration(grid, owner)) return false;
         owners.put(grid, new WeakReference<>(owner));
         rotation.addLast(new WeakReference<>(owner));
         return true;
@@ -40,13 +41,15 @@ public final class PatternMigrationBudget {
     public void release(Object grid, Object owner) {
         var existing = owners.get(grid);
         if (existing != null && existing.get() == owner) owners.remove(grid);
+        com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.releaseMigration(grid, owner);
         rotation.removeIf(ref -> ref.get() == null || ref.get() == owner);
         grants.removeIf(ref -> ref.get() == null || ref.get() == owner);
     }
 
     public boolean isOwner(Object grid, Object owner) {
         var existing = owners.get(grid);
-        return existing != null && existing.get() == owner;
+        return existing != null && existing.get() == owner
+                && com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.ownsMigration(grid, owner);
     }
 
     public long begin(long serverTick, Object owner) {

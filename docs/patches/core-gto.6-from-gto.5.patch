@@ -1,0 +1,31 @@
+diff --git a/gradle.properties b/gradle.properties
+--- a/gradle.properties
++++ b/gradle.properties
+@@ -17,4 +17,4 @@
+ loader_version_range=[47,)
+-ae2_version=15.2610.8
+-ae2_version_range=[15.2610.8]
++ae2_version=15.2610.31
++ae2_version_range=[15.2610.31]
+ guideme_version=20.1.15
+@@ -37,3 +37,3 @@
+ mod_license=GNU LGPL 3.0
+-mod_version=2.0.3-gto.5
++mod_version=2.0.3-gto.6
+ mod_group_id=com.moakiee.thunderbolt
+diff --git a/src/main/resources/META-INF/mods.toml b/src/main/resources/META-INF/mods.toml
+--- a/src/main/resources/META-INF/mods.toml
++++ b/src/main/resources/META-INF/mods.toml
+@@ -38,3 +38,3 @@
+ mandatory = true
+-versionRange = "[26.10.5,26.10.6)"
++versionRange = "[26.10.10,26.10.11)"
+ ordering = "AFTER"
+diff --git a/src/test/java/com/moakiee/thunderbolt/assets/PortMetadataContractTest.java b/src/test/java/com/moakiee/thunderbolt/assets/PortMetadataContractTest.java
+--- a/src/test/java/com/moakiee/thunderbolt/assets/PortMetadataContractTest.java
++++ b/src/test/java/com/moakiee/thunderbolt/assets/PortMetadataContractTest.java
+@@ -26,3 +26,3 @@
+         assertEquals("[47.4.20,)", properties.getProperty("forge_version_range"));
+-        assertEquals("[15.2610.8]", properties.getProperty("ae2_version_range"));
++        assertEquals("[15.2610.31]", properties.getProperty("ae2_version_range"));
+     }

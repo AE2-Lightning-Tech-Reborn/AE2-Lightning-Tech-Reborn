@@ -17,7 +17,7 @@ import appeng.crafting.inv.ListCraftingInventory;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import appeng.me.service.CraftingService;
 import appeng.util.Platform;
-import com.gtocore.api.ae2.crafting.OptimizedCraftingCpuLogic;
+import appeng.crafting.execution.CraftingCpuLogic;
 import com.moakiee.ae2lt.crafting.timewheel.*;
 import com.moakiee.ae2lt.overload.runtime.pattern.OverloadedProviderOnlyPatternDetails;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
@@ -30,14 +30,29 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Ordinary plans use the unchanged GTO implementation. Plans containing LT overload patterns
  * use LT's existing dispatcher, which owns their fuzzy-return accounting. This keeps GTO's
- * optimized CPU type (including its pause/status UI contract) without modifying GTO classes.
+ * native CPU and optional NeoECO wrapper without binding to randomized GTO implementation names.
  */
-public final class GtoCompatibleCraftingCpuLogic extends OptimizedCraftingCpuLogic {
+public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
     private static final String LT_STATE = "ae2ltGtoOverloadCpu";
+    private final CraftingCpuLogic delegate;
+    private boolean paused;
     private final Set<Consumer<AEKey>> listeners = new HashSet<>();
     private @Nullable TimeWheelCraftingCPU ltCpu;
 
-    public GtoCompatibleCraftingCpuLogic(CraftingCPUCluster cluster) { super(cluster); }
+    public GtoCompatibleCraftingCpuLogic(CraftingCPUCluster cluster) {
+        this(cluster, cluster.craftingLogic instanceof GtoCompatibleCraftingCpuLogic previous
+                ? previous.nativeDelegate() : cluster.craftingLogic);
+    }
+
+    public GtoCompatibleCraftingCpuLogic(CraftingCPUCluster cluster, CraftingCpuLogic delegate) {
+        super(cluster);
+        this.delegate = java.util.Objects.requireNonNull(delegate, "native CPU logic");
+        if (delegate instanceof GtoCompatibleCraftingCpuLogic)
+            throw new IllegalArgumentException("CPU bridge already installed");
+    }
+
+    public CraftingCpuLogic nativeDelegate() { return delegate; }
+    @Override protected void postChange(AEKey key) { cluster.markDirty(); }
 
     public boolean usesLt() { return ltCpu != null; }
     private Ae2LtTimeWheelCraftingCpuLogic lt() { return ltCpu.getCraftingLogic(); }
@@ -71,43 +86,43 @@ public final class GtoCompatibleCraftingCpuLogic extends OptimizedCraftingCpuLog
     @Override public ICraftingSubmitResult trySubmitJob(IGrid grid, ICraftingPlan plan, IActionSource src,
             @Nullable ICraftingRequester requester) {
         if (hasJob() || (usesLt() && lt().hasPersistentState())) return CraftingSubmitResult.CPU_BUSY;
-        if (!super.getInventory().list.isEmpty()) return CraftingSubmitResult.CPU_BUSY;
+        if (!delegate.getInventory().list.isEmpty()) return CraftingSubmitResult.CPU_BUSY;
         if (requiresLtDispatcher(plan)) {
             createLt();
             return lt().trySubmitJob(grid, plan, src, requester);
         }
         ltCpu = null;
-        return super.trySubmitJob(grid, plan, src, requester);
+        return delegate.trySubmitJob(grid, plan, src, requester);
     }
     @Override public void tickCraftingLogic(IEnergyService energy, CraftingService service) {
         if (usesLt()) lt().tickCraftingLogic(energy, service);
-        else super.tickCraftingLogic(energy, service);
+        else if (!paused) delegate.tickCraftingLogic(energy, service);
     }
     @Override public long insert(AEKey key, long amount, Actionable mode) {
-        return usesLt() ? lt().insert(key, amount, mode) : super.insert(key, amount, mode);
+        return usesLt() ? lt().insert(key, amount, mode) : delegate.insert(key, amount, mode);
     }
-    @Override public void cancel() { if (usesLt()) lt().cancel(); else super.cancel(); }
-    @Override public boolean hasJob() { return usesLt() ? lt().hasPersistentState() : super.hasJob(); }
-    @Override public GenericStack getFinalJobOutput() { return usesLt() ? lt().getFinalJobOutput() : super.getFinalJobOutput(); }
-    @Override public ElapsedTimeTracker getElapsedTimeTracker() { return usesLt() ? lt().getElapsedTimeTracker() : super.getElapsedTimeTracker(); }
-    @Override public ICraftingLink getLastLink() { return usesLt() ? lt().getLastLink() : super.getLastLink(); }
-    @Override public ListCraftingInventory getInventory() { return usesLt() ? lt().getInventory() : super.getInventory(); }
-    @Override public long getLastModifiedOnTick() { return usesLt() ? lt().getLastModifiedOnTick() : super.getLastModifiedOnTick(); }
-    @Override public long getStored(AEKey key) { return usesLt() ? lt().getStored(key) : super.getStored(key); }
-    @Override public long getWaitingFor(AEKey key) { return usesLt() ? lt().getWaitingFor(key) : super.getWaitingFor(key); }
-    @Override public void getAllWaitingFor(Set<AEKey> keys) { if (usesLt()) lt().getAllWaitingFor(keys); else super.getAllWaitingFor(keys); }
-    @Override public long getPendingOutputs(AEKey key) { return usesLt() ? lt().getPendingOutputs(key) : super.getPendingOutputs(key); }
-    @Override public void getAllItems(KeyCounter out) { if (usesLt()) lt().getAllItems(out); else super.getAllItems(out); }
-    @Override public boolean isCantStoreItems() { return usesLt() ? lt().isCantStoreItems() : super.isCantStoreItems(); }
-    @Override public boolean isPaused() { return usesLt() ? lt().isJobSuspended() : super.isPaused(); }
-    @Override public void setPaused(boolean paused) { if (usesLt()) lt().setJobSuspended(paused); else super.setPaused(paused); }
+    @Override public void cancel() { if (usesLt()) lt().cancel(); else delegate.cancel(); }
+    @Override public boolean hasJob() { return usesLt() ? lt().hasPersistentState() : delegate.hasJob(); }
+    @Override public GenericStack getFinalJobOutput() { return usesLt() ? lt().getFinalJobOutput() : delegate.getFinalJobOutput(); }
+    @Override public ElapsedTimeTracker getElapsedTimeTracker() { return usesLt() ? lt().getElapsedTimeTracker() : delegate.getElapsedTimeTracker(); }
+    @Override public ICraftingLink getLastLink() { return usesLt() ? lt().getLastLink() : delegate.getLastLink(); }
+    @Override public ListCraftingInventory getInventory() { return usesLt() ? lt().getInventory() : delegate.getInventory(); }
+    @Override public long getLastModifiedOnTick() { return usesLt() ? lt().getLastModifiedOnTick() : delegate.getLastModifiedOnTick(); }
+    @Override public long getStored(AEKey key) { return usesLt() ? lt().getStored(key) : delegate.getStored(key); }
+    @Override public long getWaitingFor(AEKey key) { return usesLt() ? lt().getWaitingFor(key) : delegate.getWaitingFor(key); }
+    @Override public void getAllWaitingFor(Set<AEKey> keys) { if (usesLt()) lt().getAllWaitingFor(keys); else delegate.getAllWaitingFor(keys); }
+    @Override public long getPendingOutputs(AEKey key) { return usesLt() ? lt().getPendingOutputs(key) : delegate.getPendingOutputs(key); }
+    @Override public void getAllItems(KeyCounter out) { if (usesLt()) lt().getAllItems(out); else delegate.getAllItems(out); }
+    @Override public boolean isCantStoreItems() { return usesLt() ? lt().isCantStoreItems() : delegate.isCantStoreItems(); }
+    public boolean isPaused() { return usesLt() ? lt().isJobSuspended() : paused; }
+    public void setPaused(boolean paused) { if (usesLt()) lt().setJobSuspended(paused); else this.paused = paused; cluster.markDirty(); }
     @Override public void addListener(Consumer<AEKey> listener) {
-        listeners.add(listener); super.addListener(listener); if (usesLt()) lt().addListener(listener);
+        listeners.add(listener); delegate.addListener(listener); if (usesLt()) lt().addListener(listener);
     }
     @Override public void removeListener(Consumer<AEKey> listener) {
-        listeners.remove(listener); super.removeListener(listener); if (usesLt()) lt().removeListener(listener);
+        listeners.remove(listener); delegate.removeListener(listener); if (usesLt()) lt().removeListener(listener);
     }
-    public long getRemainingOutputAmount() { return usesLt() ? lt().getRemainingOutputAmount() : GtoCpuJobAccess.remaining(this); }
+    public long getRemainingOutputAmount() { return usesLt() ? lt().getRemainingOutputAmount() : GtoCpuJobAccess.remaining(delegate); }
 
     /** Reclaim both LT inventories before AE2's breakCluster path drops its ordinary inventory. */
     public void dropStoredItemsForRemoval(Level level, BlockPos pos) {
@@ -129,7 +144,8 @@ public final class GtoCompatibleCraftingCpuLogic extends OptimizedCraftingCpuLog
             data.put(LT_STATE, state);
         } else {
             data.remove(LT_STATE);
-            super.writeToNBT(data);
+            delegate.writeToNBT(data);
+            data.putBoolean("ae2ltPaused", paused);
         }
     }
     @Override public void readFromNBT(CompoundTag data) {
@@ -138,7 +154,8 @@ public final class GtoCompatibleCraftingCpuLogic extends OptimizedCraftingCpuLog
             lt().readFromNBT(data.getCompound(LT_STATE), cluster.getLevel().registryAccess());
         } else {
             ltCpu = null;
-            super.readFromNBT(data);
+            delegate.readFromNBT(data);
+            paused = data.getBoolean("ae2ltPaused");
         }
     }
 }

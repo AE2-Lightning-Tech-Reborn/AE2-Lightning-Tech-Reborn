@@ -17,6 +17,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             "AdvCraftingCpuAccessor", "advanced_ae",
             "AdvCraftingCpuLogicMixin", "advanced_ae",
             "InterfaceEnergyDistributionMixin", "appflux",
+            "NeoEcoRemoteMachineUiMixin", "neoecoae",
             "IpnContainerClickerMixin", "inventoryprofilesnext",
             "EntityConveyorPhaseLockMixin", "mob_grinding_utils");
 
@@ -66,6 +67,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             ClassNode targetClass,
             String mixinClassName,
             IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".NeoEcoRemoteMachineUiMixin")) {
+            com.moakiee.ae2lt.compat.neoeco.NeoEcoRemoteUiTransform.isolateClientWorld(targetClass);
+        }
     }
 
     @Override
@@ -74,5 +78,8 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             ClassNode targetClass,
             String mixinClassName,
             IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".PatternProviderLogicMixin")) {
+            com.moakiee.ae2lt.compat.gto.GtoPatternDecodeTransform.filterOrdinaryProvider(targetClass);
+        }
     }
 }

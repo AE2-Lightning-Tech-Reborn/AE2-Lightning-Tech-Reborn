@@ -938,7 +938,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             var resolvedProvider = firstProvider;
             while (resolvedProvider != null && dispatched < affordable) {
                 var provider = resolvedProvider.provider();
-                while (dispatched < affordable && !provider.isBusy()) {
+                while (dispatched < affordable && !activeJob.suspended && !provider.isBusy()) {
                     if (pending == null) {
                         pending = TimeWheelInputExtractor.cloneSingleCopy(result);
                     }
@@ -985,6 +985,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
 
     @Nullable
     private ResolvedProvider nextFreeProvider(Iterator<ResolvedProvider> providers) {
+        if (job != null && job.suspended) return null;
         while (providers.hasNext()) {
             var resolved = providers.next();
             if (!resolved.provider().isBusy()) {
@@ -1009,6 +1010,14 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 return false;
             }
         } catch (Throwable t) {
+            if (com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.isIndeterminate(t)) {
+                // Keep this copy debited and register its expected output exactly once. An ECO
+                // provider may already own it; suspend before visiting another provider/copy.
+                if (job != null) job.suspended = true;
+                cpu.markDirty();
+                AELog.warn("[ae2lt] Suspended CPU after uncertain NeoECO single-copy ownership: %s", t);
+                return true;
+            }
             AELog.warn("[ae2lt] ICraftingProvider %s threw during pushPattern; blocking this pattern for the current tick. %s",
                     provider, t);
             dispatchSchedule.recordFailure(resolvedProvider.pattern(), provider);

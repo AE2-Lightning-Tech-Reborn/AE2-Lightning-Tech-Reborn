@@ -42,6 +42,8 @@ final class BigProviderDispatcher {
             ICraftingProvider provider, Level level, IEnergyService energy, long tick, Runnable changed,
             CraftingDispatch transaction) {
         var view = new View(job, details, level, transaction);
+        Long exactResult = dispatchNeoEcoExact(job, recipe, details, provider, level, energy, changed, transaction);
+        if (exactResult != null) return exactResult;
         IBatchCraftingProvider batch;
         long capacity;
         boolean shared;
@@ -79,8 +81,18 @@ final class BigProviderDispatcher {
                 prepared = batch.prepareBatch(details, recipe.template(), slice.copies(), view);
                 if (prepared != null) {
                     long admitted = Math.min(slice.copies(), Math.max(0, prepared.capacity()));
-                    if (admitted == 0) return 0;
-                    slice = BigLongSlice.of(admitted, recipe.inputs(), fixedInputs, recipe.outputs(), fixedOutputs);
+                    if (admitted == 0
+                            && com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.supports(provider)) {
+                        // Processing/stateful recipes can opt out of FastPath and still take one copy.
+                        prepared = null;
+                        batchCall = false;
+                        slice = BigLongSlice.plan(job.remainingStepCopies(), job.escrow,
+                                recipe.inputs(), Map.of(), recipe.outputs(), Map.of(), 1);
+                        if (slice.copies() == 0) return 0;
+                    } else {
+                        if (admitted == 0) return 0;
+                        slice = BigLongSlice.of(admitted, recipe.inputs(), fixedInputs, recipe.outputs(), fixedOutputs);
+                    }
                 }
             } catch (RuntimeException unavailable) { return 0; }
         }
@@ -92,7 +104,8 @@ final class BigProviderDispatcher {
                     ? batch.pushBatch(details, recipe.template(), slice.copies(), view)
                     : (provider instanceof DeferredCraftingProvider deferred
                             ? deferred.pushPattern(details, recipe.template(), transaction.outputSink())
-                            : provider.pushPattern(details, recipe.template())) ? 0 : slice.copies();
+                            : com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.pushForJob(
+                                    provider, details, recipe.template(), job.id)) ? 0 : slice.copies();
             if (leftover < 0 || leftover > slice.copies())
                 throw new IllegalStateException("Provider returned an invalid accepted count");
             long received = slice.copies() - leftover;
@@ -110,6 +123,52 @@ final class BigProviderDispatcher {
             appeng.core.AELog.warn("[ae2lt] Exact order %s stopped after indeterminate provider ownership: %s",
                     job.id, uncertain);
             return 0;
+        }
+    }
+
+    private Long dispatchNeoEcoExact(BigCraftingJob job, BigProviderRecipe recipe, IPatternDetails details,
+            ICraftingProvider provider, Level level, IEnergyService energy, Runnable changed,
+            CraftingDispatch transaction) {
+        if (!com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.supports(provider)
+                || !recipe.sharedInputs().isEmpty()) return null;
+        BigInteger requested = job.remainingStepCopies();
+        if (details instanceof BatchCopyLimitPattern limit)
+            requested = requested.min(BigInteger.valueOf(Math.max(1, limit.maxBatchCopies())));
+        for (var input : recipe.inputs().entrySet())
+            requested = requested.min(job.escrow.getOrDefault(input.getKey(), BigInteger.ZERO)
+                    .divide(BigInteger.valueOf(input.getValue())));
+        double eachPower = powerLong(recipe.inputs());
+        if (eachPower > 0) {
+            double available = energy.extractAEPower(Double.MAX_VALUE, Actionable.SIMULATE, PowerMultiplier.CONFIG);
+            if (!Double.isFinite(available)) available = Double.MAX_VALUE;
+            requested = requested.min(java.math.BigDecimal.valueOf(Math.max(0, available))
+                    .divide(java.math.BigDecimal.valueOf(eachPower), 0, java.math.RoundingMode.DOWN).toBigInteger());
+        }
+        if (requested.signum() <= 0) return 0L;
+        com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.ExactBatch batch;
+        try {
+            batch = com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.prepareExact(
+                    provider, details, recipe.template(), requested, level, job.id);
+            if (batch == null) return null;
+        } catch (RuntimeException unavailable) { return 0L; }
+        var offered = BigCraftingTransfer.of(recipe, batch.copies());
+        double offeredPower = power(offered.inputs());
+        if (!Double.isFinite(offeredPower) || energy.extractAEPower(offeredPower,
+                Actionable.SIMULATE, PowerMultiplier.CONFIG) + 0.01 < offeredPower) return 0L;
+        job.reserve(offered);
+        changed.run();
+        try {
+            boolean accepted = batch.submit();
+            job.settle(offered, accepted ? offered : BigCraftingTransfer.of(recipe, BigInteger.ZERO));
+            if (accepted) energy.extractAEPower(power(offered.inputs()), Actionable.MODULATE, PowerMultiplier.CONFIG);
+            changed.run();
+            transaction.accounted();
+            return accepted ? 1L : 0L;
+        } catch (RuntimeException uncertain) {
+            job.failDispatch();
+            changed.run();
+            appeng.core.AELog.warn("[ae2lt] Exact order %s stopped after uncertain NeoECO ownership: %s", job.id, uncertain);
+            return 0L;
         }
     }
 

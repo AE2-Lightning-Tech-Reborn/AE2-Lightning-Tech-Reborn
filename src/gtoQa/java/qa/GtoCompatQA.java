@@ -92,6 +92,7 @@ public final class GtoCompatQA {
             try { checkPlanner(e.getServer()); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA PLANNER FAIL",failure); }
             var suite = System.getProperty("ae2lt.gtoQaSuite", "base");
             switch (suite) {
+                case "neoeco" -> GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.NeoEcoGtoGameTests.class);
                 case "permissions" -> GameTestRegistry.register(
                         com.moakiee.ae2lt.network.FrequencyPermissionsGameTests.class);
                 case "machine" -> {
@@ -190,12 +191,46 @@ public final class GtoCompatQA {
         var key=AEItemKey.of(Items.DIAMOND);
         var cpu=new CraftingCPUCluster(BlockPos.ZERO,BlockPos.ZERO);
         check(cpu.craftingLogic instanceof com.moakiee.ae2lt.compat.gto.GtoCompatibleCraftingCpuLogic,"compatible GTO CPU not installed");
-        var jobType=Class.forName("com.gtocore.api.ae2.crafting.ExecutingCraftingJob");
+        Object nativeLogic = ((com.moakiee.ae2lt.compat.gto.GtoCompatibleCraftingCpuLogic) cpu.craftingLogic).nativeDelegate();
+        if (net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) {
+            check(nativeLogic.getClass().getName().equals("cn.dancingsnow.neoecoae.compat.gto.ECOGtoCraftingCpuLogic"),
+                    "LT bridge displaced the NeoECO GTO CPU delegate");
+        }
+        if (nativeLogic.getClass().getName().equals("cn.dancingsnow.neoecoae.compat.gto.ECOGtoCraftingCpuLogic")) {
+            var delegate = nativeLogic.getClass().getDeclaredField("delegate");
+            delegate.setAccessible(true); nativeLogic = delegate.get(nativeLogic);
+        }
+        Field field = null;
+        for (var candidate : nativeLogic.getClass().getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(candidate.getModifiers())) continue;
+            for (var member : candidate.getType().getDeclaredFields()) {
+                if (member.getType() == appeng.crafting.CraftingLink.class) { field = candidate; break; }
+            }
+        }
+        check(field != null, "native GTO job ledger missing");
+        var jobType = field.getType();
         var ctor=Arrays.stream(jobType.getDeclaredConstructors()).filter(c->c.getParameterCount()==4).findFirst().orElseThrow();
         ctor.setAccessible(true);
         var job=ctor.newInstance(plan(key,100),(ListCraftingInventory.ChangeListener)changed->{},null,null);
-        var field=Class.forName("com.gtocore.api.ae2.crafting.OptimizedCraftingCpuLogic").getDeclaredField("job");field.setAccessible(true);field.set(cpu.craftingLogic,job);
-        var remaining=jobType.getDeclaredField("remainingAmount");remaining.setAccessible(true);remaining.setLong(job,30);
+        field.setAccessible(true);field.set(nativeLogic,job);
+        Field remaining = null;
+        try (var input = jobType.getResourceAsStream("/"+jobType.getName().replace('.', '/')+".class")) {
+            var node = new org.objectweb.asm.tree.ClassNode();
+            new org.objectweb.asm.ClassReader(input).accept(node, 0);
+            for (var method : node.methods) for (var instruction : method.instructions) {
+                if (!(instruction instanceof org.objectweb.asm.tree.LdcInsnNode constant)
+                        || !"remainingAmount".equals(constant.cst)) continue;
+                for (var next=instruction.getNext();next!=null;next=next.getNext()) {
+                    if (next instanceof org.objectweb.asm.tree.MethodInsnNode) break;
+                    if (next instanceof org.objectweb.asm.tree.FieldInsnNode member
+                            && member.getOpcode()==org.objectweb.asm.Opcodes.GETFIELD && member.desc.equals("J")) {
+                        remaining=jobType.getDeclaredField(member.name); break;
+                    }
+                }
+            }
+        }
+        check(remaining!=null,"persisted remaining output contract missing");
+        remaining.setAccessible(true);remaining.setLong(job,30);
         check(GtoCpuJobAccess.remaining(cpu.craftingLogic)==30,"remaining output bridge failed");
         var service=proxy(ICraftingService.class,m->m.getName().equals("getCpus")?ImmutableSet.of(cpu):null);
         var inflight=Class.forName("com.moakiee.ae2lt.logic.interfaces.OverloadedInterfaceCrafting").getDeclaredMethod("inFlightAmounts",ICraftingService.class);

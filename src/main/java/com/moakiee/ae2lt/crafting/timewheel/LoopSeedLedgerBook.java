@@ -396,6 +396,18 @@ final class LoopSeedLedgerBook {
         long moved = Math.min(amount, Math.max(0L, balance(consumer, expected)));
         if (moved <= 0) return;
         adjust(consumer, expected, -moved);
+        // The concrete return can cancel a loan taken while this planned credit was in flight.
+        // Retire that debt now, otherwise the next producer credit pays the same loan twice.
+        var byPlanned = variantDebts.get(consumer);
+        var byActual = byPlanned == null ? null : byPlanned.get(expected);
+        if (byActual != null) {
+            long debt = byActual.getOrDefault(actual, 0L);
+            long remaining = debt - Math.min(debt, moved);
+            if (remaining > 0) byActual.put(actual, remaining);
+            else byActual.remove(actual);
+            if (byActual.isEmpty()) byPlanned.remove(expected);
+            if (byPlanned.isEmpty()) variantDebts.remove(consumer);
+        }
         adjust(consumer, actual, moved);
     }
 

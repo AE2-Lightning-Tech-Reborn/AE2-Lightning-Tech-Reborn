@@ -883,6 +883,7 @@ public class AE2LightningTech {
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
             com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
+            com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.initialize();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
