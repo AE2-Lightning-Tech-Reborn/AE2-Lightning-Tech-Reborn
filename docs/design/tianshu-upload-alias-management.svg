@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="680" viewBox="0 0 1360 680">
+  <title>天枢上传别名管理：纯色界面设计示意</title>
+  <desc>左侧为已保存别名清单，右侧为单条别名编辑页。示例数据不代表真实配置，控件为布局示意。</desc>
+  <style>
+    text {font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif; fill:#252525; font-size:18px}
+    .heading {font-size:24px;font-weight:600}
+    .small {font-size:15px;fill:#555}
+    .id {font-family:Consolas,monospace;font-size:18px}
+    .panel {fill:#c6c6c6;stroke:#565656;stroke-width:2}
+    .field {fill:#e2e2e2;stroke:#777;stroke-width:1}
+    .button {fill:#d9d9d9;stroke:#565656;stroke-width:2}
+  </style>
+  <rect width="1360" height="680" fill="#f2f2f0"/>
+  <text x="40" y="44" class="heading">上传别名管理</text>
+  <text x="40" y="76" class="small">纯色布局示意 · 仅管理玩家保存的别名 · 非游戏截图</text>
+  <rect x="40" y="108" width="608" height="440" class="panel"/>
+  <text x="56" y="140" class="heading">上传别名管理</text>
+  <rect x="586" y="98" width="44" height="42" class="button"/>
+  <text x="598" y="127">↩</text>
+  <rect x="56" y="156" width="576" height="34" class="field"/>
+  <text x="68" y="179" class="small">搜索来源或别名…</text>
+  <text x="610" y="180">×</text>
+  <text x="68" y="218" class="small">配方来源</text>
+  <text x="376" y="218" class="small">上传别名</text>
+  <rect x="56" y="230" width="558" height="240" fill="#e2e2e2"/>
+  <rect x="56" y="230" width="558" height="40" fill="#afc4d4"/>
+  <text x="68" y="256" class="id">mekanism:crushing</text>
+  <text x="376" y="256">粉碎工厂</text>
+  <text x="68" y="296" class="id">mekanism:enriching</text>
+  <text x="376" y="296">富集工厂</text>
+  <text x="68" y="336" class="id">example:pressing</text>
+  <text x="376" y="336">金属压机</text>
+  <rect x="620" y="230" width="12" height="240" fill="#a0a0a0"/>
+  <rect x="620" y="230" width="12" height="70" fill="#dedede" stroke="#777"/>
+  <text x="56" y="490" class="small">共 3 条 · 保存在本机</text>
+  <rect x="56" y="502" width="92" height="34" class="button"/>
+  <text x="84" y="525">新增</text>
+  <rect x="160" y="502" width="92" height="34" class="button"/>
+  <text x="188" y="525">编辑</text>
+  <rect x="264" y="502" width="92" height="34" class="button"/>
+  <text x="292" y="525">删除</text>
+  <rect x="712" y="108" width="608" height="440" class="panel"/>
+  <text x="728" y="140" class="heading">编辑上传别名</text>
+  <rect x="1258" y="98" width="44" height="42" class="button"/>
+  <text x="1270" y="127">↩</text>
+  <text x="728" y="180">配方来源</text>
+  <rect x="728" y="194" width="576" height="36" class="field"/>
+  <text x="740" y="219" class="id">mekanism:crushing</text>
+  <text x="728" y="264">上传别名</text>
+  <text x="1288" y="264">?</text>
+  <rect x="728" y="278" width="576" height="36" class="field"/>
+  <text x="740" y="303">粉碎工厂</text>
+  <rect x="728" y="330" width="148" height="34" class="button"/>
+  <text x="748" y="353">使用当前来源</text>
+  <rect x="888" y="330" width="148" height="34" class="button"/>
+  <text x="908" y="353">从目标选择…</text>
+  <text x="728" y="407">当前网络：匹配 1 个分组</text>
+  <rect x="1228" y="382" width="76" height="34" class="button"/>
+  <text x="1248" y="405">刷新</text>
+  <text x="728" y="441" class="small">匹配检查只作参考，保存不会上传样板。</text>
+  <rect x="728" y="502" width="92" height="34" class="button"/>
+  <text x="756" y="525">取消</text>
+  <rect x="1212" y="502" width="92" height="34" fill="#afc4d4" stroke="#565656" stroke-width="2"/>
+  <text x="1240" y="525">保存</text>
+  <text x="40" y="594">入口：上传目标选择页工具栏 → 管理上传别名</text>
+  <text x="40" y="625" class="small">另在天枢终端设置提供常驻入口；没有已编码样板也能管理。</text>
+  <text x="712" y="594">选中记录 → 编辑 / 逐条删除</text>
+  <text x="712" y="625" class="small">背景后续可替换；正式实现优先使用 AE2 原生控件。</text>
+</svg>
