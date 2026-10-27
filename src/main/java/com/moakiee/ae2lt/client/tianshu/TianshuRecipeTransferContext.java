@@ -60,19 +60,9 @@ public final class TianshuRecipeTransferContext {
             Object recipeBase,
             String fallbackSourceKey,
             Iterable<String> additionalAliases) {
-        Recipe<?> recipe = switch (recipeBase) {
-            case RecipeHolder<?> holder -> holder.value();
-            case Recipe<?> direct -> direct;
-            default -> null;
-        };
-        String sourceKey = "";
+        String sourceKey = sourceKeyFor(recipeBase, fallbackSourceKey);
         String recipeId = "";
         var defaultAliases = new ArrayList<String>();
-        if (recipe != null) {
-            var typeId = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
-            sourceKey = typeId == null ? "" : typeId.toString();
-        }
-        if (sourceKey.isBlank() && fallbackSourceKey != null) sourceKey = fallbackSourceKey;
         if (recipeBase instanceof RecipeHolder<?> holder) {
             recipeId = holder.id().toString();
             addDefaultAlias(defaultAliases, firstPathSegment(holder.id().getPath()));
@@ -83,6 +73,21 @@ public final class TianshuRecipeTransferContext {
             additionalAliases.forEach(value -> addDefaultAlias(defaultAliases, value));
         }
         publish(menu, sourceKey, recipeId, defaultAliases);
+    }
+
+    /** Resolves source identity without changing the terminal's transferred recipe context. */
+    public static String sourceKeyFor(Object recipeBase, String fallbackSourceKey) {
+        Recipe<?> recipe = switch (recipeBase) {
+            case RecipeHolder<?> holder -> holder.value();
+            case Recipe<?> direct -> direct;
+            case null -> null;
+            default -> null;
+        };
+        if (recipe != null) {
+            var typeId = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
+            if (typeId != null) return typeId.toString();
+        }
+        return fallbackSourceKey == null ? "" : fallbackSourceKey;
     }
 
     /** Publishes viewer metadata without exposing optional viewer types to common code. */

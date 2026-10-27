@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.mixin.recipeviewer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -32,6 +33,10 @@ class RecipeViewerMixinPluginTest {
         assertEquals(legacy, applies(plugin, "JeiWirelessSupplyMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyServiceMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertTrue(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
+        assertFalse(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiEncodePatternTransferMixin"));
     }
 
     @Test
@@ -42,6 +47,8 @@ class RecipeViewerMixinPluginTest {
         assertFalse(applies(plugin, "JeiWirelessSupplyMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyServiceMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertFalse(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
     }
 
     private static boolean applies(RecipeViewerMixinPlugin plugin, String mixin) {

@@ -15,7 +15,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
-final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends TianshuUploadAliasScreen<M> {
+public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends TianshuUploadAliasScreen<M> {
     private final AETextField source, alias;
     private final AE2Button save, cancel, targets, matchCheck, refresh, clearSource, clearAlias;
     private final String original, initialSource, initialAlias;
@@ -59,6 +59,11 @@ final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends Tiansh
     }
 
     private TianshuPatternEncodingTermMenu patternMenu() { return (TianshuPatternEncodingTermMenu) menu; }
+
+    /** Copies recipe identity into this draft without transferring ingredients or saving it. */
+    public void setRecipeSource(Object recipe, String fallbackSourceKey) {
+        source.setValue(TianshuRecipeTransferContext.sourceKeyFor(recipe, fallbackSourceKey));
+    }
 
     @Override
     protected void init() {

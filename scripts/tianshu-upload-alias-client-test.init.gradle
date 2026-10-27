@@ -1,0 +1,11 @@
+// Run once with EMI, then add -Pae2ltJeiOnlyForTest=true for the native JEI profile.
+// ./gradlew.bat -I scripts/tianshu-upload-alias-client-test.init.gradle runTianshuUploadAliasClient
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/client/tianshu/TianshuUploadAliasClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei', 'dev.emi'])
+        }
+    }
+}

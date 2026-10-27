@@ -15,6 +15,7 @@ import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModItems;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -195,6 +196,7 @@ public final class TianshuUploadAliasClientProbe {
         require(!(boolean) field(editor, "matchCheckExpanded"), "match check starts collapsed");
         require(!((Button) field(editor, "refresh")).visible, "refresh hidden before check");
         require(!(boolean) field(editor, "waiting"), "ordinary edit does not request snapshot");
+        exerciseRecipeSources(editor);
         editor.onClose();
         require(mc.screen == management, "untouched prefill cancels without confirmation");
         press(management, "add");
@@ -230,7 +232,9 @@ public final class TianshuUploadAliasClientProbe {
         input(edit, "source").setValue(SECOND);
         input(edit, "alias").setValue("replacement");
         press(edit, "save");
-        require(mc.screen instanceof TianshuUploadAliasConfirmScreen<?>, "migration collision asks confirmation");
+        require(mc.screen instanceof TianshuUploadAliasConfirmScreen<?>,
+                "migration collision asks confirmation: screen=" + mc.screen.getClass().getSimpleName()
+                        + ", original=" + field(edit, "original") + ", records=" + AE2LTClientConfig.uploadAliases());
         mc.screen.onClose();
         require(AE2LTClientConfig.findUploadAlias(SECOND).equals(shared), "cancel conflict preserves destination");
         edit.onClose();
@@ -250,7 +254,15 @@ public final class TianshuUploadAliasClientProbe {
         var upload = new TianshuUploadTargetScreen<>(terminal, true);
         switchScreen(terminal, upload);
         invoke(upload, "openAliasManagement");
-        require(AE2LTClientConfig.setUploadAlias(FIRST, "new alias"), "edit current source");
+        var management = mc.screen;
+        require(AE2LTClientConfig.findUploadAlias(FIRST) == null, "upload source has no saved alias");
+        press(management, "add");
+        var draft = (TianshuUploadAliasEditScreen<?>) mc.screen;
+        require(input(draft, "source").getValue().equals(FIRST), "upload management add prefills current source");
+        require(input(draft, "alias").getValue().equals(input(upload, "aliasField").getValue()), "upload filter prefills alias draft");
+        input(draft, "alias").setValue("new alias");
+        press(draft, "save");
+        require(mc.screen == management, "new source saves back to management");
         mc.screen.onClose();
         require(mc.screen == upload, "upload return path");
         require(input(upload, "aliasField").getValue().equals("new alias"), "return refreshes current source alias");
@@ -259,6 +271,102 @@ public final class TianshuUploadAliasClientProbe {
         require(!(boolean) field(upload, "awaitingUpload"), "return does not upload");
         upload.onClose();
         require(AE2LTClientConfig.removeUploadAlias(FIRST), "clean current source");
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void exerciseRecipeSources(TianshuUploadAliasEditScreen<?> draft) throws Exception {
+        var mc = Minecraft.getInstance();
+        var menu = (TianshuPatternEncodingTermMenu) draft.getMenu();
+        var previousContext = TianshuRecipeTransferContext.snapshotFor(menu);
+        var previousRecords = List.copyOf(config().get());
+        String previousSource = input(draft, "source").getValue();
+        String previousAlias = input(draft, "alias").getValue();
+        input(draft, "alias").setValue("keep this alias");
+        var vanilla = mc.player.level().getRecipeManager()
+                .getAllRecipesFor(net.minecraft.world.item.crafting.RecipeType.SMELTING).getFirst();
+        if (net.neoforged.fml.ModList.get().isLoaded("emi")) {
+            EmiSources.exercise(draft, vanilla, previousSource);
+            report.append("EMI source picker: PASS\n");
+        } else {
+            var recipesGui = (mezz.jei.gui.recipes.RecipesGui) mezz.jei.common.Internal.getJeiRuntime().getRecipesGui();
+            for (boolean backed : List.of(false, true)) {
+                recipesGui.showTypes(List.of(mezz.jei.api.constants.RecipeTypes.SMELTING));
+                require(mc.screen == recipesGui, "JEI recipe page opens from editor");
+                var type = mezz.jei.api.recipe.RecipeType.create("alias_probe", "viewer_category", Object.class);
+                var category = (mezz.jei.api.recipe.category.IRecipeCategory) Proxy.newProxyInstance(
+                        mezz.jei.api.recipe.category.IRecipeCategory.class.getClassLoader(),
+                        new Class<?>[]{mezz.jei.api.recipe.category.IRecipeCategory.class}, (proxy, method, args) ->
+                                method.getName().equals("getRecipeType") ? type : null);
+                var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable) Proxy.newProxyInstance(
+                        mezz.jei.api.gui.IRecipeLayoutDrawable.class.getClassLoader(),
+                        new Class<?>[]{mezz.jei.api.gui.IRecipeLayoutDrawable.class}, (proxy, method, args) -> switch (method.getName()) {
+                            case "getRecipeCategory" -> category;
+                            case "getRecipe" -> backed ? vanilla : new Object();
+                            default -> null;
+                        });
+                var controller = new mezz.jei.gui.recipes.RecipeTransferButtonController(layout, recipesGui);
+                boolean[] state = new boolean[2];
+                controller.updateState((mezz.jei.api.gui.buttons.IButtonState) Proxy.newProxyInstance(
+                        mezz.jei.api.gui.buttons.IButtonState.class.getClassLoader(),
+                        new Class<?>[]{mezz.jei.api.gui.buttons.IButtonState.class}, (proxy, method, args) -> {
+                            if (method.getName().equals("setActive")) state[0] = (boolean) args[0];
+                            if (method.getName().equals("setVisible")) state[1] = (boolean) args[0];
+                            return null;
+                        }));
+                require(state[0] && state[1], "JEI source fill button enabled");
+                for (boolean simulate : List.of(true, false)) {
+                    var input = (mezz.jei.api.gui.inputs.IJeiUserInput) Proxy.newProxyInstance(
+                            mezz.jei.api.gui.inputs.IJeiUserInput.class.getClassLoader(),
+                            new Class<?>[]{mezz.jei.api.gui.inputs.IJeiUserInput.class}, (proxy, method, args) ->
+                                    method.getName().equals("isSimulate") ? simulate : null);
+                    require(controller.onPress(input), "JEI source click handled");
+                    if (simulate) require(input(draft, "source").getValue().equals(previousSource), "JEI simulation does not change draft");
+                }
+                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "alias_probe:viewer_category"),
+                        "JEI prefers vanilla type and falls back to category");
+                require(mc.screen == draft, "JEI source click returns to editor");
+                input(draft, "source").setValue(previousSource);
+            }
+            report.append("JEI source picker: PASS\n");
+        }
+        require(input(draft, "alias").getValue().equals("keep this alias"), "recipe source selection retains alias draft");
+        require(previousContext.equals(TianshuRecipeTransferContext.snapshotFor(menu)), "source selection preserves terminal recipe context");
+        require(previousRecords.equals(config().get()), "source selection does not save configuration");
+        require(menu.uploadState == 0, "source selection does not upload");
+        input(draft, "source").setValue(previousSource);
+        input(draft, "alias").setValue(previousAlias);
+    }
+
+    // Keep optional EMI bytecode out of the subscriber class when testing a JEI-only installation.
+    private static final class EmiSources {
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        static void exercise(TianshuUploadAliasEditScreen<?> draft,
+                net.minecraft.world.item.crafting.RecipeHolder<?> vanilla, String previousSource) throws Exception {
+            var mc = Minecraft.getInstance();
+            var handler = new com.moakiee.ae2lt.integration.emi.TianshuEmiEncodePatternHandler(TianshuPatternEncodingTermMenu.class);
+            var context = new dev.emi.emi.api.recipe.handler.EmiCraftContext(draft,
+                    new dev.emi.emi.api.recipe.EmiPlayerInventory(List.of()),
+                    dev.emi.emi.api.recipe.handler.EmiCraftContext.Type.FILL_BUTTON);
+            for (boolean backed : List.of(false, true)) {
+                dev.emi.emi.api.EmiApi.displayRecipes(dev.emi.emi.api.stack.EmiStack.of(net.minecraft.world.item.Items.IRON_INGOT));
+                require(mc.screen != draft && dev.emi.emi.api.EmiApi.getHandledScreen() == draft,
+                        "EMI recipe page retains editor as its parent");
+                var recipe = (dev.emi.emi.api.recipe.EmiRecipe) Proxy.newProxyInstance(
+                        dev.emi.emi.api.recipe.EmiRecipe.class.getClassLoader(),
+                        new Class<?>[]{dev.emi.emi.api.recipe.EmiRecipe.class}, (proxy, method, args) -> switch (method.getName()) {
+                            case "getCategory" -> dev.emi.emi.api.recipe.VanillaEmiRecipeCategories.CRAFTING;
+                            case "getBackingRecipe" -> backed ? vanilla : null;
+                            default -> null;
+                        });
+                require(handler.canCraft(recipe, context), "EMI source fill button enabled");
+                require(input(draft, "source").getValue().equals(previousSource), "EMI button check does not change draft");
+                require(handler.craft(recipe, context), "EMI source selection succeeds");
+                require(mc.screen == draft, "EMI source click returns to editor");
+                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "minecraft:crafting"),
+                        "EMI prefers vanilla type and falls back to category");
+                input(draft, "source").setValue(previousSource);
+            }
+        }
     }
 
     private static void switchScreen(AEBaseScreen<?> from, AEBaseScreen<?> to) throws Exception {

@@ -36,10 +36,10 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
 
         assertTrue(emiPlugin.contains("TianshuPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
         assertTrue(emiPlugin.contains("TianshuWirelessPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
     }
 
     @Test

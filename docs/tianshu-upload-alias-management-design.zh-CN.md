@@ -137,6 +137,7 @@
 ### 6.2 降低手填成本
 
 - 新增时自动带入上传页填写的来源；没有填写值时，使用有效配方上下文的来源。没有可靠上下文则留空手填，不提供额外的「使用当前来源」按钮。预填值作为初始草稿，未修改即可直接取消。
+- 在新增／编辑页打开 JEI 或 EMI 配方并点击「+」，返回表单并填入所选配方来源，保留当前别名。优先取真实 Recipe Type，无法获取时使用查看器分类 ID；此操作只修改草稿，不改变终端配方、保存配置或触发编码上传。
 - 「从分组选择…」作为可选辅助入口，打开选择模式的供应器列表。点击分组仅将建议别名带回表单，绝不发送上传请求。
 - 建议值沿用 `preferredAlias`：自定义分组名称优先，否则优先使用图标注册 ID。返回表单后仍需点击保存。
 - 编辑页不显示默认候选切换按钮；上传页原有候选逻辑保留。常用流程只有填写来源、填写别名、保存。
@@ -246,14 +247,19 @@
 探针位于 `src/jdb/java/com/moakiee/ae2lt/client/tianshu/TianshuUploadAliasClientProbe.java`，仅编入开发运行，不包含在发布 JAR。它启动真实客户端和集成服务器，在专用 QA 存档构建供电网络、供应器及无线接入点，分别打开有线与无线样板编码终端。
 
 ```powershell
-./gradlew.bat runTianshuUploadAliasClient -Pae2ltUploadAliasProbeOnly=true -Pae2ltAliasProbeWorldSeed=<测试存档路径>/level.dat --console=plain
+./gradlew.bat -I scripts/tianshu-upload-alias-client-test.init.gradle runTianshuUploadAliasClient --console=plain
+./gradlew.bat -I scripts/tianshu-upload-alias-client-test.init.gradle runTianshuUploadAliasClient -Pae2ltJeiOnlyForTest=true --console=plain
 ```
 
 首次运行将测试存档的 `level.dat` 复制到 `build/tianshu-upload-alias-client/saves/AliasQA`，不复制区块或玩家数据，不修改种子存档。之后复用该隔离存档；独立客户端配置在探针退出时恢复原始别名列表。不要把探针用于正常游玩存档。未提供种子参数时尝试使用已有的 `build/wireless-energy-gametest/world/level.dat`。
 
+测试脚本仅保留本功能所需依赖和探针类，第一条命令验证 EMI，第二条排除 EMI 并验证原生 JEI；种子存档也可通过 `-Pae2ltAliasProbeWorldSeed=<测试存档路径>/level.dat` 指定。
+
 覆盖内容：
 
 - 真实设置入口、来源自动预填、未修改直接取消、修改后取消并保留草稿、非法来源禁用保存。
+- 上传页来源没有自定义别名时，从管理页新增会带入本次来源和筛选词。
+- JEI 配方页「+」控制器及 EMI 原生处理器填入来源；真实 Recipe Type 优先、分类 ID 回退、模拟点击不改草稿，且保留别名、终端配方上下文和已保存配置。
 - 匹配检查默认折叠；仅显式检查请求快照；服务端在无样板时返回零槽位，客户端仍报告匹配分组。
 - 分组选择只填草稿、保存返回列表、来源搜索、迁移冲突取消、两个来源同名时只删除所选来源。
 - 返回设置与终端、槽位布局恢复、窄尺寸保存按钮可达。
@@ -261,4 +267,4 @@
 
 运行任务会检查 `build/tianshu-upload-alias-client/upload-alias-probe.txt` 中的 `TIANSHU_ALIAS_QA PASS`；报告未通过则使 Gradle 任务失败。报告和开发日志不纳入提交。探针使用真实控件和部分反射入口，不替代所有 GUI 缩放下的人工视觉检查、磁盘写入失败和重启持久化验收。
 
-本次实测：有线与无线两组均输出 PASS；覆盖无样板及已有加工样板返回、配置写入、单条删除和真实服务器目标快照。结果不代表其他 Minecraft／加载器版本已验证。
+本次实测：Minecraft 1.21.1 / NeoForge 21.1.220，JEI 19.27.0.336 与 EMI 1.1.24+1.21.1 分别验证有线、无线入口，均输出 PASS；JEI 来源选择也验证了未安装 AE2 JEI Integration 的环境。覆盖无样板及已有加工样板返回、配置写入、单条删除、真实服务器目标快照和配方页来源选择；另有 30 项相关 JUnit 回归通过。配方模型使用代理覆盖分类 ID 回退，不能替代所有第三方配方类型的人工验收。结果不代表其他 Minecraft／加载器版本已验证。
