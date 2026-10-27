@@ -27,14 +27,14 @@ This branch is the maintained Forge 1.20.1 GTL port, including a compatibility l
 | Minecraft 1.20.1 | Required |
 | Forge 47.1.3+ | Required |
 | Applied Energistics 2 15.4.10+ | Required |
-| Thunderbolt Core Reborn GTL 2.0.0 to `<2.1.0` | Required |
+| Thunderbolt Core Reborn GTL 2.0.3-beta4 to `<2.1.0` | Required |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |
 
 Optional integrations are isolated and are not required for normal startup.
 
-Use the matching Thunderbolt build from its `1.20.1_GTL` branch with crafting-planner injection and prepared batch admission. The Maven coordinate is `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.0`. Before a development build, publish the matching dependency to your local Maven repository; this project resolves `mavenLocal()` first.
+Use the matching Thunderbolt build from its `1.20.1_GTL` branch with crafting-planner injection, prepared batch admission, and the default Radium NBT compatibility fix. The Maven coordinate is `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.3-beta4`. Before a development build, publish the matching dependency to your local Maven repository; this project resolves `mavenLocal()` first. Keep the GTL artifact coordinate separate from ordinary Forge builds so their mapped caches cannot overwrite one another.
 
 ## Build
 

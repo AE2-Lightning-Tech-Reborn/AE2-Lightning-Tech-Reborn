@@ -18,7 +18,7 @@ class PowerCostServiceAccessTest {
     @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
 
     private static final class Energy {
-        double stored = 100, idle = 4;
+        double stored = 100, idle = 4, capacity = 10_000;
         int simulations, charges;
         final AtomicInteger lookups = new AtomicInteger();
         final IEnergyService service = (IEnergyService) Proxy.newProxyInstance(IEnergyService.class.getClassLoader(),
@@ -29,6 +29,11 @@ class PowerCostServiceAccessTest {
                         if (args[1] == Actionable.MODULATE) { stored -= received; charges++; }
                         else simulations++;
                         return received;
+                    }
+                    if (m.getName().equals("injectPower")) {
+                        double accepted = Math.min(Math.max(0, capacity - stored), (Double) args[0]);
+                        if (args[1] == Actionable.MODULATE) stored += accepted;
+                        return (Double) args[0] - accepted;
                     }
                     throw new AssertionError(m);
                 });
@@ -86,5 +91,47 @@ class PowerCostServiceAccessTest {
         assertThrows(IllegalStateException.class, () -> access.maxAffordable(unreliable, key, 64));
         assertEquals(64, access.maxAffordable(unreliable, key, 64));
         assertEquals(2, attempts.get());
+    }
+
+    @Test void prepaidPassBatchesPowerAndRefundsOnlyUnusedReservation() {
+        var energy = new Energy(); energy.stored = 10_000;
+        var access = new PowerCostUtil.EnergyAccess(); var key = AEItemKey.of(Items.STONE);
+        access.beginBatch(energy.grid);
+        for (int i = 0; i < 27; i++) {
+            assertEquals(64, access.maxAffordable(energy.grid, key, 64));
+            access.consume(energy.grid, key, 64);
+        }
+        assertFalse(access.endBatch());
+        assertEquals(10_000 - 27 * 16, energy.stored);
+        assertEquals(0, access.storedEnergy());
+        assertEquals(1, energy.simulations);
+        assertEquals(1, energy.charges);
+        assertEquals(1, energy.lookups.get());
+    }
+
+    @Test void rejectedRefundRetainsEnergyAcrossReloadAndCannotPowerAnOfflineGrid() {
+        var energy = new Energy(); energy.stored = energy.capacity;
+        var access = new PowerCostUtil.EnergyAccess(); var key = AEItemKey.of(Items.STONE);
+        access.beginBatch(energy.grid);
+        assertEquals(64, access.maxAffordable(energy.grid, key, 64));
+        access.consume(energy.grid, key, 64);
+        // A callback fills the grid before this custodian can return its unused power.
+        energy.stored = energy.capacity;
+        assertTrue(access.endBatch());
+        assertEquals(496, access.storedEnergy());
+
+        var restored = new PowerCostUtil.EnergyAccess();
+        restored.loadStoredEnergy(access.storedEnergy());
+        restored.beginBatch(null);
+        assertEquals(0, restored.maxAffordable(null, key, 64));
+        restored.endBatch();
+        assertEquals(496, restored.storedEnergy());
+        restored.beginBatch(energy.grid);
+        assertEquals(64, restored.maxAffordable(energy.grid, key, 64));
+        restored.consume(energy.grid, key, 64);
+        assertTrue(restored.endBatch());
+        assertEquals(480, restored.storedEnergy());
+        assertEquals(energy.capacity, energy.stored);
+        assertEquals(1, energy.charges, "restored prepaid power must not be charged twice");
     }
 }

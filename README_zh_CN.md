@@ -27,14 +27,14 @@
 | Minecraft 1.20.1 | 必需 |
 | Forge 47.1.3+ | 必需 |
 | Applied Energistics 2 15.4.10+ | 必需 |
-| 雷电核心：重生 GTL 2.0.0 至 `<2.1.0` | 必需 |
+| 雷电核心：重生 GTL 2.0.3-beta4 至 `<2.1.0` | 必需 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
 
 所有可选联动均已隔离，不安装时不应影响正常启动。
 
-雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入、包含批次准入 API 的配套构建，Maven 坐标为 `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.0`。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。
+雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入、包含批次准入 API 和默认 Radium NBT 兼容修复的配套构建，Maven 坐标为 `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.3-beta4`。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。GTL 与普通 Forge 构建须使用各自的构件坐标，避免覆盖彼此的映射缓存。
 
 ## 构建
 

@@ -11,6 +11,7 @@ import appeng.api.networking.energy.IEnergyService;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
+import com.moakiee.ae2lt.logic.WirelessExportStockBatch;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import net.minecraft.network.chat.Component;
 import appeng.api.stacks.AEItemKey;
@@ -160,6 +161,50 @@ class OverloadedInterfaceExportPlanTest {
         assertEquals(100, supply.items + overflow[0]);
         assertEquals(64, overflow[0]);
         assertEquals(100, power[0], "rejected output must not consume transfer power");
+    }
+
+    @Test void boundedExportsShareNetworkReceiptsAndChargeOnlyDeliveredItems() {
+        var key = AEItemKey.of(Items.STONE);
+        var supply = new Supply(); supply.items = 100_000;
+        double[] power = {10_000}; var grid = grid(power);
+        long[] buffered = {0};
+        long delivered = 0;
+        try (var batch = new WirelessExportStockBatch(supply, 100, (k, a) -> buffered[0] += a)) {
+            for (int target = 0; target < 100; target++) {
+                var handler = new ItemStackHandler(1);
+                delivered += OverloadedInterfaceBlockEntity.exportBoundedItemKey(
+                        new OverloadedInterfaceBlockEntity.ExportTransferState(),
+                        new OverloadedInterfaceBlockEntity.ExportConfigEntry(key, 64), handler, batch,
+                        IActionSource.empty(), new PowerCostUtil.EnergyAccess(), () -> grid,
+                        (k, a) -> buffered[0] += a, OverloadedInterfaceBlockEntity.IOSpeedMode.FAST, 10, -1);
+                assertEquals(64, handler.getStackInSlot(0).getCount());
+            }
+            assertEquals(2, supply.extractions);
+            assertEquals(0, supply.simulations);
+        }
+        assertEquals(6400, delivered);
+        assertEquals(1792, buffered[0]);
+        assertEquals(100_000, supply.items + delivered + buffered[0]);
+        assertEquals(8400, power[0]);
+    }
+
+    @Test void prefetchedStockAndRejectedReceiptReturnToPersistentCustody() {
+        var key = AEItemKey.of(Items.STONE);
+        var supply = new Supply(); supply.items = 10_000;
+        var handler = new ItemStackHandler(1);
+        supply.afterExtract = () -> handler.setStackInSlot(0, new ItemStack(Items.DIRT, 64));
+        long[] buffered = {0}; double[] power = {100}; var grid = grid(power);
+        try (var batch = new WirelessExportStockBatch(supply, 64, (k, a) -> buffered[0] += a)) {
+            assertEquals(0, OverloadedInterfaceBlockEntity.exportBoundedItemKey(
+                    new OverloadedInterfaceBlockEntity.ExportTransferState(),
+                    new OverloadedInterfaceBlockEntity.ExportConfigEntry(key, 64), handler, batch,
+                    IActionSource.empty(), new PowerCostUtil.EnergyAccess(), () -> grid,
+                    (k, a) -> buffered[0] += a, OverloadedInterfaceBlockEntity.IOSpeedMode.FAST, 10, -1));
+        }
+        assertEquals(1, supply.extractions);
+        assertEquals(4096, buffered[0]);
+        assertEquals(10_000, supply.items + buffered[0]);
+        assertEquals(100, power[0]);
     }
 
     @Test void noPowerOrOfflineNeverExtractsAndPartialPowerPreservesIdleReserve() {

@@ -1969,10 +1969,10 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         IItemHandler itemHandler = null;
         long moved = 0;
         long next = Long.MAX_VALUE;
-        // References are scoped to this target pass. Power balances and external
-        // acceptance are still checked for each key, after preceding mutations.
-        var energyAccess = new PowerCostUtil.EnergyAccess();
         var plan = state.exportPlan(keyType, entries);
+        // Share the persistent energy custodian with imports. Prepaid power is
+        // checked for every key and any rejected refund survives a save/reload.
+        energyAccess.beginBatch(getMainNode().getGrid());
         try {
             if (!entries.isEmpty() && keyType == AEKeyType.items()
                     && wrapper instanceof ExternalStorageFacade) {
@@ -2005,8 +2005,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                 } else if (now >= transfer.untilTick) {
                     long inserted = directItemHandler != null && entry.key() instanceof AEItemKey itemKey
                             && entry.maxAmount() <= itemKey.getMaxStackSize()
-                            ? exportItemKey(transfer, entry, directItemHandler, me, src, energyAccess, now,
-                            stock != null ? stock.get(entry.key()) : -1)
+                            ? exportBoundedItemKey(transfer, entry, directItemHandler,
+                                    exportStock != null ? exportStock : me, src, energyAccess,
+                                    transferGrid, exportOverflowSink, ioSpeedMode, now, stock != null ? stock.get(entry.key()) : -1)
                             : exportKey(transfer, entry, wrapper, me, src, energyAccess, now,
                                     stock != null ? stock.get(entry.key()) : -1);
                     moved += inserted;
@@ -2025,16 +2026,6 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
             cd.cooldownUntil = Math.max(now + 1, next);
         }
         return moved;
-    }
-
-    private long exportItemKey(ExportTransferState transfer, ExportConfigEntry entry,
-                               IItemHandler handler, MEStorage me, IActionSource src,
-                               PowerCostUtil.EnergyAccess energyAccess, long now, long stockBefore) {
-        return exportBoundedItemKey(transfer, entry, handler, me, src, energyAccess,
-                () -> getMainNode().getGrid(), (key, amount) -> {
-                    addToImportBuffer(key, amount);
-                    saveImportBufferChanges(now);
-                }, ioSpeedMode, now, stockBefore);
     }
 
     static long exportBoundedItemKey(ExportTransferState transfer, ExportConfigEntry entry,
@@ -2816,6 +2807,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         rebuildFilter();
         importBuffer.clear();
         importBufferLastSaveTick = Long.MIN_VALUE;
+        energyAccess.loadStoredEnergy(d.getDouble(TAG_TRANSFER_ENERGY));
         passiveInput.read(d.getList(TAG_PASSIVE_INPUT, Tag.TAG_COMPOUND));
         importBufferFlushLimited = false;
         importBufferRemainingKeys = 0;

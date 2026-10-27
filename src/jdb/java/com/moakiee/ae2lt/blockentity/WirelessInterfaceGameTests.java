@@ -80,6 +80,33 @@ public final class WirelessInterfaceGameTests {
 
     private WirelessInterfaceGameTests() {}
 
+    @GameTest(template = "wireless_io_empty", timeoutTicks = 100)
+    public static void retainedTransferEnergyRoundTripsWithInterfaceNBT(GameTestHelper helper) {
+        var fixture = createFixture(helper, 1);
+        var owner = fixture.blockEntity();
+        helper.runAfterDelay(40, () -> {
+            var tag = new net.minecraft.nbt.CompoundTag();
+            owner.saveAdditional(tag);
+            tag.putDouble("ae2ltTransferEnergy", 37.5);
+            owner.loadTag(tag);
+            var restored = new net.minecraft.nbt.CompoundTag();
+            owner.saveAdditional(restored);
+            require(restored.getDouble("ae2ltTransferEnergy") == 37.5,
+                    "reloading the interface discarded its retained prepaid energy");
+            tag.remove("ae2ltTransferEnergy");
+            owner.loadTag(tag);
+            owner.saveAdditional(restored);
+            require(restored.getDouble("ae2ltTransferEnergy") == 0,
+                    "a legacy tag retained energy from the previous interface state");
+            tag.putDouble("ae2ltTransferEnergy", Double.NaN);
+            owner.loadTag(tag);
+            owner.saveAdditional(restored);
+            require(restored.getDouble("ae2ltTransferEnergy") == 0,
+                    "invalid retained energy was not rejected");
+            helper.succeed();
+        });
+    }
+
     @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_polling", timeoutTicks = 140)
     public static void fastWirelessImportPollsChangedInventory(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
