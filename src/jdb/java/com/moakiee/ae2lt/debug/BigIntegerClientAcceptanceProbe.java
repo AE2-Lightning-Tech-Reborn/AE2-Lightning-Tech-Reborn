@@ -335,7 +335,7 @@ public final class BigIntegerClientAcceptanceProbe {
                 if (report == null) return;
                 var input = report.entries().get(rawKey());
                 var output = report.entries().get(outKey());
-                record("confirm", menu instanceof BigConfirmMenu m && m.ae2lt$isBig()
+                record("confirm", menu instanceof com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu m && m.thunderbolt$isExactRequest()
                                 && !menu.getPlan().isSimulation() && input != null && RAW.equals(input.stored())
                                 && output != null && ORDER.equals(output.crafting()) && !report.previewOnly(),
                         "screen=" + screen.getClass().getSimpleName() + " raw=" + input + " output=" + output);

@@ -1,0 +1,32 @@
+allprojects {
+    afterEvaluate {
+        def localThunderbolt = project.property('craftingRequestThunderboltJar')
+        ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+            configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+            project.dependencies.add(name, project.files(localThunderbolt))
+        }
+        sourceSets.jdb.java.setIncludes([
+                'com/moakiee/ae2lt/crafting/big/CraftingRequestRoutingGameTests.java',
+                'com/moakiee/ae2lt/crafting/big/BigServiceTestFixture.java',
+                'com/moakiee/ae2lt/debug/BigIntegerNativeUiProbe.java'])
+        tasks.withType(Test).configureEach {
+            include '**/BigCraftingPlanBytesTest*', '**/CraftingReportStartStateTest*',
+                    '**/CraftingReportInventoryTest*', '**/CraftingReportPresentationContractTest*'
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'de.mari_023']
+                    || dep.name in ['glodium-957920', 'extendedae-892005'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('crafting-request-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+        }
+        neoForge.runs.client {
+            gameDirectory = project.layout.buildDirectory.dir('crafting-request-client').get().asFile
+            systemProperty 'ae2lt.bigNativeProbe', 'true'
+            systemProperty 'ae2lt.bigNativeProbe.stop', 'true'
+            systemProperty 'ae2lt.bigNativeProbe.long', project.findProperty('craftingRequestLongProbe') ?: 'false'
+            programArguments.addAll '--quickPlaySingleplayer', 'BigIntProbe', '--width', '1280', '--height', '900'
+        }
+    }
+}

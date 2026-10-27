@@ -60,8 +60,6 @@
     "ShulkerBulletMixin",
     "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
-    "big.BigCraftConfirmMenuMixin",
-    "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
     "big.BigCpuListEntryMixin",
     "TianshuStonecutterMenuMixin",

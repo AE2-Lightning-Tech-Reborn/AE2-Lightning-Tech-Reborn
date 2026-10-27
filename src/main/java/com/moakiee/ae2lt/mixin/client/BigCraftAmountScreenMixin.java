@@ -34,9 +34,10 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
 
     @Inject(method = "updateBeforeRender", at = @At("TAIL"))
     private void ae2lt$update(CallbackInfo ci) {
-        if (!(menu instanceof BigAmountMenu big) || !big.ae2lt$bigAvailable()) return;
+        if (!(menu instanceof BigAmountMenu big)) return;
         var widget = (BigNumberEntry) amountToCraft;
-        widget.ae2lt$enableBig();
+        widget.ae2lt$setExtendedRange(big.ae2lt$longAvailable(), big.ae2lt$bigAvailable());
+        if (!big.ae2lt$longAvailable()) return;
         if (!ae2lt$restored && !big.ae2lt$initialAmount().isEmpty()) {
             widget.ae2lt$setBig(new BigInteger(big.ae2lt$initialAmount()));
             ae2lt$restored = true;
@@ -46,14 +47,14 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
 
     @Inject(method = "confirm", at = @At("HEAD"), cancellable = true)
     private void ae2lt$confirm(CallbackInfo ci) {
-        if (!(menu instanceof BigAmountMenu big) || !big.ae2lt$bigAvailable()) return;
+        if (!(menu instanceof BigAmountMenu big) || !big.ae2lt$longAvailable()) return;
         var n = ((BigNumberEntry) amountToCraft).ae2lt$getBig();
         if (n.isEmpty()) {
             ci.cancel();
             return;
         }
-        // The existing int path remains in charge of ordinary orders. Its exact-overflow
-        // preview automatically upgrades in the confirmation menu when necessary.
+        // AE2's amount packet is int-sized. Our packet transports larger values, but the
+        // server still uses the normal selected planner/CPU path up to Long.MAX_VALUE.
         if (n.get().compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0) {
             PacketDistributor.sendToServer(
                     new ConfirmBigAmountPacket(

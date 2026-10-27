@@ -817,6 +817,9 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
+                    com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
+                    com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);
             com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
