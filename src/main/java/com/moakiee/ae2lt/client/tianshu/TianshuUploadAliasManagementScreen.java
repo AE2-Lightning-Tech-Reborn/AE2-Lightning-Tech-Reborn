@@ -18,12 +18,12 @@ import net.minecraft.network.chat.Component;
 public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> extends TianshuUploadAliasScreen<M> {
     private final AETextField search;
     private final Scrollbar scroll;
-    private final AE2Button add, edit, delete, clear, autoUpload, importAliases, exportAliases;
+    private final AE2Button add, edit, delete, clear, importAliases, exportAliases;
     private final String currentSource, currentAlias;
     private List<UploadAliasRecords.Entry> all = List.of(), filtered = List.of();
     private String selected;
     private Component status = Component.empty();
-    private int rows, rowHeight, listTop = 84;
+    private int rows, rowHeight, listTop = 60;
     private long lastClick;
 
     public TianshuUploadAliasManagementScreen(AEBaseScreen<M> parent, String source, String alias) {
@@ -40,8 +40,6 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         edit = widgets.addButton("edit", text("edit"), () -> openEditor(selection()));
         delete = widgets.addButton("delete", text("delete"), this::deleteSelected);
         clear = widgets.addButton("clear", Component.literal("×"), () -> search.setValue(""));
-        autoUpload = widgets.addButton("autoUpload", modeLabel(), this::cycleAutoUpload);
-        autoUpload.setTooltip(Tooltip.create(text("auto_mode_help")));
         importAliases = widgets.addButton("importAliases", text("import"), this::importFromClipboard);
         exportAliases = widgets.addButton("exportAliases", text("export"), this::exportToClipboard);
         clear.setTooltip(Tooltip.create(text("clear_search")));
@@ -52,18 +50,6 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
 
     @Override
     protected int preferredHeight() { return 280; }
-
-    private Component modeLabel() {
-        return text("auto_mode", text("auto_mode." + AE2LTClientConfig.uploadMatchMode().name().toLowerCase(Locale.ROOT)));
-    }
-
-    private void cycleAutoUpload() {
-        if (!AE2LTClientConfig.setUploadMatchMode(AE2LTClientConfig.uploadMatchMode().next())) {
-            status = text("save_failed");
-            return;
-        }
-        autoUpload.setMessage(modeLabel());
-    }
 
     private void exportToClipboard() {
         try {
@@ -96,12 +82,11 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     protected void init() {
         super.init();
         boolean compact = imageHeight < 206;
-        listTop = compact ? 72 : 84;
+        listTop = compact ? 54 : 60;
         rowHeight = imageWidth < 280 && !compact ? 28 : 20;
         rows = Math.max(0, (imageHeight - listTop - 78) / rowHeight);
-        place(autoUpload, 8, compact ? 20 : 24, imageWidth - 16);
-        place(search, 8, compact ? 44 : 50, imageWidth - 42);
-        place(clear, imageWidth - 30, compact ? 42 : 48, 22);
+        place(search, 8, compact ? 26 : 30, imageWidth - 42);
+        place(clear, imageWidth - 30, compact ? 24 : 28, 22);
         int buttonWidth = (imageWidth - 24) / 3;
         place(add, 8, imageHeight - 50, buttonWidth);
         place(edit, 12 + buttonWidth, imageHeight - 50, buttonWidth);

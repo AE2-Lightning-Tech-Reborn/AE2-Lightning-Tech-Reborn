@@ -1,19 +1,60 @@
 {
   "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md#settings",
   "$schema": "schema.json",
-  "includes": ["common/common.json"],
-  "generatedBackground": { "width": 200, "height": 202 },
+  "includes": [
+    "common/common.json"
+  ],
+  "generatedBackground": {
+    "width": 220,
+    "height": 218
+  },
   "text": {
     "dialog_title": {
-      "text": { "translate": "ae2lt.tianshu.settings.title" },
-      "position": { "left": 10, "top": 8 }
+      "text": {
+        "translate": "ae2lt.tianshu.settings.title"
+      },
+      "position": {
+        "left": 10,
+        "top": 8
+      }
     }
   },
   "widgets": {
-    "back": { "left": 176, "top": -5, "width": 20, "height": 20 },
-    "uploadTrigger": { "left": 10, "top": 43, "width": 180, "height": 20 },
-    "uploadAliases": { "left": 10, "top": 69, "width": 180, "height": 20 },
-    "duplicateEncoding": { "left": 10, "top": 113, "width": 180, "height": 20 },
-    "jeiWirelessSupply": { "left": 10, "top": 171, "width": 180, "height": 20 }
+    "back": {
+      "left": 196,
+      "top": -5,
+      "width": 20,
+      "height": 20
+    },
+    "uploadTrigger": {
+      "left": 10,
+      "top": 40,
+      "width": 200,
+      "height": 20
+    },
+    "uploadAliases": {
+      "left": 10,
+      "top": 102,
+      "width": 200,
+      "height": 20
+    },
+    "duplicateEncoding": {
+      "left": 10,
+      "top": 144,
+      "width": 200,
+      "height": 20
+    },
+    "jeiWirelessSupply": {
+      "left": 10,
+      "top": 188,
+      "width": 200,
+      "height": 20
+    },
+    "autoUpload": {
+      "left": 10,
+      "top": 76,
+      "width": 200,
+      "height": 20
+    }
   }
 }

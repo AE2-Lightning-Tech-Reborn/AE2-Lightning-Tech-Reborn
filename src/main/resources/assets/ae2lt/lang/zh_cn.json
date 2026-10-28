@@ -1333,6 +1333,7 @@
   "ae2lt.tianshu.reserve.rule_value": "本规则附加：%s（%s）",
   "ae2lt.tianshu.terminal.upload.no_target": "没有可用样板供应器",
   "ae2lt.tianshu.terminal.upload.free": "空槽：%s",
+  "ae2lt.tianshu.settings.auto_upload": "自动上传",
   "ae2lt.tianshu.upload.title": "选择样板供应器",
   "ae2lt.tianshu.upload.search": "搜索名称、物品或提示…",
   "ae2lt.tianshu.upload.refresh": "刷新",

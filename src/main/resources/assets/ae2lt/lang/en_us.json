@@ -1333,6 +1333,7 @@
   "ae2lt.tianshu.reserve.rule_value": "Rule additional: %s (%s)",
   "ae2lt.tianshu.terminal.upload.no_target": "No pattern provider available",
   "ae2lt.tianshu.terminal.upload.free": "Free slots: %s",
+  "ae2lt.tianshu.settings.auto_upload": "Automatic upload",
   "ae2lt.tianshu.upload.title": "Select Pattern Provider",
   "ae2lt.tianshu.upload.search": "Search name, item, or tooltip…",
   "ae2lt.tianshu.upload.refresh": "Refresh",
