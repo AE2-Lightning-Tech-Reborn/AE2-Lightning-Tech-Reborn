@@ -126,14 +126,17 @@ public final class OverloadCpuStateManager {
                 reusableSeeds);
     }
 
+    /** Optional dynamic patterns use long output quantities independently of the editor view. */
+    public synchronized void registerActualOutputAmounts(Object logic, UUID craftingId,
+            OverloadPatternReference reference, OverloadPatternDetails details, List<GenericStack> outputs,
+            @Nullable AEKey finalOutputKey, long copies) {
+        getOrCreate(logic, craftingId).registerExpectedOutputs(reference, details, outputs, finalOutputKey, copies, Map.of(), true);
+    }
+
     /**
-     * Detects whether registering the given pattern would create ambiguous
-     * concurrent ID_ONLY pending outputs for the same item id.
-     * <p>
-     * CPU-side claim only sees returned item id. If multiple distinct ID_ONLY outputs with the
-     * same item id coexist, the CPU cannot reliably decide which pending slot a returned stack
-     * belongs to. STRICT outputs are mirrored only in native waiting and are partitioned there
-     * before an exact ID_ONLY claim; they do not create a second overload identity.
+     * Checks whether a new fuzzy registration would be ambiguous with pending output.
+     * CPU-side claim sees only an item id. STRICT outputs are partitioned in insert()
+     * before an exact ID_ONLY claim and do not create a second overload identity.
      */
     public synchronized boolean hasAmbiguousOutputRegistration(CraftingCpuLogic logic,
                                                                OverloadPatternReference patternReference,

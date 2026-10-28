@@ -325,15 +325,14 @@ public final class OverloadedIOPortGameTests {
         });
     }
 
-    /** Counts structural work without relying on AEItemKey interning or a GC timing assumption. */
-    private static final class CountingKey extends AEKey {
+    /** Counts cold comparisons while respecting GTO's canonical key identity and final hash. */
+    private static class CountingKey extends AEKey {
         final int value;
         final AEKeyType type;
         int structuralCalls;
         CountingKey(int value) { this(value,AEKeyType.items()); }
         CountingKey(int value,AEKeyType type) { this.value=value;this.type=type; }
-        @Override public int hashCode() { structuralCalls++;return value; }
-        @Override public boolean equals(Object other) { structuralCalls++;return other instanceof CountingKey k && value==k.value; }
+        @Override public boolean equals(Object other) { structuralCalls++;return this==other; }
         @Override public AEKeyType getType() { return type; }
         @Override public AEKey dropSecondary() { return this; }
         @Override public CompoundTag toTag() { throw new UnsupportedOperationException(); }
@@ -343,23 +342,45 @@ public final class OverloadedIOPortGameTests {
         @Override protected Component computeDisplayName() { return Component.literal("test key"); }
         @Override public void addDrops(long amount,List<ItemStack> drops,net.minecraft.world.level.Level level,BlockPos pos) { throw new UnsupportedOperationException(); }
     }
+
+    /** Kept behind reflection: the .40 VM must never define a class overriding its final hash. */
+    private static final class LegacyCountingKey extends CountingKey {
+        LegacyCountingKey(int value,AEKeyType type) { super(value,type); }
+        @Override public int hashCode() { structuralCalls++;return value; }
+        @Override public boolean equals(Object other) { structuralCalls++;return other instanceof LegacyCountingKey key && value==key.value; }
+    }
+    private static boolean identityHashContract() {
+        try { return java.lang.reflect.Modifier.isFinal(AEKey.class.getMethod("hashCode").getModifiers()); }
+        catch (ReflectiveOperationException failure) { throw new IllegalStateException("AEKey hash contract unavailable",failure); }
+    }
+    private static CountingKey countingKey(int value) { return countingKey(value,AEKeyType.items()); }
+    private static CountingKey countingKey(int value,AEKeyType type) {
+        if (identityHashContract()) return new CountingKey(value,type);
+        try {
+            var constructor=Class.forName(OverloadedIOPortGameTests.class.getName()+"$LegacyCountingKey")
+                    .getDeclaredConstructor(int.class,AEKeyType.class);
+            constructor.setAccessible(true);
+            return (CountingKey)constructor.newInstance(value,type);
+        } catch (ReflectiveOperationException failure) { throw new IllegalStateException("Legacy structural key fixture unavailable",failure); }
+    }
     @GameTest(templateNamespace="minecraft",template="bastion/mobs/empty")
     public static void filterCacheUsesIdentityForBothOutcomes(GameTestHelper h) {
-        var configured=new CountingKey(1);
+        boolean identity=identityHashContract();
+        var configured=countingKey(1);
         var matcher=OverloadedFilterComponentItem.createMatcher(Set.of(configured),null,false);
         for (int value : new int[]{1,2}) {
-            var key=new CountingKey(value);boolean expected=value==1;
+            var key=identity&&value==1?configured:countingKey(value);boolean expected=value==1;
             h.assertTrue(matcher.test(key)==expected && key.structuralCalls>0,"first encounter computes precise rule");
             int coldCalls=key.structuralCalls;
             for(int i=0;i<1000;i++) h.assertTrue(matcher.test(key)==expected,"cached result stable");
             h.assertTrue(key.structuralCalls==coldCalls,"identity hits avoid all structural hashing/equality for true and false");
-            var equalButDistinct=new CountingKey(value);
-            h.assertTrue(matcher.test(equalButDistinct)==expected && equalButDistinct.structuralCalls>0,"equal distinct instances must miss identity cache");
+            var distinctIdentity=countingKey(value);
+            h.assertTrue(matcher.test(distinctIdentity)==(!identity&&expected) && distinctIdentity.structuralCalls>0,"distinct instances miss the identity cache and obey the installed AEKey equality contract");
             var inverted=OverloadedFilterComponentItem.createMatcher(Set.of(configured),null,true);
             h.assertTrue(inverted.test(key)!=expected,"new rule snapshot never reuses stale cached outcome");
         }
         var fuzzy=OverloadedFilterComponentItem.createMatcher(Set.of(configured),FuzzyMode.IGNORE_ALL,false);
-        var variant=new CountingKey(3);h.assertTrue(fuzzy.test(variant),"fuzzy primary-key rule matches");
+        var variant=countingKey(3);h.assertTrue(fuzzy.test(variant),"fuzzy primary-key rule matches");
         int coldCalls=variant.structuralCalls;for(int i=0;i<1000;i++)fuzzy.test(variant);
         h.assertTrue(variant.structuralCalls==coldCalls,"fuzzy cache hit avoids repeated rule scans");h.succeed();
     }
@@ -449,7 +470,7 @@ public final class OverloadedIOPortGameTests {
                 @Override public AEKey readFromPacket(net.minecraft.network.FriendlyByteBuf data) { throw new UnsupportedOperationException(); }
                 @Override public int getAmountPerOperation() { return 4096; }
             };
-            AEKey[] keys={STONE,AEFluidKey.of(Fluids.WATER),LightningKey.HIGH_VOLTAGE,new CountingKey(12345,customType)};
+            AEKey[] keys={STONE,AEFluidKey.of(Fluids.WATER),LightningKey.HIGH_VOLTAGE,countingKey(12345,customType)};
             long[] caps={BASE_CAP,BASE_CAP*125,BASE_CAP,BASE_CAP*4096};
             var network=new Store();mount(be,network);var from=new Store();
             for(int i=0;i<keys.length;i++)from.amounts.put(keys[i],2*caps[i]);

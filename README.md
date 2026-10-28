@@ -6,7 +6,7 @@ An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energis
 
 > GTO build · Minimum supported pack: GTO 0.6.0-dev-23 · Minecraft 1.20.1 / Java 21 / Forge 47.4.20+
 
-The `gto` branch maintains the Forge 1.20.1 GTO adaptation; the ordinary `1.20.1` branch provides same-version updates for comparison. The current LT version is `2.1.2-gto.9`. See [GTO compatibility notes](GTO_COMPATIBILITY.md) for the complete dependency set and validation limits.
+The `gto` branch maintains the Forge 1.20.1 GTO adaptation; the ordinary `1.20.1` branch provides same-version updates for comparison. The current LT version is `2.1.2-gto.12`. See [GTO compatibility notes](GTO_COMPATIBILITY.md) for the complete dependency set and validation limits.
 
 ## Features
 
@@ -24,11 +24,11 @@ The `gto` branch maintains the Forge 1.20.1 GTO adaptation; the ordinary `1.20.1
 |-----|-------------|
 | Minecraft 1.20.1 | Required |
 | Java 21 / Forge 47.4.20+ | Required |
-| GTO pack 0.6.0-dev-23 | Minimum supported baseline; check dependencies for later releases |
-| GTOCore 26.10.10 | Required; loader range `[26.10.10,26.10.11)` |
-| AE2-GTO 15.2610.31 | Required, exact version |
+| GTO pack 0.6.0-dev-23 or dev-25 | Verified server environments; use each pack's matching dependencies |
+| GTOCore 26.10.10 or 26.10.18 | Required; loader range `[26.10.10,26.10.11),[26.10.18]` |
+| AE2-GTO 15.2610.31 or 15.2610.40 | Required; the two exact versions are accepted |
 | Thunderbolt Core Reborn 2.0.3-gto.6 | Required, exact version |
-| NeoECO GTO 20.5.0-gto.1 | Optional; exact version when installed |
+| NeoECO GTO 20.5.0-gto.1 or 20.5.2-gto.1 | Optional; the two exact versions are accepted |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |
@@ -45,7 +45,7 @@ Use Java 21, prepare the matching Core using the [GTO build instructions](GTO_CO
 .\gradlew.bat test build
 ```
 
-The distributable artifact is `build/libs/ae2lt-forge-1.20.1-2.1.2-gto.9.jar`.
+The distributable artifact is `build/libs/ae2lt-forge-1.20.1-2.1.2-gto.12.jar`.
 The `-slim.jar` artifact is an intermediate development artifact and must not be distributed.
 
 ## Public API

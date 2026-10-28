@@ -1,6 +1,7 @@
 package qa;
 
 import java.lang.reflect.Field;
+import java.nio.channels.SelectionKey;
 import io.netty.channel.Channel;
 import net.minecraft.network.Connection;
 
@@ -39,10 +40,30 @@ final class GtoNetworkDiagnostics {
             if (channel == null) continue;
             channel.eventLoop().execute(() -> {
                 var buffer = channel.unsafe().outboundBuffer();
-                LOGGER.info("GTO_LOGIN_TRACE channel={} active={} autoRead={} writable={} pendingBytes={} pipeline={}",
-                        channel.id(), channel.isActive(), channel.config().isAutoRead(), channel.isWritable(),
+                LOGGER.info("GTO_LOGIN_TRACE channel={} active={} protocol={} autoRead={} nio={} writable={} pendingBytes={} pipeline={}",
+                        channel.id(), channel.isActive(), channel.attr(Connection.ATTRIBUTE_PROTOCOL).get(),
+                        channel.config().isAutoRead(), nioState(channel), channel.isWritable(),
                         buffer == null ? -1 : buffer.totalPendingWriteBytes(), channel.pipeline().names());
             });
+        }
+    }
+
+    private static String nioState(Channel channel) {
+        String interest = "unregistered", pending = "unknown";
+        try {
+            for (Class<?> type = channel.getClass(); type != null; type = type.getSuperclass()) {
+                for (Field field : type.getDeclaredFields()) {
+                    if (SelectionKey.class.isAssignableFrom(field.getType()) && field.trySetAccessible()) {
+                        var key = (SelectionKey) field.get(channel);
+                        if (key != null && key.isValid()) interest = Integer.toString(key.interestOps());
+                    } else if (field.getName().equals("readPending") && field.trySetAccessible()) {
+                        pending = String.valueOf(field.getBoolean(channel));
+                    }
+                }
+            }
+            return "interestOps=" + interest + ",readPending=" + pending;
+        } catch (ReflectiveOperationException | RuntimeException failure) {
+            return failure.getClass().getSimpleName();
         }
     }
 }

@@ -65,6 +65,7 @@ class EaepActualJarContractTest {
             missing.add(key, 3);
             var original = plan(missing);
             var wrapped = wrap(loader, original);
+            assertTrue(com.moakiee.ae2lt.compat.gto.GtoCompatibleCraftingCpuLogic.requiresLtDispatcher(wrapped));
             assertFalse(wrapped.simulation());
             var data = EaepForcedCraftingPlanAccess.read(wrapped);
             assertNotNull(data);

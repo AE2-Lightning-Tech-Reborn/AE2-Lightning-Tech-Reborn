@@ -38,6 +38,7 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
     private boolean paused;
     private final Set<Consumer<AEKey>> listeners = new HashSet<>();
     private @Nullable TimeWheelCraftingCPU ltCpu;
+    private final KeyCounter eaepManualWaiting = new KeyCounter();
 
     public GtoCompatibleCraftingCpuLogic(CraftingCPUCluster cluster) {
         this(cluster, cluster.craftingLogic instanceof GtoCompatibleCraftingCpuLogic previous
@@ -52,9 +53,26 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
     }
 
     public CraftingCpuLogic nativeDelegate() { return delegate; }
+    public boolean completeEaepVirtualTask(appeng.api.crafting.IPatternDetails pattern) {
+        return usesLt() ? lt().completeEaepVirtualTask(pattern)
+                : GtoEaepVirtualCpu.completeLastTask(delegate, pattern);
+    }
     @Override protected void postChange(AEKey key) { cluster.markDirty(); }
 
     public boolean usesLt() { return ltCpu != null; }
+    public java.util.Map<AEKey, Long> eaepManualWaitingSnapshot() {
+        if (!usesLt() || !hasJob()) return java.util.Map.of();
+        var snapshot = new java.util.HashMap<AEKey, Long>();
+        for (var entry : eaepManualWaiting) {
+            long remaining = Math.min(entry.getLongValue(), lt().getWaitingFor(entry.getKey()));
+            if (remaining > 0) snapshot.put(entry.getKey(), remaining);
+        }
+        return java.util.Map.copyOf(snapshot);
+    }
+    public void setEaepManualWaiting(KeyCounter missing) {
+        eaepManualWaiting.clear();
+        if (missing != null) eaepManualWaiting.addAll(missing);
+    }
     private Ae2LtTimeWheelCraftingCpuLogic lt() { return ltCpu.getCraftingLogic(); }
 
     private void createLt() {
@@ -79,8 +97,12 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
     }
 
     public static boolean requiresLtDispatcher(ICraftingPlan plan) {
+        // EAEP's ordinary CPU hooks target a job class removed by GTO. LT already owns the
+        // force-start/manual-missing protocol, including admission, save/reload and refunds.
+        if (com.moakiee.ae2lt.integration.eaep.EaepForcedCraftingPlanAccess.isForced(plan)) return true;
         return plan.patternTimes().keySet().stream().anyMatch(pattern ->
-                CraftingPatternDelegates.forProviderLookup(pattern) instanceof OverloadedProviderOnlyPatternDetails);
+                CraftingPatternDelegates.forProviderLookup(pattern) instanceof OverloadedProviderOnlyPatternDetails
+                        || GtoUselessDynamicPatterns.isDynamic(pattern));
     }
 
     @Override public ICraftingSubmitResult trySubmitJob(IGrid grid, ICraftingPlan plan, IActionSource src,
@@ -89,9 +111,15 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
         if (!delegate.getInventory().list.isEmpty()) return CraftingSubmitResult.CPU_BUSY;
         if (requiresLtDispatcher(plan)) {
             createLt();
-            return lt().trySubmitJob(grid, plan, src, requester);
+            var result = lt().trySubmitJob(grid, plan, src, requester);
+            if (result.successful()) {
+                var forced = com.moakiee.ae2lt.integration.eaep.EaepForcedCraftingPlanAccess.read(plan);
+                setEaepManualWaiting(forced == null ? null : forced.manualMissing());
+            }
+            return result;
         }
         ltCpu = null;
+        eaepManualWaiting.clear();
         return delegate.trySubmitJob(grid, plan, src, requester);
     }
     @Override public void tickCraftingLogic(IEnergyService energy, CraftingService service) {
@@ -99,7 +127,14 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
         else if (!paused) delegate.tickCraftingLogic(energy, service);
     }
     @Override public long insert(AEKey key, long amount, Actionable mode) {
-        return usesLt() ? lt().insert(key, amount, mode) : delegate.insert(key, amount, mode);
+        if (!usesLt()) return delegate.insert(key, amount, mode);
+        long before = lt().getWaitingFor(key);
+        long accepted = lt().insert(key, amount, mode);
+        if (mode == Actionable.MODULATE && eaepManualWaiting.get(key) > 0) {
+            long consumed = Math.max(0, before - lt().getWaitingFor(key));
+            eaepManualWaiting.set(key, Math.max(0, eaepManualWaiting.get(key) - consumed));
+        }
+        return accepted;
     }
     @Override public void cancel() { if (usesLt()) lt().cancel(); else delegate.cancel(); }
     @Override public boolean hasJob() { return usesLt() ? lt().hasPersistentState() : delegate.hasJob(); }
@@ -141,6 +176,9 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
             data.remove("job"); data.remove("inventory");
             var state = new CompoundTag();
             lt().writeToNBT(state, cluster.getLevel().registryAccess());
+            var manual = new net.minecraft.nbt.ListTag();
+            eaepManualWaitingSnapshot().forEach((key, amount) -> manual.add(GenericStack.writeTag(new GenericStack(key, amount))));
+            state.put("eaepManualWaiting", manual);
             data.put(LT_STATE, state);
         } else {
             data.remove(LT_STATE);
@@ -152,8 +190,15 @@ public final class GtoCompatibleCraftingCpuLogic extends CraftingCpuLogic {
         if (data.contains(LT_STATE)) {
             createLt();
             lt().readFromNBT(data.getCompound(LT_STATE), cluster.getLevel().registryAccess());
+            eaepManualWaiting.clear();
+            var manual = data.getCompound(LT_STATE).getList("eaepManualWaiting", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < manual.size(); i++) {
+                var stack = GenericStack.readTag(manual.getCompound(i));
+                if (stack != null && stack.amount() > 0) eaepManualWaiting.add(stack.what(), stack.amount());
+            }
         } else {
             ltCpu = null;
+            eaepManualWaiting.clear();
             delegate.readFromNBT(data);
             paused = data.getBoolean("ae2ltPaused");
         }

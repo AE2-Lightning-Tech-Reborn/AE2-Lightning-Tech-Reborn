@@ -57,6 +57,8 @@ tasks.register('gtoQaJar', Jar) {
     archiveFileName = 'gto-compat-qa.jar'
     from(sourceSets.gtoQa.output) {
         include 'qa/**', 'META-INF/mods.toml', 'pack.mcmeta'
+        // FX/restart probes also run with the formal LT jar, which has no QA recipes.
+        include 'data/ae2lt_qa/recipes/**'
     }
     destinationDirectory = layout.buildDirectory.dir('gto-qa')
 }

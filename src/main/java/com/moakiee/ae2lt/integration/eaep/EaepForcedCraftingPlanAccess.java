@@ -15,7 +15,7 @@ public final class EaepForcedCraftingPlanAccess {
     }
 
     public static Data read(ICraftingPlan plan) {
-        if (!plan.getClass().getName().equals(WRAPPER)) {
+        if (!isForced(plan)) {
             return new Data(plan, new KeyCounter());
         }
         try {
@@ -24,6 +24,10 @@ public final class EaepForcedCraftingPlanAccess {
             LOG.warn("Cannot safely read the forced crafting plan", failure);
             return null;
         }
+    }
+
+    public static boolean isForced(ICraftingPlan plan) {
+        return plan.getClass().getName().equals(WRAPPER);
     }
 
     static Data readWrapper(ICraftingPlan plan) throws ReflectiveOperationException {

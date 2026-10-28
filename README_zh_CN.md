@@ -6,7 +6,7 @@
 
 > GTO 专用构建 · 最低支持 GTO 0.6.0-dev-23 · Minecraft 1.20.1 / Java 21 / Forge 47.4.20+
 
-本 `gto` 分支维护 Forge 1.20.1 GTO 适配，普通 `1.20.1` 分支用于同版本更新对照。当前版本为 LT `2.1.2-gto.9`，完整配套要求及验证边界见 [GTO 兼容说明](GTO_COMPATIBILITY.md)。
+本 `gto` 分支维护 Forge 1.20.1 GTO 适配，普通 `1.20.1` 分支用于同版本更新对照。当前版本为 LT `2.1.2-gto.12`，完整配套要求及验证边界见 [GTO 兼容说明](GTO_COMPATIBILITY.md)。
 
 ## 主要内容
 
@@ -24,11 +24,11 @@
 |------|------|
 | Minecraft 1.20.1 | 必需 |
 | Java 21 / Forge 47.4.20+ | 必需 |
-| GTO 整包 0.6.0-dev-23 | 最低支持基线，后续版本需核对依赖 |
-| GTOCore 26.10.10 | 必需，加载范围 `[26.10.10,26.10.11)` |
-| AE2-GTO 15.2610.31 | 必需，精确版本 |
+| GTO 整包 0.6.0-dev-23 或 dev-25 | 已验证服务端；使用对应整包的完整配套依赖 |
+| GTOCore 26.10.10 或 26.10.18 | 必需，加载范围 `[26.10.10,26.10.11),[26.10.18]` |
+| AE2-GTO 15.2610.31 或 15.2610.40 | 必需，只接受这两个精确版本 |
 | 雷电核心：重生 2.0.3-gto.6 | 必需，精确版本 |
-| NeoECO GTO 20.5.0-gto.1 | 可选联动，安装时要求精确版本 |
+| NeoECO GTO 20.5.0-gto.1 或 20.5.2-gto.1 | 可选联动，只接受这两个精确版本 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
@@ -45,7 +45,7 @@
 .\gradlew.bat test build
 ```
 
-可发布制品位于 `build/libs/ae2lt-forge-1.20.1-2.1.2-gto.9.jar`。
+可发布制品位于 `build/libs/ae2lt-forge-1.20.1-2.1.2-gto.12.jar`。
 带 `-slim.jar` 后缀的是开发中间制品，不应对外发布。
 
 ## 公开 API
