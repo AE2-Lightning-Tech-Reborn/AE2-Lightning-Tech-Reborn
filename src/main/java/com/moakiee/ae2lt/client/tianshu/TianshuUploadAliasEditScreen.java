@@ -24,7 +24,7 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
     TianshuUploadAliasEditScreen(AEBaseScreen<M> parent, UploadAliasRecords.Entry entry,
                                 String sourceValue, String aliasValue, Consumer<String> onSaved) {
         super(parent, "/screens/tianshu_upload_alias_edit.json", true);
-        heading = text(entry == null ? "add" : "edit");
+        heading = text(entry == null ? "add_title" : "edit_title");
         original = entry == null ? null : entry.source();
         initialSource = entry == null && sourceValue.isBlank()
                 ? TianshuUploadSourceSelection.collect(patternMenu()).sourceKey() : sourceValue;
@@ -32,12 +32,14 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
         this.onSaved = onSaved;
         source = sourceField;
         alias = aliasField;
+        source.setPlaceholder(text("source"));
+        alias.setPlaceholder(text("alias"));
         // Accept overlong drafts so validation can explain the limit instead of silently truncating input.
         source.setMaxLength(1024);
         alias.setMaxLength(1024);
         source.setValue(initialSource);
         alias.setValue(aliasValue);
-        save = widgets.addButton("save", text("accept"), this::save);
+        save = widgets.addButton("save", text("save"), this::save);
         cancel = widgets.addButton("cancel", text("cancel"), this::returnToParent);
         source.setResponder(v -> validate());
         alias.setResponder(v -> { refreshAliasQuery(); validate(); });
@@ -84,12 +86,16 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
     private void validate() {
         save.active = UploadAliasRecords.valid(source.getValue(), alias.getValue());
         status = Component.empty();
-        source.setTooltipMessage(sourceError().isEmpty()
-                ? List.of(text("source"), text("source_help"))
-                : List.of(text("source"), text(sourceError()), text("source_help")));
-        alias.setTooltipMessage(aliasError().isEmpty()
-                ? List.of(text("alias"), text("alias_help"))
-                : List.of(text("alias"), text(aliasError()), text("alias_help")));
+        var sourceTooltip = new java.util.ArrayList<Component>();
+        sourceTooltip.add(text("source"));
+        if (!sourceError().isEmpty()) sourceTooltip.add(text(sourceError()));
+        sourceTooltip.addAll(List.of(text("source_help"), text("editor_hint"), text("clear_field")));
+        source.setTooltipMessage(sourceTooltip);
+        var aliasTooltip = new java.util.ArrayList<Component>();
+        aliasTooltip.add(text("alias"));
+        if (!aliasError().isEmpty()) aliasTooltip.add(text(aliasError()));
+        aliasTooltip.addAll(List.of(text("alias_help"), text("alias_match_help"), text("clear_field")));
+        alias.setTooltipMessage(aliasTooltip);
     }
 
     private void save() {
@@ -139,7 +145,7 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
         super.renderTooltip(g, mx, my);
         if (mx >= leftPos + 8 && mx < leftPos + imageWidth - 8
                 && my >= topPos + imageHeight - 42 && my < topPos + imageHeight - 28) {
-            drawTooltip(g, mx, my, List.of(footerMessage(), text("select_provider"), text("editor_hint")));
+            drawTooltip(g, mx, my, List.of(footerMessage(), text("editor_save_hint"), text("editor_hint")));
         }
     }
 

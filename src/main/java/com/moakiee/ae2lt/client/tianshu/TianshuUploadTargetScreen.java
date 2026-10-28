@@ -314,7 +314,7 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
             if (target.group().icon() != null) {
                 graphics.renderItem(target.group().icon().getReadOnlyStack(), ROW_LEFT + 2, y);
             }
-            String suffix = " [\u2248" + target.availableSlots() + "]";
+            String suffix = aliasEditor ? "" : " [\u2248" + target.availableSlots() + "]";
             var label = target.group().name().copy().append(suffix);
             graphics.drawString(font, Language.getInstance().getVisualOrder(
                             font.substrByWidth(label, ROW_LABEL_WIDTH)), ROW_LEFT + 22,
@@ -332,7 +332,10 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         } else if (awaitingTargets) {
             status = Component.translatable("ae2lt.tianshu.upload.loading");
         } else if (filtered.isEmpty()) {
-            status = Component.translatable("ae2lt.tianshu.upload.empty");
+            status = aliasEditor
+                    ? TianshuUploadAliasScreen.text(aliasField.getValue().isBlank()
+                            ? "no_providers" : "no_matching_providers")
+                    : Component.translatable("ae2lt.tianshu.upload.empty");
         }
         if (status != null) {
             String text = font.plainSubstrByWidth(status.getString(), 158);
@@ -393,11 +396,18 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         lines.addAll(target.group().tooltip());
         lines.add(Component.translatable("ae2lt.tianshu.upload.providers", target.providerCount())
                 .withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("ae2lt.tianshu.upload.slots", target.availableSlots())
-                .withStyle(target.availableSlots() > 0 ? ChatFormatting.GREEN : ChatFormatting.RED));
+        if (aliasEditor) {
+            lines.add(TianshuUploadAliasScreen.text("provider_alias", aliasFromTarget(target)).copy()
+                    .withStyle(ChatFormatting.AQUA));
+        } else {
+            lines.add(Component.translatable("ae2lt.tianshu.upload.slots", target.availableSlots())
+                    .withStyle(target.availableSlots() > 0 ? ChatFormatting.GREEN : ChatFormatting.RED));
+        }
         lines.add(Component.translatable(aliasEditor
                 ? "ae2lt.tianshu.aliases.select_provider" : "ae2lt.tianshu.upload.alias.quick_bind")
                 .withStyle(ChatFormatting.DARK_GRAY));
+        if (aliasEditor) lines.add(TianshuUploadAliasScreen.text("editor_save_hint").copy()
+                .withStyle(ChatFormatting.GRAY));
         drawTooltip(graphics, mouseX, mouseY, lines);
     }
 
@@ -551,15 +561,18 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
     }
 
     private void bindAliasFromTarget(IndexedTarget selected) {
-        var group = selected.target().group();
+        aliasField.setValue(aliasFromTarget(selected.target()));
+        if (!aliasEditor) addMapping();
+    }
+
+    private static String aliasFromTarget(TianshuUploadTargetData target) {
+        var group = target.group();
         String currentName = group.name().getString();
         String machineId = group.icon() == null ? "" : group.icon().getId().toString();
         String defaultName = group.icon() == null
                 ? "" : group.icon().getDisplayName().getString();
-        String alias = TianshuUploadTargetMatcher.preferredAlias(
+        return TianshuUploadTargetMatcher.preferredAlias(
                 machineId, defaultName, currentName);
-        aliasField.setValue(alias);
-        if (!aliasEditor) addMapping();
     }
 
     private void openAliasManagement() {
