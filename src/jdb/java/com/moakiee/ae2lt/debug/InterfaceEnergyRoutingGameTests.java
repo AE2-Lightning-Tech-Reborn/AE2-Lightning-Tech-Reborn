@@ -18,7 +18,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.common.capabilities.Capability;
@@ -40,9 +41,15 @@ public final class InterfaceEnergyRoutingGameTests {
     private static final BlockPos ADJACENT = HOST.east();
     private static final BlockPos REMOTE = new BlockPos(4, 2, 4);
 
+    private static final class EnergySinkBlockEntity extends BarrelBlockEntity {
+        private EnergySinkBlockEntity(BlockPos pos, BlockState state) {
+            super(pos, state);
+        }
+    }
+
     @SubscribeEvent
     public static void registerSinks(AttachCapabilitiesEvent<BlockEntity> event) {
-        if (event.getObject().getType() != BlockEntityType.BARREL) return;
+        if (!(event.getObject() instanceof EnergySinkBlockEntity)) return;
         var storage = new EnergyStorage(20_000_000);
         var optional = LazyOptional.of(() -> storage);
         event.addCapability(new ResourceLocation("ae2lt", "test_energy"), new ICapabilityProvider() {
@@ -67,8 +74,11 @@ public final class InterfaceEnergyRoutingGameTests {
 
     private static void verify(GameTestHelper h, boolean wireless, boolean bound, boolean nativeAe) {
         h.assertTrue(AppFluxHelper.isAvailable(), "Applied Flux is required");
-        h.setBlock(ADJACENT, Blocks.BARREL);
-        h.setBlock(REMOTE, Blocks.BARREL);
+        for (var pos : new BlockPos[] {ADJACENT, REMOTE}) {
+            h.setBlock(pos, Blocks.BARREL);
+            h.getLevel().setBlockEntity(new EnergySinkBlockEntity(
+                    h.absolutePos(pos), Blocks.BARREL.defaultBlockState()));
+        }
         h.setBlock(HOST, nativeAe ? AEBlocks.INTERFACE.block() : ModBlocks.OVERLOADED_INTERFACE.get());
         InterfaceBlockEntity host = (InterfaceBlockEntity) h.getBlockEntity(HOST);
         host.getInterfaceLogic().getUpgrades().setItemDirect(0,

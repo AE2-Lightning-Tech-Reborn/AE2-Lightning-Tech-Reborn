@@ -40,16 +40,23 @@ public final class AppFluxBridge {
     public static final long TRANSFER_RATE;
 
     static {
-        boolean available;
+        boolean available = false;
+        AEKey key = null;
+        long rate = 0L;
         try {
-            Class.forName("com.glodblock.github.appflux.api.IFluxCell");
-            available = true;
-        } catch (ClassNotFoundException e) {
-            available = false;
+            Class.forName("com.glodblock.github.appflux.api.IFluxCell", false,
+                    AppFluxBridge.class.getClassLoader());
+            key = AppFluxAccess.FE_KEY;
+            rate = AppFluxAccess.TRANSFER_RATE;
+            available = key != null && rate > 0L;
+        } catch (ClassNotFoundException | LinkageError | RuntimeException unavailable) {
+            // Publish the entire optional capability only after its API has initialized.
+            key = null;
+            rate = 0L;
         }
         LOADED = available;
-        FE_KEY = LOADED ? AppFluxAccess.FE_KEY : null;
-        TRANSFER_RATE = LOADED ? AppFluxAccess.TRANSFER_RATE : 0L;
+        FE_KEY = available ? key : null;
+        TRANSFER_RATE = available ? rate : 0L;
     }
 
     private AppFluxBridge() {}

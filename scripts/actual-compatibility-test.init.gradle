@@ -1,0 +1,26 @@
+// Pass -Penable_neoecoae_runtime=true -Penable_extendedae_plus_runtime=true.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ActualCompatibilityGameTests.java', '**/PatternMigrationGameTests.java',
+                '**/ForgeCraftingInput.java', '**/NeoEcoCatalyzerGameTests.java'])
+        tasks.named('processJdbResources') {
+            from(project.file('src/jdb/resources/data/ae2lt_migration/structures/migration_test.nbt')) { into 'data/ae2lt_actual/structures' }
+            from(project.file('src/jdb/resources/data/ae2lt_machine_recharge/structures/empty.nbt')) { into 'data/ae2lt_actual/structures' }
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('run-gametest/actual-compatibility')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_actual'
+            property 'ae2lt.neoecoTestPresent', 'true'
+            mods { "${project.mod_id}" { source sourceSets.jdb } }
+        }
+        tasks.named('runGameTestServer') {
+            doLast {
+                def log = project.file('run-gametest/actual-compatibility/logs/latest.log')
+                if (!log.isFile() || !log.text.contains('8 GAME TESTS COMPLETE')
+                        || !log.text.contains('All 8 required tests passed')) {
+                    throw new GradleException('Expected eight actual compatibility tests to pass')
+                }
+            }
+        }
+    }
+}

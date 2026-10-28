@@ -207,6 +207,26 @@ public class OverloadedPowerSupplyLogic implements IGridTickable {
         return distributor.getBufferedEnergy();
     }
 
+    public void writeEnergyToNBT(net.minecraft.nbt.CompoundTag tag) {
+        distributor.writeToNBT(tag);
+    }
+
+    public void readEnergyFromNBT(net.minecraft.nbt.CompoundTag tag) {
+        distributor.readFromNBT(tag);
+    }
+
+    public void writeDismantleEnergyToNBT(net.minecraft.nbt.CompoundTag tag) {
+        distributor.writeDismantleEnergyToNBT(tag);
+    }
+
+    public void importDismantleEnergyFromNBT(net.minecraft.nbt.CompoundTag tag) {
+        distributor.importDismantleEnergyFromNBT(tag);
+    }
+
+    public void consumeDismantleDropHandoff() {
+        distributor.consumeDismantleDropHandoff();
+    }
+
     public int getActiveTicketCount() {
         long[] expiry = connectionTicketExpiry;
         int n = Math.min(expiry.length, cachedValidTargets.size());
@@ -250,7 +270,7 @@ public class OverloadedPowerSupplyLogic implements IGridTickable {
 
         var mainNode = host.getMainNode();
         if (!mainNode.isActive() || mainNode.getGrid() == null) {
-            setStatus(Status.NO_GRID);
+            enterIdleState(Status.NO_GRID, true);
             return false;
         }
 
@@ -604,6 +624,11 @@ public class OverloadedPowerSupplyLogic implements IGridTickable {
         @Override
         public Runnable getCellPersistCallback() {
             return host::persistCellStorage;
+        }
+
+        @Override
+        public Runnable getPendingEnergyPersistCallback() {
+            return host::saveChanges;
         }
     }
 }

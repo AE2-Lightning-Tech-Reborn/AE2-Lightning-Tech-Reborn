@@ -513,6 +513,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
 
     @Override
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
+        logic.consumeDismantleDropHandoff();
         logic.flushBufferToNetwork();
         AppFluxBridge.persistCellStorage(cachedCellView);
         super.addAdditionalDrops(level, pos, drops);
@@ -534,6 +535,9 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
                                net.minecraft.nbt.CompoundTag output,
                                @Nullable Player player) {
         super.exportSettings(mode, output, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            logic.writeDismantleEnergyToNBT(output);
+        }
         FrequencyBindingHelper.exportMemorySettings(mode, output, getFrequencyId());
     }
 
@@ -542,6 +546,9 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
                                net.minecraft.nbt.CompoundTag input,
                                @Nullable Player player) {
         super.importSettings(mode, input, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            logic.importDismantleEnergyFromNBT(input);
+        }
         FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
     }
 
@@ -573,6 +580,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
         // /save-all flush pick it up again in the next dirty pass.
         AppFluxBridge.persistCellStorage(cachedCellView);
         super.saveAdditional(data);
+        logic.writeEnergyToNBT(data);
         data.putString(TAG_MODE, mode.name());
         cellInv.writeToNBT(data, TAG_CELL_INV);
 
@@ -598,6 +606,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
         cellViewDirty = true;
         cellCapacityDirty = true;
         cachedCellView = null;
+        logic.readEnergyFromNBT(data);
         WirelessConnectionLists.readTagList(
                 data, TAG_CONNECTIONS, connections, MAX_WIRELESS_CONNECTIONS, WirelessConnection::fromTag);
         invalidConnectionScanCursor = 0;

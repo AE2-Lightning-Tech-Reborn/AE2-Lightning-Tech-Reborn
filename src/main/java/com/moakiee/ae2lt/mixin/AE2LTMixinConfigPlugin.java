@@ -16,6 +16,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             "AdvCraftingCpuAccessor", "advanced_ae",
             "AdvCraftingCpuLogicMixin", "advanced_ae",
             "ECOCraftingCpuLogicMixin", "neoecoae",
+            "NeoEcoLightningTransformMixin", "neoecoae",
             "InterfaceEnergyDistributionMixin", "appflux",
             "IpnContainerClickerMixin", "inventoryprofilesnext",
             "EntityConveyorPhaseLockMixin", "mob_grinding_utils");

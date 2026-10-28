@@ -1,0 +1,55 @@
+// Also pass both optional runtime flags and -Pae2ltClientSeed=<disposable test world>.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PatternMigrationClientProbe.java', '**/MiningFactoryClientProbe.java',
+                '**/OverloadedIOPortClientProbe.java', '**/JeiTransferCompatibilityClientProbe.java',
+                '**/CoverageClientSequence.java', '**/CraftingReportClientProbe.java',
+                '**/PigmeeLightningClientProbe.java', '**/PatternMigrationGameTests.java',
+                '**/ForgeCraftingInput.java', '**/ClientStartupProbe.java'])
+        def viewer = (project.findProperty('enable_emi_runtime') ?: 'true').toBoolean() ? 'emi' : 'jei'
+        def mode = project.findProperty('ae2ltClientMode') ?: 'coverage'
+        if (!(mode in ['coverage', 'mainMenu'])) throw new GradleException('Unknown ae2ltClientMode: ' + mode)
+        def individual = project.findProperty('ae2ltClientProbe')
+        def individualResults = [patternMigrationClientProbe: 'migration-client-result.txt',
+                miningClientProbe: 'mining-client-probe.txt', ioClientProbe: 'io-port-result.txt',
+                jeiTransferCompatibilityProbe: 'jei-transfer-result.txt', craftReportProbe: 'report-result.txt',
+                pigmeeLightningClientProbe: 'pigmee-lightning-client-probe.txt']
+        if (individual && !individualResults.containsKey(individual)) throw new GradleException('Unknown ae2ltClientProbe: ' + individual)
+        def directory = project.file(project.findProperty('ae2ltClientRunDirectory') ?: 'build/actual-client-' + viewer)
+        minecraft.runs.client {
+            workingDirectory directory
+            property 'ae2lt.coverageAllClient', (mode == 'coverage' && !individual).toString()
+            individualResults.keySet().each { probe ->
+                property 'ae2lt.' + probe, (mode == 'coverage' && probe == (individual ?: 'patternMigrationClientProbe')).toString()
+            }
+            property 'ae2lt.clientStartupProbe', (mode == 'mainMenu').toString()
+            mods { "${project.mod_id}" { source sourceSets.jdb } }
+            if (mode == 'coverage') args '--quickPlaySingleplayer', 'coverage-world'
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                def seed = project.findProperty('ae2ltClientSeed')
+                if (mode == 'coverage' && (!seed || !new File(seed.toString(), 'level.dat').isFile())) {
+                    throw new GradleException('ae2ltClientSeed must name a disposable test world with level.dat')
+                }
+                // A new directory keeps previous failures and prevents stale PASS files or world state.
+                def marker = new File(directory, '.client-probe-started')
+                if (marker.exists()) throw new GradleException('Use a new ae2ltClientRunDirectory for each run: ' + directory)
+                directory.mkdirs()
+                marker.text = java.time.Instant.now().toString()
+                def config = new File(directory, 'config')
+                config.mkdirs()
+                new File(config, 'emi.css').text = '#dev { dev-mode: false; }\n'
+                if (mode == 'coverage') project.copy { from seed; into new File(directory, 'saves/coverage-world'); exclude 'session.lock' }
+                new File(directory, 'all-client-result.txt').delete()
+                new File(directory, 'options.txt').text = 'version:3465\nonboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nguiScale:2\nrenderDistance:4\nsimulationDistance:5\nlang:zh_cn\n'
+            }
+            doLast {
+                def result = new File(directory, mode == 'coverage' ? (individual ? individualResults[individual] : 'all-client-result.txt') : 'client-startup-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS')) {
+                    throw new GradleException('Actual client probes did not finish successfully')
+                }
+            }
+        }
+    }
+}

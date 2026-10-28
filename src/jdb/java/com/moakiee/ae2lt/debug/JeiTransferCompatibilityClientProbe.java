@@ -29,7 +29,7 @@ public final class JeiTransferCompatibilityClientProbe {
         try {
             verify();
             Files.writeString(Path.of("jei-transfer-result.txt"), "PASS\n");
-            Minecraft.getInstance().stop();
+            CoverageClientSequence.finish("jeiTransferCompatibilityProbe");
         } catch (Throwable failure) {
             failure.printStackTrace();
             try { Files.writeString(Path.of("jei-transfer-result.txt"), "FAIL: " + failure); }

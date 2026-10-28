@@ -223,7 +223,7 @@ public final class MiningFactoryClientProbe {
                     ((OverloadProcessingFactoryOutputConfigScreen) mc.screen).onClose();
                     report("PASS: five-tick progress sync and compact factory UI; matrix shift-click and parallel sync; tool/input/output transfers; 4096-count sync; auto-export toggle, side selection, clear, actual chest insertion and return to parent; original Overload Processing Factory shared output screen and packets verified.");
                 }
-                case 15 -> { finished = true; mc.stop(); }
+                case 15 -> { finished = true; CoverageClientSequence.finish("miningClientProbe"); }
                 default -> throw new AssertionError("Unexpected phase");
             }
             phase++;

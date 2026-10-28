@@ -11,7 +11,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -43,20 +43,20 @@ public final class AppGenProcessorGameTests {
         var printed = item("appgen:printed_origination_processor");
         var processor = item("appgen:origination_processor");
         var compression = (ShapedRecipe) manager.byKey(new ResourceLocation("appgen:crafting/ember_block"))
-                .orElseThrow().value();
+                .orElseThrow();
         helper.assertTrue(compression.getWidth() == 2 && compression.getHeight() == 2
                         && compression.getIngredients().stream().allMatch(i -> i.test(ember))
                         && compression.getResultItem(level.registryAccess()).is(emberBlock.getItem()),
                 "actual AppGen compression is four crystals per ember block");
         var printing = (InscriberRecipe) manager.byKey(new ResourceLocation("appgen:inscriber/printed_origination_processor"))
-                .orElseThrow().value();
+                .orElseThrow();
         var finishing = (InscriberRecipe) manager.byKey(new ResourceLocation("appgen:inscriber/origination_processor"))
-                .orElseThrow().value();
+                .orElseThrow();
         helper.assertTrue(printing.getMiddleInput().test(ember) && printing.getResultItem(level.registryAccess()).is(printed.getItem())
                         && finishing.getTopOptional().test(printed) && finishing.getResultItem(level.registryAccess()).is(processor.getItem()),
                 "bulk output follows the real inscriber processor chain");
-        helper.assertTrue(bulk.isPresent() && bulk.get().value() instanceof OverloadProcessingRecipe, "conditional bulk recipe loaded");
-        var recipe = (OverloadProcessingRecipe) bulk.orElseThrow().value();
+        helper.assertTrue(bulk.isPresent() && bulk.get() instanceof OverloadProcessingRecipe, "conditional bulk recipe loaded");
+        var recipe = (OverloadProcessingRecipe) bulk.orElseThrow();
         helper.assertTrue(recipe.itemInputs().size() == 3 && recipe.itemInputs().get(0).count() == 9
                         && recipe.itemInputs().get(1).count() == 4 && recipe.itemInputs().get(2).count() == 4,
                 "36 processors require 9 ember blocks, 4 redstone blocks, and 4 silicon blocks");
@@ -75,18 +75,18 @@ public final class AppGenProcessorGameTests {
         helper.assertTrue(recipe.matches(input, level), "real tagged inputs match");
         var candidate = OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                 FluidStack.EMPTY, FluidStack.EMPTY, 1, 0);
-        helper.assertTrue(candidate.isPresent() && candidate.get().recipe().id().equals(BULK)
+        helper.assertTrue(candidate.isPresent() && candidate.get().recipe().getId().equals(BULK)
                         && candidate.get().parallel() == 1, "factory recipe selection accepts the new processor");
         helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                 FluidStack.EMPTY, FluidStack.EMPTY, 0, 0).isEmpty(), "lightning requirement is retained");
         inventory.setStackInSlot(0, emberBlock.copyWithCount(8));
         helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                 FluidStack.EMPTY, FluidStack.EMPTY, 1, 0).isEmpty(), "eight ember blocks are insufficient");
-        var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
-            var codec = new OverloadProcessingRecipe.Serializer().streamCodec();
-            codec.encode(buffer, recipe);
-            var copy = codec.decode(buffer);
+            var serializer = new OverloadProcessingRecipe.Serializer();
+            serializer.toNetwork(buffer, recipe);
+            var copy = serializer.fromNetwork(BULK, buffer);
             helper.assertTrue(copy.matches(input, level) && copy.totalEnergy() == 400_000
                             && copy.itemResults().get(0).is(processor.getItem())
                             && copy.itemResults().get(0).getCount() == 36,
@@ -126,10 +126,10 @@ public final class AppGenProcessorGameTests {
             return;
         }
         helper.assertTrue(holder.isPresent(), name + " must be borrowed from the reaction catalog");
-        var recipe = holder.orElseThrow().value();
+        var recipe = holder.orElseThrow();
         // Compare against the optional mod's resource, independently of the execution view.
         var source = level.getServer().getResourceManager().getResourceOrThrow(
-                new ResourceLocation("appgen:recipe/reaction/" + name + ".json"));
+                new ResourceLocation("appgen:recipes/reaction/" + name + ".json"));
         try (var reader = source.openAsReader()) {
             var upstream = JsonParser.parseReader(reader).getAsJsonObject();
             var inputs = upstream.getAsJsonArray("input_items");
@@ -160,24 +160,26 @@ public final class AppGenProcessorGameTests {
                     "upstream FE retained with the standard one high-voltage lightning cost");
             var candidate = OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                     fluid, FluidStack.EMPTY, 1, 0);
-            helper.assertTrue(candidate.isPresent() && candidate.get().recipe().id().equals(id)
+            helper.assertTrue(candidate.isPresent() && candidate.get().recipe().getId().equals(id)
                             && candidate.get().parallel() == 1, "factory selects the reaction with actual registered inputs");
             helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                     fluid, FluidStack.EMPTY, 0, 0).isEmpty(), "lightning remains required");
             helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                     new FluidStack(Fluids.WATER, fluid.getAmount()), FluidStack.EMPTY, 1, 0).isEmpty(),
                     "water cannot replace lava");
+            var insufficientFluid = fluid.copy();
+            insufficientFluid.setAmount(fluid.getAmount() - 1);
             helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
-                    fluid.copyWithAmount(fluid.getAmount() - 1), FluidStack.EMPTY, 1, 0).isEmpty(),
+                    insufficientFluid, FluidStack.EMPTY, 1, 0).isEmpty(),
                     "insufficient lava cannot start a reaction");
-            var buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess());
+            var buffer = new FriendlyByteBuf(Unpooled.buffer());
             try {
                 var sourceRecipe = (net.pedroksl.advanced_ae.recipes.ReactionChamberRecipe)
-                        level.getRecipeManager().byKey(id).orElseThrow().value();
-                var codec = net.pedroksl.advanced_ae.recipes.ReactionChamberRecipeSerializer.INSTANCE.streamCodec();
-                codec.encode(buffer, sourceRecipe);
-                var copy = codec.decode(buffer);
-                helper.assertTrue(copy.getFluid().getIngredient().test(fluid)
+                        level.getRecipeManager().byKey(id).orElseThrow();
+                var serializer = net.pedroksl.advanced_ae.recipes.ReactionChamberRecipeSerializer.INSTANCE;
+                serializer.toNetwork(buffer, sourceRecipe);
+                var copy = serializer.fromNetwork(id, buffer);
+                helper.assertTrue(copy.getFluid().getIngredient() == fluid.getFluid()
                                 && copy.getFluid().getAmount() == fluid.getAmount()
                                 && ItemStack.matches(copy.getResultItem(), result)
                                 && copy.getEnergy() == recipe.totalEnergy(),

@@ -52,6 +52,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Return
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessConnection;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.WirelessDispatchMode;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
+import com.moakiee.ae2lt.logic.ResourceIngressPolicy;
 import com.moakiee.ae2lt.logic.energy.WirelessEnergyAPI;
 import com.moakiee.ae2lt.logic.energy.WirelessEnergyDistributor;
 import com.moakiee.ae2lt.logic.provider.WirelessOverflowQueue.Bucket;
@@ -227,6 +228,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
         this.returnInventory = new OverloadedReturnInventoryController(
                 totalCapacity, returnListener, returnFilter);
+        this.returnInventory.setOnlineSupplier(() -> ResourceIngressPolicy.isOnline(host, mainNode));
         accessor.setReturnInv(returnInventory.full());
         this.autoReturn = new OverloadedAutoReturnController(
                 new AutoReturnEnvironment());
@@ -756,21 +758,23 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         long targetMaxCraft = Math.min(
                 maxCraft,
                 context.target().batchCopyLimit(context.level()));
-        var result = context.target().pushPattern(
-                patternHandle,
-                targetMaxCraft,
-                batchSupported,
-                () -> isBatchTargetBlocked(context, patternHandle),
-                copies -> pushBatchChunk(
-                        context,
-                        pattern,
-                        patternHandle,
-                        oneCopyTemplate,
-                        copies,
-                        oneCopyCost,
-                        inputAcceptance));
-        saveAdaptiveBatchStateIfDirty(context.target());
-        return result;
+        try {
+            return context.target().pushPattern(
+                    patternHandle,
+                    targetMaxCraft,
+                    batchSupported,
+                    () -> isBatchTargetBlocked(context, patternHandle),
+                    copies -> pushBatchChunk(
+                            context,
+                            pattern,
+                            patternHandle,
+                            oneCopyTemplate,
+                            copies,
+                            oneCopyCost,
+                            inputAcceptance));
+        } finally {
+            saveAdaptiveBatchStateIfDirty(context.target());
+        }
     }
 
     private ProviderTarget.BatchStepResult dispatchWirelessBatchStep(
@@ -783,23 +787,25 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             boolean preserveBatchHistoryOnRejection) {
         boolean batchSupported = context.target().supportsBatch(
                 context.level(), pattern);
-        var result = context.target().pushPatternStep(
-                patternHandle,
-                maxCraft,
-                context.level().getGameTime(),
-                batchSupported,
-                preserveBatchHistoryOnRejection,
-                () -> isBatchTargetBlocked(context, patternHandle),
-                copies -> pushBatchChunk(
-                        context,
-                        pattern,
-                        patternHandle,
-                        oneCopyTemplate,
-                        copies,
-                        oneCopyCost,
-                        PatternInputAcceptance.COMPLETE_BATCH));
-        saveAdaptiveBatchStateIfDirty(context.target());
-        return result;
+        try {
+            return context.target().pushPatternStep(
+                    patternHandle,
+                    maxCraft,
+                    context.level().getGameTime(),
+                    batchSupported,
+                    preserveBatchHistoryOnRejection,
+                    () -> isBatchTargetBlocked(context, patternHandle),
+                    copies -> pushBatchChunk(
+                            context,
+                            pattern,
+                            patternHandle,
+                            oneCopyTemplate,
+                            copies,
+                            oneCopyCost,
+                            PatternInputAcceptance.COMPLETE_BATCH));
+        } finally {
+            saveAdaptiveBatchStateIfDirty(context.target());
+        }
     }
 
     private void saveAdaptiveBatchStateIfDirty(ProviderTarget target) {
@@ -1607,6 +1613,18 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         wirelessDistributor.flushBufferToNetwork();
     }
 
+    public void writeDismantleEnergyToNBT(CompoundTag tag) {
+        wirelessDistributor.writeDismantleEnergyToNBT(tag);
+    }
+
+    public void importDismantleEnergyFromNBT(CompoundTag tag) {
+        wirelessDistributor.importDismantleEnergyFromNBT(tag);
+    }
+
+    public void consumeDismantleDropHandoff() {
+        wirelessDistributor.consumeDismantleDropHandoff();
+    }
+
     public boolean prepareInvalidConnectionRemoval(WirelessConnection conn) {
         var bucket = wirelessOverflow.get(conn);
         if (bucket == null) {
@@ -1879,6 +1897,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         public int getValidTargetsVersion() {
             return validTargetsVersion;
         }
+
+        @Override
+        public Runnable getPendingEnergyPersistCallback() {
+            return OverloadedPatternProviderLogic.this::saveChanges;
+        }
     }
 
     private static final Item APPFLUX_INDUCTION_CARD =
@@ -1985,6 +2008,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
 
     @Override
     public void addDrops(List<ItemStack> drops) {
+        wirelessDistributor.consumeDismantleDropHandoff();
         super.addDrops(drops);
         for (var bucket : wirelessOverflow.buckets()) {
             addBucketDrops(bucket, drops);
@@ -2035,6 +2059,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     @Override
     public void writeToNBT(CompoundTag tag) {
         super.writeToNBT(tag);
+        wirelessDistributor.writeToNBT(tag);
         storage.writeToNBT(tag);
         returnPolicy.writeToNBT(tag);
         var localOverflow = pendingLocalDirectionalOverflowTarget != null
@@ -2070,6 +2095,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
     @Override
     public void readFromNBT(CompoundTag tag) {
         super.readFromNBT(tag);
+        wirelessDistributor.readFromNBT(tag);
         storage.readFromNBT(tag, returnInventory.full());
         returnPolicy.readFromNBT(tag);
         pendingLocalDirectionalOverflowTarget = null;

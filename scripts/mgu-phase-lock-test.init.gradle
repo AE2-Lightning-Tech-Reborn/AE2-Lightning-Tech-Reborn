@@ -1,0 +1,18 @@
+// Supply -PmguTestMods=<directory containing mob_grinding_utils-1.20.1-1.1.0.jar>.
+allprojects {
+    plugins.withId('net.minecraftforge.gradle') {
+        if (project.hasProperty('mguTestMods')) {
+            repositories.flatDir { dirs project.property('mguTestMods') }
+            dependencies.add('runtimeOnly', fg.deobf('local.mgu:mob_grinding_utils-1.20.1:1.1.0'))
+        }
+    }
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MguConveyorPhaseLockGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('run-gametest/mgu-phase-lock')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_mgu,minecraft'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

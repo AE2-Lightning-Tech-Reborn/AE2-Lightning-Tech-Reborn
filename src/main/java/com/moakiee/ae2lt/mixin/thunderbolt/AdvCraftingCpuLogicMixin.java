@@ -29,7 +29,7 @@ import appeng.crafting.CraftingLink;
 import appeng.crafting.inv.ListCraftingInventory;
 
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
-import com.moakiee.thunderbolt.core.util.MixinReflectionSupport;
+import com.moakiee.ae2lt.util.MixinReflectionSupport;
 import com.moakiee.ae2lt.mixin.thunderbolt.accessor.AdvCraftingCpuAccessor;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.ae2lt.overload.runtime.cpu.InsertContext;

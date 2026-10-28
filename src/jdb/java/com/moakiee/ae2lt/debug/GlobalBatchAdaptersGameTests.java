@@ -12,6 +12,8 @@ import appeng.api.stacks.*;
 import appeng.crafting.inv.ListCraftingInventory;
 import appeng.me.service.CraftingService;
 import com.moakiee.thunderbolt.api.crafting.batch.*;
+import com.moakiee.thunderbolt.compat.extendedaeplus.ExtendedAePlusBatchAdapter;
+import com.moakiee.thunderbolt.compat.neoeco.NeoEcoFastPathCompat;
 import com.moakiee.thunderbolt.core.crafting.batch.*;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -52,21 +54,44 @@ public final class GlobalBatchAdaptersGameTests {
 
     @GameTest(template = "empty")
     public static void optionalAdaptersRegisterAndNeoEcoAcceptsPartialBatch(GameTestHelper helper) throws Exception {
+        var mods = net.minecraftforge.fml.ModList.get();
         helper.assertTrue(!Boolean.getBoolean("ae2lt.neoecoBatchTestRequired")
-                || net.minecraftforge.fml.ModList.get().isLoaded("neoecoae"), "required NeoECO runtime loaded");
-        for (var mapping : Map.of("neoecoae", "neoeco", "extendedae_plus", "extendedae_plus").entrySet()) {
-            if (net.minecraftforge.fml.ModList.get().isLoaded(mapping.getKey())) {
-                helper.assertTrue(BatchProviderAdapters.entries().stream().anyMatch(e -> e.id().toString().equals("thunderbolt:" + mapping.getValue())),
-                        "TB registered adapter for " + mapping.getKey());
-            }
+                || mods.isLoaded("neoecoae"), "required NeoECO runtime loaded");
+        boolean eaepApi = hasClass("com.extendedae_plus.api.crafting.ScaledMolecularAssemblerPattern")
+                && hasClass("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity");
+        assertOptionalRegistration(helper, "extendedae_plus", mods.isLoaded("extendedae_plus") && eaepApi,
+                ExtendedAePlusBatchAdapter.createAdapter());
+        if (mods.isLoaded("extendedae_plus") && !eaepApi) verifyOrdinaryEaepCore(helper);
+
+        boolean forgeApi = hasClass("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider")
+                && hasClass("cn.dancingsnow.neoecoae.api.me.ECOBatchDispatchContext")
+                && hasClass("cn.dancingsnow.neoecoae.crafting.execution.fastpath.ECOExtractedPatternExecution");
+        boolean facadeApi = hasClass("cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider")
+                && hasClass("cn.dancingsnow.neoecoae.api.me.ECOFastPathFacade");
+        var neoAdapter = NeoEcoFastPathCompat.createAdapter();
+        assertOptionalRegistration(helper, "neoeco", mods.isLoaded("neoecoae") && (forgeApi || facadeApi), neoAdapter);
+
+        // The global Core contract must execute even when an optional version has no batch API.
+        run(helper, BatchCpuAccounting.Mode.LINEAR, false, 3, false);
+        run(helper, BatchCpuAccounting.Mode.SUCCESSFUL_DISPATCH, false, 8, true);
+        if (neoAdapter == null) {
+            verifyOrdinaryNeoEcoFallback(helper);
+            System.out.println("GLOBAL_BATCH_NEOECO_NATIVE_PARTIAL_UNCOVERED reason="
+                    + (mods.isLoaded("neoecoae") ? "released_api_absent" : "mod_absent")
+                    + " global_partial=3/8 global_uncertain_ownership_verified=true ordinary_fallback_verified=true");
+        } else if (forgeApi) {
+            verifyNeoEcoForgePartialBatch(helper);
+            verifyNeoEcoNativeAccounting(helper, false);
+            verifyNeoEcoNativeAccounting(helper, true);
+        } else {
+            verifyNeoEcoFacadePartialBatch(helper);
         }
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")) { helper.succeed(); return; }
-        runNeoEco(helper, false);
-        runNeoEco(helper, true);
+        System.out.println("GLOBAL_BATCH_OPTIONAL_CAPABILITIES eaep_super_api=" + eaepApi
+                + " neoeco_forge_api=" + forgeApi + " neoeco_facade_api=" + facadeApi);
         helper.succeed();
     }
 
-    private static void runNeoEco(GameTestHelper helper, boolean uncertain) throws Exception {
+    private static void verifyNeoEcoNativeAccounting(GameTestHelper helper, boolean uncertain) throws Exception {
         var type = Class.forName("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider");
         Class<?> admission;
         try { admission = Class.forName("cn.dancingsnow.neoecoae.crafting.execution.batch.ECOBatchAdmission"); }
@@ -121,6 +146,149 @@ public final class GlobalBatchAdaptersGameTests {
         }
     }
 
+    private static boolean hasClass(String name) {
+        try { Class.forName(name, false, GlobalBatchAdaptersGameTests.class.getClassLoader()); return true; }
+        catch (ClassNotFoundException absent) { return false; }
+    }
+
+    private static void assertOptionalRegistration(GameTestHelper helper, String name,
+            boolean expected, BatchProviderAdapter factory) {
+        var registered = BatchProviderAdapters.entries().stream()
+                .filter(e -> e.id().equals(new ResourceLocation("thunderbolt", name))).findFirst();
+        helper.assertTrue((factory != null) == expected, name + " factory matches the actual optional API");
+        helper.assertTrue(registered.isPresent() == expected, name + " registration matches the actual optional API");
+        if (expected) helper.assertTrue(registered.orElseThrow().priority() == -100
+                && registered.orElseThrow().adapter().getClass() == factory.getClass(), name + " uses the native Core adapter");
+    }
+
+    private static void verifyOrdinaryEaepCore(GameTestHelper helper) {
+        var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                new ResourceLocation("extendedae_plus", "assembler_matrix_pattern_plus"));
+        helper.assertTrue(block != net.minecraft.world.level.block.Blocks.AIR, "real Forge EAEP pattern core exists");
+        var pos = helper.absolutePos(new net.minecraft.core.BlockPos(1, 2, 1));
+        helper.getLevel().setBlockAndUpdate(pos, block.defaultBlockState());
+        var owner = helper.getLevel().getBlockEntity(pos);
+        helper.assertTrue(owner instanceof ICraftingProvider, "ordinary EAEP core retains its native provider");
+        var provider = (ICraftingProvider) owner;
+        var pattern = new Pattern();
+        var job = new Job(helper.getLevel(), pattern);
+        for (var entry : BatchProviderAdapters.entries()) helper.assertTrue(
+                entry.adapter().adapt(provider, pattern, job) == null, "ordinary EAEP core is not claimed by " + entry.id());
+        var input = new KeyCounter(); input.add(AEItemKey.of(Items.STONE), 1);
+        helper.assertTrue(!provider.pushPattern(pattern, new KeyCounter[] {input}), "unformed native EAEP core rejects ordinary work");
+        helper.assertTrue(input.get(AEItemKey.of(Items.STONE)) == 1, "native ordinary rejection preserves the unowned input");
+    }
+
+    private static void verifyOrdinaryNeoEcoFallback(GameTestHelper helper) {
+        var pattern = new Pattern(); var provider = new Provider(pattern);
+        var input = new KeyCounter(); input.add(AEItemKey.of(Items.STONE), 1);
+        helper.assertTrue(!NeoEcoFastPathCompat.pushPattern(provider, pattern, new KeyCounter[] {input}, UUID.randomUUID()),
+                "absent NeoECO batch API preserves ordinary provider rejection");
+        helper.assertTrue(provider.ordinaryCalls == 1 && input.get(AEItemKey.of(Items.STONE)) == 1,
+                "ordinary fallback calls once without taking rejected input ownership");
+    }
+
+    private static void verifyNeoEcoForgePartialBatch(GameTestHelper helper) throws Exception {
+        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.ECOBatchCapacityProvider");
+        var pattern = craftingPattern(helper);
+        long[] accepted = new long[1]; int[] ordinary = new int[1]; int[] pushes = new int[1];
+        boolean[] fail = new boolean[1]; var uncertain = new IllegalStateException("uncertain native NeoECO submission");
+        var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[] {ICraftingProvider.class, type}, (p, method, args) -> switch (method.getName()) {
+                    case "equals" -> p == args[0];
+                    case "hashCode" -> System.identityHashCode(p);
+                    case "toString" -> "native-neoeco-capacity-provider";
+                    case "isBusy" -> false;
+                    case "getAvailablePatterns" -> List.of(pattern);
+                    case "eco$getBatchCapacity" -> 3L;
+                    case "pushPattern" -> { ordinary[0]++; yield false; }
+                    case "eco$pushBatch", "eco$pushBatchAdmission" -> {
+                        pushes[0]++;
+                        if (fail[0]) throw uncertain;
+                        long offered = (long) args[1];
+                        helper.assertTrue(offered == 3, "native NeoECO admission bounds the offer");
+                        accepted[0] += offered;
+                        yield method.getReturnType() == boolean.class ? true
+                                : method.getReturnType().getMethod("accepted", long.class, boolean.class).invoke(null, offered, true);
+                    }
+                    default -> throw new AssertionError(method);
+                });
+        var entry = BatchProviderAdapters.entries().stream().filter(e -> e.id().toString().equals("thunderbolt:neoeco")).findFirst().orElseThrow();
+        var endpoint = entry.adapter().adapt(provider, pattern, null);
+        helper.assertTrue(endpoint != null, "real Forge NeoECO capacity interface is recognized");
+        var template = new KeyCounter(); template.add(AEItemKey.of(Items.OAK_LOG), 1);
+        var job = new Job(helper.getLevel(), pattern);
+        helper.assertTrue(endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job) == 5, "native NeoECO returns five unaccepted copies");
+        helper.assertTrue(accepted[0] == 3 && pushes[0] == 1 && ordinary[0] == 0, "native NeoECO accepts three once without ordinary replay");
+        helper.assertTrue(template.get(AEItemKey.of(Items.OAK_LOG)) == 1, "native NeoECO preserves the borrowed unit template");
+        fail[0] = true;
+        try {
+            endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job);
+            throw new AssertionError("uncertain native submit must propagate");
+        } catch (RuntimeException expected) {
+            helper.assertTrue(expected == uncertain || expected.getCause() == uncertain, "native NeoECO preserves the uncertain ownership cause");
+        }
+        helper.assertTrue(pushes[0] == 2 && ordinary[0] == 0 && accepted[0] == 3, "uncertain native work is never replayed");
+        helper.assertTrue(template.get(AEItemKey.of(Items.OAK_LOG)) == 1, "uncertain native submit preserves the caller template");
+        System.out.println("GLOBAL_BATCH_NEOECO_NATIVE_CAPACITY_PASS accepted=3 offered=8");
+    }
+
+    private static void verifyNeoEcoFacadePartialBatch(GameTestHelper helper) throws Exception {
+        var type = Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOFastPathDispatchProvider");
+        var prepared = Class.forName(type.getName() + "$Preparation");
+        var preparationConstructor = Arrays.stream(prepared.getConstructors())
+                .filter(c -> c.getParameterCount() == 4).findFirst().orElseThrow();
+        long[] accepted = new long[1];
+        int[] ordinary = new int[1];
+        boolean[] fail = new boolean[1];
+        var uncertain = (RuntimeException) Class.forName("cn.dancingsnow.neoecoae.api.me.provider.ECOIndeterminateBatchException")
+                .getConstructor(String.class, Throwable.class).newInstance("uncertain test submit", new IllegalStateException());
+        java.util.function.Predicate<Object> submit = batch -> {
+            if (fail[0]) throw uncertain;
+            try { accepted[0] += (long) batch.getClass().getMethod("craftCount").invoke(batch); }
+            catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            return true;
+        };
+        var provider = (ICraftingProvider) Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[] {ICraftingProvider.class, type}, (p, method, args) -> switch (method.getName()) {
+                    case "isBusy" -> false;
+                    case "getAvailablePatterns" -> List.of();
+                    case "eco$prepareFastPath" -> preparationConstructor.newInstance(3L, null, false, submit);
+                    case "pushPattern" -> { ordinary[0]++; yield false; }
+                    default -> null;
+                });
+        var pattern = craftingPattern(helper);
+        var entry = BatchProviderAdapters.entries().stream().filter(e -> e.id().toString().equals("thunderbolt:neoeco")).findFirst().orElseThrow();
+        var endpoint = entry.adapter().adapt(provider, pattern, null);
+        helper.assertTrue(endpoint != null, "native NeoECO protocol recognized");
+        var template = new KeyCounter(); template.add(AEItemKey.of(Items.OAK_LOG), 1);
+        var job = new Job(helper.getLevel(), pattern);
+        helper.assertTrue(endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job) == 5, "NeoECO partial capacity returned five copies");
+        helper.assertTrue(accepted[0] == 3 && ordinary[0] == 0, "three accepted via real NeoECO FastPath facade");
+        helper.assertTrue(template.get(AEItemKey.of(Items.OAK_LOG)) == 1, "NeoECO did not mutate template");
+        fail[0] = true;
+        try {
+            endpoint.pushBatch(pattern, new KeyCounter[] {template}, 8, job);
+            throw new AssertionError("indeterminate submit must propagate");
+        } catch (RuntimeException expected) {
+            helper.assertTrue(expected == uncertain, "preserved NeoECO uncertain ownership signal");
+        }
+        helper.assertTrue(ordinary[0] == 0, "uncertain NeoECO submission was not replayed");
+        System.out.println("GLOBAL_BATCH_NEOECO_NATIVE_FACADE_PASS accepted=3 offered=8");
+    }
+
+    private static IPatternDetails craftingPattern(GameTestHelper helper) {
+        var raw = helper.getLevel().getRecipeManager().byKey(new ResourceLocation("oak_planks")).orElseThrow();
+        var holder = (net.minecraft.world.item.crafting.CraftingRecipe) raw;
+        var inputs = new net.minecraft.world.item.ItemStack[9]; Arrays.fill(inputs, net.minecraft.world.item.ItemStack.EMPTY);
+        inputs[0] = new net.minecraft.world.item.ItemStack(Items.OAK_LOG);
+        var pattern = appeng.api.crafting.PatternDetailsHelper.decodePattern(
+                appeng.api.crafting.PatternDetailsHelper.encodeCraftingPattern(holder, inputs,
+                        new net.minecraft.world.item.ItemStack(Items.OAK_PLANKS, 4), false, false), helper.getLevel());
+        helper.assertTrue(pattern != null, "native crafting recipe decodes for optional dispatch");
+        return pattern;
+    }
+
     private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,
                             int accepted, boolean fail) {
         run(helper, mode, explicitNull, accepted, fail, -1);
@@ -155,6 +323,7 @@ public final class GlobalBatchAdaptersGameTests {
             helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 8 - accepted, "refund only unowned copies");
             if (fail) {
                 helper.assertTrue("AMBIGUOUS_BATCH_PROVIDER_OWNERSHIP".equals(job.failure), "job stopped on uncertain ownership");
+                helper.assertTrue(job.failureCause == endpoint.uncertain, "original uncertain ownership cause is preserved");
                 helper.assertTrue(job.waitingFor.list.isEmpty(), "uncertain work is not confirmed output");
             } else {
                 helper.assertTrue(job.failure == null, "normal dispatch must not fail");
@@ -187,6 +356,7 @@ public final class GlobalBatchAdaptersGameTests {
     }
     private static final class Endpoint implements IBatchCraftingProvider {
         final Provider provider; final int accepted; final boolean fail; int calls;
+        final RuntimeException uncertain = new IllegalStateException("submission ownership unknown");
         int admission = -1;
         Endpoint(Provider provider, int accepted, boolean fail) { this.provider = provider; this.accepted = accepted; this.fail = fail; }
         @Override public List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
@@ -204,7 +374,7 @@ public final class GlobalBatchAdaptersGameTests {
         @Override public long pushBatch(IPatternDetails p, KeyCounter[] inputs, long count) {
             calls++;
             if (count != (admission < 0 ? 8 : admission) || inputs[0].get(AEItemKey.of(Items.STONE)) != 1) throw new AssertionError("single-copy template contract");
-            if (fail) throw new IllegalStateException("submission ownership unknown");
+            if (fail) throw uncertain;
             return count - accepted;
         }
     }
@@ -217,7 +387,7 @@ public final class GlobalBatchAdaptersGameTests {
     }
     private static final class Job implements BatchJobView {
         final Level level; final Task task; final ArrayList<BatchTaskHandle> tasks = new ArrayList<>();
-        final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure;
+        final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure; Throwable failureCause;
         final UUID craftingId = UUID.randomUUID();
         Job(Level level, IPatternDetails pattern) { this.level = level; task = new Task(pattern); tasks.add(task); }
         @Override public Level level() { return level; }
@@ -225,6 +395,6 @@ public final class GlobalBatchAdaptersGameTests {
         @Override public ListCraftingInventory waitingFor() { return waitingFor; }
         @Override public UUID craftingId() { return craftingId; }
         @Override public void addContainerMaxItems(long count, AEKeyType type) {}
-        @Override public void failDispatch(String reason, Throwable cause) { failure = reason; }
+        @Override public void failDispatch(String reason, Throwable cause) { failure = reason; failureCause = cause; }
     }
 }

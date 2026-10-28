@@ -17,6 +17,7 @@
     "RainbowPigmeeRecipeManagerMixin",
     "ServerLevelMixin",
     "LightningBoltOriginMixin",
+    "neoecoae.NeoEcoLightningTransformMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",

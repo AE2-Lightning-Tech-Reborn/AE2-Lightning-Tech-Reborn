@@ -15,11 +15,10 @@ import com.mojang.logging.LogUtils;
  * Shared reflection helpers for {@link org.spongepowered.asm.mixin.Pseudo} mixins
  * that target optional dependencies such as AdvancedAE.
  * <p>
- * Lookup helpers return {@code null} on failure instead of throwing, so static
- * field initializers in mixin classes never crash class loading. Invocation
- * helpers swallow {@link ReflectiveOperationException} and log a warning at
- * most once per {@code action} key, mirroring the existing {@code ae2lt$*}
- * pattern that lived inside {@code AdvCraftingCpuLogicMixin}.
+ * Discovery does not initialize optional classes. Lookup helpers return {@code null}
+ * when a class, member descriptor or access permission is unavailable. Invocation
+ * helpers also contain linkage and receiver/argument failures, logging a warning at
+ * most once per {@code action} key before returning the caller's fallback.
  */
 public final class MixinReflectionSupport {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -32,8 +31,8 @@ public final class MixinReflectionSupport {
     @Nullable
     public static Class<?> findClassSafe(String fqn) {
         try {
-            return Class.forName(fqn);
-        } catch (Exception ignored) {
+            return Class.forName(fqn, false, MixinReflectionSupport.class.getClassLoader());
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return null;
         }
     }
@@ -43,9 +42,8 @@ public final class MixinReflectionSupport {
         if (owner == null) return null;
         try {
             var field = owner.getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (Exception ignored) {
+            return field.trySetAccessible() ? field : null;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return null;
         }
     }
@@ -56,9 +54,8 @@ public final class MixinReflectionSupport {
         if (owner == null) return null;
         try {
             var method = owner.getDeclaredMethod(name, parameterTypes);
-            method.setAccessible(true);
-            return method;
-        } catch (Exception ignored) {
+            return method.trySetAccessible() ? method : null;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return null;
         }
     }
@@ -68,7 +65,7 @@ public final class MixinReflectionSupport {
         if (field == null) return null;
         try {
             return field.get(target);
-        } catch (ReflectiveOperationException e) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             logReflectionFailure("read reflective field", e);
             return null;
         }
@@ -78,7 +75,7 @@ public final class MixinReflectionSupport {
         if (field == null) return fallback;
         try {
             return field.getLong(target);
-        } catch (ReflectiveOperationException e) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             logReflectionFailure("read reflective long field", e);
             return fallback;
         }
@@ -88,7 +85,7 @@ public final class MixinReflectionSupport {
         if (field == null) return;
         try {
             field.setLong(target, value);
-        } catch (ReflectiveOperationException e) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             logReflectionFailure(action, e);
         }
     }
@@ -99,7 +96,7 @@ public final class MixinReflectionSupport {
         if (method == null) return null;
         try {
             return method.invoke(target, args);
-        } catch (ReflectiveOperationException e) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
             logReflectionFailure(action, e);
             return null;
         }

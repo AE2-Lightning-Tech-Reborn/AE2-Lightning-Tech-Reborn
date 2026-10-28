@@ -48,6 +48,7 @@ sourceSets {
         java.include '**/blockentity/*Interface*GameTests.java'
         java.include '**/blockentity/ManualItemExportReceiptGameTests.java'
         java.include '**/client/crafting/CraftingReportClientProbe.java'
+        java.include '**/debug/CoverageClientSequence.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -338,6 +339,16 @@ dependencies {
     jarJar(group: 'io.github.llamalad7', name: 'mixinextras-forge', version: "[${mixinextras_version},)") {
         jarJar.pin(it, "${mixinextras_version}")
     }
+}
+
+tasks.named('compileJava', JavaCompile).configure {
+    // The Mixin processor writes one aggregate refmap outside the classes directory.
+    // ABI-only dependency changes can otherwise compile no source files and discard
+    // that output, leaving processResources without a refmap. Process all main sources
+    // whenever compilation is needed; normal task up-to-date checks remain enabled.
+    options.incremental = false
+    outputs.file(layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json'))
+            .withPropertyName('mixinRefmap')
 }
 
 tasks.named('processResources', ProcessResources).configure {

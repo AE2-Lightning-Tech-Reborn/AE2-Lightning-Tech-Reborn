@@ -35,7 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -60,9 +60,15 @@ public final class ProviderEnergyOutputGameTests {
     private static final BlockPos POS = new BlockPos(2, 2, 2);
     private static final Map<BarrelBlockEntity, Machine> MACHINES = new WeakHashMap<>();
 
+    private static final class MachineBarrelBlockEntity extends BarrelBlockEntity {
+        private MachineBarrelBlockEntity(BlockPos pos, BlockState state) {
+            super(pos, state);
+        }
+    }
+
     @SubscribeEvent
     public static void capabilities(AttachCapabilitiesEvent<BlockEntity> event) {
-        if (!(event.getObject() instanceof BarrelBlockEntity barrel)) return;
+        if (!(event.getObject() instanceof MachineBarrelBlockEntity barrel)) return;
         var machine = machine(barrel);
         var energy = LazyOptional.of(() -> machine.energy);
         var fluid = LazyOptional.of(() -> machine.fluid);
@@ -130,9 +136,15 @@ public final class ProviderEnergyOutputGameTests {
                     "flux cell rejected the source energy");
             fixture.provider.setReturnMode(ReturnMode.AUTO);
             induction(fixture.provider, true);
+            helper.assertTrue(fixture.barrel.getCapability(ForgeCapabilities.ENERGY, Direction.NORTH)
+                    .orElse(null) == fixture.machine.energy, "fixture energy capability changed");
+            helper.assertTrue(((IUpgradeableObject) fixture.provider.getLogic()).getUpgrades()
+                    .isInstalled(AppFluxBridge.getInductionCard()), "fixture induction card was not installed");
         });
         helper.runAfterDelay(100, () -> {
-            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 100_000, "induction did not power machine");
+            helper.assertTrue(fixture.machine.energy.getEnergyStored() == 100_000,
+                    "induction did not power machine: stored=" + fixture.machine.energy.getEnergyStored()
+                            + ", network=" + stored(fixture.provider, AppFluxBridge.FE_KEY));
             helper.assertTrue(fixture.machine.energy.extractions == 0, "supplied FE was pulled back");
             helper.assertTrue(stored(fixture.provider, AppFluxBridge.FE_KEY) == 25_000,
                     "FE transfer must conserve network plus machine energy");
@@ -234,6 +246,8 @@ public final class ProviderEnergyOutputGameTests {
         var provider = (OverloadedPatternProviderBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(POS));
         var machinePos = wireless ? POS.offset(4, 0, 0) : POS.south();
         helper.setBlock(machinePos, Blocks.BARREL);
+        helper.getLevel().setBlockEntity(new MachineBarrelBlockEntity(
+                helper.absolutePos(machinePos), Blocks.BARREL.defaultBlockState()));
         var barrel = (BarrelBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(machinePos));
         if (wireless) {
             provider.setProviderMode(ProviderMode.WIRELESS);
