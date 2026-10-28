@@ -1,4 +1,8 @@
 {
+  "ae2lt.wireless_coverage.bound": "无线设备已绑定到此 ME 网络",
+  "tooltip.ae2lt.wireless_coverage.same_dimension": "ME 网络无线覆盖：整个所在维度",
+  "tooltip.ae2lt.wireless_coverage.all_dimensions": "ME 网络无线覆盖：所有维度",
+  "tooltip.ae2lt.wireless_coverage.bind": "手持无线终端右键绑定网络",
   "ae2lt.wireless_energy.bulk_cancelled": "批量操作已中止；已完成的更改保留",
   "ae2lt.wireless_energy.bulk_busy": "已有批量操作正在处理，请稍后重试",
   "ae2lt.wireless_energy.bulk_queued": "批量供电操作已排队，将分批处理",

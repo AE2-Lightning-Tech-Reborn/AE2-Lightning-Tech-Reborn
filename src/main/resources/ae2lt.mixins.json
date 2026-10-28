@@ -9,6 +9,7 @@
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
+    "WirelessTerminalCoverageMixin",
     "WirelessEnergyTargetRemovalMixin",
     "WirelessEnergyMachineTickMixin",
     "WirelessEnergyObservationRemovalMixin",

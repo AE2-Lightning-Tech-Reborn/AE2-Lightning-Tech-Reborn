@@ -1,4 +1,8 @@
 {
+  "ae2lt.wireless_coverage.bound": "Wireless device linked to this ME network",
+  "tooltip.ae2lt.wireless_coverage.same_dimension": "ME network wireless coverage: entire dimension",
+  "tooltip.ae2lt.wireless_coverage.all_dimensions": "ME network wireless coverage: all dimensions",
+  "tooltip.ae2lt.wireless_coverage.bind": "Right-click with a wireless terminal to link it",
   "ae2lt.wireless_energy.bulk_cancelled": "Group operation stopped; completed changes were kept",
   "ae2lt.wireless_energy.bulk_busy": "A group operation is already running; try again later",
   "ae2lt.wireless_energy.bulk_queued": "Group power operation queued; processing in batches",
