@@ -175,7 +175,8 @@ side = "BOTH"
 modId = "extendedae_plus"
 type = "optional"
 versionRange = "[0,)"
-ordering = "AFTER"
+# Runtime-only integration; avoid a load-order cycle through NeoECO.
+ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
