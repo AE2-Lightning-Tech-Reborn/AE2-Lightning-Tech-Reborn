@@ -1,0 +1,51 @@
+// Real armor inventory ticks and vanilla status effects in an isolated NeoForge server.
+allprojects {
+    afterEvaluate {
+        def localThunderbolt = project.findProperty('nightVisionThunderboltJar')
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+                project.dependencies.add(name, project.files(localThunderbolt))
+            }
+        }
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/NightVisionArmorGameTests.java',
+                'com/moakiee/ae2lt/debug/NightVisionClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('night-vision-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+        }
+        def clientDirectory = project.layout.buildDirectory.dir('night-vision-client').get().asFile
+        def clientWorld = new File(clientDirectory, 'saves/NightVisionQA/level.dat')
+        def seed = project.file(project.findProperty('nightVisionWorldSeed')
+                ?: 'build/night-vision-gametest/world/level.dat')
+        def report = new File(clientDirectory, 'night-vision-client-probe.txt')
+        neoForge.runs.client {
+            gameDirectory = clientDirectory
+            systemProperty 'ae2lt.nightVisionClientProbe', 'true'
+            systemProperty 'ae2lt.nightVisionExpectFlicker',
+                    project.findProperty('nightVisionExpectFlicker') ?: 'false'
+            programArguments.addAll '--username', 'NightVisionQA', '--quickPlaySingleplayer', 'NightVisionQA'
+        }
+        tasks.named('runClient') {
+            doFirst {
+                if (!clientWorld.isFile()) {
+                    if (!seed.isFile()) throw new GradleException('Run runGameTestServer to create the isolated world seed first.')
+                    clientWorld.parentFile.mkdirs()
+                    java.nio.file.Files.copy(seed.toPath(), clientWorld.toPath())
+                }
+                def options = new File(clientDirectory, 'options.txt')
+                if (!options.isFile()) options.setText('onboardAccessibility:false\npauseOnLostFocus:false\nrenderDistance:4\nsimulationDistance:5\nmaxFps:60\ntutorialStep:none\n', 'UTF-8')
+                report.setText('NIGHT_VISION_CLIENT_RUNNING\n', 'UTF-8')
+            }
+            doLast {
+                if (!report.getText('UTF-8').startsWith('NIGHT_VISION_CLIENT_PASS')) {
+                    throw new GradleException('Night vision client probe failed; inspect ' + report)
+                }
+            }
+        }
+    }
+}

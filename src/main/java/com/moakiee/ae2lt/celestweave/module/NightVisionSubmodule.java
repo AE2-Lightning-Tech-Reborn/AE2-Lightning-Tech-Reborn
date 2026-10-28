@@ -12,9 +12,10 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
 
     public static final NightVisionSubmodule INSTANCE = new NightVisionSubmodule();
 
-    // Renew at 30 seconds, well before vanilla starts flickering at 10 seconds.
+    // Client effects keep counting down while server ticks or refresh packets stall. Renew our
+    // grant after 60 server ticks, leaving headroom above vanilla's 200-tick fade window.
     private static final int EFFECT_DURATION_TICKS = 1_200;
-    private static final int REFRESH_THRESHOLD_TICKS = 600;
+    private static final int REFRESH_THRESHOLD_TICKS = EFFECT_DURATION_TICKS - 60;
 
     private NightVisionSubmodule() {}
 
