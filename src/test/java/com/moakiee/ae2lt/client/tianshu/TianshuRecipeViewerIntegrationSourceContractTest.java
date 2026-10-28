@@ -119,7 +119,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         String context = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuRecipeTransferContext.java"));
 
-        assertTrue(picker.contains("TianshuUploadSourceSelection.collect(menu)"));
+        assertTrue(picker.contains("TianshuUploadSourceSelection.collect(uploadMenu)"));
         assertTrue(selection.contains("TianshuRecipeTransferContext.snapshotFor(menu)"));
         assertTrue(selection.contains("recipeContext.sourceKey()"));
         assertTrue(selection.contains("return Selection.EMPTY;"));
@@ -236,7 +236,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         String picker = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuUploadTargetScreen.java"));
 
-        assertTrue(picker.contains("sourceField.setValue(sourceKey)"));
+        assertTrue(picker.contains("sourceField.setValue(aliasEditor ? \"\" : sourceKey)"));
         assertTrue(picker.contains("aliasField.setValue(storedAlias)"));
         assertTrue(picker.contains("String source = sourceField.getValue().strip()"));
         assertTrue(picker.contains("String query = aliasField.getValue().strip()"));

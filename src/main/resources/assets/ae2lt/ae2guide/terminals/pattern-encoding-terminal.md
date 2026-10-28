@@ -62,7 +62,7 @@ The terminal settings configure an **upload trigger**: holding a chosen key (or 
 
 **Shift + right-click the encode button** opens management in wired and wireless terminals. The upload picker and Tianshu settings also provide an entry.
 
-Search, add, edit or delete mappings by source. The editor contains only the recipe source and alias; fill the source manually or use + on a JEI/EMI recipe page. Saving and returning never upload a pattern. Changed drafts and conflicting replacements ask for confirmation.
+Search, add, edit or delete mappings by source. Adding or editing uses the upload provider list; fill the source manually or use + on a JEI/EMI recipe page. Left click or Shift + right click a provider to fill the draft alias, including full providers, or type an alias manually. Confirm saves the draft; Cancel discards it without uploading a pattern. Back or Esc asks before discarding a changed draft, and conflicting replacements still require confirmation.
 
 The top button cycles a client-wide policy, defaulting to **Off**:
 

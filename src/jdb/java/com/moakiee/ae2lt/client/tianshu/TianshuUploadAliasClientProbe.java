@@ -86,7 +86,8 @@ public final class TianshuUploadAliasClientProbe {
                 }
                 case 1 -> server(TianshuUploadAliasClientProbe::openTerminal);
                 case 2 -> exerciseEditor();
-                case 3 -> {
+                case 3 -> exerciseAliasPicker();
+                case 4 -> {
                     net.minecraft.client.Screenshot.grab(mc.gameDirectory, (wireless ? "wireless" : "wired") + "-alias-editor.png", mc.getMainRenderTarget(), ignored -> {});
                     var menu = (TianshuPatternEncodingTermMenu) editor.getMenu();
                     press(editor, "save");
@@ -111,7 +112,7 @@ public final class TianshuUploadAliasClientProbe {
                         require(provider.getLogic().getPatternInv().isEmpty(), "management leaves provider empty");
                     });
                 }
-                case 4 -> server(() -> {
+                case 5 -> server(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                     var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
                     var pattern = appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
@@ -120,12 +121,12 @@ public final class TianshuUploadAliasClientProbe {
                     menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(pattern);
                     menu.broadcastChanges();
                 });
-                case 5 -> {
+                case 6 -> {
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     require(!terminal.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "encoded pattern synchronized");
                     exerciseUploadReturn(terminal);
                 }
-                case 6 -> server(() -> {
+                case 7 -> server(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                     var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
                     require(menu.uploadState == 0, "encoded pattern management never uploads");
@@ -135,7 +136,7 @@ public final class TianshuUploadAliasClientProbe {
                     menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(ItemStack.EMPTY);
                     menu.broadcastChanges();
                 });
-                case 7 -> server(() -> {
+                case 8 -> server(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                     var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
                     var pattern = appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
@@ -146,7 +147,7 @@ public final class TianshuUploadAliasClientProbe {
                     menu.uploadTianshuPatternToTarget(player, menu.getUploadTargets().getFirst().group(), menu.getUploadTargetRequestRevision());
                     require(menu.uploadState == 1 && menu.canUndoUpload, "server upload creates player receipt");
                 });
-                case 8 -> {
+                case 9 -> {
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     var button = terminal.children().stream()
                             .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
@@ -154,7 +155,7 @@ public final class TianshuUploadAliasClientProbe {
                             .map(c -> (appeng.client.gui.widgets.ActionButton)c).findFirst().orElseThrow();
                     require(button.mouseClicked(button.getX() + 2, button.getY() + 2, 1), "native encode right click handled");
                 }
-                case 9 -> server(() -> {
+                case 10 -> server(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                     var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
                     var provider = (appeng.blockentity.crafting.PatternProviderBlockEntity) player.serverLevel().getBlockEntity(CABLE.east());
@@ -163,11 +164,11 @@ public final class TianshuUploadAliasClientProbe {
                     menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(ItemStack.EMPTY);
                     menu.broadcastChanges();
                 });
-                case 10 -> {
+                case 11 -> {
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     switchScreen(terminal, new TianshuUploadAliasManagementScreen<>(terminal, "", ""));
                 }
-                case 11 -> {
+                case 12 -> {
                     net.minecraft.client.Screenshot.grab(mc.gameDirectory, (wireless ? "wireless" : "wired") + "-alias-management.png", mc.getMainRenderTarget(), ignored -> {});
                     var list = (TianshuUploadAliasManagementScreen<?>) mc.screen;
                     list.init(mc, 270, 190);
@@ -194,11 +195,11 @@ public final class TianshuUploadAliasClientProbe {
                         menu.broadcastChanges();
                     });
                 }
-                case 12 -> {
+                case 13 -> {
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.SAVED_ALIAS);
                     openAutomaticPicker();
                 }
-                case 13 -> {
+                case 14 -> {
                     require(mc.screen instanceof TianshuUploadTargetScreen<?>, "saved-only mode retains picker without explicit alias");
                     var picker = (TianshuUploadTargetScreen<?>) mc.screen;
                     require(!(boolean) field(picker, "awaitingUpload"), "machine guess alone does not auto upload in saved mode");
@@ -207,7 +208,7 @@ public final class TianshuUploadAliasClientProbe {
                     AE2LTClientConfig.setUploadAlias(FIRST, "minecraft:furnace");
                     openAutomaticPicker();
                 }
-                case 14 -> {
+                case 15 -> {
                     require(mc.screen instanceof TianshuPatternEncodingTermScreen<?>, "saved unique alias auto uploads and returns to terminal");
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     require(terminal.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "auto upload emptied encoded slot");
@@ -216,12 +217,12 @@ public final class TianshuUploadAliasClientProbe {
                         ((TianshuPatternEncodingTermMenu) player.containerMenu).undoLastUpload();
                     });
                 }
-                case 15 -> {
+                case 16 -> {
                     AE2LTClientConfig.removeUploadAlias(FIRST);
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH);
                     openAutomaticPicker();
                 }
-                case 16 -> {
+                case 17 -> {
                     require(mc.screen instanceof TianshuPatternEncodingTermScreen<?>, "unique machine ID auto uploads in any-match mode");
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     require(terminal.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "machine upload transferred the physical pattern");
@@ -234,7 +235,7 @@ public final class TianshuUploadAliasClientProbe {
                     });
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
                 }
-                case 17 -> {
+                case 18 -> {
                     report.append(wireless ? "wireless" : "wired").append(": PASS native editor, clipboard merge, three modes + real automatic uploads, machine IDs, exact deletion, conflict, cancellation, return paths, right-click undo\n");
                     if (!wireless) {
                         wireless = true;
@@ -348,6 +349,59 @@ public final class TianshuUploadAliasClientProbe {
         editor.init(mc, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
     }
 
+    private static com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData machineTarget(
+            net.minecraft.world.item.Item item, String name, int slots) {
+        return new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData(
+                new appeng.api.implementations.blockentities.PatternContainerGroup(
+                        appeng.api.stacks.AEItemKey.of(item), net.minecraft.network.chat.Component.literal(name), List.of()), 1, slots);
+    }
+
+    private static void exerciseAliasPicker() throws Exception {
+        var mc = Minecraft.getInstance();
+        var menu = (TianshuPatternEncodingTermMenu) editor.getMenu();
+        var originalTargets = menu.getUploadTargets();
+        require(!originalTargets.isEmpty(), "editor requests live network providers");
+        String saved = AE2LTClientConfig.findUploadAlias(FIRST);
+        int uploadState = menu.uploadState;
+        var priorMode = AE2LTClientConfig.uploadMatchMode();
+        AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH);
+        var full = machineTarget(net.minecraft.world.item.Items.FURNACE, "Full furnace", 0);
+        menu.receiveUploadTargets(List.of(full), 9000);
+        input(editor, "alias").setValue("");
+        editor.containerTick();
+        clickFirstAliasProvider();
+        require(input(editor, "alias").getValue().equals("Full furnace"), "full provider custom name fills alias");
+        require(java.util.Objects.equals(saved, AE2LTClientConfig.findUploadAlias(FIRST)), "selection does not save draft");
+        require(menu.uploadState == uploadState, "selection does not start upload in automatic mode");
+        press(editor, "cancel");
+        require(mc.screen instanceof TianshuUploadAliasManagementScreen<?>, "cancel returns directly to management");
+        require(java.util.Objects.equals(saved, AE2LTClientConfig.findUploadAlias(FIRST)), "cancel discards selected alias");
+        var management = (TianshuUploadAliasManagementScreen<?>) mc.screen;
+        press(management, "add");
+        editor = (TianshuUploadAliasEditScreen<?>) mc.screen;
+        var furnace = machineTarget(net.minecraft.world.item.Items.FURNACE,
+                net.minecraft.world.item.Items.FURNACE.getDescription().getString(), 9);
+        menu.receiveUploadTargets(List.of(furnace), 9001);
+        input(editor, "source").setValue(FIRST);
+        input(editor, "alias").setValue("");
+        editor.containerTick();
+        clickFirstAliasProvider();
+        require(input(editor, "alias").getValue().equals("minecraft:furnace"), "default provider fills exact machine ID");
+        require(java.util.Objects.equals(saved, AE2LTClientConfig.findUploadAlias(FIRST)), "new selection still waits for confirm");
+        require(menu.uploadState == uploadState, "picker never uploads while editing");
+        menu.receiveUploadTargets(originalTargets, 9002);
+        menu.requestUploadTargets();
+        AE2LTClientConfig.setUploadMatchMode(priorMode);
+        report.append("Alias provider picker: PASS full providers, machine IDs, draft selection, explicit cancel, no automatic upload\n");
+    }
+
+    private static void clickFirstAliasProvider() throws Exception {
+        var source = input(editor, "source");
+        double x = source.getX() + 25, y = source.getY() + 22;
+        require(editor.mouseClicked(x, y, 0), "provider left press handled");
+        require(editor.mouseReleased(x, y, 0), "provider left release handled");
+    }
+
     private static void exerciseClipboardAndMode() throws Exception {
         var mc = Minecraft.getInstance();
         var list = (TianshuUploadAliasManagementScreen<?>) mc.screen;
@@ -424,6 +478,9 @@ public final class TianshuUploadAliasClientProbe {
         invoke(list, "refresh");
         input(list, "search").setValue(FIRST);
         require(((List<?>) field(list, "filtered")).size() == 1, "search filters by source");
+        // Returning through settings creates a fresh management screen with no selection.
+        require(list.mouseClicked(list.getGuiLeft() + 12,
+                list.getGuiTop() + (int) field(list, "listTop") + 2, 0), "select filtered alias record");
         input(list, "search").setValue("");
         press(list, "edit");
         var edit = (TianshuUploadAliasEditScreen<?>) mc.screen;

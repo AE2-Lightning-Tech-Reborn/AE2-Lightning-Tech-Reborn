@@ -12,6 +12,7 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.TabButton;
 import appeng.core.AEConfig;
+import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
@@ -31,9 +32,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
-/** EA2-native provider picker modelled after EAEP ClientPlus' provider-list sub-screen. */
-public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTermMenu>
-        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+/** AE2-native provider picker, also used for selecting an alias without uploading a pattern. */
+public class TianshuUploadTargetScreen<M extends MEStorageMenu>
+        extends AESubScreen<M, AEBaseScreen<M>> {
     private static final String STYLE = "/screens/tianshu_upload_targets.json";
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/tianshu_upload_targets.png");
@@ -56,8 +57,10 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     private static final int BACKGROUND_FOOTER_TEXTURE_Y = 203;
     private static final int HIDDEN_SLOT_POS = -10_000;
 
-    private final AETextField sourceField;
-    private final AETextField aliasField;
+    protected final AETextField sourceField;
+    protected final AETextField aliasField;
+    private final TianshuPatternEncodingTermMenu uploadMenu;
+    private final boolean aliasEditor;
     private final Scrollbar scrollbar;
     private final List<String> defaultAliases = new ArrayList<>();
     private List<String> machineIds = List.of();
@@ -80,23 +83,31 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     private String initialAlias = "";
     private Component uploadTargetName = Component.empty();
 
-    public TianshuUploadTargetScreen(TianshuPatternEncodingTermScreen<M> parent) {
+    public TianshuUploadTargetScreen(AEBaseScreen<M> parent) {
         this(parent, false);
     }
 
     public TianshuUploadTargetScreen(
-            TianshuPatternEncodingTermScreen<M> parent, boolean directUploadRequested) {
-        super(parent, STYLE);
+            AEBaseScreen<M> parent, boolean directUploadRequested) {
+        this(parent, STYLE, false);
+    }
+
+    protected TianshuUploadTargetScreen(AEBaseScreen<M> parent, String style, boolean aliasEditor) {
+        super(parent, style);
+        this.aliasEditor = aliasEditor;
+        uploadMenu = (TianshuPatternEncodingTermMenu) menu;
         imageWidth = GUI_WIDTH;
 
         addToLeftToolbar(new SettingToggleButton<>(Settings.TERMINAL_STYLE,
                 AEConfig.instance().getTerminalStyle(), this::toggleTerminalStyle));
         widgets.add("button_back", new TabButton(Icon.BACK,
-                Component.translatable("gui.back"), ignored -> returnToParent()));
-        addToLeftToolbar(new AliasActionButton(Icon.ENTER,
-                Component.translatable("ae2lt.tianshu.upload.alias.add"), this::addMapping));
-        addToLeftToolbar(new AliasActionButton(Icon.COG,
-                TianshuUploadAliasScreen.text("title"), this::openAliasManagement));
+                Component.translatable("gui.back"), ignored -> onClose()));
+        if (!aliasEditor) {
+            addToLeftToolbar(new AliasActionButton(Icon.ENTER,
+                    Component.translatable("ae2lt.tianshu.upload.alias.add"), this::addMapping));
+            addToLeftToolbar(new AliasActionButton(Icon.COG,
+                    TianshuUploadAliasScreen.text("title"), this::openAliasManagement));
+        }
 
         scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
         sourceField = widgets.addTextField("field_search");
@@ -106,22 +117,22 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         aliasField.setMaxLength(256);
         aliasField.setPlaceholder(Component.translatable("ae2lt.tianshu.upload.alias"));
 
-        var selection = TianshuUploadSourceSelection.collect(menu);
+        var selection = TianshuUploadSourceSelection.collect(uploadMenu);
         String sourceKey = selection.sourceKey();
         defaultAliases.addAll(selection.defaultAliases());
         machineIds = selection.machineIds();
-        sourceField.setValue(sourceKey);
+        sourceField.setValue(aliasEditor ? "" : sourceKey);
         String storedAlias = selection.savedAlias();
-        if (storedAlias != null && !storedAlias.isBlank()) {
+        if (!aliasEditor && storedAlias != null && !storedAlias.isBlank()) {
             setConfiguredAlias(storedAlias);
             defaultAliasIndex = indexOfDefaultAlias(storedAlias);
             aliasField.setValue(storedAlias);
-        } else if (!selection.initialQuery().isBlank()) {
+        } else if (!aliasEditor && !selection.initialQuery().isBlank()) {
             defaultAliasIndex = 0;
             aliasField.setValue(selection.initialQuery());
         }
         initialAlias = aliasField.getValue();
-        initialAliasSelectionPending = storedAlias.isBlank()
+        initialAliasSelectionPending = !aliasEditor && storedAlias.isBlank()
                 && !initialAlias.isBlank()
                 && !defaultAliases.isEmpty();
         aliasField.setResponder(value -> {
@@ -133,8 +144,14 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         });
         rebuildDefaultAliasTooltip();
 
-        requestedRevision = menu.getUploadTargetsRevision();
-        menu.requestUploadTargets();
+        if (aliasEditor) {
+            uploadMenu.cancelPendingClientUpload();
+            directUploadAttempted = true;
+            defaultAliases.clear();
+        }
+
+        requestedRevision = uploadMenu.getUploadTargetsRevision();
+        uploadMenu.requestUploadTargets();
     }
 
     private void setConfiguredAlias(String alias) {
@@ -163,6 +180,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     private void rebuildDefaultAliasTooltip() {
+        if (aliasEditor) return; // The editor owns validation and help for its draft fields.
         if (defaultAliases.size() <= 1) {
             aliasField.setTooltipMessage(List.of());
             return;
@@ -181,14 +199,21 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
 
     @Override
     protected void init() {
-        visibleRows = Math.max(6, config.getTerminalStyle().getRows(
-                (height - GUI_HEADER_HEIGHT - GUI_FOOTER_HEIGHT - GUI_VERTICAL_PADDING) / ROW_HEIGHT));
-        imageHeight = GUI_HEADER_HEIGHT + GUI_FOOTER_HEIGHT + visibleRows * ROW_HEIGHT;
+        int availableRows = Math.max(1,
+                (height - GUI_HEADER_HEIGHT - footerHeight() - GUI_VERTICAL_PADDING) / ROW_HEIGHT);
+        visibleRows = aliasEditor
+                ? Math.min(availableRows, Math.max(6, config.getTerminalStyle().getRows(availableRows)))
+                : Math.max(6, config.getTerminalStyle().getRows(availableRows));
+        imageHeight = GUI_HEADER_HEIGHT + footerHeight() + visibleRows * ROW_HEIGHT;
         scrollbar.setHeight(visibleRows * ROW_HEIGHT - 1);
         super.init();
         hideAllMenuSlots();
         queryRefresh = true;
     }
+
+    private int footerHeight() { return aliasEditor ? 44 : GUI_FOOTER_HEIGHT; }
+
+    protected final void refreshAliasQuery() { queryRefresh = true; }
 
     @Override
     protected void updateBeforeRender() {
@@ -206,12 +231,12 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     @Override
     public void containerTick() {
         super.containerTick();
-        if (menu.getUploadTargetsRevision() != requestedRevision) {
-            requestedRevision = menu.getUploadTargetsRevision();
+        if (uploadMenu.getUploadTargetsRevision() != requestedRevision) {
+            requestedRevision = uploadMenu.getUploadTargetsRevision();
             awaitingTargets = false;
             queryRefresh = true;
         }
-        if (awaitingUpload && menu.uploadState == 1) {
+        if (awaitingUpload && uploadMenu.uploadState == 1) {
             awaitingUpload = false;
             if (minecraft.player != null) {
                 minecraft.player.displayClientMessage(
@@ -222,10 +247,10 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
             returnToParent();
             return;
         }
-        if (awaitingUpload && menu.uploadState == 3) {
+        if (awaitingUpload && uploadMenu.uploadState == 3) {
             awaitingUpload = false;
             uploadFailed = true;
-            requestedRevision = menu.getUploadTargetsRevision();
+            requestedRevision = uploadMenu.getUploadTargetsRevision();
             queryRefresh = true;
         }
         if (queryRefresh) {
@@ -241,8 +266,8 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         if (!initialAliasSelectionPending || awaitingTargets) return;
         initialAliasSelectionPending = false;
         String selectedAlias = machineIds.isEmpty()
-                ? TianshuUploadTargetMatcher.findClosestUniqueAlias(menu.getUploadTargets(), initialAlias, defaultAliases)
-                : TianshuUploadTargetMatcher.initialMachineAlias(menu.getUploadTargets(), machineIds);
+                ? TianshuUploadTargetMatcher.findClosestUniqueAlias(uploadMenu.getUploadTargets(), initialAlias, defaultAliases)
+                : TianshuUploadTargetMatcher.initialMachineAlias(uploadMenu.getUploadTargets(), machineIds);
         if (selectedAlias.equals(aliasField.getValue())) return;
         defaultAliasIndex = indexOfDefaultAlias(selectedAlias);
         updatingAliasField = true;
@@ -253,7 +278,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     private void rebuildFilteredTargets() {
         String query = aliasField.getValue().strip().toLowerCase(Locale.ROOT);
         filtered.clear();
-        var targets = menu.getUploadTargets();
+        var targets = uploadMenu.getUploadTargets();
         for (int i = 0; i < targets.size(); i++) {
             var target = targets.get(i);
             if (query.isEmpty() || matches(target, query)) filtered.add(new IndexedTarget(i, target));
@@ -267,11 +292,11 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     }
 
     private void tryDirectUpload() {
-        if (directUploadAttempted || awaitingTargets || awaitingUpload) {
+        if (aliasEditor || directUploadAttempted || awaitingTargets || awaitingUpload) {
             return;
         }
         directUploadAttempted = true;
-        var selected = TianshuUploadTargetMatcher.automaticCandidate(menu.getUploadTargets(),
+        var selected = TianshuUploadTargetMatcher.automaticCandidate(uploadMenu.getUploadTargets(),
                 AE2LTClientConfig.uploadMatchMode(),
                 AE2LTClientConfig.findUploadAlias(sourceField.getValue()), aliasField.getValue(), machineIds);
         if (selected != null) select(new IndexedTarget(-1, selected), true);
@@ -293,7 +318,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
             var label = target.group().name().copy().append(suffix);
             graphics.drawString(font, Language.getInstance().getVisualOrder(
                             font.substrByWidth(label, ROW_LABEL_WIDTH)), ROW_LEFT + 22,
-                    y + 4, target.availableSlots() > 0 ? textColor : 0xFFAA3333, false);
+                    y + 4, aliasEditor || target.availableSlots() > 0 ? textColor : 0xFFAA3333, false);
         }
 
         Component status = null;
@@ -335,7 +360,13 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         graphics.blit(TEXTURE, offsetX, bottomBorderY,
                 0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1,
                 TEXTURE_SIZE, TEXTURE_SIZE);
-        graphics.blit(TEXTURE, offsetX, bottomBorderY + 1,
+        if (footerHeight() > GUI_FOOTER_HEIGHT) {
+            graphics.blit(TEXTURE, offsetX, bottomBorderY + 1,
+                    GUI_WIDTH, footerHeight() - GUI_FOOTER_HEIGHT,
+                    0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, 1,
+                    TEXTURE_SIZE, TEXTURE_SIZE);
+        }
+        graphics.blit(TEXTURE, offsetX, bottomBorderY + 1 + footerHeight() - GUI_FOOTER_HEIGHT,
                 0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT,
                 TEXTURE_SIZE, TEXTURE_SIZE);
 
@@ -364,7 +395,8 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
                 .withStyle(ChatFormatting.GRAY));
         lines.add(Component.translatable("ae2lt.tianshu.upload.slots", target.availableSlots())
                 .withStyle(target.availableSlots() > 0 ? ChatFormatting.GREEN : ChatFormatting.RED));
-        lines.add(Component.translatable("ae2lt.tianshu.upload.alias.quick_bind")
+        lines.add(Component.translatable(aliasEditor
+                ? "ae2lt.tianshu.aliases.select_provider" : "ae2lt.tianshu.upload.alias.quick_bind")
                 .withStyle(ChatFormatting.DARK_GRAY));
         drawTooltip(graphics, mouseX, mouseY, lines);
     }
@@ -478,6 +510,10 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
     private void select(IndexedTarget selected) { select(selected, false); }
 
     private void select(IndexedTarget selected, boolean automatic) {
+        if (aliasEditor) {
+            bindAliasFromTarget(selected);
+            return;
+        }
         if (selected.target().availableSlots() <= 0) {
             uploadFailed = true;
             return;
@@ -485,12 +521,12 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         awaitingUpload = true;
         uploadFailed = false;
         uploadTargetName = selected.target().group().name().copy();
-        menu.uploadTianshuPatternToTarget(selected.target().group(), automatic);
+        uploadMenu.uploadTianshuPatternToTarget(selected.target().group(), automatic);
     }
 
     private void addMapping() {
         if (awaitingUpload) return;
-        menu.cancelPendingClientUpload();
+        uploadMenu.cancelPendingClientUpload();
         directUploadAttempted = true;
         initialAliasSelectionPending = false;
         String source = sourceField.getValue().strip();
@@ -523,7 +559,7 @@ public final class TianshuUploadTargetScreen<M extends TianshuPatternEncodingTer
         String alias = TianshuUploadTargetMatcher.preferredAlias(
                 machineId, defaultName, currentName);
         aliasField.setValue(alias);
-        addMapping();
+        if (!aliasEditor) addMapping();
     }
 
     private void openAliasManagement() {
