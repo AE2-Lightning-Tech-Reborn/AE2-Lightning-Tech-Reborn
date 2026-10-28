@@ -10,6 +10,7 @@ import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
 import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
 import com.moakiee.ae2lt.client.render.NetworkDeviceHighlight;
+import com.moakiee.ae2lt.client.widgets.SmallScrollbarTrack;
 import com.moakiee.ae2lt.logic.management.DeviceLocation;
 import com.moakiee.ae2lt.logic.management.ManagementMode;
 import com.moakiee.ae2lt.logic.management.ManagementQuery;
@@ -329,6 +330,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
     }
     @Override public void drawBG(GuiGraphics graphics, int ox, int oy, int mx, int my, float partialTick) {
         super.drawBG(graphics, ox, oy, mx, my, partialTick);
+        SmallScrollbarTrack.draw(graphics, scrollbar, ox, oy);
         // AE2 19's text-field painter only fills 126 inner pixels. Tile its own middle texture for this wide field.
         var bounds = search.getTooltipArea();
         int variant = search.isFocused() ? 24 : 0;

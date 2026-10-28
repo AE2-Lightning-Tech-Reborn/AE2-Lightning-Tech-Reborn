@@ -6,6 +6,7 @@ import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.menu.me.common.MEStorageMenu;
+import com.moakiee.ae2lt.client.widgets.SmallScrollbarTrack;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.UploadAliasRecords;
 import com.moakiee.ae2lt.config.UploadAliasClipboard;
@@ -115,7 +116,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         place(importAliases, 10, imageHeight - 28, half);
         place(exportAliases, 16 + half, imageHeight - 28, imageWidth - 26 - half);
         scroll.setPosition(new Point(imageWidth - 18, listTop));
-        scroll.setHeight(Math.max(1, rows * rowHeight));
+        scroll.setHeight(Math.max(15, rows * rowHeight));
         filter();
         revealSelection();
     }
@@ -256,14 +257,9 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     @Override
     public void drawBG(GuiGraphics g, int x, int y, int mx, int my, float partialTicks) {
         super.drawBG(g, x, y, mx, my, partialTicks);
-        int listHeight = Math.max(14, rows * rowHeight);
+        int listHeight = scroll.getBounds().getHeight();
         drawRecess(g, x + LIST_LEFT, y + listTop - 1, listRight() - LIST_LEFT, listHeight + 2);
-        int trackX = x + imageWidth - 18;
-        int trackY = y + listTop - 1;
-        g.blit(LIST_TEXTURE, trackX, trackY, 224, 47, 6, 14, 256, 256);
-        g.blit(LIST_TEXTURE, trackX, trackY + 14, 6, listHeight - 13,
-                224, 61, 6, 1, 256, 256);
-        g.blit(LIST_TEXTURE, trackX, trackY + listHeight + 1, 224, 171, 6, 1, 256, 256);
+        SmallScrollbarTrack.draw(g, scroll, x, y);
     }
 
     /** Use the controller's recessed panel, preserving its one-pixel rim at every size. */

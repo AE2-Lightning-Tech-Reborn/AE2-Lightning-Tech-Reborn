@@ -20,6 +20,7 @@ import appeng.core.network.serverbound.SwitchGuisPacket;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.frequency.ClientFrequencyCache;
 import com.moakiee.ae2lt.client.frequency.ManagementViewCache;
+import com.moakiee.ae2lt.client.widgets.SmallScrollbarTrack;
 import com.moakiee.ae2lt.grid.FrequencyAccessLevel;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
@@ -513,7 +514,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         int total = ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size();
         connectionScroll = clampScroll(connectionScroll, total, ITEMS_PER_PAGE_LIST);
         currentScrollbar = new ScrollbarWidget(x0 + SCROLLBAR_X, y0 + SCROLLBAR_Y,
-                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT - 1, total, ITEMS_PER_PAGE_LIST, connectionScroll,
+                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT, total, ITEMS_PER_PAGE_LIST, connectionScroll,
                 offset -> connectionScroll = offset);
         addRenderableWidget(currentScrollbar);
         addRenderableWidget(new AE2Button(x0 + (GUI_WIDTH - 104) / 2, y0 + FOOTER_Y, 104, 16,
@@ -573,7 +574,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         currentScrollbar = new ScrollbarWidget(
                 x0 + SCROLLBAR_X, y0 + SCROLLBAR_Y,
-                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT - 1,
+                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT,
                 total, ITEMS_PER_PAGE_LIST,
                 selectionScroll,
                 offset -> { selectionScroll = offset; rebuildSelectionRows(); });
@@ -661,7 +662,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         currentScrollbar = new ScrollbarWidget(
                 x0 + SCROLLBAR_X, y0 + SCROLLBAR_Y,
-                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT - 1,
+                ITEMS_PER_PAGE_LIST * LIST_ROW_HEIGHT,
                 total, ITEMS_PER_PAGE_LIST,
                 memberScroll,
                 offset -> { memberScroll = offset; rebuildMemberRows(); });
@@ -1525,6 +1526,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             sync(); return handled;
         }
         @Override protected void renderWidget(GuiGraphics g, int mx, int my, float partialTick) {
+            SmallScrollbarTrack.draw(g, delegate, 0, 0);
             delegate.drawForegroundLayer(g, delegate.getBounds(), new Point(mx, my));
         }
         @Override public boolean mouseClicked(double x, double y, int button) {
