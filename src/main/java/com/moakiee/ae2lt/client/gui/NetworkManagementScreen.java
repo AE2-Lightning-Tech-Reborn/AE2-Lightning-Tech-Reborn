@@ -87,7 +87,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         search.setPlaceholder(tr("search"));
         search.setTooltipMessage(List.of(tr("search_help")));
         search.setResponder(value -> changed(5));
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.BIG);
+        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
         scrollbar.setRange(0, 0, 1);
         var navigation = FrequencyNavigation.create(0, 0, FrequencyPage.TAB_DEVICES, true, true, page -> {
             if (!page.isManagement()) { rememberView(); menu.clientFrequencyPage(page); }

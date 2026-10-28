@@ -66,15 +66,19 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private static final int GUI_WIDTH = FrequencyNavigation.WIDTH;
     private static final int GUI_HEIGHT = FrequencyNavigation.HEIGHT;
+    private static final int[] HOME_TEXTURE_COLUMNS = {0, 10, 185, 195};
+    private static final int[] HOME_TEXTURE_ROWS = {0, 18, 155, 157};
+    private static final int[] HOME_BACKGROUND_COLUMNS = {0, 10, GUI_WIDTH - 10, GUI_WIDTH};
+    private static final int[] HOME_BACKGROUND_ROWS = {0, 18, GUI_HEIGHT - 2, GUI_HEIGHT};
     private static final int ITEMS_PER_PAGE_LIST = 5;
-    private static final int LIST_ROW_HEIGHT = 25;
+    private static final int LIST_ROW_HEIGHT = 24;
     private static final int LIST_ROW_BUTTON_HEIGHT = 24;
-    private static final int LIST_ROW_FIRST_Y = 49;
+    private static final int LIST_ROW_FIRST_Y = 50;
     private static final int LIST_ROW_X = 8;
     private static final int LIST_ROW_WIDTH = GUI_WIDTH - 34;
-    private static final int SCROLLBAR_X = GUI_WIDTH - 20;
+    private static final int SCROLLBAR_X = 224;
     private static final int SCROLLBAR_Y = LIST_ROW_FIRST_Y;
-    private static final int SCROLLBAR_WIDTH = 12;
+    private static final int SCROLLBAR_WIDTH = 7;
 
     // AE2 standard text tones matching MultiblockControllerScreen & Tianshu screens.
     private static final int AE2_TEXT_TITLE = 0x2A2E3F;
@@ -270,7 +274,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             checkAutoPasswordPrompt();
         }
 
-        // Keep the frame and navigation stationary when switching between main pages.
+        imageWidth = GUI_WIDTH;
         imageHeight = GUI_HEIGHT;
         leftPos = (width - imageWidth) / 2;
         topPos = (height - imageHeight) / 2;
@@ -525,9 +529,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         ? Component.literal(current.name())
                         : Component.translatable("ae2lt.gui.frequency.none"));
         Component right = Component.translatable("ae2lt.gui.frequency.total").append(": " + rows.size());
-        int rightX = imageWidth - 12 - font.width(right);
-        drawFlatFitted(g, left, 12, 28, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 28, AE2_TEXT_LABEL);
+        int rightX = LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(right);
+        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), AE2_TEXT_BODY);
+        drawFlat(g, right, rightX, 31, AE2_TEXT_LABEL);
 
         if (rows.isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.connection.none"),
@@ -908,29 +912,35 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             case TAB_SELECTION -> TEXTURE_SELECTION;
             case TAB_MEMBER, TAB_CONNECTION -> TEXTURE_LIST;
             case TAB_CREATE, TAB_SETTING -> TEXTURE_FORM;
-            default -> TEXTURE_HOME;
+            default -> passwordPromptFreqId > 0 ? TEXTURE_FORM : TEXTURE_HOME;
         };
-        g.blit(bg, leftPos, topPos, 0, 0, GUI_WIDTH, imageHeight, 256, 256);
+        if (bg == TEXTURE_HOME) {
+            drawHomeBackground(g);
+        } else {
+            g.blit(bg, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        }
 
-        if (popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
-            if (currentTab == FrequencyPage.TAB_HOME) {
-                if (freqMenu().isCardMode()) {
-                    drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, 46);
-                    drawWell(g, leftPos + 6, topPos + 85, GUI_WIDTH - 12, 32);
-                    drawWell(g, leftPos + 6, topPos + 139, GUI_WIDTH - 12, 30);
-                    g.fill(leftPos + GUI_WIDTH / 2, topPos + 142, leftPos + GUI_WIDTH / 2 + 1, topPos + 166, 0xFF696D88);
-                } else {
-                    int upperH = freqMenu().isController() ? 86 : 70;
-                    drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, upperH);
-                    drawWell(g, leftPos + 6, topPos + 131, GUI_WIDTH - 12, 36);
-                }
-            } else if (currentTab == FrequencyPage.TAB_CONNECTION) {
-                int visible = Math.min(ITEMS_PER_PAGE_LIST,
-                        Math.max(0, ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size() - connectionScroll));
-                for (int i = 0; i < visible; i++) {
-                    g.blit(TEXTURE_LIST, leftPos + LIST_ROW_X, topPos + LIST_ROW_FIRST_Y + i * LIST_ROW_HEIGHT,
-                            0, 208, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT, 256, 256);
-                }
+        if (currentTab == FrequencyPage.TAB_HOME
+                && popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
+            if (freqMenu().isCardMode()) {
+                drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, 46);
+                drawWell(g, leftPos + 6, topPos + 85, GUI_WIDTH - 12, 32);
+                drawWell(g, leftPos + 6, topPos + 139, GUI_WIDTH - 12, 30);
+                g.fill(leftPos + GUI_WIDTH / 2, topPos + 142, leftPos + GUI_WIDTH / 2 + 1, topPos + 166, 0xFF878FA5);
+            } else {
+                int upperH = freqMenu().isController() ? 86 : 70;
+                drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, upperH);
+                drawWell(g, leftPos + 6, topPos + 131, GUI_WIDTH - 12, 36);
+            }
+        }
+
+        if (currentTab == FrequencyPage.TAB_CONNECTION
+                && popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
+            int visible = Math.min(ITEMS_PER_PAGE_LIST,
+                    Math.max(0, ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size() - connectionScroll));
+            for (int i = 0; i < visible; i++) {
+                g.blit(TEXTURE_LIST, leftPos + LIST_ROW_X, topPos + LIST_ROW_FIRST_Y + i * LIST_ROW_HEIGHT,
+                        0, 208, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT, 256, 256);
             }
         }
 
@@ -942,6 +952,22 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
         if (passwordPromptFreqId > 0) {
             drawPasswordPromptPanel(g);
+        }
+    }
+
+    /** Expand the chassis using a plain texture row, leaving space for the separate home sections. */
+    private void drawHomeBackground(GuiGraphics g) {
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 3; column++) {
+                int x = HOME_BACKGROUND_COLUMNS[column];
+                int y = HOME_BACKGROUND_ROWS[row];
+                int u = HOME_TEXTURE_COLUMNS[column];
+                int v = HOME_TEXTURE_ROWS[row];
+                g.blit(TEXTURE_HOME, leftPos + x, topPos + y,
+                        HOME_BACKGROUND_COLUMNS[column + 1] - x, HOME_BACKGROUND_ROWS[row + 1] - y,
+                        u, v, HOME_TEXTURE_COLUMNS[column + 1] - u, row == 1 ? 1 : HOME_TEXTURE_ROWS[row + 1] - v,
+                        256, 256);
+            }
         }
     }
 
@@ -963,13 +989,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         drawModalBackdrop(g, leftPos + 8, topPos + 26, GUI_WIDTH - 16, 148);
     }
 
-    /** Draws an AE2-style recessed well: 1px #413F54 top/left shadow, 1px #F2F2F2 bottom/right highlight, #696D88 inner rim, #9A9FB4 fill. */
+    /** Matches the new home texture's light outline and two-pixel inner top shadow. */
     private static void drawWell(GuiGraphics g, int x, int y, int width, int height) {
         g.fill(x, y, x + width, y + height, 0xFFF2F2F2);
-        g.fill(x, y, x + width - 1, y + 1, 0xFF413F54);
-        g.fill(x, y, x + 1, y + height - 1, 0xFF413F54);
-        g.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF696D88);
-        g.fill(x + 2, y + 2, x + width - 1, y + height - 1, 0xFF9A9FB4);
+        g.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF9A9FB4);
+        g.fill(x + 1, y + 1, x + width - 1, y + 3, 0xFF696D88);
     }
 
     @Override
@@ -1177,7 +1201,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
         if (divider) {
             int divY = y + (step == 16 ? 12 : 11);
-            g.fill(12, divY, GUI_WIDTH - 12, divY + 1, 0xFF868BA4);
+            g.fill(12, divY, GUI_WIDTH - 12, divY + 1, 0xFF878FA5);
         }
     }
 
@@ -1225,9 +1249,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         var members = ClientFrequencyCache.getMembers(currentId);
         Component right = Component.translatable("ae2lt.gui.frequency.total")
                 .append(": " + members.size());
-        int rightX = imageWidth - 12 - font.width(right);
-        drawFlatFitted(g, left, 12, 28, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 28, AE2_TEXT_LABEL);
+        int rightX = LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(right);
+        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), AE2_TEXT_BODY);
+        drawFlat(g, right, rightX, 31, AE2_TEXT_LABEL);
 
         if (members.isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.member.none"),
@@ -1477,7 +1501,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     /** Bridges the native composite widget into this container screen's event routing. */
     private final class ScrollbarWidget extends AbstractWidget {
-        private final Scrollbar delegate = new Scrollbar(Scrollbar.BIG);
+        private final Scrollbar delegate = new Scrollbar(Scrollbar.SMALL);
         private final java.util.function.IntConsumer onScroll;
         private int lastScroll;
 
