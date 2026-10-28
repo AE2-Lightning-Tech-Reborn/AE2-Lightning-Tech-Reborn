@@ -10,10 +10,13 @@ import appeng.client.gui.widgets.TabButton;
 import appeng.menu.me.common.MEStorageMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 /** Shared panel geometry and container-preserving navigation for upload alias pages. */
 abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubScreen<M, AEBaseScreen<M>> {
+    protected static final ResourceLocation PANEL_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+            "ae2lt", "textures/gui/wireless_overloaded_home.png");
     private final TabButton back;
     private final Component heading;
 
@@ -30,7 +33,7 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
 
     @Override
     protected void init() {
-        imageWidth = Math.min(304, Math.max(100, width - 16));
+        imageWidth = Math.min(preferredWidth(), Math.max(100, width - 16));
         imageHeight = Math.min(preferredHeight(), Math.max(100, height - 20));
         super.init();
         back.setPosition(leftPos + imageWidth - 28, topPos - 5);
@@ -38,6 +41,8 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
     }
 
     protected int preferredHeight() { return 220; }
+
+    protected int preferredWidth() { return 304; }
 
     private void hideSlots() {
         for (var slot : menu.slots) { slot.x = -10000; slot.y = -10000; }
@@ -53,7 +58,7 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
 
     protected void place(AETextField field, int x, int y, int w) {
         field.move(new Point(leftPos + x, topPos + y));
-        field.resize(w, 16);
+        field.resize(w, 12);
         // Recompute EditBox's horizontal viewport after expanding a freshly styled widget.
         int cursor = field.getCursorPosition();
         field.setCursorPosition(0);
@@ -66,8 +71,18 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
 
     @Override
     public void drawBG(GuiGraphics g, int x, int y, int mouseX, int mouseY, float partialTicks) {
-        g.fill(x, y, x + imageWidth, y + imageHeight, 0xff565656);
-        g.fill(x + 1, y + 1, x + imageWidth - 1, y + imageHeight - 1, 0xffc6c6c6);
+        int[] sourceX = {0, 10, 185, 195};
+        int[] sourceY = {0, 18, 155, 157};
+        int[] targetX = {0, 10, imageWidth - 10, imageWidth};
+        int[] targetY = {0, 18, imageHeight - 2, imageHeight};
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 3; column++) {
+                g.blit(PANEL_TEXTURE, x + targetX[column], y + targetY[row],
+                        targetX[column + 1] - targetX[column], targetY[row + 1] - targetY[row],
+                        sourceX[column], sourceY[row], sourceX[column + 1] - sourceX[column],
+                        row == 1 ? 1 : sourceY[row + 1] - sourceY[row], 256, 256);
+            }
+        }
         // AE2 19.x paints only the first 126 pixels of an input's textured interior.
         // Continue that same texture for these wider forms, behind the normal widget rendering.
         var texture = appeng.client.gui.style.Blitter.texture("guis/text_field.png", 128, 128);
@@ -84,7 +99,7 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
 
     @Override
     public void drawFG(GuiGraphics g, int x, int y, int mouseX, int mouseY) {
-        g.drawString(font, clipped(heading.getString(), imageWidth - 42), 8, 7, 0x252525, false);
+        g.drawString(font, clipped(heading.getString(), imageWidth - 42), 10, 7, 0x2A2E3F, false);
     }
 
     @Override

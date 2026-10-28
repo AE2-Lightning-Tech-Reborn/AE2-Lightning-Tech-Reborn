@@ -14,8 +14,13 @@ import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> extends TianshuUploadAliasScreen<M> {
+    private static final ResourceLocation LIST_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+            "ae2lt", "textures/gui/wireless_overloaded_selection.png");
+    private static final int LIST_LEFT = 10;
+    private static final int CELL_PADDING = 6;
     private final AETextField search;
     private final Scrollbar scroll;
     private final AE2Button add, edit, delete, clear, importAliases, exportAliases;
@@ -23,7 +28,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     private List<UploadAliasRecords.Entry> all = List.of(), filtered = List.of();
     private String selected;
     private Component status = Component.empty();
-    private int rows, rowHeight, listTop = 60;
+    private int rows, rowHeight = 24, listTop = 60;
     private long lastClick;
 
     public TianshuUploadAliasManagementScreen(AEBaseScreen<M> parent, String source, String alias) {
@@ -39,7 +44,17 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         add = widgets.addButton("add", text("add"), () -> openEditor(null));
         edit = widgets.addButton("edit", text("edit"), () -> openEditor(selection()));
         delete = widgets.addButton("delete", text("delete"), this::deleteSelected);
-        clear = widgets.addButton("clear", Component.literal("×"), () -> search.setValue(""));
+        clear = new AE2Button(Component.literal("×"), button -> search.setValue("")) {
+            @Override
+            protected void renderButtonText(GuiGraphics g, net.minecraft.client.gui.Font font,
+                                            int padding, int color, int yOffset) {
+                g.pose().pushPose();
+                g.pose().translate(0, 1, 0);
+                super.renderButtonText(g, font, padding, color, yOffset);
+                g.pose().popPose();
+            }
+        };
+        widgets.add("clear", clear);
         importAliases = widgets.addButton("importAliases", text("import"), this::importFromClipboard);
         exportAliases = widgets.addButton("exportAliases", text("export"), this::exportToClipboard);
         clear.setTooltip(Tooltip.create(text("clear_search")));
@@ -49,7 +64,10 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     }
 
     @Override
-    protected int preferredHeight() { return 280; }
+    protected int preferredHeight() { return 270; }
+
+    @Override
+    protected int preferredWidth() { return 254; }
 
     private void exportToClipboard() {
         try {
@@ -83,17 +101,20 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         super.init();
         boolean compact = imageHeight < 206;
         listTop = compact ? 54 : 60;
-        rowHeight = imageWidth < 280 && !compact ? 28 : 20;
-        rows = Math.max(0, (imageHeight - listTop - 78) / rowHeight);
-        place(search, 8, compact ? 26 : 30, imageWidth - 42);
-        place(clear, imageWidth - 30, compact ? 24 : 28, 22);
-        int buttonWidth = (imageWidth - 24) / 3;
-        place(add, 8, imageHeight - 50, buttonWidth);
-        place(edit, 12 + buttonWidth, imageHeight - 50, buttonWidth);
-        place(delete, 16 + buttonWidth * 2, imageHeight - 50, buttonWidth);
-        place(importAliases, 8, imageHeight - 26, (imageWidth - 20) / 2);
-        place(exportAliases, 12 + (imageWidth - 20) / 2, imageHeight - 26, (imageWidth - 20) / 2);
-        scroll.setPosition(new Point(imageWidth - 14, listTop));
+        rowHeight = compact ? 20 : 24;
+        rows = Math.max(0, (imageHeight - listTop - 82) / rowHeight);
+        int searchY = compact ? 24 : 28;
+        place(search, 10, searchY, imageWidth - 38);
+        place(clear, imageWidth - 23, searchY, 12);
+        clear.setHeight(12);
+        int buttonWidth = (imageWidth - 32) / 3;
+        place(add, 10, imageHeight - 54, buttonWidth);
+        place(edit, 16 + buttonWidth, imageHeight - 54, buttonWidth);
+        place(delete, 22 + buttonWidth * 2, imageHeight - 54, imageWidth - 32 - buttonWidth * 2);
+        int half = (imageWidth - 26) / 2;
+        place(importAliases, 10, imageHeight - 28, half);
+        place(exportAliases, 16 + half, imageHeight - 28, imageWidth - 26 - half);
+        scroll.setPosition(new Point(imageWidth - 18, listTop));
         scroll.setHeight(Math.max(1, rows * rowHeight));
         filter();
         revealSelection();
@@ -157,7 +178,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
 
     private int hovered(double x, double y) {
         int row = (int) ((y - topPos - listTop) / rowHeight);
-        if (x < leftPos + 8 || x >= leftPos + imageWidth - 20 || y < topPos + listTop || row >= rows) return -1;
+        if (x < leftPos + LIST_LEFT || x >= leftPos + listRight() || y < topPos + listTop || row >= rows) return -1;
         int index = scroll.getCurrentScroll() + row;
         return index < filtered.size() ? index : -1;
     }
@@ -198,26 +219,67 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     @Override
     public void drawFG(GuiGraphics g, int x, int y, int mx, int my) {
         super.drawFG(g, x, y, mx, my);
-        int split = (imageWidth - 28) * 55 / 100;
-        g.drawString(font, text("source"), 8, listTop - 11, 0x252525, false);
-        if (imageWidth >= 280) g.drawString(font, text("alias"), 12 + split, listTop - 11, 0x252525, false);
-        g.fill(8, listTop, imageWidth - 20, listTop + rows * rowHeight, 0xffe2e2e2);
+        int split = LIST_LEFT + (listRight() - LIST_LEFT) * 55 / 100;
+        g.drawString(font, clipped(text("source").getString(), split - LIST_LEFT - CELL_PADDING * 2),
+                LIST_LEFT + CELL_PADDING, listTop - 14, 0x2A2E3F, false);
+        g.drawString(font, clipped(text("alias").getString(), listRight() - split - CELL_PADDING * 2),
+                split + CELL_PADDING, listTop - 14, 0x2A2E3F, false);
+        if (filtered.isEmpty() && rows > 0) {
+            g.drawWordWrap(font, text(all.isEmpty() ? "empty" : "no_results"),
+                    LIST_LEFT + CELL_PADDING, listTop + 7, listRight() - LIST_LEFT - CELL_PADDING * 2, 0x363B4E);
+        }
         for (int row = 0; row < rows; row++) {
             int index = scroll.getCurrentScroll() + row;
             if (index >= filtered.size()) break;
-            var e = filtered.get(index);
             int top = listTop + row * rowHeight;
-            if (e.source().equals(selected)) g.fill(8, top, imageWidth - 20, top + rowHeight, 0xffafc4d4);
-            else if (index == hovered(mx, my)) g.fill(8, top, imageWidth - 20, top + rowHeight, 0xffd4dce2);
-            boolean narrow = rowHeight == 28;
-            g.drawString(font, clipped(e.source(), narrow ? imageWidth - 36 : split - 6), 12, top + 4, 0x252525, false);
-            g.drawString(font, clipped(e.alias(), narrow ? imageWidth - 36 : imageWidth - split - 36),
-                    narrow ? 12 : 12 + split, top + (narrow ? 16 : 4), 0x252525, false);
+            var entry = filtered.get(index);
+            boolean selectedRow = entry.source().equals(selected);
+            boolean highlighted = selectedRow || index == hovered(mx, my);
+            if (highlighted) {
+                g.blit(LIST_TEXTURE, LIST_LEFT + 1, top, listRight() - LIST_LEFT - 2, rowHeight,
+                        1, 233, 204, 22, 256, 256);
+            }
+            if (selectedRow) g.fill(LIST_LEFT + 1, top + 2, LIST_LEFT + 3, top + rowHeight - 2, 0xff1864ab);
+            int textY = top + (rowHeight - font.lineHeight) / 2;
+            g.drawString(font, clipped(entry.source(), split - LIST_LEFT - CELL_PADDING * 2),
+                    LIST_LEFT + CELL_PADDING, textY, 0x14161F, false);
+            g.drawString(font, clipped(entry.alias(), listRight() - split - CELL_PADDING * 2),
+                    split + CELL_PADDING, textY, 0x14161F, false);
         }
-        if (filtered.isEmpty()) g.drawWordWrap(font, text(all.isEmpty() ? "empty" : "no_results"), 12, listTop + 4, imageWidth - 40, 0x555555);
         g.drawString(font, clipped(text("count", filtered.size(), all.size()).getString(), imageWidth - 16),
-                8, imageHeight - 73, 0x555555, false);
-        g.drawString(font, clipped(status.getString(), imageWidth - 16), 8, imageHeight - 62, 0x404040, false);
+                10, imageHeight - 79, 0x4E5370, false);
+        g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 67, 0x363B4E, false);
+    }
+
+    private int listRight() { return imageWidth - 24; }
+
+    @Override
+    public void drawBG(GuiGraphics g, int x, int y, int mx, int my, float partialTicks) {
+        super.drawBG(g, x, y, mx, my, partialTicks);
+        int listHeight = Math.max(14, rows * rowHeight);
+        drawRecess(g, x + LIST_LEFT, y + listTop - 1, listRight() - LIST_LEFT, listHeight + 2);
+        int trackX = x + imageWidth - 18;
+        int trackY = y + listTop - 1;
+        g.blit(LIST_TEXTURE, trackX, trackY, 224, 47, 6, 14, 256, 256);
+        g.blit(LIST_TEXTURE, trackX, trackY + 14, 6, listHeight - 13,
+                224, 61, 6, 1, 256, 256);
+        g.blit(LIST_TEXTURE, trackX, trackY + listHeight + 1, 224, 171, 6, 1, 256, 256);
+    }
+
+    /** Use the controller's recessed panel, preserving its one-pixel rim at every size. */
+    private void drawRecess(GuiGraphics g, int x, int y, int width, int height) {
+        int[] sourceX = {8, 9, 187, 188};
+        int[] sourceY = {38, 39, 111, 112};
+        int[] targetX = {x, x + 1, x + width - 1, x + width};
+        int[] targetY = {y, y + 1, y + height - 1, y + height};
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 3; column++) {
+                g.blit(PANEL_TEXTURE, targetX[column], targetY[row],
+                        targetX[column + 1] - targetX[column], targetY[row + 1] - targetY[row],
+                        sourceX[column], sourceY[row], sourceX[column + 1] - sourceX[column],
+                        sourceY[row + 1] - sourceY[row], 256, 256);
+            }
+        }
     }
 
     @Override
@@ -231,9 +293,6 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
             lines.add(Component.literal(e.alias()));
             if (e.occurrences() > 1) lines.add(text("duplicates", e.occurrences()));
             drawTooltip(g, mx, my, lines);
-        } else if (mx >= leftPos + 8 && mx < leftPos + imageWidth - 8
-                && my >= topPos + imageHeight - 74 && my < topPos + imageHeight - 51) {
-            drawTooltip(g, mx, my, List.of(text("scope"), status));
         }
     }
 }
