@@ -16,7 +16,7 @@
     },
     {
       "ingredient": {
-        "item": "ae2lt:overload_crystal"
+        "tag": "forge:gems/overload_crystal"
       },
       "count": 64
     }

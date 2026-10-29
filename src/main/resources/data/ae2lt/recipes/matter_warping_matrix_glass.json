@@ -10,9 +10,9 @@
     "A": { "item": "ae2:quartz_glass" },
     "B": { "item": "ae2:fluix_crystal" },
     "C": { "item": "ae2:quartz_glass" },
-    "D": { "item": "ae2lt:overload_crystal" },
+    "D": { "tag": "forge:gems/overload_crystal" },
     "E": { "item": "minecraft:quartz_block" },
-    "F": { "item": "ae2lt:overload_crystal" },
+    "F": { "tag": "forge:gems/overload_crystal" },
     "G": { "item": "ae2:quartz_glass" },
     "H": { "item": "ae2:fluix_crystal" },
     "I": { "item": "ae2:quartz_glass" }
