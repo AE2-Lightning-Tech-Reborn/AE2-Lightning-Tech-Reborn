@@ -1,0 +1,50 @@
+// Bytecode verification and native movement regressions for issue #47 (Java 17 / Forge 1.20.1).
+allprojects {
+    afterEvaluate {
+        sourceSets.test.java.setIncludes([
+                '**/IsolatedWrapOperationInjectionInfoTest.java',
+                '**/PhaseFlightMovementGuardSourceContractTest.java',
+                '**/PhaseEnvironmentMovementSourceContractTest.java'])
+        sourceSets.jdb.java.setIncludes([
+                '**/PhaseFlightAndLockGameTests.java', '**/PhaseFlightGroundCrouchGameTests.java',
+                '**/ClientStartupProbe.java'])
+        def profile = project.findProperty('issue47Profile') ?: 'baseline'
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/issue47-mixin-forge-' + profile)
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_phase,ae2lt,ae2lt_mining'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.named('runGameTestServer') {
+            doLast {
+                def log = project.file('build/issue47-mixin-forge-' + profile + '/logs/latest.log')
+                if (!log.isFile() || !log.text.contains('All 20 required tests passed')) {
+                    throw new GradleException('Expected all 20 native movement regressions to pass')
+                }
+            }
+        }
+        if (project.hasProperty('issue47ClientStartup')) {
+            def clientDirectory = project.file('build/issue47-client-' + profile)
+            minecraft.runs.client {
+                workingDirectory clientDirectory
+                property 'ae2lt.clientStartupProbe', 'true'
+                property 'forge.logging.console.level', 'info'
+                mods { ae2lt { source sourceSets.jdb } }
+            }
+            tasks.named('runClient') {
+                doFirst {
+                    clientDirectory.mkdirs()
+                    new File(clientDirectory, 'client-startup-result.txt').delete()
+                    new File(clientDirectory, 'options.txt').text =
+                            'version:3465\nonboardAccessibility:false\ntutorialStep:none\nrenderDistance:4\n'
+                }
+                doLast {
+                    def result = new File(clientDirectory, 'client-startup-result.txt')
+                    if (!result.isFile() || !result.text.startsWith('PASS')) {
+                        throw new GradleException('Client did not reach the title screen')
+                    }
+                }
+            }
+        }
+    }
+}

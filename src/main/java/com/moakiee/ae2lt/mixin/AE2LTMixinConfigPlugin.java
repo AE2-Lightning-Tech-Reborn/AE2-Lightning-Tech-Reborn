@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import com.moakiee.ae2lt.asm.IsolatedWrapOperationInjectionInfo;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -26,6 +29,8 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        MixinExtrasBootstrap.init();
+        InjectionInfo.register(IsolatedWrapOperationInjectionInfo.class);
     }
 
     @Override
