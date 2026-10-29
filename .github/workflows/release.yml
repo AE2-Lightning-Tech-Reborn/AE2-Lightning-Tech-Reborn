@@ -144,5 +144,4 @@ jobs:
           game-versions: ${{ needs.build.outputs.game_version }}
           dependencies: |
             thunderbolt-core(required){modrinth:M5jhzZXH}{curseforge:1631756}
-            ldlib(required){modrinth:B1CBVXHX}{curseforge:626676}
           changelog: ${{ github.event.release.body }}
