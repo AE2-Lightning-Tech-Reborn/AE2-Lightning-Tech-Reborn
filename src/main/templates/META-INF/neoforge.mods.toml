@@ -208,6 +208,14 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
+modId = "omni_upgrades"
+type = "optional"
+# 1.0.4 restores frequency cards' own right-click actions instead of intercepting them as upgrades.
+versionRange = "[1.0.4-1.21.1,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies."${mod_id}"]]
 modId = "ae2ltpp"
 type = "optional"
 versionRange = "[1.2.0-beta.1,)"

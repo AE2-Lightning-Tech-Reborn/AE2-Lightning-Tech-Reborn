@@ -5,14 +5,35 @@ import appeng.api.networking.crafting.ICraftingCPU;
 import com.moakiee.ae2lt.blockentity.*;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPool;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
-import com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines;
-import com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine;
+import com.moakiee.thunderbolt.api.crafting.ICraftingPlanningService;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionHost;
 import net.minecraft.world.level.Level;
 
 public final class BigCraftingMenus {
     private BigCraftingMenus() {}
+
+    public static boolean hasTianshu(IGrid grid) {
+        // A full/busy pool may no longer be published as an available CPU. Its active port
+        // still proves that the CPU belongs to this grid, irrespective of free capacity.
+        for (var port : grid.getActiveMachines(TianshuSupercomputerPortBlockEntity.class)) {
+            var pool = port.getTimeWheelCraftingCpuPool();
+            if (pool != null && pool.isActive() && port.getGrid() == grid) return true;
+        }
+        return grid.getCraftingService().getCpus().stream().anyMatch(cpu ->
+                cpu instanceof TimeWheelCraftingCpuPool || cpu instanceof TimeWheelCraftingCPU
+                        || cpu instanceof BigCraftingCpu);
+    }
+
+    public static boolean planningEnabled(Object host) {
+        var context = context(host);
+        return context != null && planningEnabled(context.grid());
+    }
+
+    public static boolean planningEnabled(IGrid grid) {
+        return hasTianshu(grid) && BigCraftingPlanningPolicy.enabled(true,
+                grid.getService(ICraftingPlanningService.class).resolve());
+    }
 
     public static TianshuSupercomputerControllerBlockEntity controller(Object host) {
         if (host instanceof TianshuSupercomputerControllerBlockEntity c) return c;
@@ -43,11 +64,7 @@ public final class BigCraftingMenus {
     /** Extended terminal requests must use the same selected algorithm as ordinary requests. */
     public static Context planningContext(Object host) {
         var context = context(host);
-        if (context == null) return null;
-        if (!CraftingPlanningEngines.isSelected(context.grid(), ThunderboltV2PlanningEngine.ID)) return null;
-        boolean hasTianshu = context.grid().getCraftingService().getCpus().stream()
-                .anyMatch(cpu -> cpu instanceof TimeWheelCraftingCPU || cpu instanceof TimeWheelCraftingCpuPool);
-        return hasTianshu ? context : null;
+        return context != null && planningEnabled(context.grid()) ? context : null;
     }
 
     /** Native amount/confirmation menus only need an actionable grid, not a terminal subtype. */
