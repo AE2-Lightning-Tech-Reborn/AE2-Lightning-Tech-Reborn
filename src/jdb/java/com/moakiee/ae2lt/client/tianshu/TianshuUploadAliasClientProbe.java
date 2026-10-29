@@ -257,6 +257,23 @@ public final class TianshuUploadAliasClientProbe {
         }
     }
 
+    private static mezz.jei.gui.recipes.RecipeTransferButtonController jeiController(
+            mezz.jei.api.gui.IRecipeLayoutDrawable<?> layout, mezz.jei.gui.recipes.RecipesGui recipesGui)
+            throws Exception {
+        // Test the actual production controller across both published constructor signatures.
+        var type = mezz.jei.gui.recipes.RecipeTransferButtonController.class;
+        for (var constructor : type.getConstructors()) {
+            if (constructor.getParameterCount() == 2) {
+                return (mezz.jei.gui.recipes.RecipeTransferButtonController) constructor.newInstance(layout, recipesGui);
+            }
+            if (constructor.getParameterCount() == 3) {
+                var service = field(field(recipesGui, "logic"), "recipeTransferService");
+                return (mezz.jei.gui.recipes.RecipeTransferButtonController) constructor.newInstance(layout, recipesGui, service);
+            }
+        }
+        throw new AssertionError("Unknown JEI transfer controller constructor");
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void exerciseNormalViewerTransfer() throws Exception {
         var mc = Minecraft.getInstance();
@@ -268,11 +285,11 @@ public final class TianshuUploadAliasClientProbe {
             var runtime = mezz.jei.common.Internal.getJeiRuntime();
             var recipe = mc.level.getRecipeManager().getAllRecipesFor(net.minecraft.world.item.crafting.RecipeType.SMELTING).getFirst();
             var category = runtime.getRecipeManager().getRecipeCategory(mezz.jei.api.constants.RecipeTypes.SMELTING);
-            var layout = runtime.getRecipeManager().createRecipeLayoutDrawable(category, recipe,
+            var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable<?>) runtime.getRecipeManager().createRecipeLayoutDrawable(category, recipe,
                     runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
             var recipesGui = (mezz.jei.gui.recipes.RecipesGui) runtime.getRecipesGui();
             recipesGui.showTypes(List.of(mezz.jei.api.constants.RecipeTypes.SMELTING));
-            var controller = new mezz.jei.gui.recipes.RecipeTransferButtonController(layout, recipesGui);
+            var controller = jeiController(layout, recipesGui);
             var input = (mezz.jei.api.gui.inputs.IJeiUserInput) Proxy.newProxyInstance(
                     mezz.jei.api.gui.inputs.IJeiUserInput.class.getClassLoader(),
                     new Class<?>[]{mezz.jei.api.gui.inputs.IJeiUserInput.class}, (proxy, method, args) ->
@@ -549,19 +566,16 @@ public final class TianshuUploadAliasClientProbe {
             for (boolean backed : List.of(false, true)) {
                 recipesGui.showTypes(List.of(mezz.jei.api.constants.RecipeTypes.SMELTING));
                 require(mc.screen == recipesGui, "JEI recipe page opens from editor");
-                var type = mezz.jei.api.recipe.RecipeType.create("alias_probe", "viewer_category", Object.class);
-                var category = (mezz.jei.api.recipe.category.IRecipeCategory) Proxy.newProxyInstance(
-                        mezz.jei.api.recipe.category.IRecipeCategory.class.getClassLoader(),
-                        new Class<?>[]{mezz.jei.api.recipe.category.IRecipeCategory.class}, (proxy, method, args) ->
-                                method.getName().equals("getRecipeType") ? type : null);
-                var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable) Proxy.newProxyInstance(
-                        mezz.jei.api.gui.IRecipeLayoutDrawable.class.getClassLoader(),
-                        new Class<?>[]{mezz.jei.api.gui.IRecipeLayoutDrawable.class}, (proxy, method, args) -> switch (method.getName()) {
-                            case "getRecipeCategory" -> category;
-                            case "getRecipe" -> backed ? vanilla : new Object();
-                            default -> null;
-                        });
-                var controller = new mezz.jei.gui.recipes.RecipeTransferButtonController(layout, recipesGui);
+                var runtime = mezz.jei.common.Internal.getJeiRuntime();
+                var type = backed ? mezz.jei.api.constants.RecipeTypes.SMELTING
+                        : com.moakiee.ae2lt.integration.jei.category.MultiblockStructureCategory.TYPE;
+                var category = runtime.getRecipeManager().getRecipeCategory((mezz.jei.api.recipe.RecipeType) type);
+                var recipe = backed ? vanilla : runtime.getRecipeManager()
+                        .createRecipeLookup(com.moakiee.ae2lt.integration.jei.category.MultiblockStructureCategory.TYPE)
+                        .get().findFirst().orElseThrow();
+                var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable<?>) runtime.getRecipeManager().createRecipeLayoutDrawable(category, recipe,
+                        runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
+                var controller = jeiController(layout, recipesGui);
                 boolean[] state = new boolean[2];
                 controller.updateState((mezz.jei.api.gui.buttons.IButtonState) Proxy.newProxyInstance(
                         mezz.jei.api.gui.buttons.IButtonState.class.getClassLoader(),
@@ -579,7 +593,7 @@ public final class TianshuUploadAliasClientProbe {
                     require(controller.onPress(input), "JEI source click handled");
                     if (simulate) require(input(draft, "source").getValue().equals(previousSource), "JEI simulation does not change draft");
                 }
-                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "alias_probe:viewer_category"),
+                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "ae2lt:multiblock_structure"),
                         "JEI prefers vanilla type and falls back to category");
                 require(mc.screen == draft, "JEI source click returns to editor");
                 input(draft, "source").setValue(previousSource);

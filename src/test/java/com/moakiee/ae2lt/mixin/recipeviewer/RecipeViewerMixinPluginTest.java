@@ -21,10 +21,11 @@ class RecipeViewerMixinPluginTest {
     @CsvSource({
             "19.26.0.316, true",
             "19.27.0.336, true",
-            "19.51.0.399, true",
+            "19.51.0.420, true",
             "19.52.0, false",
-            "19.52.0.400, false",
-            "19.64.0.455, false"
+            "19.52.0.421, false",
+            "19.64.0.455, false",
+            "19.70.0.464, false"
     })
     void selectsExactlyOneTransferHookAndOnlyEnablesContextsForModernJei(String version, boolean legacy) {
         var plugin = new RecipeViewerMixinPlugin();
@@ -32,7 +33,7 @@ class RecipeViewerMixinPluginTest {
 
         assertEquals(legacy, applies(plugin, "JeiWirelessSupplyMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyServiceMixin"));
-        assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
         assertTrue(plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
         assertFalse(plugin.shouldApplyMixin("unused",
