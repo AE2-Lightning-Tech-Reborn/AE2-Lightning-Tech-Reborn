@@ -7,6 +7,7 @@ allprojects {
         def probes = [mining: 'MiningFactory', io: 'OverloadedIOPort', rainbow: 'RainbowPigmee', phase: 'PhaseFlight']
         if (!probes.containsKey(probe)) throw new GradleException('Unknown alpha client probe: ' + probe)
         sourceSets.jdb.java.setIncludes(probes.values().collect { '**/' + it + 'ClientProbe.java' })
+        sourceSets.jdb.java.include '**/CoverageClientSequence.java'
         if (probe == 'io') {
             def result = project.file('build/forge-client-io/io-port-result.txt')
             tasks.matching { it.name == 'runClient' }.configureEach {

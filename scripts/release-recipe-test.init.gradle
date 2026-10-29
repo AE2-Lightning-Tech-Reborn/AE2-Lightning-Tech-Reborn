@@ -1,0 +1,14 @@
+// Focused real Forge recipe loading and consumption tests for upstream release changes.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                '**/UpstreamReleaseRecipeGameTests.java', '**/PigmeeBuildingGameTests.java',
+                '**/OverloadedIOPortGameTests.java', '**/ForgeCraftingInput.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('run-gametest/release-recipes')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_release_recipes,minecraft'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

@@ -1,0 +1,59 @@
+// Read actual Forge dependency jars, not same-package unit-test fixtures.
+// Optional jars are test inputs only; they are never added to the release/runtime classpath.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    p.tasks.register('optionalApiAudit', Test) {
+        group = 'verification'
+        description = 'Checks the actual Forge 1.20.1 optional-mod binary API contracts.'
+        dependsOn p.tasks.named('testClasses')
+        testClassesDirs = p.sourceSets.test.output.classesDirs
+        classpath = p.sourceSets.test.runtimeClasspath
+        inputs.files(p.provider {
+            def auditDir = p.findProperty('optionalApiAuditMods')
+            def jars = p.sourceSets.main.compileClasspath.files + p.sourceSets.main.runtimeClasspath.files
+            if (auditDir) jars += p.fileTree(p.file(auditDir)) { include '*.jar' }.files
+            jars.findAll { it.name.endsWith('.jar') }
+        }).withPathSensitivity(PathSensitivity.NONE)
+        useJUnitPlatform()
+        filter {
+            includeTestsMatching 'com.moakiee.ae2lt.compat.Forge120OptionalApiContractTest'
+            includeTestsMatching 'com.moakiee.ae2lt.compat.neoeco.NeoEcoAllocatedApiTest'
+        }
+        systemProperty 'ae2lt.apiAudit.enabled', 'true'
+        doFirst {
+            def inputs = (p.sourceSets.main.compileClasspath.files + p.sourceSets.main.runtimeClasspath.files)
+                    .findAll { it.name.endsWith('.jar') }.unique()
+            def optionalDir = p.findProperty('optionalApiAuditMods')
+            if (!optionalDir) {
+                throw new GradleException('Set -PoptionalApiAuditMods to a directory containing the public Forge NeoECO, Blood Magic, Apotheosis, Silent Gear and EAEP jars.')
+            }
+            inputs += p.fileTree(p.file(optionalDir)) { include '*.jar' }.files
+            def names = [
+                ae2: 'appliedenergistics2-forge-',
+                thunderbolt: ['thunderbolt-reborn-forge-1.20.1-', 'thunderbolt-forge-1.20.1-'],
+                advancedae: 'advancedae-',
+                extendedaeplus: 'extendedae-plus-',
+                wtlib: 'applied-energistics-2-wireless-terminals-',
+                appflux: 'applied-flux-965012-',
+                fluxnetworks: 'flux-networks-248020-',
+                mekanism: 'Mekanism-',
+                jade: 'jade-324717-',
+                jei: 'jei-1.20.1-common-api-',
+                emi: 'emi-forge-',
+                curios: 'curios-forge-',
+                polymorph: 'polymorph-388800-',
+                veil: 'Veil-forge-1.20.1-',
+                neoeco: 'neoecoae-',
+                bloodmagic: 'BloodMagic-',
+                apotheosis: 'Apotheosis-',
+                silentgear: 'silent-gear-1.20.1-'
+            ]
+            names.each { id, prefix ->
+                def prefixes = prefix instanceof List ? prefix : [prefix]
+                def jar = inputs.find { candidate -> prefixes.any { candidate.name.startsWith(it) } }
+                if (!jar) throw new GradleException("Missing audit jar: ${id} (${prefix})")
+                systemProperty "ae2lt.apiAudit.${id}", jar.absolutePath
+            }
+        }
+    }
+}

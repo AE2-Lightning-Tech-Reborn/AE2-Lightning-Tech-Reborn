@@ -8,7 +8,9 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
+import com.moakiee.ae2lt.logic.ResourceIngressPolicy;
 import net.minecraft.network.chat.Component;
+import com.moakiee.ae2lt.util.MixinReflectionSupport;
 
 /**
  * Single-cell FE buffer/proxy in front of an ME storage delegate.
@@ -44,18 +46,24 @@ public class BufferedMEStorage implements MEStorage {
         return a > Long.MAX_VALUE / b ? Long.MAX_VALUE : a * b;
     }
 
-    private final MEStorage delegate;
+    private MEStorage delegate;
     @Nullable
     private final Supplier<MEStorage> cellSupplier;
     @Nullable
     private final Runnable cellPersistCallback;
     private final long[] consumptionHistory = new long[HISTORY_SIZE];
 
-    /** Transient preload buffer, ONLY used when no cell is installed. */
+    /** Owned raw FE: batch preloads, fractional fees and confirmed rejected refunds. */
     private long feBuffer;
     private boolean batchOnly;
     private int historyPointer;
     private int costMultiplier = 1;
+    private int transferDepth;
+    private int nextCostMultiplier = 1;
+    @Nullable
+    private final Runnable pendingPersistCallback;
+    private long lastNotifiedPendingEnergy;
+    private final java.util.function.BooleanSupplier onlineSupplier;
 
     public BufferedMEStorage(MEStorage delegate) {
         this(delegate, null);
@@ -67,9 +75,27 @@ public class BufferedMEStorage implements MEStorage {
 
     public BufferedMEStorage(MEStorage delegate, @Nullable Supplier<MEStorage> cellSupplier,
                              @Nullable Runnable cellPersistCallback) {
+        this(delegate, cellSupplier, cellPersistCallback, null);
+    }
+
+    public BufferedMEStorage(MEStorage delegate, @Nullable Supplier<MEStorage> cellSupplier,
+                             @Nullable Runnable cellPersistCallback, @Nullable Runnable pendingPersistCallback) {
+        this(delegate, cellSupplier, cellPersistCallback, pendingPersistCallback, () -> true);
+    }
+
+    public BufferedMEStorage(MEStorage delegate, @Nullable Supplier<MEStorage> cellSupplier,
+                             @Nullable Runnable cellPersistCallback, @Nullable Runnable pendingPersistCallback,
+                             java.util.function.BooleanSupplier onlineSupplier) {
         this.delegate = delegate;
         this.cellSupplier = cellSupplier;
         this.cellPersistCallback = cellPersistCallback;
+        this.pendingPersistCallback = pendingPersistCallback;
+        this.onlineSupplier = java.util.Objects.requireNonNull(onlineSupplier);
+    }
+
+    void rebindDelegate(MEStorage delegate) {
+        // Grid replacement must not abandon locally owned return/remainder energy.
+        this.delegate = delegate;
     }
 
     @Override
@@ -90,26 +116,37 @@ public class BufferedMEStorage implements MEStorage {
             return extractFromBuffer(needed, mode) / costMultiplier;
         }
 
-        MEStorage cell = resolveCell();
-        if (cell != null) {
-            return extractThroughCell(cell, feKey, needed, mode, source) / costMultiplier;
-        }
-
-        if (feBuffer > 0L) {
-            return extractFromBuffer(needed, mode) / costMultiplier;
-        }
-        return delegate.extract(feKey, needed, mode, source) / costMultiplier;
+        return creditWholeUnits(extractRawWithScratch(feKey, needed, mode, source, false), mode);
     }
 
     @Override
     public long insert(AEKey what, long amount, Actionable mode, IActionSource source) {
+        if (!ResourceIngressPolicy.canAccept(what, onlineSupplier.getAsBoolean())) return 0L;
+        return insertOwned(what, amount, mode, source);
+    }
+
+    /** Confirmed undelivered transfer funds remain owned even if a callback disconnects the host. */
+    long returnUndelivered(long amount, IActionSource source) {
+        if (amount <= 0L) return 0L;
+        // This is a confirmed refund of funds already withdrawn by this
+        // buffer. It must remain recoverable even if the grid disappeared
+        // while the target callback was running.
+        long units = Math.min(amount, (Long.MAX_VALUE - feBuffer) / costMultiplier);
+        long credit = units * costMultiplier;
+        feBuffer = saturatingAdd(feBuffer, credit);
+        recordReturn(credit);
+        return units;
+    }
+
+    private long insertOwned(AEKey what, long amount, Actionable mode, IActionSource source) {
         if (!isFeKey(what) || amount <= 0L) {
             return delegate.insert(what, amount, mode, source);
         }
         AEKey feKey = AppFluxBridge.FE_KEY;
         if (feKey == null) return delegate.insert(what, amount, mode, source);
 
-        long credit = saturatingMul(amount, costMultiplier);
+        long units = Math.min(amount, (Long.MAX_VALUE - feBuffer) / costMultiplier);
+        long credit = units * costMultiplier;
         long accepted;
 
         // NORMAL batch path: leftover from undelivered demand goes back to
@@ -123,26 +160,25 @@ public class BufferedMEStorage implements MEStorage {
                 feBuffer = saturatingAdd(feBuffer, credit);
                 recordReturn(credit);
             }
-            return credit / costMultiplier;
+            return units;
         }
 
+        if (mode == Actionable.MODULATE) {
+            feBuffer = saturatingAdd(feBuffer, credit);
+            recordReturn(credit);
+            flush(feKey, source);
+            return units;
+        }
         MEStorage cell = resolveCell();
         if (cell != null) {
-            long intoCell = cell.insert(feKey, credit, mode, source);
+            long intoCell = insertIntoStorage(cell, feKey, credit, mode, source);
             long overflow = credit - intoCell;
-            long intoDelegate = overflow > 0L ? delegate.insert(feKey, overflow, mode, source) : 0L;
+            long intoDelegate = overflow > 0L ? insertIntoStorage(delegate, feKey, overflow, mode, source) : 0L;
             accepted = saturatingAdd(intoCell, intoDelegate);
-            if (mode == Actionable.MODULATE && intoCell > 0L) {
-                recordReturn(intoCell);
-            }
         } else if (feBuffer > 0L) {
             accepted = credit;
-            if (mode == Actionable.MODULATE && credit > 0L) {
-                feBuffer = saturatingAdd(feBuffer, credit);
-                recordReturn(credit);
-            }
         } else {
-            accepted = delegate.insert(feKey, credit, mode, source);
+            accepted = insertIntoStorage(delegate, feKey, credit, mode, source);
         }
 
         return accepted / costMultiplier;
@@ -172,53 +208,20 @@ public class BufferedMEStorage implements MEStorage {
         if (feKey == null || amount <= 0L) return 0L;
         long needed = saturatingMul(amount, costMultiplier);
 
-        MEStorage cell = resolveCell();
-        if (cell != null) {
-            long extracted = cell.extract(feKey, needed, Actionable.MODULATE, source);
-            long credited = extracted / costMultiplier;
-            long consumed = credited * costMultiplier;
-            long remainder = extracted - consumed;
-            if (remainder > 0L) {
-                long returned = cell.insert(feKey, remainder, Actionable.MODULATE, source);
-                if (returned < remainder) {
-                    delegate.insert(feKey, remainder - returned, Actionable.MODULATE, source);
-                }
-            }
-            if (consumed > 0L) recordConsumption(consumed);
-            return credited;
-        }
-        if (batchOnly || feBuffer > 0L) {
-            long extracted = Math.min(needed, feBuffer);
-            long credited = extracted / costMultiplier;
-            long consumed = credited * costMultiplier;
-            feBuffer -= consumed;
-            if (consumed > 0L) recordConsumption(consumed);
-            return credited;
-        }
-        return 0L;
+        if (batchOnly) return extractFromBuffer(needed, Actionable.MODULATE) / costMultiplier;
+        return creditWholeUnits(extractRawWithScratch(feKey, needed, Actionable.MODULATE, source, true),
+                Actionable.MODULATE);
     }
 
     public long returnFromDirectSend(long amount, IActionSource source) {
         AEKey feKey = AppFluxBridge.FE_KEY;
         if (feKey == null || amount <= 0L) return 0L;
-        long credit = saturatingMul(amount, costMultiplier);
-        long accepted;
-
-        MEStorage cell = resolveCell();
-        if (cell != null) {
-            long intoCell = cell.insert(feKey, credit, Actionable.MODULATE, source);
-            long overflow = credit - intoCell;
-            long intoDelegate = overflow > 0L
-                    ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-            accepted = saturatingAdd(intoCell, intoDelegate);
-        } else if (batchOnly || feBuffer > 0L) {
-            feBuffer = saturatingAdd(feBuffer, credit);
-            accepted = credit;
-        } else {
-            accepted = delegate.insert(feKey, credit, Actionable.MODULATE, source);
-        }
-        if (accepted > 0L) recordReturn(accepted);
-        return accepted / costMultiplier;
+        long units = Math.min(amount, (Long.MAX_VALUE - feBuffer) / costMultiplier);
+        long credit = units * costMultiplier;
+        feBuffer = saturatingAdd(feBuffer, credit);
+        recordReturn(credit);
+        if (!batchOnly) flush(feKey, source);
+        return units;
     }
 
     /**
@@ -233,6 +236,7 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     public void refillForDirectSend(long refillBudget, IActionSource source) {
+        if (!isOnline()) return;
         AEKey feKey = AppFluxBridge.FE_KEY;
         MEStorage cell = resolveCell();
         if (feKey == null || refillBudget <= 0L || cell == null) return;
@@ -252,8 +256,11 @@ public class BufferedMEStorage implements MEStorage {
      *         it).
      */
     public long beginMemoryBatch(AEKey feKey, long demand, IActionSource source) {
-        if (demand <= 0L) return 0L;
+        if (demand <= 0L || !onlineSupplier.getAsBoolean()) return 0L;
         batchOnly = true;
+        long available = Math.min(demand, feBuffer);
+        long missing = demand - available;
+        if (missing == 0L) return available;
 
         MEStorage cell = resolveCell();
         if (cell != null) {
@@ -261,27 +268,26 @@ public class BufferedMEStorage implements MEStorage {
             // of one per target. Saves N - 1 trips through
             // FluxCellInventory.saveChanges → callback → BE.saveChanges →
             // Level.blockEntityChanged → TickHandler.addCallable.
-            long pulled = cell.extract(feKey, demand, Actionable.MODULATE, source);
-            if (pulled < demand) {
-                long shortfall = demand - pulled;
+            long pulled = extractFromStorage(cell, feKey, missing, Actionable.MODULATE, source);
+            feBuffer = saturatingAdd(feBuffer, pulled);
+            if (pulled < missing) {
+                long shortfall = missing - pulled;
                 long ahead = recentConsumptionBeforeCurrentTick();
                 long ideal = saturatingAdd(shortfall, ahead);
                 refillFromDelegateInline(cell, feKey, ideal, source);
-                long retry = cell.extract(feKey, shortfall, Actionable.MODULATE, source);
+                long retry = extractFromStorage(cell, feKey, shortfall, Actionable.MODULATE, source);
                 pulled += retry;
+                feBuffer = saturatingAdd(feBuffer, retry);
             }
-            if (pulled > 0L) {
-                feBuffer = saturatingAdd(feBuffer, pulled);
-            }
-            return pulled;
+            return Math.min(demand, feBuffer);
         }
 
         // No cell — pull straight from the ME network into feBuffer.
-        long pulled = delegate.extract(feKey, demand, Actionable.MODULATE, source);
+        long pulled = extractFromStorage(delegate, feKey, missing, Actionable.MODULATE, source);
         if (pulled > 0L) {
             feBuffer = saturatingAdd(feBuffer, pulled);
         }
-        return pulled;
+        return available + pulled;
     }
 
     public long endBatch(AEKey feKey, IActionSource source) {
@@ -292,22 +298,7 @@ public class BufferedMEStorage implements MEStorage {
             // beginMemoryBatch over-pulled (target rejected its slice mid-loop
             // or demand shrank). Return it to the cell — or, if no cell is
             // installed, to the delegate — in a single insert call.
-            MEStorage cell = resolveCell();
-            if (cell != null) {
-                long intoCell = cell.insert(feKey, feBuffer, Actionable.MODULATE, source);
-                long overflow = feBuffer - intoCell;
-                long intoDelegate = overflow > 0L
-                        ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-                long absorbed = intoCell + intoDelegate;
-                feBuffer -= absorbed;
-                // recordConsumption was called in extractFromBuffer for what
-                // actually went out; what came back never left the system, so
-                // there is nothing to unrecord here.
-                return absorbed;
-            }
-            long returned = delegate.insert(feKey, feBuffer, Actionable.MODULATE, source);
-            feBuffer -= returned;
-            return returned;
+            return flush(feKey, source);
         } finally {
             batchOnly = false;
         }
@@ -319,18 +310,29 @@ public class BufferedMEStorage implements MEStorage {
         // installed we prefer to keep the FE in the cell rather than dump it
         // back to the network so the player's installed disk reflects reality.
         MEStorage cell = resolveCell();
+        long intoCell = 0L;
         if (cell != null) {
-            long intoCell = cell.insert(feKey, feBuffer, Actionable.MODULATE, source);
-            long overflow = feBuffer - intoCell;
-            long intoDelegate = overflow > 0L
-                    ? delegate.insert(feKey, overflow, Actionable.MODULATE, source) : 0L;
-            long absorbed = intoCell + intoDelegate;
-            feBuffer -= absorbed;
-            return absorbed;
+            intoCell = flushToStorage(cell, feKey, source);
         }
-        long returned = delegate.insert(feKey, feBuffer, Actionable.MODULATE, source);
-        feBuffer -= returned;
-        return returned;
+        if (feBuffer <= 0L) return intoCell;
+        long returned = flushToStorage(delegate, feKey, source);
+        return intoCell + returned;
+    }
+
+    private long flushToStorage(MEStorage target, AEKey feKey, IActionSource source) {
+        long attempt = feBuffer;
+        feBuffer = 0L;
+        try {
+            long returned = insertIntoStorage(target, feKey, attempt, Actionable.MODULATE, source);
+            feBuffer = saturatingAdd(feBuffer, attempt - returned);
+            return returned;
+        } catch (RuntimeException | LinkageError uncertain) {
+            // Receipt is unknowable even for a refund. Never replay a credit
+            // that may already have been stored before this exception.
+            MixinReflectionSupport.logReflectionFailure("return FE to storage " + target.getClass().getName()
+                    + " (receipt unknown; in-flight refund will not be retried)", uncertain);
+            return 0L;
+        }
     }
 
     /**
@@ -348,18 +350,20 @@ public class BufferedMEStorage implements MEStorage {
         if (cellPersistCallback != null && resolveCell() != null) {
             cellPersistCallback.run();
         }
+        if (pendingPersistCallback != null && lastNotifiedPendingEnergy != feBuffer) {
+            pendingPersistCallback.run();
+            lastNotifiedPendingEnergy = feBuffer;
+        }
         return flushed;
     }
 
     /**
      * Lifecycle cleanup (cell removed, mode switched, BE removed, chunk
-     * unloaded). Identical to {@link #endTick} but also clears the transient
-     * buffer just in case.
+     * unloaded). Unreturned energy stays owned by this buffer; refusal is not
+     * permission to discard it. Hosts must retain the buffer until drained.
      */
     public long flushAll(AEKey feKey, IActionSource source) {
-        long flushed = endTick(feKey, source);
-        clearBuffer();
-        return flushed;
+        return endTick(feKey, source);
     }
 
     public void advanceHistory() {
@@ -368,22 +372,59 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     public void setCostMultiplier(int multiplier) {
-        costMultiplier = Math.max(1, multiplier);
+        nextCostMultiplier = Math.max(1, multiplier);
+        if (transferDepth == 0) costMultiplier = nextCostMultiplier;
+    }
+
+    // Pin the cost of withdrawn FE through target callbacks and the matching refund.
+    boolean isOnline() {
+        return onlineSupplier.getAsBoolean();
+    }
+
+    boolean beginTransfer() {
+        // Foreign callbacks must not recursively enter a transaction on the same funds.
+        if (transferDepth != 0 || !onlineSupplier.getAsBoolean()) return false;
+        transferDepth = 1;
+        return true;
+    }
+
+    void endTransfer() {
+        if (transferDepth != 0) {
+            transferDepth = 0;
+            costMultiplier = nextCostMultiplier;
+        }
+    }
+
+    long getPendingEnergy() { return feBuffer; }
+
+    /** Transfer the locally owned refund to a dismantle item without replaying it. */
+    long takePendingEnergy() {
+        long pending = feBuffer;
+        feBuffer = 0L;
+        lastNotifiedPendingEnergy = 0L;
+        return pending;
+    }
+
+    void restorePendingEnergy(long amount) {
+        feBuffer = Math.max(0L, amount);
+        batchOnly = false;
+        lastNotifiedPendingEnergy = feBuffer;
     }
 
     public long getBufferedEnergy() {
         MEStorage cell = resolveCell();
         if (cell != null) {
             AEKey feKey = AppFluxBridge.FE_KEY;
-            if (feKey == null) return 0L;
-            return cell.extract(feKey, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty());
+            if (feKey == null) return feBuffer;
+            return saturatingAdd(feBuffer,
+                    extractFromStorage(cell, feKey, Long.MAX_VALUE, Actionable.SIMULATE, IActionSource.empty()));
         }
         return feBuffer;
     }
 
     /**
      * Clears the transient preload buffer WITHOUT returning FE to the delegate.
-     * No-op when a cell is providing backing storage. Prefer {@link
+     * Prefer {@link
      * #flushAll(AEKey, IActionSource)} for lifecycle cleanup.
      */
     public void clearBuffer() {
@@ -391,6 +432,26 @@ public class BufferedMEStorage implements MEStorage {
     }
 
     // ---- helpers --------------------------------------------------------
+
+    private long extractRawWithScratch(AEKey feKey, long needed, Actionable mode, IActionSource source,
+                                      boolean direct) {
+        long owned = Math.min(needed, feBuffer);
+        if (mode == Actionable.MODULATE) feBuffer -= owned;
+        long missing = needed - owned;
+        if (missing == 0L) return owned;
+        try {
+            MEStorage cell = resolveCell();
+            long pulled = cell != null
+                    ? direct ? extractFromStorage(cell, feKey, missing, mode, source)
+                             : extractThroughCell(cell, feKey, missing, mode, source)
+                    : direct ? 0L : extractFromStorage(delegate, feKey, missing, mode, source);
+            return owned + pulled;
+        } catch (RuntimeException | LinkageError failure) {
+            // Our scratch portion has not entered a foreign API and is safe to restore.
+            if (mode == Actionable.MODULATE) feBuffer = saturatingAdd(feBuffer, owned);
+            throw failure;
+        }
+    }
 
     /**
      * Cell-aware extract with inline refill on shortfall. Mirrors the AE2 ME
@@ -401,9 +462,8 @@ public class BufferedMEStorage implements MEStorage {
      */
     private long extractThroughCell(MEStorage cell, AEKey feKey, long needed, Actionable mode,
                                     IActionSource source) {
-        long extracted = cell.extract(feKey, needed, mode, source);
+        long extracted = extractFromStorage(cell, feKey, needed, mode, source);
         if (extracted >= needed) {
-            if (mode == Actionable.MODULATE && extracted > 0L) recordConsumption(extracted);
             return extracted;
         }
 
@@ -412,12 +472,27 @@ public class BufferedMEStorage implements MEStorage {
             long shortfall = needed - extracted;
             long ahead = recentConsumptionBeforeCurrentTick();
             long ideal = saturatingAdd(shortfall, ahead);
-            refillFromDelegateInline(cell, feKey, ideal, source);
-            long retry = cell.extract(feKey, shortfall, Actionable.MODULATE, source);
-            extracted += retry;
+            try {
+                refillFromDelegateInline(cell, feKey, ideal, source);
+                long retry = extractFromStorage(cell, feKey, shortfall, Actionable.MODULATE, source);
+                extracted += retry;
+            } catch (RuntimeException | LinkageError failure) {
+                // This part has not entered a target API; we still own it.
+                feBuffer = saturatingAdd(feBuffer, extracted);
+                throw failure;
+            }
         }
-        if (mode == Actionable.MODULATE && extracted > 0L) recordConsumption(extracted);
         return extracted;
+    }
+
+    private long creditWholeUnits(long extracted, Actionable mode) {
+        long credited = extracted / costMultiplier;
+        if (mode == Actionable.MODULATE && extracted > 0L) {
+            long consumed = credited * costMultiplier;
+            feBuffer = saturatingAdd(feBuffer, extracted - consumed);
+            if (consumed > 0L) recordConsumption(consumed);
+        }
+        return credited;
     }
 
     /**
@@ -428,15 +503,22 @@ public class BufferedMEStorage implements MEStorage {
      */
     private void refillFromDelegateInline(MEStorage cell, AEKey feKey, long request,
                                           IActionSource source) {
-        if (request <= 0L) return;
-        long freeSpace = cell.insert(feKey, Long.MAX_VALUE, Actionable.SIMULATE, source);
+        if (request <= 0L || !isOnline()) return;
+        long freeSpace = insertIntoStorage(cell, feKey, Long.MAX_VALUE, Actionable.SIMULATE, source);
+        // Capacity simulation is foreign code and can detach the host too.
+        if (!isOnline()) return;
         long refill = Math.min(request, freeSpace);
         if (refill <= 0L) return;
-        long pulled = delegate.extract(feKey, refill, Actionable.MODULATE, source);
+        long pulled = extractFromStorage(delegate, feKey, refill, Actionable.MODULATE, source);
         if (pulled <= 0L) return;
-        long inserted = cell.insert(feKey, pulled, Actionable.MODULATE, source);
-        if (inserted < pulled) {
-            delegate.insert(feKey, pulled - inserted, Actionable.MODULATE, source);
+        // The full attempt is in-flight; only a confirmed rejection can return.
+        long inserted = insertIntoStorage(cell, feKey, pulled, Actionable.MODULATE, source);
+        long rejected = pulled - inserted;
+        feBuffer = saturatingAdd(feBuffer, rejected);
+        if (rejected > 0L) {
+            feBuffer -= rejected;
+            long returned = insertIntoStorage(delegate, feKey, rejected, Actionable.MODULATE, source);
+            feBuffer = saturatingAdd(feBuffer, rejected - returned);
         }
     }
 
@@ -444,10 +526,37 @@ public class BufferedMEStorage implements MEStorage {
         if (mode == Actionable.SIMULATE) {
             return Math.min(needed, feBuffer);
         }
-        long extracted = Math.min(needed, feBuffer);
+        // A fractional fee is not delivered energy. Leave it in the buffer.
+        long extracted = (Math.min(needed, feBuffer) / costMultiplier) * costMultiplier;
         feBuffer -= extracted;
         if (extracted > 0L) recordConsumption(extracted);
         return extracted;
+    }
+
+    private long extractFromStorage(MEStorage storage, AEKey key, long amount, Actionable mode,
+                                    IActionSource source) {
+        long receipt = storage.extract(key, amount, mode, source);
+        if (receipt >= 0L && receipt <= amount) return receipt;
+        logMalformedReceipt(storage, "extract", amount, receipt);
+        // An invalid receipt cannot authorize delivery. The foreign withdrawal is unknown.
+        return 0L;
+    }
+
+    private long insertIntoStorage(MEStorage storage, AEKey key, long amount, Actionable mode,
+                                   IActionSource source) {
+        long receipt = storage.insert(key, amount, mode, source);
+        if (receipt >= 0L && receipt <= amount) return receipt;
+        logMalformedReceipt(storage, "insert", amount, receipt);
+        // Like an exception after credit, a malformed modulate receipt cannot be replayed.
+        // Simulation is not permission to mutate, so invalid capacity means no capacity.
+        return mode == Actionable.MODULATE ? amount : 0L;
+    }
+
+    private static void logMalformedReceipt(MEStorage storage, String operation, long amount, long receipt) {
+        MixinReflectionSupport.logReflectionFailure("validate FE " + operation + " receipt from "
+                        + storage.getClass().getName(),
+                new IllegalStateException("Storage reported " + receipt + " for request " + amount
+                        + "; ownership is unknown, no replay or extra delivery is authorized"));
     }
 
     @Nullable

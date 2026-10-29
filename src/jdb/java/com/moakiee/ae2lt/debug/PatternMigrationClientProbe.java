@@ -146,7 +146,7 @@ public final class PatternMigrationClientProbe {
                     capture("migration-port-scale4-reopened.png");
                     Files.writeString(mc.gameDirectory.toPath().resolve("migration-client-result.txt"),
                             "PASS: real controller/port screens and C2S; exact refunds and shared status; recovery; GUI scales 2/3/4; CPU waiting; stop button and cancellation; closed-menu completion.\n");
-                    done=true;mc.stop();
+                    done=true;CoverageClientSequence.finish("patternMigrationClientProbe");
                 }
             }
             phase++;

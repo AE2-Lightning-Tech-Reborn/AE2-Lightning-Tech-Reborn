@@ -82,6 +82,38 @@ public final class NaturalLightningTransformationHandler {
         tryTransformFromNearbyLightningRod(serverLevel, lightningBolt.blockPosition(), naturalWeatherLightning);
     }
 
+    /**
+     * Reserves a complete LT ritual before another addon's join-event conversion can consume
+     * its center. Ignore the origin restriction here: an artificial strike must leave a
+     * natural-only ritual intact, just as it does when the other addon is absent.
+     * This probe never consumes ingredients or claims the lightning entity.
+     */
+    public static boolean isReservedForStructure(ServerLevel level, BlockPos lightningPos, BlockPos targetPos) {
+        var recipes = RecipeManagerByTypeAccess.byType(
+                level.getRecipeManager(), ModRecipeTypes.LIGHTNING_STRIKE_TYPE.get()).values();
+        for (int yOffset = 0; yOffset <= 2; yOffset++) {
+            BlockPos rodPos = lightningPos.below(yOffset);
+            if (!level.hasChunkAt(rodPos) || !level.getBlockState(rodPos).is(Blocks.LIGHTNING_ROD)) {
+                continue;
+            }
+            BlockPos centerPos = rodPos.below();
+            for (LightningStrikeRecipe recipe : recipes) {
+                if (!matchesStructure(level, recipe, centerPos)) {
+                    continue;
+                }
+                if (targetPos.equals(centerPos)) {
+                    return true;
+                }
+                for (StructureRequirement requirement : recipe.requirements()) {
+                    if (targetPos.equals(centerPos.offset(requirement.offset()))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private static void tryCaptureLightning(ServerLevel level, BlockPos lightningPos, boolean naturalWeatherLightning) {
         // Each collector accepts strikes in the 3x3x3 cube around its top rod.
         // Search the inverse cube around the strike. With offsets limited to one
@@ -134,16 +166,8 @@ public final class NaturalLightningTransformationHandler {
 
     private static boolean tryApplyRecipe(
             ServerLevel level, LightningStrikeRecipe recipe, BlockPos centerPos, BlockPos rodPos) {
-        BlockState centerState = level.getBlockState(centerPos);
-        if (!centerState.is(recipe.centerInput())) {
+        if (!matchesStructure(level, recipe, centerPos)) {
             return false;
-        }
-
-        for (StructureRequirement req : recipe.requirements()) {
-            BlockPos worldPos = centerPos.offset(req.offset());
-            if (!level.getBlockState(worldPos).is(req.block())) {
-                return false;
-            }
         }
 
         spawnTransformationParticles(level, recipe, centerPos, rodPos);
@@ -157,6 +181,24 @@ public final class NaturalLightningTransformationHandler {
 
         level.setBlockAndUpdate(centerPos, recipe.centerOutput().defaultBlockState());
         spawnCompletionParticles(level, centerPos);
+        return true;
+    }
+
+    private static boolean matchesStructure(ServerLevel level, LightningStrikeRecipe recipe, BlockPos centerPos) {
+        if (!level.hasChunkAt(centerPos)) {
+            return false;
+        }
+        BlockState centerState = level.getBlockState(centerPos);
+        if (!centerState.is(recipe.centerInput())) {
+            return false;
+        }
+
+        for (StructureRequirement req : recipe.requirements()) {
+            BlockPos worldPos = centerPos.offset(req.offset());
+            if (!level.hasChunkAt(worldPos) || !level.getBlockState(worldPos).is(req.block())) {
+                return false;
+            }
+        }
         return true;
     }
 

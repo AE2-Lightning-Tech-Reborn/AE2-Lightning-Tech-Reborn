@@ -5,6 +5,7 @@ import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ToLongFunction;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -138,8 +139,8 @@ public final class AdjacentItemAutoExportHelper {
     }
 
     @FunctionalInterface
-    public interface FluidDrainer {
-        int drain(int amount);
+    public interface FluidExporter {
+        long export(ToLongFunction<FluidStack> insertion);
     }
 
     public static boolean hasAnyOutput(boolean autoExport, int firstSlot, int slotCount, SlotStackReader stackReader) {
@@ -217,7 +218,7 @@ public final class AdjacentItemAutoExportHelper {
             @Nullable BlockOrientation orientation,
             Set<RelativeSide> allowedOutputs,
             FluidTankReader tankReader,
-            FluidDrainer drainer,
+            FluidExporter exporter,
             TargetResolver targetResolver) {
         if (orientation == null || allowedOutputs.isEmpty()) {
             return false;
@@ -228,16 +229,10 @@ public final class AdjacentItemAutoExportHelper {
             return false;
         }
 
-        var fluidKey = AEFluidKey.of(stored);
-        if (fluidKey == null) {
-            return false;
-        }
-
         var actionSource = IActionSource.ofMachine(host);
-        int remaining = stored.getAmount();
         boolean pushed = false;
         for (var side : allowedOutputs) {
-            if (remaining <= 0) {
+            if (tankReader.getFluid().isEmpty()) {
                 break;
             }
 
@@ -251,16 +246,12 @@ public final class AdjacentItemAutoExportHelper {
                 continue;
             }
 
-            long inserted = target.insert(fluidKey, remaining, Actionable.MODULATE, actionSource);
-            if (inserted <= 0L) {
-                continue;
-            }
-
-            int drained = drainer.drain((int) inserted);
-            if (drained > 0) {
-                pushed = true;
-                remaining -= drained;
-            }
+            long retired = exporter.export(offer -> {
+                var fluidKey = AEFluidKey.of(offer);
+                return fluidKey == null ? 0
+                        : target.insert(fluidKey, offer.getAmount(), Actionable.MODULATE, actionSource);
+            });
+            pushed |= retired > 0;
         }
 
         return pushed;

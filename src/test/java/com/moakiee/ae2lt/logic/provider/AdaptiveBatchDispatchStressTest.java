@@ -28,8 +28,7 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 class AdaptiveBatchDispatchStressTest {
     @org.junit.jupiter.api.BeforeAll
     static void bootstrapMinecraft() {
-        net.minecraft.SharedConstants.tryDetectVersion();
-        net.minecraft.server.Bootstrap.bootStrap();
+        com.moakiee.ae2lt.testing.MinecraftTestBootstrap.bootstrap();
     }
 
     private static final int TARGETS = 512;

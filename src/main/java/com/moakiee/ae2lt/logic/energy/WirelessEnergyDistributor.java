@@ -8,15 +8,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.function.BiFunction;
 
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageService;
 import appeng.api.storage.MEStorage;
+import com.moakiee.ae2lt.util.MixinReflectionSupport;
 
 /**
  * Reusable, host-agnostic NORMAL (no-disk) wireless FE distribution engine.
@@ -50,6 +55,8 @@ import appeng.api.storage.MEStorage;
  * passes the already-validated list via {@link Host#getValidTargets()}.
  */
 public final class WirelessEnergyDistributor {
+    private static final String TAG_PENDING_FE = "ae2lt:pending_wireless_fe";
+    private static final MEStorage DETACHED_STORAGE = () -> Component.literal("Detached wireless FE buffer");
 
     public enum Status {
         IDLE,
@@ -105,6 +112,14 @@ public final class WirelessEnergyDistributor {
         default Runnable getCellPersistCallback() {
             return null;
         }
+
+        /** Mark the host dirty when a confirmed refund remains locally owned at tick end. */
+        default Runnable getPendingEnergyPersistCallback() { return null; }
+
+        default boolean isOnline() {
+            var node = getMainNode();
+            return !isHostRemoved() && node != null && node.isActive() && node.getGrid() != null;
+        }
     }
 
     // ---- adaptive scheduling wheel ---------------------------------------
@@ -145,6 +160,8 @@ public final class WirelessEnergyDistributor {
     }
 
     private final Host host;
+    @Nullable
+    private final BiFunction<WirelessEnergyAPI.Target, ServerLevel, TargetAccess> targetResolver;
     private final Map<WirelessEnergyAPI.Target, BlockEnergyTargetCache> targetCachePool = new HashMap<>();
 
     private final IntWheelSlot[] normalEnergyWheel = new IntWheelSlot[ENERGY_WHEEL_SLOTS];
@@ -182,9 +199,18 @@ public final class WirelessEnergyDistributor {
 
     private Status lastStatus = Status.IDLE;
     private long lastTransferAmount;
+    /** True while a block-item export has taken ownership of pending FE. */
+    private boolean dismantleDropHandoff;
 
     public WirelessEnergyDistributor(Host host) {
+        this(host, null);
+    }
+
+    // Test-owned capability fault injection; normal runtime always uses the live cache.
+    WirelessEnergyDistributor(Host host,
+            @Nullable BiFunction<WirelessEnergyAPI.Target, ServerLevel, TargetAccess> targetResolver) {
         this.host = host;
+        this.targetResolver = targetResolver;
     }
 
     // ---- public lifecycle ------------------------------------------------
@@ -196,6 +222,10 @@ public final class WirelessEnergyDistributor {
      * FE was actually delivered to a target.
      */
     public boolean tickNormal(ServerLevel serverLevel) {
+        // A preview/save which never became a real block break must not pin
+        // the transient handoff forever. A real break consumes this state in
+        // the same call chain before the next server tick.
+        dismantleDropHandoff = false;
         if (!AppFluxBridge.canUseEnergyHandler()) {
             enterIdleState(Status.APPFLUX_UNAVAILABLE, true);
             return false;
@@ -203,7 +233,10 @@ public final class WirelessEnergyDistributor {
 
         var mainNode = host.getMainNode();
         if (!mainNode.isActive() || mainNode.getGrid() == null) {
-            setStatus(Status.NO_GRID);
+            // A previous tick may have preloaded FE into the local buffer.
+            // Do not strand that owned energy merely because the grid vanished
+            // before ensureStorageProxy() could rebind the delegate.
+            enterIdleState(Status.NO_GRID, true);
             return false;
         }
 
@@ -295,9 +328,7 @@ public final class WirelessEnergyDistributor {
     }
 
     /**
-     * Flush any cached FE back to the ME network and zero the buffer. Safe
-     * to call on any lifecycle boundary; FE the network refuses is dropped
-     * (there is no persistent storage on this side by design).
+     * Flush cached FE where possible. Refused energy stays owned by the buffer.
      */
     public void flushBufferToNetwork() {
         var feKey = AppFluxBridge.FE_KEY;
@@ -307,7 +338,30 @@ public final class WirelessEnergyDistributor {
         if (feKey != null) {
             bufferedStorage.flushAll(feKey, host.actionSource());
         }
-        bufferedStorage.clearBuffer();
+    }
+
+    /** Add pending FE to the block item produced by AE2's dismantle path. */
+    public void writeDismantleEnergyToNBT(CompoundTag tag) {
+        long pending = bufferedStorage != null ? bufferedStorage.getPendingEnergy() : 0L;
+        if (pending > 0L) tag.putLong(TAG_PENDING_FE, pending);
+        else tag.remove(TAG_PENDING_FE);
+        dismantleDropHandoff = pending > 0L;
+    }
+
+    /** Consume the pending FE after AE2 has attached the exported tag to a real drop. */
+    public void consumeDismantleDropHandoff() {
+        if (dismantleDropHandoff && bufferedStorage != null) {
+            bufferedStorage.takePendingEnergy();
+        }
+        dismantleDropHandoff = false;
+    }
+
+    public boolean hasDismantleDropHandoff() {
+        return dismantleDropHandoff;
+    }
+
+    public void clearDismantleDropHandoff() {
+        dismantleDropHandoff = false;
     }
 
     public void persistCellCache() {
@@ -351,6 +405,7 @@ public final class WirelessEnergyDistributor {
      */
     @Nullable
     public BufferedMEStorage prepareTick() {
+        dismantleDropHandoff = false;
         BufferedStorageService proxy = ensureStorageProxy();
         BufferedMEStorage buffer = bufferedStorage;
         if (proxy == null || buffer == null) {
@@ -373,6 +428,36 @@ public final class WirelessEnergyDistributor {
 
     public long getBufferedEnergy() {
         return bufferedStorage != null ? bufferedStorage.getBufferedEnergy() : 0L;
+    }
+
+    /** Snapshot only owned scratch FE, never the cell, network, or uncertain receipts. No I/O during saves. */
+    public void writeToNBT(CompoundTag tag) {
+        long pending = bufferedStorage != null ? bufferedStorage.getPendingEnergy() : 0L;
+        if (pending > 0L) tag.putLong(TAG_PENDING_FE, pending);
+        else tag.remove(TAG_PENDING_FE);
+    }
+
+    public void readFromNBT(CompoundTag tag) {
+        // A replacement snapshot owns its own funds. An export of the old
+        // snapshot must never consume energy loaded or imported afterwards.
+        dismantleDropHandoff = false;
+        // Loading replaces the serialized snapshot; never retain an older
+        // in-memory refund when the new snapshot does not contain the key.
+        long pending = tag.contains(TAG_PENDING_FE, Tag.TAG_LONG)
+                ? Math.max(0L, tag.getLong(TAG_PENDING_FE))
+                : 0L;
+        if (bufferedStorage == null && pending > 0L) {
+            bufferedStorage = new BufferedMEStorage(DETACHED_STORAGE, host.getCellStorageSupplier(),
+                    host.getCellPersistCallback(), host.getPendingEnergyPersistCallback(), host::isOnline);
+        }
+        if (bufferedStorage != null) bufferedStorage.restorePendingEnergy(pending);
+    }
+
+    /** Import the owned refund carried by an AE2 dismantle block item. */
+    public void importDismantleEnergyFromNBT(CompoundTag tag) {
+        // DISMANTLE_ITEM is a complete snapshot. Treat a missing key as zero
+        // so reusing an existing host cannot retain an unrelated old refund.
+        readFromNBT(tag);
     }
 
     @Nullable
@@ -415,7 +500,18 @@ public final class WirelessEnergyDistributor {
             return null;
         }
         BlockEnergyTargetCache cache = connectionTargetCaches[index];
-        return cache != null ? cache.resolve(serverLevel) : null;
+        return cache != null ? resolveEnergyTargetSafe(index, cache, serverLevel) : null;
+    }
+
+    @Nullable
+    private TargetAccess resolveEnergyTargetSafe(int index, BlockEnergyTargetCache cache, ServerLevel level) {
+        try {
+            return targetResolver == null ? cache.resolve(level)
+                    : targetResolver.apply(cachedValidTargets.get(index), level);
+        } catch (RuntimeException | LinkageError failure) {
+            MixinReflectionSupport.logReflectionFailure("resolve wireless FE target capability", failure);
+            return null;
+        }
     }
 
     /**
@@ -450,6 +546,22 @@ public final class WirelessEnergyDistributor {
     // ---- NORMAL tick implementation -------------------------------------
 
     private boolean runNormalTick(ServerLevel serverLevel, BufferedMEStorage buffer) {
+        try {
+            return runNormalTickUnchecked(serverLevel, buffer);
+        } catch (RuntimeException | LinkageError failure) {
+            // An aborted pass may have polled its due entries without scheduling
+            // them again. Rebuild next tick so healthy targets cannot be stranded.
+            normalWheelDirty = true;
+            spareNormalWheelSlot.clear();
+            Arrays.fill(normalBatchEnergyTargets, null);
+            buffer.endBatch(AppFluxBridge.FE_KEY, host.actionSource());
+            MixinReflectionSupport.logReflectionFailure("run wireless FE dispatch (rebuild schedule after API failure)", failure);
+            if (lastStatus != Status.ACTIVE) setStatus(Status.TARGET_BLOCKED);
+            return lastTransferAmount > 0L;
+        }
+    }
+
+    private boolean runNormalTickUnchecked(ServerLevel serverLevel, BufferedMEStorage buffer) {
         if (normalWheelDirty || normalWheelTargetsVersion != validTargetsVersion) {
             rebuildNormalWheel();
         }
@@ -479,15 +591,20 @@ public final class WirelessEnergyDistributor {
         long perCallLimit = Math.max(0L, AppFluxBridge.TRANSFER_RATE);
         for (int i = 0; i < dueSize; i++) {
             BlockEnergyTargetCache cache = caches[dueData[i]];
-            TargetAccess energyTarget = cache.resolve(serverLevel);
+            TargetAccess energyTarget = resolveEnergyTargetSafe(dueData[i], cache, serverLevel);
             resolvedTargets[i] = energyTarget;
             long demand = 0L;
             if (energyTarget != null) {
-                long sim = AppFluxBridge.simulateTarget(energyTarget, perCallLimit);
-                demand = sim > perCallLimit ? perCallLimit : sim;
+                try {
+                    long sim = AppFluxBridge.simulateTarget(energyTarget, perCallLimit);
+                    demand = sim > perCallLimit ? perCallLimit : sim;
+                } catch (RuntimeException | LinkageError failure) {
+                    MixinReflectionSupport.logReflectionFailure("simulate wireless FE target "
+                            + energyTarget.getClass().getName(), failure);
+                }
             }
             demands[i] = demand;
-            totalDemand += demand;
+            totalDemand = demand > Long.MAX_VALUE - totalDemand ? Long.MAX_VALUE : totalDemand + demand;
         }
 
         if (totalDemand <= 0L) {
@@ -745,7 +862,7 @@ public final class WirelessEnergyDistributor {
             // is silently deleted.
             flushBufferToNetwork();
             delegateStorageService = null;
-            bufferedStorage = null;
+            // Keep the owned buffer for the next grid; rejected refunds are not voided.
             storageProxy = null;
             return null;
         }
@@ -755,10 +872,13 @@ public final class WirelessEnergyDistributor {
             if (bufferedStorage != null) {
                 flushBufferToNetwork();
             }
-            bufferedStorage = new BufferedMEStorage(
-                    storageService.getInventory(),
-                    host.getCellStorageSupplier(),
-                    host.getCellPersistCallback());
+            if (bufferedStorage == null) {
+                bufferedStorage = new BufferedMEStorage(
+                        storageService.getInventory(), host.getCellStorageSupplier(), host.getCellPersistCallback(),
+                        host.getPendingEnergyPersistCallback(), host::isOnline);
+            } else {
+                bufferedStorage.rebindDelegate(storageService.getInventory());
+            }
             storageProxy = new BufferedStorageService(storageService, bufferedStorage);
             delegateStorageService = storageService;
         }

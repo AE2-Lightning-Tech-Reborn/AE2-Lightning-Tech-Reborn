@@ -290,28 +290,65 @@ public final class PatternMigrationGameTests {
     }
 
     @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
-    @SuppressWarnings("unchecked")
     public static void eaepAggregateDeduplicatesPhysicalCoreInventories(GameTestHelper h) throws Exception {
         if(!net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")){System.out.println("MIGRATION_EAEP_SKIPPED");h.succeed();return;}
-        var first=place(h,new BlockPos(3,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
-        var last=place(h,new BlockPos(4,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
-        var aggregate=place(h,new BlockPos(5,2,3),"extendedae_plus:super_assembler_matrix_frame");
-        var type=Class.forName("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixCluster");
-        int capacity=100;
-        var cluster=type.getMethod("ultimate",BlockPos.class,BlockPos.class).invoke(null,first.getBlockPos(),aggregate.getBlockPos());
-        setField(first,"patternInventory",new appeng.util.inv.AppEngInternalInventory((appeng.util.inv.InternalInventoryHost)first,capacity-40,1));
-        setField(last,"patternInventory",new appeng.util.inv.AppEngInternalInventory((appeng.util.inv.InternalInventoryHost)last,40,1));
-        ((List<Object>)MigrationReflection.field(cluster,"patternCores")).addAll(List.of(first,last));
-        for(var owner:List.of(first,last))setField(owner,"superMatrixCluster",cluster);
-        setField(aggregate,"superCluster",cluster);
-        var adapter=new PatternMigrationSources();var sources=adapter.discover(proxyNode(aggregate),null);
-        h.assertTrue(sources.size()==2&&sources.stream().mapToInt(source->source.count).sum()==capacity,"aggregate maps underlying physical inventories");
-        h.assertTrue(sources.get(1).count==40,"last core exposes only actual forty physical slots");
-        h.assertTrue(adapter.discover(proxyNode(last),null).isEmpty(),"direct core and aggregate are not counted twice");
-        var pending=(it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap<appeng.api.stacks.AEKey>)MigrationReflection.field(cluster,"outputBuffer");
-        pending.addTo(AEItemKey.of(Items.OAK_PLANKS),1);
-        h.assertTrue(sources.get(0).busy.getAsBoolean(),"undelivered outputs mean executing even when capacity is available");
-        System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS capacity="+capacity);h.succeed();
+        // Forge EAEP 1.5.5 aggregates ordinary matrix cores through EAE's cluster membership.
+        // Use both native capacities so a shorter final inventory cannot be padded or counted twice.
+        var first=place(h,new BlockPos(3,2,3),"extendedae_plus:assembler_matrix_pattern_plus");
+        var last=place(h,new BlockPos(4,2,3),"expatternprovider:assembler_matrix_pattern");
+        net.minecraft.world.level.block.entity.BlockEntity crafter=null;
+        try {
+        var type=Class.forName("com.glodblock.github.extendedae.common.me.matrix.ClusterAssemblerMatrix");
+        var coreType=Class.forName(PatternMigrationSources.EAE_PATTERN);
+        var cluster=type.getConstructor(BlockPos.class,BlockPos.class).newInstance(first.getBlockPos(),last.getBlockPos());
+        for(var owner:List.of(first,last)){
+            setField(owner,"cluster",cluster);
+            type.getMethod("addPattern",coreType).invoke(cluster,owner);
+        }
+        var firstInventory=(appeng.api.inventories.InternalInventory)MigrationReflection.call(first,"getPatternInventory");
+        var lastInventory=(appeng.api.inventories.InternalInventory)MigrationReflection.call(last,"getPatternInventory");
+        h.assertTrue(firstInventory.size()==72&&lastInventory.size()==36,"actual EAEP and EAE physical capacities");
+        var firstPattern=pattern(h,false);var lastPattern=pattern(h,true);
+        firstInventory.setItemDirect(71,firstPattern.copy());lastInventory.setItemDirect(35,lastPattern.copy());
+
+        var members=(List<?>)MigrationReflection.call(cluster,"getPatterns");
+        h.assertTrue(members.size()==2&&members.get(0)==first&&members.get(1)==last,"actual cluster aggregates both physical owners");
+        var adapter=new PatternMigrationSources();var sources=new ArrayList<PatternMigrationSource>();
+        for(var owner:members)sources.addAll(adapter.discover(proxyNode(owner),null));
+        h.assertTrue(sources.size()==2&&sources.stream().mapToInt(source->source.count).sum()==108,"cluster members map exactly to physical inventories");
+        h.assertTrue(sources.get(0).inventory==firstInventory&&sources.get(0).count==72
+                &&sources.get(1).inventory==lastInventory&&sources.get(1).count==36,"last core exposes only its thirty-six physical slots");
+        for(var owner:members)h.assertTrue(adapter.discover(proxyNode(owner),null).isEmpty(),"repeated aggregate discovery cannot duplicate a physical core");
+        h.assertTrue(adapter.discover(proxyNode(last),null).isEmpty(),"direct core and cluster membership are not counted twice");
+        h.assertTrue(ItemStack.matches(firstPattern,sources.get(0).inventory.getStackInSlot(71))
+                &&ItemStack.matches(lastPattern,sources.get(1).inventory.getStackInSlot(35)),"each physical tail slot preserves its exact pattern");
+        var simulated=lastInventory.extractItem(35,1,true);
+        h.assertTrue(ItemStack.matches(simulated,lastPattern)&&ItemStack.matches(lastInventory.getStackInSlot(35),lastPattern),"simulated tail extraction is read-only");
+        try(var mutations=PatternMigrationMutationScope.open()){
+            var extracted=sources.get(1).inventory.extractItem(35,1,false);
+            h.assertTrue(ItemStack.matches(extracted,lastPattern)&&lastInventory.getStackInSlot(35).isEmpty()
+                    &&ItemStack.matches(firstInventory.getStackInSlot(71),firstPattern),"one physical tail extraction neither duplicates nor touches another core");
+        }
+
+        crafter=place(h,new BlockPos(5,2,3),"extendedae_plus:assembler_matrix_crafter_plus");
+        setField(crafter,"cluster",cluster);
+        type.getMethod("addCrafter",Class.forName("com.glodblock.github.extendedae.common.tileentities.matrix.TileAssemblerMatrixCrafter"))
+                .invoke(cluster,crafter);
+        h.assertTrue(sources.stream().noneMatch(source->source.busy.getAsBoolean()),"native empty crafter permits migration");
+        crafter.getClass().getMethod("addToBuffer",appeng.api.stacks.AEKey.class,long.class)
+                .invoke(crafter,AEItemKey.of(Items.OAK_PLANKS),1L);
+        h.assertTrue(!Boolean.TRUE.equals(MigrationReflection.call(cluster,"isBusy")),"native crafter still has spare capacity with one pending output");
+        h.assertTrue(sources.stream().allMatch(source->source.busy.getAsBoolean()),"one undelivered output blocks every core despite spare crafting capacity");
+        } finally {
+            // These real inventories share a test-owned cluster without a formed controller.
+            // Detach it before native grid ticks can attempt to deliver the pending probe output.
+            if(crafter!=null)setField(crafter,"cluster",null);
+            setField(first,"cluster",null);setField(last,"cluster",null);
+            if(crafter!=null)h.getLevel().removeBlock(crafter.getBlockPos(),false);
+            h.getLevel().removeBlock(first.getBlockPos(),false);
+            h.getLevel().removeBlock(last.getBlockPos(),false);
+        }
+        System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS cluster=EAE first=72 last=36 capacity=108");h.succeed();
     }
 
     @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
