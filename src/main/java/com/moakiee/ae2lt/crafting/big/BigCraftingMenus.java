@@ -50,11 +50,21 @@ public final class BigCraftingMenus {
     public static BigCraftingService available(Object host) {
         var context = context(host);
         if (context == null) return null;
-        for (var port : context.grid().getActiveMachines(TianshuSupercomputerPortBlockEntity.class)) {
+        return available(context.grid());
+    }
+
+    public static BigCraftingService available(IGrid grid) {
+        for (var port : grid.getActiveMachines(TianshuSupercomputerPortBlockEntity.class)) {
             var c = port.getController();
             if (port.isLinkActive() && c != null && c.bigCrafting().available()) return c.bigCrafting();
         }
         return null;
+    }
+
+    /** Extended terminal requests must use the same selected algorithm as ordinary requests. */
+    public static Context planningContext(Object host) {
+        var context = context(host);
+        return context != null && planningEnabled(context.grid()) ? context : null;
     }
 
     /** Native amount/confirmation menus only need an actionable grid, not a terminal subtype. */

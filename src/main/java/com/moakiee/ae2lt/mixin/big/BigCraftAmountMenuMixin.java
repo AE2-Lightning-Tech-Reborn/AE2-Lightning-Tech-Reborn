@@ -32,6 +32,10 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
     private boolean ae2lt$bigAvailable;
 
     @Unique
+    @GuiSync(30202)
+    private boolean ae2lt$longAvailable;
+
+    @Unique
     @GuiSync(30201)
     private String ae2lt$initialAmount = "";
 
@@ -41,7 +45,25 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void ae2lt$init(int id, Inventory inv, ISubMenuHost host, CallbackInfo ci) {
-        if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.planningEnabled(host);
+        ae2lt$refreshAvailability();
+    }
+
+    @Override
+    public void broadcastChanges() {
+        ae2lt$refreshAvailability();
+        super.broadcastChanges();
+    }
+
+    @Unique
+    private void ae2lt$refreshAvailability() {
+        if (!isClientSide()) {
+            ae2lt$longAvailable = BigCraftingMenus.planningContext(getHost()) != null;
+            ae2lt$bigAvailable = ae2lt$longAvailable && BigCraftingMenus.available(getHost()) != null;
+        }
+    }
+
+    public boolean ae2lt$longAvailable() {
+        return ae2lt$longAvailable;
     }
 
     public boolean ae2lt$bigAvailable() {
@@ -57,15 +79,15 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
     }
 
     public void ae2lt$confirm(BigInteger amount, boolean missing, boolean autoStart) {
+        var context = BigCraftingMenus.planningContext(getHost());
         if (!(getPlayer() instanceof ServerPlayer player)
                 || !stillValid(player)
-                || !BigCraftingMenus.planningEnabled(getHost())
+                || context == null
                 || getWhatToCraft() == null) return;
         BigAmounts.nonNegative(amount);
         var key = getWhatToCraft().what();
         if (amount.signum() <= 0) return;
         if (missing) {
-            var context = BigCraftingMenus.context(getHost());
             var stock =
                     BigStorageOps.snapshot(
                             context.grid().getStorageService().getInventory(),
@@ -76,10 +98,15 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
             getHost().returnToMainMenu(player, (CraftAmountMenu) (Object) this);
             return;
         }
+        boolean exact = amount.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0;
+        if (exact && BigCraftingMenus.available(getHost()) == null) return;
         if (MenuOpener.open(CraftConfirmMenu.TYPE, player, getLocator())) {
             var confirm = (CraftConfirmMenu) player.containerMenu;
             confirm.setAutoStart(autoStart);
-            ((BigConfirmMenu) confirm).ae2lt$planBig(key, amount);
+            if (!((com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) confirm)
+                    .thunderbolt$planRequest(key, amount, appeng.api.networking.crafting.CalculationStrategy.CRAFT_LESS)) {
+                confirm.goBack();
+            }
         }
     }
 }

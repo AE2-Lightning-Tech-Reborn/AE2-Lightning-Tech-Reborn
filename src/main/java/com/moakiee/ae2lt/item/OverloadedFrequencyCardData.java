@@ -10,11 +10,18 @@ import java.util.UUID;
 public record OverloadedFrequencyCardData(
         int frequencyId,
         boolean autoConnect,
+        boolean autoConnectEnergy,
         Optional<String> boundControllerDimension,
         Optional<Long> boundControllerPos,
         Optional<UUID> ownerUuid
 ) {
     public static final int NO_FREQUENCY = -1;
+
+    /** Legacy callers retain the old combined preference until explicitly changed. */
+    public OverloadedFrequencyCardData(int frequencyId, boolean autoConnect,
+            Optional<String> dimension, Optional<Long> pos, Optional<UUID> owner) {
+        this(frequencyId, autoConnect, autoConnect, dimension, pos, owner);
+    }
 
     public OverloadedFrequencyCardData {
         boundControllerDimension = boundControllerDimension == null
@@ -52,6 +59,7 @@ public record OverloadedFrequencyCardData(
         return new OverloadedFrequencyCardData(
                 newFrequencyId,
                 autoConnect,
+                autoConnectEnergy,
                 Optional.ofNullable(controllerDimension),
                 Optional.of(controllerPos),
                 Optional.ofNullable(owner));
@@ -61,6 +69,7 @@ public record OverloadedFrequencyCardData(
         return new OverloadedFrequencyCardData(
                 NO_FREQUENCY,
                 autoConnect,
+                autoConnectEnergy,
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
@@ -70,6 +79,7 @@ public record OverloadedFrequencyCardData(
         return new OverloadedFrequencyCardData(
                 frequencyId,
                 enabled,
+                autoConnectEnergy,
                 boundControllerDimension,
                 boundControllerPos,
                 ownerUuid);
@@ -77,5 +87,14 @@ public record OverloadedFrequencyCardData(
 
     public OverloadedFrequencyCardData toggleAutoConnect() {
         return withAutoConnect(!autoConnect);
+    }
+
+    public OverloadedFrequencyCardData withAutoConnectEnergy(boolean enabled) {
+        return new OverloadedFrequencyCardData(frequencyId, autoConnect, enabled,
+                boundControllerDimension, boundControllerPos, ownerUuid);
+    }
+
+    public OverloadedFrequencyCardData toggleAutoConnectEnergy() {
+        return withAutoConnectEnergy(!autoConnectEnergy);
     }
 }

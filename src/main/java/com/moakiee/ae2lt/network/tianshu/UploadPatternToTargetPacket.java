@@ -9,7 +9,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record UploadPatternToTargetPacket(int containerId, PatternContainerGroup group)
+public record UploadPatternToTargetPacket(int containerId, int revision, int encodingRevision, PatternContainerGroup group)
         implements CustomPacketPayload {
     public static final Type<UploadPatternToTargetPacket> TYPE =
             new Type<>(NetworkInit.id("upload_pattern_to_target"));
@@ -18,12 +18,14 @@ public record UploadPatternToTargetPacket(int containerId, PatternContainerGroup
 
     private void write(RegistryFriendlyByteBuf buf) {
         buf.writeVarInt(containerId);
+        buf.writeVarInt(revision);
+        buf.writeVarInt(encodingRevision);
         group.writeToPacket(buf);
     }
 
     private static UploadPatternToTargetPacket decode(RegistryFriendlyByteBuf buf) {
         return new UploadPatternToTargetPacket(
-                buf.readVarInt(), PatternContainerGroup.readFromPacket(buf));
+                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), PatternContainerGroup.readFromPacket(buf));
     }
 
     @Override public Type<UploadPatternToTargetPacket> type() { return TYPE; }
@@ -33,7 +35,7 @@ public record UploadPatternToTargetPacket(int containerId, PatternContainerGroup
             if (context.player() instanceof ServerPlayer player
                     && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
                     && menu.containerId == packet.containerId()) {
-                menu.uploadTianshuPatternToTarget(player, packet.group());
+                menu.uploadTianshuPatternToTarget(player, packet.group(), packet.revision(), packet.encodingRevision());
             }
         });
     }

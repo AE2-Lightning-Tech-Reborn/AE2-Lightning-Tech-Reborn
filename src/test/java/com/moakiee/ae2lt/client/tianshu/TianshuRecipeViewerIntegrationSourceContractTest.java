@@ -36,10 +36,10 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
 
         assertTrue(emiPlugin.contains("TianshuPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class)"));
         assertTrue(emiPlugin.contains("TianshuWirelessPatternEncodingTermMenu.TYPE"));
         assertTrue(emiPlugin.contains(
-                "new EmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
+                "new TianshuEmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class)"));
     }
 
     @Test
@@ -119,7 +119,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         String context = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuRecipeTransferContext.java"));
 
-        assertTrue(picker.contains("TianshuUploadSourceSelection.collect(menu)"));
+        assertTrue(picker.contains("TianshuUploadSourceSelection.collect(uploadMenu)"));
         assertTrue(selection.contains("TianshuRecipeTransferContext.snapshotFor(menu)"));
         assertTrue(selection.contains("recipeContext.sourceKey()"));
         assertTrue(selection.contains("return Selection.EMPTY;"));
@@ -161,7 +161,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(emi.contains("currentScreen != EmiApi.getHandledScreen()"));
         assertTrue(emi.contains("TianshuDirectUploadClient.holdRecipeScreen("));
         assertTrue(picker.contains("directUploadRequested"));
-        assertTrue(picker.contains("findUniqueCandidate"));
+        assertTrue(picker.contains("automaticCandidate"));
         assertTrue(picker.contains("if (selected != null) select("));
         assertTrue(matcher.contains("findUniqueCandidate"));
         assertTrue(coordinator.contains("TianshuUploadSourceSelection.collect(menu)"));
@@ -178,7 +178,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(terminalScreen.contains("public boolean openDirectUploadFallback()"));
         assertTrue(terminalScreen.contains(
                 "switchToScreen(new TianshuUploadTargetScreen<>(this, true))"));
-        assertTrue(coordinator.contains("menu.uploadTianshuPatternToTarget(target.group())"));
+        assertTrue(coordinator.contains("menu.uploadTianshuPatternToTarget(target.group(), true)"));
         assertTrue(picker.contains("\"ae2lt.tianshu.upload.success_target\""));
         assertTrue(coordinator.contains("\"ae2lt.tianshu.upload.success_target\""));
         assertTrue(coordinator.contains(
@@ -236,7 +236,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         String picker = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/tianshu/TianshuUploadTargetScreen.java"));
 
-        assertTrue(picker.contains("sourceField.setValue(sourceKey)"));
+        assertTrue(picker.contains("sourceField.setValue(aliasEditor ? \"\" : sourceKey)"));
         assertTrue(picker.contains("aliasField.setValue(storedAlias)"));
         assertTrue(picker.contains("String source = sourceField.getValue().strip()"));
         assertTrue(picker.contains("String query = aliasField.getValue().strip()"));

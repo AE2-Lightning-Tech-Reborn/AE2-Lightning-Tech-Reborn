@@ -23,10 +23,11 @@ import appeng.api.crafting.IPatternDetails;
  * <p>Successfully owned pattern copies are counted in 100-tick accounting windows.
  * A pass always leases the least-served active targets first and leases every
  * target at most once. Targets in rejection cooldown or provider-owned overflow
- * are excluded from both the active average and the priority queue.
+ * are excluded from both the window average and the priority queue. Normal
+ * refill waits only defer polling; their owned copies remain in the window.
  *
  * <p>A target that becomes eligible midway through a window starts at the
- * current active average. This is deliberately a scheduling credit rather than
+ * current window average. This is deliberately a scheduling credit rather than
  * a fabricated physical dispatch: unavailable machines do not accumulate debt
  * that would otherwise monopolize all work when they return.
  */
@@ -79,10 +80,7 @@ final class DispatchFairnessScheduler<T, P> {
         deactivate(patternState, targetState);
         targetState.cooldownUntil = Math.max(gameTick + 1L, retryAfter);
         targetState.cooldownVersion++;
-        patternState.cooldowns.add(new CooldownEntry<>(
-                targetState.cooldownUntil,
-                targetState.cooldownVersion,
-                targetState));
+        queueCooldown(patternState, targetState);
     }
 
     void pauseTarget(T target) {
@@ -185,16 +183,16 @@ final class DispatchFairnessScheduler<T, P> {
 
         if (state.lastAdvancedTick != Long.MIN_VALUE
                 && gameTick < state.lastAdvancedTick) {
-            state.history.clear();
-            state.activeSum = 0L;
-            state.activeCountFrequencies.clear();
+            while (!state.history.isEmpty()) recycleHistory(state, state.history.removeFirst());
+            state.windowSum = 0L;
+            state.windowCountFrequencies.clear();
             for (var targetState : state.targets.values()) {
                 targetState.ownedCopies = 0L;
                 targetState.schedulingCredit = 0L;
                 targetState.leased = false;
                 targetState.leasedAllowance = 0L;
                 targetState.queueVersion++;
-                if (targetState.active) {
+                if (targetState.participatesInWindow()) {
                     addFrequency(state, 0L);
                     offer(state, targetState);
                 }
@@ -208,6 +206,7 @@ final class DispatchFairnessScheduler<T, P> {
             var expired = state.history.removeFirst();
             expireAmounts(state, expired.ownedCopies, false);
             expireAmounts(state, expired.schedulingCredits, true);
+            recycleHistory(state, expired);
         }
     }
 
@@ -230,16 +229,16 @@ final class DispatchFairnessScheduler<T, P> {
             if (amount <= 0L) {
                 continue;
             }
-            if (targetState.active) {
+            if (targetState.participatesInWindow()) {
                 removeFrequency(state, targetState.effectiveCount());
-                state.activeSum -= amount;
+                state.windowSum -= amount;
             }
             if (schedulingCredit) {
                 targetState.schedulingCredit -= amount;
             } else {
                 targetState.ownedCopies -= amount;
             }
-            if (targetState.active) {
+            if (targetState.participatesInWindow()) {
                 addFrequency(state, targetState.effectiveCount());
                 offer(state, targetState);
             }
@@ -288,11 +287,14 @@ final class DispatchFairnessScheduler<T, P> {
                 && state.cooldowns.peek().retryAfter <= gameTick) {
             var due = state.cooldowns.poll();
             var targetState = due.targetState;
-            if (due.cooldownVersion != targetState.cooldownVersion
+            boolean stale = due.cooldownVersion != targetState.cooldownVersion
                     || due.retryAfter != targetState.cooldownUntil
                     || !state.targets.containsKey(targetState.target)
                     || pausedTargets.contains(targetState.target)
-                    || targetState.active) {
+                    || targetState.active;
+            due.targetState = null;
+            state.freeCooldowns.addLast(due);
+            if (stale) {
                 continue;
             }
             activateAtCurrentAverage(state, targetState);
@@ -302,28 +304,37 @@ final class DispatchFairnessScheduler<T, P> {
     private void activateAtCurrentAverage(
             PatternState<T> state,
             TargetState<T> targetState) {
-        long baseline = ceilingAverage(state.activeSum, state.activeCount);
-        if (targetState.effectiveCount() < baseline) {
+        long baseline = ceilingAverage(state.windowSum, state.windowTargetCount);
+        // A planned refill delay is still normal participation in the window.
+        // Crediting it as unavailable repeatedly hides real dispatch imbalance.
+        if (!targetState.refillCoverage && targetState.effectiveCount() < baseline) {
             addSchedulingCredit(
                     state, targetState, baseline - targetState.effectiveCount());
         }
+        if (!targetState.refillCoverage) {
+            state.windowTargetCount++;
+            state.windowSum = saturatingAdd(state.windowSum, targetState.effectiveCount());
+            addFrequency(state, targetState.effectiveCount());
+        }
         targetState.cooldownUntil = Long.MIN_VALUE;
+        targetState.refillCoverage = false;
         targetState.active = true;
         targetState.leased = false;
         state.activeCount++;
-        state.activeSum = saturatingAdd(
-                state.activeSum, targetState.effectiveCount());
-        addFrequency(state, targetState.effectiveCount());
         offer(state, targetState);
     }
 
     private void deactivate(PatternState<T> state, TargetState<T> targetState) {
         if (targetState.active) {
             state.activeCount--;
-            state.activeSum -= targetState.effectiveCount();
+        }
+        if (targetState.participatesInWindow()) {
+            state.windowTargetCount--;
+            state.windowSum -= targetState.effectiveCount();
             removeFrequency(state, targetState.effectiveCount());
         }
         targetState.active = false;
+        targetState.refillCoverage = false;
         targetState.leased = false;
         targetState.leasedAllowance = 0L;
         targetState.queueVersion++;
@@ -341,7 +352,7 @@ final class DispatchFairnessScheduler<T, P> {
         removeFrequency(state, targetState.effectiveCount());
         targetState.ownedCopies = saturatingAdd(
                 targetState.ownedCopies, ownedCopies);
-        state.activeSum = saturatingAdd(state.activeSum, ownedCopies);
+        state.windowSum = saturatingAdd(state.windowSum, ownedCopies);
         addFrequency(state, targetState.effectiveCount());
         addHistory(state, targetState, ownedCopies, false);
         targetState.lastSuccessfulSequence = ++sequence;
@@ -356,7 +367,7 @@ final class DispatchFairnessScheduler<T, P> {
         }
         if (targetState.active) {
             removeFrequency(state, targetState.effectiveCount());
-            state.activeSum = saturatingAdd(state.activeSum, credit);
+            state.windowSum = saturatingAdd(state.windowSum, credit);
         }
         targetState.schedulingCredit = saturatingAdd(
                 targetState.schedulingCredit, credit);
@@ -377,7 +388,10 @@ final class DispatchFairnessScheduler<T, P> {
         }
         WindowBucket<T> bucket = state.history.peekLast();
         if (bucket == null || bucket.gameTick != state.lastAdvancedTick) {
-            bucket = new WindowBucket<>(state.lastAdvancedTick);
+            bucket = state.spareHistory;
+            state.spareHistory = null;
+            if (bucket == null) bucket = new WindowBucket<>();
+            bucket.gameTick = state.lastAdvancedTick;
             state.history.addLast(bucket);
         }
         var amounts = schedulingCredit
@@ -389,19 +403,38 @@ final class DispatchFairnessScheduler<T, P> {
                 DispatchFairnessScheduler::saturatingAdd);
     }
 
+    private static <T> void recycleHistory(PatternState<T> state, WindowBucket<T> bucket) {
+        // One spare is enough for the next writing tick. After a long idle gap,
+        // release the other expired buckets instead of retaining a full window.
+        if (state.spareHistory == null) {
+            bucket.ownedCopies.clear();
+            bucket.schedulingCredits.clear();
+            state.spareHistory = bucket;
+        }
+    }
+
+    private static <T> void queueCooldown(PatternState<T> state, TargetState<T> target) {
+        var entry = state.freeCooldowns.pollFirst();
+        if (entry == null) entry = new CooldownEntry<>();
+        entry.retryAfter = target.cooldownUntil;
+        entry.cooldownVersion = target.cooldownVersion;
+        entry.targetState = target;
+        state.cooldowns.add(entry);
+    }
+
     private static <T> void addFrequency(PatternState<T> state, long count) {
-        state.activeCountFrequencies.addTo(count, 1);
+        state.windowCountFrequencies.addTo(count, 1);
     }
 
     private static <T> void removeFrequency(PatternState<T> state, long count) {
-        var occurrences = state.activeCountFrequencies.get(count);
+        var occurrences = state.windowCountFrequencies.get(count);
         if (occurrences == 0) {
             return;
         }
         if (occurrences <= 1) {
-            state.activeCountFrequencies.remove(count);
+            state.windowCountFrequencies.remove(count);
         } else {
-            state.activeCountFrequencies.put(count, occurrences - 1);
+            state.windowCountFrequencies.put(count, occurrences - 1);
         }
     }
 
@@ -410,12 +443,7 @@ final class DispatchFairnessScheduler<T, P> {
             return;
         }
         long version = ++targetState.queueVersion;
-        state.ready.add(new ReadyEntry<>(
-                targetState.effectiveCount(),
-                targetState.lastSuccessfulSequence,
-                ++sequence,
-                version,
-                targetState));
+        queueReady(state, targetState, version);
         compactReadyIfNeeded(state);
     }
 
@@ -426,19 +454,33 @@ final class DispatchFairnessScheduler<T, P> {
         if (state.ready.size() <= threshold) {
             return;
         }
+        for (var entry : state.ready) recycleReady(state, entry);
         state.ready.clear();
         for (var targetState : state.targets.values()) {
             if (!targetState.active || targetState.leased) {
                 continue;
             }
             long version = ++targetState.queueVersion;
-            state.ready.add(new ReadyEntry<>(
-                    targetState.effectiveCount(),
-                    targetState.lastSuccessfulSequence,
-                    ++sequence,
-                    version,
-                    targetState));
+            queueReady(state, targetState, version);
         }
+    }
+
+    private void queueReady(PatternState<T> state, TargetState<T> target, long version) {
+        var entry = state.freeReady.pollFirst();
+        if (entry == null) entry = new ReadyEntry<>();
+        // A queued entry remains an immutable snapshot until it leaves the heap.
+        // Reusing only detached entries preserves stale-version and tie ordering.
+        entry.dispatchCount = target.effectiveCount();
+        entry.lastSuccessfulSequence = target.lastSuccessfulSequence;
+        entry.tieSequence = ++sequence;
+        entry.queueVersion = version;
+        entry.targetState = target;
+        state.ready.add(entry);
+    }
+
+    private static <T> void recycleReady(PatternState<T> state, ReadyEntry<T> entry) {
+        entry.targetState = null;
+        state.freeReady.addLast(entry);
     }
 
     @Nullable
@@ -446,10 +488,12 @@ final class DispatchFairnessScheduler<T, P> {
         while (!state.ready.isEmpty()) {
             var entry = state.ready.poll();
             var targetState = entry.targetState;
-            if (entry.queueVersion != targetState.queueVersion
+            boolean stale = entry.queueVersion != targetState.queueVersion
                     || !targetState.active
                     || targetState.leased
-                    || !state.targets.containsKey(targetState.target)) {
+                    || !state.targets.containsKey(targetState.target);
+            recycleReady(state, entry);
+            if (stale) {
                 continue;
             }
             targetState.leased = true;
@@ -487,12 +531,16 @@ final class DispatchFairnessScheduler<T, P> {
     final class Pass implements AutoCloseable {
         private final PatternState<T> state;
         private final long gameTick;
-        private final ArrayList<TargetState<T>> leased = new ArrayList<>();
+        private final boolean balancedWindow;
+        private final ArrayList<TargetState<T>> leased;
         private boolean closed;
 
         private Pass(PatternState<T> state, long gameTick) {
             this.state = state;
             this.gameTick = gameTick;
+            this.leased = state.leased;
+            this.balancedWindow = state.windowCountFrequencies.size() <= 1
+                    && state.activeCount == state.windowTargetCount;
         }
 
         int activeTargetsAtStart() {
@@ -512,9 +560,8 @@ final class DispatchFairnessScheduler<T, P> {
         }
 
         long raiseAllowance(T target, long minimumAllowance) {
-            // A long-idle target may retain a proven physical batch after its
-            // 100-tick fairness count expires. Keep the target ordering fair,
-            // but do not truncate that already-proven batch back to one copy.
+            // Explicit grouping and balanced batch ramps can reserve more than
+            // the incremental window allowance while retaining target order.
             var targetState = requireLeased(target);
             targetState.leasedAllowance = Math.max(
                     targetState.leasedAllowance,
@@ -522,14 +569,22 @@ final class DispatchFairnessScheduler<T, P> {
             return targetState.leasedAllowance;
         }
 
+        long raiseRampAllowance(T target, long requestedAllowance) {
+            // Equal window counts can grow together using the caller's equal
+            // shares. Otherwise, growth must obey the existing 2:1 limit.
+            return balancedWindow || state.windowTargetCount <= 1
+                    ? raiseAllowance(target, requestedAllowance)
+                    : allowance(target);
+        }
+
         private long allowanceFor(
                 PatternState<T> patternState,
                 TargetState<T> targetState) {
             long averageCeiling = doubledAverageFloor(
-                    patternState.activeSum, patternState.activeCount);
-            long minimum = patternState.activeCountFrequencies.isEmpty()
+                    patternState.windowSum, patternState.windowTargetCount);
+            long minimum = patternState.windowCountFrequencies.isEmpty()
                     ? 0L
-                    : patternState.activeCountFrequencies.firstLongKey();
+                    : patternState.windowCountFrequencies.firstLongKey();
             long ratioCeiling = saturatingAdd(
                     Math.max(1L, minimum),
                     Math.max(1L, minimum));
@@ -584,13 +639,17 @@ final class DispatchFairnessScheduler<T, P> {
             var targetState = requireLeased(target);
             int boundedCoverage = Math.max(1, coverageTicks);
             long delay = boundedCoverage;
-            deactivate(state, targetState);
+            // Keep this target in the fairness window while skipping physical
+            // probes until its learned refill time.
+            state.activeCount--;
+            targetState.active = false;
+            targetState.leased = false;
+            targetState.leasedAllowance = 0L;
+            targetState.queueVersion++;
+            targetState.refillCoverage = true;
             targetState.cooldownUntil = saturatingAdd(gameTick, delay);
             targetState.cooldownVersion++;
-            state.cooldowns.add(new CooldownEntry<>(
-                    targetState.cooldownUntil,
-                    targetState.cooldownVersion,
-                    targetState));
+            queueCooldown(state, targetState);
         }
 
         void cooldown(T target, long retryAfter) {
@@ -599,10 +658,7 @@ final class DispatchFairnessScheduler<T, P> {
             deactivate(state, targetState);
             targetState.cooldownUntil = Math.max(gameTick + 1L, retryAfter);
             targetState.cooldownVersion++;
-            state.cooldowns.add(new CooldownEntry<>(
-                    targetState.cooldownUntil,
-                    targetState.cooldownVersion,
-                    targetState));
+            queueCooldown(state, targetState);
         }
 
         void remove(T target) {
@@ -625,6 +681,7 @@ final class DispatchFairnessScheduler<T, P> {
                     offer(state, targetState);
                 }
             }
+            leased.clear();
             state.passOpen = false;
         }
 
@@ -652,12 +709,17 @@ final class DispatchFairnessScheduler<T, P> {
                         .thenComparingLong(entry -> entry.tieSequence));
         private final PriorityQueue<CooldownEntry<T>> cooldowns =
                 new PriorityQueue<>(Comparator.comparingLong(entry -> entry.retryAfter));
-        private final Long2IntAVLTreeMap activeCountFrequencies = new Long2IntAVLTreeMap();
+        private final ArrayDeque<ReadyEntry<T>> freeReady = new ArrayDeque<>();
+        private final ArrayDeque<CooldownEntry<T>> freeCooldowns = new ArrayDeque<>();
+        private final ArrayList<TargetState<T>> leased = new ArrayList<>();
+        private final Long2IntAVLTreeMap windowCountFrequencies = new Long2IntAVLTreeMap();
         private final ArrayDeque<WindowBucket<T>> history = new ArrayDeque<>();
+        private WindowBucket<T> spareHistory;
         private long lastAdvancedTick = Long.MIN_VALUE;
         private long topologyVersion = Long.MIN_VALUE;
-        private long activeSum;
+        private long windowSum;
         private int activeCount;
+        private int windowTargetCount;
         private boolean passOpen;
     }
 
@@ -671,6 +733,7 @@ final class DispatchFairnessScheduler<T, P> {
         private long cooldownUntil = Long.MIN_VALUE;
         private long leasedAllowance;
         private boolean active;
+        private boolean refillCoverage;
         private boolean leased;
 
         private TargetState(T target) {
@@ -680,31 +743,31 @@ final class DispatchFairnessScheduler<T, P> {
         private long effectiveCount() {
             return saturatingAdd(ownedCopies, schedulingCredit);
         }
+
+        private boolean participatesInWindow() {
+            return active || refillCoverage;
+        }
     }
 
-    private record ReadyEntry<T>(
-            long dispatchCount,
-            long lastSuccessfulSequence,
-            long tieSequence,
-            long queueVersion,
-            TargetState<T> targetState) {
+    private static final class ReadyEntry<T> {
+        private long dispatchCount;
+        private long lastSuccessfulSequence;
+        private long tieSequence;
+        private long queueVersion;
+        private TargetState<T> targetState;
     }
 
-    private record CooldownEntry<T>(
-            long retryAfter,
-            long cooldownVersion,
-            TargetState<T> targetState) {
+    private static final class CooldownEntry<T> {
+        private long retryAfter;
+        private long cooldownVersion;
+        private TargetState<T> targetState;
     }
 
     private static final class WindowBucket<T> {
-        private final long gameTick;
+        private long gameTick;
         private final Reference2LongOpenHashMap<TargetState<T>> ownedCopies =
                 new Reference2LongOpenHashMap<>();
         private final Reference2LongOpenHashMap<TargetState<T>> schedulingCredits =
                 new Reference2LongOpenHashMap<>(0);
-
-        private WindowBucket(long gameTick) {
-            this.gameTick = gameTick;
-        }
     }
 }

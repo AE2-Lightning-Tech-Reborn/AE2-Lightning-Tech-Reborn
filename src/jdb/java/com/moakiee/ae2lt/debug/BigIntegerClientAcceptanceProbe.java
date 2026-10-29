@@ -48,6 +48,7 @@ public final class BigIntegerClientAcceptanceProbe {
     private static UUID seenJob;
     private static volatile String currentCase = "unknown";
     private static volatile boolean waitingRefund;
+    private static volatile boolean completedImmediately;
     private static boolean readingTerminalTooltip;
     private static int actionPhase, caseIndex;
     private static boolean checkedBack, finished;
@@ -119,14 +120,35 @@ public final class BigIntegerClientAcceptanceProbe {
                 } else { m.cycleSelectedCPU(true); m.startJob(); }
             }
             case 5 -> server(p -> {
-                require(cpu.bigCrafting().busy(), "job missing");
-                appeng.menu.MenuOpener.open(CraftingStatusMenu.TYPE, p, locator());
+                if (cpu.bigCrafting().busy()) {
+                    appeng.menu.MenuOpener.open(CraftingStatusMenu.TYPE, p, locator());
+                } else {
+                    // The 0t matrix may settle before the post-tick observer can suspend it.
+                    // Prove completion from exact inventory deltas before restoring the fixture.
+                    var storage = cpu.getGrid().getStorageService().getInventory();
+                    var stock = BigStorageOps.snapshot(storage, IActionSource.empty());
+                    var raw = stock.getOrDefault(rawKey(), BigInteger.ZERO);
+                    var output = stock.getOrDefault(outKey(), BigInteger.ZERO);
+                    require(raw.signum() == 0 && output.equals(ORDER),
+                            "job missing without exact completion: raw=" + raw + " output=" + output);
+                    record("submit-completed", true, "0t completion: raw=" + raw + " output=" + output);
+                    require(BigStorageOps.extract(storage, outKey(), ORDER, Actionable.MODULATE, IActionSource.empty()).equals(ORDER),
+                            "completed fixture output removal");
+                    require(BigStorageOps.insert(storage, rawKey(), RAW, Actionable.MODULATE, IActionSource.empty()).equals(RAW),
+                            "completed fixture input restoration");
+                    completedImmediately = true;
+                }
             });
             case 6 -> {
-                require(mc.screen instanceof CraftingStatusScreen, "status screen missing");
-                var m = ((CraftingStatusScreen) mc.screen).getMenu();
-                var entry = m.cpuList.cpus().stream().filter(c -> c.currentJob() != null).findFirst().orElseThrow();
-                m.selectCpu(entry.serial());
+                if (completedImmediately) {
+                    server(BigIntegerClientAcceptanceProbe::openTerminal);
+                    actionPhase = 8;
+                } else {
+                    require(mc.screen instanceof CraftingStatusScreen, "status screen missing");
+                    var m = ((CraftingStatusScreen) mc.screen).getMenu();
+                    var entry = m.cpuList.cpus().stream().filter(c -> c.currentJob() != null).findFirst().orElseThrow();
+                    m.selectCpu(entry.serial());
+                }
             }
             case 7 -> {
                 require(emitted.contains(currentCase + ":status"), "status exact packet missing");
@@ -137,7 +159,7 @@ public final class BigIntegerClientAcceptanceProbe {
                 openTerminal(p);
             });
             case 9 -> {
-                require(emitted.contains(currentCase + ":refund"), "refund not observed");
+                require(completedImmediately || emitted.contains(currentCase + ":refund"), "refund not observed");
                 screenshot("refunded-terminal");
                 server(p -> {
                     var removed = BigStorageOps.extract(cpu.getGrid().getStorageService().getInventory(), rawKey(),
@@ -163,15 +185,20 @@ public final class BigIntegerClientAcceptanceProbe {
             }
             case 12 -> {
                 for (String stage : List.of("stock", "terminal-tooltip", "increment", "amount", "confirm", "confirm-renderer",
-                        "back", "submit", "status", "status-renderer", "refund", "refunded-stock", "lower-to-long", "restore-big"))
+                        "confirm-bytes", "confirm-bytes-label", "back", "refunded-stock", "lower-to-long", "restore-big"))
                     require(emitted.contains(currentCase + ":" + stage), "missing observation: " + stage);
-                record("case-complete", true, "native terminal -> amount -> confirm/back -> start -> status -> cancel -> terminal, including live cache removal");
+                for (String stage : completedImmediately ? List.of("submit-completed")
+                        : List.of("submit", "status", "status-renderer", "refund"))
+                    require(emitted.contains(currentCase + ":" + stage), "missing observation: " + stage);
+                record("case-complete", true, "native terminal -> amount -> confirm/back -> start -> "
+                        + (completedImmediately ? "exact 0t completion" : "status -> cancel")
+                        + " -> terminal, including live cache removal");
                 caseIndex++;
                 if (caseIndex == 3) {
                     record("all-complete", failures == 0, "three terminal flows complete; failed checks=" + failures);
                     finished = true;
                     mc.stop();
-                } else { checkedBack = false; actionPhase = -1; }
+                } else { checkedBack = false; completedImmediately = false; actionPhase = -1; }
             }
         }
         actionPhase++;
@@ -308,10 +335,24 @@ public final class BigIntegerClientAcceptanceProbe {
                 if (report == null) return;
                 var input = report.entries().get(rawKey());
                 var output = report.entries().get(outKey());
-                record("confirm", menu instanceof BigConfirmMenu m && m.ae2lt$isBig()
+                record("confirm", menu instanceof com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu m && m.thunderbolt$isExactRequest()
                                 && !menu.getPlan().isSimulation() && input != null && RAW.equals(input.stored())
                                 && output != null && ORDER.equals(output.crafting()) && !report.previewOnly(),
                         "screen=" + screen.getClass().getSimpleName() + " raw=" + input + " output=" + output);
+                var expectedBytes = RAW.multiply(BigInteger.valueOf(6)).add(BigInteger.valueOf(16));
+                record("confirm-bytes", expectedBytes.equals(report.bytes())
+                                && menu.getPlan().getUsedBytes() == Long.MAX_VALUE,
+                        "expected=" + expectedBytes + " actual=" + report.bytes());
+                var update = screen.getClass().getDeclaredMethod("updateBeforeRender");
+                update.setAccessible(true);
+                update.invoke(screen);
+                var texts = appeng.client.gui.AEBaseScreen.class.getDeclaredField("textOverrides");
+                texts.setAccessible(true);
+                var bytesText = ((Map<String, appeng.client.gui.TextOverride>) texts.get(screen)).get("bytes_used");
+                var expectedText = net.minecraft.network.chat.Component.translatable("gui.ae2lt.crafting_report.exact_bytes",
+                        com.moakiee.thunderbolt.ae2.crafting.ExactAmountFormatter.compact(expectedBytes, 1));
+                record("confirm-bytes-label", bytesText != null && expectedText.equals(bytesText.getContent()),
+                        "expected=" + expectedText.getString() + " actual=" + (bytesText == null ? null : bytesText.getContent()));
                 var tableField = screen.getClass().getDeclaredField("table"); tableField.setAccessible(true);
                 verifyRenderer("confirm-renderer", tableField.get(screen), menu.getPlan().getEntries(), CraftingPlanSummaryEntry.class);
                 screenshot("confirm");

@@ -817,10 +817,20 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
+                    com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
+                    com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);
+            com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);
             com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.energy.WirelessEnergyGridService.class,
+                    com.moakiee.ae2lt.logic.energy.WirelessEnergyGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.
@@ -1195,6 +1205,8 @@ public class AE2LightningTech {
     private void onServerStarting(ServerStartingEvent event) {
         WirelessFrequencyManager.onServerStart(event.getServer());
         WirelessLinkRegistry.onServerStart(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer());
         var recipeConflicts = RecipeConflictScanner.scan(event.getServer().getRecipeManager());
         if (recipeConflicts.isEmpty()) {
             LOG.info("[AE2LT recipe conflict scan] no conflicts found");
@@ -1207,8 +1219,11 @@ public class AE2LightningTech {
     }
 
     private void onServerStopped(ServerStoppedEvent event) {
+        com.moakiee.ae2lt.logic.management.PowerTelemetry.clear();
         WirelessIoPerformanceProbe.finish(event.getServer());
         WirelessLinkRegistry.onServerStop();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.stop();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.stop();
         WirelessFrequencyManager.onServerStop();
         CRAFTING_CORE_REGISTRY.clear();
         com.moakiee.ae2lt.registry.ModDamageTypes.clearCache();
@@ -1220,6 +1235,9 @@ public class AE2LightningTech {
 
     private void onServerTickPost(ServerTickEvent.Post event) {
         CRAFTING_CORE_REGISTRY.tickAll();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tickBulkConnections(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer()).tick(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tick(event.getServer());
         WirelessFrequencyManager.flushPendingDeviceNotifications();
         var registry = WirelessLinkRegistry.get();
         if (registry != null) {

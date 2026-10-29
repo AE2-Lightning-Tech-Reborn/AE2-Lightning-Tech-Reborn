@@ -23,6 +23,7 @@ docs/*
 !docs/alpha-vs-main-2026-10-05.md
 !docs/io-simplification-20261015.md
 !docs/io-simplification-20261015.json
+!docs/provider-machine-adaptation.zh-CN.md
 
 # Bundled source mirrors / references
 Source Code/

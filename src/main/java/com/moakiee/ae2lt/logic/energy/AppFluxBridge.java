@@ -104,22 +104,22 @@ public final class AppFluxBridge {
 
     public static long sendToTarget(@Nullable TargetAccess target, IStorageService storage,
                                     IActionSource source, long maxFe) {
-        return LOADED ? AppFluxAccess.sendToTarget(target, storage, source, maxFe) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTarget(target, storage, source, maxFe)) : 0L;
     }
 
     public static long sendToTargetKnownDemand(@Nullable TargetAccess target, IStorageService storage,
                                                IActionSource source, long requested) {
-        return LOADED ? AppFluxAccess.sendToTargetKnownDemand(target, storage, source, requested) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetKnownDemand(target, storage, source, requested)) : 0L;
     }
 
     public static long sendToTargetKnownDemand(@Nullable TargetAccess target, BufferedMEStorage buffer,
                                                IActionSource source, long requested) {
-        return LOADED ? AppFluxAccess.sendToTargetKnownDemand(target, buffer, source, requested) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetKnownDemand(target, buffer, source, requested)) : 0L;
     }
 
     public static long sendToTargetRepeatedOptimistic(@Nullable TargetAccess target, BufferedMEStorage buffer,
                                                       IActionSource source, long maxFe, int maxCalls) {
-        return LOADED ? AppFluxAccess.sendToTargetRepeatedOptimistic(target, buffer, source, maxFe, maxCalls) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetRepeatedOptimistic(target, buffer, source, maxFe, maxCalls)) : 0L;
     }
 
     public static boolean hasEnergyCapability(ServerLevel level, BlockPos pos,

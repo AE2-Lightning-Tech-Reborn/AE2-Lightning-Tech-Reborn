@@ -23,7 +23,12 @@ import com.moakiee.ae2lt.network.PhaseFlightInputPacket;
 
 /** Authorizes the vanilla space/shift vertical-flight impulse without authorizing world forces. */
 @Mixin(LocalPlayer.class)
-public abstract class LocalPlayerPhaseMovementMixin {
+public abstract class LocalPlayerPhaseMovementMixin implements PhaseFlightPlayerState.ClientAccess {
+    @Override
+    public boolean ae2lt$isLocalClientPlayer() {
+        return (Object) this == Minecraft.getInstance().player;
+    }
+
     @ModifyExpressionValue(
             method = "aiStep",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isMovingSlowly()Z"))
@@ -83,7 +88,8 @@ public abstract class LocalPlayerPhaseMovementMixin {
                     ordinal = 1))
     private void ae2lt$applyPhaseFlightInput(Abilities abilities, boolean requestedFlying) {
         LocalPlayer player = (LocalPlayer) (Object) this;
-        if (!CelestweaveArmorState.isAnyClientFlightControlActive()
+        if (!ae2lt$isLocalClientPlayer()
+                || !CelestweaveArmorState.isAnyClientFlightControlActive()
                 && !PhaseFlightPlayerState.isFlightLocked(player)) {
             abilities.flying = requestedFlying;
             return;
@@ -111,7 +117,8 @@ public abstract class LocalPlayerPhaseMovementMixin {
                     target = "Lnet/minecraft/client/player/LocalPlayer;onUpdateAbilities()V",
                     ordinal = 1))
     private void ae2lt$useSinglePhaseFlightInputPath(LocalPlayer player) {
-        if (!CelestweaveArmorState.isAnyClientFlightControlActive()
+        if (!ae2lt$isLocalClientPlayer()
+                || !CelestweaveArmorState.isAnyClientFlightControlActive()
                 && !PhaseFlightPlayerState.isFlightLocked(player)) {
             player.onUpdateAbilities();
         }
@@ -153,6 +160,9 @@ public abstract class LocalPlayerPhaseMovementMixin {
 
     @Inject(method = "isCrouching", at = @At("HEAD"), cancellable = true)
     private void ae2lt$exposePhaseFlightCrouchChord(CallbackInfoReturnable<Boolean> cir) {
+        if (!ae2lt$isLocalClientPlayer()) {
+            return;
+        }
         LocalPlayer player = (LocalPlayer) (Object) this;
         boolean crouchChord = PhaseFlightControlRules.isCrouchChord(
                 CelestweaveArmorState.isAnyClientFlightControlActive(),

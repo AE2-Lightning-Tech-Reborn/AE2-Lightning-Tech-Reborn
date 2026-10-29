@@ -11,7 +11,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetData> targets)
+public record UploadTargetsSyncPacket(int containerId, int revision, List<TianshuUploadTargetData> targets)
         implements CustomPacketPayload {
     public static final Type<UploadTargetsSyncPacket> TYPE =
             new Type<>(NetworkInit.id("upload_targets_sync"));
@@ -25,6 +25,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
 
     private void write(RegistryFriendlyByteBuf buf) {
         buf.writeVarInt(containerId);
+        buf.writeVarInt(revision);
         buf.writeVarInt(targets.size());
         for (var target : targets) {
             target.group().writeToPacket(buf);
@@ -35,6 +36,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
 
     private static UploadTargetsSyncPacket decode(RegistryFriendlyByteBuf buf) {
         int containerId = buf.readVarInt();
+        int revision = buf.readVarInt();
         int size = TianshuPacketLimits.requireDecodedListSize(
                 "upload targets", buf.readVarInt());
         var targets = new ArrayList<TianshuUploadTargetData>(size);
@@ -42,7 +44,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
             targets.add(new TianshuUploadTargetData(
                     PatternContainerGroup.readFromPacket(buf), buf.readVarInt(), buf.readVarInt()));
         }
-        return new UploadTargetsSyncPacket(containerId, targets);
+        return new UploadTargetsSyncPacket(containerId, revision, targets);
     }
 
     @Override public Type<UploadTargetsSyncPacket> type() { return TYPE; }
@@ -51,7 +53,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
         context.enqueueWork(() -> {
             if (context.player().containerMenu instanceof TianshuPatternEncodingTermMenu menu
                     && menu.containerId == packet.containerId()) {
-                menu.receiveUploadTargets(packet.targets());
+                menu.receiveUploadTargets(packet.targets(), packet.revision());
             }
         });
     }

@@ -45,32 +45,32 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 public final class ProviderMekanismReturnGameTests {
     private static final BlockPos POS = new BlockPos(2, 2, 2);
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentUnfilteredReturnPreservesInfuserAuxiliarySlots(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", false, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentFilteredReturnPreservesMatchingAuxiliaryItems(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", false, true);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessUnfilteredReturnPreservesInfuserAuxiliarySlots(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", true, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessFilteredReturnPreservesMatchingAuxiliaryItems(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", true, true);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentReturnPreservesInfiniteReactionFactoryEnergySlot(GameTestHelper helper) {
         checkReactionFactory(helper, false, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessReturnPreservesInfiniteReactionFactoryEnergySlot(GameTestHelper helper) {
         checkReactionFactory(helper, true, true);
     }
@@ -144,12 +144,20 @@ public final class ProviderMekanismReturnGameTests {
                     "changing side config must not make the energy slot an output");
             setSide(machine, config, side, DataType.INPUT_OUTPUT);
         });
-        helper.runAfterDelay(240, () -> {
+        // An idle sweep backs off to 128 ticks. The side changes at tick 160;
+        // allow a complete sweep plus return-buffer/network transfer before asserting.
+        helper.runAfterDelay(320, () -> {
             helper.assertTrue(output.isEmpty() && stored(provider) == 23,
                     "real output must still return after switching to combined item I/O");
             helper.assertTrue(input.getCount() == 11 && auxiliary.getCount() == 17
                             && energy.getCount() == (energy == auxiliary ? 17 : 9),
                     "returning products must preserve input, auxiliary and energy contents");
+            provider.setMachineAdaptationEnabled(false);
+            setSide(machine, config, side, protectedType);
+        });
+        helper.runAfterDelay(390, () -> {
+            helper.assertTrue(auxiliary.isEmpty() && stored(provider) == 40,
+                    "disabling adaptation restores generic AUTO extraction of the auxiliary slot");
             helper.succeed();
         });
     }

@@ -7,7 +7,6 @@ import appeng.menu.me.crafting.*;
 
 import com.moakiee.thunderbolt.ae2.crafting.*;
 import com.moakiee.thunderbolt.core.crafting.big.BigCraftingPlanner;
-import com.moakiee.thunderbolt.core.crafting.planner.CraftPattern;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 
 import java.math.BigInteger;
@@ -16,9 +15,16 @@ import java.util.*;
 /** Native menu/CPU adapter. Projected long values are display-only, never execution inputs. */
 public record BigCraftingPlan(
         AEKey target, BigInteger amount, BigCraftingPlanner.Result<AEKey> exact, String failure)
-        implements ICraftingPlan {
+        implements com.moakiee.thunderbolt.api.crafting.ExactCraftingPlan {
     public BigCraftingPlan {
         BigAmounts.nonNegative(amount);
+    }
+
+    @Override
+    public net.minecraft.network.chat.Component planningError() {
+        String error = exact != null && !exact.verified() ? "unverified" : failure;
+        return error == null || error.isEmpty() ? net.minecraft.network.chat.Component.empty()
+                : net.minecraft.network.chat.Component.translatable("gui.ae2lt.crafting_report." + error);
     }
 
     public GenericStack finalOutput() {
@@ -28,6 +34,12 @@ public record BigCraftingPlan(
     public long bytes() {
         return 0;
     } // Multidimensional CPUs have no byte reservation.
+
+    /** Report the calculation cost independently of the CPU's unbounded reservation policy. */
+    public BigInteger reportBytes() {
+        return exact == null || exact.diagnostic() == null ? BigInteger.ZERO
+                : exact.diagnostic().byteCost(key -> key.getType().getAmountPerByte(), Set.of());
+    }
 
     public boolean simulation() {
         return exact == null || !exact.executable();
@@ -74,7 +86,6 @@ public record BigCraftingPlan(
     public CraftingPlanSummary summary() {
         var stored = new LinkedHashMap<AEKey, BigInteger>();
         var crafted = new LinkedHashMap<AEKey, BigInteger>();
-        var firings = new IdentityHashMap<CraftPattern<AEKey>, BigInteger>();
         var missing = exact == null ? Map.<AEKey, BigInteger>of() : exact.missing();
         if (exact != null && exact.program() != null) {
             exact.program()
@@ -89,7 +100,6 @@ public record BigCraftingPlan(
                 for (var step : block.steps()) {
                     var recipe = (BigCraftingRecipe) step.recipe().source();
                     var copies = step.copies().multiply(block.repetitions());
-                    firings.merge(recipe.pattern(), copies, BigInteger::add);
                     crafted.merge(
                             recipe.pattern().output(),
                             recipe.pattern().exactOutputAmount().multiply(copies),
@@ -126,55 +136,11 @@ public record BigCraftingPlan(
                 Comparator.comparing(
                                 (CraftingPlanSummaryEntry e) -> precise.get(e.getWhat()).missing())
                         .reversed());
-        var reportBytes = reportBytes(firings);
-        var summary = new CraftingPlanSummary(
-                BigAmounts.project(reportBytes), simulation(), List.copyOf(entries));
+        var bytes = reportBytes();
+        var summary = new CraftingPlanSummary(ExactPlanReport.project(bytes), simulation(), List.copyOf(entries));
         ExactPlanReports.attach(
                 summary,
-                new ExactPlanReport(reportBytes, precise, exact == null || !exact.verified()));
+                new ExactPlanReport(bytes, precise, exact == null || !exact.verified(), false));
         return summary;
-    }
-
-    /** Logical plan size for the report, independent of the CPU's zero byte reservation. */
-    private BigInteger reportBytes(Map<CraftPattern<AEKey>, BigInteger> firings) {
-        if (exact == null || exact.program() == null) return BigInteger.ZERO;
-
-        var demand = new LinkedHashMap<AEKey, BigInteger>();
-        var seeds = new LinkedHashMap<AEKey, BigInteger>();
-        demand.put(target, amount);
-        BigInteger executionBytes = BigInteger.ZERO;
-        for (var entry : firings.entrySet()) {
-            var copies = entry.getValue();
-            executionBytes = executionBytes.add(copies);
-            for (var input : entry.getKey().inputs()) {
-                if (input.returned() && input.uses() == Long.MAX_VALUE) {
-                    // An unchanged catalyst is acquired once and reused across recipe firings.
-                    seeds.merge(input.key(), input.exactAmount(), BigInteger::max);
-                } else {
-                    demand.merge(input.key(), input.unitsForExact(copies), BigInteger::add);
-                }
-                if (input.returned() || input.remainder() != null) {
-                    executionBytes = executionBytes.add(input.exactAmount().multiply(copies));
-                }
-            }
-        }
-        seeds.forEach((key, count) -> demand.merge(key, count, BigInteger::add));
-
-        // Sum resource-specific byte fractions exactly and round up only the final total.
-        BigInteger numerator = BigInteger.ZERO;
-        BigInteger denominator = BigInteger.ONE;
-        BigInteger eight = BigInteger.valueOf(8);
-        for (var entry : demand.entrySet()) {
-            BigInteger divisor = BigInteger.valueOf(
-                    Math.max(1, entry.getKey().getType().getAmountPerByte()));
-            BigInteger gcd = denominator.gcd(divisor);
-            BigInteger factor = divisor.divide(gcd);
-            numerator = numerator.multiply(factor).add(
-                    entry.getValue().multiply(eight).multiply(denominator.divide(gcd)));
-            denominator = denominator.multiply(factor);
-        }
-        return numerator.add(denominator).subtract(BigInteger.ONE).divide(denominator)
-                .add(eight.multiply(BigInteger.valueOf(demand.size())))
-                .add(executionBytes);
     }
 }

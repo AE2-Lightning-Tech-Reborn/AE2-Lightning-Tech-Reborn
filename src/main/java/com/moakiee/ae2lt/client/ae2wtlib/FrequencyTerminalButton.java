@@ -61,11 +61,8 @@ public final class FrequencyTerminalButton {
         // AEBaseScreen.init() will populate the toolbar into renderables after
         // this hook runs.
         var toolbar = ((AEBaseScreenAccessor) screen).ae2lt$getVerticalToolbar();
-        var buttons = new ToolbarButtons(
-                FrequencyBindingClient.createCardToolbarButton(),
-                FrequencyBindingClient.createCardAutoConnectToolbarButton());
+        var buttons = new ToolbarButtons(FrequencyBindingClient.createCardToolbarButton());
         toolbar.add(buttons.configureButton());
-        toolbar.add(buttons.autoConnectButton());
         buttons.update(screen);
         return buttons;
     }
@@ -90,15 +87,10 @@ public final class FrequencyTerminalButton {
         return ItemStack.EMPTY;
     }
 
-    public record ToolbarButtons(TextureToggleButton configureButton, TextureToggleButton autoConnectButton) {
+    public record ToolbarButtons(TextureToggleButton configureButton) {
         public void update(AEBaseScreen<?> screen) {
             var card = findInstalledFrequencyCard(screen);
-            boolean hasCard = !card.isEmpty();
-            configureButton.setVisibility(hasCard);
-            autoConnectButton.setVisibility(hasCard);
-            if (hasCard) {
-                autoConnectButton.setState(OverloadedFrequencyCardItem.getData(card).autoConnect());
-            }
+            configureButton.setVisibility(!card.isEmpty());
         }
     }
 }

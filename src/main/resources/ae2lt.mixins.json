@@ -9,6 +9,12 @@
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
+    "WirelessTerminalCoverageMixin",
+    "WirelessEnergyTargetRemovalMixin",
+    "WirelessEnergyMachineTickMixin",
+    "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
+    "RunningNetworkFeFallbackMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",
@@ -56,11 +62,12 @@
     "ShulkerBulletMixin",
     "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
-    "big.BigCraftConfirmMenuMixin",
-    "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
     "big.BigCpuListEntryMixin",
-    "TianshuStonecutterMenuMixin"
+    "TianshuStonecutterMenuMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -87,7 +94,9 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

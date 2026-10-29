@@ -61,7 +61,7 @@ public abstract class JeiEncodePatternTransferMixin {
                 tianshuMenu,
                 recipeBase,
                 fallback.sourceKey(),
-                fallback.defaultAliases());
+                fallback.defaultAliases(), fallback.machineIds());
     }
 
     @Inject(

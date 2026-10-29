@@ -1,0 +1,14 @@
+// ./gradlew -I scripts/large-stack-slot-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/LargeStackSlotGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_mining'
+            gameDirectory = project.layout.buildDirectory.dir('large-stack-slot-gametest').get().asFile
+        }
+    }
+}

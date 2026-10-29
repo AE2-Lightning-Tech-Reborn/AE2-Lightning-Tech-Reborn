@@ -92,6 +92,7 @@ public class ModScreens {
         event.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
         event.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
         event.register(FrequencyMenu.TYPE, FrequencyScreen::new);
+        event.register(com.moakiee.ae2lt.menu.NetworkManagementMenu.TYPE, ModScreens::createNetworkManagementScreen);
         event.register(CrystalCatalyzerMenu.TYPE, ModScreens::createCrystalCatalyzerScreen);
         event.register(DeviceHubMenu.TYPE, DeviceHubScreen::new);
         event.register(MatrixControllerMenu.TYPE, MatrixControllerScreen::new);
@@ -103,6 +104,12 @@ public class ModScreens {
         event.register(TianshuWirelessPatternEncodingTermMenu.TYPE,
                 ModScreens::createTianshuWirelessPatternEncodingTermScreen);
         event.register(TianshuSeedStorageMenu.TYPE, ModScreens::createTianshuSeedStorageScreen);
+    }
+
+    private static com.moakiee.ae2lt.client.gui.NetworkManagementScreen createNetworkManagementScreen(
+            com.moakiee.ae2lt.menu.NetworkManagementMenu menu, Inventory inventory, Component title) {
+        return new com.moakiee.ae2lt.client.gui.NetworkManagementScreen(menu, inventory, title,
+                StyleManager.loadStyleDoc("/screens/network_management.json"));
     }
 
     private static TianshuCraftingTermScreen<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu> createTianshuCraftingTermScreen(

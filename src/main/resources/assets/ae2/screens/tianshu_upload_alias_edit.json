@@ -1,0 +1,13 @@
+{
+  "helpTopic": "ae2lt:terminals/pattern-encoding-terminal.md#pattern-upload",
+  "$schema": "schema.json",
+  "includes": ["common/common.json"],
+  "widgets": {
+    "scrollbar": { "left": 175, "top": 33 },
+    "field_search": { "left": 7, "top": 16, "width": 81, "height": 13 },
+    "field_alias": { "left": 90, "top": 16, "width": 79, "height": 13 },
+    "button_back": { "left": 166, "top": -5, "width": 20, "height": 20 },
+    "cancel": { "left": 8, "bottom": 6, "width": 83, "height": 20 },
+    "save": { "left": 99, "bottom": 6, "width": 83, "height": 20 }
+  }
+}

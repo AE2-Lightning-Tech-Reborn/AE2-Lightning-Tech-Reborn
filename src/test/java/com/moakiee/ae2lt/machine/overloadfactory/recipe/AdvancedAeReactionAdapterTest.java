@@ -3,13 +3,16 @@ package com.moakiee.ae2lt.machine.overloadfactory.recipe;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Collections;
+import java.util.AbstractList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import com.moakiee.ae2lt.me.key.LightningKey;
+import com.moakiee.ae2lt.compat.OptionalIntegrationGuard;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
@@ -155,6 +158,45 @@ class AdvancedAeReactionAdapterTest {
         var manager = new RecipeManager(RegistryAccess.EMPTY);
         manager.replaceRecipes(List.of(invalid, valid));
         assertEquals(List.of(valid.id()), catalog(manager).stream().map(RecipeHolder::id).toList());
+    }
+
+    @Test
+    void linkageFailureDropsPartialBorrowedCatalogButKeepsNativeRecipesAcrossReloads() {
+        var calls = new AtomicInteger();
+        var incompatibleInputs = new AbstractList<IngredientStack.Item>() {
+            @Override
+            public IngredientStack.Item get(int index) {
+                calls.incrementAndGet();
+                throw new NoClassDefFoundError("net/pedroksl/ae2addonlib/recipes/IngredientStack$Item");
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+        };
+        var incompatible = holder("test:incompatible", new ReactionChamberRecipe(
+                new GenericStack(AEItemKey.of(Items.DIAMOND), 1), incompatibleInputs, null, 100));
+        var valid = itemRecipe(Ingredient.of(Items.IRON_INGOT), 1, 1, 100);
+        var nativeRecipe = new RecipeHolder<>(ResourceLocation.parse("ae2lt:native"),
+                AdvancedAeReactionAdapter.convert(valid).value());
+        var manager = new RecipeManager(RegistryAccess.EMPTY);
+        manager.replaceRecipes(List.of(valid, incompatible));
+        var guard = new OptionalIntegrationGuard("test reaction recipes");
+        var reactions = List.of(valid, incompatible);
+
+        // The valid source converts first; a later linkage failure must discard that partial view.
+        var first = OverloadProcessingRecipeCatalog.recipes(manager, List.of(nativeRecipe), reactions, guard);
+        assertEquals(List.of(nativeRecipe), first);
+        assertSame(first, OverloadProcessingRecipeCatalog.recipes(manager, List.of(nativeRecipe), reactions, guard));
+        assertEquals(1, calls.get());
+        assertSame(valid.value(), manager.byKey(valid.id()).orElseThrow().value());
+        assertSame(incompatible.value(), manager.byKey(incompatible.id()).orElseThrow().value());
+
+        manager.replaceRecipes(List.of(valid, incompatible));
+        assertEquals(List.of(nativeRecipe),
+                OverloadProcessingRecipeCatalog.recipes(manager, List.of(nativeRecipe), reactions, guard));
+        assertEquals(1, calls.get(), "reload must not retry the incompatible ABI or repeat its warning");
     }
 
     private static List<RecipeHolder<OverloadProcessingRecipe>> catalog(RecipeManager manager) {

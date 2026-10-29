@@ -78,10 +78,14 @@ public final class TianshuDirectUploadClient {
                 if (!menu.requestDirectUploadTargetsAfterEncoding()) return;
                 if (!menu.hasFreshDirectUploadTargets()) return;
                 var selection = TianshuUploadSourceSelection.collect(menu);
-                var target = TianshuUploadTargetMatcher.findUniqueCandidate(
-                        menu.getUploadTargets(), selection.initialQuery());
+                var mode = com.moakiee.ae2lt.config.AE2LTClientConfig.uploadMatchMode();
+                String suggested = mode == com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH
+                        ? TianshuUploadTargetMatcher.findClosestUniqueAlias(menu.getUploadTargets(),
+                                selection.initialQuery(), selection.defaultAliases()) : "";
+                var target = TianshuUploadTargetMatcher.automaticCandidate(
+                        menu.getUploadTargets(), mode, selection.savedAlias(), suggested, selection.machineIds());
                 if (target != null && consumeDirectRequest(menu)) {
-                    menu.uploadTianshuPatternToTarget(target.group());
+                    menu.uploadTianshuPatternToTarget(target.group(), true);
                     awaitResult(menu, target.group().name());
                     clearHeldRecipe();
                 } else {

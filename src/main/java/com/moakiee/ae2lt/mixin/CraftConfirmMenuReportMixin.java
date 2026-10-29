@@ -71,7 +71,7 @@ public abstract class CraftConfirmMenuReportMixin implements CraftingReportMenuS
 
     @Override
     public boolean ae2lt$shouldShowReport() {
-        return ae2lt$showReport || ((Object)this instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig());
+        return ae2lt$showReport || ((Object)this instanceof com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu big && big.thunderbolt$isExactRequest());
     }
 
     @Shadow

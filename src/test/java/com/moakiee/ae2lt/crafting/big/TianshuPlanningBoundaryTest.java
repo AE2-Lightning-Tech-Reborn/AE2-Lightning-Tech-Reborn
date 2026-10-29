@@ -3,13 +3,16 @@ package com.moakiee.ae2lt.crafting.big;
 import static org.junit.jupiter.api.Assertions.*;
 
 import appeng.api.networking.IGrid;
+import appeng.api.networking.IGridNode;
 import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.api.networking.crafting.ICraftingService;
+import appeng.api.networking.security.IActionHost;
 import com.google.common.collect.ImmutableSet;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuPool;
 import com.moakiee.ae2lt.mixin.thunderbolt.TianshuPlanningServiceMixin;
 import com.moakiee.thunderbolt.api.crafting.ICraftingPlanningService;
 import com.moakiee.thunderbolt.api.crafting.PlanningChoice;
+import com.moakiee.thunderbolt.core.crafting.planner.CpSatPlanningEngine;
 import com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +30,7 @@ class TianshuPlanningBoundaryTest {
         var grid = grid(ImmutableSet.of(other), null);
         assertFalse(BigCraftingMenus.hasTianshu(grid));
         assertFalse(BigCraftingMenus.planningEnabled(grid));
+        assertNull(BigCraftingMenus.planningContext(host(grid)));
         assertEquals(List.of(PlanningChoice.VANILLA), inject(grid,
                 List.of(TIANSHU, PlanningChoice.VANILLA)));
     }
@@ -39,6 +43,7 @@ class TianshuPlanningBoundaryTest {
         var grid = grid(ImmutableSet.of(pool), choices);
         assertTrue(BigCraftingMenus.hasTianshu(grid));
         assertTrue(BigCraftingMenus.planningEnabled(grid));
+        assertSame(grid, BigCraftingMenus.planningContext(host(grid)).grid());
         assertEquals(choices, inject(grid, choices));
     }
 
@@ -49,7 +54,27 @@ class TianshuPlanningBoundaryTest {
         var grid = grid(ImmutableSet.of(pool), choices);
         assertTrue(BigCraftingMenus.hasTianshu(grid));
         assertFalse(BigCraftingMenus.planningEnabled(grid));
+        assertNull(BigCraftingMenus.planningContext(host(grid)));
         assertEquals(choices, inject(grid, choices));
+    }
+
+    @Test
+    void extendedRequestsKeepAnExplicitCpSatSelection() throws Exception {
+        var pool = new TimeWheelCraftingCpuPool(null, 0, 0, 1, false);
+        var choices = List.of(PlanningChoice.engine(CpSatPlanningEngine.ID), PlanningChoice.VANILLA);
+        var grid = grid(ImmutableSet.of(pool), choices);
+        assertSame(grid, BigCraftingMenus.planningContext(host(grid)).grid());
+        assertEquals(choices, inject(grid, choices));
+    }
+
+    private static IActionHost host(IGrid grid) {
+        var node = proxy(IGridNode.class, (method, args) -> switch (method) {
+            case "isActive" -> true;
+            case "getGrid" -> grid;
+            default -> null;
+        });
+        return proxy(IActionHost.class, (method, args) ->
+                method.equals("getActionableNode") ? node : null);
     }
 
     private static List<PlanningChoice> inject(IGrid grid, List<PlanningChoice> choices) throws Exception {

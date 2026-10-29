@@ -113,7 +113,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
         boolean hasReceiver = false;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.containerMenu instanceof FrequencyMenu fm
-                    && fm.getCurrentFrequencyId() == frequencyId) {
+                    && fm.usesLocalConnectionList() && fm.getCurrentFrequencyId() == frequencyId) {
                 hasReceiver = true;
                 break;
             }
@@ -123,7 +123,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
         SyncFrequencyDetailPacket pkt = forConnections(frequencyId, server);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.containerMenu instanceof FrequencyMenu fm
-                    && fm.getCurrentFrequencyId() == frequencyId) {
+                    && fm.usesLocalConnectionList() && fm.getCurrentFrequencyId() == frequencyId) {
                 PacketDistributor.sendToPlayer(player, pkt);
             }
         }

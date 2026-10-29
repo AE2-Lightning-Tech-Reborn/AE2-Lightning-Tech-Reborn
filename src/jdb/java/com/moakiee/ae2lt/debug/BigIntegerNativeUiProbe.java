@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.debug;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.networking.GridHelper;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.PartHelper;
 import appeng.api.stacks.*;
 import appeng.blockentity.storage.DriveBlockEntity;
@@ -45,7 +46,9 @@ import java.util.*;
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
 public final class BigIntegerNativeUiProbe {
     private static final BlockPos BASE = new BlockPos(0, 100, 0);
-    private static final BigInteger N = BigInteger.TEN.pow(100).add(BigInteger.valueOf(12345));
+    private static final boolean LONG_REQUEST = Boolean.getBoolean("ae2lt.bigNativeProbe.long");
+    private static final BigInteger N = LONG_REQUEST ? BigInteger.valueOf(750_000_000L)
+            : BigInteger.TEN.pow(100).add(BigInteger.valueOf(12345));
     private static DriveBlockEntity drive;
     private static TianshuSupercomputerControllerBlockEntity cpu;
     private static MatrixControllerBlockEntity matrix;
@@ -53,7 +56,7 @@ public final class BigIntegerNativeUiProbe {
     private static BigMatrixRecipe recipe;
     private static appeng.parts.AEBasePart terminal;
     private static appeng.blockentity.networking.WirelessAccessPointBlockEntity access;
-    private static int phase, ticks;
+    private static int phase, ticks, shiftWaits;
     private static boolean wireless, finished, checkedBack;
     private static volatile Throwable failure;
 
@@ -81,7 +84,7 @@ public final class BigIntegerNativeUiProbe {
     }
 
     @SubscribeEvent
-    public static void pause(ServerTickEvent.Post event) {
+    public static void pause(ServerTickEvent.Pre event) {
         if (Boolean.getBoolean("ae2lt.bigNativeProbe")
                 && cpu != null
                 && cpu.bigCrafting().job() != null) cpu.bigCrafting().job().suspended = true;
@@ -95,6 +98,8 @@ public final class BigIntegerNativeUiProbe {
         if (++ticks % 30 != 0) return;
         try {
             if (failure != null) throw new AssertionError("Server probe failed", failure);
+            System.out.println("NATIVE_UI_PHASE phase=" + phase + " wireless=" + wireless
+                    + " back=" + checkedBack + " screen=" + (mc.screen == null ? "none" : mc.screen.getClass().getSimpleName()));
             switch (phase) {
                 case 0 ->
                         server(
@@ -248,32 +253,57 @@ public final class BigIntegerNativeUiProbe {
                                     .equals(N.multiply(BigInteger.valueOf(4)).add(BigInteger.ONE)),
                             "plus button rounded");
                     widget.ae2lt$setBig(N.multiply(BigInteger.valueOf(4)));
-                }
-                case 5 -> {
+                    // Desktop Shift state requests AE2 auto-start.
+                    // This acceptance flow intentionally exercises the manual Start button.
+                    if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+                        require(++shiftWaits <= 20, "Shift remained held during the manual-start probe");
+                        System.out.println("NATIVE_UI_WAIT_SHIFT_RELEASE");
+                        return;
+                    }
+                    shiftWaits = 0;
+                    System.out.println("NATIVE_UI_CONFIRM amount=" + widget.ae2lt$getBig().orElseThrow()
+                            + " missing=" + ((appeng.client.gui.widgets.NumberEntryWidget) widget).startsWithEquals());
                     shot("amount");
                     var confirm = CraftAmountScreen.class.getDeclaredMethod("confirm");
                     confirm.setAccessible(true);
-                    confirm.invoke(mc.screen);
+                    confirm.invoke(screen);
                 }
+                case 5 -> server(p -> System.out.println("NATIVE_UI_SERVER menu=" + p.containerMenu.getClass().getSimpleName()
+                        + " autoStart=" + (p.containerMenu instanceof CraftConfirmMenu m && m.autoStart)
+                        + " bigBusy=" + cpu.bigCrafting().busy()));
                 case 6 -> {
                     require(
                             mc.screen instanceof AE2LtCraftConfirmScreen,
                             "existing confirmation report missing: " + mc.screen);
                     var menu = ((AE2LtCraftConfirmScreen) mc.screen).getMenu();
-                    require(((BigConfirmMenu) menu).ae2lt$isBig(), "big plan flag missing");
+                    require(((com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) menu).thunderbolt$isExactRequest()
+                            != LONG_REQUEST, "request chose the wrong long/exact route");
                     require(
                             menu.getPlan() != null && !menu.getPlan().isSimulation(),
                             "exact plan not executable");
-                    var report = ExactPlanReports.get(menu.getPlan());
-                    require(
-                            report.entries().get(AEItemKey.of(Items.OAK_LOG)).stored().equals(N),
-                            "confirmation stock rounded");
-                    require(
-                            report.entries()
-                                    .get(AEItemKey.of(Items.OAK_PLANKS))
-                                    .crafting()
-                                    .equals(N.multiply(BigInteger.valueOf(4))),
-                            "confirmation output rounded");
+                    if (LONG_REQUEST) {
+                        server(p -> {
+                            try {
+                                var result = CraftConfirmMenu.class.getDeclaredField("result");
+                                result.setAccessible(true);
+                                var plan = (appeng.api.networking.crafting.ICraftingPlan) result.get(p.containerMenu);
+                                require(!(plan instanceof BigCraftingPlan), "3G request entered BigInteger backend");
+                                require(plan.finalOutput().amount() == 3_000_000_000L,
+                                        "3G request was truncated before submission");
+                            } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+                        });
+                    } else {
+                        var report = ExactPlanReports.get(menu.getPlan());
+                        require(
+                                report.entries().get(AEItemKey.of(Items.OAK_LOG)).stored().equals(N),
+                                "confirmation stock rounded");
+                        require(
+                                report.entries()
+                                        .get(AEItemKey.of(Items.OAK_PLANKS))
+                                        .crafting()
+                                        .equals(N.multiply(BigInteger.valueOf(4))),
+                                "confirmation output rounded");
+                    }
                     shot("confirm");
                     if (!checkedBack) {
                         checkedBack = true;
@@ -287,9 +317,28 @@ public final class BigIntegerNativeUiProbe {
                 case 7 ->
                         server(
                                 p -> {
+                                    if (LONG_REQUEST) {
+                                        var stock = BigStorageOps.snapshot(cpu.getGrid().getStorageService().getInventory(),
+                                                IActionSource.empty());
+                                        require(!cpu.bigCrafting().busy(), "3G request started an exact job");
+                                        require(N.multiply(BigInteger.valueOf(4)).equals(stock.get(AEItemKey.of(Items.OAK_PLANKS))),
+                                                "3G output did not settle in storage: " + stock);
+                                        require(stock.getOrDefault(AEItemKey.of(Items.OAK_LOG), BigInteger.ZERO).signum() == 0,
+                                                "3G request consumed the wrong raw quantity");
+                                        if (!wireless) {
+                                            BigStorageOps.extract(cpu.getGrid().getStorageService().getInventory(),
+                                                    AEItemKey.of(Items.OAK_PLANKS), N.multiply(BigInteger.valueOf(4)),
+                                                    Actionable.MODULATE, IActionSource.empty());
+                                            BigStorageOps.insert(cpu.getGrid().getStorageService().getInventory(),
+                                                    AEItemKey.of(Items.OAK_LOG), N, Actionable.MODULATE, IActionSource.empty());
+                                        }
+                                        return;
+                                    }
                                     require(
                                             cpu.bigCrafting().busy(),
-                                            "native Start did not submit exact job");
+                                            "native Start did not retain exact job; stock="
+                                                    + BigStorageOps.snapshot(cpu.getGrid().getStorageService().getInventory(),
+                                                            IActionSource.empty()));
                                     require(
                                             cpu.getGrid()
                                                     .getCraftingService()
@@ -299,6 +348,19 @@ public final class BigIntegerNativeUiProbe {
                                     MenuOpener.open(CraftingStatusMenu.TYPE, p, locator());
                                 });
                 case 8 -> {
+                    if (LONG_REQUEST) {
+                        if (!wireless) {
+                            wireless = true;
+                            checkedBack = false;
+                            phase = 2;
+                        } else {
+                            finished = true;
+                            System.out.println("LONG_NATIVE_UI_CONFIRMED wired+wireless 3G amount+confirm+back+start+settlement");
+                            server(p -> p.closeContainer());
+                            if (Boolean.getBoolean("ae2lt.bigNativeProbe.stop")) mc.stop();
+                        }
+                        break;
+                    }
                     require(
                             mc.screen instanceof CraftingStatusScreen,
                             "native status screen missing");
@@ -368,6 +430,7 @@ public final class BigIntegerNativeUiProbe {
                                 "BIGINT_NATIVE_UI_CONFIRMED wired+wireless"
                                         + " amount+confirm+start+status+cancel+stock");
                         server(p -> p.closeContainer());
+                        if (Boolean.getBoolean("ae2lt.bigNativeProbe.stop")) mc.stop();
                     }
                 }
             }
@@ -375,7 +438,8 @@ public final class BigIntegerNativeUiProbe {
         } catch (Throwable e) {
             finished = true;
             e.printStackTrace();
-            System.out.println("BIGINT_NATIVE_UI_FAILED phase=" + phase + " wireless=" + wireless);
+            System.out.println((LONG_REQUEST ? "LONG" : "BIGINT") + "_NATIVE_UI_FAILED phase=" + phase + " wireless=" + wireless);
+            if (Boolean.getBoolean("ae2lt.bigNativeProbe.stop")) mc.stop();
         }
     }
 
@@ -383,7 +447,7 @@ public final class BigIntegerNativeUiProbe {
         var mc = Minecraft.getInstance();
         Screenshot.grab(
                 mc.gameDirectory,
-                "native-big-" + (wireless ? "wireless-" : "wired-") + name + ".png",
+                (LONG_REQUEST ? "native-long-" : "native-big-") + (wireless ? "wireless-" : "wired-") + name + ".png",
                 mc.getMainRenderTarget(),
                 t -> {});
     }

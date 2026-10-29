@@ -126,15 +126,6 @@ versionRange = "${thunderbolt_version_range}"
 ordering = "AFTER"
 side = "BOTH"
 
-# LDLib2 supplies the multiblock scene renderer. The CurseForge/Modrinth project is still
-# named LDLib, but the 1.21 mod id is ldlib2.
-[[dependencies."${mod_id}"]]
-modId = "ldlib2"
-type = "required"
-versionRange = "${ldlib2_version_range}"
-ordering = "AFTER"
-side = "BOTH"
-
 [[dependencies."${mod_id}"]]
 modId = "neoecoae"
 type = "optional"
@@ -168,7 +159,8 @@ side = "CLIENT"
 [[dependencies."${mod_id}"]]
 modId = "advanced_ae"
 type = "optional"
-versionRange = "[0,)"
+# Reaction recipes switched from Glodium to AE2AddonLib's IngredientStack in 1.6.7.
+versionRange = "[1.6.7-1.21.1,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -183,7 +175,8 @@ side = "BOTH"
 modId = "extendedae_plus"
 type = "optional"
 versionRange = "[0,)"
-ordering = "AFTER"
+# Runtime-only integration; avoid a load-order cycle through NeoECO.
+ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]

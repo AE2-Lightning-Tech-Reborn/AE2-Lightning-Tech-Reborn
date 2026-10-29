@@ -112,7 +112,7 @@ class TianshuPatternUploadRoutingTest {
         assertTrue(upload.contains("boundUploadTargets.get(group)"));
         assertTrue(upload.contains("binding.slot()"));
         assertFalse(upload.contains("refreshUploadTargetsNow()"));
-        assertFalse(upload.contains("getTerminalGroup()"));
+        assertTrue(upload.contains("!target.getTerminalGroup().equals(group)"));
         assertFalse(upload.contains("firstFreePatternSlot("));
         assertTrue(menu.contains("summary.slots.add(new BoundUploadSlot(target, i))"));
     }
