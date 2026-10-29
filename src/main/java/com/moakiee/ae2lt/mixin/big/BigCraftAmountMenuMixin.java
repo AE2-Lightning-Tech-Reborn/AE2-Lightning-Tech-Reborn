@@ -41,7 +41,7 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void ae2lt$init(int id, Inventory inv, ISubMenuHost host, CallbackInfo ci) {
-        if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.context(host) != null;
+        if (!isClientSide()) ae2lt$bigAvailable = BigCraftingMenus.planningEnabled(host);
     }
 
     public boolean ae2lt$bigAvailable() {
@@ -59,7 +59,7 @@ public abstract class BigCraftAmountMenuMixin extends AEBaseMenu implements BigA
     public void ae2lt$confirm(BigInteger amount, boolean missing, boolean autoStart) {
         if (!(getPlayer() instanceof ServerPlayer player)
                 || !stillValid(player)
-                || BigCraftingMenus.context(getHost()) == null
+                || !BigCraftingMenus.planningEnabled(getHost())
                 || getWhatToCraft() == null) return;
         BigAmounts.nonNegative(amount);
         var key = getWhatToCraft().what();

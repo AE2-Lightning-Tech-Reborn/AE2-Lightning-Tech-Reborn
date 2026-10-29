@@ -47,6 +47,7 @@
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
+    "thunderbolt.TianshuPlanningServiceMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.CraftingCpuLogicMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",

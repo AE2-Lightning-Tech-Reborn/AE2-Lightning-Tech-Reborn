@@ -9,6 +9,7 @@ import appeng.menu.me.crafting.*;
 
 import com.moakiee.ae2lt.crafting.big.*;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReports;
+import com.moakiee.thunderbolt.core.crafting.algorithm.CraftingAlgorithmCalculationStatus;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -62,7 +63,7 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
     public void ae2lt$planBig(AEKey key, BigInteger n) {
         if (isClientSide()) return;
         var context = BigCraftingMenus.context(getHost());
-        if (context == null) return;
+        if (context == null || !BigCraftingMenus.planningEnabled(context.grid())) return;
         if (job != null) job.cancel(true);
         clearError();
         setPlan(null);
@@ -96,7 +97,9 @@ public abstract class BigCraftConfirmMenuMixin extends AEBaseMenu implements Big
             var finished = job.get();
             if (!ae2lt$isBig
                     && ExactPlanReports.isPreview(finished)
-                    && BigCraftingMenus.context(getHost()) != null) {
+                    && BigCraftingPlanningPolicy.ownsEngine(
+                            CraftingAlgorithmCalculationStatus.selected(job))
+                    && BigCraftingMenus.planningEnabled(getHost())) {
                 ae2lt$planBig(whatToCraft, BigInteger.valueOf(amount));
             } else if (finished instanceof BigCraftingPlan big) {
                 ae2lt$failure = big.failure();
