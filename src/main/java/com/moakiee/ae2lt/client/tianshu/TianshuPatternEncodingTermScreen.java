@@ -114,7 +114,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
             @Override
             public boolean mouseClicked(double x, double y, int button) {
-                if (button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT && visible && isMouseOver(x, y)) {
+                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
+                boolean rightClick = button == GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
+                if (rightClick && visible && active && isMouseOver(x, y)) {
                     if (hasShiftDown()) {
                         var selection = TianshuUploadSourceSelection.collect(menu);
                         switchToScreen(new TianshuUploadAliasManagementScreen<>(

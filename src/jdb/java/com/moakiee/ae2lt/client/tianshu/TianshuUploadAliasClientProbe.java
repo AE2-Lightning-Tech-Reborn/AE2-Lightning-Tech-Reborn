@@ -153,7 +153,9 @@ public final class TianshuUploadAliasClientProbe {
                             .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
                                     .anyMatch(t -> t.getString().equals(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.encode_management").getString())))
                             .map(c -> (appeng.client.gui.widgets.ActionButton)c).findFirst().orElseThrow();
-                    require(button.mouseClicked(button.getX() + 2, button.getY() + 2, 1), "native encode right click handled");
+                    require(terminal.mouseClicked(button.getX() + 2, button.getY() + 2, 1),
+                            "screen dispatches encode right click without re-encoding");
+                    terminal.mouseReleased(button.getX() + 2, button.getY() + 2, 1);
                 }
                 case 10 -> server(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
