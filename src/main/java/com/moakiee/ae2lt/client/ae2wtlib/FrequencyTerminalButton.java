@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.client.ae2wtlib;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
 
@@ -11,6 +13,7 @@ import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 
 import de.mari_023.ae2wtlib.api.terminal.IUniversalTerminalCapable;
+import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
 
 /**
  * Adds a "configure frequency card" button to ae2wtlib wireless terminal
@@ -34,7 +37,22 @@ public final class FrequencyTerminalButton {
             return false;
         }
 
-        return screen instanceof IUniversalTerminalCapable;
+        return findTerminalHost(screen) != null;
+    }
+
+    @Nullable
+    static WTMenuHost findTerminalHost(Object screen) {
+        if (!(screen instanceof IUniversalTerminalCapable terminalScreen)) {
+            return null;
+        }
+
+        try {
+            return terminalScreen.getHost();
+        } catch (ClassCastException ignored) {
+            // AE2CS shares this interface between wired and wireless screens, but
+            // its wired screen casts a terminal part to WTMenuHost inside getHost().
+            return null;
+        }
     }
 
     public static ToolbarButtons addToToolbar(AEBaseScreen<?> screen) {
@@ -53,11 +71,7 @@ public final class FrequencyTerminalButton {
     }
 
     private static ItemStack findInstalledFrequencyCard(AEBaseScreen<?> screen) {
-        if (!(screen instanceof IUniversalTerminalCapable terminalScreen)) {
-            return ItemStack.EMPTY;
-        }
-
-        var host = terminalScreen.getHost();
+        var host = findTerminalHost(screen);
         if (host == null) {
             return ItemStack.EMPTY;
         }
