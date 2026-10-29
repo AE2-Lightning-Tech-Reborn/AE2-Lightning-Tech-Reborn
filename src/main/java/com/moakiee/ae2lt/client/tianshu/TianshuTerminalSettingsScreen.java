@@ -22,22 +22,43 @@ import org.lwjgl.glfw.GLFW;
 public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         extends AESubScreen<M, TerminalSettingsScreen<M>> {
     @Override
-    protected PageAnchor getHelpTopic() {
-        return TianshuMaintenanceTermScreen.terminalHelpTopic("settings");
-    }
+    protected PageAnchor getHelpTopic() { return TianshuMaintenanceTermScreen.terminalHelpTopic("settings"); }
 
     private net.minecraft.client.gui.components.Button triggerButton;
+    private net.minecraft.client.gui.components.Button autoUploadButton;
     private net.minecraft.client.gui.components.Button duplicateEncodingButton;
     private net.minecraft.client.gui.components.Button wirelessSupplyButton;
+    private final boolean patternTerminal;
 
     public TianshuTerminalSettingsScreen(TerminalSettingsScreen<M> parent) {
         super(parent, "/screens/tianshu_terminal_settings.json");
+        patternTerminal = menu instanceof com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
         hideTerminalSlots();
         widgets.add("back", new TabButton(Icon.ARROW_LEFT,
                 Component.translatable("gui.back"), ignored -> returnToParent()));
-        triggerButton = widgets.addButton("uploadTrigger", triggerLabel(), this::cycleTrigger);
-        duplicateEncodingButton = widgets.addButton(
-                "duplicateEncoding", duplicateEncodingLabel(), this::toggleDuplicateEncoding);
+        if (patternTerminal) {
+            widgets.addButton("uploadAliases", TianshuUploadAliasScreen.text("title"), () ->
+                    switchToScreen(new TianshuUploadAliasManagementScreen<>(this, "", "")));
+            autoUploadButton = widgets.addButton("autoUpload", autoUploadLabel(), () -> {
+                if (AE2LTClientConfig.setUploadMatchMode(AE2LTClientConfig.uploadMatchMode().next())) {
+                    autoUploadButton.setMessage(autoUploadLabel());
+                    autoUploadButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                            TianshuUploadAliasScreen.text("auto_mode_help")));
+                } else {
+                    autoUploadButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                            TianshuUploadAliasScreen.text("save_failed")));
+                }
+            });
+            autoUploadButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    TianshuUploadAliasScreen.text("auto_mode_help")));
+            triggerButton = widgets.addButton("uploadTrigger", triggerLabel(), this::cycleTrigger);
+            duplicateEncodingButton = widgets.addButton(
+                    "duplicateEncoding", duplicateEncodingLabel(), this::toggleDuplicateEncoding);
+            triggerButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint")));
+            duplicateEncodingButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint")));
+        }
         wirelessSupplyButton = widgets.addButton("jeiWirelessSupply", wirelessSupplyLabel(), () -> {
             AE2LTClientConfig.setJeiWirelessSupply(!AE2LTClientConfig.jeiWirelessSupply());
             if (net.minecraftforge.fml.ModList.get().isLoaded("jei")) JeiWirelessSupplyClient.clear();
@@ -58,6 +79,11 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
                 Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK, Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK)) {
             setSlotsHidden(semantic, true);
         }
+    }
+
+    private Component autoUploadLabel() {
+        return TianshuUploadAliasScreen.text("auto_mode."
+                + AE2LTClientConfig.uploadMatchMode().name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private void cycleTrigger() {
@@ -91,19 +117,17 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
-                10, 30, 0x404040, false);
-        graphics.drawWordWrap(font,
-                Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint"),
-                10, 72, 180, 0x666666);
-        graphics.drawString(font,
-                Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
-                10, 118, 0x404040, false);
-        graphics.drawWordWrap(font,
-                Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint"),
-                10, 160, 180, 0x666666);
+        if (patternTerminal) {
+            graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
+                    10, 28, 0x404040, false);
+            graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.auto_upload"),
+                    10, 64, 0x404040, false);
+            graphics.drawString(font,
+                    Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
+                    10, 132, 0x404040, false);
+        }
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
-                10, 202, 0x404040, false);
+                10, patternTerminal ? 176 : 30, 0x404040, false);
     }
 
     @Override

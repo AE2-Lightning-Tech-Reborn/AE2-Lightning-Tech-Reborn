@@ -94,7 +94,32 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             modePanels.put(mode, panel);
         }
 
-        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()));
+        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
+            @Override
+            public boolean mouseClicked(double x, double y, int button) {
+                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
+                boolean rightClick = button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
+                if (rightClick && visible && active && isMouseOver(x, y)) {
+                    if (hasShiftDown()) {
+                        var selection = TianshuUploadSourceSelection.collect(menu);
+                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
+                    } else menu.undoLastUpload();
+                    return true;
+                }
+                return super.mouseClicked(x, y, button);
+            }
+
+            @Override
+            public List<Component> getTooltipMessage() {
+                var lines = new java.util.ArrayList<Component>(super.getTooltipMessage());
+                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+                lines.add(Component.translatable(menu.canUndoUpload
+                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+                return lines;
+            }
+        });
 
         addExtraTab(TianshuEncodingMode.CLOSED_LOOP, ModItems.CLOSED_LOOP_PATTERN.get().getDefaultInstance(),
                 Component.translatable("ae2lt.tianshu.terminal.mode.closed_loop"), "modeTabButton4");

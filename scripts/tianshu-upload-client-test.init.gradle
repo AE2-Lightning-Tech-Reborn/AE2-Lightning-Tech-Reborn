@@ -1,0 +1,28 @@
+allprojects {
+    afterEvaluate {
+        def selection = ['TianshuUploadAliasClientProbe', 'uploadAliasClientProbe', 'upload-alias-probe.txt']
+        sourceSets.jdb.java.setIncludes(['**/TianshuUploadAliasClientProbe.java'])
+        def directory = project.file(findProperty('wireless_client_directory') ?: 'build/alpha-port-tianshu-upload-alias-client')
+        minecraft.runs.client {
+            workingDirectory directory
+            property 'ae2lt.' + selection[1], 'true'
+            args '--quickPlaySingleplayer', 'WirelessQA', '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                def seed = project.file(findProperty('wireless_client_seed') ?: 'build/controller-ui-probe/saves/ControllerUIQA')
+                if (!new File(seed, 'level.dat').isFile()) throw new GradleException('Missing disposable client world: ' + seed)
+                def target = new File(directory, 'saves/WirelessQA')
+                if (!new File(target, 'level.dat').isFile()) project.copy { from seed; into target; exclude 'session.lock' }
+                directory.mkdirs()
+                new File(directory, selection[2]).delete()
+                new File(directory, 'options.txt').text = 'version:3465\nonboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nguiScale:2\nrenderDistance:3\nsimulationDistance:5\nlang:zh_cn\n'
+            }
+            doLast {
+                def result = new File(directory, selection[2])
+                if (!result.isFile() || !result.text.contains('TIANSHU_ALIAS_QA PASS:')) throw new GradleException('Upload alias client probe failed: ' + result)
+            }
+        }
+    }
+}

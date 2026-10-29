@@ -14,6 +14,18 @@ import mezz.jei.api.gui.IRecipeLayoutDrawable;
  */
 public final class JeiRecipeTransferMetadata {
     private static final ThreadLocal<Snapshot> CURRENT = new ThreadLocal<>();
+    private static mezz.jei.api.runtime.IJeiRuntime runtime;
+
+    public static void setRuntime(mezz.jei.api.runtime.IJeiRuntime value) { runtime = value; }
+
+    /** The machines shown in JEI's left catalyst column, using stable item registry IDs. */
+    public static List<String> machineIds(mezz.jei.api.recipe.RecipeType<?> type) {
+        if (runtime == null || type == null) return List.of();
+        return runtime.getRecipeManager().createRecipeCatalystLookup(type).getItemStack()
+                .filter(stack -> !stack.isEmpty())
+                .map(stack -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())
+                .distinct().toList();
+    }
 
     private JeiRecipeTransferMetadata() {
     }
@@ -30,7 +42,7 @@ public final class JeiRecipeTransferMetadata {
         if (category.getTitle() != null && !category.getTitle().getString().isBlank()) {
             aliases.add(category.getTitle().getString());
         }
-        CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases)));
+        CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases), machineIds(type)));
     }
 
     public static Snapshot snapshotFor(TianshuPatternEncodingTermMenu menu) {
@@ -43,7 +55,7 @@ public final class JeiRecipeTransferMetadata {
     }
 
     public record Snapshot(
-            TianshuPatternEncodingTermMenu menu, String sourceKey, List<String> defaultAliases) {
-        private static final Snapshot EMPTY = new Snapshot(null, "", List.of());
+            TianshuPatternEncodingTermMenu menu, String sourceKey, List<String> defaultAliases, List<String> machineIds) {
+        private static final Snapshot EMPTY = new Snapshot(null, "", List.of(), List.of());
     }
 }

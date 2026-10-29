@@ -121,6 +121,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean encodedClosedLoop;
     @GuiSync(124)
     public int triggeredUploadAck;
+    @GuiSync(146)
+    public boolean canUndoUpload;
     /** 0=none, 1=member cannot be decoded, 2=other invalid closed-loop declaration. */
     @GuiSync(125)
     public int closedLoopEncodeState;
@@ -177,6 +179,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private List<PatternContainer> uploadTargets = List.of();
     /** Server-side slot bindings captured by the same refresh that produced uploadTargetGroups. */
     private Map<PatternContainerGroup, List<BoundUploadSlot>> boundUploadTargets = Map.of();
+    private ItemStack boundUploadPattern = ItemStack.EMPTY;
+    private ItemStack boundUploadLivePattern = ItemStack.EMPTY;
+    private int boundUploadRevision;
+    private ItemStack lastAutoUploadPattern = ItemStack.EMPTY;
+    private ItemStack lastAutoUploadContents = ItemStack.EMPTY;
     private List<TianshuUploadTargetData> uploadTargetGroups = List.of();
     private int uploadTargetsRevision;
     private boolean pendingTriggeredUpload;
@@ -185,6 +192,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private int expectedTriggeredUploadAck;
     private boolean directUploadTargetsRequested;
     private int expectedDirectUploadTargetRevision;
+    private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo =
+            new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo();
     /** Prevents a committed encoding result from being mistaken for a manually inserted pattern. */
     private boolean ae2EncodingInProgress;
     /** Exact encoded stack that still represents one blank pattern extracted by this menu. */
@@ -289,6 +298,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         registerClientAction("clearClosedLoopDraft", this::clearClosedLoopDraftServer);
         registerClientAction("encodeTianshu", Boolean.class, this::encodeServerWithOptions);
         registerClientAction("uploadEncodedPattern", Integer.class, this::uploadEncodedPatternServer);
+        registerClientAction("undoLastUpload", this::undoLastUpload);
         registerClientAction("setMaintainableView", Boolean.class, this::setMaintainableView);
         registerClientAction("setTerminalViewMode", TianshuTerminalViewMode.class, this::setTerminalViewMode);
         registerClientAction("setTemporaryTerminalViewMode", TianshuTerminalViewMode.class, mode -> applyTerminalViewMode(mode, false));
@@ -302,6 +312,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return;
         }
         if (isServerSide()) {
+            canUndoUpload = uploadUndo.available();
             returnLegacyBlankPatternsToNetwork();
             tianshuMode = tianshuHost.getTianshuEncodingMode();
             var selected = resolveOrBindTianshu();
@@ -335,6 +346,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void removed(Player player) {
         if (isServerSide()) {
+            uploadUndo.clear();
+            lastAutoUploadPattern = lastAutoUploadContents = ItemStack.EMPTY;
             if (closedLoopDraftDirty && tianshuMode == TianshuEncodingMode.CLOSED_LOOP) {
                 rebuildClosedLoopDraft();
             }
@@ -415,11 +428,17 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return direct;
     }
 
-    public void clearClientUploadSelectionState() {
+    /** Entering alias management must also cancel an encoding acknowledgement still in flight. */
+    public void cancelPendingClientUpload() {
         if (!isClientSide()) return;
         pendingTriggeredUpload = false;
         pendingDirectUpload = false;
         directUploadTargetsRequested = false;
+    }
+
+    public void clearClientUploadSelectionState() {
+        if (!isClientSide()) return;
+        cancelPendingClientUpload();
         uploadTargetGroups = List.of();
         uploadTargetsRevision++;
     }
@@ -958,6 +977,27 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, (long) value + delta));
     }
 
+    /** Reclaims only this player's last upload in this menu session. */
+    public void undoLastUpload() {
+        if (isClientSide()) {
+            cancelPendingClientUpload();
+            sendClientAction("undoLastUpload");
+            return;
+        }
+        if (!(getPlayer() instanceof ServerPlayer player) || player.containerMenu != this || !stillValid(player)) return;
+        var node = tianshuHost.getActionableNode();
+        var grid = node != null && node.isActive() ? node.getGrid() : null;
+        var result = uploadUndo.undo(grid, tianshuHost.getLogic().getEncodedPatternInv(), discoverUploadTargets());
+        if (result == com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo.Result.SUCCESS) {
+            uploadState = 0;
+            rememberAutoUploadPattern(tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
+            settleNetworkBlankCharge();
+        }
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                "ae2lt.tianshu.upload.undo." + result.name().toLowerCase(java.util.Locale.ROOT)), false);
+        broadcastChanges();
+    }
+
     /** Uploads the encoded pattern through the shared terminal upload action. */
     public void uploadEncodedPattern() {
         if (isClientSide()) {
@@ -1001,6 +1041,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         var result = ClosedLoopPatternUploadService.upload(target, payload);
         var success = result == ClosedLoopPatternRepository.PutResult.ADDED
                 || result == ClosedLoopPatternRepository.PutResult.UPDATED;
+        if (success) uploadUndo.closedLoop(target, target.getClosedLoopPatternRepository(), payload, removed);
         if (!success) sourceInventory.addItems(removed);
         finishUpload(success);
     }
@@ -1040,11 +1081,12 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isServerSide() || player == null) return;
         refreshUploadTargetsNow();
         PacketSender.sendToPlayer(player,
-                new UploadTargetsSyncPacket(containerId, uploadTargetGroups));
+                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups));
     }
 
-    public void receiveUploadTargets(List<TianshuUploadTargetData> targets) {
+    public void receiveUploadTargets(List<TianshuUploadTargetData> targets, int revision) {
         if (!isClientSide()) return;
+        boundUploadRevision = revision;
         uploadTargetGroups = targets == null ? List.of() : List.copyOf(targets);
         uploadTargetsRevision++;
     }
@@ -1058,17 +1100,36 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     public void uploadTianshuPatternToTarget(PatternContainerGroup group) {
-        if (!isClientSide() || group == null) return;
-        uploadState = 2;
-        PacketSender.sendToServer(new UploadPatternToTargetPacket(containerId, group));
+        uploadTianshuPatternToTarget(group, false);
     }
 
-    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group) {
-        if (!isServerSide() || player == null || group == null) return;
+    public void uploadTianshuPatternToTarget(PatternContainerGroup group, boolean automatic) {
+        if (!isClientSide() || group == null) return;
         uploadState = 2;
+        PacketSender.sendToServer(new UploadPatternToTargetPacket(containerId, boundUploadRevision,
+                automatic ? triggeredUploadAck : -1, group));
+    }
+
+    public int getUploadTargetRequestRevision() { return boundUploadRevision; }
+
+    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group, int revision) {
+        uploadTianshuPatternToTarget(player, group, revision, -1);
+    }
+
+    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group, int revision, int encodingRevision) {
+        if (!isServerSide() || player == null || group == null
+                || player != getPlayer() || player.containerMenu != this || !stillValid(player)) return;
+        uploadState = 2;
+        if (revision != boundUploadRevision) {
+            finishProviderUpload(player, false);
+            return;
+        }
         var stack = tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0);
         if (TianshuPatternUploadRouting.classify(stack, getPlayer().level())
-                != TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER) {
+                != TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER
+                || stack != boundUploadLivePattern || !ItemStack.matches(stack, boundUploadPattern)
+                || (encodingRevision >= 0 && (encodingRevision != triggeredUploadAck
+                        || stack != lastAutoUploadPattern || !ItemStack.matches(stack, lastAutoUploadContents)))) {
             finishProviderUpload(player, false);
             return;
         }
@@ -1079,10 +1140,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             finishProviderUpload(player, false);
             return;
         }
+        var activeTargets = discoverUploadTargets();
         for (var binding : targets) {
             var target = binding.target();
+            if (activeTargets.stream().noneMatch(active -> active == target)) continue;
             try {
-                if (target.getGrid() != grid || !target.isVisibleInTerminal()) continue;
+                if (target.getGrid() != grid || !target.isVisibleInTerminal()
+                        || !target.getTerminalGroup().equals(group)) continue;
                 var inventory = target.getTerminalPatternInventory();
                 int slot = binding.slot();
                 if (slot < 0 || slot >= inventory.size()
@@ -1141,6 +1205,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 finishProviderUpload(player, false);
                 return;
             }
+            uploadUndo.provider(selected, selectedSlot, removed);
             if (selected instanceof PatternProviderLogicHost logicHost) logicHost.saveChanges();
             finishProviderUpload(player, true);
         } catch (RuntimeException failure) {
@@ -1158,11 +1223,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void finishProviderUpload(ServerPlayer player, boolean success) {
+        // Bind a concurrently replaced source before publishing this request's failure result.
+        refreshDerivedConfiguration();
         settleNetworkBlankCharge();
         uploadState = success ? 1 : 3;
         refreshUploadTargetsNow();
         PacketSender.sendToPlayer(player,
-                new UploadTargetsSyncPacket(containerId, uploadTargetGroups));
+                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups));
         broadcastChanges();
     }
 
@@ -1172,6 +1239,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void refreshUploadTargetsNow(ItemStack stack) {
+        // Different players can share a wired terminal's encoded slot. A previous target list
+        // must never authorize uploading a newly replaced pattern from that shared inventory.
+        boundUploadRevision++;
+        boundUploadLivePattern = stack;
+        boundUploadPattern = stack.copy();
         uploadTargets = discoverUploadTargets();
         if (uploadTargets.isEmpty()) {
             boundUploadTargets = Map.of();
@@ -1919,6 +1991,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 && com.moakiee.ae2lt.config.AE2LTClientConfig.interceptDuplicatePatternEncoding());
     }
 
+    private void rememberAutoUploadPattern(ItemStack pattern) {
+        lastAutoUploadPattern = pattern;
+        lastAutoUploadContents = pattern.copy();
+    }
+
     private void encodeServerWithOptions(Boolean interceptDuplicateUpload) {
         if (!isServerSide()) return;
         boolean interceptDuplicates = Boolean.TRUE.equals(interceptDuplicateUpload);
@@ -1951,6 +2028,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                     broadcastChanges();
                     return;
                 }
+                rememberAutoUploadPattern(encodedInventory.getStackInSlot(0));
                 triggeredUploadAck++;
             }
             broadcastChanges();
@@ -1976,6 +2054,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 refundableEncodedPattern = result.copy();
             }
             if (TianshuPatternUploadRouting.isValidEncodingResult(result, getPlayer().level())) {
+                rememberAutoUploadPattern(encodedInventory.getStackInSlot(0));
                 triggeredUploadAck++;
             }
             broadcastChanges();

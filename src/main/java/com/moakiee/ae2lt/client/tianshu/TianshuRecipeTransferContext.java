@@ -59,21 +59,34 @@ public final class TianshuRecipeTransferContext {
             Object recipeBase,
             String fallbackSourceKey,
             Iterable<String> additionalAliases) {
-        // 1.20.1 recipes carry no RecipeHolder wrapper, so only direct Recipe
-        // instances (as handed over by JEI/EMI transfers) are accepted here.
-        Recipe<?> recipe = recipeBase instanceof Recipe<?> direct ? direct : null;
-        String sourceKey = "";
+        captureVanillaRecipe(menu, recipeBase, fallbackSourceKey, additionalAliases, List.of());
+    }
+
+    public static void captureVanillaRecipe(TianshuPatternEncodingTermMenu menu, Object recipeBase,
+            String fallbackSourceKey, Iterable<String> additionalAliases, List<String> machineIds) {
+        String sourceKey = sourceKeyFor(recipeBase, fallbackSourceKey);
         String recipeId = "";
         var defaultAliases = new ArrayList<String>();
-        if (recipe != null) {
-            var typeId = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
-            sourceKey = typeId == null ? "" : typeId.toString();
+        if (recipeBase instanceof Recipe<?> recipe) {
+            recipeId = recipe.getId().toString();
+            addDefaultAlias(defaultAliases, firstPathSegment(recipe.getId().getPath()));
+            addDefaultAlias(defaultAliases,
+                    TianshuUploadAliasRules.namespaceGlob(recipe.getId().getNamespace()));
         }
-        if (sourceKey.isBlank() && fallbackSourceKey != null) sourceKey = fallbackSourceKey;
         if (additionalAliases != null) {
             additionalAliases.forEach(value -> addDefaultAlias(defaultAliases, value));
         }
-        publish(menu, sourceKey, recipeId, defaultAliases);
+        publish(menu, sourceKey, recipeId, defaultAliases, machineIds);
+    }
+
+    /** Resolves source identity without changing the terminal's transferred recipe context. */
+    public static String sourceKeyFor(Object recipeBase, String fallbackSourceKey) {
+        Recipe<?> recipe = recipeBase instanceof Recipe<?> direct ? direct : null;
+        if (recipe != null) {
+            var typeId = BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
+            if (typeId != null) return typeId.toString();
+        }
+        return fallbackSourceKey == null ? "" : fallbackSourceKey;
     }
 
     /** Publishes viewer metadata without exposing optional viewer types to common code. */
@@ -82,8 +95,14 @@ public final class TianshuRecipeTransferContext {
             String sourceKey,
             String recipeId,
             Iterable<String> defaultAliases) {
+        publish(menu, sourceKey, recipeId, defaultAliases, List.of());
+    }
+
+    public static synchronized void publish(TianshuPatternEncodingTermMenu menu, String sourceKey,
+            String recipeId, Iterable<String> defaultAliases, List<String> machineIds) {
         if (menu == null) return;
         var aliases = new LinkedHashSet<String>();
+        if (machineIds != null) machineIds.stream().filter(id -> id != null && !id.isBlank()).forEach(aliases::add);
         addSourceAliases(aliases, sourceKey);
         if (defaultAliases != null) {
             defaultAliases.forEach(value -> {
@@ -94,7 +113,7 @@ public final class TianshuRecipeTransferContext {
         snapshot = new Snapshot(
                 sourceKey == null ? "" : sourceKey,
                 recipeId == null ? "" : recipeId,
-                List.copyOf(aliases));
+                List.copyOf(aliases), machineIds);
         resetPendingEncoding();
     }
 
@@ -200,13 +219,18 @@ public final class TianshuRecipeTransferContext {
         return slash >= 0 ? path.substring(0, slash) : path;
     }
 
-    public record Snapshot(String sourceKey, String recipeId, List<String> defaultAliases) {
+    public record Snapshot(String sourceKey, String recipeId, List<String> defaultAliases, List<String> machineIds) {
+        public Snapshot(String sourceKey, String recipeId, List<String> defaultAliases) {
+            this(sourceKey, recipeId, defaultAliases, List.of());
+        }
         private static final Snapshot EMPTY = new Snapshot("", "", List.of());
 
         public Snapshot {
             sourceKey = sourceKey == null ? "" : sourceKey;
             recipeId = recipeId == null ? "" : recipeId;
             defaultAliases = defaultAliases == null ? List.of() : List.copyOf(defaultAliases);
+            machineIds = machineIds == null ? List.of() : machineIds.stream()
+                    .filter(id -> id != null && !id.isBlank()).distinct().toList();
         }
     }
 }

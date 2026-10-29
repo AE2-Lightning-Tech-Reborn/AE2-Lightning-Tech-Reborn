@@ -205,7 +205,7 @@ public final class ClientNetworkPacketHandlers {
     public static void handleUploadTargetsSync(UploadTargetsSyncPacket packet) {
         TianshuPatternEncodingTermMenu menu = getTianshuMenu(packet.containerId());
         if (menu != null) {
-            menu.receiveUploadTargets(packet.targets());
+            menu.receiveUploadTargets(packet.targets(), packet.revision());
         }
     }
 

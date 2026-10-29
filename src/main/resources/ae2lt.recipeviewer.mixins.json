@@ -14,7 +14,8 @@
     "emi.EmiRecipeTransferResultAccessor",
     "jeisupply.JeiWirelessSupplyMixin",
     "jeisupply.JeiWirelessSupplyServiceMixin",
-    "jeisupply.JeiWirelessSupplyContextAccessor"
+    "jeisupply.JeiWirelessSupplyContextAccessor",
+    "jei.JeiRecipesGuiAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

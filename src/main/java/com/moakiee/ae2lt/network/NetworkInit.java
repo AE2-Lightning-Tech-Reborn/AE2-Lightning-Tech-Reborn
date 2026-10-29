@@ -36,7 +36,7 @@ public final class NetworkInit {
     // Version 6 adds the frequency-card link shortcut packet.
     // Version 11 adds wireless JEI crafting requests and craftable ingredient offers.
     // Version 12 requires executable exact reports in native AE2 confirmation packets.
-    private static final String PROTOCOL_VERSION = "13";
+    private static final String PROTOCOL_VERSION = "14";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,

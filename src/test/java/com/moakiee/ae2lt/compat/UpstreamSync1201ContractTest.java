@@ -38,7 +38,7 @@ class UpstreamSync1201ContractTest {
         assertTrue(packets.size() > 2);
         assertEquals(java.util.List.of("ReturnToDeviceManagementPacket", "NetworkManagementRequestPacket", "NetworkManagementSyncPacket"),
                 packets.subList(packets.size() - 3, packets.size()));
-        assertTrue(network.contains("PROTOCOL_VERSION = \"13\""),
+        assertTrue(network.contains("PROTOCOL_VERSION = \"14\""),
                 "reject clients with a different packet table");
     }
 

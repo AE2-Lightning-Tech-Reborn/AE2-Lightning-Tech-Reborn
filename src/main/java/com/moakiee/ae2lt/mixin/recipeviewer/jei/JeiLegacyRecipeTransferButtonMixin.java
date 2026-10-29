@@ -2,6 +2,9 @@ package com.moakiee.ae2lt.mixin.recipeviewer.jei;
 
 import com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata;
 import com.moakiee.ae2lt.client.tianshu.TianshuDirectUploadClient;
+import com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.gui.recipes.RecipesGui;
@@ -22,6 +25,63 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Pseudo
 @Mixin(targets = "mezz.jei.gui.recipes.RecipeTransferButton", remap = false)
 public abstract class JeiLegacyRecipeTransferButtonMixin {
+    @Unique private static java.lang.reflect.Field ae2lt$legacyButtonField;
+
+    @Unique
+    private static TianshuUploadAliasEditScreen<?> ae2lt$aliasEditor() {
+        var mc = Minecraft.getInstance();
+        var parent = mc.screen instanceof RecipesGui recipesGui
+                ? ((JeiRecipesGuiAccessor) recipesGui).ae2lt$getParentScreen() : mc.screen;
+        return parent instanceof TianshuUploadAliasEditScreen<?> editor
+                && mc.player != null && mc.player.containerMenu == editor.getMenu() ? editor : null;
+    }
+
+    @Inject(method = "update", at = @At("RETURN"))
+    private void ae2lt$enableAliasSourceSelection(CallbackInfo ci) {
+        if (ae2lt$aliasEditor() != null) {
+            try {
+                // GuiIconButton was removed in newer JEI 15. Keep this legacy type out of
+                // the shared compile API while using its verified vanilla widget base.
+                if (ae2lt$legacyButtonField == null) {
+                    ae2lt$legacyButtonField = getClass().getSuperclass().getDeclaredField("button");
+                    ae2lt$legacyButtonField.setAccessible(true);
+                }
+                var button = (net.minecraft.client.gui.components.AbstractWidget) ae2lt$legacyButtonField.get(this);
+                button.active = true;
+                button.visible = true;
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("Cannot access JEI 15 legacy transfer button", failure);
+            }
+        }
+    }
+
+    @Inject(method = {"onMouseClicked(Lmezz/jei/gui/input/UserInput;)Z",
+            "onMouseClicked(Lmezz/jei/common/input/UserInput;)Z"},
+            at = @At("HEAD"), cancellable = true, require = 1)
+    private void ae2lt$selectAliasSource(@org.spongepowered.asm.mixin.injection.Coerce
+            mezz.jei.api.gui.inputs.IJeiUserInput input, CallbackInfoReturnable<Boolean> cir) {
+        var editor = ae2lt$aliasEditor();
+        if (editor == null) return;
+        if (!input.isSimulate()) {
+            var layout = ae2lt$getRecipeLayout();
+            var type = layout.getRecipeCategory().getRecipeType();
+            editor.setRecipeSource(layout.getRecipe(), type == null || type.getUid() == null
+                    ? "" : type.getUid().toString());
+            if (Minecraft.getInstance().screen instanceof RecipesGui recipesGui) recipesGui.onClose();
+        }
+        cir.setReturnValue(true);
+    }
+
+    @Inject(method = {"getTooltips(Lmezz/jei/common/gui/JeiTooltip;)V",
+            "getTooltips(Lmezz/jei/api/gui/builder/ITooltipBuilder;)V"},
+            at = @At("HEAD"), cancellable = true, require = 1)
+    private void ae2lt$aliasSourceTooltip(@org.spongepowered.asm.mixin.injection.Coerce
+            mezz.jei.api.gui.builder.ITooltipBuilder tooltip, CallbackInfo ci) {
+        if (ae2lt$aliasEditor() == null) return;
+        tooltip.add(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.aliases.recipe_source"));
+        ci.cancel();
+    }
+
     @Accessor("recipeLayout")
     protected abstract IRecipeLayoutDrawable<?> ae2lt$getRecipeLayout();
 

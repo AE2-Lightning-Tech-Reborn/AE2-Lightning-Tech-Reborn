@@ -59,7 +59,9 @@ class TianshuWorkstationResourceTest {
     void wirelessSupplySwitchRetainsItsWidgetLayout() throws Exception {
         var style = json("assets/ae2/screens/tianshu_terminal_settings.json");
         assertTrue(style.getAsJsonObject("widgets").has("jeiWirelessSupply"));
-        assertTrue(style.getAsJsonObject("generatedBackground").get("height").getAsInt() >= 235);
+        var supply = style.getAsJsonObject("widgets").getAsJsonObject("jeiWirelessSupply");
+        assertTrue(supply.get("top").getAsInt() + supply.get("height").getAsInt()
+                <= style.getAsJsonObject("generatedBackground").get("height").getAsInt());
     }
 
     @Test

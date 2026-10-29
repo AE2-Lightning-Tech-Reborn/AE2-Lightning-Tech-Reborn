@@ -104,7 +104,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"13\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"14\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable as new packets are appended");

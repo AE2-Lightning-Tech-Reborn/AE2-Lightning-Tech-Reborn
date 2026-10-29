@@ -70,11 +70,13 @@ public class JEIPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
         JeiBookmarkAccessImpl.setRuntime(runtime);
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(runtime);
     }
 
     @Override
     public void onRuntimeUnavailable() {
         JeiBookmarkAccessImpl.clearRuntime();
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(null);
     }
 
     @Override
