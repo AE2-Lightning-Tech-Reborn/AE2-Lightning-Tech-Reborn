@@ -173,6 +173,12 @@ Use the search box to find stored network content and click an item to configure
 
 If the overview becomes a recovery page, zero out or delete old entries one by one to reveal the remaining entries.
 
+## Omniversal Patterns
+
+With a compatible Useless Mod installed, the Omniversal tab keeps an independent draft of inputs, outputs and reusable molds. Transfer a recipe from JEI or enter the draft manually. Middle-click a populated input or output to edit its amount; cycle outputs to choose the primary product. Drafts survive closing wired and wireless terminals.
+
+Encoding validates the complete draft against the current recipe catalog. Automatic upload requires the matching molds and prefers a ready multiblock furnace. Failed uploads retain the encoded pattern in the terminal.
+
 <a name="settings"></a>
 
 ## Terminal Settings

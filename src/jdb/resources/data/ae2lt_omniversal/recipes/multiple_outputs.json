@@ -1,0 +1,41 @@
+{
+  "type": "useless_mod:advanced_alloy_furnace",
+  "id": "ae2lt_omniversal:multiple_outputs",
+  "ingredients": [
+    {
+      "count": 2,
+      "ingredient": {
+        "item": "minecraft:iron_ingot"
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "minecraft:gold_ingot",
+      "count": 7
+    },
+    {
+      "id": "minecraft:diamond",
+      "count": 3
+    }
+  ],
+  "output_fluids": [
+    {
+      "id": "minecraft:water",
+      "amount": 20000
+    }
+  ],
+  "energy": 1000,
+  "process_time": 40,
+  "molds": [
+    {
+      "item": "minecraft:stick"
+    }
+  ],
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "useless_mod"
+    }
+  ]
+}

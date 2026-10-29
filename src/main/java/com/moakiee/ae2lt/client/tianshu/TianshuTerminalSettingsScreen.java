@@ -75,7 +75,9 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
                 SlotSemantics.SMITHING_TABLE_ADDITION, SlotSemantics.SMITHING_TABLE_RESULT,
                 SlotSemantics.STONECUTTING_INPUT, SlotSemantics.BLANK_PATTERN,
                 SlotSemantics.ENCODED_PATTERN, SlotSemantics.PLAYER_INVENTORY,
-                SlotSemantics.PLAYER_HOTBAR, Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER,
+                SlotSemantics.PLAYER_HOTBAR, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_INPUTS,
+                Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_MOLDS,
+                Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER,
                 Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_OUTPUT_MARK, Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK)) {
             setSlotsHidden(semantic, true);
         }

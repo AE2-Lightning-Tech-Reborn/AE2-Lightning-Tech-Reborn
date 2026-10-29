@@ -15,7 +15,8 @@
     "jeisupply.JeiWirelessSupplyMixin",
     "jeisupply.JeiWirelessSupplyServiceMixin",
     "jeisupply.JeiWirelessSupplyContextAccessor",
-    "jei.JeiRecipesGuiAccessor"
+    "jei.JeiRecipesGuiAccessor",
+    "useless.OmniversalPatternJeiTransferMixin"
   ],
   "injectors": {
     "defaultRequire": 0

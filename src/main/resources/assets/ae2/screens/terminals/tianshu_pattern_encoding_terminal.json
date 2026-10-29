@@ -12,6 +12,11 @@
     }
   },
   "widgets": {
+    "modeTabButton5": { "left": 173, "bottom": 68, "width": 20, "height": 22 },
+    "omniversalPanel": { "left": 9, "bottom": 166, "width": 124, "height": 66 },
+    "omniversalScrollbar": { "left": 15, "bottom": 158, "height": 52 },
+    "omniversalClear": { "left": 124, "bottom": 176, "width": 8, "height": 8 },
+    "omniversalCycleOutput": { "left": 114, "bottom": 176, "width": 8, "height": 8 },
     "toolbox": { "left": -9999, "top": -9999, "width": 59, "height": 66 },
     "modeTabButton3": { "left": 173, "bottom": 110, "width": 20, "height": 20 },
     "modeTabButton4": { "left": 173, "bottom": 90, "width": 20, "height": 22 },

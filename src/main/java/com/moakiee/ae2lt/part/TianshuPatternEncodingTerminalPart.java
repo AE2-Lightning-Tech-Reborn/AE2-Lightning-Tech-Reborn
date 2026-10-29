@@ -69,6 +69,16 @@ public final class TianshuPatternEncodingTerminalPart extends PatternEncodingTer
     }
 
     @Override
+    public com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft getOmniversalPatternDraft() {
+        return terminalState.getOmniversalDraft();
+    }
+
+    @Override
+    public void setOmniversalPatternDraft(com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft draft) {
+        if (terminalState.setOmniversalDraft(draft)) markForSave();
+    }
+
+    @Override
     public boolean isMaintainableView() {
         return terminalState.isMaintainableView();
     }

@@ -19,6 +19,7 @@ import com.moakiee.ae2lt.network.tianshu.SaveGlobalReservePacket;
 import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import com.moakiee.ae2lt.network.tianshu.UploadPatternToTargetPacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
+import com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,7 +37,7 @@ public final class NetworkInit {
     // Version 6 adds the frequency-card link shortcut packet.
     // Version 11 adds wireless JEI crafting requests and craftable ingredient offers.
     // Version 12 requires executable exact reports in native AE2 confirmation packets.
-    private static final String PROTOCOL_VERSION = "14";
+    private static final String PROTOCOL_VERSION = "15";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -408,6 +409,13 @@ public final class NetworkInit {
         CHANNEL.registerMessage(nextPacketId++, NetworkManagementSyncPacket.class,
                 (p, b) -> p.write(b), NetworkManagementSyncPacket::decode,
                 NetworkManagementSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(
+                nextPacketId++,
+                SelectOmniversalPatternPacket.class,
+                SelectOmniversalPatternPacket::write,
+                SelectOmniversalPatternPacket::decode,
+                SelectOmniversalPatternPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     public static ResourceLocation id(String path) {

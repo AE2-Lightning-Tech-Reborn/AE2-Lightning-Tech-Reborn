@@ -145,6 +145,13 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    ivy {
+        name = 'UselessModReleases'
+        url = 'https://github.com/SorrowMist/UselessMod/releases/download'
+        patternLayout { artifact '[revision]/[artifact]-[revision].[ext]' }
+        metadataSources { artifact() }
+        content { includeModule 'com.sorrowmist.useless', 'useless_mod' }
+    }
     mavenLocal()
     if (githubPackagesUser && githubPackagesToken) {
         maven {
@@ -218,6 +225,11 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly fg.deobf("com.sorrowmist.useless:useless_mod:${useless_version}")
+    if ((findProperty('enable_useless_runtime') ?: 'false').toBoolean()) {
+        runtimeOnly fg.deobf("com.sorrowmist.useless:useless_mod:${useless_version}")
+        runtimeOnly fg.deobf('maven.modrinth:geckolib:aVW7Z5da') // Forge 1.20.1, 4.8.2
+    }
 
     implementation fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
 
@@ -291,7 +303,9 @@ dependencies {
         runtimeOnly fg.deobf("maven.modrinth:advancedae:${advancedae_version}")
         // AdvancedAE instantiates GeoItem implementations but its 1.20.1 metadata does not
         // declare GeckoLib. Mirror the dependency from its categorized 1.20.1 source project.
-        runtimeOnly fg.deobf("curse.maven:geckolib-388172:${advancedae_geckolib_file_id}")
+        if (!(findProperty('enable_useless_runtime') ?: 'false').toBoolean()) {
+            runtimeOnly fg.deobf("curse.maven:geckolib-388172:${advancedae_geckolib_file_id}")
+        }
     }
     // ExtendedAE Plus is optional in production. Pin and expose its real Forge 1.20.1
     // artifact for reproducible compatibility smoke tests:

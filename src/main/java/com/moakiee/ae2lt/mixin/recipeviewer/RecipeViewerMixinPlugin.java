@@ -12,6 +12,7 @@ import net.minecraftforge.fml.loading.LoadingModList;
 
 /** Gates optional recipe-viewer mixins before their external API types are resolved. */
 public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
+    private boolean uselessPresent;
     private boolean jeiPresent;
     private boolean emiPresent;
     private boolean jeiSupplyPresent;
@@ -24,6 +25,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         // 1.20.1: AE2 embeds its JEI integration (EncodePatternTransferHandler and friends)
         // in the main jar, so only JEI itself is required (the 1.21 standalone
         // AE2JEIIntegration mod does not exist for 1.20.1).
+        uselessPresent = mods.getModFileById("useless_mod") != null;
         jeiPresent = mods.getModFileById("jei") != null;
         emiPresent = mods.getModFileById("emi") != null;
         configureJeiTransfer(mods.getModFileById("jei"), mods.getModFileById("ae2wtlib") != null);
@@ -49,6 +51,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains(".useless.")) return jeiPresent && uselessPresent;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) return jeiLegacyTransfer;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")
                 || mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyContextAccessor")) {

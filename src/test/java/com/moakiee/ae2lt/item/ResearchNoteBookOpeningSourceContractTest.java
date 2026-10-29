@@ -95,7 +95,8 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "ClosedLoopResultPagePacket",
                 "OpenResearchNotePacket",
                 "MatrixPatternMigrationActionPacket",
-                "MatrixPatternMigrationStatusPacket");
+                "MatrixPatternMigrationStatusPacket",
+                "SelectOmniversalPatternPacket");
         var matcher = Pattern.compile("(?m)^\\s+([A-Za-z0-9]+Packet)\\.class,$").matcher(network);
         List<String> actualOrder = new ArrayList<>();
         while (matcher.find()) {
@@ -104,7 +105,7 @@ class ResearchNoteBookOpeningSourceContractTest {
         int openPacket = network.indexOf("OpenResearchNotePacket.class");
         int direction = network.indexOf("Optional.of(NetworkDirection.PLAY_TO_CLIENT)", openPacket);
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"14\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"15\""));
         assertTrue(direction > openPacket, "The research-note packet must only travel to clients");
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable as new packets are appended");

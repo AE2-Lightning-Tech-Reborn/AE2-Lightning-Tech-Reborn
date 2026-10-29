@@ -13,24 +13,27 @@ import org.jetbrains.annotations.Nullable;
 public final class TianshuTerminalState {
     /** Historical schemas, not a migration: callers keep their original container and keys. */
     public enum NbtFormat {
-        PART("TianshuEncodingMode", "MaintainableView", "ClosedLoopDraft", "ProcessingDraft"),
-        WIRELESS("tianshuMode", "tianshuMaintainableView", "tianshuClosedLoopDraft", "tianshuProcessingDraft");
+        PART("TianshuEncodingMode", "MaintainableView", "ClosedLoopDraft", "ProcessingDraft", "OmniversalDraft"),
+        WIRELESS("tianshuMode", "tianshuMaintainableView", "tianshuClosedLoopDraft", "tianshuProcessingDraft", "tianshuOmniversalDraft");
 
         private final String mode;
         private final String view;
         private final String closedLoop;
         private final String processing;
+        private final String omniversal;
 
-        NbtFormat(String mode, String view, String closedLoop, String processing) {
+        NbtFormat(String mode, String view, String closedLoop, String processing, String omniversal) {
             this.mode = mode;
             this.view = view;
             this.closedLoop = closedLoop;
             this.processing = processing;
+            this.omniversal = omniversal;
         }
     }
 
     private TianshuEncodingMode encodingMode = TianshuEncodingMode.CRAFTING;
     private boolean maintainableView;
+    private OmniversalPatternDraft omniversalDraft = OmniversalPatternDraft.empty();
     @Nullable
     private ClosedLoopTerminalDraft closedLoopDraft;
     @Nullable
@@ -45,6 +48,14 @@ public final class TianshuTerminalState {
             return false;
         }
         encodingMode = mode;
+        return true;
+    }
+
+    public OmniversalPatternDraft getOmniversalDraft() { return omniversalDraft; }
+
+    public boolean setOmniversalDraft(OmniversalPatternDraft draft) {
+        if (omniversalDraft.equals(draft)) return false;
+        omniversalDraft = draft;
         return true;
     }
 
@@ -93,6 +104,7 @@ public final class TianshuTerminalState {
             encodingMode = TianshuEncodingMode.CRAFTING;
         }
         maintainableView = data.getBoolean(format.view);
+        omniversalDraft = OmniversalPatternDraft.read(data.getCompound(format.omniversal));
         closedLoopDraft = data.contains(format.closedLoop, Tag.TAG_COMPOUND)
                 ? ClosedLoopTerminalDraft.read(data.getCompound(format.closedLoop))
                 : null;
@@ -101,10 +113,12 @@ public final class TianshuTerminalState {
                 : null;
     }
 
-    /** Updates only our four fields, preserving native pattern data and other integrations' keys. */
+    /** Updates only authoring fields, preserving native pattern data and other integrations' keys. */
     public void write(CompoundTag data, NbtFormat format) {
         data.putString(format.mode, encodingMode.name());
         data.putBoolean(format.view, maintainableView);
+        if (omniversalDraft.isEmpty()) data.remove(format.omniversal);
+        else data.put(format.omniversal, omniversalDraft.write());
         if (closedLoopDraft != null) {
             data.put(format.closedLoop, closedLoopDraft.write());
         } else {
