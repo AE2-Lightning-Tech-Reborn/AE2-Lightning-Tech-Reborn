@@ -33,6 +33,20 @@ public final class JeiRecipeTransferMetadata {
         CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases)));
     }
 
+    /** Scope metadata to the real transfer, restoring it even if a handler throws or nests a transfer. */
+    public static boolean withLayout(net.minecraft.world.inventory.AbstractContainerMenu menu,
+            IRecipeLayoutDrawable<?> layout, java.util.function.BooleanSupplier transfer) {
+        var previous = CURRENT.get();
+        try {
+            clear();
+            if (menu instanceof TianshuPatternEncodingTermMenu tianshuMenu) begin(tianshuMenu, layout);
+            return transfer.getAsBoolean();
+        } finally {
+            if (previous == null) clear();
+            else CURRENT.set(previous);
+        }
+    }
+
     public static Snapshot snapshotFor(TianshuPatternEncodingTermMenu menu) {
         var snapshot = CURRENT.get();
         return snapshot != null && snapshot.menu() == menu ? snapshot : Snapshot.EMPTY;

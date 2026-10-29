@@ -235,17 +235,17 @@ public class JEIPlugin implements IModPlugin {
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
         var visibility = registration.getJeiHelpers().getIngredientVisibility();
-        processingPatternTransfer = new EncodePatternTransferHandler<>(
+        processingPatternTransfer = new TianshuPatternTransferHandler<>(new EncodePatternTransferHandler<>(
                 TianshuPatternEncodingTermMenu.TYPE,
                 TianshuPatternEncodingTermMenu.class,
                 helper,
-                visibility);
+                visibility));
         registration.addUniversalRecipeTransferHandler(processingPatternTransfer);
-        registration.addUniversalRecipeTransferHandler(new EncodePatternTransferHandler<>(
+        registration.addUniversalRecipeTransferHandler(new TianshuPatternTransferHandler<>(new EncodePatternTransferHandler<>(
                 TianshuWirelessPatternEncodingTermMenu.TYPE,
                 TianshuWirelessPatternEncodingTermMenu.class,
                 helper,
-                visibility));
+                visibility)));
 
     }
 

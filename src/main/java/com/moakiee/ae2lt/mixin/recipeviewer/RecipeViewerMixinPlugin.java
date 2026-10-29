@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.mixin.recipeviewer;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -20,9 +21,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void onLoad(String mixinPackage) {
         var mods = LoadingModList.get();
-        jeiSupplyPresent = mods.getModFileById("jei") != null;
-        // JEI 19.27+ performs the handler call from RecipeTransferService, not RecipeTransferUtil.
-        jeiLegacyTransfer = jeiSupplyPresent && !jeiAtLeast(mods.getModFileById("jei"), 19, 27);
+        configureJeiTransfer(mods.getModFileById("jei"));
         jeiPresent = mods.getModFileById("jei") != null
                 && mods.getModFileById("ae2jeiintegration") != null;
         emiPresent = mods.getModFileById("emi") != null;
@@ -30,13 +29,15 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
                 && mods.getModFileById("jei") != null;
     }
 
-    /** JEI 19.27 moved handler transfer out of RecipeTransferUtil. Unparseable versions keep the legacy hook. */
+    void configureJeiTransfer(net.neoforged.neoforgespi.language.IModFileInfo jei) {
+        jeiSupplyPresent = jei != null;
+        // JEI 19.52 introduced RecipeTransferService and IRecipeTransferContext together.
+        jeiLegacyTransfer = jeiSupplyPresent && !jeiAtLeast(jei, 19, 52);
+    }
+
     private static boolean jeiAtLeast(net.neoforged.neoforgespi.language.IModFileInfo jei, int major, int minor) {
         if (jei == null || jei.getMods().isEmpty()) return false;
-        var parts = jei.getMods().get(0).getVersion().toString().split("[^0-9]+");
-        int seenMajor = parts.length > 0 && !parts[0].isEmpty() ? Integer.parseInt(parts[0]) : 0;
-        int seenMinor = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 0;
-        return seenMajor > major || (seenMajor == major && seenMinor >= minor);
+        return jei.getMods().get(0).getVersion().compareTo(new DefaultArtifactVersion(major + "." + minor + ".0")) >= 0;
     }
 
     @Override
@@ -46,9 +47,13 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin")) return jeiSupplyPresent;
+        if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin")
+                || mixinClassName.endsWith(".jei.JeiRecipeTransferButtonControllerMixin")) return jeiSupplyPresent;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) return jeiLegacyTransfer;
-        if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
+        if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")) {
+            return jeiSupplyPresent && !jeiLegacyTransfer;
+        }
+
         if (mixinClassName.contains(".useless.")) return uselessJeiPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;

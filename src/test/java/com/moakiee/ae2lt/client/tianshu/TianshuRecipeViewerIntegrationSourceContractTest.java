@@ -19,7 +19,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
 
         assertTrue(config.contains("\"required\": false"));
         assertTrue(config.contains("RecipeViewerMixinPlugin"));
-        assertTrue(config.contains("JeiEncodePatternTransferMixin"));
+        assertFalse(config.contains("JeiEncodePatternTransferMixin"));
         assertTrue(config.contains("JeiRecipeTransferButtonControllerMixin"));
         assertTrue(config.contains("EmiEncodePatternTransferMixin"));
         assertTrue(config.contains("EmiRecipeTransferResultAccessor"));
@@ -45,7 +45,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
     @Test
     void bothViewersObserveOnlyActualTransfersAndCaptureStableRecipeIdentity() throws Exception {
         String jei = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/JeiEncodePatternTransferMixin.java"));
+                "src/main/java/com/moakiee/ae2lt/integration/jei/TianshuPatternTransferHandler.java"));
         String emi = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/emi/EmiEncodePatternTransferMixin.java"));
         String context = Files.readString(Path.of(
@@ -92,9 +92,9 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertFalse(context.contains("retainAfterEncodedSlotChange("));
         assertFalse(context.contains("hashItemAndComponents"));
         assertFalse(context.contains("Map<Integer, Component>"));
-        assertTrue(transferButton.contains("ae2lt$getRecipeLayout()"));
-        assertTrue(transferButton.contains("JeiRecipeTransferMetadata.begin("));
-        assertTrue(transferButton.contains("JeiRecipeTransferMetadata.clear()"));
+        assertFalse(transferButton.contains("@Accessor"));
+        assertTrue(transferButton.contains("JeiRecipeTransferMetadata.withLayout("));
+        assertTrue(jeiMetadata.contains("finally"));
         assertTrue(jeiMetadata.contains("getRecipeCategory()"));
         assertTrue(jeiMetadata.contains("getRecipeType()"));
         assertTrue(jeiMetadata.contains("getUid().toString()"));
@@ -134,7 +134,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
     void altTransferEncodesOnlyAfterViewerSuccessAndDirectUploadHasASafeFallback()
             throws Exception {
         String jei = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/JeiEncodePatternTransferMixin.java"));
+                "src/main/java/com/moakiee/ae2lt/integration/jei/TianshuPatternTransferHandler.java"));
         String emi = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/emi/EmiEncodePatternTransferMixin.java"));
         String picker = Files.readString(Path.of(
@@ -151,8 +151,8 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
                 "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/"
                         + "JeiRecipeTransferButtonControllerMixin.java"));
 
-        assertTrue(jei.contains("at = @At(\"RETURN\")"));
-        assertTrue(jei.contains("cir.getReturnValue() != null"));
+        assertTrue(jei.contains("delegate.transferRecipe("));
+        assertTrue(jei.contains("error == null"));
         assertTrue(jei.contains("Screen.hasAltDown()"));
         assertTrue(jei.contains("encodeAndUploadDirectly()"));
         assertTrue(emi.contains("EmiRecipeTransferResultAccessor result"));
@@ -168,7 +168,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(coordinator.contains("selection.initialQuery()"));
         assertTrue(transferButton.contains("RecipeTransferButtonController"));
         assertTrue(transferButton.contains("TianshuDirectUploadClient.holdRecipeScreen"));
-        assertTrue(transferButton.contains("recipesGui.onClose()"));
+        assertTrue(transferButton.contains("original.call(recipesGui)"));
         assertTrue(coordinator.contains("hasTriggeredUploadAck()"));
         assertTrue(coordinator.contains("isEncodingResultReady(menu, stack)"));
         assertTrue(coordinator.contains("requestDirectUploadTargetsAfterEncoding()"));
@@ -202,7 +202,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         String menu = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/menu/TianshuPatternEncodingTermMenu.java"));
         String jei = Files.readString(Path.of(
-                "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/jei/JeiEncodePatternTransferMixin.java"));
+                "src/main/java/com/moakiee/ae2lt/integration/jei/TianshuPatternTransferHandler.java"));
         String emi = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/mixin/recipeviewer/emi/EmiEncodePatternTransferMixin.java"));
 
@@ -211,8 +211,8 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(jei.contains("RecipeIngredientRole.OUTPUT"));
         assertTrue(jei.contains("markClosedLoopPrimaryOutput(output)"));
         assertTrue(jei.contains("tianshuMenu.autoFillClosedLoop()"));
-        assertTrue(jei.contains("cancellable = true"));
-        assertTrue(jei.contains("cir.setReturnValue(null)"));
+        assertTrue(jei.contains("implements IUniversalRecipeTransferHandler"));
+        assertTrue(jei.contains("return null;"));
         assertTrue(emi.contains("EmiStackHelper.ofOutputs(emiRecipe)"));
         assertTrue(emi.contains("markClosedLoopPrimaryOutput("));
         assertTrue(emi.contains("tianshuMenu.autoFillClosedLoop()"));
