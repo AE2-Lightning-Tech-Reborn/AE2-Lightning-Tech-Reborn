@@ -887,6 +887,9 @@ public class AE2LightningTech {
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);
             com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
+            com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
+                    com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
+                    com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);

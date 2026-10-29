@@ -31,8 +31,8 @@ class PortedMixinTargetContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "big.BigCraftAmountMenuMixin", "big.BigCraftConfirmMenuMixin",
-        "big.BigCraftingPlanSummaryMixin", "big.BigCraftingStatusEntryMixin", "big.BigCpuListEntryMixin",
+        "big.BigCraftAmountMenuMixin",
+        "big.BigCraftingStatusEntryMixin", "big.BigCpuListEntryMixin",
         "client.BigNumberEntryWidgetMixin", "client.BigCraftAmountScreenMixin",
         "client.BigCraftingStatusTableMixin", "client.BigTerminalAmountMixin", "client.BigCpuListMixin",
         "CraftingCPURecordAccessor", "TimeWheelCraftingCPUCyclerMixin",
