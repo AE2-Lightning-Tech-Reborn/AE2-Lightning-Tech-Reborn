@@ -44,12 +44,12 @@ class FrequencyTerminalButtonSourceContractTest {
     }
 
     @Test
-    void autoConnectButtonDisplaysTheStateSynchronizedByTheMenu() throws Exception {
+    void toolbarKeepsOnlyTheConfigureEntry() throws Exception {
         String source = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/ae2wtlib/FrequencyTerminalButton.java"));
 
-        assertTrue(source.contains(
-                "autoConnectButton.setState(OverloadedFrequencyCardItem.getData(card).autoConnect())"));
+        assertTrue(source.contains("configureButton.setVisibility(!card.isEmpty())"));
+        assertFalse(source.contains("autoConnectButton"));
         assertFalse(source.contains("pendingAutoConnect"));
         assertFalse(source.contains("SYNC_GRACE_TICKS"));
     }

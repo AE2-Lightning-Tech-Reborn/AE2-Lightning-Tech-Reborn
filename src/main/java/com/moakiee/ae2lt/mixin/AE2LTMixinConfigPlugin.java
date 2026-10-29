@@ -18,6 +18,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             "ECOCraftingCpuLogicMixin", "neoecoae",
             "NeoEcoLightningTransformMixin", "neoecoae",
             "InterfaceEnergyDistributionMixin", "appflux",
+            "NetworkFEPowerTelemetryMixin", "appflux",
+            "ForgeEnergyHandlerTelemetryMixin", "appflux",
+            "ConstructionStickPlacementMixin", "constructionstick",
             "IpnContainerClickerMixin", "inventoryprofilesnext",
             "EntityConveyorPhaseLockMixin", "mob_grinding_utils");
 
@@ -34,6 +37,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         int separator = mixinClassName.lastIndexOf('.');
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
+        if (simpleName.equals("ForgeFluxNetworkTelemetryMixin")) return isModLoaded("appflux") && isModLoaded("fluxnetworks");
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
     }

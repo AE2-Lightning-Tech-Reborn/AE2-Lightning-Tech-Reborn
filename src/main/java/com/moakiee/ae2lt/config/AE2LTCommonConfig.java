@@ -63,6 +63,7 @@ public final class AE2LTCommonConfig {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         VALUES = new Values(builder);
         com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig.define(builder);
+        com.moakiee.ae2lt.logic.energy.WirelessEnergySettings.define(builder);
         SPEC = builder.build();
     }
 
@@ -322,6 +323,10 @@ public final class AE2LTCommonConfig {
     public static double overloadExecutionDecayPower() { return VALUES.overloadExecutionDecayPower.get(); }
     public static int overloadExecutionMaxTracked() { return VALUES.overloadExecutionMaxTracked.get(); }
 
+    public static int maxOwnedFrequenciesPerPlayer() {
+        return VALUES.maxOwnedFrequenciesPerPlayer.get();
+    }
+
     public static boolean frequencyCardEnableAutoCleanup() {
         return VALUES.frequencyCardEnableAutoCleanup.get();
     }
@@ -343,6 +348,7 @@ public final class AE2LTCommonConfig {
     }
 
     private static final class Values {
+        final ForgeConfigSpec.IntValue maxOwnedFrequenciesPerPlayer;
         private final ForgeConfigSpec.IntValue configVersion;
         private final ForgeConfigSpec.IntValue lightningCollectorCooldownTicks;
         private final ForgeConfigSpec.IntValue electroChimeMaxCatalysis;
@@ -820,6 +826,13 @@ public final class AE2LTCommonConfig {
                     .comment("Maximum number of targets whose recorded HP is kept simultaneously on a single railgun.")
                     .defineInRange("maxTracked", 8, 1, 64);
             builder.pop();
+            builder.pop();
+
+            builder.push("wirelessFrequency");
+            maxOwnedFrequenciesPerPlayer = builder
+                    .comment("Maximum number of frequencies in which a player may hold OWNER membership.",
+                            "Applies to creation and owner promotions. Existing memberships are retained when lowered.")
+                    .defineInRange("maxOwnedFrequenciesPerPlayer", 16, 1, Integer.MAX_VALUE);
             builder.pop();
 
             builder.push("frequencyCard");

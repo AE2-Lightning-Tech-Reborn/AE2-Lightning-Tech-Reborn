@@ -549,7 +549,7 @@ public class OverloadedPowerSupplyBlockEntity extends AENetworkBlockEntity
         if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
             logic.importDismantleEnergyFromNBT(input);
         }
-        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
+        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency, player, this);
     }
 
     @Override

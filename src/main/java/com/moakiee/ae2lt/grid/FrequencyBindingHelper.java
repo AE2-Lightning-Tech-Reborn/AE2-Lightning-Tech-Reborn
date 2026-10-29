@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.grid;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import java.util.function.IntConsumer;
 
 import org.jetbrains.annotations.Nullable;
@@ -203,12 +205,45 @@ public final class FrequencyBindingHelper
         return true;
     }
 
+    /** Player-originated imports must retain both the actor and target, unlike trusted restoration. */
+    public static boolean importMemoryFrequency(CompoundTag tag, IntConsumer setter,
+            @Nullable net.minecraft.world.entity.player.Player player,
+            net.minecraft.world.level.block.entity.BlockEntity target) {
+        if (!tag.contains(TAG_MEMORY_FREQUENCY)
+                || !PlayerWorldActions.mayInteract(
+                        player, target.getLevel(), target.getBlockPos())) return false;
+        int frequencyId = tag.getInt(TAG_MEMORY_FREQUENCY);
+        var manager = WirelessFrequencyManager.get();
+        if (manager == null) return false;
+        int currentId = target instanceof com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity controller
+                ? controller.getFrequencyId()
+                : target instanceof com.moakiee.ae2lt.api.frequency.FrequencyBindingHost bindingHost
+                        ? bindingHost.getFrequencyId() : -1;
+        if (currentId > 0 && currentId != frequencyId) {
+            var current = manager.getFrequency(currentId);
+            if (current != null && !current.canPlayerAccess(player, "")) return false;
+        }
+        if (frequencyId > 0) {
+            var frequency = manager.getFrequency(frequencyId);
+            if (frequency == null || !frequency.canPlayerAccess(player, "")) return false;
+        }
+        setter.accept(frequencyId);
+        return true;
+    }
+
     public static void exportMemorySettings(SettingsFrom mode, CompoundTag output, int frequencyId) {
         MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> writeMemoryFrequency(tag, frequencyId));
     }
 
     public static void importMemorySettings(SettingsFrom mode, CompoundTag input, IntConsumer setter) {
         MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> importMemoryFrequency(tag, setter));
+    }
+
+    public static void importMemorySettings(SettingsFrom mode, CompoundTag input, IntConsumer setter,
+            @Nullable net.minecraft.world.entity.player.Player player,
+            net.minecraft.world.level.block.entity.BlockEntity target) {
+        MemoryCardConfigSupport.importMemoryCardSettings(mode, input,
+                tag -> importMemoryFrequency(tag, setter, player, target));
     }
 
     public int getGridUsedChannels() {

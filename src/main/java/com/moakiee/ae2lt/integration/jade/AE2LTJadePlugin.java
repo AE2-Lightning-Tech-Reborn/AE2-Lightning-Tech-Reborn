@@ -19,6 +19,7 @@ public class AE2LTJadePlugin implements IWailaPlugin {
             new FirmamentConversionCoreJadeProvider();
     private static final FrequencyCardWirelessNodeJadeProvider FREQUENCY_CARD_WIRELESS_NODE_PROVIDER =
             new FrequencyCardWirelessNodeJadeProvider();
+    private static final WirelessEnergyJadeProvider WIRELESS_ENERGY_PROVIDER = new WirelessEnergyJadeProvider();
 
     @Override
     public void register(IWailaCommonRegistration registration) {
@@ -28,6 +29,7 @@ public class AE2LTJadePlugin implements IWailaPlugin {
         // devices, centre cables, or sided cable-bus parts. Register at the BE
         // base type and let the provider's exact hit-based resolver filter them.
         registration.registerBlockDataProvider(FREQUENCY_CARD_WIRELESS_NODE_PROVIDER, BlockEntity.class);
+        registration.registerBlockDataProvider(WIRELESS_ENERGY_PROVIDER, BlockEntity.class);
     }
 
     @Override
@@ -36,5 +38,6 @@ public class AE2LTJadePlugin implements IWailaPlugin {
         registration.registerBlockComponent(LIGHTNING_COLLECTOR_PROVIDER, Block.class);
         registration.registerBlockComponent(FIRMAMENT_CONVERSION_CORE_PROVIDER, Block.class);
         registration.registerBlockComponent(FREQUENCY_CARD_WIRELESS_NODE_PROVIDER, Block.class);
+        registration.registerBlockComponent(WIRELESS_ENERGY_PROVIDER, Block.class);
     }
 }

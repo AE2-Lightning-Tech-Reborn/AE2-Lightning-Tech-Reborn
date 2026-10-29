@@ -36,9 +36,9 @@ class UpstreamSync1201ContractTest {
             assertTrue(seen.add(name), "duplicate packet: " + name); packets.add(name);
         }
         assertTrue(packets.size() > 2);
-        assertEquals(java.util.List.of("MatrixPatternMigrationActionPacket", "MatrixPatternMigrationStatusPacket"),
-                packets.subList(packets.size() - 2, packets.size()));
-        assertTrue(network.contains("PROTOCOL_VERSION = \"12\""),
+        assertEquals(java.util.List.of("ReturnToDeviceManagementPacket", "NetworkManagementRequestPacket", "NetworkManagementSyncPacket"),
+                packets.subList(packets.size() - 3, packets.size()));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"13\""),
                 "reject clients with a different packet table");
     }
 

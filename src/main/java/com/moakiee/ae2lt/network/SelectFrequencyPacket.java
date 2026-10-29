@@ -1,66 +1,57 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.api.frequency.FrequencyBindingHost;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.FrequencySecurityLevel;
 import com.moakiee.ae2lt.grid.WirelessFrequency;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardData;
-import com.moakiee.ae2lt.item.TerminalCardAccess;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import java.util.function.Supplier;
 
 public record SelectFrequencyPacket(
         int token,
         BlockPos blockPos, int frequencyId, String password
 ) {
 
-    public static void encode(SelectFrequencyPacket pkt, FriendlyByteBuf buf) {
-        buf.writeVarInt(pkt.token);
-        buf.writeBlockPos(pkt.blockPos);
-        buf.writeInt(pkt.frequencyId);
-        buf.writeUtf(pkt.password, WirelessFrequency.MAX_PASSWORD_LENGTH);
-    }
-
-    public static SelectFrequencyPacket decode(FriendlyByteBuf buf) {
-        return new SelectFrequencyPacket(
-                buf.readVarInt(),
-                buf.readBlockPos(),
-                buf.readInt(),
-                buf.readUtf(WirelessFrequency.MAX_PASSWORD_LENGTH));
-    }
-
-    public static void handle(SelectFrequencyPacket pkt, Supplier<NetworkEvent.Context> ctxSupplier) {
-        var ctx = ctxSupplier.get();
+    public void write(net.minecraft.network.FriendlyByteBuf b) { b.writeVarInt(token); b.writeBlockPos(blockPos); b.writeVarInt(frequencyId); b.writeUtf(password, 64); }
+    public static void encode(SelectFrequencyPacket p, net.minecraft.network.FriendlyByteBuf b) { p.write(b); }
+    public static SelectFrequencyPacket decode(net.minecraft.network.FriendlyByteBuf b) { return new SelectFrequencyPacket(b.readVarInt(), b.readBlockPos(), b.readVarInt(), b.readUtf(64)); }
+    public static void handle(SelectFrequencyPacket pkt, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> supplier) {
+        var ctx = supplier.get();
+        ctx.setPacketHandled(true);
         ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+            if (!((net.minecraft.world.entity.player.Player) ctx.getSender() instanceof ServerPlayer player)) return;
 
             FrequencyMenu menu = FrequencyMenu.validateToken(player, pkt.token);
             if (menu == null) {
-                NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
                 return;
             }
 
-            // Card mode: the menu targets a frequency card installed in a
-            // wireless terminal's upgrade slot rather than a block entity.
+            // Card mode targets the exact held card or the terminal upgrade slot.
             if (menu.isCardMode()) {
                 handleCardSelect(player, menu, pkt.frequencyId, pkt.password);
                 return;
             }
 
             if (!menu.getBlockPos().equals(pkt.blockPos)) {
-                NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
                 return;
             }
 
-            var level = player.serverLevel();
-            var be = level.getBlockEntity(pkt.blockPos);
+            var be = menu.getConfiguredBlockEntity(player);
+            if (be == null || !(be.getLevel() instanceof net.minecraft.server.level.ServerLevel level)) return;
+            if (!PlayerWorldActions.mayConfigure(player, level, pkt.blockPos)) {
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
+                        new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
+                return;
+            }
 
             // Resolve the device's CURRENT frequency so the block-op
             // access gate below knows what permission to verify. Any
@@ -73,7 +64,7 @@ public record SelectFrequencyPacket(
             } else if (be instanceof FrequencyBindingHost bindingHost) {
                 currentFreqId = bindingHost.getFrequencyId();
             } else {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
                 return;
             }
@@ -81,13 +72,20 @@ public record SelectFrequencyPacket(
             var manager = WirelessFrequencyManager.get();
             if (manager == null) return;
 
-            // Changing a binding requires access to the current frequency.
-            // Reselecting it must remain available for encrypted password authentication.
+            // Block-op access gate: if the device is currently bound to
+            // a frequency AND the player is trying to change that
+            // binding (disconnect OR switch-to-different), they need
+            // at least USE-level access on the CURRENT freq. Skips:
+            //   - unbound devices (currentFreqId <= 0): fresh config
+            //   - same-id re-select (pkt.frequencyId == currentFreqId):
+            //     this is how an ENCRYPTED outsider submits their
+            //     password to JOIN the current freq; the later
+            //     {@code canPlayerAccess} check does the real work.
             boolean changingBinding = pkt.frequencyId != currentFreqId;
             if (changingBinding && currentFreqId > 0) {
                 var currentFreq = manager.getFrequency(currentFreqId);
                 if (currentFreq != null && !currentFreq.canPlayerAccess(player, "")) {
-                    NetworkInit.sendToPlayer(player,
+                    com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                             new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
                     return;
                 }
@@ -106,29 +104,39 @@ public record SelectFrequencyPacket(
 
             WirelessFrequency freq = manager.getFrequency(pkt.frequencyId);
             if (freq == null) {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.INVALID_FREQUENCY));
                 return;
             }
 
+            if (!FrequencyPasswordAttempts.allow(player, freq, pkt.password)) return;
             if (!freq.canPlayerAccess(player, pkt.password)) {
                 if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                         && !freq.getPlayerAccess(player).canUse()
                         && pkt.password.isBlank()) {
-                    NetworkInit.sendToPlayer(player,
+                    com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                             new FrequencyResponsePacket(FrequencyResponsePacket.REQUIRE_PASSWORD));
                 } else if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                         && !freq.getPlayerAccess(player).canUse()) {
-                    NetworkInit.sendToPlayer(player,
+                    com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                             new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
                 } else {
-                    NetworkInit.sendToPlayer(player,
+                    com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                             new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
                 }
                 return;
             }
 
-            // Persist membership after public access or successful password authentication.
+            // Durable auto-enroll: anyone who cleared the
+            // {@code canPlayerAccess} check above got there via one of
+            //   (a) existing member, or
+            //   (b) PUBLIC fallback USER access, or
+            //   (c) ENCRYPTED + correct password.
+            // Cases (b) and (c) leave the player with access but no
+            // persistent membership entry, so the Members tab and
+            // subsequent session re-opens would forget them. Promoting
+            // both to a real USER row makes access stable and the
+            // member list consistent with "who actually uses this freq".
             if (!freq.isMember(player) && freq.enrollAsUser(player)) {
                 manager.markModified();
                 SyncFrequencyDetailPacket.broadcastMembersTo(player.getServer(), pkt.frequencyId);
@@ -136,7 +144,7 @@ public record SelectFrequencyPacket(
 
             if (be instanceof WirelessOverloadedControllerBlockEntity
                     && !manager.canRegisterTransmitter(pkt.frequencyId, level.dimension(), pkt.blockPos)) {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.FREQUENCY_IN_USE));
                 return;
             }
@@ -148,32 +156,24 @@ public record SelectFrequencyPacket(
             }
             // DataSlot handles freqId sync; members may have been updated above
         });
-        ctx.setPacketHandled(true);
     }
 
     /**
      * Card-mode variant of the block-entity selection flow above: reuses the
      * same permission / password / auto-enroll gating, but binds (or clears) the
-     * frequency card installed in the player's open terminal instead of a block
-     * entity. The card's bound frequency is then synced back to the screen via
+     * held frequency card or the card installed in the player's open terminal. The card's bound frequency is then synced back to the screen via
      * the menu's DataSlot.
      */
     private static void handleCardSelect(ServerPlayer player, FrequencyMenu menu, int targetFreqId, String password) {
-        ItemStack terminal = menu.resolveTerminalStack();
-        if (!TerminalCardAccess.hasCard(terminal)) {
-            NetworkInit.sendToPlayer(player, new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
-            return;
-        }
-
         var manager = WirelessFrequencyManager.get();
         if (manager == null) return;
 
-        int currentFreqId = TerminalCardAccess.readCardData(terminal).frequencyId();
+        int currentFreqId = menu.readCardData().frequencyId();
         boolean changingBinding = targetFreqId != currentFreqId;
         if (changingBinding && currentFreqId > 0) {
             var currentFreq = manager.getFrequency(currentFreqId);
             if (currentFreq != null && !currentFreq.canPlayerAccess(player, "")) {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
                 return;
             }
@@ -181,29 +181,30 @@ public record SelectFrequencyPacket(
 
         // disconnect
         if (targetFreqId <= 0) {
-            TerminalCardAccess.updateCard(terminal, OverloadedFrequencyCardData::clearFrequency);
+            menu.updateCard(OverloadedFrequencyCardData::clearFrequency);
             return;
         }
 
         WirelessFrequency freq = manager.getFrequency(targetFreqId);
         if (freq == null) {
-            NetworkInit.sendToPlayer(player,
+            com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                     new FrequencyResponsePacket(FrequencyResponsePacket.INVALID_FREQUENCY));
             return;
         }
 
+        if (!FrequencyPasswordAttempts.allow(player, freq, password)) return;
         if (!freq.canPlayerAccess(player, password)) {
             if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                     && !freq.getPlayerAccess(player).canUse()
                     && password.isBlank()) {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.REQUIRE_PASSWORD));
             } else if (freq.getSecurity() == FrequencySecurityLevel.ENCRYPTED
                     && !freq.getPlayerAccess(player).canUse()) {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.REJECTED));
             } else {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.NO_PERMISSION));
             }
             return;
@@ -215,11 +216,10 @@ public record SelectFrequencyPacket(
         }
 
         final int boundId = targetFreqId;
-        TerminalCardAccess.updateCard(terminal, data -> data.bindFrequency(
+        menu.updateCard(data -> data.bindFrequency(
                 boundId,
                 player.level().dimension().location().toString(),
                 player.blockPosition().asLong(),
                 player.getUUID()));
     }
 }
-

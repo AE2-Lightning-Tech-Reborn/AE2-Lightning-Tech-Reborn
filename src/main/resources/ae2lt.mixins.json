@@ -13,11 +13,20 @@
     "PatternMigrationStorageMountMixin",
 
     "appflux.InterfaceEnergyDistributionMixin",
+    "appflux.NetworkFEPowerTelemetryMixin",
+    "appflux.ForgeEnergyHandlerTelemetryMixin",
+    "appflux.ForgeFluxNetworkTelemetryMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
     "ServerLevelMixin",
     "LightningBoltOriginMixin",
     "neoecoae.NeoEcoLightningTransformMixin",
+    "WirelessTerminalCoverageMixin",
+    "WirelessEnergyTargetRemovalMixin",
+    "WirelessEnergyMachineTickMixin",
+    "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
+    "RunningNetworkFeFallbackMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",
@@ -71,7 +80,10 @@
     "big.BigCraftConfirmMenuMixin",
     "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -96,7 +108,9 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

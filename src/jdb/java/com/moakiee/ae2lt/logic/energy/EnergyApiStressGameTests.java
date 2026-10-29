@@ -679,7 +679,7 @@ public final class EnergyApiStressGameTests {
                 var network = new Store(0);
                 var buffer = new BufferedMEStorage(network, () -> cell);
                 buffer.setCostMultiplier(cost);
-                long[] received = {0}, uncertain = {0};
+                long[] received = {0}, uncertain = {0}, invalidUnaccepted = {0};
                 var target = new TargetAccess() {
                     public long simulateReceive(long n) { return 0; }
                     public long receive(long n) {
@@ -688,6 +688,7 @@ public final class EnergyApiStressGameTests {
                         if (behavior == 1) { received[0] += n; throw new NoSuchMethodError("after receipt"); }
                         long accepted = behavior == 2 ? 0 : behavior == 3 ? n / 2 : n;
                         received[0] += accepted;
+                        if (behavior == 2) invalidUnaccepted[0] += n;
                         return behavior == 4 ? Long.MAX_VALUE : behavior == 2 ? -1 : accepted;
                     }
                 };
@@ -695,7 +696,7 @@ public final class EnergyApiStressGameTests {
                         1 + random.nextLong(4096), 1 + random.nextInt(64));
                 buffer.endTick(AppFluxBridge.FE_KEY, SOURCE);
                 h.assertTrue(initial == network.energy + buffer.getBufferedEnergy()
-                                + (received[0] + uncertain[0]) * cost,
+                                + (received[0] + uncertain[0] + invalidUnaccepted[0]) * cost,
                         "Randomized ownership failed at tick=" + tick + " target=" + targetId);
                 h.assertTrue(result >= 0 && result <= received[0], "Invalid acknowledged send accounting");
                 attempts++;

@@ -94,6 +94,7 @@ public class ModScreens {
             MenuScreens.register(TeslaCoilMenu.TYPE, ModScreens::createTeslaCoilScreen);
             MenuScreens.register(AtmosphericIonizerMenu.TYPE, ModScreens::createAtmosphericIonizerScreen);
             MenuScreens.register(FrequencyMenu.TYPE, FrequencyScreen::new);
+            MenuScreens.register(com.moakiee.ae2lt.menu.NetworkManagementMenu.TYPE, ModScreens::createNetworkManagementScreen);
             MenuScreens.register(CrystalCatalyzerMenu.TYPE, ModScreens::createCrystalCatalyzerScreen);
             MenuScreens.register(DeviceHubMenu.TYPE, DeviceHubScreen::new);
             MenuScreens.register(MatrixControllerMenu.TYPE, MatrixControllerScreen::new);
@@ -220,6 +221,11 @@ public class ModScreens {
             CrystalCatalyzerMenu menu, Inventory inv, Component title) {
         var style = StyleManager.loadStyleDoc("/screens/crystal_catalyzer.json");
         return new CrystalCatalyzerScreen(menu, inv, title, style);
+    }
+    private static com.moakiee.ae2lt.client.gui.NetworkManagementScreen createNetworkManagementScreen(
+            com.moakiee.ae2lt.menu.NetworkManagementMenu menu, Inventory inv, Component title) {
+        return new com.moakiee.ae2lt.client.gui.NetworkManagementScreen(menu, inv, title,
+                StyleManager.loadStyleDoc("/screens/network_management.json"));
     }
 
 }

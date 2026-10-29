@@ -1,26 +1,20 @@
 package com.moakiee.ae2lt.network;
-import java.util.function.Supplier;
+
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.WirelessOverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.grid.FrequencyDisplayName;
 import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.grid.wirelesslink.WirelessLinkRegistry;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.ChatFormatting;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.core.BlockPos;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.core.Direction;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.world.InteractionHand;
 
 public record FrequencyCardUsePacket(
@@ -30,9 +24,10 @@ public record FrequencyCardUsePacket(
         double hitX,
         double hitY,
         double hitZ,
-        boolean shiftDown
+        boolean shiftDown,
+        boolean bulkPower
 ) {
-public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
+    public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
         return new FrequencyCardUsePacket(
                 buf.readEnum(InteractionHand.class),
                 buf.readBlockPos(),
@@ -40,6 +35,7 @@ public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
                 buf.readDouble(),
                 buf.readDouble(),
                 buf.readDouble(),
+                buf.readBoolean(),
                 buf.readBoolean());
     }
 
@@ -51,30 +47,35 @@ public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
         buf.writeDouble(hitY);
         buf.writeDouble(hitZ);
         buf.writeBoolean(shiftDown);
+        buf.writeBoolean(bulkPower);
     }
 
-    public static void handle(FrequencyCardUsePacket payload, Supplier<NetworkEvent.Context> context) {
-        var ctx = context.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-        if (player != null) {
+    public static void handle(FrequencyCardUsePacket payload, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> supplier) {
+        var context = supplier.get();
+        context.setPacketHandled(true);
+        context.enqueueWork(() -> {
+            if ((net.minecraft.world.entity.player.Player) context.getSender() instanceof ServerPlayer player) {
                 payload.handleOnServer(player);
             }
         });
-        ctx.setPacketHandled(true);
     }
 
     private void handleOnServer(ServerPlayer player) {
         if (!(player.level() instanceof ServerLevel level)) return;
-        if (!level.isLoaded(pos)) return;
-        // 1.20.1 has no Player.canInteractWithBlock; enforce the vanilla 6-block reach.
-        if (player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) > 36.0D) return;
+        if (!level.isLoaded(pos) || player.isSpectator() || !player.mayBuild() || !level.mayInteract(player, pos)) return;
+        if (!com.moakiee.ae2lt.logic.world.PlayerWorldActions.withinReach(player, pos)) return;
 
         var stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) return;
+        if (!(stack.getItem() instanceof OverloadedFrequencyCardItem)) {
+            if (!bulkPower || shiftDown || player.isShiftKeyDown()) return;
+            stack = com.moakiee.ae2lt.item.TerminalCardAccess.findCard(stack);
+            if (stack.isEmpty()) return;
+        }
 
         var be = level.getBlockEntity(pos);
         if (shiftDown || player.isShiftKeyDown()) {
+            if (!PlayerWorldActions.mayInteract(player, level, pos,
+                    hand, face, new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ))) return;
             var data = OverloadedFrequencyCardItem.getData(stack);
             if (data.isBound() && !data.canBeUsedBy(player.getUUID())) {
                 message(player, "ae2lt.frequency_card.card_owner_mismatch", ChatFormatting.RED);
@@ -90,8 +91,8 @@ public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
             return;
         }
 
-        tryLinkWithCard(player, stack, level, pos, face,
-                new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ));
+        tryLinkWithCard(player, hand, stack, level, pos, face,
+                new net.minecraft.world.phys.Vec3(hitX, hitY, hitZ), bulkPower);
     }
 
     /**
@@ -108,6 +109,25 @@ public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
             BlockPos pos,
             Direction face,
             net.minecraft.world.phys.Vec3 hitVec) {
+        tryLinkWithCard(player, card, level, pos, face, hitVec, false);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, net.minecraft.world.item.ItemStack card,
+            ServerLevel level, BlockPos pos, Direction face, net.minecraft.world.phys.Vec3 hitVec, boolean bulkPower) {
+        tryLinkWithCard(player, InteractionHand.MAIN_HAND, card, level, pos, face, hitVec, bulkPower);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, InteractionHand hand,
+            net.minecraft.world.item.ItemStack card, ServerLevel level, BlockPos pos, Direction face,
+            net.minecraft.world.phys.Vec3 hitVec) {
+        tryLinkWithCard(player, hand, card, level, pos, face, hitVec, false);
+    }
+
+    public static void tryLinkWithCard(ServerPlayer player, InteractionHand hand,
+            net.minecraft.world.item.ItemStack card, ServerLevel level, BlockPos pos, Direction face,
+            net.minecraft.world.phys.Vec3 hitVec, boolean bulkPower) {
+        if (!validInteraction(player, level, pos, face, hitVec)
+                || !PlayerWorldActions.mayInteract(player, level, pos, hand, face, hitVec)) return;
         var data = OverloadedFrequencyCardItem.getData(card);
         if (!data.isBound()) {
             message(player, "ae2lt.frequency_card.unbound_message", ChatFormatting.RED);
@@ -125,17 +145,80 @@ public static FrequencyCardUsePacket decode(FriendlyByteBuf buf) {
             return;
         }
 
-        var feedback = WirelessLinkRegistry.get(level.getServer()).handleManualUse(
-                player,
-                data.frequencyId(),
-                level,
-                pos,
-                face,
-                hitVec);
-        player.displayClientMessage(
-                Component.translatable(feedback.translationKey(), feedback.args())
-                        .withStyle(feedback.style()),
-                true);
+        var links = WirelessLinkRegistry.get(level.getServer());
+        var energy = com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer());
+        if (bulkPower) {
+            var result = energy.toggleConnected(player, data.frequencyId(), level, pos, face,
+                    completed -> displayBulkResult(player, completed));
+            displayBulkResult(player, result);
+            return;
+        }
+        boolean aeTarget = links.isPotentialLinkTarget(level, pos);
+        var inputFace = energy.findInputFace(level, pos, face);
+        boolean feTarget = inputFace != null
+                || energy.isBound(level, pos, data.frequencyId());
+        if (!feTarget) {
+            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec, hand);
+            player.displayClientMessage(Component.translatable(feedback.translationKey(), feedback.args()).withStyle(feedback.style()), true);
+            return;
+        }
+        boolean bind = !energy.isBound(level, pos, data.frequencyId());
+        Component aeFeedback = Component.empty();
+        if (aeTarget) {
+            var feedback = links.handleManualUse(player, data.frequencyId(), level, pos, face, hitVec, hand);
+            aeFeedback = Component.translatable(feedback.translationKey(), feedback.args()).withStyle(feedback.style());
+            if (feedback.style() == ChatFormatting.RED) {
+                player.displayClientMessage(aeFeedback, true);
+                return;
+            }
+            // A physical grid already on this frequency has no ME link to toggle; toggle its FE independently.
+            if (!feedback.translationKey().equals("ae2lt.frequency_card.already_in_frequency")) {
+                bind = !feedback.translationKey().startsWith("ae2lt.frequency_card.disconnected");
+            }
+        }
+        String result = energy.setBound(player, data.frequencyId(), level, pos, inputFace == null ? face : inputFace, bind);
+        Component feFeedback = Component.translatable("ae2lt.wireless_energy." + result)
+                .withStyle(result.equals("connected") || result.equals("disconnected") ? ChatFormatting.GREEN : ChatFormatting.YELLOW);
+        player.displayClientMessage(aeTarget ? Component.empty().append(aeFeedback).append(" | FE: ").append(feFeedback) : feFeedback, true);
+    }
+
+    private static void displayBulkResult(ServerPlayer player,
+                                          com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.BulkResult result) {
+        var style = result.skipped() > 0 && result.changed() + result.unchanged() == 0 ? ChatFormatting.RED
+                : result.skipped() > 0 || result.unloaded() ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
+        Component feedback = result.error().isEmpty()
+                ? Component.translatable("ae2lt.wireless_energy.bulk_" + (result.bind() ? "connected" : "disconnected"),
+                        result.changed(), result.unchanged(), result.skipped()).withStyle(style)
+                : Component.translatable("ae2lt.wireless_energy." + result.error()).withStyle(
+                        result.error().equals("bulk_queued") ? ChatFormatting.YELLOW : ChatFormatting.RED);
+        if (!result.skippedReasons().isEmpty()) {
+            var reasons = Component.empty();
+            result.skippedReasons().forEach((reason, count) -> {
+                if (!reasons.getSiblings().isEmpty()) reasons.append(", ");
+                reasons.append(Component.translatable("ae2lt.wireless_energy.bulk_reason_count",
+                        Component.translatable("ae2lt.wireless_energy.bulk_reason." + reason), count));
+            });
+            feedback = Component.empty().append(feedback).append(" | ").append(reasons.withStyle(style));
+        }
+        if (result.unloaded()) feedback = Component.empty().append(feedback).append(" ")
+                .append(Component.translatable("ae2lt.wireless_energy.bulk_unloaded").withStyle(ChatFormatting.YELLOW));
+        player.displayClientMessage(feedback, true);
+    }
+
+    private static boolean validInteraction(ServerPlayer player, ServerLevel level, BlockPos pos, Direction face,
+                                             net.minecraft.world.phys.Vec3 hit) {
+        if (player.serverLevel() != level || player.isSpectator() || !player.mayBuild()
+                || !level.isLoaded(pos) || !level.mayInteract(player, pos) || !com.moakiee.ae2lt.logic.world.PlayerWorldActions.withinReach(player, pos)
+                || face == null || !Double.isFinite(hit.x) || !Double.isFinite(hit.y) || !Double.isFinite(hit.z)
+                || hit.x < pos.getX() - 0.001 || hit.x > pos.getX() + 1.001
+                || hit.y < pos.getY() - 0.001 || hit.y > pos.getY() + 1.001
+                || hit.z < pos.getZ() - 0.001 || hit.z > pos.getZ() + 1.001) return false;
+        var start = player.getEyePosition();
+        var end = hit.add(hit.subtract(start).normalize().scale(0.01));
+        var actual = level.clip(new net.minecraft.world.level.ClipContext(start, end,
+                net.minecraft.world.level.ClipContext.Block.OUTLINE, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        return actual.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK
+                && actual.getBlockPos().equals(pos) && actual.getDirection() == face;
     }
 
     private static void bindController(

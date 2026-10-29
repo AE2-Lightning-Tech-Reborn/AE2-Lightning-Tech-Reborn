@@ -36,7 +36,7 @@ public final class NetworkInit {
     // Version 6 adds the frequency-card link shortcut packet.
     // Version 11 adds wireless JEI crafting requests and craftable ingredient offers.
     // Version 12 requires executable exact reports in native AE2 confirmation packets.
-    private static final String PROTOCOL_VERSION = "12";
+    private static final String PROTOCOL_VERSION = "13";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -399,6 +399,15 @@ public final class NetworkInit {
                 MatrixPatternMigrationStatusPacket.class,
                 MatrixPatternMigrationStatusPacket::encode, MatrixPatternMigrationStatusPacket::decode,
                 MatrixPatternMigrationStatusPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextPacketId++, ReturnToDeviceManagementPacket.class,
+                (p, b) -> p.write(b), ReturnToDeviceManagementPacket::decode,
+                ReturnToDeviceManagementPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, NetworkManagementRequestPacket.class,
+                (p, b) -> p.write(b), NetworkManagementRequestPacket::decode,
+                NetworkManagementRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, NetworkManagementSyncPacket.class,
+                (p, b) -> p.write(b), NetworkManagementSyncPacket::decode,
+                NetworkManagementSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static ResourceLocation id(String path) {

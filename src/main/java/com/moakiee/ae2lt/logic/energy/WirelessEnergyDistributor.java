@@ -342,7 +342,7 @@ public final class WirelessEnergyDistributor {
 
     /** Add pending FE to the block item produced by AE2's dismantle path. */
     public void writeDismantleEnergyToNBT(CompoundTag tag) {
-        long pending = bufferedStorage != null ? bufferedStorage.getPendingEnergy() : 0L;
+        long pending = bufferedStorage != null && !bufferedStorage.isLedgerOwned() ? bufferedStorage.getPendingEnergy() : 0L;
         if (pending > 0L) tag.putLong(TAG_PENDING_FE, pending);
         else tag.remove(TAG_PENDING_FE);
         dismantleDropHandoff = pending > 0L;
@@ -432,7 +432,10 @@ public final class WirelessEnergyDistributor {
 
     /** Snapshot only owned scratch FE, never the cell, network, or uncertain receipts. No I/O during saves. */
     public void writeToNBT(CompoundTag tag) {
-        long pending = bufferedStorage != null ? bufferedStorage.getPendingEnergy() : 0L;
+        long uncertain = bufferedStorage != null && !bufferedStorage.isLedgerOwned() ? bufferedStorage.getUncertainEnergy() : 0;
+        if (uncertain > 0) tag.putLong("ae2lt:uncertain_wireless_fe", uncertain);
+        else tag.remove("ae2lt:uncertain_wireless_fe");
+        long pending = bufferedStorage != null && !bufferedStorage.isLedgerOwned() ? bufferedStorage.getPendingEnergy() : 0L;
         if (pending > 0L) tag.putLong(TAG_PENDING_FE, pending);
         else tag.remove(TAG_PENDING_FE);
     }
@@ -446,11 +449,13 @@ public final class WirelessEnergyDistributor {
         long pending = tag.contains(TAG_PENDING_FE, Tag.TAG_LONG)
                 ? Math.max(0L, tag.getLong(TAG_PENDING_FE))
                 : 0L;
-        if (bufferedStorage == null && pending > 0L) {
+        long uncertain = Math.max(0, tag.getLong("ae2lt:uncertain_wireless_fe"));
+        if (pending > Long.MAX_VALUE - uncertain) throw new IllegalArgumentException("Invalid saved FE balance");
+        if (bufferedStorage == null && (pending > 0L || uncertain > 0)) {
             bufferedStorage = new BufferedMEStorage(DETACHED_STORAGE, host.getCellStorageSupplier(),
                     host.getCellPersistCallback(), host.getPendingEnergyPersistCallback(), host::isOnline);
         }
-        if (bufferedStorage != null) bufferedStorage.restorePendingEnergy(pending);
+        if (bufferedStorage != null) bufferedStorage.restoreSnapshot(pending, uncertain);
     }
 
     /** Import the owned refund carried by an AE2 dismantle block item. */
@@ -545,6 +550,50 @@ public final class WirelessEnergyDistributor {
 
     // ---- NORMAL tick implementation -------------------------------------
 
+    /** Prepared NORMAL work; hosts supply lifecycle checks and scheduling, not another FE sender. */
+    interface NormalBatch {
+        int size();
+        long demand(int index);
+        @Nullable TargetAccess target(int index);
+        void transferred(int index, long amount);
+        void noEnergy(int index);
+        default boolean canContinue() { return true; }
+        default void failed(int index, RuntimeException failure) { throw failure; }
+    }
+
+    static long simulateNormalDemand(TargetAccess target) {
+        long limit = Math.max(0L, AppFluxBridge.TRANSFER_RATE);
+        return Math.min(limit, AppFluxBridge.simulateTarget(target, limit));
+    }
+
+    /**
+     * Shared by NORMAL power supplies, interfaces and controller endpoints.
+     * Callers finish/refund the batch in finally, using their current-grid guard.
+     */
+    static long dispatchNormalBatch(BufferedMEStorage buffer, IActionSource source, long requested,
+                                    NormalBatch batch) {
+        long remaining = requested > 0 ? buffer.beginMemoryBatch(AppFluxBridge.FE_KEY, requested, source) : 0;
+        long total = 0;
+        for (int i = 0; i < batch.size() && batch.canContinue(); i++) {
+            long demand = batch.demand(i);
+            if (demand <= 0) { batch.transferred(i, 0); continue; }
+            if (remaining <= 0) { batch.noEnergy(i); continue; }
+            try {
+                var target = batch.target(i);
+                long delivered = target == null ? 0 : AppFluxBridge.sendToTargetKnownDemand(
+                        target, buffer, source, Math.min(demand, remaining));
+                remaining -= delivered;
+                total += delivered;
+                batch.transferred(i, delivered);
+            } catch (RuntimeException failure) {
+                batch.failed(i, failure);
+                // A throwing receiver may have moved part of the batch into quarantine.
+                remaining = Math.min(remaining, buffer.getBufferedEnergy());
+            }
+        }
+        return total;
+    }
+
     private boolean runNormalTick(ServerLevel serverLevel, BufferedMEStorage buffer) {
         try {
             return runNormalTickUnchecked(serverLevel, buffer);
@@ -588,21 +637,12 @@ public final class WirelessEnergyDistributor {
         long[] demands = normalBatchDemand;
         TargetAccess[] resolvedTargets = normalBatchEnergyTargets;
         long totalDemand = 0L;
-        long perCallLimit = Math.max(0L, AppFluxBridge.TRANSFER_RATE);
         for (int i = 0; i < dueSize; i++) {
             BlockEnergyTargetCache cache = caches[dueData[i]];
             TargetAccess energyTarget = resolveEnergyTargetSafe(dueData[i], cache, serverLevel);
             resolvedTargets[i] = energyTarget;
             long demand = 0L;
-            if (energyTarget != null) {
-                try {
-                    long sim = AppFluxBridge.simulateTarget(energyTarget, perCallLimit);
-                    demand = sim > perCallLimit ? perCallLimit : sim;
-                } catch (RuntimeException | LinkageError failure) {
-                    MixinReflectionSupport.logReflectionFailure("simulate wireless FE target "
-                            + energyTarget.getClass().getName(), failure);
-                }
-            }
+            if (energyTarget != null) demand = simulateNormalDemand(energyTarget);
             demands[i] = demand;
             totalDemand = demand > Long.MAX_VALUE - totalDemand ? Long.MAX_VALUE : totalDemand + demand;
         }
@@ -618,46 +658,22 @@ public final class WirelessEnergyDistributor {
             return false;
         }
 
-        long pulled = buffer.beginMemoryBatch(feKey, totalDemand, host.actionSource());
-        if (pulled <= 0L) {
-            try {
-                requeueNormalEntriesSoon(due, 0);
-                updateIdleFailureStatus(false, false);
-                return false;
-            } finally {
-                buffer.endBatch(feKey, host.actionSource());
-                Arrays.fill(resolvedTargets, 0, dueSize, null);
-                due.size = 0;
-            }
-        }
-
-        boolean didWork = false;
-        long remainingBudget = pulled;
         IActionSource src = host.actionSource();
+        boolean didWork;
         try {
-            for (int i = 0; i < dueSize; i++) {
-                int targetIndex = dueData[i];
-                long demand = demands[i];
-                if (demand <= 0L) {
-                    adjustAndScheduleNormalEntry(targetIndex, 0L);
-                    continue;
+            didWork = dispatchNormalBatch(buffer, src, totalDemand, new NormalBatch() {
+                @Override public int size() { return dueSize; }
+                @Override public long demand(int i) { return demands[i]; }
+                @Override public TargetAccess target(int i) { return resolvedTargets[i]; }
+                @Override public void noEnergy(int i) {
+                    normalEnergyWheel[(normalWheelPointer + 1) & ENERGY_WHEEL_SLOTS_MASK].add(dueData[i]);
+                    updateIdleFailureStatus(false, false);
                 }
-                if (remainingBudget <= 0L) {
-                    requeueNormalEntriesSoon(due, i);
-                    break;
+                @Override public void transferred(int i, long pushed) {
+                    if (pushed > 0L) { lastStatus = Status.ACTIVE; lastTransferAmount += pushed; }
+                    adjustAndScheduleNormalEntry(dueData[i], pushed);
                 }
-
-                long requested = demand < remainingBudget ? demand : remainingBudget;
-                long pushed = AppFluxBridge.sendToTargetKnownDemand(
-                        resolvedTargets[i], buffer, src, requested);
-                if (pushed > 0L) {
-                    lastStatus = Status.ACTIVE;
-                    lastTransferAmount += pushed;
-                    didWork = true;
-                    remainingBudget -= pushed;
-                }
-                adjustAndScheduleNormalEntry(targetIndex, pushed);
-            }
+            }) > 0;
         } finally {
             buffer.endBatch(feKey, src);
             Arrays.fill(resolvedTargets, 0, dueSize, null);
@@ -775,19 +791,6 @@ public final class WirelessEnergyDistributor {
         normalEnergyWheel[slot].add(targetIndex);
     }
 
-    private void requeueNormalEntriesSoon(IntWheelSlot due, int startIndex) {
-        if (startIndex >= due.size) {
-            return;
-        }
-        int slotIdx = (normalWheelPointer + 1) & ENERGY_WHEEL_SLOTS_MASK;
-        IntWheelSlot targetSlot = normalEnergyWheel[slotIdx];
-        int[] dueData = due.data;
-        int dueSize = due.size;
-        for (int i = startIndex; i < dueSize; i++) {
-            targetSlot.add(dueData[i]);
-        }
-    }
-
     private void rebuildNormalWheel() {
         for (var slot : normalEnergyWheel) {
             slot.clear();
@@ -879,6 +882,11 @@ public final class WirelessEnergyDistributor {
             } else {
                 bufferedStorage.rebindDelegate(storageService.getInventory());
             }
+            var node = host.getMainNode().getNode();
+            if (node == null) return null;
+            bufferedStorage.attachLedger(grid.getService(WirelessEnergyGridService.class).escrow(node));
+            bufferedStorage.rebindDelegate(new GuardedEnergyStorage(storageService.getInventory(),
+                    () -> host.isOnline() && host.getMainNode().getGrid() == grid));
             storageProxy = new BufferedStorageService(storageService, bufferedStorage);
             delegateStorageService = storageService;
         }

@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def fallback = (findProperty('wireless_test_suite') ?: 'wireless') == 'fallback'
+        sourceSets.jdb.java.setIncludes(fallback ? ['**/WirelessAeFallbackGameTests.java'] : [
+                '**/EnergyApiStressGameTests.java', '**/WirelessEnergyGameTests.java',
+                '**/NetworkManagementGameTests.java', '**/WirelessEnergyTestMachine.java',
+                '**/WirelessEnergyAdmissionGameTests.java', '**/WirelessEnergyBoundaryGameTests.java'])
+        def directory = project.file('build/wireless-management-gametest/' + (fallback ? 'fallback' : 'wireless'))
+        minecraft.runs.gameTestServer {
+            workingDirectory directory
+            property 'forge.enabledGameTestNamespaces', 'ae2lt,ae2lt_io,ae2lt_stress,ae2lt_wireless_energy,ae2lt_management,minecraft'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

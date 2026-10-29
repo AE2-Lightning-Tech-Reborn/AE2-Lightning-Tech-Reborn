@@ -1,5 +1,11 @@
 package com.moakiee.ae2lt.blockentity;
 
+import appeng.api.implementations.blockentities.IWirelessAccessPoint;
+import appeng.api.networking.IGrid;
+import appeng.api.networking.pathing.ControllerState;
+import appeng.api.util.DimensionalBlockPos;
+
+import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -28,7 +34,8 @@ import com.moakiee.ae2lt.registry.ModBlocks;
  * Receivers with the matching frequency connect directly to this controller's grid node.
  */
 public class WirelessOverloadedControllerBlockEntity extends OverloadedControllerBlockEntity
-        implements WirelessFrequencyManager.WirelessTransmitterNodeProvider, ConnectionChannelCapacityProvider {
+        implements WirelessFrequencyManager.WirelessTransmitterNodeProvider, ConnectionChannelCapacityProvider,
+        IWirelessAccessPoint {
 
     private int frequencyId = -1;
 
@@ -53,6 +60,32 @@ public class WirelessOverloadedControllerBlockEntity extends OverloadedControlle
      */
     public boolean isAdvanced() {
         return false;
+    }
+
+    @Override
+    public DimensionalBlockPos getLocation() {
+        return new DimensionalBlockPos(this);
+    }
+
+    @Override
+    public double getRange() {
+        return Double.POSITIVE_INFINITY;
+    }
+
+    @Override
+    public IGrid getGrid() {
+        return getMainNode().getGrid();
+    }
+
+    @Override
+    public boolean isActive() {
+        var grid = getGrid();
+        return level != null && !level.isClientSide && !isRemoved()
+                && level.hasChunkAt(worldPosition) && level.getBlockEntity(worldPosition) == this
+                && getMainNode().isOnline() && grid != null
+                && !grid.getPathingService().isNetworkBooting()
+                && grid.getPathingService().getControllerState()
+                    != ControllerState.CONTROLLER_CONFLICT;
     }
 
     @Override
@@ -305,6 +338,6 @@ public class WirelessOverloadedControllerBlockEntity extends OverloadedControlle
         super.importSettings(mode, input, player);
         // setFrequency guards against duplicates on transmitters and reverts on conflict,
         // so the paste is a no-op if the target frequency is already bound elsewhere.
-        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency);
+        FrequencyBindingHelper.importMemorySettings(mode, input, this::setFrequency, player, this);
     }
 }

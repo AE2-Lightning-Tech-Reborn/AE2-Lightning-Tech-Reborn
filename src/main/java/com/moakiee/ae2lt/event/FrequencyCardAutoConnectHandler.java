@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.event;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import appeng.api.implementations.parts.ICablePart;
 import appeng.api.parts.IPartItem;
 import appeng.parts.PartPlacement;
@@ -27,8 +29,9 @@ public final class FrequencyCardAutoConnectHandler {
     private FrequencyCardAutoConnectHandler() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        if (event.isCanceled()) return;
         if (!(event.getLevel() instanceof ServerLevelAccessor levelAccessor)) {
             return;
         }
@@ -38,11 +41,47 @@ public final class FrequencyCardAutoConnectHandler {
         }
 
         var level = levelAccessor.getLevel();
-        if (registry.isPotentialLinkTarget(level, event.getPos())) {
-            registry.queueClusterTopologyChange(level, event.getPos());
+        ServerPlayer player = event.getEntity() instanceof ServerPlayer p && !(p instanceof net.minecraftforge.common.util.FakePlayer) ? p : null;
+        var meCard = player == null ? ItemStack.EMPTY
+                : OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
+        var feCard = player == null ? ItemStack.EMPTY
+                : OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).orElse(ItemStack.EMPTY);
+        int meFrequency = meCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(meCard).frequencyId();
+        int feFrequency = feCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(feCard).frequencyId();
+        if (event instanceof BlockEvent.EntityMultiPlaceEvent multi) {
+            // The inherited event position is only the first snapshot. Wands may report the entire placement here.
+            var seen = new java.util.HashSet<BlockPos>();
+            for (var snapshot : multi.getReplacedBlockSnapshots()) {
+                if (seen.size() >= 8192) break;
+                if (snapshot.getLevel() == level && seen.add(snapshot.getPos())) {
+                    queuePlacedBlock(registry, player, level, snapshot.getPos(), meFrequency, feFrequency);
+                }
+            }
+        } else {
+            queuePlacedBlock(registry, player, level, event.getPos(), meFrequency, feFrequency);
         }
-        if (event.getEntity() instanceof ServerPlayer player) {
-            registry.queueAutoConnect(player, player.level().dimension(), event.getPos(), null, 2);
+    }
+
+    /** Compatibility entry for tools whose placement event precedes the actual world edit. */
+    public static void onSuccessfulPlacement(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        var registry = WirelessLinkRegistry.get();
+        if (registry == null || (player instanceof net.minecraftforge.common.util.FakePlayer)) return;
+        var meCard = OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
+        var feCard = OverloadedFrequencyCardItem.findAutoConnectEnergyCard(player).orElse(ItemStack.EMPTY);
+        queuePlacedBlock(registry, player, level, pos,
+                meCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(meCard).frequencyId(),
+                feCard.isEmpty() ? -1 : OverloadedFrequencyCardItem.getData(feCard).frequencyId());
+    }
+
+    private static void queuePlacedBlock(WirelessLinkRegistry registry, ServerPlayer player, ServerLevel level,
+                                        BlockPos pos, int meFrequency, int feFrequency) {
+        if (!level.isLoaded(pos)) return;
+        if (registry.isPotentialLinkTarget(level, pos)) {
+            registry.queueClusterTopologyChange(level, pos);
+            if (player != null && meFrequency > 0) registry.queuePlacedBlockAutoConnect(player, level, pos, meFrequency);
+        }
+        if (player != null && feFrequency > 0) {
+            com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.placed(player, level, pos, feFrequency);
         }
     }
 
@@ -77,6 +116,7 @@ public final class FrequencyCardAutoConnectHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onWrenchDisassemble(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !(player.level() instanceof ServerLevel level)
                 || !InteractionUtil.isInAlternateUseMode(player)
@@ -98,8 +138,9 @@ public final class FrequencyCardAutoConnectHandler {
      * is performed server-side. Runs before {@link #onRightClickBlock}; a
      * terminal is never an {@link IPartItem}, so the two handlers never overlap.
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onTerminalCardRightClick(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player) || player.isShiftKeyDown()) {
             return;
         }
@@ -117,7 +158,9 @@ public final class FrequencyCardAutoConnectHandler {
         }
         var pos = event.getPos();
         var registry = WirelessLinkRegistry.get(level.getServer());
-        if (registry == null || !registry.isPotentialLinkTarget(level, pos)) {
+        if (registry == null || (!registry.isPotentialLinkTarget(level, pos)
+                && (event.getFace() == null || !com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(level.getServer())
+                        .isPotentialTarget(level, pos, event.getFace())))) {
             return;
         }
 
@@ -131,11 +174,12 @@ public final class FrequencyCardAutoConnectHandler {
             return;
         }
         FrequencyCardUsePacket.tryLinkWithCard(
-                player, card, level, pos, face, event.getHitVec().getLocation());
+                player, event.getHand(), card, level, pos, face, event.getHitVec().getLocation());
     }
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
