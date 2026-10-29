@@ -19,17 +19,19 @@ import com.moakiee.ae2lt.util.RecipeSerializationHelper;
 /**
  * 水晶催化器配方的产物声明。
  *
- * <p>支持两种 JSON 写法：</p>
+ * <p>支持三种 JSON 写法：</p>
  * <ul>
  *     <li>{@code {"id": "modid:item", "count": N}} —— 直接指定一个物品。</li>
  *     <li>{@code {"tag": "modid:path", "count": N}} —— 引用一个物品 tag，运行时解析为该 tag 内的第一个物品。
  *         若 tag 为空（即装包内没有任何物品被 tag 命中），配方等同于"输出为空"，会被机器和 JEI 跳过。</li>
+ *     <li>{@code {"harvestBlock": "modid:cluster", "count": N}} —— 服务器解析成熟晶簇的真实采集产物，
+ *         并在数据包重载后更新、同步产物。</li>
  * </ul>
  *
  * <p>采用 tag 形式可以让多模组装包里"任何一个 amethyst 粉物品"都能被识别，无需为每个潜在模组写一份配方。</p>
  */
 public sealed interface CrystalCatalyzerOutput
-        permits CrystalCatalyzerOutput.OfItem, CrystalCatalyzerOutput.OfTag {
+        permits CrystalCatalyzerOutput.OfItem, CrystalCatalyzerOutput.OfTag, CrystalHarvestOutput {
 
     /**
      * Resolve to a concrete {@link ItemStack}. Returns {@link ItemStack#EMPTY} when this is a tag
@@ -40,6 +42,7 @@ public sealed interface CrystalCatalyzerOutput
     int count();
 
     static CrystalCatalyzerOutput ofItem(ItemStack stack) {
+        if (stack.isEmpty()) throw new IllegalArgumentException("output stack cannot be empty");
         return new OfItem(stack.copy());
     }
 
@@ -48,12 +51,16 @@ public sealed interface CrystalCatalyzerOutput
     }
 
     static CrystalCatalyzerOutput fromJson(JsonObject json) {
+        if (json.has("harvestBlock")) {
+            return new CrystalHarvestOutput(new ResourceLocation(GsonHelper.getAsString(json, "harvestBlock")),
+                    GsonHelper.getAsInt(json, "count", 1));
+        }
         if (json.has("tag")) {
             return new OfTag(
                     TagKey.create(Registries.ITEM, ResourceLocation.tryParse(GsonHelper.getAsString(json, "tag"))),
                     GsonHelper.getAsInt(json, "count", 1));
         }
-        return new OfItem(RecipeSerializationHelper.itemStackFromJson(json));
+        return ofItem(RecipeSerializationHelper.itemStackFromJson(json));
     }
 
     static void encode(FriendlyByteBuf buf, CrystalCatalyzerOutput output) {
@@ -66,6 +73,11 @@ public sealed interface CrystalCatalyzerOutput
             buf.writeBoolean(true);
             buf.writeResourceLocation(tag.tag().location());
             buf.writeInt(tag.count());
+            return;
+        }
+        if (output instanceof CrystalHarvestOutput harvest) {
+            buf.writeBoolean(false);
+            LargeStackStreamCodecs.writeItemStack(buf, harvest.resolve());
             return;
         }
         throw new IllegalStateException("Unknown crystal catalyzer output type: " + output);
@@ -84,9 +96,7 @@ public sealed interface CrystalCatalyzerOutput
     record OfItem(ItemStack stack) implements CrystalCatalyzerOutput {
         public OfItem {
             stack = stack.copy();
-            if (stack.isEmpty()) {
-                throw new IllegalArgumentException("output stack cannot be empty");
-            }
+            // Disabled harvest recipes synchronize as empty snapshots; JSON remains strict.
         }
 
         @Override

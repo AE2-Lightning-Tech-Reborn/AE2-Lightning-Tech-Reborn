@@ -37,9 +37,14 @@ public final class NeoEcoCatalyzerGameTests {
         }
         var recipe = candidate.orElseThrow().recipe();
         var catalyst = BuiltInRegistries.ITEM.get(new ResourceLocation("neoecoae:flawless_budding_energized_crystal"));
-        var output = BuiltInRegistries.ITEM.get(new ResourceLocation("neoecoae:energized_crystal"));
+        var cluster = BuiltInRegistries.BLOCK.get(new ResourceLocation("neoecoae:energized_crystal_cluster"));
+        var drops = net.minecraft.world.level.block.Block.getDrops(cluster.defaultBlockState(), h.getLevel(),
+                BlockPos.ZERO, null, net.minecraftforge.common.util.FakePlayerFactory.getMinecraft(h.getLevel()),
+                new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+        h.assertTrue(!drops.isEmpty(), "native energized cluster must have a harvest product");
+        var output = drops.get(0).getItem();
         h.assertTrue(recipe.getOutputTemplate().is(output) && recipe.getOutputTemplate().getCount() == 16,
-                "incorrect Neo ECO output");
+                "Neo ECO catalysis differs from actual mature-cluster harvest");
         var pos = new BlockPos(2, 2, 2);
         h.setBlock(pos, ModBlocks.CRYSTAL_CATALYZER.get());
         h.setBlock(pos.below(), AEBlocks.CREATIVE_ENERGY_CELL.block());
@@ -58,7 +63,7 @@ public final class NeoEcoCatalyzerGameTests {
         });
         h.succeedWhen(() -> {
             var result = host.getInventory().getStackInSlot(CrystalCatalyzerInventory.SLOT_OUTPUT);
-            h.assertTrue(result.is(output) && result.getCount() == 16, "waiting for sixteen energized crystals");
+            h.assertTrue(result.is(output) && result.getCount() == 16, "waiting for sixteen harvested crystals");
             h.assertTrue(host.getInventory().getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount() == 1,
                     "catalyst was consumed");
             h.assertTrue(host.getFluid().isEmpty() && host.getMachineStoredEnergy() == 0, "incorrect cycle cost");

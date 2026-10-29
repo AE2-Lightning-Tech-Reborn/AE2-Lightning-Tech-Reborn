@@ -663,6 +663,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         }
 
         if (!lockedRecipe.matchesFluidInput(candidate.recipe())
+                || !lockedRecipe.matchesHarvestOutput(candidate.recipe())
                 || (isPigmeeVariant() && !candidate.recipe().isWaterRecipe())) {
             return false;
         }
