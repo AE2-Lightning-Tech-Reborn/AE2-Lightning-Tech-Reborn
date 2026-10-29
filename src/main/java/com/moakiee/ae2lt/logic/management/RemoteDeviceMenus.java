@@ -16,7 +16,7 @@ final class RemoteDeviceMenus {
     static MenuType<?> type(Object owner) {
         if (owner instanceof IOPortBlockEntity) return IOPortMenu.TYPE;
         if (owner instanceof OverloadedIOPortBlockEntity) return OverloadedIOPortMenu.TYPE;
-        return ModList.get().isLoaded("extendedae") ? ExtendedAe.type(owner) : null;
+        return ModList.get().isLoaded("expatternprovider") ? ExtendedAe.type(owner) : null;
     }
 
     /** Keep optional ExtendedAE types out of the enclosing class's linkage. */

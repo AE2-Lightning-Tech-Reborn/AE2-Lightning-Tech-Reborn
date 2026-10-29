@@ -24,7 +24,7 @@ public abstract class JeiMultiblockLayoutMixin {
     @Shadow
     public abstract IRecipeCategory<?> getSelectedRecipeCategory();
 
-    @Inject(method = "getVisibleRecipeLayoutsWithButtons", at = @At("HEAD"), require = 0)
+    @Inject(method = "getVisibleRecipeLayoutsWithButtons(IILnet/minecraft/world/inventory/AbstractContainerMenu;)Ljava/util/List;", at = @At("HEAD"), require = 0)
     private void ae2lt$fitMultiblockPreview(
             int availableHeight,
             int minRecipePadding,
@@ -37,4 +37,5 @@ public abstract class JeiMultiblockLayoutMixin {
             cachedRecipeLayoutsWithButtons = null;
         }
     }
+
 }

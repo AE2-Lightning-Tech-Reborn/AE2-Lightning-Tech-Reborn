@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.mixin.recipeviewer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -55,8 +56,10 @@ class RecipeViewerMixinPluginTest {
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
         assertEquals(!controller, plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiLegacyRecipeTransferButtonMixin"));
-        assertEquals(true, plugin.shouldApplyMixin("unused",
-                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"));
+        assertNotEquals(plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"),
+                plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiModernMultiblockLayoutMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyServiceMixin"));
     }

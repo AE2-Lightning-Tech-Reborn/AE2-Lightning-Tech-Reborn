@@ -162,13 +162,13 @@
     "mode_energy": {
       "left": 84,
       "top": 19,
-      "width": 72,
+      "width": 64,
       "height": 15
     },
     "mode_connections": {
-      "left": 160,
+      "left": 152,
       "top": 19,
-      "width": 72,
+      "width": 80,
       "height": 15
     },
     "return_to_terminal": {

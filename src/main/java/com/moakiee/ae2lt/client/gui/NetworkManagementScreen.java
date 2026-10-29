@@ -100,7 +100,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         managementTab = navigation.stream().filter(b -> b.page() == FrequencyPage.TAB_DEVICES).findFirst().orElseThrow();
         if (menu.hasParentMenu()) {
             var back = new TabButton(Icon.ARROW_LEFT,
-                    Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> com.moakiee.ae2lt.network.NetworkInit.sendToServer(
+                    Component.translatable("ae2lt.gui.button.return_to_terminal"), button -> appeng.core.sync.network.NetworkHandler.instance().sendToServer(
                             appeng.core.sync.packets.SwitchGuisPacket.returnToParentMenu()));
             back.setStyle(TabButton.Style.BOX);
             widgets.add("return_to_terminal", back);

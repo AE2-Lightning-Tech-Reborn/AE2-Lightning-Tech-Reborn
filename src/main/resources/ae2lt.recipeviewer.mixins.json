@@ -10,6 +10,7 @@
     "jei.JeiRecipeTransferButtonControllerMixin",
     "jei.JeiLegacyRecipeTransferButtonMixin",
     "jei.JeiMultiblockLayoutMixin",
+    "jei.JeiModernMultiblockLayoutMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",
     "jeisupply.JeiWirelessSupplyMixin",

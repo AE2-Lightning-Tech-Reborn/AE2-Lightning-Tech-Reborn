@@ -18,6 +18,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean jeiSupplyPresent;
     private boolean jeiLegacyTransfer;
     private boolean jeiButtonController;
+    private boolean modernJeiLayouts;
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -37,6 +38,22 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         jeiSupplyPresent = jeiPresent && wirelessLibraryPresent;
         // JEI 15.57 introduced RecipeTransferService and IRecipeTransferContext on 1.20.1.
         jeiLegacyTransfer = jeiSupplyPresent && !jeiAtLeast(jei, 15, 57);
+        modernJeiLayouts = jeiPresent && hasModernJeiLayouts();
+    }
+
+    private static boolean hasModernJeiLayouts() {
+        try (var stream = RecipeViewerMixinPlugin.class.getClassLoader().getResourceAsStream(
+                "mezz/jei/gui/recipes/RecipeGuiLogic.class")) {
+            if (stream == null) return false;
+            var type = new ClassNode();
+            new org.objectweb.asm.ClassReader(stream).accept(type,
+                    org.objectweb.asm.ClassReader.SKIP_CODE | org.objectweb.asm.ClassReader.SKIP_DEBUG
+                            | org.objectweb.asm.ClassReader.SKIP_FRAMES);
+            return type.methods.stream().anyMatch(method -> method.name.equals("getVisibleRecipeLayoutsWithButtons")
+                    && method.desc.startsWith("(Lmezz/jei/common/util/ImmutableSize2i;"));
+        } catch (java.io.IOException ignored) {
+            return false;
+        }
     }
 
     private static boolean jeiAtLeast(net.minecraftforge.forgespi.language.IModFileInfo jei, int major, int minor) {
@@ -52,6 +69,8 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.contains(".useless.")) return jeiPresent && uselessPresent;
+        if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin")) return jeiPresent && !modernJeiLayouts;
+        if (mixinClassName.endsWith(".jei.JeiModernMultiblockLayoutMixin")) return jeiPresent && modernJeiLayouts;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) return jeiLegacyTransfer;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")
                 || mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyContextAccessor")) {
