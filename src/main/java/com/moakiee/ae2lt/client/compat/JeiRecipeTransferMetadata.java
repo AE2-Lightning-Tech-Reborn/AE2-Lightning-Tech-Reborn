@@ -18,6 +18,17 @@ public final class JeiRecipeTransferMetadata {
 
     public static void setRuntime(mezz.jei.api.runtime.IJeiRuntime value) { runtime = value; }
 
+    public static com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen<?> aliasEditor(
+            TianshuPatternEncodingTermMenu menu) {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        var parent = mc.screen instanceof mezz.jei.gui.recipes.RecipesGui recipesGui
+                ? ((com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipesGuiAccessor) recipesGui).ae2lt$getParentScreen()
+                : mc.screen;
+        return parent instanceof com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen<?> editor
+                && editor.getMenu() == menu && mc.player != null && mc.player.containerMenu == menu
+                ? editor : null;
+    }
+
     /** The machines shown in JEI's left catalyst column, using stable item registry IDs. */
     public static List<String> machineIds(mezz.jei.api.recipe.RecipeType<?> type) {
         if (runtime == null || type == null) return List.of();
@@ -43,6 +54,20 @@ public final class JeiRecipeTransferMetadata {
             aliases.add(category.getTitle().getString());
         }
         CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases), machineIds(type)));
+    }
+
+    /** Scope metadata to the real transfer, restoring it even if a handler throws or nests a transfer. */
+    public static boolean withLayout(net.minecraft.world.inventory.AbstractContainerMenu menu,
+            IRecipeLayoutDrawable<?> layout, java.util.function.BooleanSupplier transfer) {
+        var previous = CURRENT.get();
+        try {
+            clear();
+            if (menu instanceof TianshuPatternEncodingTermMenu tianshuMenu) begin(tianshuMenu, layout);
+            return transfer.getAsBoolean();
+        } finally {
+            if (previous == null) clear();
+            else CURRENT.set(previous);
+        }
     }
 
     public static Snapshot snapshotFor(TianshuPatternEncodingTermMenu menu) {

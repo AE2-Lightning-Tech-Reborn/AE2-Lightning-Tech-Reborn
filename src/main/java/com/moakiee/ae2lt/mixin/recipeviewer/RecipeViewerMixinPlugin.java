@@ -72,13 +72,11 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin")) return jeiPresent && !modernJeiLayouts;
         if (mixinClassName.endsWith(".jei.JeiModernMultiblockLayoutMixin")) return jeiPresent && modernJeiLayouts;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) return jeiLegacyTransfer;
-        if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")
-                || mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyContextAccessor")) {
+        if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")) {
             return jeiSupplyPresent && !jeiLegacyTransfer;
         }
         if (mixinClassName.endsWith(".jei.JeiLegacyRecipeTransferButtonMixin")) return jeiPresent && !jeiButtonController;
         if (mixinClassName.endsWith(".jei.JeiRecipeTransferButtonControllerMixin")) return jeiPresent && jeiButtonController;
-        if (mixinClassName.contains(".jeisupply.")) return jeiSupplyPresent;
         if (mixinClassName.contains(".jei.")) return jeiPresent;
         if (mixinClassName.contains(".emi.")) return emiPresent;
         return false;

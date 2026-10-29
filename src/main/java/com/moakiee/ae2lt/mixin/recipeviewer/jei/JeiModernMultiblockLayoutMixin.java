@@ -18,7 +18,7 @@ public abstract class JeiModernMultiblockLayoutMixin {
     @Shadow private IRecipeLayoutList cachedRecipeLayoutsWithButtons;
     @Shadow public abstract IRecipeCategory<?> getSelectedRecipeCategory();
 
-    @Inject(method = "getVisibleRecipeLayoutsWithButtons", at = @At("HEAD"))
+    @Inject(method = "getVisibleRecipeLayoutsWithButtons(Lmezz/jei/common/util/ImmutableSize2i;Lnet/minecraft/world/inventory/AbstractContainerMenu;)Ljava/util/List;", at = @At("HEAD"))
     private void ae2lt$fitModernMultiblockPreview(
             @Coerce Object availableSize, AbstractContainerMenu container,
             CallbackInfoReturnable<List<?>> cir) throws ReflectiveOperationException {

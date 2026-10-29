@@ -568,20 +568,17 @@ public final class TianshuUploadAliasClientProbe {
             for (boolean backed : List.of(false, true)) {
                 recipesGui.showTypes(List.of(mezz.jei.api.constants.RecipeTypes.SMELTING));
                 require(mc.screen == recipesGui, "JEI recipe page opens from editor");
-                var type = mezz.jei.api.recipe.RecipeType.create("alias_probe", "viewer_category", Object.class);
-                var category = (mezz.jei.api.recipe.category.IRecipeCategory) Proxy.newProxyInstance(
-                        mezz.jei.api.recipe.category.IRecipeCategory.class.getClassLoader(),
-                        new Class<?>[]{mezz.jei.api.recipe.category.IRecipeCategory.class}, (proxy, method, args) ->
-                                method.getName().equals("getRecipeType") ? type : null);
-                var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable) Proxy.newProxyInstance(
-                        mezz.jei.api.gui.IRecipeLayoutDrawable.class.getClassLoader(),
-                        new Class<?>[]{mezz.jei.api.gui.IRecipeLayoutDrawable.class}, (proxy, method, args) -> switch (method.getName()) {
-                            case "getRecipeCategory" -> category;
-                            case "getRecipe" -> backed ? vanilla : new Object();
-                            default -> null;
-                        });
+                var runtime = mezz.jei.common.Internal.getJeiRuntime();
+                var type = backed ? mezz.jei.api.constants.RecipeTypes.SMELTING
+                        : com.moakiee.ae2lt.integration.jei.category.MultiblockStructureCategory.TYPE;
+                var category = runtime.getRecipeManager().getRecipeCategory((mezz.jei.api.recipe.RecipeType) type);
+                var recipe = backed ? vanilla : runtime.getRecipeManager()
+                        .createRecipeLookup(com.moakiee.ae2lt.integration.jei.category.MultiblockStructureCategory.TYPE)
+                        .get().findFirst().orElseThrow();
+                var layout = (mezz.jei.api.gui.IRecipeLayoutDrawable<?>) runtime.getRecipeManager().createRecipeLayoutDrawable(category, recipe,
+                        runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).orElseThrow();
                 var controller = new mezz.jei.gui.recipes.RecipeTransferButtonController(layout, recipesGui,
-                    new mezz.jei.common.transfer.RecipeTransferService(mezz.jei.common.Internal.getJeiRuntime().getRecipeTransferManager()));
+                    new mezz.jei.common.transfer.RecipeTransferService(runtime.getRecipeTransferManager()));
                 boolean[] state = new boolean[2];
                 controller.updateState((mezz.jei.api.gui.buttons.IButtonState) Proxy.newProxyInstance(
                         mezz.jei.api.gui.buttons.IButtonState.class.getClassLoader(),
@@ -599,7 +596,7 @@ public final class TianshuUploadAliasClientProbe {
                     require(controller.onPress(input), "JEI source click handled");
                     if (simulate) require(input(draft, "source").getValue().equals(previousSource), "JEI simulation does not change draft");
                 }
-                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "alias_probe:viewer_category"),
+                require(input(draft, "source").getValue().equals(backed ? "minecraft:smelting" : "ae2lt:multiblock_structure"),
                         "JEI prefers vanilla type and falls back to category");
                 require(mc.screen == draft, "JEI source click returns to editor");
                 input(draft, "source").setValue(previousSource);

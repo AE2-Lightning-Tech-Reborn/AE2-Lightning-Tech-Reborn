@@ -33,7 +33,7 @@ class RecipeViewerMixinPluginTest {
 
         assertEquals(legacy, applies(plugin, "JeiWirelessSupplyMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyServiceMixin"));
-        assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
     }
 
     @Test

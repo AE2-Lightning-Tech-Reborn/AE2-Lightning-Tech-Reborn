@@ -95,19 +95,26 @@ public final class JeiTransferCompatibilityClientProbe {
         var metadata = JeiRecipeTransferMetadata.class.getDeclaredField("CURRENT");
         metadata.setAccessible(true);
         var current = (ThreadLocal<JeiRecipeTransferMetadata.Snapshot>) metadata.get(null);
-        current.set(new JeiRecipeTransferMetadata.Snapshot(null, "sentinel", List.of()));
+        current.set(new JeiRecipeTransferMetadata.Snapshot(null, "sentinel", List.of(), List.of()));
         if (!Boolean.valueOf(expectedResult).equals(click.invoke(instance, clickArguments))) {
             throw new AssertionError("Simulated click changed JEI's return value");
         }
-        if (current.get() != null) throw new AssertionError("Simulated click retained transfer metadata");
+        if (current.get() == null || !current.get().sourceKey().equals("sentinel"))
+            throw new AssertionError("Simulated click changed the outer metadata scope");
+        current.remove();
 
         Method success = Arrays.stream(button.getDeclaredMethods())
                 .filter(m -> m.getName().contains("ae2lt$keepRecipePageForDirectUpload")
-                        && Arrays.equals(m.getParameterTypes(), new Class<?>[] {Runnable.class}))
+                        && m.getParameterCount() == 2
+                        && m.getParameterTypes()[0] == Runnable.class)
                 .findFirst().orElseThrow();
         success.setAccessible(true);
         var called = new AtomicBoolean();
-        success.invoke(instance, (Runnable) () -> called.set(true));
+        com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> operation = arguments -> {
+            ((Runnable) arguments[0]).run();
+            return null;
+        };
+        success.invoke(null, (Runnable) () -> called.set(true), operation);
         if (!called.get()) throw new AssertionError("Success callback was suppressed outside RecipesGui");
     }
 }

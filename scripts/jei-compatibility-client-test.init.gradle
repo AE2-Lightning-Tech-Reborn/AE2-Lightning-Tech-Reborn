@@ -1,0 +1,34 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/JeiCompatibilityClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
+                    'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
+                    || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
+        }
+        def probeDir = project.file('build/jei-client-' + project.jei_version + '/jei-compat-client')
+        minecraft.runs.client {
+            workingDirectory probeDir
+            jvmArgs '-Xverify:all'
+            property 'ae2lt.jeiCompatibilityProbe', 'true'
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'JeiQA'
+            mods { "${project.mod_id}" { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                def seed = project.file(project.property('jeiCompatSeed'))
+                if (!new File(seed, 'level.dat').isFile()) throw new GradleException('Supply a disposable Forge 1.20.1 world using -PjeiCompatSeed')
+                probeDir.mkdirs()
+                project.copy { from seed; into new File(probeDir, 'saves/JeiQA'); exclude 'session.lock' }
+                new File(probeDir, 'jei-compatibility-probe.txt').delete()
+                new File(probeDir, 'options.txt').text = 'version:3465\nonboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nguiScale:2\nrenderDistance:3\nsimulationDistance:5\n'
+            }
+            doLast {
+                def result = new File(probeDir, 'jei-compatibility-probe.txt')
+                if (!result.isFile() || !result.text.startsWith('JEI_CLIENT_QA PASS'))
+                    throw new GradleException('JEI client probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}
