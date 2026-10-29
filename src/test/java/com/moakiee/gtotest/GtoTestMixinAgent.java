@@ -24,6 +24,20 @@ public final class GtoTestMixinAgent {
             public byte[] transform(ClassLoader loader, String name, Class<?> type,
                     ProtectionDomain domain, byte[] bytes) {
                 // Forge normally synthesizes this event constructor during ModLauncher loading.
+                if (name.equals("appeng/api/stacks/KeyCounter")
+                        && Boolean.getBoolean("ae2lt.testLegacyCounterEntries")) {
+                    try {
+                        var node = new ClassNode();
+                        new ClassReader(bytes).accept(node, 0);
+                        loader.loadClass("com.moakiee.ae2lt.compat.gto.GtoKeyCounterEntryTransform")
+                                .getMethod("apply", ClassNode.class).invoke(null, node);
+                        var writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                        node.accept(writer);
+                        return writer.toByteArray();
+                    } catch (ReflectiveOperationException failure) {
+                        throw new AssertionError("GTO counter compatibility transform failed", failure);
+                    }
+                }
                 if (name.startsWith("net/minecraftforge/network/NetworkEvent")) {
                     var node = new ClassNode();
                     new ClassReader(bytes).accept(node, 0);

@@ -726,8 +726,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         // Overload outputs must be registered per dispatched pattern so returned variants can be
         // split between the requester and the CPU seed pool. BatchExecutor bypasses that
         // registration path, therefore overload patterns intentionally stay on pushOnePattern.
-        if (CraftingPatternDelegates.forProviderLookup(details)
-                instanceof OverloadedProviderOnlyPatternDetails) {
+        if (com.moakiee.ae2lt.compat.gto.GtoUselessDynamicPatterns.outputView(details) != null) {
             nonBatchTasksThisTick.add(details);
             return BatchExecutor.BatchRunResult.EMPTY;
         }
@@ -881,8 +880,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                      IEnergyService energyService,
                                      Level level,
                                      TickProviderDispatchSchedule dispatchSchedule) {
-        if (CraftingPatternDelegates.forProviderLookup(details)
-                instanceof OverloadedProviderOnlyPatternDetails) {
+        if (com.moakiee.ae2lt.compat.gto.GtoUselessDynamicPatterns.outputView(details) != null) {
             return null;
         }
         if (task.value <= 0 || maxCopies <= 0) {
@@ -1004,18 +1002,19 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
             var returns = provider instanceof DeferredCraftingProvider ? deferredOutputSink() : null;
             boolean accepted = returns != null
                     ? ((DeferredCraftingProvider) provider).pushPattern(resolvedProvider.pattern(), inputs, returns)
-                    : provider.pushPattern(resolvedProvider.pattern(), inputs);
+                    : com.moakiee.ae2lt.compat.gto.GtoProviderDispatch.push(provider, resolvedProvider.pattern(), inputs);
             if (!accepted) {
                 dispatchSchedule.recordFailure(resolvedProvider.pattern(), provider);
                 return false;
             }
         } catch (Throwable t) {
-            if (com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.isIndeterminate(t)) {
+            if (com.moakiee.ae2lt.compat.gto.GtoProviderDispatch.isIndeterminate(t)
+                    || com.moakiee.ae2lt.compat.neoeco.NeoEcoCraftingCompat.isIndeterminate(t)) {
                 // Keep this copy debited and register its expected output exactly once. An ECO
                 // provider may already own it; suspend before visiting another provider/copy.
                 if (job != null) job.suspended = true;
                 cpu.markDirty();
-                AELog.warn("[ae2lt] Suspended CPU after uncertain NeoECO single-copy ownership: %s", t);
+                AELog.warn("[ae2lt] Suspended CPU after uncertain provider single-copy ownership: %s", t);
                 return true;
             }
             AELog.warn("[ae2lt] ICraftingProvider %s threw during pushPattern; blocking this pattern for the current tick. %s",
@@ -1413,6 +1412,19 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         }
         seedReturnQuotaFinalized = true;
         cpu.markDirty();
+    }
+
+    public boolean completeEaepVirtualTask(IPatternDetails pattern) {
+        var activeJob = job;
+        if (activeJob == null) return false;
+        var current = activeJob.tasks.get(pattern);
+        if (current == null || current.value > 1) return false;
+        for (var progress : activeJob.tasks.values()) {
+            if (progress.value - (progress == current ? 1 : 0) > 0) return false;
+        }
+        cpu.updateOutput(null);
+        finishJob(true);
+        return true;
     }
 
     private void finishJob(boolean success) {
@@ -2371,8 +2383,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     private boolean hasAmbiguousOverloadOutput(
             IPatternDetails details,
             @Nullable Map<UUID, KeyCounter> preallocatedRemainderCredits) {
-        var providerDetails = CraftingPatternDelegates.forProviderLookup(details);
-        if (!(providerDetails instanceof OverloadedProviderOnlyPatternDetails overloadDetails)) {
+        var overloadDetails = com.moakiee.ae2lt.compat.gto.GtoUselessDynamicPatterns.outputView(details);
+        if (overloadDetails == null) {
             // STRICT outputs and remainders are partitioned from mirrored exact ID_ONLY waiting
             // in insert(). They no longer need to serialize behind unrelated overload work.
             return false;
@@ -2427,13 +2439,18 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                                  IPatternDetails details,
                                                  long copies,
                                                  Map<UUID, KeyCounter> remainderLoopCredits) {
-        if (!(CraftingPatternDelegates.forProviderLookup(details)
-                instanceof OverloadedProviderOnlyPatternDetails overloadDetails) || copies <= 0) {
+        var overloadDetails = com.moakiee.ae2lt.compat.gto.GtoUselessDynamicPatterns.outputView(details);
+        if (overloadDetails == null || copies <= 0) {
             return;
         }
 
         var reference = overloadPatternReference(details, overloadDetails);
         var finalOutputKey = activeJob.finalOutput != null ? activeJob.finalOutput.what() : null;
+        if (com.moakiee.ae2lt.compat.gto.GtoUselessDynamicPatterns.isDynamic(details)) {
+            OverloadCpuStateManager.INSTANCE.registerActualOutputAmounts(this, activeJob.link.getCraftingID(), reference,
+                    overloadDetails.overloadPatternDetailsView(), List.of(details.getOutputs()), finalOutputKey, copies);
+            return;
+        }
         OverloadCpuStateManager.INSTANCE.registerExpectedOutputs(
                 this,
                 activeJob.link.getCraftingID(),

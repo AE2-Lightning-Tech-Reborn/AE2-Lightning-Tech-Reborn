@@ -1,57 +1,62 @@
 package com.moakiee.ae2lt.client.compat;
 
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
-/** GTO replaces annotation discovery with its public recipe-viewer plugin events. */
-@Mod.EventBusSubscriber(modid = AE2LightningTech.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+/** Add LT after GTO's viewer discovery; its internal event owner is obfuscated in release jars. */
 public final class GtoRecipeViewerBootstrap {
     private GtoRecipeViewerBootstrap() { }
 
-    @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            if (ModList.get().isLoaded("emi")) Emi.register();
-            if (ModList.get().isLoaded("jei")) Jei.register();
-        });
-    }
-
-    private static void listen(String fieldName, Consumer<Consumer<Object>> listener) {
+    public static List<Object> withEmi(List<Object> plugins) {
         try {
-            // Keep GTCEu's nested implementation types off LT's compile/runtime dependency list.
-            // The pinned GTO API exposes Event<Consumer<Plugin>> for both viewers.
-            Object event = Class.forName("com.gtolib.api.GTOApi").getField(fieldName).get(null);
-            event.getClass().getMethod("addListener", Class.class, Consumer.class)
-                    .invoke(event, GtoRecipeViewerBootstrap.class, listener);
+            // The published EMI API jar omits this runtime container type.
+            var type = Class.forName("dev.emi.emi.registry.EmiPluginContainer");
+            var id = type.getMethod("id");
+            for (var plugin : plugins) if (AE2LightningTech.MODID.equals(id.invoke(plugin))) return plugins;
+            var result = new ArrayList<>(plugins);
+            result.add(type.getConstructor(dev.emi.emi.api.EmiPlugin.class, String.class)
+                    .newInstance(new com.moakiee.ae2lt.integration.emi.AE2LTEmiPlugin(), AE2LightningTech.MODID));
+            return result;
         } catch (ReflectiveOperationException failure) {
-            throw new IllegalStateException("Cannot register LT with GTO " + fieldName, failure);
+            throw new IllegalStateException("Cannot add LT to the installed EMI plugin list", failure);
         }
     }
 
-    private static final class Emi {
-        private static void register() {
-            listen("EMI_PLUGIN_EVENT", registrar -> {
-                try {
-                    Object container = Class.forName("dev.emi.emi.registry.EmiPluginContainer")
-                            .getConstructor(dev.emi.emi.api.EmiPlugin.class, String.class)
-                            .newInstance(new com.moakiee.ae2lt.integration.emi.AE2LTEmiPlugin(), AE2LightningTech.MODID);
-                    registrar.accept(container);
-                } catch (ReflectiveOperationException failure) {
-                    throw new IllegalStateException("Cannot create LT EMI plugin container", failure);
-                }
-            });
+    public static List<mezz.jei.api.IModPlugin> withJei(List<mezz.jei.api.IModPlugin> plugins) {
+        for (var plugin : plugins) if (plugin instanceof com.moakiee.ae2lt.integration.jei.JEIPlugin) return plugins;
+        var result = new ArrayList<>(plugins);
+        result.add(new com.moakiee.ae2lt.integration.jei.JEIPlugin());
+        return result;
+    }
+
+    /** Snapshot JEI's volatile runtime before a hover query; unload can precede EMI cleanup. */
+    public static dev.emi.emi.api.stack.EmiStackInteraction jemiStackAt(
+            mezz.jei.api.runtime.IJeiRuntime runtime, net.minecraft.client.gui.screens.Screen screen, int x, int y) {
+        if (runtime == null) return dev.emi.emi.api.stack.EmiStackInteraction.EMPTY;
+        var helper = runtime.getScreenHelper();
+        if (helper == null) return dev.emi.emi.api.stack.EmiStackInteraction.EMPTY;
+        var ingredients = helper.getClickableIngredientUnderMouse(screen, x, y).iterator();
+        if (!ingredients.hasNext()) return dev.emi.emi.api.stack.EmiStackInteraction.EMPTY;
+        try {
+            var stack = (dev.emi.emi.api.stack.EmiStack) JemiConversion.CONVERT.invoke(null,
+                    ingredients.next().getTypedIngredient());
+            return new dev.emi.emi.api.stack.EmiStackInteraction(stack, null, false);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("Cannot convert the installed JEMI hover ingredient", failure);
         }
     }
 
-    private static final class Jei {
-        private static void register() {
-            listen("JEI_PLUGIN_EVENT", registrar -> registrar.accept(new com.moakiee.ae2lt.integration.jei.JEIPlugin()));
+    private static final class JemiConversion {
+        private static final java.lang.reflect.Method CONVERT = converter();
+        private static java.lang.reflect.Method converter() {
+            try {
+                return Class.forName("dev.emi.emi.jemi.JemiUtil")
+                        .getMethod("getStack", mezz.jei.api.ingredients.ITypedIngredient.class);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("Installed JEMI conversion API changed", failure);
+            }
         }
     }
 }

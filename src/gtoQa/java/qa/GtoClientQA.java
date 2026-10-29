@@ -36,9 +36,13 @@ public final class GtoClientQA {
                 && ++menuTicks >= 400) {
             connecting = true;
             LOGGER.info("GTO_CLIENT_QA connecting after initial resources and main menu settled");
-            net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen, mc,
-                    net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(connect),
-                    new net.minecraft.client.multiplayer.ServerData("GTO QA", connect, false), false);
+            if (Boolean.getBoolean("ae2lt.gtoQaLoopbackConnect")) {
+                GtoLoopbackConnectionQA.start(mc.screen, mc, connect);
+            } else {
+                net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen, mc,
+                        net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(connect),
+                        new net.minecraft.client.multiplayer.ServerData("GTO QA", connect, false), false);
+            }
         }
         if (mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen) {
             for (var field : mc.screen.getClass().getDeclaredFields()) {
@@ -56,12 +60,19 @@ public final class GtoClientQA {
         }
         if (Boolean.getBoolean("ae2lt.bigTerminalProbe") || Boolean.getBoolean("ae2lt.multiblockLayoutProbe")
                 || Boolean.getBoolean("ae2lt.emiMultiblockProbe") || Boolean.getBoolean("ae2lt.phaseFreecamClientProbe")
-                || Boolean.getBoolean("ae2lt.providerGuiProbe")) return;
+                || Boolean.getBoolean("ae2lt.providerGuiProbe") || Boolean.getBoolean("ae2lt.multiplayerProbe")) return;
         if(++loading%100==0)LOGGER.info("GTO_CLIENT_QA SCREEN "+(mc.screen==null?"none":mc.screen.getClass().getName())+" world="+(mc.level!=null));
         if(mc.level==null || mc.player==null) return;
         if(++ticks<120)return;
         done=true;
         try {
+            if (connect != null && Integer.getInteger("ae2lt.gtoQaConnectionAttempts", 1) > 1
+                    && net.minecraftforge.fml.ModList.get().isLoaded("emi")
+                    && !(boolean) Class.forName("dev.emi.emi.runtime.EmiReloadManager")
+                            .getMethod("isLoaded").invoke(null)) {
+                done = false;
+                return;
+            }
             if (Boolean.getBoolean("ae2lt.gtoMixinAudit")) GtoMixinAudit.run();
             var key=AEItemKey.of(Items.DIAMOND);var amount=BigInteger.TEN.pow(30);
             var nativeText=key.formatAmount(1,AmountFormat.SLOT);

@@ -4,29 +4,30 @@
 
 ## 当前配套版本
 
-当前 LT `2.1.2-gto.9` 的最低支持整包基线为 **GTO `0.6.0-dev-23`**，已验证的是该官方发行包的配套环境。低于此基线的整包不在本版支持范围内；更新的整包仍需核对下表依赖，不能仅凭版本号更高判定兼容。
+当前 LT `2.1.2-gto.12` 支持已验证的 **GTO `0.6.0-dev-23` 与 `0.6.0-dev-25` 配套环境**。低于 Dev23 的整包不在本版支持范围内；其他版本仍需单独核对依赖并验证，不能仅凭版本号更高判定兼容。最新 Core 配套、图形双人、重连、真实 FX、可选集成与跨 JVM 恢复的实际制品和验证边界见 [2026-10-28 配套验证](GTO_CORE_PAIR_VALIDATION_2026-10-28.md)。此前记录保留为 [Dev25 客户端修复](GTO_DEV25_CLIENT_FIXES_2026-10-27.md) 和 [扩展修复](GTO_EXTENDED_FIXES_2026-10-27.md)。
 
 | 组件 | 版本 |
 | --- | --- |
 | Minecraft / Java / Forge | 1.20.1 / 21 / 47.4.20 |
-| GTO 整包基线 | 0.6.0-dev-23 官方服务端发行包 |
-| GTOCore | 26.10.10 |
-| AE2-GTO | 15.2610.31 |
+| GTO 整包 | 0.6.0-dev-23 / 0.6.0-dev-25 官方服务端发行包 |
+| GTOCore | Dev23：26.10.10；Dev25：26.10.18 |
+| AE2-GTO | Dev23：15.2610.31；Dev25：15.2610.40 |
+| EMI（客户端） | Dev23：1.1.25；Dev25：1.1.1027 |
 | Thunderbolt | 2.0.3-gto.6 |
-| AE2LT | 2.1.2-gto.9 |
+| AE2LT | 2.1.2-gto.12 |
 | NeoECO（可选） | 20.5.0-gto.1 或 20.5.2-gto.1，GTO 发行包 |
 
 客户端与服务端一起更新整套依赖及配套 TB/LT，移除相同 mod ID 的旧包。该组合不能与旧 GTOCore 26.10.5 / AE2 15.2610.8 混用，也不适用于普通版 AE2 或普通版 NeoECO。LT 的加载元数据会明确阻止版本误装。NeoECO 本身仍为可选依赖。
 
-加载约束为 GTOCore `[26.10.10,26.10.11)`、AE2-GTO `[15.2610.31]`、Thunderbolt `[2.0.3-gto.6]`；安装 NeoECO 时接受两个精确版本 `[20.5.0-gto.1],[20.5.2-gto.1]`。这里的最低整包基线不表示这些依赖可以任意升级。旧 Core `2.0.3-gto.1` 不适用于当前 LT。
+加载约束为 GTOCore `[26.10.10,26.10.11),[26.10.18]`、AE2-GTO `[15.2610.31],[15.2610.40]`、Thunderbolt `[2.0.3-gto.6]`；安装 NeoECO 时接受两个精确版本 `[20.5.0-gto.1],[20.5.2-gto.1]`。客户端与专服必须使用同一套整包依赖，不交叉混搭上表两组 AE2/GTOCore。旧 Core `2.0.3-gto.1` 不适用于当前 LT。
 
-NeoECO `20.5.2-gto.1` 上游发布说明面向 Dev25；本项目的验证环境仍是上表 Dev23 及锁定的 GTOCore/AE2。上游版本声明接受这套依赖，不能据此推定 LT 已支持 Dev25。
+NeoECO `20.5.2-gto.1` 已在 Dev23 与准确重建的 Dev25 官方服务端环境执行真实专项。Dev25 的依赖与官方索引逐项核对；未用旧版 AE2、GTM、Ars Nouveau 或 Botania 代替缺失包。
 
-本次实现、制品、验证结果和边界见 [NeoECO GTO 兼容记录](GTO_NEOECO_GTO_COMPAT_2026-10-26.md)。历史客户端结果不代表本版已经验证客户端界面或联机。
+NeoECO 兼容实现的历史起点见 [NeoECO GTO 兼容记录](GTO_NEOECO_GTO_COMPAT_2026-10-26.md)；当前客户端与联机范围以最新配套验证记录为准。
 
 远程 UI 补丁同时支持 NeoECO 原正式包与上游 `cca7fbb` 的客户端类加载隔离实现，按实际字节码识别，不依赖未变更的 `20.5.0-gto.1` 版本号。更新范围及测试制品边界见 [远程 UI 补丁更新记录](GTO_NEOECO_UI_UPDATE_2026-10-26.md)。
 
-当前补丁保留 Core `2.0.3-gto.6` 已完成的客户端世界隔离，避免重复转换导致专服启动失败。新版 NeoECO `20.5.2-gto.1` 的实际包复测为 JUnit 1590 项通过、5 项跳过，122 项 GameTest、6 项压力测试、12 项发行检查通过；正式包安装新版 NeoECO、保存后重启同一世界及不安装 NeoECO 的加载均通过。本轮还修复了全检发现的模糊种子借用等待环。实际制品哈希、失败重试记录与验证边界见 [新版 NeoECO 实包复测](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md)。[此前 Core gto.6 配套验证](GTO_NEOECO_CORE_GTO6_2026-10-27.md) 使用的是 NeoECO `20.5.0-gto.1`；相同 LT 版本号的历史制品应按哈希区分。
+当前补丁保留 Core `2.0.3-gto.6` 已完成的客户端世界隔离，避免重复转换导致专服启动失败。此前新版 NeoECO `20.5.2-gto.1` 的实际包复测为 JUnit 1590 项通过、5 项跳过，122 项 GameTest、6 项压力测试、12 项发行检查通过；正式包安装新版 NeoECO、保存后重启同一世界及不安装 NeoECO 的加载均通过。该轮还修复了全检发现的模糊种子借用等待环。实际制品哈希、失败重试记录与验证边界见 [新版 NeoECO 实包复测](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md)。[此前 Core gto.6 配套验证](GTO_NEOECO_CORE_GTO6_2026-10-27.md) 使用的是 NeoECO `20.5.0-gto.1`；相同 LT 版本号的历史制品应按哈希区分。
 
 ## 适配边界
 
@@ -36,10 +37,12 @@ NeoECO `20.5.2-gto.1` 上游发布说明面向 Dev25；本项目的验证环境�
 - 样板迁移使用 NeoECO 的真实物理槽位，并检查整个工作站网络是否仍有工作线程持有任务；LT 与 NeoECO 共用每个 ME 网络的迁移锁。
 - NeoECO 远程界面的客户端世界读取隔离到客户端辅助类，避免正式发行包在专用服校验共享 UI 类时加载 ClientLevel。保持原 UI 和同步协议，不修改 NeoECO 原件。
 - TB 候选算法不适用时仍调用 GTO 计算任务。直接 BigMEStorage 保留 BigInteger 精度；经存储总线跨 ME 网络时沿用 GTO 去重与单次 long 数量边界。
+- GTOCore + Krypton 组合在协议切换后排队恢复读取订阅，避免 `autoRead=true` 时被旧清理任务清除；执行时尊重后续主动暂停。保留 LOGIN 刷新和 PLAY 发送合并，不调整登录超时。
+- GTO 环境将 Forge 握手的待确认序号列表改为 `CopyOnWriteArrayList`，保留构造器已加入的序号，防止服务端发送与 Netty 回执并发修改普通列表。回执协议和待确认语义保持不变。
 
 ## 构建
 
-使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_NEOECO_20_5_2_RETRY_2026-10-27.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
+使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_CORE_PAIR_VALIDATION_2026-10-28.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
 
 1. [gto.5 完整补丁](docs/patches/core-gto.5-from-upstream.patch)
 2. [gto.6 增量补丁](docs/patches/core-gto.6-from-gto.5.patch)
@@ -66,9 +69,23 @@ Core 默认本地仓库路径仍为同级 `../Thunderbolt-Core-Reborn/repo`。LT
 
 在隔离 GTO 实例内安装配套 TB、正式 NeoECO GTO、`build/gto-qa/gto-compat-qa.jar`，并以 `ae2lt-gto-qa-instrumented.jar` 替代 LT 主包。该包保留正式生产类并附加测试夹具。其余中间 JAR 不要放入 mods。
 
-使用 `-Dae2lt.gtoQaSuite=neoeco|base|exact|dispatch|batch|interfaces|io|infinite|recipes|content|content-recipes|permissions|none` 选择测试组，每次新建测试世界。测试应同时满足 CPU、STORAGE、PLANNER 三个 PASS 与最终 `GTO_COMPAT_QA PASS total=... failed=0 startupFailures=0`；只出现服务端 Done 或退出码 0 不能证明通过。`neoeco` 组要求安装上表指定的正式 NeoECO。
+使用 `-Dae2lt.gtoQaSuite=neoeco|base|exact|dispatch|batch|interfaces|io|infinite|recipes|content|content-recipes|permissions|machine|useless|eaep|none` 选择测试组，每次新建测试世界。非 `none` 组应同时满足 CPU、STORAGE、PLANNER 三个 PASS 与最终非零数量的 `GTO_COMPAT_QA PASS total=... failed=0 startupFailures=0`；只出现服务端 Done 或退出码 0 不能证明通过。`neoeco`、`useless`、`eaep` 组分别要求相应真实依赖；`none` 不运行 GameTest 与规划诊断，供独立客户端／FX／重启探针使用。
+
+EAEP 实包 JUnit 通过 `-Peaep_test_jar=/path/to/extendedae_plus-1.6.3.jar` 启用。GTO 的旧 CPU 类已删除，因此 LT 针对 EAEP `1.5.5`／`1.6.3` 精确替换旧接口注入，并保留供应器升级、无线与迁移行为。Useless `20.2.4.7` 与 NeoECO `20.5.2-gto.1` 同装需要 [可复现元数据副本脚本](scripts/prepare-useless-gto.py)：脚本校验原件 SHA256，输出独立 `20.2.4.7-gto.1` 副本，只更新版本／可选依赖声明并保留全部类、许可证及署名。不要覆盖上游原件。
+
+EAEP 的强制缺料、手动等待、最后任务虚拟完成、高级阻塞及无空白槽编码走本版 GTO 适配。Useless 动态产物模式保留实际 long 数量，并检查暂停／存档／取消和原生 CPU 回退。具体测试数量、制品与边界见 [扩展修复记录](GTO_EXTENDED_FIXES_2026-10-27.md)，不代表附属的全部功能已验证。
+
+变更隔离实例的可选依赖后，停服并备份、重命名该实例生成的 `gtocore/cache`，让 GTO 在实际模组组合下重建。Dev25 曾沿用没有 Useless 的旧标签缓存，导致其合法外壳无法成型；仅新建世界不能刷新这一缓存。
+
+扩展 QA 入口为 `-Dae2lt.gtoQaSuite=none -Dae2lt.extendedQa=fx|restart|multiplayer`。`fx` 构建真实 F9／FX 和高能交换机网络，再执行精确大数任务；`restart` 依次用 `-Dae2lt.extendedPhase=prepare|resume|verify` 正常保存、退出并在三个 JVM 中打开同一世界。`multiplayer` 需要两个真实图形客户端及不同测试身份，客户端使用 `-Dae2lt.multiplayerProbe=true -Dae2lt.gtoQaConnect=127.0.0.1:25587 -Dae2lt.gtoQaLoopbackConnect=false`，走普通 ConnectScreen。上述探针仅用于隔离测试实例，QA 附件不参与正式分发。
+
+上述扩展探针也可使用正式 LT 主包与独立 `gto-compat-qa.jar`；独立 QA 包自带三份 `ae2lt_qa` 测试配方，正式包不含这些资源。切换夹具后同样需要停服备份并重命名 GTO 缓存，避免缺配方发生在业务断言之前。本轮另在保存确认后精确终止准备 JVM，再由两个新 JVM 分别验证任务恢复和终态，具体边界见最新配套记录。
 
 JUnit 的旧版 NeoECO API/字节码测试读取 `build/neoeco-compat/neoeco-release.jar`。放入兼容记录列出的原件并校验哈希后再运行 `check`；缺包时这三项会明确跳过。通过 `-Pneoeco_fixed_release=/path/to/neoecoae-20.5.2-gto.1.jar` 同时执行新版的三项实际包检查，覆盖迁移锁、精确数量单次提交及远程 UI 协议。显式配置的新包缺失会失败。测试原件不嵌入生产制品。
+
+Dev25 客户端的 Core 确认页适配实包检查通过 `-Pgto_dev25_ae2_test_jar=/path/to/appliedenergistics2-forge-1.20.1-15.2610.40.jar` 启用；核对真实目标调用和 Core 回调保留情况。未提供夹具时明确跳过，显式指定的缺失文件会失败。
+
+Dev25 使用官方客户端 release manifest 和 overrides，其中 EMI 实际为 `1.1.1027`。JEMI 生命周期保护仅对已核对的 `1.1.25`／`1.1.1027` 启用；Core 确认页调用点适配仅对客户端 AE2 `15.2610.40` + Core `2.0.3-gto.6` 启用，保留算法名、精确字节数与模拟预览。图形双人 QA 可附加 `-Dae2lt.confirmProbe=true` 检查原生及 LT 报告页渲染，该客户端摘要探针不执行服务端订单。
 
 以下内容保留历史追溯，涉及的旧版本、数量及兼容限制均以各自日期为准。
 

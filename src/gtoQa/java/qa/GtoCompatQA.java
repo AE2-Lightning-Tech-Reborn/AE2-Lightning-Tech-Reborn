@@ -43,10 +43,31 @@ public final class GtoCompatQA {
     private Collection<GameTestInfo> tests;
     private boolean reported;
     private int startupFailures;
+    private List<TestFunction> pendingTests;
+    private final List<CompletableFuture<?>> testChunks = new ArrayList<>();
+    private CompletableFuture<Void> plannerCheck;
+    private int preparationTicks;
     private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
     private static final java.util.concurrent.atomic.AtomicInteger ENGINE_CALLS = new java.util.concurrent.atomic.AtomicInteger();
     public GtoCompatQA() {
-        if (Boolean.getBoolean("ae2lt.gtoLoginTrace")) {
+        if (Boolean.getBoolean("ae2lt.gtoExceptionTrace")) {
+            // Keep packet and protocol logging off: only a failure should write a stack.
+            var context = (org.apache.logging.log4j.core.LoggerContext)
+                    org.apache.logging.log4j.LogManager.getContext(false);
+            var logger = new org.apache.logging.log4j.core.config.LoggerConfig(
+                    "net.minecraft.network.Connection", org.apache.logging.log4j.Level.DEBUG, true);
+            logger.addFilter(new org.apache.logging.log4j.core.filter.AbstractFilter() {
+                @Override
+                public org.apache.logging.log4j.core.Filter.Result filter(org.apache.logging.log4j.core.LogEvent event) {
+                    return event.getThrown() != null || event.getLevel().isMoreSpecificThan(org.apache.logging.log4j.Level.INFO)
+                            ? org.apache.logging.log4j.core.Filter.Result.NEUTRAL
+                            : org.apache.logging.log4j.core.Filter.Result.DENY;
+                }
+            });
+            context.getConfiguration().addLogger(logger.getName(), logger);
+            context.updateLoggers();
+        }
+        if (Boolean.getBoolean("ae2lt.gtoLoginTrace") && !Boolean.getBoolean("ae2lt.gtoQuietLoginTrace")) {
             org.apache.logging.log4j.core.config.Configurator.setLevel("net.minecraftforge.network", org.apache.logging.log4j.Level.DEBUG);
             org.apache.logging.log4j.core.config.Configurator.setLevel("net.minecraft.network.Connection", org.apache.logging.log4j.Level.DEBUG);
         }
@@ -81,6 +102,10 @@ public final class GtoCompatQA {
     }
     private void start(ServerStartedEvent e) {
         try {
+            var suite = System.getProperty("ae2lt.gtoQaSuite", "base");
+            // Client/FX/restart probes have their own lifecycle. Do not launch an unrelated
+            // planner before their first player joins when no GameTest suite was requested.
+            if ("none".equals(suite)) return;
             // GTO skips all CraftingService ticks until a player has joined.
             // Headless fixtures must enable that scheduling gate to exercise
             // native waiting-key refresh and output routing without a client.
@@ -89,9 +114,12 @@ public final class GtoCompatQA {
             }
             try { checkCpu(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA CPU FAIL",failure); }
             try { checkStorage(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA STORAGE FAIL",failure); }
-            try { checkPlanner(e.getServer()); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA PLANNER FAIL",failure); }
-            var suite = System.getProperty("ae2lt.gtoQaSuite", "base");
             switch (suite) {
+                case "eaep" -> {
+                    if (!net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus"))
+                        throw new IllegalStateException("EAEP runtime fixture requires its real Forge release");
+                    GameTestRegistry.register(GtoEaepGameTests.class);
+                }
                 case "neoeco" -> GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.NeoEcoGtoGameTests.class);
                 case "permissions" -> GameTestRegistry.register(
                         com.moakiee.ae2lt.network.FrequencyPermissionsGameTests.class);
@@ -102,9 +130,10 @@ public final class GtoCompatQA {
                     GameTestRegistry.register(com.moakiee.ae2lt.debug.ProviderMekanismReturnGameTests.class);
                 }
                 case "useless" -> {
-                    if (net.minecraftforge.fml.ModList.get().isLoaded("useless_mod"))
+                    if (net.minecraftforge.fml.ModList.get().isLoaded("useless_mod")) {
                         GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.UselessBigIntegerGameTests.class);
-                    else LOGGER.info("GTO_COMPAT_QA SKIP Useless Mod bigint tests (mod absent)");
+                        GameTestRegistry.register(GtoUselessCpuGameTests.class);
+                    } else LOGGER.info("GTO_COMPAT_QA SKIP Useless Mod bigint tests (mod absent)");
                 }
                 case "dispatch" -> {
                     GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.BigCandidateIndexGameTests.class);
@@ -139,8 +168,7 @@ public final class GtoCompatQA {
             }
             // Some fixtures construct multiblocks beyond the small empty template. Give every
             // test its own area so concurrently ticking fixtures cannot overwrite one another.
-            tests = new ArrayList<>();
-            int index = 0;
+            pendingTests = new ArrayList<>();
             for (var function : GameTestRegistry.getAllTestFunctions()) {
                 var name = function.getTestName().toLowerCase(Locale.ROOT);
                 var filter = System.getProperty("ae2lt.gtoQaTestFilter");
@@ -152,10 +180,13 @@ public final class GtoCompatQA {
                 }
                 if (!Boolean.getBoolean("ae2lt.exportFairnessBenchmark")
                         && function.getTestName().toLowerCase(Locale.ROOT).contains("benchmark")) continue;
-                tests.addAll(GameTestRunner.runTests(List.of(function), new BlockPos(index++ * 1024,100,0),
-                        Rotation.NONE,e.getServer().overworld(),ticker,1));
+                pendingTests.add(function);
             }
-            LOGGER.info("GTO_COMPAT_QA START suite="+suite+" tests="+tests.size());
+            if (!"none".equals(suite) && pendingTests.isEmpty()) {
+                throw new IllegalStateException("No tests registered for suite " + suite
+                        + " and filter " + System.getProperty("ae2lt.gtoQaTestFilter", "<all>"));
+            }
+            LOGGER.info("GTO_COMPAT_QA PREPARE suite="+suite+" tests="+pendingTests.size());
         } catch(Throwable failure) {
             startupFailures++;
             reported = true;
@@ -167,7 +198,17 @@ public final class GtoCompatQA {
     private void tick(TickEvent.ServerTickEvent e) {
         if (e.phase == TickEvent.Phase.END && ++loginTraceTicks % 100 == 0)
             GtoNetworkDiagnostics.inspect(e.getServer().getConnection());
-        if(e.phase!=TickEvent.Phase.END || tests==null || reported) return;
+        if(e.phase!=TickEvent.Phase.END || reported) return;
+        if (tests == null && pendingTests != null) {
+            try {
+                prepareTests(e.getServer());
+            } catch (Throwable failure) {
+                reported = true;
+                LOGGER.error("QA preparation failure", failure);
+                LOGGER.info("GTO_COMPAT_QA FAIL preparation " + failure);
+            }
+        }
+        if (tests == null || reported) return;
         ticker.tick();
         if(tests.stream().allMatch(GameTestInfo::isDone)) {
             reported=true;
@@ -178,6 +219,49 @@ public final class GtoCompatQA {
             }
             LOGGER.info("GTO_COMPAT_QA "+(failed==0 && startupFailures==0?"PASS":"FAIL")+" total="+tests.size()+" failed="+failed+" startupFailures="+startupFailures);
         }
+    }
+    private void prepareTests(MinecraftServer server) {
+        if (++preparationTicks > 1000) throw new IllegalStateException("QA chunks/planner did not settle");
+        var level = server.overworld();
+        if (preparationTicks == 1) {
+            for (int index = 0; index < pendingTests.size(); index++) {
+                // GameTest places its structure synchronously. Load new-world chunks through
+                // natural server ticks first; blocking generation in ServerStarted stalls GTO.
+                for (int z : new int[] {0, 300, 400}) {
+                    if (z != 0 && !"useless".equals(System.getProperty("ae2lt.gtoQaSuite"))) continue;
+                    for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
+                        var pos = new net.minecraft.world.level.ChunkPos(index * 64 + dx, (z >> 4) + dz);
+                        level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, pos, 2, pos);
+                        testChunks.add(level.getChunkSource().getChunkFuture(pos.x, pos.z,
+                                net.minecraft.world.level.chunk.ChunkStatus.FULL, true));
+                    }
+                }
+            }
+            return;
+        }
+        if (testChunks.stream().anyMatch(future -> !future.isDone())) return;
+        testChunks.forEach(CompletableFuture::join);
+        if (plannerCheck == null) {
+            plannerCheck = CompletableFuture.runAsync(() -> {
+                try { checkPlanner(server); }
+                catch (Exception failure) { throw new CompletionException(failure); }
+            });
+            return;
+        }
+        if (!plannerCheck.isDone()) return;
+        try { plannerCheck.join(); }
+        catch (CompletionException failure) {
+            startupFailures++;
+            LOGGER.error("GTO_COMPAT_QA PLANNER FAIL", failure.getCause());
+        }
+        tests = new ArrayList<>();
+        int index = 0;
+        for (var function : pendingTests) {
+            tests.addAll(GameTestRunner.runTests(List.of(function), new BlockPos(index++ * 1024, 100, 0),
+                    Rotation.NONE, level, ticker, 1));
+        }
+        LOGGER.info("GTO_COMPAT_QA START suite=" + System.getProperty("ae2lt.gtoQaSuite", "base")
+                + " tests=" + tests.size());
     }
     private static void check(boolean condition,String message) {if(!condition)throw new AssertionError(message);}
     @SuppressWarnings("unchecked")
@@ -286,13 +370,16 @@ public final class GtoCompatQA {
             case "getService"->a[0]==ICraftingPlanningService.class?choices:null;
             case "getMachines"->List.of();case "getPivot"->proxy(IGridNode.class,m2->m2.getName().equals("getLevel")?server.overworld():null);default->null;});
         service[0]=new CraftingService(grid,storage,energy);
-        var future=service[0].beginCraftingCalculation(server.overworld(),()->null,AEItemKey.of(Items.DIAMOND),1,CalculationStrategy.REPORT_MISSING_ITEMS);
+        var future=server.submit(() -> service[0].beginCraftingCalculation(server.overworld(),()->null,
+                AEItemKey.of(Items.DIAMOND),1,CalculationStrategy.REPORT_MISSING_ITEMS)).get(10,TimeUnit.SECONDS);
         var result=future.get(10,TimeUnit.SECONDS);
         check(result!=null,"native fallback returned no plan");
         check(resolutions.get()==1,"TB calculation wrapper did not run");
         check(result.simulation(),"empty network should report native missing-items simulation");
         selected.set(List.of(PlanningChoice.engine(QA_ENGINE_ID),PlanningChoice.VANILLA));
-        var engineResult=service[0].beginCraftingCalculation(server.overworld(),()->null,AEItemKey.of(Items.DIAMOND),7,CalculationStrategy.REPORT_MISSING_ITEMS).get(10,TimeUnit.SECONDS);
+        var engineFuture=server.submit(() -> service[0].beginCraftingCalculation(server.overworld(),()->null,
+                AEItemKey.of(Items.DIAMOND),7,CalculationStrategy.REPORT_MISSING_ITEMS)).get(10,TimeUnit.SECONDS);
+        var engineResult=engineFuture.get(10,TimeUnit.SECONDS);
         check(!engineResult.simulation() && engineResult.finalOutput().amount()==7 && ENGINE_CALLS.get()==1,"TB candidate was not selected through GTO service");
         check(engineResult.patternTimes() instanceof Object2LongOpenHashMap,"native CPU needs concrete fastutil map");
         LOGGER.info("GTO_COMPAT_QA PLANNER PASS transformed service, selected TB candidate, and native GTO fallback");

@@ -23,6 +23,16 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()
+                && hasVersion("ae2", "15.2610.40") && hasVersion("thunderbolt", "2.0.3-gto.6")) {
+            com.moakiee.ae2lt.compat.gto.GtoCoreClientMixinExtension.register();
+        }
+        if (isModLoaded("gtocore") && hasVersion("extendedae_plus", "1.5.5", "1.6.3")) {
+            com.moakiee.ae2lt.compat.gto.GtoLegacyAddonMixins.registerEaep();
+        }
+        if (isModLoaded("gtocore") && hasVersion("useless_mod", "20.2.4.7", "20.2.4.7-gto.1")) {
+            com.moakiee.ae2lt.compat.gto.GtoLegacyAddonMixins.registerUseless();
+        }
     }
 
     @Override
@@ -34,8 +44,19 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         int separator = mixinClassName.lastIndexOf('.');
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
+        if (simpleName.equals("GtoHandshakePendingMessagesMixin")) {
+            return isModLoaded("gtocore");
+        }
         if (simpleName.equals("GtoLoginPacketFlushMixin")) {
             return isModLoaded("gtocore") && isModLoaded("krypton");
+        }
+        if (simpleName.equals("GtoKeyCounterEntryMixin")) {
+            return isModLoaded("gtocore")
+                    && (isModLoaded("extendedae_plus") || isModLoaded("useless_mod"));
+        }
+        if (simpleName.equals("GtoEaepProviderMixin") || simpleName.equals("GtoEaepPatternUploadMixin")
+                || simpleName.equals("GtoEaepManualStateMixin")) {
+            return isModLoaded("gtocore") && hasVersion("extendedae_plus", "1.5.5", "1.6.3");
         }
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
@@ -50,6 +71,17 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             // target is safer than loading addon-owned classes that may not exist.
             return false;
         }
+    }
+
+    private static boolean hasVersion(String modId, String... versions) {
+        var mods = LoadingModList.get();
+        if (mods == null || mods.getModFileById(modId) == null) return false;
+        for (var mod : mods.getModFileById(modId).getMods()) {
+            if (mod.getModId().equals(modId)) {
+                return java.util.Arrays.asList(versions).contains(mod.getVersion().toString());
+            }
+        }
+        return false;
     }
 
     @Override
@@ -70,6 +102,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".NeoEcoRemoteMachineUiMixin")) {
             com.moakiee.ae2lt.compat.neoeco.NeoEcoRemoteUiTransform.isolateClientWorld(targetClass);
         }
+        if (mixinClassName.endsWith(".GtoKeyCounterEntryMixin")) {
+            com.moakiee.ae2lt.compat.gto.GtoKeyCounterEntryTransform.apply(targetClass);
+        }
     }
 
     @Override
@@ -78,6 +113,12 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             ClassNode targetClass,
             String mixinClassName,
             IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".GtoEaepProviderMixin")) {
+            com.moakiee.ae2lt.compat.gto.GtoEaepProviderTransform.apply(targetClass);
+        }
+        if (mixinClassName.endsWith(".GtoEaepManualStateMixin")) {
+            targetClass.interfaces.add("com/extendedae_plus/api/crafting/IManualCraftingState");
+        }
         if (mixinClassName.endsWith(".PatternProviderLogicMixin")) {
             com.moakiee.ae2lt.compat.gto.GtoPatternDecodeTransform.filterOrdinaryProvider(targetClass);
         }

@@ -45,6 +45,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     private final Button selectCpu;
     private final Button bookmarkMissing;
     private final Scrollbar scrollbar;
+    private final int footerHeight;
     private int visibleRows = 7;
 
     public AE2LtCraftConfirmScreen(
@@ -55,6 +56,8 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         scrollbar = nativeScreen.ae2lt$getScrollbar();
         start = nativeScreen.ae2lt$getStart();
         selectCpu = nativeScreen.ae2lt$getSelectCpu();
+        // Dev25 adds this native action; older supported AE2 builds have no such widget.
+        footerHeight = FOOTER_HEIGHT + (widgets.getWidgets().containsKey("startWithFollow") ? 24 : 0);
         bookmarkMissing = widgets.addButton("bookmarkMissing",
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing"), this::bookmarkMissing);
         bookmarkMissing.active = false;
@@ -67,7 +70,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     @Override
     protected void init() {
         int maxRows = Math.max(1,
-                (height - HEADER_HEIGHT - FOOTER_HEIGHT - VERTICAL_PADDING) / ROW_HEIGHT);
+                (height - HEADER_HEIGHT - footerHeight - VERTICAL_PADDING) / ROW_HEIGHT);
         int preferredRows = switch (config.getTerminalStyle()) {
             case SMALL -> 3;
             case MEDIUM -> 5;
@@ -75,7 +78,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
             case FULL -> maxRows;
         };
         visibleRows = Math.min(maxRows, preferredRows);
-        imageHeight = HEADER_HEIGHT + visibleRows * ROW_HEIGHT + FOOTER_HEIGHT;
+        imageHeight = HEADER_HEIGHT + visibleRows * ROW_HEIGHT + footerHeight;
         table = new AE2LtCraftConfirmTableRenderer(this, visibleRows);
         scrollbar.setHeight(visibleRows * ROW_HEIGHT);
         super.init();
@@ -200,6 +203,11 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
                 .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 1).blit(graphics);
         background.src(0, FOOTER_Y, imageWidth, FOOTER_HEIGHT - 8)
                 .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT).blit(graphics);
+        if (footerHeight > FOOTER_HEIGHT) {
+            background.src(0, 220, imageWidth, footerHeight - FOOTER_HEIGHT)
+                    .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT + FOOTER_HEIGHT - 8)
+                    .blit(graphics);
+        }
         background.src(0, 248, imageWidth, 8)
                 .dest(offsetX, offsetY + imageHeight - 8).blit(graphics);
     }

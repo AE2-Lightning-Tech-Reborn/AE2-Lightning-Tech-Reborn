@@ -164,15 +164,8 @@ public final class LightningKey extends AEKey {
     public void addDrops(long amount, List<ItemStack> drops, Level level, BlockPos pos) {
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof LightningKey other && this.tier == other.tier;
-    }
-
-    @Override
-    public int hashCode() {
-        return this.tier.hashCode();
-    }
+    // Both tiers are canonical singletons, including all packet/NBT decode paths. Inherit the
+    // identity hash used by GTO counters; AE2-GTO .40 makes IdentityKey.hashCode final.
 
     @Override
     public String toString() {

@@ -52,6 +52,30 @@ adapted portions of ExtendedAE Plus [ClientPlus]. Automatic encoding is intentio
 The adapted implementation has been scoped to the Tianshu pattern terminal and retains
 AE2 Lightning Tech's server-authoritative upload acknowledgement and target validation.
 
+## ExtendedAE Plus — GTO provider and CPU adapters
+
+The GTO adapters retain ExtendedAE Plus's scaled-pattern lookup and last-task virtual
+completion rules while replacing access to the ordinary AE2 CPU classes removed by GTO.
+Other provider upgrade, wireless-link and migration methods remain supplied by the installed
+ExtendedAE Plus release. No ExtendedAE Plus classes are bundled in LT.
+
+- Upstream repository: https://github.com/GaLicn/ExtendedAE_Plus
+- Releases reviewed: Forge `1.5.5` and `1.6.3`
+- Upstream author: GaLi
+- License: GNU Lesser General Public License version 3 or later
+
+## Useless Mod — optional GTO dynamic-pattern adapter
+
+LT's optional adapter uses the installed Useless Mod's pattern identity and persisted
+output modes, with LT's existing CPU output matching. No Useless Mod classes are bundled.
+The compatibility-copy script preserves the upstream archive entries and attribution;
+it changes only the version and optional NeoECO dependency metadata.
+
+- Upstream repository: https://github.com/SorrowMist/UselessMod
+- Release reviewed: `20.2.4.7`
+- Upstream author: SorrowMist
+- Declared upstream license: MIT
+
 ## MixinExtras
 
 AE2 Lightning Tech bundles MixinExtras for its mixin injection extensions.

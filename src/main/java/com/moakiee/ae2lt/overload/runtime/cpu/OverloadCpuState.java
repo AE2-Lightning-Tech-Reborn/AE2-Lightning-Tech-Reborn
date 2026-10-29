@@ -90,6 +90,13 @@ public final class OverloadCpuState {
                                         @Nullable AEKey finalOutputKey,
                                         long pushedCopies,
                                         Map<Integer, OverloadReusableSeedMetadata> reusableSeeds) {
+        registerExpectedOutputs(patternReference, patternDetails, actualOutputs, finalOutputKey, pushedCopies, reusableSeeds, false);
+    }
+
+    void registerExpectedOutputs(OverloadPatternReference patternReference,
+                                OverloadPatternDetails patternDetails, List<GenericStack> actualOutputs,
+                                @Nullable AEKey finalOutputKey, long pushedCopies,
+                                Map<Integer, OverloadReusableSeedMetadata> reusableSeeds, boolean actualAmounts) {
         Objects.requireNonNull(patternReference, "patternReference");
         Objects.requireNonNull(patternDetails, "patternDetails");
         Objects.requireNonNull(actualOutputs, "actualOutputs");
@@ -113,7 +120,7 @@ public final class OverloadCpuState {
 
             var itemId = itemIdOf(output);
             var exactExpectedKey = actual.what();
-            var amount = multiplySaturated(output.amountPerCraft(), pushedCopies);
+            var amount = multiplySaturated(actualAmounts ? actual.amount() : output.amountPerCraft(), pushedCopies);
             var reusableSeed = reusableSeeds.get(output.slotIndex());
             registerExpectedOutput(
                     patternReference,

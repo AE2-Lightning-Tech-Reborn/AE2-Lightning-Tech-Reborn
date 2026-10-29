@@ -14,6 +14,8 @@ import net.minecraftforge.fml.loading.LoadingModList;
 public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean jeiPresent;
     private boolean emiPresent;
+    private boolean gtoPresent;
+    private boolean jemiLifecycle;
     private boolean jeiSupplyPresent;
     private boolean jeiLegacyTransfer;
     private boolean jeiButtonController;
@@ -26,6 +28,10 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         // AE2JEIIntegration mod does not exist for 1.20.1).
         jeiPresent = mods.getModFileById("jei") != null;
         emiPresent = mods.getModFileById("emi") != null;
+        gtoPresent = mods.getModFileById("gtocore") != null;
+        var emi = mods.getModFileById("emi");
+        jemiLifecycle = emi != null && emi.getMods().stream().anyMatch(mod -> mod.getModId().equals("emi")
+                && Set.of("1.1.25", "1.1.1027").contains(mod.getVersion().toString()));
         configureJeiTransfer(mods.getModFileById("jei"), mods.getModFileById("ae2wtlib") != null);
     }
 
@@ -49,6 +55,9 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith(".emi.GtoEmiPluginDiscoveryMixin")) return gtoPresent && emiPresent;
+        if (mixinClassName.endsWith(".emi.GtoJemiLifecycleMixin")) return gtoPresent && jeiPresent && jemiLifecycle;
+        if (mixinClassName.endsWith(".jei.GtoJeiPluginDiscoveryMixin")) return gtoPresent && jeiPresent;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) return jeiLegacyTransfer;
         if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")
                 || mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyContextAccessor")) {

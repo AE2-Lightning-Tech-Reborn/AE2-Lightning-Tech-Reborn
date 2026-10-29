@@ -44,13 +44,15 @@ public final class InfiniteCellRegressionGameTests {
                     MutableUnitKey.class, net.minecraft.network.chat.Component.literal("QA reloadable units"));
         }
         @Override public int getAmountPerByte() { return units; }
-        @Override public AEKey loadKeyFromTag(CompoundTag tag) { return new MutableUnitKey(tag.getInt("value")); }
-        @Override public AEKey readFromPacket(net.minecraft.network.FriendlyByteBuf input) { return new MutableUnitKey(input.readInt()); }
+        @Override public AEKey loadKeyFromTag(CompoundTag tag) { return MutableUnitKey.of(tag.getInt("value")); }
+        @Override public AEKey readFromPacket(net.minecraft.network.FriendlyByteBuf input) { return MutableUnitKey.of(input.readInt()); }
     }
 
     private static final class MutableUnitKey extends AEKey {
+        private static final Map<Integer, MutableUnitKey> KEYS = new java.util.concurrent.ConcurrentHashMap<>();
         private final int value;
-        MutableUnitKey(int value) { this.value = value; }
+        private MutableUnitKey(int value) { this.value = value; }
+        static MutableUnitKey of(int value) { return KEYS.computeIfAbsent(value, MutableUnitKey::new); }
         @Override public AEKeyType getType() { return RELOADABLE; }
         @Override public AEKey dropSecondary() { return this; }
         @Override public Object getPrimaryKey() { return value; }
@@ -59,8 +61,6 @@ public final class InfiniteCellRegressionGameTests {
         @Override public void writeToPacket(net.minecraft.network.FriendlyByteBuf output) { output.writeInt(value); }
         @Override public void addDrops(long amount, List<ItemStack> drops, net.minecraft.world.level.Level level, BlockPos pos) {}
         @Override protected net.minecraft.network.chat.Component computeDisplayName() { return net.minecraft.network.chat.Component.literal("QA " + value); }
-        @Override public boolean equals(Object other) { return other instanceof MutableUnitKey key && key.value == value; }
-        @Override public int hashCode() { return value; }
     }
 
     @GameTest(templateNamespace = "minecraft", template = "bastion/mobs/empty", timeoutTicks = 1200)
@@ -102,7 +102,7 @@ public final class InfiniteCellRegressionGameTests {
         final int activeCellCount = 8;
         record ActiveCell(int slot, AEKey[] keys, Map<AEKey, BigInteger> ledger, IndexedStorage storage) {}
         final List<ActiveCell> activeCells = new ArrayList<>();
-        final AEKey[] custom = {new MutableUnitKey(0), new MutableUnitKey(1),
+        final AEKey[] custom = {MutableUnitKey.of(0), MutableUnitKey.of(1),
                 LightningKey.HIGH_VOLTAGE, LightningKey.EXTREME_HIGH_VOLTAGE,
                 AEFluidKey.of(Fluids.WATER), AEItemKey.of(Items.GOLD_INGOT)};
         MEStorage network;

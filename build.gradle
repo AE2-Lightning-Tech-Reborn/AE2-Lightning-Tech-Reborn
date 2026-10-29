@@ -376,6 +376,7 @@ tasks.named('processResources', ProcessResources).configure {
             mod_authors: mod_authors,
             mod_description: mod_description,
             ae2_version_range: ae2_version_range,
+            gtocore_version_range: gtocore_version_range,
             guideme_version_range: guideme_version_range,
             jade_version_range: jade_version_range,
             jei_version_range: jei_version_range,
@@ -952,6 +953,20 @@ tasks.withType(Test).configureEach {
 
 // Verify an upstream fixed NeoECO release alongside the original local archive.
 tasks.named('test', Test).configure {
+    def eaepTestJar = providers.gradleProperty('eaep_test_jar')
+    if (eaepTestJar.isPresent()) {
+        def releaseArchive = file(eaepTestJar.get())
+        inputs.file(releaseArchive).withPropertyName('eaepActualRelease')
+        systemProperty 'ae2lt.eaepTestJar', releaseArchive.absolutePath
+        // Plain JUnit has no loading mod list; the real pack enables this adapter when EAEP loads.
+        systemProperty 'ae2lt.testLegacyCounterEntries', 'true'
+    }
+    def dev25Ae2TestJar = providers.gradleProperty('gto_dev25_ae2_test_jar')
+    if (dev25Ae2TestJar.isPresent()) {
+        def releaseArchive = file(dev25Ae2TestJar.get())
+        inputs.file(releaseArchive).withPropertyName('gtoDev25Ae2ActualRelease')
+        systemProperty 'ae2lt.gtoDev25Ae2TestJar', releaseArchive.absolutePath
+    }
     def fixedNeoEco = providers.gradleProperty('neoeco_fixed_release')
     if (fixedNeoEco.isPresent()) {
         def releaseArchive = file(fixedNeoEco.get())

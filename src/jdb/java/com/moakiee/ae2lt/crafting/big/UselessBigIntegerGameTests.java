@@ -33,6 +33,13 @@ public final class UselessBigIntegerGameTests {
     private static final BigInteger N = BigInteger.TEN.pow(100);
     private static final String API = "com.sorrowmist.useless.api.crafting.bigint.";
 
+    private static Recipe<?> planksRecipe(net.minecraft.world.level.Level level) {
+        Recipe<?> vanilla = level.getRecipeManager().byKey(ResourceLocation.withDefaultNamespace("oak_planks"))
+                .orElse(null);
+        return vanilla != null ? vanilla : level.getRecipeManager()
+                .byKey(new ResourceLocation("ae2lt_qa", "oak_planks")).orElseThrow();
+    }
+
     @GameTest(template = "empty", templateNamespace = "ae2lt_global_batch", timeoutTicks = 100)
     public static void formedOmniversalMachineReturnsExactBatchOnItsOwnTick(GameTestHelper h) throws Exception {
         formedMachine(h, false);
@@ -68,10 +75,12 @@ public final class UselessBigIntegerGameTests {
         }
         var core = level.getBlockEntity(corePos);
         call(core, "validateStructure");
-        h.assertTrue((boolean) call(core, "isFormed"), "real Omniversal structure did not form");
+        h.assertTrue((boolean) call(core, "isFormed"), "real Omniversal structure did not form: "
+                + structure.getMethod("validate", net.minecraft.world.level.LevelReader.class, BlockPos.class, Direction.class)
+                        .invoke(null, level, corePos, Direction.NORTH));
         var energy = call(core, "getEnergyStorage");
         energy.getClass().getMethod("receiveEnergy", int.class, boolean.class).invoke(energy, 1_000_000, false);
-        var holder = level.getRecipeManager().byKey(ResourceLocation.withDefaultNamespace("oak_planks")).orElseThrow();
+        var holder = planksRecipe(level);
         var slots = new ItemStack[9]; Arrays.fill(slots, ItemStack.EMPTY); slots[0] = new ItemStack(Items.OAK_LOG);
         var craftingPattern = PatternDetailsHelper.encodeCraftingPattern(
                 (CraftingRecipe) holder, slots,
@@ -223,7 +232,7 @@ public final class UselessBigIntegerGameTests {
 
         Fixture(GameTestHelper h) throws Exception {
             super(h.getLevel());
-            var holder = level.getRecipeManager().byKey(ResourceLocation.withDefaultNamespace("oak_planks")).orElseThrow();
+            var holder = planksRecipe(level);
             var slots = new ItemStack[9]; Arrays.fill(slots, ItemStack.EMPTY); slots[0] = new ItemStack(Items.OAK_LOG);
             details = PatternDetailsHelper.decodePattern(PatternDetailsHelper.encodeCraftingPattern(
                     (CraftingRecipe) holder, slots,
