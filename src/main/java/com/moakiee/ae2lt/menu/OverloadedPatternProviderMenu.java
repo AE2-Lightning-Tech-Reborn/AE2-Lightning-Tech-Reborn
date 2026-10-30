@@ -1,7 +1,5 @@
 package com.moakiee.ae2lt.menu;
 
-import java.util.List;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
@@ -13,10 +11,10 @@ import appeng.menu.SlotSemantics;
 import appeng.menu.guisync.GuiSync;
 import appeng.menu.implementations.MenuTypeBuilder;
 import appeng.menu.implementations.PatternProviderMenu;
-import appeng.menu.slot.AppEngSlot;
 
-import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.api.pattern.PatternProviderUiProfile;
+import com.moakiee.ae2lt.api.patternprovider.PatternSlotPages;
+import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.BlockingMode;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ProviderMode;
@@ -33,7 +31,6 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
             .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
                     AE2LightningTech.MODID, "overloaded_pattern_provider"));
 
-    private static final int SLOTS_PER_PAGE = 36;
     private static final int PROFILE_PACKAGED = 1;
     private static final int PROFILE_MODE_SWITCH = 1 << 1;
     private static final int PROFILE_FILTERED_IMPORT = 1 << 2;
@@ -87,7 +84,7 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
     public int totalPages;
 
     private final PatternProviderLogicHost host;
-    private int lastShownPage = -1;
+    private final PatternSlotPages patternPages;
 
     public OverloadedPatternProviderMenu(int id, Inventory playerInventory, PatternProviderLogicHost host) {
         this(TYPE, id, playerInventory, host);
@@ -112,27 +109,12 @@ public class OverloadedPatternProviderMenu extends PatternProviderMenu implement
         registerClientAction("nextPage", this::nextPage);
         registerClientAction("prevPage", this::prevPage);
 
+        patternPages = new PatternSlotPages(getSlots(SlotSemantics.ENCODED_PATTERN));
         showPage(0);
-        lastShownPage = -1;
     }
 
     public void showPage(int page) {
-        if (page == lastShownPage) return;
-        lastShownPage = page;
-
-        List<net.minecraft.world.inventory.Slot> patternSlots =
-                getSlots(SlotSemantics.ENCODED_PATTERN);
-
-        int totalSlots = patternSlots.size();
-        int start = page * SLOTS_PER_PAGE;
-        int end = Math.min(start + SLOTS_PER_PAGE, totalSlots);
-
-        for (int i = 0; i < totalSlots; i++) {
-            var slot = patternSlots.get(i);
-            if (slot instanceof AppEngSlot aeSlot) {
-                aeSlot.setActive(i >= start && i < end);
-            }
-        }
+        patternPages.showPage(page);
     }
 
     @Override
