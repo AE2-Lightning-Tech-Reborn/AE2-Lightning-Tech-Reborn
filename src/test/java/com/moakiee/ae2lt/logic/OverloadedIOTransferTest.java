@@ -31,13 +31,18 @@ class OverloadedIOTransferTest {
         var source = new Storage(30, 30);
         var destination = new Storage(0, 20);
         int[] payments = {0};
+        double[] charged = {0};
         var result = OverloadedIOTransfer.move(source, destination, AEItemKey.of(Items.STONE),
-                IActionSource.empty(), () -> { payments[0]++; return true; }, 12);
+                IActionSource.empty(), (amount, mode, multiplier) -> {
+                    if (mode == Actionable.MODULATE) { payments[0]++; charged[0] += amount; }
+                    return amount;
+                }, 12);
         assertEquals(12, result.inserted());
         assertEquals(0, result.remainder());
         assertEquals(18, source.count);
         assertEquals(12, destination.count);
         assertEquals(1, payments[0]);
+        assertEquals(12, charged[0]);
     }
 
     @Test
@@ -45,7 +50,7 @@ class OverloadedIOTransferTest {
         var source = new Storage(20, 20);
         var destination = new Storage(5, 5);
         var result = OverloadedIOTransfer.move(source, destination, AEItemKey.of(Items.STONE),
-                IActionSource.empty(), () -> { throw new AssertionError("No payment"); });
+                IActionSource.empty(), (amount, mode, multiplier) -> { throw new AssertionError("No payment"); });
         assertEquals(0, result.inserted());
         assertEquals(20, source.count);
         assertFalse(result.powerBlocked());
@@ -56,7 +61,7 @@ class OverloadedIOTransferTest {
         var source = new Storage(20, 20);
         var destination = new Storage(0, 20);
         var result = OverloadedIOTransfer.move(source, destination, AEItemKey.of(Items.STONE),
-                IActionSource.empty(), () -> false);
+                IActionSource.empty(), (amount, mode, multiplier) -> 0);
         assertTrue(result.powerBlocked());
         assertEquals(20, source.count);
         assertEquals(0, destination.count);
@@ -72,7 +77,7 @@ class OverloadedIOTransferTest {
             }
         };
         var result = OverloadedIOTransfer.move(source, destination, AEItemKey.of(Items.STONE),
-                IActionSource.empty(), () -> true);
+                IActionSource.empty(), (amount, mode, multiplier) -> amount);
         assertEquals(3, result.inserted());
         assertEquals(0, result.remainder());
         assertEquals(7, source.count);
