@@ -147,15 +147,17 @@ public final class WirelessEnergyGameTests {
         });
     }
     @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 100)
-    public static void sameTypeReplacementRevokesGeneration(GameTestHelper h) {
+    public static void sameTypeReplacementPreservesCoordinateBinding(GameTestHelper h) {
         var f = fixture(h);
         h.runAfterDelay(35, () -> {
             var registry = WirelessEnergyEndpoints.get(h.getLevel().getServer());
             check(registry.setBound(f.player, f.frequency, h.getLevel(), f.target, Direction.NORTH, true).equals("connected"), "bind failed");
             h.getLevel().removeBlockEntity(f.target);
             h.getLevel().setBlockEntity(new BarrelBlockEntity(f.target, Blocks.BARREL.defaultBlockState()));
-            check(!registry.isBound(h.getLevel(), f.target, f.frequency), "same-type replacement inherited energy binding");
-            h.succeed();
+            h.runAfterDelay(3, () -> {
+                check(registry.isBound(h.getLevel(), f.target, f.frequency), "same-type replacement lost coordinate binding");
+                h.succeed();
+            });
         });
     }
     @GameTest(templateNamespace = "ae2lt_io", template = "wireless_io_empty", timeoutTicks = 120)

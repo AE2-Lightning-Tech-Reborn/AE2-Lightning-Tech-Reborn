@@ -11,8 +11,10 @@ import com.moakiee.ae2lt.logic.management.PowerTelemetry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,11 +29,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.common.util.NonNullConsumer;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 public final class WirelessEnergyEndpoints extends SavedData {
     private static final int WORLD_LIMIT = 8192;
     private static final int BATCH_SIZE = 32;
+    private static final int MISSING_FE_GRACE_TICKS = 20;
     public record BulkResult(boolean bind, int changed, int unchanged, Map<String, Integer> skippedReasons,
                              boolean unloaded, String error) {
         public BulkResult {
@@ -59,52 +62,29 @@ public final class WirelessEnergyEndpoints extends SavedData {
         final Location location;
         final Direction face;
         final UUID actor;
-        final String block, type;
-        // Removal invalidates this generation before any later callback can use it.
+        String block;
         boolean registered = true;
         String source = "manual";
         State state = State.WAITING;
         int scheduleDelay = 1;
         long nextVisitTick;
         long lastVisitedTick = Long.MIN_VALUE, lastDelivered, totalDelivered;
-        // Registry singletons for the identity check, resolved once per session; null until resolved.
-        transient Block blockInstance;
-        transient BlockEntityType<?> typeInstance;
-        transient boolean identityResolved;
+        long revision;
+        long validationTick = Long.MAX_VALUE, missingFeSince = Long.MIN_VALUE;
+        boolean chunkUnloaded;
         transient PowerTelemetry.Key telemetryKey;
         // Direct meter handle; re-resolved when stale or when the dispatch context's meter table changed.
         transient PowerTelemetry.Meter telemetryMeter;
         transient Map<PowerTelemetry.Key, PowerTelemetry.Meter> telemetryMeterOwner;
-        // Listener-backed Forge capability resolution, invalidated with its owning block entity.
+        // Forge invalidation listeners expire the capability together with its owning machine.
         transient LazyOptional<IEnergyStorage> capabilityCache;
+        transient LazyOptional<IEnergyStorage> observedCapability;
+        transient NonNullConsumer<LazyOptional<IEnergyStorage>> capabilityListener;
         transient BlockEntity capabilityOwner;
         final transient EndpointTargetAccess access = new EndpointTargetAccess();
-        Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block, String type) {
+        Endpoint(UUID id, int frequency, Location location, Direction face, UUID actor, String block) {
             this.id = id; this.frequency = frequency; this.location = location; this.face = face;
-            this.actor = actor; this.block = block; this.type = type;
-        }
-        void bindIdentity(BlockEntity be) {
-            blockInstance = be.getBlockState().getBlock();
-            typeInstance = be.getType();
-            identityResolved = true;
-        }
-        /** Same-generation check. Registry entries are session singletons, so identity equals the persisted key strings. */
-        boolean matches(BlockEntity be) {
-            if (!identityResolved) {
-                identityResolved = true;
-                var blockId = ResourceLocation.tryParse(block);
-                var typeId = ResourceLocation.tryParse(type);
-                blockInstance = blockId == null ? null
-                        : BuiltInRegistries.BLOCK.getOptional(blockId).orElse(null);
-                typeInstance = typeId == null ? null
-                        : BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(typeId).orElse(null);
-            }
-            if (blockInstance != null && typeInstance != null) {
-                return be.getBlockState().getBlock() == blockInstance && be.getType() == typeInstance;
-            }
-            // Entry no longer in the registries (mod removed); keep comparing by key string.
-            return block.equals(BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString())
-                    && type.equals(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
+            this.actor = actor; this.block = block;
         }
         PowerTelemetry.Key telemetry() {
             var t = telemetryKey;
@@ -133,10 +113,12 @@ public final class WirelessEnergyEndpoints extends SavedData {
         BlockEntity blockEntity;
         IEnergyStorage target;
         long demand;
+        long revision;
         void prepare(Endpoint endpoint, com.moakiee.ae2lt.grid.WirelessFrequency frequency, ServerLevel level,
                      BlockEntity blockEntity, IEnergyStorage target, long demand) {
             this.endpoint = endpoint; this.frequency = frequency; this.level = level;
             this.blockEntity = blockEntity; this.target = target; this.demand = demand;
+            this.revision = endpoint.revision;
         }
         void clear() {
             endpoint = null; frequency = null; level = null; blockEntity = null; target = null;
@@ -180,6 +162,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         }
     }
     private final Map<Location, Endpoint> endpoints = new LinkedHashMap<>();
+    private final TreeMap<Long, LinkedHashSet<Endpoint>> validations = new TreeMap<>();
     private final WirelessEnergyBulkConnections bulkConnections = new WirelessEnergyBulkConnections();
     private final WirelessEnergySchedule<Endpoint> schedule = new WirelessEnergySchedule<>(e -> e.nextVisitTick);
     private long lastTick = Long.MIN_VALUE;
@@ -203,19 +186,159 @@ public final class WirelessEnergyEndpoints extends SavedData {
             owner = server;
             instance = server.overworld().getDataStorage().computeIfAbsent(
                     WirelessEnergyEndpoints::load, WirelessEnergyEndpoints::new, "ae2lt_wireless_energy_endpoints");
+            for (var e : instance.endpoints.values()) instance.listen(server, e);
         }
         return instance;
     }
-    public static void stop() { instance = null; owner = null; }
+    public static void stop() {
+        if (instance != null) for (var e : instance.endpoints.values()) detachCapability(e);
+        instance = null;
+        owner = null;
+    }
 
-    /** Called only on actual BE removal, not chunk unload: same-type replacements lose the old generation. */
+    private static void detachCapability(Endpoint e) {
+        if (e.observedCapability != null) e.observedCapability.removeListener(e.capabilityListener);
+        e.observedCapability = null;
+        e.capabilityCache = null;
+        e.capabilityOwner = null;
+    }
+
+    /** Placement probes belong to an instance; established FE bindings belong to a coordinate. */
     public static void onRemoved(ServerLevel level, BlockPos pos) {
-        if (instance != null && owner == level.getServer()) instance.remove(new Location(level.dimension(), pos));
+        onBlockChanged(level, pos);
         WirelessEnergyAdmissions.onRemoved(level, pos);
     }
+
+    private record ChunkLocation(ResourceKey<Level> dimension, long pos) {}
+    private final Map<ChunkLocation, LinkedHashSet<Endpoint>> endpointsByChunk = new HashMap<>();
+
+    private static ChunkLocation chunkLocation(Location location) {
+        return new ChunkLocation(location.dimension(), net.minecraft.world.level.ChunkPos.asLong(
+                location.pos().getX() >> 4, location.pos().getZ() >> 4));
+    }
+
+    private void listen(MinecraftServer server, Endpoint e) {
+        endpointsByChunk.computeIfAbsent(chunkLocation(e.location), ignored -> new LinkedHashSet<>()).add(e);
+        e.capabilityListener = expired -> {
+            if (e.registered && instance == this && owner == server && e.observedCapability == expired) {
+                e.observedCapability = null;
+                invalidate(e, server.getTickCount());
+            }
+        };
+        queueValidation(e, server.getTickCount());
+    }
+
+    private void invalidate(Endpoint e, long tick) {
+        e.revision++;
+        e.capabilityCache = null;
+        e.capabilityOwner = null;
+        queueValidation(e, tick);
+    }
+
+    /** Forge world events and existing removal notifications only enqueue affected coordinates. */
+    public static void onBlockChanged(ServerLevel level, BlockPos pos) {
+        if (instance == null || owner != level.getServer()) return;
+        var e = instance.endpoints.get(new Location(level.dimension(), pos));
+        if (e != null) instance.invalidate(e, owner.getTickCount());
+    }
+
+    public static void onChunkChanged(ServerLevel level, net.minecraft.world.level.ChunkPos pos, boolean loaded) {
+        var server = level.getServer();
+        if (!server.isSameThread()) {
+            server.execute(() -> onChunkChanged(level, pos, loaded));
+            return;
+        }
+        if (instance == null || owner != server) return;
+        var indexed = instance.endpointsByChunk.get(new ChunkLocation(level.dimension(), pos.toLong()));
+        if (indexed == null) return;
+        for (var e : indexed) {
+            e.chunkUnloaded = !loaded;
+            instance.invalidate(e, server.getTickCount());
+        }
+    }
+
+    private void cancelValidation(Endpoint e) {
+        var bucket = validations.get(e.validationTick);
+        if (bucket != null) {
+            bucket.remove(e);
+            if (bucket.isEmpty()) validations.remove(e.validationTick);
+        }
+        e.validationTick = Long.MAX_VALUE;
+    }
+
+    private void queueValidation(Endpoint e, long tick) {
+        if (!e.registered || tick >= e.validationTick) return;
+        cancelValidation(e);
+        e.validationTick = tick;
+        validations.computeIfAbsent(tick, ignored -> new LinkedHashSet<>()).add(e);
+    }
+
+    /** Only invalidated coordinates and one-shot grace deadlines are examined, never the endpoint table. */
+    public void tickValidations(MinecraftServer server) {
+        long now = server.getTickCount();
+        if (validations.isEmpty() || validations.firstKey() > now) return;
+        // Snapshot due work so callbacks during a lookup cannot cause an unbounded same-tick loop.
+        var due = new ArrayList<Endpoint>();
+        while (!validations.isEmpty() && validations.firstKey() <= now) {
+            for (var e : validations.pollFirstEntry().getValue()) {
+                e.validationTick = Long.MAX_VALUE;
+                due.add(e);
+            }
+        }
+        for (var e : due) {
+            if (!e.registered) continue;
+            try { validate(server, e, now); }
+            catch (RuntimeException ex) { fault(e, ex); }
+        }
+    }
+
+    private void validate(MinecraftServer server, Endpoint e, long now) {
+        long revision = e.revision;
+        var level = server.getLevel(e.location.dimension());
+        var pos = e.location.pos();
+        var chunk = level == null ? null : level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
+        if (chunk == null || e.chunkUnloaded) {
+            e.missingFeSince = Long.MIN_VALUE;
+            if (e.state != State.FAULTED) e.state = State.UNLOADED;
+            return; // The chunk-load capability notification will resume validation.
+        }
+        var state = chunk.getBlockState(pos);
+        if (state.isAir()) { remove(e.location); return; }
+        var block = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        if (!block.equals(e.block)) { e.block = block; setDirty(); }
+        var be = chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
+        // An absent Forge capability has no live invalidation listener. Recheck it only on
+        // a world event or the one-shot grace deadline, never during normal FE dispatch.
+        if (e.capabilityCache != null && !e.capabilityCache.isPresent()) e.capabilityCache = null;
+        var target = cachedEnergyTarget(e, level);
+        // A provider may itself replace the block or invalidate capabilities during lookup.
+        if (!e.registered || revision != e.revision) return;
+        if (target == null || excludedVisit(be, e.face)) {
+            if (e.missingFeSince == Long.MIN_VALUE) e.missingFeSince = now;
+            long deadline = e.missingFeSince + MISSING_FE_GRACE_TICKS;
+            if (now >= deadline) remove(e.location);
+            else queueValidation(e, deadline);
+        } else {
+            e.missingFeSince = Long.MIN_VALUE;
+            cancelValidation(e);
+        }
+    }
+
     private void remove(Location location) {
         var removed = endpoints.remove(location);
-        if (removed != null) { removed.registered = false; scheduleDirty = true; setDirty(); }
+        if (removed != null) {
+            removed.registered = false;
+            cancelValidation(removed);
+            detachCapability(removed);
+            var key = chunkLocation(removed.location);
+            var indexed = endpointsByChunk.get(key);
+            if (indexed != null) {
+                indexed.remove(removed);
+                if (indexed.isEmpty()) endpointsByChunk.remove(key);
+            }
+            scheduleDirty = true;
+            setDirty();
+        }
     }
     public List<View> inspect(int frequency, UUID viewer) {
         var manager = WirelessFrequencyManager.get();
@@ -286,15 +409,22 @@ public final class WirelessEnergyEndpoints extends SavedData {
      * capability rebuild, chunk unload/load) re-resolves on the next call, so a
      * replaced capability never keeps its old identity past the next visit.
      */
-    private static @Nullable IEnergyStorage cachedEnergyTarget(Endpoint e, ServerLevel level) {
+    private @Nullable IEnergyStorage cachedEnergyTarget(Endpoint e, ServerLevel level) {
         var be = loadedBlockEntity(level, e.location.pos());
-        if (be == null || be.isRemoved()) return null;
+        if (be == null || be.isRemoved() || e.chunkUnloaded) return null;
         var cache = e.capabilityCache;
         if (cache == null || e.capabilityOwner != be) {
             e.capabilityOwner = be;
             cache = be.getCapability(ForgeCapabilities.ENERGY, e.face);
             e.capabilityCache = cache;
-            cache.addListener(ignored -> e.capabilityCache = null);
+            if (cache != e.observedCapability) {
+                if (e.observedCapability != null) e.observedCapability.removeListener(e.capabilityListener);
+                e.observedCapability = null;
+                if (cache.isPresent()) {
+                    e.observedCapability = cache;
+                    cache.addListener(e.capabilityListener);
+                }
+            }
         }
         return cache.orElse(null);
     }
@@ -363,11 +493,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
         if (endpoints.size() >= WORLD_LIMIT) return "limit";
         if (isBackfeed(be, controller.getMainNode().getGrid())) return "backfeed";
         var endpoint = new Endpoint(UUID.randomUUID(), frequency, location, face, player.getUUID(),
-                BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString(),
-                BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType()).toString());
-        endpoint.bindIdentity(be);
+                BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString());
         endpoint.source = source;
         endpoints.put(location, endpoint);
+        listen(level.getServer(), endpoint);
         scheduleDirty = true;
         setDirty();
         // Manual admission deliberately calls neither simulateReceive nor receiveEnergy.
@@ -542,7 +671,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
         var chunk = level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4);
         if (chunk == null) { e.state = State.UNLOADED; return; }
         var be = chunk.getBlockEntity(pos, net.minecraft.world.level.chunk.LevelChunk.EntityCreationType.CHECK);
-        if (be == null || !e.matches(be)) { remove(e.location); return; }
+        if (be == null || be.isRemoved()) { e.state = State.BLOCKED; return; }
         var ctx = contextFor(server, e.frequency);
         if (ctx == null) {
             // Drop the meter handle so a dead controller's meter table is not pinned.
@@ -625,9 +754,10 @@ public final class WirelessEnergyEndpoints extends SavedData {
     private @Nullable TargetAccess resolvePending(WirelessFrequencyManager manager, DispatchContext ctx, Pending p) {
         var e = p.endpoint;
         // ME callbacks may replace/unload a target or move the controller into a new grid.
-        if (p.blockEntity.isRemoved() || !e.registered
+        if (p.blockEntity.isRemoved() || !e.registered || p.revision != e.revision
                 || ctx.controller.getMainNode().getGrid() != ctx.grid
                 || !p.level.isLoaded(e.location.pos())
+                || loadedBlockEntity(p.level, e.location.pos()) != p.blockEntity
                 || manager == null || manager.getFrequency(e.frequency) != p.frequency
                 || !p.frequency.getPlayerAccess(e.actor).canUse()
                 || ctx.controller.getFrequencyId() != e.frequency) {
@@ -677,7 +807,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             if (dimension == null || face == null || !row.hasUUID("id") || !row.hasUUID("actor")) continue;
             var location = new Location(ResourceKey.create(Registries.DIMENSION, dimension), BlockPos.of(row.getLong("pos")));
             var e = new Endpoint(row.getUUID("id"), row.getInt("frequency"), location, face, row.getUUID("actor"),
-                    row.getString("block"), row.getString("type"));
+                    row.getString("block"));
             e.totalDelivered = Math.max(0, row.getLong("delivered"));
             e.source = row.getString("source").equals("automatic") ? "automatic" : "manual";
             if (row.getBoolean("faulted")) e.state = State.FAULTED;
@@ -691,7 +821,7 @@ public final class WirelessEnergyEndpoints extends SavedData {
             var row = new CompoundTag();
             row.putUUID("id", e.id); row.putInt("frequency", e.frequency); row.putUUID("actor", e.actor);
             row.putString("dimension", e.location.dimension().location().toString()); row.putLong("pos", e.location.pos().asLong());
-            row.putString("face", e.face.getName()); row.putString("block", e.block); row.putString("type", e.type);
+            row.putString("face", e.face.getName()); row.putString("block", e.block);
             row.putString("source", e.source); row.putLong("delivered", e.totalDelivered); row.putBoolean("faulted", e.state == State.FAULTED);
             list.add(row);
         }

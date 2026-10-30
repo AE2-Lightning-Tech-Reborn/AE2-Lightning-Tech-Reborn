@@ -29,12 +29,13 @@ public final class WirelessEnergyTestMachine extends BlockEntity {
     Direction inputFace = Direction.NORTH;
     int simulations;
     int ticks, receiveCalls, received, receiveLimit = 100000, actualLimit = 100000, retainedFloor, reportedCapacity = 100000;
-    boolean drain, instantTrash, unknown, inputReady = true;
+    boolean drain, instantTrash, unknown, inputReady = true, accepting = true;
     Runnable duringTick = () -> {}, duringSimulation = () -> {}, afterReceive = () -> {}, duringCapability = () -> {};
     ProbeStorage energy = makeStorage();
     ProbeStorage makeStorage() { return new ProbeStorage(); }
     final class ProbeStorage extends EnergyStorage {
         ProbeStorage() { super(100000, 100000, 0); }
+        @Override public boolean canReceive() { return accepting && super.canReceive(); }
         void prime(int value) { energy = value; }
         @Override public int receiveEnergy(int amount, boolean simulate) {
             if (simulate) { simulations++; duringSimulation.run(); }

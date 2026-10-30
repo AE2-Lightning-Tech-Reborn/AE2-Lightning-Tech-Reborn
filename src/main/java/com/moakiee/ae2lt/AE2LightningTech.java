@@ -1313,6 +1313,7 @@ public class AE2LightningTech {
             return;
         }
         CRAFTING_CORE_REGISTRY.tickAll();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tickValidations(event.getServer());
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tickBulkConnections(event.getServer());
         com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer()).tick(event.getServer());
         com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tick(event.getServer());
