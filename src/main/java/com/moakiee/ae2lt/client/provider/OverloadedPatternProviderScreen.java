@@ -19,6 +19,7 @@ import appeng.client.gui.widgets.ActionButton;
 import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.api.client.PatternProviderToolbarButtonHider;
+import com.moakiee.ae2lt.api.patternprovider.PatternSlotPages;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ReturnMode;
 import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
@@ -45,8 +46,6 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     private final TextureToggleButton adaptiveBatchButton;
     private final ActionButton advancedSettingsButton;
     private final PageButton pageButton;
-
-    private static final int SLOTS_PER_PAGE = 36;
 
     public OverloadedPatternProviderScreen(M menu, Inventory playerInventory,
                                            Component title, ScreenStyle style) {
@@ -96,25 +95,7 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     protected void init() {
         super.init();
 
-        alignSlotPositions();
-    }
-
-    /**
-     * After AE2's layout system positions all ENCODED_PATTERN slots,
-     * copy page-0 positions to every subsequent page so all pages
-     * share the same screen coordinates. Only active/inactive toggles
-     * are needed to switch pages — no per-frame coordinate remapping.
-     */
-    private void alignSlotPositions() {
-        var patternSlots = this.menu.getSlots(SlotSemantics.ENCODED_PATTERN);
-        int total = patternSlots.size();
-        if (total <= SLOTS_PER_PAGE) return;
-
-        for (int i = SLOTS_PER_PAGE; i < total; i++) {
-            int ref = i % SLOTS_PER_PAGE;
-            patternSlots.get(i).x = patternSlots.get(ref).x;
-            patternSlots.get(i).y = patternSlots.get(ref).y;
-        }
+        PatternSlotPages.alignSlots(menu.getSlots(SlotSemantics.ENCODED_PATTERN));
     }
 
     @Override

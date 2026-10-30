@@ -62,7 +62,8 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
         implements FrequencyBindingHost, WirelessPatternProviderHost {
 
     /** Pattern slots displayed per GUI page. */
-    public static final int SLOTS_PER_PAGE = 36;
+    public static final int SLOTS_PER_PAGE =
+            com.moakiee.ae2lt.api.patternprovider.PatternSlotPages.SLOTS_PER_PAGE;
     public static final int MAX_WIRELESS_CONNECTIONS = 1024;
 
     // ── Idle power (recomputed on mode/connection changes) ───────────────

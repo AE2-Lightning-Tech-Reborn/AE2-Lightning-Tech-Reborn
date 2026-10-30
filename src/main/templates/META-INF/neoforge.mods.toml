@@ -212,7 +212,8 @@ modId = "omni_upgrades"
 type = "optional"
 # 1.0.4 restores frequency cards' own right-click actions instead of intercepting them as upgrades.
 versionRange = "[1.0.4-1.21.1,)"
-ordering = "AFTER"
+# Only the version constraint is needed; AFTER creates a cycle through Productive Bees Genesis.
+ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]

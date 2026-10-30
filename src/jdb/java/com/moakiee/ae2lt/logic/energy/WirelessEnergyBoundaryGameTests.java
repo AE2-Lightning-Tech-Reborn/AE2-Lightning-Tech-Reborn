@@ -93,6 +93,148 @@ public final class WirelessEnergyBoundaryGameTests {
         return machine;
     }
 
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_mekupgrade", timeoutTicks = 120)
+    public static void mekanismTierInstallerPreservesWirelessFe(GameTestHelper h) {
+        ready(h, f -> {
+            var level = h.getLevel();
+            var machine = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:enrichment_chamber"));
+            var factory = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("mekanism:basic_enriching_factory"));
+            var installer = BuiltInRegistries.ITEM.get(ResourceLocation.parse("mekanism:basic_tier_installer"));
+            h.assertTrue(machine != net.minecraft.world.level.block.Blocks.AIR
+                    && factory != net.minecraft.world.level.block.Blocks.AIR
+                    && installer != net.minecraft.world.item.Items.AIR, "Mekanism upgrade fixture missing");
+            level.setBlockAndUpdate(f.pos, machine.defaultBlockState());
+            // Raw block placement does not apply the item's default side-configuration components.
+            var tile = (mekanism.common.tile.prefab.TileEntityConfigurableMachine) level.getBlockEntity(f.pos);
+            tile.getConfig().getConfig(mekanism.common.lib.transmitter.TransmissionType.ENERGY).setDataType(
+                    mekanism.common.tile.component.config.DataType.INPUT, mekanism.api.RelativeSide.FRONT);
+            level.invalidateCapabilities(f.pos);
+            h.runAfterDelay(2, () -> {
+                var face = f.endpoints.findInputFace(level, f.pos, Direction.NORTH);
+                h.assertTrue(face != null, "Mekanism machine lacks FE input");
+                h.assertTrue(f.endpoints.setBound(f.player, f.frequency, level, f.pos, face, true).equals("connected"), "Mekanism bind failed");
+                f.player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(installer));
+                var hit = new net.minecraft.world.phys.BlockHitResult(f.pos.getCenter(), Direction.NORTH, f.pos, false);
+                installer.useOn(new net.minecraft.world.item.context.UseOnContext(f.player,
+                        net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+                h.assertTrue(level.getBlockState(f.pos).is(factory), "native Mekanism installer did not upgrade the machine");
+                f.fill(100000);
+                h.runAfterDelay(5, () -> {
+                    h.assertTrue(f.endpoints.isBound(level, f.pos, f.frequency), "Mekanism factory upgrade disconnected FE");
+                    var view = f.endpoints.inspectTarget(level, f.pos, f.player.getUUID());
+                    h.assertTrue(view.face() == face && view.totalDelivered() > 0
+                            && view.block().equals("mekanism:basic_enriching_factory"), "upgraded factory did not inherit and receive FE");
+                    h.succeed();
+                });
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_air", timeoutTicks = 120)
+    public static void airDisconnectsAtEndOfTickWithoutController(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            f.controller.setFrequency(-1);
+            h.getLevel().removeBlock(f.pos, false);
+            h.runAfterDelay(2, () -> {
+                h.assertTrue(!f.endpoints.isBound(h.getLevel(), f.pos, f.frequency), "air retained a binding without an active controller");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_stone", timeoutTicks = 120)
+    public static void nonFeReplacementDisconnectsAfterGrace(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            h.getLevel().setBlockAndUpdate(f.pos, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            h.runAfterDelay(5, () -> h.assertTrue(f.endpoints.isBound(h.getLevel(), f.pos, f.frequency), "missing capability skipped grace"));
+            h.runAfterDelay(24, () -> {
+                h.assertTrue(!f.endpoints.isBound(h.getLevel(), f.pos, f.frequency), "non-FE replacement retained a binding");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_missingfe", timeoutTicks = 120)
+    public static void repeatedInvalidationsDoNotExtendMissingFeDeadline(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            f.machine.inputReady = false;
+            h.getLevel().invalidateCapabilities(f.pos);
+            for (int delay : new int[] { 5, 10, 15 }) {
+                h.runAfterDelay(delay, () -> h.getLevel().invalidateCapabilities(f.pos));
+            }
+            h.runAfterDelay(24, () -> {
+                h.assertTrue(!f.endpoints.isBound(h.getLevel(), f.pos, f.frequency), "invalidation extended a missing-FE deadline");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_recoverfe", timeoutTicks = 120)
+    public static void delayedCapabilityRecoversWithoutProbeOrStaleDeadline(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            var id = f.endpoints.inspectTarget(h.getLevel(), f.pos, f.player.getUUID()).id();
+            f.machine.inputReady = false;
+            h.getLevel().invalidateCapabilities(f.pos);
+            h.runAfterDelay(10, () -> {
+                f.machine.inputReady = true;
+                h.getLevel().invalidateCapabilities(f.pos);
+                f.fill(100000);
+            });
+            h.runAfterDelay(26, () -> {
+                var view = f.endpoints.inspectTarget(h.getLevel(), f.pos, f.player.getUUID());
+                h.assertTrue(view != null && view.id().equals(id) && f.machine.received > 0,
+                        "delayed capability lost its binding or stale deadline removed it");
+                h.assertTrue(WirelessEnergyAdmissions.get(h.getLevel().getServer()).inspect(
+                        h.getLevel(), f.pos, f.player.getUUID()).offered() == 0, "recovery repeated automatic admission");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_notaccepting", timeoutTicks = 120)
+    public static void presentButDisabledInputRetainsBinding(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            f.machine.accepting = false;
+            h.getLevel().invalidateCapabilities(f.pos);
+            f.fill(100000);
+            h.runAfterDelay(26, () -> {
+                h.assertTrue(f.endpoints.isBound(h.getLevel(), f.pos, f.frequency)
+                        && f.machine.received == 0, "disabled input disconnected or received FE");
+                f.machine.accepting = true;
+                h.getLevel().invalidateCapabilities(f.pos);
+                h.runAfterDelay(25, () -> {
+                    h.assertTrue(f.machine.received > 0, "enabled input did not resume");
+                    h.succeed();
+                });
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_listener", timeoutTicks = 120)
+    public static void idleBindingDoesNotPollCapabilityProvider(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            var queries = new java.util.concurrent.atomic.AtomicInteger();
+            f.machine.duringCapability = queries::incrementAndGet;
+            h.runAfterDelay(3, () -> {
+                int before = queries.get();
+                h.runAfterDelay(25, () -> {
+                    h.assertTrue(queries.get() == before, "unchanged endpoint polled its capability provider");
+                    h.getLevel().invalidateCapabilities(f.pos);
+                    h.runAfterDelay(2, () -> {
+                        h.assertTrue(queries.get() == before + 1, "capability event did not trigger exactly one fresh lookup");
+                        h.succeed();
+                    });
+                });
+            });
+        });
+    }
+
     private static void redistribution(GameTestHelper h, Consumer<WirelessEnergyTestMachine> configurePrefix,
                                        int prefixReceived, WirelessEnergyEndpoints.State prefixState) {
         ready(h, f -> {
@@ -366,6 +508,33 @@ public final class WirelessEnergyBoundaryGameTests {
             h.runAfterDelay(5, () -> {
                 h.assertTrue(other.received > 0 && before - f.stored() == f.machine.received + other.received,
                         "new generation failed to recover or FE was duplicated");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "wireless_io_empty", batch = "energy_coordinate_preparedreplacement", timeoutTicks = 120)
+    public static void replacementDuringEarlierReceiptRejectsPreparedOldMachine(GameTestHelper h) {
+        ready(h, f -> {
+            f.bind(h);
+            var other = bindAnother(h, f);
+            f.machine.receiveLimit = other.receiveLimit = 100;
+            var replacement = new AtomicReference<WirelessEnergyTestMachine>();
+            f.machine.afterReceive = () -> {
+                f.machine.afterReceive = () -> {};
+                h.getLevel().removeBlockEntity(other.getBlockPos());
+                var next = new WirelessEnergyTestMachine(other.getBlockPos(), other.getBlockState());
+                replacement.set(next);
+                h.getLevel().getChunkAt(other.getBlockPos()).addAndRegisterBlockEntity(next);
+            };
+            f.fill(100000);
+            long before = f.stored();
+            f.tick(h);
+            h.assertTrue(replacement.get() != null && other.received == 0 && replacement.get().received == 0
+                    && before - f.stored() == f.machine.received, "prepared replacement received stale FE or lost its refund");
+            h.runAfterDelay(5, () -> {
+                h.assertTrue(f.endpoints.isBound(h.getLevel(), other.getBlockPos(), f.frequency)
+                        && replacement.get().received > 0, "replacement did not resume through the coordinate binding");
                 h.succeed();
             });
         });
