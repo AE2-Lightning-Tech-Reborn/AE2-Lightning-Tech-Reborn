@@ -13,9 +13,11 @@ class Forge120DependencyFloorTest {
     @Test
     void productionUsesCurrentForgeReleaseAndRejectsIncompatibleOlderBetas() throws Exception {
         var properties = properties();
-        assertEquals("2.0.3", properties.getProperty("thunderbolt_version"));
+        assertEquals("2.0.4", properties.getProperty("thunderbolt_version"));
         assertEquals("thunderbolt-reborn-forge-1.20.1", properties.getProperty("thunderbolt_artifact_id"));
         var range = VersionRange.createFromVersionSpec(properties.getProperty("thunderbolt_version_range"));
+        assertFalse(range.containsVersion(new DefaultArtifactVersion("2.0.3")));
+        assertFalse(range.containsVersion(new DefaultArtifactVersion("2.0.4-beta")));
         assertFalse(range.containsVersion(new DefaultArtifactVersion("2.0.3-beta2")));
         assertFalse(range.containsVersion(new DefaultArtifactVersion("2.0.3-beta3")));
         assertFalse(range.containsVersion(new DefaultArtifactVersion("2.0.3-beta4")));
