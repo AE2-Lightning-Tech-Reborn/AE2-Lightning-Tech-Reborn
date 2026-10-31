@@ -27,3 +27,9 @@ Conditions:
 The projectile does not need to be shot down. Simply letting it reach the Silk Touch Annihilation Plane is enough.
 
 > The configuration file can disable this collection mechanic.
+
+## Brewing
+
+When **Apothic Attributes** is installed, brew an **Awkward Potion** with <ItemLink id="ae2lt:floating_matter" /> in a Brewing Stand to make its **Potion of Levitation**, granting **Levitation I for 2 minutes**.
+
+This alternative brewing recipe is only available with Apothic Attributes installed.
