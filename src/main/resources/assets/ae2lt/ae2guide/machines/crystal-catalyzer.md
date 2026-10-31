@@ -121,4 +121,3 @@ A redstone stop preserves the current recipe and paid progress, pausing processi
 This is a signal gate: one output batch, one input debit or concurrent machines can cross a threshold. Leave room for a full operation when protecting an input reserve, and reduce batch size when a tighter output limit is needed.
 
 The catalyzer continues auto-exporting completed products while paused. This upgrade slot applies to the normal Crystal Catalyzer.
-

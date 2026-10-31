@@ -69,7 +69,6 @@ public final class ModEntityRenderers {
     public static void wrapFumoItemModels(ModelEvent.ModifyBakingResult event) {
         wrapFumoItemModel(event, "moakiee_fumo");
         wrapFumoItemModel(event, "cystrysu_fumo");
-        wrapFumoItemModel(event, "pigmee_fumo");
 
     }
 

@@ -256,7 +256,6 @@ public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FumoBlock
                     () -> BlockEntityType.Builder.of(
                             FumoBlockEntity::new,
                             ModFumos.MOAKIEE_FUMO.get(),
-                            ModFumos.CYSTRYSU_FUMO.get(),
-                            ModFumos.PIGMEE_FUMO.get())
+                            ModFumos.CYSTRYSU_FUMO.get())
                             .build(null));
 }

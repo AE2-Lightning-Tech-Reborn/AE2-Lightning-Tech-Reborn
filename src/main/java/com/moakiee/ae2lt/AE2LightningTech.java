@@ -335,7 +335,6 @@ public class AE2LightningTech {
                         // Fumo 收藏品
                         output.accept(ModFumos.MOAKIEE_FUMO_ITEM.get());
                         output.accept(ModFumos.CYSTRYSU_FUMO_ITEM.get());
-                        output.accept(ModFumos.PIGMEE_FUMO_ITEM.get());
                     })
                     .build());
 

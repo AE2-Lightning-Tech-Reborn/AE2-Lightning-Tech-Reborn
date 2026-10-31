@@ -2,7 +2,6 @@ package com.moakiee.ae2lt.debug;
 
 import com.moakiee.ae2lt.api.cell.MysteriousCellRewards;
 import com.moakiee.ae2lt.item.FixedInfiniteCellItem;
-import com.moakiee.ae2lt.registry.ModFumos;
 import java.util.UUID;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
@@ -15,13 +14,10 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class AddonIsolationGameTests {
     @GameTest(template = "pigmee_station_empty")
-    public static void coreHasOnlyTheOriginalPigmee(GameTestHelper h) {
-        h.assertTrue(BuiltInRegistries.ITEM.get(ResourceLocation.parse("ae2lt:pigmee_fumo"))
-                == ModFumos.PIGMEE_FUMO_ITEM.get(), "original pigmee disappeared");
+    public static void coreHasNoPigmeeContent(GameTestHelper h) {
         for (var id : BuiltInRegistries.ITEM.keySet()) {
             h.assertTrue(!id.getNamespace().equals("pigmeetech"), "addon accidentally loaded");
-            h.assertTrue(!id.getNamespace().equals("ae2lt") || !id.getPath().contains("pigmee")
-                    || id.getPath().equals("pigmee_fumo"), "core still registers " + id);
+            h.assertTrue(!id.getNamespace().equals("ae2lt") || !id.getPath().contains("pigmee"), "core still registers " + id);
         }
         h.assertTrue(!BuiltInRegistries.ITEM.containsKey(ResourceLocation.parse("ae2lt:research_note")), "research note still registered");
         h.succeed();
