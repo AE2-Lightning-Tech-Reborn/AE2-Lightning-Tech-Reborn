@@ -104,6 +104,8 @@ public final class NetworkInit {
                 ChangeMemberPacket.STREAM_CODEC,
                 ChangeMemberPacket::handle);
 
+        registrar.playToClient(EasterEggPacket.TYPE, EasterEggPacket.STREAM_CODEC, EasterEggPacket::handle);
+
         // S→C
 
         registrar.playToClient(
