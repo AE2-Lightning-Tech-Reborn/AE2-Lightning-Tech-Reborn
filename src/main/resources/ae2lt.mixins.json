@@ -5,7 +5,6 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "InscriberProcessorRecipeLoaderMixin",
-    "RainbowPigmeeRecipeManagerMixin",
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
@@ -22,7 +21,6 @@
     "CraftingCPURecordAccessor",
     "TimeWheelCraftingCPUCyclerMixin",
     "AEBaseMenuManagedSlotClickMixin",
-    "PigmeeRecipeTransferStorageMixin",
     "AnnihilationPlaneFirmamentDustMixin",
     "PatternProviderLogicAccessor",
     "PatternMigrationRefundMixin",
@@ -70,8 +68,6 @@
     "RemoteDevicePacketGuardMixin"
   ],
   "client": [
-    "client.LightningBoltRendererMixin",
-    "client.IpnContainerClickerMixin",
     "client.EncodingHelperAccessor",
     "client.CableBusRenderStateMixin",
     "client.CraftConfirmReportRoutingMixin",

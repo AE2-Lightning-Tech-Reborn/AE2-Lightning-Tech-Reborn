@@ -23,7 +23,6 @@ import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.item.WeatherCondensateItem;
 import com.moakiee.ae2lt.logic.world.WeatherControlHelper;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
-import com.moakiee.ae2lt.logic.research.ResearchRitualService;
 import com.moakiee.ae2lt.machine.atmosphericionizer.AtmosphericIonizerInventory;
 import com.moakiee.ae2lt.machine.atmosphericionizer.AtmosphericIonizerLogic;
 import com.moakiee.ae2lt.machine.atmosphericionizer.AtmosphericIonizerStatus;
@@ -351,7 +350,7 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
     /**
      * 雷暴凝核成功的一瞬间,立即在 BE 正上方召唤一束原版闪电。
      * 研究仪式是否成立,交由 {@code LightningItemTransformationHandler}
-     * + {@code ResearchRitualService} 按反应场内的物品判定,这里只负责"触发点"。
+     * 附属可通过 IonizerLightningEvent 处理此电离仪产生的闪电。
      */
     private void summonRitualLightning(ServerLevel serverLevel) {
         LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(serverLevel);
@@ -363,7 +362,8 @@ public class AtmosphericIonizerBlockEntity extends AENetworkedBlockEntity
         BlockPos strikePos = worldPosition.above(RITUAL_STRIKE_HEIGHT_OFFSET);
         bolt.moveTo(Vec3.atBottomCenterOf(strikePos));
         bolt.setVisualOnly(false);
-        ResearchRitualService.markRitualLightning(bolt, worldPosition);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.moakiee.ae2lt.api.event.IonizerLightningEvent(bolt, worldPosition));
         serverLevel.addFreshEntity(bolt);
         LOG.info("[ae2lt/ionizer] thunderstorm nucleation -> spawn lightning at {} (ionizer={})", strikePos,
                 worldPosition);

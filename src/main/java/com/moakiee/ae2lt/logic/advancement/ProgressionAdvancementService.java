@@ -18,10 +18,6 @@ public final class ProgressionAdvancementService {
             advancement("neutralization");
     private static final ResourceLocation CONSTRUCT_FRAGMENT =
             advancement("construct_fragment");
-    private static final ResourceLocation THUNDERSTORM_GENERATOR =
-            advancement("thunderstorm_generator");
-    private static final ResourceLocation OBSERVABLE_BLACK_HOLE =
-            advancement("observable_black_hole");
 
     private ProgressionAdvancementService() {
     }
@@ -35,6 +31,9 @@ public final class ProgressionAdvancementService {
             return;
         }
 
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new com.moakiee.ae2lt.api.event.MysteriousCellInspectEvent(player, stack));
+
         if (!FixedInfiniteCellItem.hasType(stack)) {
             award(player, NEUTRALIZATION, "obtain_mysterious_component");
             return;
@@ -43,13 +42,8 @@ public final class ProgressionAdvancementService {
         switch (FixedInfiniteCellItem.CellOutcome.fromTypeId(FixedInfiniteCellItem.getType(stack))) {
             case LIGHTNING_ROD ->
                     award(player, CONSTRUCT_FRAGMENT, "obtain_infinite_lightning_rod");
-            case HIGH_VOLTAGE ->
-                    award(player, THUNDERSTORM_GENERATOR, "obtain_infinite_high_voltage");
-            case EXTREME_HIGH_VOLTAGE ->
-                    award(player, THUNDERSTORM_GENERATOR, "obtain_infinite_extreme_high_voltage");
-            case LIGHTNING_COLLAPSE_MATRIX ->
-                    award(player, OBSERVABLE_BLACK_HOLE, "obtain_infinite_collapse_matrix");
-            case RESEARCH_NOTE, MOAKIEE_FUMO, CYSTRYSU_FUMO -> {
+            case HIGH_VOLTAGE, EXTREME_HIGH_VOLTAGE, LIGHTNING_COLLAPSE_MATRIX,
+                    ADDON_REWARD, MOAKIEE_FUMO, CYSTRYSU_FUMO -> {
                 // These outcomes have distinct real output items and use vanilla
                 // inventory_changed criteria after being extracted.
             }

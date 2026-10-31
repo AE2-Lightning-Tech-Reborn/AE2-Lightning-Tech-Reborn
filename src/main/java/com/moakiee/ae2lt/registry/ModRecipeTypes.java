@@ -8,16 +8,10 @@ import com.moakiee.ae2lt.machine.firmament.recipe.FirmamentConversionRecipe;
 import com.moakiee.ae2lt.machine.lightningassembly.recipe.LightningAssemblyRecipe;
 import com.moakiee.ae2lt.machine.lightningchamber.recipe.LightningSimulationRecipe;
 import com.moakiee.ae2lt.machine.overloadfactory.recipe.OverloadProcessingRecipe;
-import com.moakiee.ae2lt.recipe.CreativePigmeeDuplicationRecipe;
-import com.moakiee.ae2lt.recipe.HyperdimensionalPigmeeConversionRecipe;
-import com.moakiee.ae2lt.recipe.PigmeeBuildingRecipe;
-import com.moakiee.ae2lt.recipe.RainbowPigmeeDyeRecipe;
-import com.moakiee.ae2lt.recipe.RainbowPigmeeColorCycleRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -103,31 +97,6 @@ public final class ModRecipeTypes {
                     () -> RecipeType.simple(ResourceLocation.fromNamespaceAndPath(
                             AE2LightningTech.MODID,
                             "crystal_catalyzer")));
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<CreativePigmeeDuplicationRecipe>>
-            CREATIVE_PIGMEE_DUPLICATION_SERIALIZER =
-                    RECIPE_SERIALIZERS.register(
-                            "creative_pigmee_duplication",
-                            () -> new SimpleCraftingRecipeSerializer<>(CreativePigmeeDuplicationRecipe::new));
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<HyperdimensionalPigmeeConversionRecipe>>
-            HYPERDIMENSIONAL_PIGMEE_CONVERSION_SERIALIZER =
-                    RECIPE_SERIALIZERS.register(
-                            "hyperdimensional_pigmee_conversion",
-                            () -> new SimpleCraftingRecipeSerializer<>(HyperdimensionalPigmeeConversionRecipe::new));
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<PigmeeBuildingRecipe>>
-            PIGMEE_BUILDING_SERIALIZER =
-                    RECIPE_SERIALIZERS.register("pigmee_building", PigmeeBuildingRecipe.Serializer::new);
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<RainbowPigmeeDyeRecipe>>
-            RAINBOW_PIGMEE_DYE_SERIALIZER =
-                    RECIPE_SERIALIZERS.register("rainbow_pigmee_dye", RainbowPigmeeDyeRecipe.Serializer::new);
-
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<RainbowPigmeeColorCycleRecipe>>
-            RAINBOW_PIGMEE_COLOR_CYCLE_SERIALIZER =
-                    RECIPE_SERIALIZERS.register("rainbow_pigmee_color_cycle",
-                            () -> new SimpleCraftingRecipeSerializer<>(RainbowPigmeeColorCycleRecipe::new));
 
     private ModRecipeTypes() {
     }

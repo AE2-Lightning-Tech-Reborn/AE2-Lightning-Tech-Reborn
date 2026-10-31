@@ -43,7 +43,7 @@ public final class CtmFaceGeometry {
     }
 
     /** World position of the diagonal neighbour for the given face quadrant. */
-    static BlockPos cornerPos(BlockPos pos, Direction face, CtmTileSelector.Quadrant quadrant) {
+    public static BlockPos cornerPos(BlockPos pos, Direction face, CtmTileSelector.Quadrant quadrant) {
         return switch (quadrant) {
             case TOP_LEFT -> pos.relative(neighborDir(face, UP)).relative(neighborDir(face, LEFT));
             case TOP_RIGHT -> pos.relative(neighborDir(face, UP)).relative(neighborDir(face, RIGHT));

@@ -25,9 +25,21 @@ import java.util.List;
 
 import com.moakiee.ae2lt.block.FumoBlock;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
-import com.moakiee.ae2lt.registry.ModFumos;
 
 public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
+
+    @FunctionalInterface
+    public interface Appearance {
+        void render(FumoBlockEntity entity, float partialTick, PoseStack poses,
+                    MultiBufferSource buffers, int light, int overlay);
+    }
+
+    private static final java.util.Map<net.minecraft.world.level.block.Block, Appearance> APPEARANCES = new java.util.IdentityHashMap<>();
+
+    /** Register during client setup; the default renderer handles all unregistered blocks. */
+    public static void registerAppearance(net.minecraft.world.level.block.Block block, Appearance appearance) {
+        APPEARANCES.put(block, appearance);
+    }
 
     private static final RandomSource RAND = RandomSource.create();
 
@@ -38,6 +50,11 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
     public void render(FumoBlockEntity blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         BlockState state = blockEntity.getBlockState();
+        var appearance = APPEARANCES.get(state.getBlock());
+        if (appearance != null) {
+            appearance.render(blockEntity, partialTick, poseStack, buffer, packedLight, packedOverlay);
+            return;
+        }
         boolean spinning = blockEntity.isSpinning();
 
         BlockState renderState = spinning && state.hasProperty(FumoBlock.FACING)
@@ -56,18 +73,9 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
         ModelData modelData = ModelData.EMPTY;
         Level level = blockEntity.getLevel();
         BlockPos pos = blockEntity.getBlockPos();
-        boolean hyperdimensional = state.is(ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get());
-        boolean rainbow = state.is(ModFumos.RAINBOW_PIGMEE_FUMO.get());
-
-        if (rainbow) {
-            RainbowPigmeeSurfaceLayer.renderBlock(model, renderState, modelData, poseStack, buffer);
-            HyperdimensionalPigmeeTextureLayer.renderBlock(renderState, poseStack, buffer, packedOverlay);
-            poseStack.popPose();
-            return;
-        }
 
         if (level != null) {
-            if (!hyperdimensional) {
+
                 ModelBlockRenderer modelRenderer = dispatcher.getModelRenderer();
                 for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
                     modelRenderer.tesselateBlock(
@@ -84,13 +92,7 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
                             modelData,
                             renderType);
                 }
-            }
-            if (hyperdimensional) {
-                HyperdimensionalPigmeePortalLayer.renderBlock(
-                        model, renderState, modelData, poseStack, buffer);
-                HyperdimensionalPigmeeTextureLayer.renderBlock(
-                        renderState, poseStack, buffer, packedOverlay);
-            }
+
         } else {
             int color = Minecraft.getInstance().getBlockColors().getColor(renderState, null, null, 0);
             float r = (color >> 16 & 0xFF) / 255.0F;
@@ -98,7 +100,6 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
             float b = (color & 0xFF) / 255.0F;
             PoseStack.Pose pose = poseStack.last();
 
-            if (!hyperdimensional) {
                 for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
                     VertexConsumer consumer = buffer.getBuffer(renderType);
                     for (Direction dir : Direction.values()) {
@@ -110,13 +111,7 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
                     renderQuads(pose, consumer, model.getQuads(renderState, null, RAND, modelData, renderType),
                             r, g, b, packedLight, packedOverlay);
                 }
-            }
-            if (hyperdimensional) {
-                HyperdimensionalPigmeePortalLayer.renderBlock(
-                        model, renderState, modelData, poseStack, buffer);
-                HyperdimensionalPigmeeTextureLayer.renderBlock(
-                        renderState, poseStack, buffer, packedOverlay);
-            }
+
         }
 
         poseStack.popPose();

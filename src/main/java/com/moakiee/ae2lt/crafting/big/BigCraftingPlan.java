@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.crafting.big;
 
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.stacks.*;
 import appeng.menu.me.crafting.*;
 

@@ -12,9 +12,9 @@ import static com.moakiee.ae2lt.client.ctm.CtmFaceGeometry.UP;
  * no orthogonal connections are sampled from the original 16x16 base texture's
  * 2x2 quadrant grid instead.
  */
-final class CtmTileSelector {
+public final class CtmTileSelector {
 
-    enum Source {
+    public enum Source {
         BASE(2),
         CTM(4);
 
@@ -24,32 +24,32 @@ final class CtmTileSelector {
             this.gridSize = gridSize;
         }
 
-        int gridSize() {
+        public int gridSize() {
             return gridSize;
         }
     }
 
-    enum Quadrant {
+    public enum Quadrant {
         TOP_LEFT,
         TOP_RIGHT,
         BOTTOM_RIGHT,
         BOTTOM_LEFT
     }
 
-    record Tile(Source source, int x, int y) {
+    public record Tile(Source source, int x, int y) {
     }
 
     private CtmTileSelector() {
     }
 
-    static Quadrant quadrant(int sq, int tq) {
+    public static Quadrant quadrant(int sq, int tq) {
         if (tq == 0) {
             return sq == 0 ? Quadrant.TOP_LEFT : Quadrant.TOP_RIGHT;
         }
         return sq == 0 ? Quadrant.BOTTOM_LEFT : Quadrant.BOTTOM_RIGHT;
     }
 
-    static Tile select(Quadrant quadrant, int edgeMask, int cornerMask) {
+    public static Tile select(Quadrant quadrant, int edgeMask, int cornerMask) {
         return switch (quadrant) {
             case TOP_LEFT -> selectCorner(edgeMask, cornerMask, UP, LEFT, Quadrant.TOP_LEFT,
                     0, 0, 0, 0, 2, 0, 0, 2, 2, 2);

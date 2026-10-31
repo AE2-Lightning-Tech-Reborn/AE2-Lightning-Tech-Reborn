@@ -87,3 +87,5 @@ run-cell-workbench-gametest/
 /run-pattern-migration-gametest/
 /run-pattern-migration-client/
 !docs/tianshu-pattern-migration.md
+
+!docs/pigmee-tech-extraction.zh-CN.md

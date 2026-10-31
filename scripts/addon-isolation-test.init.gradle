@@ -1,0 +1,13 @@
+// Isolated core-only startup and optional-prize regression. No addon is loaded.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/AddonIsolationGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+            gameDirectory = project.layout.buildDirectory.dir('addon-isolation-gametest').get().asFile
+        }
+    }
+}

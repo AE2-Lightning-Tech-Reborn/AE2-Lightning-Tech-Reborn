@@ -25,7 +25,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import com.moakiee.ae2lt.config.AE2LTCommonConfig;
+import com.moakiee.ae2lt.api.cell.MysteriousCellRewards;
 import com.moakiee.ae2lt.logic.advancement.ProgressionAdvancementService;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModFumos;
@@ -43,7 +43,7 @@ public final class FixedInfiniteCellItem extends Item {
         HIGH_VOLTAGE((byte) 1, "high_voltage"),
         EXTREME_HIGH_VOLTAGE((byte) 2, "extreme_high_voltage"),
         LIGHTNING_COLLAPSE_MATRIX((byte) 3, "lightning_collapse_matrix"),
-        RESEARCH_NOTE((byte) 4, "research_note"),
+        ADDON_REWARD((byte) 4, "addon_reward"),
         MOAKIEE_FUMO((byte) 5, "moakiee_fumo"),
         CYSTRYSU_FUMO((byte) 6, "cystrysu_fumo");
 
@@ -60,7 +60,7 @@ public final class FixedInfiniteCellItem extends Item {
         }
 
         public String suffix() {
-            return suffix;
+            return this == ADDON_REWARD ? MysteriousCellRewards.suffix() : suffix;
         }
 
         public static CellOutcome fromTypeId(byte id) {
@@ -68,7 +68,7 @@ public final class FixedInfiniteCellItem extends Item {
                 case 1 -> HIGH_VOLTAGE;
                 case 2 -> EXTREME_HIGH_VOLTAGE;
                 case 3 -> LIGHTNING_COLLAPSE_MATRIX;
-                case 4 -> RESEARCH_NOTE;
+                case 4 -> MysteriousCellRewards.hasRareReward() ? ADDON_REWARD : LIGHTNING_ROD;
                 case 5 -> MOAKIEE_FUMO;
                 case 6 -> CYSTRYSU_FUMO;
                 default -> LIGHTNING_ROD;
@@ -81,7 +81,8 @@ public final class FixedInfiniteCellItem extends Item {
                 case HIGH_VOLTAGE -> LightningKey.HIGH_VOLTAGE;
                 case EXTREME_HIGH_VOLTAGE -> LightningKey.EXTREME_HIGH_VOLTAGE;
                 case LIGHTNING_COLLAPSE_MATRIX -> AEItemKey.of(ModItems.LIGHTNING_COLLAPSE_MATRIX.get());
-                case RESEARCH_NOTE -> AEItemKey.of(ModItems.RESEARCH_NOTE.get());
+                case ADDON_REWARD -> MysteriousCellRewards.hasRareReward()
+                        ? AEItemKey.of(MysteriousCellRewards.createRareReward()) : AEItemKey.of(Items.LIGHTNING_ROD);
                 case MOAKIEE_FUMO -> AEItemKey.of(ModFumos.MOAKIEE_FUMO_ITEM.get());
                 case CYSTRYSU_FUMO -> AEItemKey.of(ModFumos.CYSTRYSU_FUMO_ITEM.get());
             };
@@ -170,24 +171,15 @@ public final class FixedInfiniteCellItem extends Item {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(TAG_RESULT_CONSUMED, consumed));
     }
 
-    /**
-     * 按 seed + 世界种子 hash 出 10000 个 roll 区间,再映射到一个 outcome:
-     * <ul>
-     *   <li>首段 → RESEARCH_NOTE,长度由 common config 的 eastereggweight 决定</li>
-     *   <li>随后两段各 2000 → 两种作者玩偶</li>
-     *   <li>剩余区间 → LIGHTNING_ROD</li>
-     * </ul>
-     * HIGH_VOLTAGE / EXTREME_HIGH_VOLTAGE / LIGHTNING_COLLAPSE_MATRIX /
-     * INFINITE_STORAGE_CELL 全部仅通过研究笔记仪式产出,不再由扭蛋直接抽到。
-     */
+    /** Stable seeded draw: optional rare prize, two 20% author dolls, then lightning rods. */
     public static CellOutcome resolveOutcome(UUID seed, long worldSeed) {
         long mixed = (seed.getLeastSignificantBits() ^ worldSeed)
                    ^ (seed.getMostSignificantBits() ^ Long.reverseBytes(worldSeed));
         int roll = Math.floorMod(mixed, 10000);
-        int noteEnd = AE2LTCommonConfig.easterEggWeight();
-        int moakieeEnd = Math.min(10000, noteEnd + 2000);
+        int rareEnd = MysteriousCellRewards.rareWeight();
+        int moakieeEnd = Math.min(10000, rareEnd + 2000);
         int cystrysuEnd = Math.min(10000, moakieeEnd + 2000);
-        if (roll < noteEnd) return CellOutcome.RESEARCH_NOTE;
+        if (roll < rareEnd) return CellOutcome.ADDON_REWARD;
         if (roll < moakieeEnd) return CellOutcome.MOAKIEE_FUMO;
         if (roll < cystrysuEnd) return CellOutcome.CYSTRYSU_FUMO;
         return CellOutcome.LIGHTNING_ROD;
@@ -243,8 +235,10 @@ public final class FixedInfiniteCellItem extends Item {
     }
 
     public static ItemStack createDisplayedResultStack(CellOutcome outcome) {
-        if (outcome == CellOutcome.RESEARCH_NOTE) {
-            return new ItemStack(ModItems.RESEARCH_NOTE.get());
+        if (outcome == CellOutcome.ADDON_REWARD) {
+            var reward = MysteriousCellRewards.createRareReward();
+            if (!reward.isEmpty()) return reward;
+            outcome = CellOutcome.LIGHTNING_ROD;
         }
 
         ItemStack innerStack = new ItemStack(ModItems.MYSTERIOUS_CELL.get());

@@ -1,5 +1,7 @@
 # AE2 闪电科技
 
+> 猪咪设备、变体、建材、研究笔记和仪式已拆到 [猪咪科技](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Tech)。升级旧存档时需同时安装匹配的附属，详见[迁移说明](docs/pigmee-tech-extraction.zh-CN.md)。普通猪咪仍保留在闪电本体。
+
 [English](README.md)
 
 一个 [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) 的附属模组，添加了一套闪电能源系统、进阶机器以及过载 ME 网络组件。

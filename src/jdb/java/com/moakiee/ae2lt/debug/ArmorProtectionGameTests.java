@@ -359,34 +359,7 @@ public final class ArmorProtectionGameTests {
         h.succeed();
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "workstation_test")
-    public static void legacyResearchNotesStillRequestTheRenamedRitualItem(GameTestHelper h) {
-        var ids = new java.util.ArrayList<net.minecraft.resources.ResourceLocation>();
-        ids.add(net.minecraft.resources.ResourceLocation.parse("ae2lt:pigmee_core"));
-        ids.add(net.minecraft.resources.ResourceLocation.parse("ae2lt:module_undying"));
-        ids.add(net.minecraft.resources.ResourceLocation.parse("ae2lt:module_phase_lock"));
-        for (String id : List.of("stone", "dirt", "sand", "gravel", "apple", "diamond")) {
-            ids.add(net.minecraft.resources.ResourceLocation.withDefaultNamespace(id));
-        }
-        var descriptions = ids.stream().map(id -> "item." + id.getNamespace() + "." + id.getPath()).toList();
-        var seed = UUID.randomUUID();
-        var note = new ItemStack(ModItems.RESEARCH_NOTE.get());
-        new com.moakiee.ae2lt.logic.research.ResearchNoteData(seed,
-                com.moakiee.ae2lt.logic.research.RitualGoal.HYPERDIMENSIONAL_PIGMEE,
-                ids, descriptions, true).writeTo(note);
-        var migrated = com.moakiee.ae2lt.logic.research.ResearchNoteData.read(note);
-        require(migrated != null && migrated.ritualSeed().equals(seed) && migrated.consumed(),
-                "note seed/completion changed");
-        require(migrated.recipeItems().get(1).toString().equals("ae2lt:module_overload_protection"),
-                "old note cannot match the renamed item in ritual comparisons");
-        require(migrated.descriptionKeys().get(1).equals("item.ae2lt.module_overload_protection"),
-                "old note still renders an obsolete translation key");
-        require(migrated.recipeItems().subList(2, 9).equals(ids.subList(2, 9)), "ritual order changed");
-        com.moakiee.ae2lt.item.ResearchNoteItem.applyGeneratedState(note, migrated);
-        require(!note.get(DataComponents.CUSTOM_DATA).copyTag().toString().contains("module_undying"),
-                "reopening the note did not save canonical IDs");
-        h.succeed();
-    }
+
 
     private static void require(boolean condition, String message) {
         if (!condition) throw new net.minecraft.gametest.framework.GameTestAssertException(message);

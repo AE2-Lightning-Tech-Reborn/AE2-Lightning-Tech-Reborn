@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /** Native EMI categories mirroring the dedicated JEI category layouts. */
-final class AE2LTEmiCategories {
+public final class AE2LTEmiCategories {
     private static final OptionalIntegrationGuard ADVANCED_AE_FACTORY =
             new OptionalIntegrationGuard("AdvancedAE factory EMI integration");
     static final EmiRecipeCategory OVERLOAD_GROWTH = category(
@@ -30,7 +30,7 @@ final class AE2LTEmiCategories {
             "overload_processing", EmiStack.of(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get()));
     static final EmiRecipeCategory TESLA_COIL = category(
             "tesla_coil", EmiStack.of(ModBlocks.TESLA_COIL.get()));
-    static final EmiRecipeCategory CRYSTAL_CATALYZER = category(
+    public static final EmiRecipeCategory CRYSTAL_CATALYZER = category(
             "crystal_catalyzer", EmiStack.of(ModBlocks.CRYSTAL_CATALYZER.get()));
     static final EmiRecipeCategory FIRMAMENT_CONVERSION = category(
             "firmament_conversion", EmiStack.of(ModBlocks.FIRMAMENT_CONVERSION_CORE.get()));
@@ -50,8 +50,7 @@ final class AE2LTEmiCategories {
         }
         addCategory(registry, TESLA_COIL, ModBlocks.TESLA_COIL.toStack());
         addCategory(registry, CRYSTAL_CATALYZER,
-                ModBlocks.CRYSTAL_CATALYZER.toStack(),
-                ModBlocks.PIGMEE_CRYSTAL_CATALYZER.toStack());
+                ModBlocks.CRYSTAL_CATALYZER.toStack());
         addCategory(registry, FIRMAMENT_CONVERSION, ModBlocks.FIRMAMENT_CONVERSION_CORE.toStack());
 
         EmiOverloadGrowthRecipe.registerAll(registry);

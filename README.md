@@ -1,5 +1,7 @@
 # AE2 Lightning Tech Reborn
 
+> Pigmee machines, variants, building materials, research notes and rituals now live in [Pigmee Tech](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Tech). Install the matching addon alongside this extraction build when upgrading existing worlds; see [migration notes](docs/pigmee-tech-extraction.zh-CN.md). The original Pigmee Fumo remains in LT.
+
 [![Modrinth](https://img.shields.io/modrinth/dt/ArHeh5Fz?style=flat&logo=modrinth&label=Modrinth)](https://modrinth.com/mod/ae2-lightning-tech) [![CurseForge](https://img.shields.io/curseforge/dt/1527395?style=flat&logo=curseforge&label=CurseForge)](https://www.curseforge.com/minecraft/mc-mods/ae2-lightning-tech)
 
 [中文文档](README_zh_CN.md)

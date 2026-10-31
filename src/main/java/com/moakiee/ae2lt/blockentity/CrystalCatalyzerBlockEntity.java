@@ -13,7 +13,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -36,7 +35,6 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.orientation.BlockOrientation;
 import appeng.api.orientation.RelativeSide;
-import appeng.api.stacks.AEKey;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.upgrades.UpgradeInventories;
@@ -83,7 +81,6 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     private static final String TAG_CONSUMED_ENERGY = "ConsumedEnergy";
     private static final String TAG_PROCESSING_TICKS = "ProcessingTicks";
     private static final String TAG_LOCKED_RECIPE = "LockedRecipe";
-    private static final String TAG_PIGMEE_BASE_YIELD = "PigmeeBaseYield";
     private static final String TAG_AUTO_EXPORT = "AutoExport";
     private static final String TAG_ALLOWED_OUTPUTS = "AllowedOutputs";
     private static final String TAG_MODE = "Mode";
@@ -101,12 +98,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     private Mode mode = Mode.CRYSTAL;
 
     private final CrystalCatalyzerInventory inventory =
-            new CrystalCatalyzerInventory(this::onInventoryChanged, this::getMode, this::isPigmeeVariant);
+            new CrystalCatalyzerInventory(this::onInventoryChanged, this::getMode, this::getCatalyzerSettings);
     private final CrystalCatalyzerAutomationInventory automationInventory =
             new CrystalCatalyzerAutomationInventory(inventory);
     private final NotifyingFluidTank tank =
             new NotifyingFluidTank(FLUID_TANK_CAPACITY_MB,
-                    fluid -> !isPigmeeVariant() || fluid.getFluid() == Fluids.WATER, this::onTankChanged);
+                    fluid -> !getCatalyzerSettings().waterOnly() || fluid.getFluid() == Fluids.WATER, this::onTankChanged);
     private final CrystalCatalyzerFluidHandler fluidHandler =
             new CrystalCatalyzerFluidHandler(tank);
     private final OverloadProcessingFactoryEnergyStorage energyStorage =
@@ -117,7 +114,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     // Only the normal registered subtype implements FrequencyBindingHost.
     protected final FrequencyBindingHelper frequencyBinding = this instanceof FrequencyBindingHost host
             ? new FrequencyBindingHelper(host) : null;
-    private int legacyPigmeeFrequencyId = -1;
+    private int legacyUnboundFrequencyId = -1;
 
     private CrystalCatalyzerLockedRecipe lockedRecipe;
     private long consumedEnergy;
@@ -128,9 +125,14 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             new AdjacentItemAutoExportHelper.DirectionalTargetCache();
 
     public CrystalCatalyzerBlockEntity(BlockPos pos, BlockState blockState) {
-        super(blockEntityTypeFor(blockState), pos, blockState);
+        this(ModBlockEntities.CRYSTAL_CATALYZER.get(), pos, blockState);
+    }
+
+    protected CrystalCatalyzerBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+            BlockPos pos, BlockState blockState) {
+        super(type, pos, blockState);
         this.logic = new CrystalCatalyzerLogic(this);
-        if (!isPigmeeVariant()) {
+        if (!getCatalyzerSettings().standalone()) {
             getMainNode()
                     .setIdlePowerUsage(0)
                     .addService(IGridTickable.class, logic);
@@ -139,10 +141,10 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     @Override
     protected IManagedGridNode createMainNode() {
-        if (!isPigmeeVariant()) {
+        if (!getCatalyzerSettings().standalone()) {
             return super.createMainNode();
         }
-        // Retain the shared AE block/menu lifecycle, but never create a Pigmee grid node.
+        // Retain the shared AE block/menu lifecycle, but never create a standalone grid node.
         return new ManagedGridNode(this, BlockEntityNodeListener.INSTANCE) {
             @Override
             public void create(Level level, BlockPos pos) {
@@ -150,26 +152,23 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
             @Override
             public void loadFromNBT(CompoundTag tag) {
-                // Old Pigmee proxy data no longer represents a network node.
+                // Old standalone proxy data no longer represents a network node.
             }
         };
     }
 
-    private static net.minecraft.world.level.block.entity.BlockEntityType<CrystalCatalyzerBlockEntity>
-            blockEntityTypeFor(BlockState state) {
-        return state.is(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get())
-                ? ModBlockEntities.PIGMEE_CRYSTAL_CATALYZER.get()
-                : ModBlockEntities.CRYSTAL_CATALYZER.get();
+    public com.moakiee.ae2lt.api.machine.CrystalCatalyzerSettings getCatalyzerSettings() {
+        return com.moakiee.ae2lt.api.machine.CrystalCatalyzerSettings.DEFAULT;
     }
 
-    /** Whether this block entity belongs to the water-only Pigmee variant. */
-    public boolean isPigmeeVariant() {
-        return getBlockState().is(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get());
+    /** An addon may translate its own retired recipe IDs without changing the shared recipe registry. */
+    protected CrystalCatalyzerLockedRecipe migrateLockedRecipe(CrystalCatalyzerLockedRecipe recipe, CompoundTag data) {
+        return recipe;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CrystalCatalyzerBlockEntity be) {
         if (!level.isClientSide()) {
-            if (be.isPigmeeVariant()) {
+            if (be.getCatalyzerSettings().standalone()) {
                 be.logic.tickStandalone();
             } else if (be.frequencyBinding != null) {
                 be.frequencyBinding.serverTick();
@@ -265,12 +264,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     public void onReady() {
         super.onReady();
         if (frequencyBinding != null) frequencyBinding.onReady();
-        if (isPigmeeVariant() && legacyPigmeeFrequencyId > 0 && level instanceof ServerLevel) {
+        if (getCatalyzerSettings().standalone() && legacyUnboundFrequencyId > 0 && level instanceof ServerLevel) {
             var manager = WirelessFrequencyManager.get();
             if (manager != null) {
-                manager.unregisterDevice(legacyPigmeeFrequencyId, level.dimension(), worldPosition);
+                manager.unregisterDevice(legacyUnboundFrequencyId, level.dimension(), worldPosition);
             }
-            legacyPigmeeFrequencyId = -1;
+            legacyUnboundFrequencyId = -1;
         }
         inventory.setLevel(level);
         setWorking(lockedRecipe != null);
@@ -297,14 +296,13 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     public Optional<CrystalCatalyzerRecipeCandidate> findProcessableRecipe() {
-        if (isPigmeeVariant()
-                && inventory.getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount()
-                        < CrystalCatalyzerInventory.PIGMEE_CATALYST_SLOT_LIMIT) {
+        if (inventory.getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount()
+                        < getCatalyzerSettings().minimumCatalysts()) {
             return Optional.empty();
         }
 
         Optional<CrystalCatalyzerRecipeCandidate> candidate = CrystalCatalyzerRecipeService.findRecipe(
-                level, inventory, getMode(), tank.getFluid(), isPigmeeVariant());
+                level, inventory, getMode(), tank.getFluid(), getCatalyzerSettings().waterOnly());
         if (candidate.isEmpty()) {
             return Optional.empty();
         }
@@ -312,7 +310,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     public Mode getMode() {
-        return isPigmeeVariant() ? Mode.CRYSTAL : mode;
+        return getCatalyzerSettings().modeSwitching() ? mode : Mode.CRYSTAL;
     }
 
     /**
@@ -320,7 +318,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
      * （因为新模式可能根本不认现槽内催化剂）。
      */
     public void cycleMode() {
-        if (isPigmeeVariant()) {
+        if (!getCatalyzerSettings().modeSwitching()) {
             return;
         }
         Mode previous = this.mode;
@@ -332,7 +330,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean hasEnoughFluid(FluidStack required) {
-        if (isPigmeeVariant() && required.getFluid() != Fluids.WATER) {
+        if (getCatalyzerSettings().waterOnly() && required.getFluid() != Fluids.WATER) {
             return false;
         }
         FluidStack current = tank.getFluid();
@@ -358,7 +356,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     public boolean canAdvanceLockedRecipe(CrystalCatalyzerLockedRecipe lockedRecipe) {
-        if (isPigmeeVariant() || lockedRecipe.lightningCost() <= 0) {
+        if (getCatalyzerSettings().energyFree() || lockedRecipe.lightningCost() <= 0) {
             return hasEnoughFluid(lockedRecipe.fluidInput());
         }
         LightningKey lightningKey = LightningKey.of(lockedRecipe.lightningTier());
@@ -377,8 +375,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     private ItemStack getLockedRecipeOutputStack(CrystalCatalyzerLockedRecipe lockedRecipe) {
         ItemStack template = lockedRecipe.output();
-        // Pigmee keeps the recipe's base yield, without parallel or matrix scaling.
-        long outputCount = isPigmeeVariant() ? template.getCount()
+        // Unscaled processing keeps the recipe's base yield, without parallel or matrix scaling.
+        long outputCount = !getCatalyzerSettings().scaleOutput() ? template.getCount()
                 : (long) template.getCount() * lockedRecipe.outputMultiplier();
         if (outputCount <= 0 || outputCount > Integer.MAX_VALUE) {
             return ItemStack.EMPTY;
@@ -393,7 +391,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
      * which candidate will run (e.g. restoring a locked recipe from NBT at load time).
      */
     private int getCurrentOutputMultiplier() {
-        return !isPigmeeVariant() && inventory.hasLightningCollapseMatrix()
+        return getCatalyzerSettings().scaleOutput() && inventory.hasLightningCollapseMatrix()
                 ? MATRIX_OUTPUT_MULTIPLIER : 1;
     }
 
@@ -407,7 +405,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
      * the whole processing cycle.
      */
     private int getCurrentOutputMultiplier(CrystalCatalyzerRecipeCandidate candidate) {
-        int matrix = !isPigmeeVariant() && inventory.hasLightningCollapseMatrix()
+        int matrix = getCatalyzerSettings().scaleOutput() && inventory.hasLightningCollapseMatrix()
                 ? MATRIX_OUTPUT_MULTIPLIER : 1;
         int parallel = computeParallel(candidate);
         long multiplier = (long) Math.max(1, parallel) * matrix;
@@ -415,7 +413,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     private int computeParallel(CrystalCatalyzerRecipeCandidate candidate) {
-        if (isPigmeeVariant()) {
+        if (!getCatalyzerSettings().scaleOutput()) {
             return 1;
         }
         if (candidate == null) {
@@ -458,7 +456,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             return Optional.empty();
         }
 
-        if (isPigmeeVariant()) {
+        if (!getCatalyzerSettings().scaleOutput()) {
             var holder = candidate.get().recipe();
             var recipe = holder.value();
             // Keep the shared recipe's cost metadata. This machine bypasses energy in its tick driver.
@@ -501,13 +499,18 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         return processingTicksSpent;
     }
 
+    public int getMinimumProcessTicks() {
+        int fixed = getCatalyzerSettings().fixedProcessTicks();
+        return fixed > 0 ? fixed : getMode().getMinProcessTicks();
+    }
+
     public double getProgress() {
         if (lockedRecipe == null) {
             return 0.0D;
         }
-        if (lockedRecipe.totalEnergy() <= 0L) {
+        if (getCatalyzerSettings().energyFree() || lockedRecipe.totalEnergy() <= 0L) {
             return Math.min(1.0D,
-                    (double) processingTicksSpent / (double) CrystalCatalyzerLogic.PIGMEE_PROCESS_TICKS);
+                    (double) processingTicksSpent / (double) Math.max(1, getMinimumProcessTicks()));
         }
         return Math.min(1.0D, (double) consumedEnergy / (double) lockedRecipe.totalEnergy());
     }
@@ -529,7 +532,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     public void advanceEnergyFreeProcessingTick() {
         processingTicksSpent = Math.min(
-                CrystalCatalyzerLogic.PIGMEE_PROCESS_TICKS,
+                Math.max(1, getMinimumProcessTicks()),
                 processingTicksSpent + 1);
         saveChanges();
         markForClientUpdate();
@@ -604,11 +607,11 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     }
 
     public long getAvailableHighVoltage() {
-        return isPigmeeVariant() ? 0L : simulateLightningExtract(LightningKey.HIGH_VOLTAGE, Long.MAX_VALUE);
+        return getCatalyzerSettings().energyFree() ? 0L : simulateLightningExtract(LightningKey.HIGH_VOLTAGE, Long.MAX_VALUE);
     }
 
     public long getAvailableExtremeHighVoltage() {
-        return isPigmeeVariant() ? 0L : simulateLightningExtract(LightningKey.EXTREME_HIGH_VOLTAGE, Long.MAX_VALUE);
+        return getCatalyzerSettings().energyFree() ? 0L : simulateLightningExtract(LightningKey.EXTREME_HIGH_VOLTAGE, Long.MAX_VALUE);
     }
 
     private long simulateLightningExtract(LightningKey key, long amount) {
@@ -658,7 +661,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
         if (!lockedRecipe.matchesFluidInput(candidate.recipe().value())
                 || !lockedRecipe.matchesHarvestOutput(candidate.recipe().value())
-                || (isPigmeeVariant() && !candidate.recipe().value().isWaterRecipe())) {
+                || (getCatalyzerSettings().waterOnly() && !candidate.recipe().value().isWaterRecipe())) {
             return false;
         }
         FluidStack requiredFluid = lockedRecipe.fluidInput();
@@ -672,7 +675,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         LightningKey lightningKey = null;
         long lightningCost = lockedRecipe.lightningCost();
         long extractedLightning = 0L;
-        if (!isPigmeeVariant() && lightningCost > 0L) {
+        if (!getCatalyzerSettings().energyFree() && lightningCost > 0L) {
             lightningKey = LightningKey.of(lockedRecipe.lightningTier());
             if (simulateLightningExtract(lightningKey, lightningCost) < lightningCost) {
                 return false;
@@ -749,8 +752,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
     public void setWorking(boolean working) {
         if (level != null) {
             BlockState state = level.getBlockState(worldPosition);
-            if ((state.is(ModBlocks.CRYSTAL_CATALYZER.get())
-                    || state.is(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get()))
+            if (state.getBlock() instanceof CrystalCatalyzerBlock
                     && level.getBlockEntity(worldPosition) == this
                     && state.hasProperty(CrystalCatalyzerBlock.WORKING)
                     && state.getValue(CrystalCatalyzerBlock.WORKING) != working) {
@@ -774,9 +776,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         }
         data.put(TAG_ALLOWED_OUTPUTS, outputTags);
         data.putString(TAG_MODE, getMode().getSerializedName());
-        if (isPigmeeVariant()) {
-            data.putBoolean(TAG_PIGMEE_BASE_YIELD, true);
-        }
+
         if (lockedRecipe != null) {
             data.put(TAG_LOCKED_RECIPE, lockedRecipe.toTag(registries));
         } else {
@@ -801,7 +801,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         if (frequencyBinding != null) {
             frequencyBinding.load(data);
         } else {
-            legacyPigmeeFrequencyId = data.getInt(FrequencyBindingHelper.TAG_FREQUENCY_ID);
+            legacyUnboundFrequencyId = data.getInt(FrequencyBindingHelper.TAG_FREQUENCY_ID);
         }
         autoExport = data.getBoolean(TAG_AUTO_EXPORT);
         allowedOutputs.clear();
@@ -812,7 +812,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             } catch (IllegalArgumentException ignored) {
             }
         }
-        if (data.contains(TAG_MODE, Tag.TAG_STRING) && !isPigmeeVariant()) {
+        if (data.contains(TAG_MODE, Tag.TAG_STRING) && getCatalyzerSettings().modeSwitching()) {
             String modeName = data.getString(TAG_MODE);
             mode = Mode.CRYSTAL;
             for (Mode m : Mode.values()) {
@@ -824,7 +824,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         } else {
             mode = Mode.CRYSTAL;
         }
-        if (isPigmeeVariant()) {
+        if (!getCatalyzerSettings().modeSwitching()) {
             mode = Mode.CRYSTAL;
         }
         if (data.contains(TAG_LOCKED_RECIPE, Tag.TAG_COMPOUND)) {
@@ -839,28 +839,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             consumedEnergy = 0L;
             processingTicksSpent = 0;
         } else {
-            if (isPigmeeVariant()) {
-                // Earlier versions duplicated recipes under pigmee_* IDs. Keep an in-flight cycle
-                // and its progress while resolving the retired fixed yield against the shared recipe.
-                var id = lockedRecipe.recipeId();
-                var oldPrefix = "crystal_catalyzer/pigmee_";
-                if (id.getNamespace().equals("ae2lt") && id.getPath().startsWith(oldPrefix)) {
-                    var sharedId = ResourceLocation.fromNamespaceAndPath("ae2lt",
-                            "crystal_catalyzer/" + id.getPath().substring(oldPrefix.length()));
-                    // The retired pigmee_* recipes produced 16; retain their migration to one.
-                    lockedRecipe = new CrystalCatalyzerLockedRecipe(sharedId, lockedRecipe.output().copyWithCount(1),
-                            lockedRecipe.energyPerCycle(), 1,
-                            lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
-                }
-                if (!data.getBoolean(TAG_PIGMEE_BASE_YIELD)) {
-                    // Already-migrated saves may have a shared ID but still store the old 16-item
-                    // template; previous versions always clamped it to one at completion.
-                    lockedRecipe = new CrystalCatalyzerLockedRecipe(lockedRecipe.recipeId(),
-                            lockedRecipe.output().copyWithCount(1), lockedRecipe.energyPerCycle(), 1,
-                            lockedRecipe.lightningCost(), lockedRecipe.lightningTier(), lockedRecipe.fluidInput());
-                }
-                consumedEnergy = 0L;
-            }
+            lockedRecipe = migrateLockedRecipe(lockedRecipe, data);
+            if (getCatalyzerSettings().energyFree()) consumedEnergy = 0L;
             consumedEnergy = Math.min(consumedEnergy, lockedRecipe.totalEnergy());
         }
         exportTargetCache.invalidate();
@@ -943,7 +923,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
                 tag -> {
                     Mode importedMode = MemoryCardConfigSupport.readEnum(
                             tag, TAG_MODE, Mode.class, this.mode);
-                    if (isPigmeeVariant()) {
+                    if (!getCatalyzerSettings().modeSwitching()) {
                         importedMode = Mode.CRYSTAL;
                     }
                     if (this.mode != importedMode) {
@@ -965,8 +945,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     @Override
     protected net.minecraft.world.item.Item getItemFromBlockEntity() {
-        return (isPigmeeVariant() ? ModBlocks.PIGMEE_CRYSTAL_CATALYZER : ModBlocks.CRYSTAL_CATALYZER)
-                .get().asItem();
+        return getBlockState().getBlock().asItem();
     }
 
     @Override
@@ -976,12 +955,12 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     @Override
     public Set<Direction> getGridConnectableSides(BlockOrientation orientation) {
-        return isPigmeeVariant() ? Set.of() : EnumSet.allOf(Direction.class);
+        return getCatalyzerSettings().standalone() ? Set.of() : EnumSet.allOf(Direction.class);
     }
 
     @Override
     public AECableType getCableConnectionType(Direction dir) {
-        return isPigmeeVariant() ? AECableType.NONE : AECableType.SMART;
+        return getCatalyzerSettings().standalone() ? AECableType.NONE : AECableType.SMART;
     }
 
     private void onInventoryChanged() {

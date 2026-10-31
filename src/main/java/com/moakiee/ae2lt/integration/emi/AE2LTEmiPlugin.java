@@ -1,7 +1,5 @@
 package com.moakiee.ae2lt.integration.emi;
 
-import appeng.integration.modules.emi.EmiUseCraftingRecipeHandler;
-import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -31,8 +29,7 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
     @Override
     public void register(EmiRegistry registry) {
         EmiMultiblockInputEvents.register();
-        registry.addRecipeHandler(PigmeeSynthesisStationMenu.TYPE,
-                new EmiUseCraftingRecipeHandler<>(PigmeeSynthesisStationMenu.class));
+
         registry.addRecipeHandler(
                 TianshuPatternEncodingTermMenu.TYPE,
                 new TianshuEmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class));

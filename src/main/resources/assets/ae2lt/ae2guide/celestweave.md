@@ -92,7 +92,7 @@ If FE or required Lightning is missing, the affected effects cannot be maintaine
 | Phase Lock | Provides four independently toggled features: Armor Lock, Flight Lock, Block External Forces and Block External Teleports; see below |
 | Overload Core Module | Unlocks Lightning compensation for the armor set. Existing Extreme High Voltage Lightning is consumed first, then any shortfall is paid at 16 High Voltage Lightning per Extreme High Voltage Lightning |
 
-Matrix Shield, Phase Shield, Overload Protection and Multidimensional Protection share one exclusive installation group. Overload Protection is crafted from Phase Shield; its Pigmee conversion produces Multidimensional Protection.
+Matrix Shield, Phase Shield, Overload Protection and Multidimensional Protection share one exclusive installation group. Overload Protection is crafted from Phase Shield.
 
 Legacy Undying modules convert to Overload Protection, preserving toggles, options and last-stand combo state. If a legacy chestplate also contains Phase or Matrix Shield, the upgraded protection absorbs those installed lower tiers. Loose shield items in inventories are unaffected.
 

@@ -5,9 +5,6 @@ import com.moakiee.ae2lt.block.MiningFactoryBlock;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.block.AtmosphericIonizerBlock;
 import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
-import com.moakiee.ae2lt.block.PigmeeBuildingBlock;
-import com.moakiee.ae2lt.block.PigmeeBuildingPanelBlock;
-import com.moakiee.ae2lt.block.PigmeeBuildingSlabBlock;
 import com.moakiee.ae2lt.block.CrystalCatalyzerBlock;
 import com.moakiee.ae2lt.block.FirmamentConversionCoreBlock;
 import com.moakiee.ae2lt.block.LightningAssemblyChamberBlock;
@@ -28,11 +25,6 @@ import com.moakiee.ae2lt.block.OverloadedControllerBlock;
 import com.moakiee.ae2lt.block.OverloadedInterfaceBlock;
 import com.moakiee.ae2lt.block.OverloadedPatternProviderBlock;
 import com.moakiee.ae2lt.block.OverloadedPowerSupplyBlock;
-import com.moakiee.ae2lt.block.PigmeeMentalmathUnitBlock;
-import com.moakiee.ae2lt.block.PigmeeMolecularAssemblerBlock;
-import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
-import com.moakiee.ae2lt.block.PigmeeSynthesisStationBlock;
-import com.moakiee.ae2lt.block.PigmeeCrystalCatalyzerBlock;
 import com.moakiee.ae2lt.block.TeslaCoilBlock;
 import com.moakiee.ae2lt.block.TianshuSeedStorageBlock;
 import com.moakiee.ae2lt.block.TianshuPatternStorageBlock;
@@ -49,11 +41,7 @@ import com.moakiee.ae2lt.blockentity.ExtendedOverloadedPatternProviderBlockEntit
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import java.util.function.Supplier;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Map;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -69,39 +57,6 @@ public final class ModBlocks {
     private static final String EXTENDEDAE_MODID = "extendedae";
 
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(AE2LightningTech.MODID);
-
-    public static final DeferredBlock<PigmeeBuildingBlock> PIGMEE_BUILDING_BLOCK =
-            registerBlock("pigmee_building_block", PigmeeBuildingBlock::new);
-
-    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> PIGMEE_BUILDING_PANELS =
-            registerPigmeePanels(false);
-    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =
-            registerPigmeePanels(true);
-
-    public static final DeferredBlock<PigmeeBuildingSlabBlock> PIGMEE_BUILDING_SLAB =
-            registerBlock("pigmee_building_slab", () -> new PigmeeBuildingSlabBlock(MapColor.COLOR_PINK));
-    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> PIGMEE_BUILDING_SLABS =
-            registerPigmeeSlabs(false);
-    public static final Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> PIGMEE_FRAMED_BUILDING_SLABS =
-            registerPigmeeSlabs(true);
-
-    private static Map<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>> registerPigmeeSlabs(boolean framed) {
-        var slabs = new EnumMap<DyeColor, DeferredBlock<PigmeeBuildingSlabBlock>>(DyeColor.class);
-        for (DyeColor color : DyeColor.values()) {
-            String name = color.getName() + (framed ? "_pigmee_framed_building_slab" : "_pigmee_building_slab");
-            slabs.put(color, registerBlock(name, () -> new PigmeeBuildingSlabBlock(color.getMapColor())));
-        }
-        return Collections.unmodifiableMap(slabs);
-    }
-
-    private static Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> registerPigmeePanels(boolean framed) {
-        var panels = new EnumMap<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>>(DyeColor.class);
-        for (DyeColor color : DyeColor.values()) {
-            String name = color.getName() + (framed ? "_pigmee_framed_building_panel" : "_pigmee_building_panel");
-            panels.put(color, registerBlock(name, () -> new PigmeeBuildingPanelBlock(color, framed)));
-        }
-        return Collections.unmodifiableMap(panels);
-    }
 
     public static final DeferredBlock<com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock> OVERLOAD_ALLOY_ANVIL =
             registerBlock("overload_alloy_anvil", () -> new com.moakiee.ae2lt.block.OverloadAlloyAnvilBlock(
@@ -214,9 +169,6 @@ public final class ModBlocks {
     public static final DeferredBlock<CrystalCatalyzerBlock> CRYSTAL_CATALYZER =
             registerBlock("crystal_catalyzer", CrystalCatalyzerBlock::new);
 
-    public static final DeferredBlock<PigmeeCrystalCatalyzerBlock> PIGMEE_CRYSTAL_CATALYZER =
-            registerBlock("pigmee_crystal_catalyzer", PigmeeCrystalCatalyzerBlock::new);
-
     public static final DeferredBlock<OverloadedControllerBlock> OVERLOADED_CONTROLLER =
             registerBlock("overloaded_controller", OverloadedControllerBlock::new);
 
@@ -280,18 +232,6 @@ public final class ModBlocks {
 
     public static final DeferredBlock<OverloadDeviceWorkbenchBlock> OVERLOAD_DEVICE_WORKBENCH =
             registerBlock("overload_device_workbench", OverloadDeviceWorkbenchBlock::new);
-
-    public static final DeferredBlock<PigmeeMentalmathUnitBlock> PIGMEE_MENTALMATH_UNIT =
-            registerBlock("pigmee_mentalmath_unit", PigmeeMentalmathUnitBlock::new);
-
-    public static final DeferredBlock<PigmeePatternProviderBlock> PIGMEE_PATTERN_PROVIDER =
-            registerBlock("pigmee_pattern_provider", PigmeePatternProviderBlock::new);
-
-    public static final DeferredBlock<PigmeeMolecularAssemblerBlock> PIGMEE_MOLECULAR_ASSEMBLER =
-            registerBlock("pigmee_molecular_assembler", PigmeeMolecularAssemblerBlock::new);
-
-    public static final DeferredBlock<PigmeeSynthesisStationBlock> PIGMEE_SYNTHESIS_STATION =
-            registerBlock("pigmee_synthesis_station", PigmeeSynthesisStationBlock::new);
 
     public static final DeferredBlock<TianshuSupercomputerStructureBlock> TIANSHU_SUPERCOMPUTER_CASING =
             registerBlock("tianshu_supercomputer_casing", () -> new TianshuSupercomputerStructureBlock(MATRIX_MACHINE_PROPERTIES));

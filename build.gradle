@@ -250,12 +250,6 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
-        crystalCatalyzerGameTestServer {
-            type = "gameTestServer"
-            gameDirectory = project.file('run-crystal-catalyzer-gametest')
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_catalyzer'
-        }
-
         cpuSelectionGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-cpu-selection-gametest')

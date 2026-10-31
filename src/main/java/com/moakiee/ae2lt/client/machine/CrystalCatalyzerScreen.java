@@ -79,7 +79,7 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
                 Component.translatable("ae2lt.gui.crystal_catalyzer.mode.tooltip.dust")));
         addToLeftToolbar(this.modeButton);
 
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> menu.isPigmeeVariant()
+        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> menu.isEnergyFree()
                 ? List.of(
                         LightningStatusLines.title(),
                         LightningStatusLines.status(menu.isWorking()),
@@ -96,13 +96,11 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
     @Override
     protected void updateBeforeRender() {
         super.updateBeforeRender();
-        setTextContent("dialog_title", Component.translatable(menu.isPigmeeVariant()
-                ? "block.ae2lt.pigmee_crystal_catalyzer"
-                : "block.ae2lt.crystal_catalyzer"));
+        setTextContent("dialog_title", title);
         this.autoExportButton.setState(menu.isAutoExportEnabled());
         this.configureOutputButton.setVisibility(menu.isAutoExportEnabled());
-        this.frequencyButton.setVisibility(!menu.isPigmeeVariant());
-        this.modeButton.setVisibility(!menu.isPigmeeVariant());
+        this.frequencyButton.setVisibility(!menu.isEnergyFree());
+        this.modeButton.setVisibility(!menu.isEnergyFree());
         this.modeButton.setState(menu.getMode() == Mode.DUST);
     }
 
@@ -110,7 +108,7 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
     public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
-        if (menu.isPigmeeVariant()) {
+        if (menu.isEnergyFree()) {
             // Cover the shared background's FE scale and unused matrix branch with its own blank texture.
             var background = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
                     "ae2lt", "textures/guis/crystal_catalyzer.png");

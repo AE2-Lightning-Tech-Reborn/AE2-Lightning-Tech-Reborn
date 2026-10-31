@@ -26,8 +26,6 @@ import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructure
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
-import com.moakiee.ae2lt.registry.ModItems;
-import com.moakiee.ae2lt.registry.ModFumos;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiClickableArea;
@@ -39,11 +37,8 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
-import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
-import tamaized.ae2jeiintegration.integration.modules.jei.transfer.UseCraftingRecipeTransfer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.fml.ModList;
@@ -129,13 +124,6 @@ public class JEIPlugin implements IModPlugin {
         if (!isEmiLoaded()) {
             registration.addRecipes(MultiblockStructureCategory.TYPE, MultiblockStructureRecipes.all());
         }
-        registration.addIngredientInfo(
-                ModItems.PIGMEE_CORE.get(),
-                Component.translatable("jei.ae2lt.pigmee_core.info"));
-
-        registration.addIngredientInfo(ModFumos.RAINBOW_PIGMEE_FUMO_ITEM.get(),
-                Component.translatable("jei.ae2lt.rainbow_pigmee.info"),
-                Component.translatable("jei.ae2lt.rainbow_pigmee.coloring"));
 
         var level = Minecraft.getInstance().level;
         if (level == null) {
@@ -204,7 +192,7 @@ public class JEIPlugin implements IModPlugin {
         }
         registration.addRecipeCatalyst(ModBlocks.TESLA_COIL.toStack(), TeslaCoilCategory.TYPE);
         registration.addRecipeCatalyst(ModBlocks.CRYSTAL_CATALYZER.toStack(), CrystalCatalyzerCategory.TYPE);
-        registration.addRecipeCatalyst(ModBlocks.PIGMEE_CRYSTAL_CATALYZER.toStack(), CrystalCatalyzerCategory.TYPE);
+
         registration.addRecipeCatalyst(ModBlocks.FIRMAMENT_CONVERSION_CORE.toStack(), FirmamentConversionCategory.TYPE);
         if (!isEmiLoaded()) {
             registration.addRecipeCatalyst(
@@ -236,9 +224,7 @@ public class JEIPlugin implements IModPlugin {
             return;
         }
         var helper = registration.getTransferHelper();
-        registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
-                PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
-                mezz.jei.api.constants.RecipeTypes.CRAFTING);
+
         var visibility = registration.getJeiHelpers().getIngredientVisibility();
         processingPatternTransfer = new TianshuPatternTransferHandler<>(new EncodePatternTransferHandler<>(
                 TianshuPatternEncodingTermMenu.TYPE,

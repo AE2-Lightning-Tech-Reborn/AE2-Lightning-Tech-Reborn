@@ -42,9 +42,6 @@ import com.moakiee.ae2lt.item.PhaseFlightSubmoduleItem;
 import com.moakiee.ae2lt.item.PhaseLockProjectionItem;
 import com.moakiee.ae2lt.item.PhaseLockSubmoduleItem;
 import com.moakiee.ae2lt.item.PerfectElectroChimeCrystalItem;
-import com.moakiee.ae2lt.item.PigmeeCoreItem;
-import com.moakiee.ae2lt.item.PigmeeStorageCellItem;
-import com.moakiee.ae2lt.item.ResearchNoteItem;
 import com.moakiee.ae2lt.item.WeatherCondensateItem;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.item.railgun.RailgunModuleItem;
@@ -76,8 +73,6 @@ public final class ModItems {
             "overload_crystal",
             OverloadCrystalItem::new,
             new Item.Properties());
-
-    public static final DeferredItem<Item> DYE_BASE = ITEMS.registerSimpleItem("dye_base");
 
     public static final DeferredItem<Item> OVERLOAD_CRYSTAL_DUST =
             ITEMS.registerSimpleItem("overload_crystal_dust", new Item.Properties());
@@ -191,23 +186,6 @@ public final class ModItems {
     public static final DeferredItem<Item> LIGHTNING_ITEM_CELL_HOUSING =
             ITEMS.registerSimpleItem("lightning_item_cell_housing", new Item.Properties());
 
-    public static final DeferredItem<Item> PIGMEE_ITEM_CELL_HOUSING =
-            ITEMS.registerSimpleItem("pigmee_item_cell_housing", new Item.Properties());
-
-    public static final DeferredItem<PigmeeCoreItem> PIGMEE_CORE =
-            ITEMS.registerItem(
-                    "pigmee_core",
-                    PigmeeCoreItem::new,
-                    new Item.Properties().stacksTo(1));
-
-    public static final DeferredItem<Item> PIGMEE_STORAGE_COMPONENT =
-            ITEMS.registerSimpleItem("pigmee_storage_component", new Item.Properties());
-
-    public static final DeferredItem<PigmeeStorageCellItem> PIGMEE_STORAGE_CELL =
-            ITEMS.register(
-                    "pigmee_storage_cell",
-                    () -> new PigmeeStorageCellItem(new Item.Properties()));
-
     public static final DeferredItem<LightningStorageComponentItem> LIGHTNING_STORAGE_COMPONENT_I =
             registerLightningStorageComponent("lightning_storage_component_i", 256, 32);
     public static final DeferredItem<LightningStorageComponentItem> LIGHTNING_STORAGE_COMPONENT_II =
@@ -250,12 +228,6 @@ public final class ModItems {
     public static final DeferredItem<FixedInfiniteCellItem> MYSTERIOUS_CELL =
             ITEMS.register("mysterious_cell",
                     () -> new FixedInfiniteCellItem(new Item.Properties()));
-
-    public static final DeferredItem<ResearchNoteItem> RESEARCH_NOTE =
-            ITEMS.registerItem("research_note", ResearchNoteItem::new, new Item.Properties().stacksTo(16));
-
-    public static final DeferredItem<Item> CHARRED_RITUAL_FRAGMENT =
-            ITEMS.registerSimpleItem("charred_ritual_fragment", new Item.Properties());
 
     public static final DeferredItem<Item> OVERLOADED_WIRELESS_CONNECT_TOOL = ITEMS.registerItem(
             "overloaded_wireless_connect_tool",
@@ -587,7 +559,6 @@ public final class ModItems {
         registerStorageCellModel(BULK_LIGHTNING_STORAGE_COMPONENT);
         registerStorageCellModel(INFINITE_STORAGE_CELL);
         registerStorageCellModel(MYSTERIOUS_CELL, "256k_item_cell");
-        registerStorageCellModel(PIGMEE_STORAGE_CELL);
     }
 
     public static ColoredPartItem<OverloadedCablePart> getOverloadedCable(AEColor color) {

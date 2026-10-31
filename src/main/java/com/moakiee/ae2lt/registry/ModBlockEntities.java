@@ -22,10 +22,6 @@ import com.moakiee.ae2lt.blockentity.OverloadedControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity;
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
-import com.moakiee.ae2lt.blockentity.PigmeeMentalmathUnitBlockEntity;
-import com.moakiee.ae2lt.blockentity.PigmeeMolecularAssemblerBlockEntity;
-import com.moakiee.ae2lt.blockentity.PigmeePatternProviderBlockEntity;
-import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
 import com.moakiee.ae2lt.blockentity.TeslaCoilBlockEntity;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerControllerBlockEntity;
 import com.moakiee.ae2lt.blockentity.TianshuSupercomputerPortBlockEntity;
@@ -124,14 +120,6 @@ public final class ModBlockEntities {
                             ModBlocks.CRYSTAL_CATALYZER.get())
                             .build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CrystalCatalyzerBlockEntity>>
-            PIGMEE_CRYSTAL_CATALYZER = BLOCK_ENTITY_TYPES.register(
-                    "pigmee_crystal_catalyzer",
-                    () -> BlockEntityType.Builder.of(
-                            CrystalCatalyzerBlockEntity::new,
-                            ModBlocks.PIGMEE_CRYSTAL_CATALYZER.get())
-                            .build(null));
-
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<OverloadedPatternProviderBlockEntity>>
             OVERLOADED_PATTERN_PROVIDER = BLOCK_ENTITY_TYPES.register(
                     "overloaded_pattern_provider",
@@ -188,38 +176,6 @@ public final class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             AdvancedWirelessOverloadedControllerBlockEntity::new,
                             ModBlocks.ADVANCED_WIRELESS_OVERLOADED_CONTROLLER.get())
-                            .build(null));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PigmeeMentalmathUnitBlockEntity>>
-            PIGMEE_MENTALMATH_UNIT = BLOCK_ENTITY_TYPES.register(
-                    "pigmee_mentalmath_unit",
-                    () -> BlockEntityType.Builder.of(
-                            PigmeeMentalmathUnitBlockEntity::new,
-                            ModBlocks.PIGMEE_MENTALMATH_UNIT.get())
-                            .build(null));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PigmeePatternProviderBlockEntity>>
-            PIGMEE_PATTERN_PROVIDER = BLOCK_ENTITY_TYPES.register(
-                    "pigmee_pattern_provider",
-                    () -> BlockEntityType.Builder.of(
-                            PigmeePatternProviderBlockEntity::new,
-                            ModBlocks.PIGMEE_PATTERN_PROVIDER.get())
-                            .build(null));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PigmeeMolecularAssemblerBlockEntity>>
-            PIGMEE_MOLECULAR_ASSEMBLER = BLOCK_ENTITY_TYPES.register(
-                    "pigmee_molecular_assembler",
-                    () -> BlockEntityType.Builder.of(
-                            PigmeeMolecularAssemblerBlockEntity::new,
-                            ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER.get())
-                            .build(null));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PigmeeSynthesisStationBlockEntity>>
-            PIGMEE_SYNTHESIS_STATION = BLOCK_ENTITY_TYPES.register(
-                    "pigmee_synthesis_station",
-                    () -> BlockEntityType.Builder.of(
-                            PigmeeSynthesisStationBlockEntity::new,
-                            ModBlocks.PIGMEE_SYNTHESIS_STATION.get())
                             .build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TianshuSupercomputerControllerBlockEntity>>
@@ -284,19 +240,6 @@ public final class ModBlockEntities {
                             Blocks.AIR)
                             .build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FumoBlockEntity>>
-            FUMO = BLOCK_ENTITY_TYPES.register(
-                    "fumo",
-                    () -> BlockEntityType.Builder.of(
-                            FumoBlockEntity::new,
-                            ModFumos.MOAKIEE_FUMO.get(),
-                            ModFumos.CYSTRYSU_FUMO.get(),
-                            ModFumos.PIGMEE_FUMO.get(),
-                            ModFumos.RAINBOW_PIGMEE_FUMO.get(),
-                            ModFumos.CREATIVE_PIGMEE_FUMO.get(),
-                            ModFumos.HYPERDIMENSIONAL_PIGMEE_FUMO.get())
-                            .build(null));
-
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<OverloadDeviceWorkbenchBlockEntity>>
             OVERLOAD_DEVICE_WORKBENCH = BLOCK_ENTITY_TYPES.register(
                     "overload_device_workbench",
@@ -307,4 +250,13 @@ public final class ModBlockEntities {
 
     private ModBlockEntities() {
     }
+public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FumoBlockEntity>>
+            FUMO = BLOCK_ENTITY_TYPES.register(
+                    "fumo",
+                    () -> BlockEntityType.Builder.of(
+                            FumoBlockEntity::new,
+                            ModFumos.MOAKIEE_FUMO.get(),
+                            ModFumos.CYSTRYSU_FUMO.get(),
+                            ModFumos.PIGMEE_FUMO.get())
+                            .build(null));
 }

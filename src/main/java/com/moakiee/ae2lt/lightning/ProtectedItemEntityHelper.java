@@ -28,8 +28,6 @@ public final class ProtectedItemEntityHelper {
                     ModItems.OVERLOAD_CRYSTAL.get(),
                     ModItems.OVERLOAD_ALLOY.get(),
                     ModItems.OVERLOAD_CIRCUIT_BOARD.get(),
-                    ModItems.RESEARCH_NOTE.get(),
-                    ModItems.CHARRED_RITUAL_FRAGMENT.get(),
                     ModBlocks.OVERLOAD_CRYSTAL_BLOCK.get().asItem(),
                     ModItems.OVERLOAD_SINGULARITY.get(),
                     ModItems.LIGHTNING_COLLAPSE_MATRIX.get());
@@ -38,7 +36,10 @@ public final class ProtectedItemEntityHelper {
     }
 
     public static boolean isFireproofItem(ItemEntity itemEntity) {
-        return getFireproofItems().contains(itemEntity.getItem().getItem());
+        return getFireproofItems().contains(itemEntity.getItem().getItem())
+                || itemEntity.getItem().is(net.minecraft.tags.TagKey.create(
+                        net.minecraft.core.registries.Registries.ITEM,
+                        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ae2lt", "lightning_fireproof")));
     }
 
     private ProtectedItemEntityHelper() {
