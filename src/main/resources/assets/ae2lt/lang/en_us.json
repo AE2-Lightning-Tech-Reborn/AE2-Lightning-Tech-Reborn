@@ -1554,5 +1554,11 @@
   "ae2lt.tianshu.upload.undo.changed": "The uploaded pattern was removed or changed; undo unavailable",
   "ae2lt.tianshu.upload.undo.unavailable": "The original upload target is unavailable",
   "ae2lt.gui.status.redstone_paused": "Paused by redstone",
-  "ae2lt.gui.tesla_coil.status.redstone_paused": "Paused by redstone"
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "Paused by redstone",
+  "advancements.ae2lt.thunderstorm_generator.title": "Thunderstorm Generator",
+  "advancements.ae2lt.thunderstorm_generator.description": "Contain high-voltage and extreme-high-voltage thunderstorm fields in compact components.",
+  "advancements.ae2lt.observable_black_hole.title": "Observable Black Hole",
+  "advancements.ae2lt.observable_black_hole.description": "An infinite matrix sealed inside collapsed spacetime.",
+  "advancements.ae2lt.multidimensional_expansion.title": "Multidimensional Expansion",
+  "advancements.ae2lt.multidimensional_expansion.description": "Unfold multiple dimensions within a finite space to unlock greater computing power."
 }

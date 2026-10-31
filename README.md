@@ -1,6 +1,6 @@
 # AE2 Lightning Tech Reborn
 
-> Pigmee machines, variants, building materials, research notes and rituals now live in [Pigmee Tech](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Tech). Install the matching addon alongside this extraction build when upgrading existing worlds; see [migration notes](docs/pigmee-tech-extraction.zh-CN.md). The ordinary Pigmee Fumo and first-join gift also belong to the addon.
+> Pigmee dolls, machines, building materials, research notes, rituals and the first-join gift now belong to the independent [Pigmee Craft](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Craft) mod; see the [extraction notes](docs/pigmee-tech-extraction.zh-CN.md). Thunderstorm Generator, Observable Black Hole, Multidimensional Expansion and the Applied Create doll lightning easter egg remain in Lightning Tech and work without Pigmee Craft.
 
 [![Modrinth](https://img.shields.io/modrinth/dt/ArHeh5Fz?style=flat&logo=modrinth&label=Modrinth)](https://modrinth.com/mod/ae2-lightning-tech) [![CurseForge](https://img.shields.io/curseforge/dt/1527395?style=flat&logo=curseforge&label=CurseForge)](https://www.curseforge.com/minecraft/mc-mods/ae2-lightning-tech)
 

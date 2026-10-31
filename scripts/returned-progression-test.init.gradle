@@ -1,0 +1,16 @@
+// Verify LT progression with no Pigmee addon on the runtime classpath.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ReturnedProgressionGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep instanceof org.gradle.api.artifacts.FileCollectionDependency
+                    || dep.group == 'com.moakiee.thunderbolt'
+                    || dep.group == 'org.appliedenergistics'
+                    || (dep.group == 'curse.maven' && dep.name == 'applied-energistics-2-223794'))
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+            gameDirectory = project.layout.buildDirectory.dir('returned-progression-gametest').get().asFile
+        }
+    }
+}

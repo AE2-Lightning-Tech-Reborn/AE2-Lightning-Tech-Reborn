@@ -1554,5 +1554,11 @@
   "ae2lt.tianshu.upload.undo.changed": "原样板已被取走或修改，无法撤回",
   "ae2lt.tianshu.upload.undo.unavailable": "原上传目标已不可用，无法撤回",
   "ae2lt.gui.status.redstone_paused": "红石控制已暂停",
-  "ae2lt.gui.tesla_coil.status.redstone_paused": "红石控制已暂停"
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "红石控制已暂停",
+  "advancements.ae2lt.thunderstorm_generator.title": "雷暴发生器",
+  "advancements.ae2lt.thunderstorm_generator.description": "将高压与极高压雷暴场封装进小小的元件中。",
+  "advancements.ae2lt.observable_black_hole.title": "可观测黑洞",
+  "advancements.ae2lt.observable_black_hole.description": "无限的矩阵被装在坍缩的时空中。",
+  "advancements.ae2lt.multidimensional_expansion.title": "多维展开",
+  "advancements.ae2lt.multidimensional_expansion.description": "在有限的维度中展开多个维度，获得更强大的运算能力。"
 }

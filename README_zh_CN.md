@@ -1,6 +1,6 @@
 # AE2 闪电科技
 
-> 猪咪设备、变体、建材、研究笔记和仪式已拆到 [猪咪科技](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Tech)。升级旧存档时需同时安装匹配的附属，详见[迁移说明](docs/pigmee-tech-extraction.zh-CN.md)。普通猪咪仍保留在闪电本体。
+> 猪咪、设备、建材、研究笔记、仪式与首登礼物已拆到独立模组 [猪咪工艺](https://github.com/AE2-Lightning-Tech-Reborn/Pigmee-Craft)，详见[拆分说明](docs/pigmee-tech-extraction.zh-CN.md)。雷暴发生器、可观测黑洞、多维展开三个进度及 Applied Create 玩偶雷击彩蛋由闪电科技提供，无需安装猪咪工艺。
 
 [English](README.md)
 
