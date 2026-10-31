@@ -114,3 +114,16 @@ Final output = base output × parallel count × matrix multiplier.
 * Supports Auto Export; output sides can be configured in the GUI
 * The Crystal Catalyzer **does not** support Speed Cards
 * Crystal Mode completes in **1 second** minimum; Dust Mode completes in **2 seconds** minimum; Pigmee Crystal Catalyzer cycles take **5 seconds** (no FE required)
+
+## Redstone Control
+
+The upgrade panel accepts one AE2 Redstone Card. With the card installed, the toolbar button cycles through **Ignore Redstone**, **Active with Signal**, and **Active without Signal**. Without a card, automatic operation is unchanged. Pulse mode is not supported.
+
+- To limit output stock, configure an ME Level Emitter to signal when the output reaches its stop condition, and select Active without Signal on the machine.
+- To preserve input stock, monitor the consumed resource, signal while enough remains, and select Active with Signal.
+
+A redstone stop preserves the current recipe and paid progress, pausing processing energy, material consumption and new output. Processing resumes when allowed. Automation can still remove existing items. The emitter measures only its own ME network inventory; export catalyzer products into that network for output-stock control.
+
+This is a signal gate: one output batch, one input debit or concurrent machines can cross a threshold. Leave room for a full operation when protecting an input reserve, and reduce batch size when a tighter output limit is needed.
+
+The catalyzer continues auto-exporting completed products while paused. This upgrade slot applies to the normal Crystal Catalyzer.

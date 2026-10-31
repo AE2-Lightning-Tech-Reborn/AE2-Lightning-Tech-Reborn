@@ -1757,5 +1757,7 @@
   "ae2lt.tianshu.upload.undo.empty": "本次打开期间没有可撤回的上传",
   "ae2lt.tianshu.upload.undo.occupied": "请先取走终端中的已编码样板，再撤回",
   "ae2lt.tianshu.upload.undo.changed": "原样板已被取走或修改，无法撤回",
-  "ae2lt.tianshu.upload.undo.unavailable": "原上传目标已不可用，无法撤回"
+  "ae2lt.tianshu.upload.undo.unavailable": "原上传目标已不可用，无法撤回",
+  "ae2lt.gui.status.redstone_paused": "红石控制已暂停",
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "红石控制已暂停"
 }
