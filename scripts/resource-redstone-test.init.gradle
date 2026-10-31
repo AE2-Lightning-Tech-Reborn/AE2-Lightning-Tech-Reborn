@@ -1,0 +1,27 @@
+// Native AE2 grids, level emitters, machine ticks, menus and save/load.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ResourceMachineRedstoneGameTests.java', '**/ResourceMachineRedstoneClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'com.lowdragmc.ldlib2'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_redstone'
+            gameDirectory = project.layout.buildDirectory.dir('resource-redstone-gametest').get().asFile
+        }
+        if (project.hasProperty('redstoneClientProbe')) {
+            neoForge.runs.client {
+                systemProperty 'ae2lt.redstoneClientProbe', 'true'
+                gameDirectory = project.layout.buildDirectory.dir('resource-redstone-client').get().asFile
+                programArguments.addAll '--quickPlaySingleplayer', 'RedstoneQA'
+            }
+            tasks.named('runClient') {
+                doFirst {
+                    def runDir = project.layout.buildDirectory.dir('resource-redstone-client').get().asFile
+                    runDir.mkdirs()
+                    new File(runDir, 'options.txt').text = 'onboardAccessibility:false\npauseOnLostFocus:false\nrenderDistance:4\nsimulationDistance:2\nmaxFps:60\ntutorialStep:none\n'
+                }
+            }
+        }
+    }
+}

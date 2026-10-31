@@ -6,7 +6,8 @@ public enum TeslaCoilStatus {
     WAITING_FE("waiting_fe"),
     WAITING_INPUTS("waiting_inputs"),
     WAITING_NETWORK("waiting_network"),
-    READY("ready");
+    READY("ready"),
+    REDSTONE_PAUSED("redstone_paused");
 
     private final String serializedName;
 

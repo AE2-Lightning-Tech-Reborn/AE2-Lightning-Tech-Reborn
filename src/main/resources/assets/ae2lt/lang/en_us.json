@@ -1557,5 +1557,7 @@
   "ae2lt.tianshu.upload.undo.empty": "No upload to undo in this menu session",
   "ae2lt.tianshu.upload.undo.occupied": "Remove the terminal's encoded pattern before undoing an upload",
   "ae2lt.tianshu.upload.undo.changed": "The uploaded pattern was removed or changed; undo unavailable",
-  "ae2lt.tianshu.upload.undo.unavailable": "The original upload target is unavailable"
+  "ae2lt.tianshu.upload.undo.unavailable": "The original upload target is unavailable",
+  "ae2lt.gui.status.redstone_paused": "Paused by redstone",
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "Paused by redstone"
 }
