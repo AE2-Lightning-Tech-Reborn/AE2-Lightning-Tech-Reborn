@@ -41,6 +41,7 @@ class TianshuPatternUploadRoutingTest {
         assertCraftingGroup("extendedae", "ex_molecular_assembler");
         assertCraftingGroup("extendedae", "assembler_matrix_pattern");
         assertCraftingGroup("extendedae_plus", "assembler_matrix_pattern_plus");
+        assertCraftingGroup("extendedae_plus", "super_assembler_matrix_frame");
         assertCraftingGroup("neoecoae", "crafting_system_l4");
         assertCraftingGroup("neoecoae", "crafting_system_l6");
         assertCraftingGroup("neoecoae", "crafting_system_l9");
