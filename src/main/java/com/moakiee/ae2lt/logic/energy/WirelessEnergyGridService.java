@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.logic.energy;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridService;
 import appeng.api.networking.IGridServiceProvider;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -13,7 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 public final class WirelessEnergyGridService implements IGridService, IGridServiceProvider {
     private static final String CLAIM = "ae2ltEnergyClaim";
     private static final String TICK_BUDGET = "ae2ltEnergyTickBudget";
-    private final Map<IGridNode, UUID> claims = new IdentityHashMap<>();
+    private final Map<IGridNode, UUID> claims = Collections.synchronizedMap(new IdentityHashMap<>());
     private EnergyTickBudget budget;
     private appeng.api.networking.IGrid grid;
     private long topologyTick = Long.MIN_VALUE;
@@ -34,9 +35,12 @@ public final class WirelessEnergyGridService implements IGridService, IGridServi
     @Override public void saveNodeData(IGridNode node, CompoundTag data) {
         UUID id = claims.get(node);
         if (id != null) data.putUUID(CLAIM, id);
+        // GTM/LDLib also saves nodes off-thread. Only the existing claim is safe to export there.
+        var server = node.getLevel().getServer();
+        if (!server.isSameThread()) return;
         // AE2 calls saveNodeData before removing a migrating node from its old grid.
-        var current = budget(node.getLevel().getServer().getTickCount());
-        WirelessEnergyLedger.get(node.getLevel().getServer()).registerBudget(current);
+        var current = budget(server.getTickCount());
+        WirelessEnergyLedger.get(server).registerBudget(current);
         data.putUUID(TICK_BUDGET, current.id);
     }
     @Override public void removeNode(IGridNode node) {
