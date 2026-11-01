@@ -3,6 +3,7 @@ allprojects {
         def fallback = (findProperty('wireless_test_suite') ?: 'wireless') == 'fallback'
         sourceSets.jdb.java.setIncludes(fallback ? ['**/WirelessAeFallbackGameTests.java'] : [
                 '**/EnergyApiStressGameTests.java', '**/WirelessEnergyGameTests.java',
+                '**/WirelessEnergyNodeSerializationGameTests.java',
                 '**/NetworkManagementGameTests.java', '**/WirelessEnergyTestMachine.java',
                 '**/WirelessEnergyAdmissionGameTests.java', '**/WirelessEnergyBoundaryGameTests.java'])
         def directory = project.file('build/wireless-management-gametest/' + (fallback ? 'fallback' : 'wireless'))
