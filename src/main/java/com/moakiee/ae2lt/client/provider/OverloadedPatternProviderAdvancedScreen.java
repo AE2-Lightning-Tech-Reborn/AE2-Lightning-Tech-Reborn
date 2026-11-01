@@ -16,6 +16,7 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.AETextField;
 import appeng.menu.SlotSemantics;
+import appeng.client.gui.style.PaletteColor;
 
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 
@@ -160,7 +161,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
-        int wirelessColor = menu.isWirelessMode() ? 0x404040 : 0x909090;
+        int wirelessColor = menu.isWirelessMode() ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB();
         if (wirelessTuningVisible) {
             guiGraphics.drawString(
                     font,
@@ -183,7 +184,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
                     LABEL_X,
                     FILTER_Y,
-                    0x404040,
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
                     false);
         }
         if (wirelessTuningVisible) {
@@ -192,7 +193,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     14, 129, wirelessColor, false);
             guiGraphics.drawString(font,
                     Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
-                    14, 171, 0x707070, false);
+                    14, 171, style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB(), false);
         }
         if (wirelessTuningVisible && !menu.isWirelessMode()) {
             guiGraphics.drawString(
@@ -200,7 +201,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
                     14,
                     185,
-                    0x707070,
+                    style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB(),
                     false);
         }
     }

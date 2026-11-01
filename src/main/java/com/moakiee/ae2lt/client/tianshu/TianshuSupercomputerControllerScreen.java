@@ -79,25 +79,25 @@ public class TianshuSupercomputerControllerScreen
 
         int y = ROW_Y;
         drawRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_storage"),
-                formatStorage(menu.getStorageBytes()), COL_VALUE);
+                formatStorage(menu.getStorageBytes()), textColor());
         y += LINE_H;
 
         boolean capped = menu.isCapped();
         drawRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_dispatches"),
                 formatCount(menu.getSuccessfulDispatchesPerTick()) + "/t"
                         + (capped ? I18n.get("ae2lt.tianshu.gui.capped") : ""),
-                capped ? COL_AMBER : COL_VALUE);
+                capped ? COL_AMBER : textColor());
         y += LINE_H;
 
         drawRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_batch"),
-                formatCount(menu.getMaxCopiesPerTick()) + "/t", COL_VALUE);
+                formatCount(menu.getMaxCopiesPerTick()) + "/t", textColor());
         y += LINE_H;
 
         drawStackedRow(graphics, y, Component.translatable("ae2lt.tianshu.gui.label_loop"),
                 I18n.get("ae2lt.tianshu.gui.value_loop",
                         formatCount(menu.getClosedLoopPatternStorages()),
                         formatCount(menu.getClosedLoopSeedStorages())),
-                COL_VALUE);
+                textColor());
 
     }
 

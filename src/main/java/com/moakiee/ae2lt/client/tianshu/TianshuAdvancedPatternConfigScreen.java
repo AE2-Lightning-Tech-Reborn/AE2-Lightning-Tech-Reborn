@@ -7,6 +7,7 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
 import appeng.menu.SlotSemantics;
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.mojang.datafixers.util.Pair;
@@ -157,7 +158,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
                     TianshuPatternConfigLayout.HEADER_HEIGHT
                             + (TianshuPatternConfigLayout.VISIBLE_ROWS
                             * TianshuPatternConfigLayout.ROW_HEIGHT) / 2 - 4,
-                    0xFF777777, false);
+                    style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB(), false);
         }
     }
 

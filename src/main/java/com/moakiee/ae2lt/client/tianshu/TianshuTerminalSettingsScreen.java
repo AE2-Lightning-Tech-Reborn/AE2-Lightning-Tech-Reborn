@@ -9,6 +9,7 @@ import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.TabButton;
 import appeng.menu.SlotSemantics;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.TianshuUploadTrigger;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -122,15 +123,15 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
         if (patternTerminal) {
             graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.upload_trigger"),
-                    10, 28, 0x404040, false);
+                    10, 28, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.auto_upload"),
-                    10, 64, 0x404040, false);
+                    10, 64, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             graphics.drawString(font,
                     Component.translatable("ae2lt.tianshu.settings.duplicate_encoding"),
-                    10, 132, 0x404040, false);
+                    10, 132, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.settings.jei_supply"),
-                10, patternTerminal ? 176 : 30, 0x404040, false);
+                10, patternTerminal ? 176 : 30, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 
     @Override

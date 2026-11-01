@@ -318,17 +318,17 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
             var label = target.group().name().copy().append(suffix);
             graphics.drawString(font, Language.getInstance().getVisualOrder(
                             font.substrByWidth(label, ROW_LABEL_WIDTH)), ROW_LEFT + 22,
-                    y + 4, aliasEditor || target.availableSlots() > 0 ? textColor : 0xFFAA3333, false);
+                    y + 4, aliasEditor || target.availableSlots() > 0 ? textColor : style.getColor(PaletteColor.ERROR).toARGB(), false);
         }
 
         Component status = null;
-        int statusColor = 0xFF777777;
+        int statusColor = style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB();
         if (awaitingUpload) {
             status = Component.translatable("ae2lt.tianshu.upload.pending");
             statusColor = 0xFFAA7700;
         } else if (uploadFailed) {
             status = Component.translatable("ae2lt.tianshu.upload.failed");
-            statusColor = 0xFFAA2222;
+            statusColor = style.getColor(PaletteColor.ERROR).toARGB();
         } else if (awaitingTargets) {
             status = Component.translatable("ae2lt.tianshu.upload.loading");
         } else if (filtered.isEmpty()) {
