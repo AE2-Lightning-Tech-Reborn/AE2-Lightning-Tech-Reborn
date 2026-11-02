@@ -18,7 +18,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import com.moakiee.ae2lt.celestweave.ArmorEnergyModuleItem;
 import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.network.CelestweaveSubmoduleActivePacket;
 import com.moakiee.ae2lt.network.FlightInertiaSyncPacket;

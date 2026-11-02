@@ -36,7 +36,6 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.orientation.BlockOrientation;
 import appeng.api.orientation.RelativeSide;
-import appeng.api.stacks.AEKey;
 import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.util.AECableType;
 import appeng.blockentity.grid.AENetworkedBlockEntity;

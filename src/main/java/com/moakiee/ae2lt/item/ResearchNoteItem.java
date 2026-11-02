@@ -103,11 +103,9 @@ public class ResearchNoteItem extends Item {
     }
 
     public static boolean isUsableGeneratedNote(ItemStack stack) {
-        return stack.getItem() instanceof ResearchNoteItem && isGenerated(stack) && !ResearchNoteData.isConsumed(stack);
-    }
-
-    public static boolean isGenerated(ItemStack stack) {
-        return ResearchNoteData.read(stack) != null;
+        if (!(stack.getItem() instanceof ResearchNoteItem)) return false;
+        ResearchNoteData data = ResearchNoteData.read(stack);
+        return data != null && !data.consumed();
     }
 
     public static @Nullable ResearchNoteData getData(ItemStack stack) {

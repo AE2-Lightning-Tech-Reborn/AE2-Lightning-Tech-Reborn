@@ -63,7 +63,6 @@ public final class PigmeeMolecularAssemblerBlockEntity extends AENetworkedInvBlo
     private static final String TAG_PUSH_DIRECTION = "pushDirection";
     private static final int CRAFTING_SLOT_COUNT = 9;
     private static final int OUTPUT_SLOT = 9;
-    private static final int PATTERN_SLOT = 10;
     private static final int MAX_PROGRESS = 100;
     private static final int ENERGY_PER_TICK = 10;
 

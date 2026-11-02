@@ -27,7 +27,7 @@ import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerLogic;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 
-public class CrystalCatalyzerMenu extends RedstoneMachineMenu<CrystalCatalyzerBlockEntity> implements FrequencyBindingMenu {
+public class CrystalCatalyzerMenu extends RedstoneMachineMenu<CrystalCatalyzerBlockEntity> implements FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<CrystalCatalyzerMenu> TYPE = MenuTypeBuilder
             .create(CrystalCatalyzerMenu::new, CrystalCatalyzerBlockEntity.class)
             .withMenuTitle(host -> Component.translatable(

@@ -31,10 +31,6 @@ public record ResearchNoteData(
     public static final String TAG_RECIPE_ITEMS = "RecipeItems";
     public static final String TAG_DESCRIPTIONS = "Descriptions";
     public static final String TAG_CONSUMED = "Consumed";
-    public static boolean isConsumed(ItemStack stack) {
-        ResearchNoteData data = read(stack);
-        return data != null && data.consumed();
-    }
 
     public static @Nullable ResearchNoteData read(ItemStack stack) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();

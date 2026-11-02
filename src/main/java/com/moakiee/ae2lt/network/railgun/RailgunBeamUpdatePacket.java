@@ -3,7 +3,6 @@ package com.moakiee.ae2lt.network.railgun;
 import java.util.UUID;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +49,4 @@ public record RailgunBeamUpdatePacket(UUID shooterId, Vec3 from, Vec3 to, boolea
         ctx.enqueueWork(() -> RailgunClientBridge.beamUpdate(p));
     }
 
-    /** Compile-time guard. */
-    @SuppressWarnings("unused") private static final Object _IMPORT_GUARD = ByteBufCodecs.BYTE;
 }
