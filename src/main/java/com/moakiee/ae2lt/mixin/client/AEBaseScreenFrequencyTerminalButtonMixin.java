@@ -39,7 +39,10 @@ public abstract class AEBaseScreenFrequencyTerminalButtonMixin {
         }
     }
 
-    @Inject(method = "updateBeforeRender", at = @At("TAIL"))
+    // Some terminal screens override updateBeforeRender without calling super.
+    // Update here so visibility is current before the toolbar lays out its widgets.
+    @Inject(method = "render", at = @At(value = "INVOKE",
+            target = "Lappeng/client/gui/WidgetContainer;updateBeforeRender()V"))
     private void ae2lt$updateFrequencyTerminalButtons(CallbackInfo ci) {
         var screen = (AEBaseScreen<?>) (Object) this;
         if (ae2lt$frequencyTerminalButtons != null) {

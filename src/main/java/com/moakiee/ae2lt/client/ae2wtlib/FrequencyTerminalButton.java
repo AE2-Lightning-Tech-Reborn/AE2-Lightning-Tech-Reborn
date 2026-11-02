@@ -11,6 +11,7 @@ import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
+import com.moakiee.ae2lt.mixin.client.VerticalButtonBarAccessor;
 
 import de.mari_023.ae2wtlib.api.terminal.IUniversalTerminalCapable;
 import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
@@ -21,8 +22,7 @@ import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
  * the screen widgets, so the button is registered through the native toolbar
  * path instead of being appended after init events.
  *
- * <p>The button is appended to the bottom of AE2's native left vertical toolbar
- * (the terminal already stacks its own buttons from the top), styled like the
+ * <p>The button uses AE2's native left vertical toolbar, styled like the
  * toolbar frequency button on the mod's machines instead of floating over the
  * GUI. AE2WTLib's screen capability marks both native and externally registered
  * wireless terminals, including universal-terminal variants.</p>
@@ -56,13 +56,21 @@ public final class FrequencyTerminalButton {
     }
 
     public static ToolbarButtons addToToolbar(AEBaseScreen<?> screen) {
-        // Append to the native left toolbar. VerticalButtonBar lays out its button
-        // list top-to-bottom every frame, so add() == bottom of the column.
-        // AEBaseScreen.init() will populate the toolbar into renderables after
-        // this hook runs.
         var toolbar = ((AEBaseScreenAccessor) screen).ae2lt$getVerticalToolbar();
         var buttons = new ToolbarButtons(FrequencyBindingClient.createCardToolbarButton());
-        toolbar.add(buttons.configureButton());
+        var toolbarButtons = ((VerticalButtonBarAccessor) toolbar).ae2lt$getButtons();
+        int insertionIndex = toolbarButtons.size();
+        for (int i = 0; i < toolbarButtons.size(); i++) {
+            // AE2WTLib 19.5's package-private selector reserves no toolbar space
+            // when always visible. Keep our button above its expanding panel.
+            // Match by name to remain compatible with the bundled 19.4 API.
+            if (toolbarButtons.get(i).getClass().getName().equals(
+                    "de.mari_023.ae2wtlib.api.terminal.TerminalSelectionButton")) {
+                insertionIndex = i;
+                break;
+            }
+        }
+        toolbarButtons.add(insertionIndex, buttons.configureButton());
         buttons.update(screen);
         return buttons;
     }
