@@ -6,6 +6,7 @@ import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.client.widgets.SmallScrollbarTrack;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.UploadAliasRecords;
@@ -222,12 +223,12 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         super.drawFG(g, x, y, mx, my);
         int split = LIST_LEFT + (listRight() - LIST_LEFT) * 55 / 100;
         g.drawString(font, clipped(text("source").getString(), split - LIST_LEFT - CELL_PADDING * 2),
-                LIST_LEFT + CELL_PADDING, listTop - 14, 0x2A2E3F, false);
+                LIST_LEFT + CELL_PADDING, listTop - 14, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         g.drawString(font, clipped(text("alias").getString(), listRight() - split - CELL_PADDING * 2),
-                split + CELL_PADDING, listTop - 14, 0x2A2E3F, false);
+                split + CELL_PADDING, listTop - 14, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         if (filtered.isEmpty() && rows > 0) {
             g.drawWordWrap(font, text(all.isEmpty() ? "empty" : "no_results"),
-                    LIST_LEFT + CELL_PADDING, listTop + 7, listRight() - LIST_LEFT - CELL_PADDING * 2, 0x363B4E);
+                    LIST_LEFT + CELL_PADDING, listTop + 7, listRight() - LIST_LEFT - CELL_PADDING * 2, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
         }
         for (int row = 0; row < rows; row++) {
             int index = scroll.getCurrentScroll() + row;
@@ -243,13 +244,13 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
             if (selectedRow) g.fill(LIST_LEFT + 1, top + 2, LIST_LEFT + 3, top + rowHeight - 2, 0xff1864ab);
             int textY = top + (rowHeight - font.lineHeight) / 2;
             g.drawString(font, clipped(entry.source(), split - LIST_LEFT - CELL_PADDING * 2),
-                    LIST_LEFT + CELL_PADDING, textY, 0x14161F, false);
+                    LIST_LEFT + CELL_PADDING, textY, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             g.drawString(font, clipped(entry.alias(), listRight() - split - CELL_PADDING * 2),
-                    split + CELL_PADDING, textY, 0x14161F, false);
+                    split + CELL_PADDING, textY, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
         g.drawString(font, clipped(text("count", filtered.size(), all.size()).getString(), imageWidth - 16),
-                10, imageHeight - 79, 0x4E5370, false);
-        g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 67, 0x363B4E, false);
+                10, imageHeight - 79, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+        g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 67, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 
     private int listRight() { return imageWidth - 24; }

@@ -31,7 +31,7 @@ final class PixelGuiLayoutContractTest {
         assertTrue(screen.contains("TEXTURE_HEIGHT = 256"));
         assertTrue(screen.contains("GUI_WIDTH = 176"));
         assertTrue(screen.contains("GUI_HEIGHT = 245"));
-        assertTrue(screen.contains("TEXT_ON_LIGHT_BG = 0xFF6E748C"));
+        assertTrue(screen.contains("AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)"));
         assertTrue(screen.contains("TEXT_ON_DARK_BG = 0xFFFFFFFF"));
         assertTrue(screen.contains("STATUS_X = 44"));
         assertTrue(screen.contains("STATUS_Y = 22"));
@@ -97,7 +97,7 @@ final class PixelGuiLayoutContractTest {
         assertTrue(screen.contains("\"textures/gui/armor_settings_gui.png\""));
         assertTrue(screen.contains("GUI_WIDTH = 176"));
         assertTrue(screen.contains("GUI_HEIGHT = 223"));
-        assertTrue(screen.contains("TEXT_ON_LIGHT_BG = 0xFF6E748C"));
+        assertTrue(screen.contains("AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)"));
         assertTrue(screen.contains("TEXT_ON_DARK_BG = 0xFFFFFFFF"));
         assertTrue(screen.contains("BUTTON_TEXT = TEXT_ON_DARK_BG"));
         assertTrue(screen.contains("renderSelectedTabTexture"));

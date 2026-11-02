@@ -1,0 +1,50 @@
+// ./gradlew -I scripts/frequency-toolbar-client-test.init.gradle -Pae2wtlib_version=19.5.1 runClient
+// Use only with a disposable seed save; override -PfrequencyToolbarSeedWorld=<save directory>.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/FrequencyToolbarClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        // Exercise the reported AE2 version without changing production dependencies.
+        if (providers.gradleProperty('frequencyToolbarReportedAe2').getOrElse('true').toBoolean()) {
+            configurations.implementation.dependencies.removeIf { it.name == 'applied-energistics-2-223794' }
+            repositories { maven { url = 'https://api.modrinth.com/maven' } }
+            dependencies.add('implementation', 'maven.modrinth:ae2:KDnFUmMm') // AE2 19.2.18, NeoForge
+        }
+        def variant = providers.gradleProperty('frequencyToolbarVariant').getOrElse(project.ae2wtlib_version)
+        def directory = layout.buildDirectory.dir("frequency-toolbar-${variant}").get().asFile
+        def report = new File(directory, 'result.txt')
+        def seed = new File(project.file(providers.gradleProperty('frequencyToolbarSeedWorld')
+                .getOrElse('build/wireless-energy-gametest/world')), 'level.dat')
+        neoForge.runs.client {
+            gameDirectory = directory
+            logLevel = org.slf4j.event.Level.INFO
+            systemProperty 'ae2lt.frequencyToolbarProbe', 'true'
+            systemProperty 'ae2lt.frequencyToolbarReport', report.absolutePath
+            programArguments.addAll '--username', 'ToolbarQA', '--quickPlaySingleplayer', 'ToolbarQA',
+                    '--width', '1440', '--height', '1080'
+        }
+        def prepare = tasks.register('prepareFrequencyToolbarProbeWorld') {
+            doLast {
+                if (!seed.isFile()) throw new GradleException('Frequency toolbar seed has no level.dat')
+                def target = new File(directory, 'saves/ToolbarQA/level.dat')
+                target.parentFile.mkdirs()
+                if (!target.exists()) java.nio.file.Files.copy(seed.toPath(), target.toPath())
+                def options = new File(directory, 'options.txt')
+                if (!options.exists()) options.text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\n'
+                report.delete()
+            }
+        }
+        tasks.named('runClient').configure {
+            dependsOn prepare
+            doLast {
+                if (!report.isFile() || !report.readLines().contains('PASS: frequency toolbar regression complete')
+                        || report.readLines().any { it.startsWith('FAIL:') }) {
+                    throw new GradleException("Frequency toolbar regression failed; inspect ${report}")
+                }
+            }
+        }
+    }
+}
