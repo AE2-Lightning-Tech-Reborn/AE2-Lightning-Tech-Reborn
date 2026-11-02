@@ -401,6 +401,10 @@ public final class ModBlocks {
             registerBlock("matter_warping_matrix_pattern_storage_t2", () -> new MatrixPatternStorageBlock(
                     MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.PATTERN_STORAGE_T2));
 
+    public static final DeferredBlock<MatrixPatternStorageBlock> MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3 =
+            registerBlock("matter_warping_matrix_pattern_storage_t3", () -> new MatrixPatternStorageBlock(
+                    MATRIX_MACHINE_PROPERTIES, MatrixMultiblockComponent.PATTERN_STORAGE_T3));
+
     private ModBlocks() {
     }
 
