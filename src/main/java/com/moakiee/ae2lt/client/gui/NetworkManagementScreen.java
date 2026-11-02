@@ -343,13 +343,13 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         int wellCenterY = 66 + (105 - 8) / 2;
         if (searchTooBroad) {
             Component msg = tr("search_too_broad");
-            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, mutedTextColor(), false);
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, textColor(), false);
         } else if (!error.isEmpty()) {
             Component msg = Component.translatable("ae2lt.wireless_energy." + error);
             graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_UNLOADED, false);
         } else if (snapshot != null && snapshot.rows().isEmpty()) {
             Component msg = tr("empty");
-            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, mutedTextColor(), false);
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, textColor(), false);
         }
 
         var selectedRow = selection();
@@ -362,7 +362,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             graphics.fill(9, footerTop + 5, 14, footerTop + 10, 0xFF1864AB);
             graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 14), 18, footerTop + 4, textColor(), false);
         } else {
-            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 4), 9, footerTop + 4, mutedTextColor(), false);
+            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 4), 9, footerTop + 4, textColor(), false);
         }
         if (selectedRow != null && isHovering(8, footerTop, selectionBoxWidth, 16, mx, my))
             drawTooltip(graphics, mx - ox, my - oy, List.of(tooltip(selectedRow)));
@@ -371,7 +371,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
                     : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
             if (snapshot.limited()) summary = tr("incomplete").append(summary);
-            graphics.drawString(font, fit(summary, imageWidth - 18), 9, footerTop - 10, mutedTextColor(), false);
+            graphics.drawString(font, fit(summary, imageWidth - 18), 9, footerTop - 10, textColor(), false);
             if (snapshot.limited() && isHovering(8, footerTop - 12, imageWidth - 16, 12, mx, my))
                 drawTooltip(graphics, mx - ox, my - oy, List.of(tr("history_limit")));
         }
@@ -502,7 +502,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             String right = row.group() ? "×" + row.count() : power ? compactRate(row.rates()[window]) + " FE/t"
                     : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
             int rightColor = row.group() ? textColor()
-                    : power ? (row.rates()[window] > 0 ? COL_RATE : mutedTextColor())
+                    : power ? (row.rates()[window] > 0 ? COL_RATE : textColor())
                     : row.state().equals("loaded") ? COL_LOADED : COL_UNLOADED;
             int rightX = x + width - 5 - font.width(right);
             int leftMaxW = right.isEmpty() ? (x + width - textX - 4) : Math.max(24, rightX - textX - 6);
@@ -513,15 +513,11 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             Component secondary = row.group()
                     ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count())
                     : Component.literal(shortAddress(row.target()));
-            graphics.drawString(font, fit(secondary, leftMaxW), textX, y + 11, mutedTextColor(), false);
+            graphics.drawString(font, fit(secondary, leftMaxW), textX, y + 11, textColor(), false);
         }
     }
     private int textColor() {
         return style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-    }
-
-    private int mutedTextColor() {
-        return style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB();
     }
 
     private Component fit(Component value, int max) {

@@ -249,7 +249,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
                     split + CELL_PADDING, textY, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
         g.drawString(font, clipped(text("count", filtered.size(), all.size()).getString(), imageWidth - 16),
-                10, imageHeight - 79, style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB(), false);
+                10, imageHeight - 79, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 67, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 

@@ -40,10 +40,6 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
         return AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR);
     }
 
-    protected static int mutedTextColor() {
-        return AE2GuiPalette.color(PaletteColor.MUTED_TEXT_COLOR);
-    }
-
     protected MultiblockControllerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         imageWidth = 209;
@@ -94,7 +90,7 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
             y += 11;
         }
         guiGraphics.drawString(font, Component.translatable(hintKey),
-                TEXT_X, y - 11 + HINT_GAP, mutedTextColor(), false);
+                TEXT_X, y - 11 + HINT_GAP, textColor(), false);
     }
 
     /** Footer gauge: recessed frame, quarter ticks, beveled fill; markLo/markHi < 0 hides the target zone. */

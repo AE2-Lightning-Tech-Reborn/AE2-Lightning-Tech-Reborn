@@ -63,7 +63,7 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
         if (!menu.isFormed()) {
             drawStatus(guiGraphics, Component.translatable("ae2lt.matrix.gui.header_unformed"), COL_AMBER);
             drawUnformed(guiGraphics, issueText(), "ae2lt.matrix.gui.hint_unformed");
-            if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, mutedTextColor());
+            if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, textColor());
             return;
         }
         drawStatus(guiGraphics,
@@ -91,13 +91,13 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
                 textColor());
 
         renderFooter(guiGraphics, multidimensional);
-        if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, mutedTextColor());
+        if (migration != null) migration.render(guiGraphics, font, TEXT_X, 113, VALUE_RIGHT - TEXT_X, textColor());
     }
 
     private void renderFooter(GuiGraphics guiGraphics, boolean multidimensional) {
         if (multidimensional) {
             guiGraphics.drawString(font, Component.translatable("ae2lt.matrix.gui.heat_ignored"),
-                    TEXT_X, FOOTER_MID_Y, mutedTextColor(), false);
+                    TEXT_X, FOOTER_MID_Y, textColor(), false);
             return;
         }
         drawRow(guiGraphics, FOOTER_ROW_Y, Component.translatable("ae2lt.matrix.gui.label_heat"),

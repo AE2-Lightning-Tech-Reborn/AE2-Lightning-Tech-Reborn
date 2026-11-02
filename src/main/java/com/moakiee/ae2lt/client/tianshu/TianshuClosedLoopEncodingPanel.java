@@ -351,7 +351,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
             case SeedRefillSync.STATE_UNAVAILABLE -> 0xAA2222;
             default -> switch (menu.closedLoopDraftStatus) {
                 case VALID, ENCODED -> 0x228822;
-                case EMPTY, NO_CANDIDATE -> screen.getStyle().getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB();
+                case EMPTY, NO_CANDIDATE -> screen.getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
                 case MISSING_PRIMARY_OUTPUT -> 0xAA7700;
                 default -> 0xAA2222;
             };

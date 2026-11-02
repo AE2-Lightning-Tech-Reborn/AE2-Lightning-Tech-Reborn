@@ -158,7 +158,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
                     TianshuPatternConfigLayout.HEADER_HEIGHT
                             + (TianshuPatternConfigLayout.VISIBLE_ROWS
                             * TianshuPatternConfigLayout.ROW_HEIGHT) / 2 - 4,
-                    style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB(), false);
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
     }
 

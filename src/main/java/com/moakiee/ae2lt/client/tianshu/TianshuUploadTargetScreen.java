@@ -322,7 +322,7 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         }
 
         Component status = null;
-        int statusColor = style.getColor(PaletteColor.MUTED_TEXT_COLOR).toARGB();
+        int statusColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
         if (awaitingUpload) {
             status = Component.translatable("ae2lt.tianshu.upload.pending");
             statusColor = 0xFFAA7700;
