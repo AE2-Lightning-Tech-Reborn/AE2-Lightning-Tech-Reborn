@@ -21,6 +21,7 @@ import com.moakiee.ae2lt.network.tianshu.SaveGlobalReservePacket;
 import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import com.moakiee.ae2lt.network.tianshu.UploadPatternToTargetPacket;
 import com.moakiee.ae2lt.network.tianshu.UploadTargetsSyncPacket;
+import com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,7 +41,8 @@ public final class NetworkInit {
     // Version 12 restores append-only packet IDs after the GTL port.
     // Version 13 adds the omniversal pattern selection packet.
     // Version 14 requires executable exact reports in native AE2 confirmation packets.
-    private static final String PROTOCOL_VERSION = "14";
+    // Version 15 appends remote device management packets.
+    private static final String PROTOCOL_VERSION = "15";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             id("main"),
             () -> PROTOCOL_VERSION,
@@ -408,6 +410,15 @@ public final class NetworkInit {
         CHANNEL.registerMessage(nextPacketId++, com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket.class,
                 (p, b) -> p.write(b), com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::read,
                 com.moakiee.ae2lt.network.tianshu.SelectOmniversalPatternPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, ReturnToDeviceManagementPacket.class,
+                (p, b) -> p.write(b), ReturnToDeviceManagementPacket::decode,
+                ReturnToDeviceManagementPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, NetworkManagementRequestPacket.class,
+                (p, b) -> p.write(b), NetworkManagementRequestPacket::decode,
+                NetworkManagementRequestPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(nextPacketId++, NetworkManagementSyncPacket.class,
+                (p, b) -> p.write(b), NetworkManagementSyncPacket::decode,
+                NetworkManagementSyncPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static ResourceLocation id(String path) {

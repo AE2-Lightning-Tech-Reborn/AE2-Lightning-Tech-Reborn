@@ -10,6 +10,7 @@ import net.minecraftforge.network.NetworkEvent;
 public record SelectOmniversalPatternPacket(int containerId, ItemStack pattern) {
     public void write(FriendlyByteBuf data) { data.writeVarInt(containerId);data.writeItem(pattern); }
     public static SelectOmniversalPatternPacket read(FriendlyByteBuf data) { return new SelectOmniversalPatternPacket(data.readVarInt(), data.readItem()); }
+    public static SelectOmniversalPatternPacket decode(FriendlyByteBuf data) { return read(data); }
     public static void handle(SelectOmniversalPatternPacket packet, Supplier<NetworkEvent.Context> context) {
         var ctx = context.get();
         ctx.enqueueWork(() -> {

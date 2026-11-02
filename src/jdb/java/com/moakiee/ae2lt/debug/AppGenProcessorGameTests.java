@@ -167,8 +167,10 @@ public final class AppGenProcessorGameTests {
             helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
                     new FluidStack(Fluids.WATER, fluid.getAmount()), FluidStack.EMPTY, 1, 0).isEmpty(),
                     "water cannot replace lava");
+            var insufficientFluid = fluid.copy();
+            insufficientFluid.setAmount(fluid.getAmount() - 1);
             helper.assertTrue(OverloadProcessingRecipeService.findFirstProcessable(level, inventory,
-                    new FluidStack(fluid, fluid.getAmount() - 1), FluidStack.EMPTY, 1, 0).isEmpty(),
+                    insufficientFluid, FluidStack.EMPTY, 1, 0).isEmpty(),
                     "insufficient lava cannot start a reaction");
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
             try {

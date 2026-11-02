@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.event;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import appeng.api.util.DimensionalBlockPos;
 import appeng.util.InteractionUtil;
 import appeng.util.Platform;
@@ -23,6 +25,7 @@ public final class MultiblockWrenchHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onWrenchDisassemble(PlayerInteractEvent.RightClickBlock event) {
+        if (PlayerWorldActions.isCheckingInteraction()) return;
         var player = event.getEntity();
         var level = event.getLevel();
         var pos = event.getPos();

@@ -644,7 +644,7 @@ public class LightningSimulationChamberBlockEntity extends AENetworkBlockEntity
                 v -> this.autoExport = v,
                 sides -> this.allowedOutputs = sides,
                 tag -> {
-                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
                     MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
                 },
                 () -> {

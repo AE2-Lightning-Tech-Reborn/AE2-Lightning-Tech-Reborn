@@ -1,9 +1,11 @@
 package com.moakiee.ae2lt.mixin.recipeviewer;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.nio.file.Files;
 
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.objectweb.asm.tree.ClassNode;
@@ -20,6 +22,7 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     private boolean uselessPresent;
     private boolean jeiLegacyTransfer;
     private boolean jeiButtonController;
+    private boolean modernJeiLayouts;
     private final Predicate<String> targetClassPresent;
 
     public RecipeViewerMixinPlugin() {
@@ -48,6 +51,32 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
         // JEI 15.57 introduced the service/context API; 15.68 moved button and keyboard
         // transfers into a controller. Retained legacy classes are no longer the active path.
         jeiLegacyTransfer = jeiSupplyPresent && !jeiAtLeast(jei, 15, 57);
+        modernJeiLayouts = jeiPresent && hasModernJeiLayouts();
+    }
+
+    private static boolean hasModernJeiLayouts() {
+        try (var stream = targetClassResource("mezz/jei/gui/recipes/RecipeGuiLogic.class")) {
+            if (stream == null) return false;
+            var type = new ClassNode();
+            new org.objectweb.asm.ClassReader(stream).accept(type,
+                    org.objectweb.asm.ClassReader.SKIP_CODE | org.objectweb.asm.ClassReader.SKIP_DEBUG
+                            | org.objectweb.asm.ClassReader.SKIP_FRAMES);
+            return type.methods.stream().anyMatch(method -> method.name.equals("getVisibleRecipeLayoutsWithButtons")
+                    && method.desc.startsWith("(Lmezz/jei/common/util/ImmutableSize2i;"));
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
+    private static InputStream targetClassResource(String resource) throws IOException {
+        var mods = LoadingModList.get();
+        if (mods != null) {
+            for (var file : mods.getModFiles()) {
+                var path = file.getFile().findResource(resource);
+                if (Files.isRegularFile(path)) return Files.newInputStream(path);
+            }
+        }
+        return RecipeViewerMixinPlugin.class.getClassLoader().getResourceAsStream(resource);
     }
 
     private static boolean jeiAtLeast(net.minecraftforge.forgespi.language.IModFileInfo jei, int major, int minor) {
@@ -63,9 +92,12 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         boolean enabled;
-        if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) enabled = jeiLegacyTransfer;
-        else if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin")
-                || mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyContextAccessor"))
+        if (mixinClassName.endsWith(".jei.JeiMultiblockLayoutMixin"))
+            enabled = jeiPresent && !modernJeiLayouts;
+        else if (mixinClassName.endsWith(".jei.JeiModernMultiblockLayoutMixin"))
+            enabled = jeiPresent && modernJeiLayouts;
+        else if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyMixin")) enabled = jeiLegacyTransfer;
+        else if (mixinClassName.endsWith(".jeisupply.JeiWirelessSupplyServiceMixin"))
             enabled = jeiSupplyPresent && !jeiLegacyTransfer;
         else if (mixinClassName.endsWith(".jei.JeiLegacyRecipeTransferButtonMixin"))
             enabled = jeiPresent && !jeiButtonController;
@@ -73,7 +105,6 @@ public final class RecipeViewerMixinPlugin implements IMixinConfigPlugin {
             enabled = jeiPresent && jeiButtonController;
         else if (mixinClassName.contains(".jemi.")) enabled = jeiPresent && emiPresent;
         else if (mixinClassName.contains(".useless.")) enabled = uselessPresent;
-        else if (mixinClassName.contains(".jeisupply.")) enabled = jeiSupplyPresent;
         else if (mixinClassName.contains(".jei.")) enabled = jeiPresent;
         else if (mixinClassName.contains(".emi.")) enabled = emiPresent;
         else return false;

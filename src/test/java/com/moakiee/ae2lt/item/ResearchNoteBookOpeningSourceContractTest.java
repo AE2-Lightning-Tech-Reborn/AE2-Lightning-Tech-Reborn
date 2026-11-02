@@ -103,7 +103,10 @@ class ResearchNoteBookOpeningSourceContractTest {
                 "FrequencyCardLinkShortcutPacket",
                 "WirelessJeiSupplyPacket",
                 "WirelessJeiSupplyResultPacket",
-                "SelectOmniversalPatternPacket");
+                "SelectOmniversalPatternPacket",
+                "ReturnToDeviceManagementPacket",
+                "NetworkManagementRequestPacket",
+                "NetworkManagementSyncPacket");
         // Match complete registrations, including inline and fully qualified names,
         // so every discriminator and its own direction participate in the contract.
         var matcher = Pattern.compile(
@@ -118,7 +121,7 @@ class ResearchNoteBookOpeningSourceContractTest {
             directions.put(matcher.group(1), matcher.group(2));
         }
 
-        assertTrue(network.contains("PROTOCOL_VERSION = \"14\""));
+        assertTrue(network.contains("PROTOCOL_VERSION = \"15\""));
         assertEquals(expectedOrder, actualOrder,
                 "Existing packet discriminators must remain stable and new packets must stay last");
         assertEquals("PLAY_TO_CLIENT", directions.get("OpenResearchNotePacket"));
@@ -128,6 +131,9 @@ class ResearchNoteBookOpeningSourceContractTest {
         assertEquals("PLAY_TO_SERVER", directions.get("WirelessJeiSupplyPacket"));
         assertEquals("PLAY_TO_CLIENT", directions.get("WirelessJeiSupplyResultPacket"));
         assertEquals("PLAY_TO_SERVER", directions.get("SelectOmniversalPatternPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("ReturnToDeviceManagementPacket"));
+        assertEquals("PLAY_TO_SERVER", directions.get("NetworkManagementRequestPacket"));
+        assertEquals("PLAY_TO_CLIENT", directions.get("NetworkManagementSyncPacket"));
     }
 
     private static String source(String path) throws Exception {

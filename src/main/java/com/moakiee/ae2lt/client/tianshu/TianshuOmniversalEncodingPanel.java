@@ -30,13 +30,14 @@ import net.minecraft.network.chat.Component;
 /** Editable inputs, outputs and mold filters, validated together when encoding. */
 final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
     private static final int ROWS = 3;
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 70, 126, 68);
+    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 70, 124, 66);
     private static final Blitter ARROW_COVER = Blitter.texture("guis/pattern_modes.png").src(73, 77, 23, 16);
-    private static final Blitter MOLD_SLOT = Blitter.texture("guis/pattern_modes.png").src(16, 77, 18, 18);
+    private static final Blitter MOLD_SLOT = Blitter.texture("guis/pattern_modes.png").src(15, 76, 18, 18);
     private final TianshuPatternEncodingTermMenu menu;
     private final TianshuPatternEncodingTermScreen<?> screen;
     private final Scrollbar scrollbar;
     private final ActionButton clearButton;
+    private final ActionButton cycleOutputButton;
     private OmniversalPatternDraft observedDraft;
     private long observedGeneration = Long.MIN_VALUE;
     private UselessModCompat.Preview preview = UselessModCompat.Preview.EMPTY;
@@ -55,6 +56,11 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
         clearButton.setHalfSize(true);
         clearButton.setDisableBackground(true);
         widgets.add("omniversalClear", clearButton);
+        cycleOutputButton = new ActionButton(ActionItems.CYCLE_PROCESSING_OUTPUT,
+                action -> menu.cycleOmniversalOutput());
+        cycleOutputButton.setHalfSize(true);
+        cycleOutputButton.setDisableBackground(true);
+        widgets.add("omniversalCycleOutput", cycleOutputButton);
     }
 
     @Override public void setPosition(Point position) { x = position.getX(); y = position.getY(); }
@@ -66,6 +72,7 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
         this.visible = visible;
         scrollbar.setVisible(visible);
         clearButton.setVisibility(visible);
+        cycleOutputButton.setVisibility(visible && menu.canCycleOmniversalOutputs());
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_INPUTS, !visible);
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS, !visible);
         screen.setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_MOLDS, !visible);
@@ -85,22 +92,19 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
             var slot = menu.getOmniversalInputSlots()[i];
             int row = i / 3 - scroll;
             slot.setActive(row >= 0 && row < ROWS);
-            slot.x = x + columnX(i % 3);
-            slot.y = y + 8 + row * 18;
+            com.moakiee.ae2lt.util.SlotPositionAccess.set(slot, x + columnX(i % 3), y + 8 + row * 18);
         }
         for (int i = 0; i < menu.getOmniversalOutputSlots().length; i++) {
             var slot = menu.getOmniversalOutputSlots()[i];
             int row = i - scroll;
             slot.setActive(row >= 0 && row < ROWS);
-            slot.x = x + columnX(4);
-            slot.y = y + 8 + row * 18;
+            com.moakiee.ae2lt.util.SlotPositionAccess.set(slot, x + columnX(4), y + 8 + row * 18);
         }
         for (int i = 0; i < menu.getOmniversalMoldSlots().length; i++) {
             var slot = menu.getOmniversalMoldSlots()[i];
             int row = i - scroll;
             slot.setActive(row >= 0 && row < ROWS);
-            slot.x = x + columnX(3);
-            slot.y = y + 8 + row * 18;
+            com.moakiee.ae2lt.util.SlotPositionAccess.set(slot, x + columnX(3), y + 8 + row * 18);
         }
     }
 

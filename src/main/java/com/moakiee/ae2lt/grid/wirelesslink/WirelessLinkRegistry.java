@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.grid.wirelesslink;
 
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
+
 import appeng.api.networking.GridHelper;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridConnection;
@@ -64,6 +66,8 @@ public final class WirelessLinkRegistry extends SavedData {
     private static final int RESTORE_INTERVAL_TICKS = 20;
     private static final int TOPOLOGY_RECONCILE_DELAY_TICKS = 2;
     private static final int CHANNEL_EXPANSION_BATCH_SIZE = 16;
+    private static final int AUTO_CONNECT_BATCH_SIZE = 128;
+    private static final int AUTO_CONNECT_QUEUE_LIMIT = 8192;
     private static final Comparator<WirelessLink> LINK_PREFERENCE =
             Comparator.comparingLong(WirelessLink::createdTime)
                     .thenComparing(link -> link.linkId().toString());
@@ -72,7 +76,7 @@ public final class WirelessLinkRegistry extends SavedData {
     private final Map<UUID, RuntimeEntrances> runtimeConnections = new HashMap<>();
     private final Map<IGridNode, LinkedHashSet<UUID>> runtimeLinksByAnchor = new IdentityHashMap<>();
     private final LinkedHashSet<UUID> pendingChannelExpansion = new LinkedHashSet<>();
-    private final List<PendingAutoConnect> pendingAutoConnect = new ArrayList<>();
+    private final Map<AutoConnectKey, PendingAutoConnect> pendingAutoConnect = new LinkedHashMap<>();
     private final Map<TopologyChangeKey, PendingClusterReconcile> pendingClusterReconciles =
             new LinkedHashMap<>();
 
@@ -249,6 +253,8 @@ public final class WirelessLinkRegistry extends SavedData {
         }
     }
 
+    private record AutoConnectKey(String dimensionId, long posLong, String sideName) {}
+
     private record PendingAutoConnect(
             UUID playerId,
             String dimensionId,
@@ -256,18 +262,9 @@ public final class WirelessLinkRegistry extends SavedData {
             String sideName,
             String expectedPartId,
             String expectedPartSideName,
-            int delayTicks) {
-        PendingAutoConnect tickDown() {
-            return new PendingAutoConnect(
-                    playerId,
-                    dimensionId,
-                    posLong,
-                    sideName,
-                    expectedPartId,
-                    expectedPartSideName,
-                    delayTicks - 1);
-        }
-
+            int readyTick,
+            int frequencyId,
+            @Nullable BlockEntity expectedBlockEntity) {
         boolean expectsPlacedPart() {
             return !expectedPartId.isBlank();
         }
@@ -399,14 +396,29 @@ public final class WirelessLinkRegistry extends SavedData {
                 || OverloadedFrequencyCardItem.findAutoConnectCard(player).isEmpty()) {
             return;
         }
-        pendingAutoConnect.add(new PendingAutoConnect(
-                player.getUUID(),
-                dimension.location().toString(),
-                pos.asLong(),
-                side == null ? "" : side.getName(),
-                expectedPartId,
-                expectedPartSideName,
-                Math.max(1, delayTicks)));
+        var card = OverloadedFrequencyCardItem.findAutoConnectCard(player).orElse(ItemStack.EMPTY);
+        enqueueAutoConnect(player, dimension, pos, side, expectedPartId, expectedPartSideName, delayTicks,
+                OverloadedFrequencyCardItem.getData(card).frequencyId());
+    }
+
+    /** Placement events authorize distant wand positions; the exact placed BE is still required at execution. */
+    public void queuePlacedBlockAutoConnect(ServerPlayer player, ServerLevel level, BlockPos pos, int frequencyId) {
+        if ((player instanceof net.minecraftforge.common.util.FakePlayer)) return;
+        enqueueAutoConnect(player, level.dimension(), pos, null, "", "", 2, frequencyId);
+    }
+
+    private void enqueueAutoConnect(ServerPlayer player, ResourceKey<Level> dimension, BlockPos pos,
+            @Nullable Direction side, String expectedPartId, String expectedPartSideName, int delayTicks, int frequencyId) {
+        String dim = dimension.location().toString();
+        String sideName = side == null ? "" : side.getName();
+        var key = new AutoConnectKey(dim, pos.asLong(), sideName);
+        if (pendingAutoConnect.size() >= AUTO_CONNECT_QUEUE_LIMIT && !pendingAutoConnect.containsKey(key)) return;
+        var level = player.server.getLevel(dimension);
+        var expected = level == null || !level.isLoaded(pos) ? null : level.getBlockEntity(pos);
+        if (expectedPartId.isEmpty() && expected == null) return;
+        pendingAutoConnect.put(key, new PendingAutoConnect(player.getUUID(), dim, pos.asLong(), sideName,
+                expectedPartId, expectedPartSideName, player.server.getTickCount() + Math.max(1, delayTicks),
+                frequencyId, expected));
     }
 
     /**
@@ -580,6 +592,17 @@ public final class WirelessLinkRegistry extends SavedData {
             BlockPos pos,
             Direction face,
             Vec3 hitVec) {
+        return handleManualUse(player, frequencyId, level, pos, face, hitVec,
+                net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
+    public ActionFeedback handleManualUse(
+            ServerPlayer player, int frequencyId, ServerLevel level, BlockPos pos,
+            Direction face, Vec3 hitVec, net.minecraft.world.InteractionHand hand) {
+        if (!PlayerWorldActions.mayInteract(player, level, pos,
+                hand, face, hitVec)) {
+            return ActionFeedback.red("ae2lt.gui.error.no_permission");
+        }
         var nativeFeedback = handleNativeFrequencyHost(frequencyId, level, pos);
         if (nativeFeedback.isPresent()) {
             return nativeFeedback.get();
@@ -717,6 +740,15 @@ public final class WirelessLinkRegistry extends SavedData {
             BlockPos pos,
             LinkTarget target,
             boolean automatic) {
+        return connectOrDisconnectTarget(player, frequencyId, level, pos, target, automatic, null);
+    }
+
+    private ActionFeedback connectOrDisconnectTarget(
+            @Nullable ServerPlayer player, int frequencyId, ServerLevel level, BlockPos pos,
+            LinkTarget target, boolean automatic, @Nullable Set<IGridNode> handledClusterNodes) {
+        if (handledClusterNodes != null && handledClusterNodes.contains(target.node())) {
+            return ActionFeedback.green("ae2lt.frequency_card.auto_silent_skip");
+        }
         var manager = WirelessFrequencyManager.get();
         var frequency = manager == null ? null : manager.getFrequency(frequencyId);
         if (frequency == null) {
@@ -727,6 +759,7 @@ public final class WirelessLinkRegistry extends SavedData {
                 : frequency.getPlayerAccess(player);
 
         var physicalCluster = PhysicalGridCluster.collect(target.node());
+        if (handledClusterNodes != null) handledClusterNodes.addAll(physicalCluster);
         var clusterLinks = findLinksInCluster(physicalCluster, level.getServer());
         var sameFrequencyLinks = clusterLinks.stream()
                 .filter(link -> link.frequencyId() == frequencyId)
@@ -822,7 +855,7 @@ public final class WirelessLinkRegistry extends SavedData {
 
         var ready = new ArrayList<PendingClusterReconcile>();
         var iterator = pendingClusterReconciles.entrySet().iterator();
-        while (iterator.hasNext()) {
+        while (iterator.hasNext() && ready.size() < 64) {
             var pending = iterator.next().getValue();
             if (--pending.delayTicks <= 0) {
                 ready.add(pending);
@@ -1206,27 +1239,22 @@ public final class WirelessLinkRegistry extends SavedData {
     }
 
     private void processPendingAutoConnect(MinecraftServer server) {
-        if (pendingAutoConnect.isEmpty()) {
-            return;
-        }
-
-        var ready = new ArrayList<PendingAutoConnect>();
-        for (int i = pendingAutoConnect.size() - 1; i >= 0; i--) {
-            var pending = pendingAutoConnect.get(i).tickDown();
-            if (pending.delayTicks() <= 0) {
-                ready.add(pending);
-                pendingAutoConnect.remove(i);
-            } else {
-                pendingAutoConnect.set(i, pending);
-            }
-        }
-
-        for (var pending : ready) {
-            processOnePendingAutoConnect(server, pending);
+        var handledClusters = new HashMap<Integer, Set<IGridNode>>();
+        long start = System.nanoTime();
+        int remaining = Math.min(AUTO_CONNECT_BATCH_SIZE, pendingAutoConnect.size());
+        while (remaining-- > 0 && !pendingAutoConnect.isEmpty()
+                && System.nanoTime() - start < 2_000_000L) {
+            var iterator = pendingAutoConnect.entrySet().iterator();
+            var entry = iterator.next();
+            if (entry.getValue().readyTick() > server.getTickCount()) break;
+            var pending = entry.getValue();
+            iterator.remove();
+            processOnePendingAutoConnect(server, pending, handledClusters);
         }
     }
 
-    private void processOnePendingAutoConnect(MinecraftServer server, PendingAutoConnect pending) {
+    private void processOnePendingAutoConnect(MinecraftServer server, PendingAutoConnect pending,
+                                               Map<Integer, Set<IGridNode>> handledClusters) {
         var player = server.getPlayerList().getPlayer(pending.playerId());
         if (player == null) {
             return;
@@ -1234,7 +1262,10 @@ public final class WirelessLinkRegistry extends SavedData {
 
         var dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.tryParse(pending.dimensionId()));
         var level = server.getLevel(dim);
-        if (level == null) {
+        if (level == null || player.serverLevel() != level || !level.isLoaded(BlockPos.of(pending.posLong()))
+                || (!pending.expectsPlacedPart() && (pending.expectedBlockEntity() == null
+                || pending.expectedBlockEntity().isRemoved()
+                || level.getBlockEntity(BlockPos.of(pending.posLong())) != pending.expectedBlockEntity()))) {
             return;
         }
 
@@ -1252,7 +1283,7 @@ public final class WirelessLinkRegistry extends SavedData {
         }
 
         var data = OverloadedFrequencyCardItem.getData(stack);
-        if (!data.isBound()) {
+        if (!data.isBound() || data.frequencyId() != pending.frequencyId()) {
             return;
         }
 
@@ -1262,6 +1293,8 @@ public final class WirelessLinkRegistry extends SavedData {
             return;
         }
 
+        if (!PlayerWorldActions.mayInteract(
+                player, level, BlockPos.of(pending.posLong()))) return;
         var nativeFeedback = autoConnectNativeFrequencyHost(level, BlockPos.of(pending.posLong()), data.frequencyId());
         if (nativeFeedback.isPresent()) {
             var feedback = nativeFeedback.get();
@@ -1285,7 +1318,8 @@ public final class WirelessLinkRegistry extends SavedData {
                 level,
                 BlockPos.of(pending.posLong()),
                 resolution.target(),
-                true);
+                true,
+                handledClusters.computeIfAbsent(data.frequencyId(), ignored -> PhysicalGridCluster.newIdentityNodeSet()));
         if (!"ae2lt.frequency_card.auto_silent_skip".equals(feedback.translationKey())
                 && feedback.style() != ChatFormatting.GREEN) {
             player.displayClientMessage(Component.translatable(feedback.translationKey(), feedback.args())

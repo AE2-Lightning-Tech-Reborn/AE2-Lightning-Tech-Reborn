@@ -482,7 +482,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
             var mode2 = MemoryCardConfigSupport.readEnum(
                     tag, TAG_SELECTED_MODE, TeslaCoilMode.class, selectedMode);
             this.selectedMode = mode2;
-            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
             MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
             saveChanges();
             markForUpdate();

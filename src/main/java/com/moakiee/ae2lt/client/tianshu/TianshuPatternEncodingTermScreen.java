@@ -95,15 +95,47 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             modePanels.put(mode, panel);
         }
 
-        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()));
+        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
+            @Override
+            public boolean mouseClicked(double x, double y, int button) {
+                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
+                boolean rightClick = button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
+                if (rightClick && visible && active && isMouseOver(x, y)) {
+                    if (hasShiftDown()) {
+                        var selection = TianshuUploadSourceSelection.collect(menu);
+                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
+                    } else menu.undoLastUpload();
+                    return true;
+                }
+                return super.mouseClicked(x, y, button);
+            }
+
+            @Override
+            public List<Component> getTooltipMessage() {
+                var lines = new java.util.ArrayList<Component>(menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                        && TianshuUploadTriggerClient.shouldTrigger()
+                        ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
+                                Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
+                        : super.getTooltipMessage());
+                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+                lines.add(Component.translatable(menu.canUndoUpload
+                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+                return lines;
+            }
+        });
 
         addExtraTab(TianshuEncodingMode.CLOSED_LOOP, ModItems.CLOSED_LOOP_PATTERN.get().getDefaultInstance(),
                 Component.translatable("ae2lt.tianshu.terminal.mode.closed_loop"), "modeTabButton4");
         closedLoopPanel = new TianshuClosedLoopEncodingPanel(this, widgets,
                 () -> switchToScreen(new TianshuClosedLoopPatternConfigScreen<>(this)));
         widgets.add("closedLoopPanel", closedLoopPanel);
-        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded()) addExtraTab(TianshuEncodingMode.OMNIVERSAL,
-                com.moakiee.ae2lt.integration.useless.UselessModCompat.icon(), Component.translatable("ae2lt.tianshu.terminal.mode.omniversal"), "modeTabButton5");
+        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded()) {
+            addExtraTab(TianshuEncodingMode.OMNIVERSAL,
+                    com.moakiee.ae2lt.integration.useless.UselessModCompat.icon(),
+                    Component.translatable("ae2lt.tianshu.terminal.mode.omniversal"), "modeTabButton5");
+        }
         omniversalPanel = new TianshuOmniversalEncodingPanel(this, widgets);
         widgets.add("omniversalPanel", omniversalPanel);
 
@@ -240,7 +272,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private void openUploadScreen(boolean directUploadRequested) {
         var stack = firstEncodedPattern();
         if (stack.isEmpty()) return;
-        if (stack.getItem() instanceof ClosedLoopPatternItem) {
+        // The server is authoritative for validating a closed-loop payload. Routing by the
+        // item type here keeps the shared upload button responsive even when the client cannot
+        // decode a registry-backed payload and lets the server report a proper upload failure.
+        if (stack.getItem() instanceof ClosedLoopPatternItem
+                || com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
             menu.uploadEncodedPattern();
             return;
         }
@@ -311,7 +347,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
         var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
-        if (menu.getCarried().isEmpty() && omniversalTooltip != null) { drawTooltip(graphics, x, y, omniversalTooltip);return; }
+        if (menu.getCarried().isEmpty() && omniversalTooltip != null) {
+            drawTooltip(graphics, x, y, omniversalTooltip);
+            return;
+        }
         var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
                 x - leftPos, y - topPos);
         if (menu.getCarried().isEmpty() && multiplierTooltip != null) {
@@ -368,12 +407,15 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
 
         if (isClosedLoopMemberSlot(slot) && slot.hasItem()) {
+            // Render only the pattern icon here. The standard slot decoration would add the
+            // display stack's amount (1) in the same corner as the per-cycle copy count below.
             graphics.renderItem(slot.getItem().copyWithCount(1), slot.x, slot.y);
             long copies = Math.max(1L,
                     menu.closedLoopDraftSync.copies(slot.getContainerSlot()));
             if (copies > 1L) {
                 var poseStack = graphics.pose();
                 poseStack.pushPose();
+                // Items render at z=100; keep the authoritative per-cycle count above the icon.
                 poseStack.translate(0, 0, 100);
                 StackSizeRenderer.renderSizeLabel(
                         graphics, font, slot.x, slot.y, Long.toString(copies), false);
@@ -404,13 +446,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     private boolean shouldShowCraftableIndicatorForSlot(Slot slot) {
-        var semantic = menu.getSlotSemantic(slot);
-        if (semantic == SlotSemantics.CRAFTING_GRID
-                || semantic == SlotSemantics.PROCESSING_INPUTS
-                || semantic == SlotSemantics.SMITHING_TABLE_ADDITION
-                || semantic == SlotSemantics.SMITHING_TABLE_BASE
-                || semantic == SlotSemantics.SMITHING_TABLE_TEMPLATE
-                || semantic == SlotSemantics.STONECUTTING_INPUT) {
+        if (menu.isPatternIngredientSlot(slot)) {
             var slotContent = GenericStack.fromItemStack(slot.getItem());
             return slotContent != null && repo.isCraftable(slotContent.what());
         }

@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.moakiee.ae2lt.blockentity.workbench.AddonWorkbenchAdapter;
 import com.moakiee.ae2lt.blockentity.workbench.DeviceWorkbenchAdapters;
 import java.util.List;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -14,10 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class WorkbenchDeviceTest {
     @BeforeAll static void bootstrap() {
-        if (net.minecraftforge.fml.loading.LoadingModList.get() == null) {
-            net.minecraftforge.fml.loading.LoadingModList.of(List.of(), List.of(), null);
-        }
-        SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();
+        com.moakiee.ae2lt.testing.MinecraftTestBootstrap.bootstrap();
     }
 
     static class Device implements WorkbenchDevice {

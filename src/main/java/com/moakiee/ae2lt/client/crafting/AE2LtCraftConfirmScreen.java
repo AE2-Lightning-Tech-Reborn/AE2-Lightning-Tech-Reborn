@@ -102,8 +102,8 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         var errorResult = menu.submitError.result();
         CraftingPlanSummary plan = menu.getPlan();
         var exact = ExactPlanReports.get(plan);
-        boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
-        String bigFailure = bigMode ? ((com.moakiee.ae2lt.crafting.big.BigConfirmMenu)menu).ae2lt$failure() : "";
+        boolean bigMode = menu instanceof com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu big && big.thunderbolt$isExactRequest();
+        Component bigFailure = bigMode ? ((com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu)menu).thunderbolt$getRequestError() : Component.empty();
         boolean startable = CraftingReportStartState.normallyStartable(plan, bigMode);
         boolean canForce = CraftingReportStartState.forceCandidate(plan, bigMode)
                 && EaepForceCraftingAccess.isAvailable(menu);
@@ -119,8 +119,8 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         bookmarkMissing.active = JeiBookmarkAccess.isAvailable() && MissingMaterialBookmarks.hasMissing(plan);
 
         Component cpuDetails = Component.empty();
-        if (!bigFailure.isEmpty()) {
-            cpuDetails = Component.translatable("gui.ae2lt.crafting_report." + bigFailure);
+        if (!bigFailure.getString().isEmpty()) {
+            cpuDetails = bigFailure;
         } else if (errorResult != null && errorResult.errorCode() != null) {
             cpuDetails = Component.translatable(
                     "gui.ae2lt.crafting_report.submit_error", errorResult.errorCode().name());
@@ -161,7 +161,7 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
 
     public void startJob() {
         var plan = menu.getPlan();
-        boolean bigMode = menu instanceof com.moakiee.ae2lt.crafting.big.BigConfirmMenu big && big.ae2lt$isBig();
+        boolean bigMode = menu instanceof com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu big && big.thunderbolt$isExactRequest();
         boolean forceStart = hasShiftDown() && CraftingReportStartState.forceCandidate(plan, bigMode)
                 && EaepForceCraftingAccess.isAvailable(menu);
         if (menu.hasNoCPU() || (!CraftingReportStartState.normallyStartable(plan, bigMode) && !forceStart)) {

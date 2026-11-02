@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.integration.useless;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.GenericStack;
 import com.moakiee.ae2lt.client.compat.ProcessingPatternTransferStacks;
-import com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft;
+import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternPayload;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.util.List;
 import java.util.Objects;
@@ -21,15 +21,18 @@ public final class UselessModClientTransfer {
                     UselessModPatternBridge.type("compat.jei.OmniversalPatternJeiTransferHandler"), "inputOptions", recipe);
             var source = (ItemStack) UselessModPatternBridge.call(UselessModPatternBridge.type(
                     "content.machines.advanced_alloy_furnace.ae.OmniversalPatternEncoding"), "createProcessingPattern", recipe);
-            if (options == null || options.isEmpty() || source.isEmpty()) return ItemStack.EMPTY;
+            var data = ProcessingPatternPayload.read(source);
+            if (options == null || options.isEmpty() || data == null) return ItemStack.EMPTY;
             var priorities = ProcessingPatternTransferStacks.priorities(menu);
             var inputs = ProcessingPatternTransferStacks.select(options, priorities);
-            var outputs = ProcessingPatternTransferStacks.select(new OmniversalPatternDraft(source).outputs().stream()
+            var outputs = ProcessingPatternTransferStacks.select(data.sparseOutputs().stream()
                     .filter(Objects::nonNull).map(List::of).toList(), priorities);
             if (inputs.isEmpty() || outputs.isEmpty() || inputs.size() > menu.getOmniversalInputSlots().length
                     || outputs.size() > menu.getOmniversalOutputSlots().length
                     || ((List<?>) UselessModPatternBridge.call(recipe, "molds")).size() > menu.getOmniversalMoldSlots().length) return ItemStack.EMPTY;
-            var processing = PatternDetailsHelper.encodeProcessingPattern(inputs.toArray(GenericStack[]::new), outputs.toArray(GenericStack[]::new));
+            // Bind the native recipe after choosing the same network-aware alternatives as processing.
+            var processing = PatternDetailsHelper.encodeProcessingPattern(
+                    inputs.toArray(GenericStack[]::new), outputs.toArray(GenericStack[]::new));
             return (ItemStack) UselessModPatternBridge.call(UselessModPatternBridge.type(
                     "content.machines.advanced_alloy_furnace.ae.OmniversalPatternEncoding"), "encode", processing, entry, menu.getPlayer().level());
         } catch (RuntimeException | LinkageError unavailableApi) { return ItemStack.EMPTY; }

@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client.core;
 import com.moakiee.ae2lt.client.core.veil.VeilCoreEffectShaders;
 import com.mojang.logging.LogUtils;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import net.minecraftforge.fml.ModList;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.slf4j.Logger;
@@ -35,11 +36,12 @@ final class CoreEffectBackend {
     }
 
     private static boolean detectCompatibleVeil() {
-        if (!ModList.get().isLoaded("veil")) {
+        var modList = ModList.get();
+        if (modList == null || !modList.isLoaded("veil")) {
             return false;
         }
 
-        var installedVersion = ModList.get().getModContainerById("veil")
+        var installedVersion = modList.getModContainerById("veil")
                 .map(container -> container.getModInfo().getVersion())
                 .orElse(null);
         if (installedVersion == null
@@ -66,7 +68,7 @@ final class CoreEffectBackend {
 
     private static ShaderPackDetector createShaderPackDetector() {
         var modList = ModList.get();
-        if (!modList.isLoaded("iris") && !modList.isLoaded("oculus")) {
+        if (modList == null || !modList.isLoaded("iris") && !modList.isLoaded("oculus")) {
             return () -> false;
         }
 
@@ -77,10 +79,8 @@ final class CoreEffectBackend {
             try {
                 Class<?> apiClass = Class.forName(apiClassName, false,
                         CoreEffectBackend.class.getClassLoader());
-                Object api = apiClass.getMethod("getInstance").invoke(null);
-                Method isShaderPackInUse = apiClass.getMethod("isShaderPackInUse");
-                return new ReflectiveShaderPackDetector(api, isShaderPackInUse);
-            } catch (ReflectiveOperationException | LinkageError | SecurityException ignored) {
+                return createReflectiveDetector(apiClass);
+            } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
                 // Try the package used by the other Iris/Oculus generation.
             }
         }
@@ -90,7 +90,23 @@ final class CoreEffectBackend {
         return () -> true;
     }
 
-    private interface ShaderPackDetector {
+    static ShaderPackDetector createReflectiveDetector(Class<?> apiClass) throws ReflectiveOperationException {
+        Method factory = apiClass.getMethod("getInstance");
+        Method query = apiClass.getMethod("isShaderPackInUse");
+        if (!Modifier.isStatic(factory.getModifiers())
+                || !apiClass.isAssignableFrom(factory.getReturnType())
+                || Modifier.isStatic(query.getModifiers())
+                || query.getReturnType() != boolean.class) {
+            throw new NoSuchMethodException("Incompatible Iris/Oculus shader-pack API: " + apiClass.getName());
+        }
+        Object api = factory.invoke(null);
+        if (!apiClass.isInstance(api)) {
+            throw new IllegalStateException("Iris/Oculus returned no shader-pack API instance");
+        }
+        return new ReflectiveShaderPackDetector(api, query);
+    }
+
+    interface ShaderPackDetector {
         boolean isShaderPackInUse();
     }
 

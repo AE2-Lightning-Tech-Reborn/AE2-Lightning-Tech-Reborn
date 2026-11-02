@@ -12,6 +12,7 @@ import appeng.api.stacks.*;
 import appeng.crafting.inv.ListCraftingInventory;
 import appeng.me.service.CraftingService;
 import com.moakiee.thunderbolt.api.crafting.batch.*;
+import com.moakiee.thunderbolt.compat.extendedaeplus.ExtendedAePlusBatchAdapter;
 import com.moakiee.thunderbolt.core.crafting.batch.*;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -52,25 +53,46 @@ public final class GlobalBatchAdaptersGameTests {
 
     @GameTest(template = "empty")
     public static void extendedAePlusAdapterRegistersWhenPresent(GameTestHelper helper) {
-        if (net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")) {
-            boolean registered = BatchProviderAdapters.entries().stream()
-                    .anyMatch(e -> e.id().toString().equals("thunderbolt:extendedae_plus"));
-            try {
-                Class.forName("com.extendedae_plus.api.crafting.ScaledMolecularAssemblerPattern");
-                Class.forName("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity");
-                helper.assertTrue(registered, "TB registered the available ExtendedAE Plus matrix adapter");
-            } catch (ClassNotFoundException absentApi) {
-                helper.assertTrue(!registered, "EAEP without the matrix API must not register its batch adapter");
-                helper.assertTrue(com.moakiee.thunderbolt.compat.extendedaeplus.ExtendedAePlusBatchAdapter
-                        .createAdapter() == null, "EAEP without the matrix API must retain the ordinary-provider fallback");
-                org.slf4j.LoggerFactory.getLogger("ae2lt").info(
-                        "EAEP_BATCH_FALLBACK_VERIFIED: installed EAEP has no super-matrix batch API");
-            }
-        } else {
-            org.slf4j.LoggerFactory.getLogger("ae2lt").info(
-                    "AE2LT_OPTIONAL_NOT_EXECUTED: extendedAePlusAdapterRegistersWhenPresent (extendedae_plus absent)");
-        }
+        boolean installed = net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus");
+        boolean matrixApi = hasClass("com.extendedae_plus.api.crafting.ScaledMolecularAssemblerPattern")
+                && hasClass("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixBlockEntity");
+        assertOptionalRegistration(helper, "extendedae_plus", installed && matrixApi,
+                ExtendedAePlusBatchAdapter.createAdapter());
+        if (installed && !matrixApi) verifyOrdinaryEaepCore(helper);
         helper.succeed();
+    }
+
+    private static boolean hasClass(String name) {
+        try { Class.forName(name, false, GlobalBatchAdaptersGameTests.class.getClassLoader()); return true; }
+        catch (ClassNotFoundException absent) { return false; }
+    }
+
+    private static void assertOptionalRegistration(GameTestHelper helper, String name,
+            boolean expected, BatchProviderAdapter factory) {
+        var registered = BatchProviderAdapters.entries().stream()
+                .filter(e -> e.id().equals(new ResourceLocation("thunderbolt", name))).findFirst();
+        helper.assertTrue((factory != null) == expected, name + " factory matches the actual optional API");
+        helper.assertTrue(registered.isPresent() == expected, name + " registration matches the actual optional API");
+        if (expected) helper.assertTrue(registered.orElseThrow().priority() == -100
+                && registered.orElseThrow().adapter().getClass() == factory.getClass(), name + " uses the native Core adapter");
+    }
+
+    private static void verifyOrdinaryEaepCore(GameTestHelper helper) {
+        var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                new ResourceLocation("extendedae_plus", "assembler_matrix_pattern_plus"));
+        helper.assertTrue(block != net.minecraft.world.level.block.Blocks.AIR, "real Forge EAEP pattern core exists");
+        var pos = helper.absolutePos(new net.minecraft.core.BlockPos(1, 2, 1));
+        helper.getLevel().setBlockAndUpdate(pos, block.defaultBlockState());
+        var owner = helper.getLevel().getBlockEntity(pos);
+        helper.assertTrue(owner instanceof ICraftingProvider, "ordinary EAEP core retains its native provider");
+        var provider = (ICraftingProvider) owner;
+        var pattern = new Pattern();
+        var job = new Job(helper.getLevel(), pattern);
+        for (var entry : BatchProviderAdapters.entries()) helper.assertTrue(
+                entry.adapter().adapt(provider, pattern, job) == null, "ordinary EAEP core is not claimed by " + entry.id());
+        var input = new KeyCounter(); input.add(AEItemKey.of(Items.STONE), 1);
+        helper.assertTrue(!provider.pushPattern(pattern, new KeyCounter[] {input}), "unformed native EAEP core rejects ordinary work");
+        helper.assertTrue(input.get(AEItemKey.of(Items.STONE)) == 1, "native ordinary rejection preserves the unowned input");
     }
 
     private static void run(GameTestHelper helper, BatchCpuAccounting.Mode mode, boolean explicitNull,
@@ -107,6 +129,7 @@ public final class GlobalBatchAdaptersGameTests {
             helper.assertTrue(inventory.list.get(AEItemKey.of(Items.STONE)) == 8 - accepted, "refund only unowned copies");
             if (fail) {
                 helper.assertTrue("AMBIGUOUS_BATCH_PROVIDER_OWNERSHIP".equals(job.failure), "job stopped on uncertain ownership");
+                helper.assertTrue(job.failureCause == endpoint.uncertain, "original uncertain ownership cause is preserved");
                 helper.assertTrue(job.waitingFor.list.isEmpty(), "uncertain work is not confirmed output");
             } else {
                 helper.assertTrue(job.failure == null, "normal dispatch must not fail");
@@ -139,6 +162,7 @@ public final class GlobalBatchAdaptersGameTests {
     }
     private static final class Endpoint implements IBatchCraftingProvider {
         final Provider provider; final int accepted; final boolean fail; int calls;
+        final RuntimeException uncertain = new IllegalStateException("submission ownership unknown");
         int admission = -1;
         Endpoint(Provider provider, int accepted, boolean fail) { this.provider = provider; this.accepted = accepted; this.fail = fail; }
         @Override public List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
@@ -156,7 +180,7 @@ public final class GlobalBatchAdaptersGameTests {
         @Override public long pushBatch(IPatternDetails p, KeyCounter[] inputs, long count) {
             calls++;
             if (count != (admission < 0 ? 8 : admission) || inputs[0].get(AEItemKey.of(Items.STONE)) != 1) throw new AssertionError("single-copy template contract");
-            if (fail) throw new IllegalStateException("submission ownership unknown");
+            if (fail) throw uncertain;
             return count - accepted;
         }
     }
@@ -169,7 +193,7 @@ public final class GlobalBatchAdaptersGameTests {
     }
     private static final class Job implements BatchJobView {
         final Level level; final Task task; final ArrayList<BatchTaskHandle> tasks = new ArrayList<>();
-        final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure;
+        final ListCraftingInventory waitingFor = new ListCraftingInventory(key -> {}); String failure; Throwable failureCause;
         final UUID craftingId = UUID.randomUUID();
         Job(Level level, IPatternDetails pattern) { this.level = level; task = new Task(pattern); tasks.add(task); }
         @Override public Level level() { return level; }
@@ -177,6 +201,6 @@ public final class GlobalBatchAdaptersGameTests {
         @Override public ListCraftingInventory waitingFor() { return waitingFor; }
         @Override public UUID craftingId() { return craftingId; }
         @Override public void addContainerMaxItems(long count, AEKeyType type) {}
-        @Override public void failDispatch(String reason, Throwable cause) { failure = reason; }
+        @Override public void failDispatch(String reason, Throwable cause) { failure = reason; failureCause = cause; }
     }
 }

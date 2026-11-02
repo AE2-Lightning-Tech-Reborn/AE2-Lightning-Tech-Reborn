@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.mixin.recipeviewer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -33,7 +34,7 @@ class RecipeViewerMixinPluginTest {
 
         assertEquals(legacy, applies(plugin, "JeiWirelessSupplyMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyServiceMixin"));
-        assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
     }
 
     @Test
@@ -56,8 +57,10 @@ class RecipeViewerMixinPluginTest {
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
         assertEquals(!controller, plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiLegacyRecipeTransferButtonMixin"));
-        assertEquals(true, plugin.shouldApplyMixin("unused",
-                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"));
+        assertNotEquals(plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"),
+                plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiModernMultiblockLayoutMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyServiceMixin"));
     }
@@ -68,6 +71,23 @@ class RecipeViewerMixinPluginTest {
         plugin.configureJeiTransfer(modFile("15.74.0.227"), true);
         assertFalse(applies(plugin, "JeiWirelessSupplyServiceMixin"));
         assertFalse(plugin.shouldApplyMixin("missing", "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
+        assertFalse(plugin.shouldApplyMixin("missing", "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"));
+        assertFalse(plugin.shouldApplyMixin("missing", "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiModernMultiblockLayoutMixin"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    void layoutHooksFollowTheDetectedMethodDescriptor(boolean modern) throws Exception {
+        var plugin = new RecipeViewerMixinPlugin(target -> true);
+        plugin.configureJeiTransfer(modFile("15.74.0.227"), false);
+        var field = RecipeViewerMixinPlugin.class.getDeclaredField("modernJeiLayouts");
+        field.setAccessible(true);
+        field.setBoolean(plugin, modern);
+
+        assertEquals(!modern, plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"));
+        assertEquals(modern, plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiModernMultiblockLayoutMixin"));
     }
 
     @Test

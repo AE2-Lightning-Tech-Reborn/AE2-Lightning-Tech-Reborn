@@ -72,22 +72,41 @@ public final class OverloadedIOPortGameTests {
         var destination = new Store();
         source.amounts.put(STONE, 20_000_000L);
         int[] payments = {0};
+        double[] charged = {0};
         var moved = OverloadedIOTransfer.move(source, destination, STONE, SOURCE,
-                () -> { payments[0]++; return true; }, 8_388_608L);
+                (amount, mode, multiplier) -> {
+                    if (mode == Actionable.MODULATE) {
+                        payments[0]++;
+                        charged[0] += amount;
+                    }
+                    return amount;
+                }, 8_388_608L);
         helper.assertTrue(moved.inserted() == 8_388_608L && moved.remainder() == 0
-                && source.amounts.get(STONE) == 11_611_392L && payments[0] == 1,
-                "one capped batch must move exactly once and charge once");
+                && source.amounts.get(STONE) == 11_611_392L
+                && destination.amounts.get(STONE) == 8_388_608L && payments[0] == 1
+                && charged[0] == moved.inserted() / (double) STONE.getAmountPerOperation(),
+                "one capped batch must move exactly once and charge for its resource amount only once");
+
+        destination.insert = false;
+        var blocked = OverloadedIOTransfer.move(source, destination, STONE, SOURCE,
+                (amount, mode, multiplier) -> { throw new AssertionError("Full storage requested power"); },
+                8_388_608L);
+        helper.assertTrue(blocked.inserted() == 0 && blocked.remainder() == 0 && !blocked.powerBlocked()
+                && source.amounts.get(STONE) == 11_611_392L
+                && destination.amounts.get(STONE) == 8_388_608L,
+                "full storage must not charge power or mutate either resource owner");
+        destination.insert = true;
 
         destination.rejectActual = true;
         var refunded = OverloadedIOTransfer.move(source, destination, STONE, SOURCE,
-                () -> true, 8_388_608L);
+                (amount, mode, multiplier) -> amount, 8_388_608L);
         helper.assertTrue(refunded.inserted() == 0 && refunded.remainder() == 0
                 && source.amounts.get(STONE) == 11_611_392L,
                 "a rejected actual insert must refund to its source");
 
         source.rejectRefund = true;
         var pending = OverloadedIOTransfer.move(source, destination, STONE, SOURCE,
-                () -> true, 8_388_608L);
+                (amount, mode, multiplier) -> amount, 8_388_608L);
         helper.assertTrue(pending.inserted() == 0 && pending.remainder() == 8_388_608L
                 && source.amounts.get(STONE) == 3_222_784L,
                 "unrefundable resources must remain owned by the port");

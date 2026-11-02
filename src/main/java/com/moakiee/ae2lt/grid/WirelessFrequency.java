@@ -292,6 +292,9 @@ public class WirelessFrequency {
                 // OWNER-on-OWNER reach (max rank is always OWNER here).
                 if (!actorAccess.canActOnLevel(FrequencyAccessLevel.OWNER)) return RESPONSE_NO_PERMISSION;
                 if (targetIsOwner) return RESPONSE_INVALID_USER;
+                var manager = WirelessFrequencyManager.get();
+                if (manager == null) return RESPONSE_NO_PERMISSION;
+                if (!manager.canOwnAnotherFrequency(targetUUID)) return RESPONSE_OWNER_LIMIT;
                 if (current != null) {
                     current.setAccessLevel(FrequencyAccessLevel.OWNER);
                 } else {
@@ -319,6 +322,7 @@ public class WirelessFrequency {
     public static final int RESPONSE_SUCCESS = 0;
     public static final int RESPONSE_NO_PERMISSION = 1;
     public static final int RESPONSE_INVALID_USER = 2;
+    public static final int RESPONSE_OWNER_LIMIT = 3;
 
     // ── NBT ──
 

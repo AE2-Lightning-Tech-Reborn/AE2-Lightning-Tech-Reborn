@@ -5,13 +5,15 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.crafting.pattern.AEProcessingPattern;
 import appeng.helpers.patternprovider.PatternContainer;
-import com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft;
+import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternPayload;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,8 +56,11 @@ final class UselessModPatternBridge {
         var details = PatternDetailsHelper.decodePattern(pattern, level);
         return details != null && type(DETAILS).isInstance(details) ? details : null;
     }
-    private static ItemStack source(OmniversalPatternDraft draft) {
-        var inputs = draft.inputs();var outputs = draft.outputs();
+    private static ItemStack source(ItemStack pattern) {
+        var payload = ProcessingPatternPayload.read(pattern);
+        if (payload == null) return ItemStack.EMPTY;
+        var inputs = payload.sparseInputs();
+        var outputs = payload.sparseOutputs();
         if (inputs.stream().filter(Objects::nonNull).noneMatch(s -> s.amount() > 0)
                 || outputs.stream().filter(Objects::nonNull).noneMatch(s -> s.amount() > 0)) return ItemStack.EMPTY;
         return PatternDetailsHelper.encodeProcessingPattern(inputs.toArray(GenericStack[]::new), outputs.toArray(GenericStack[]::new));
@@ -67,12 +72,72 @@ final class UselessModPatternBridge {
     private static boolean matches(Object entry, Level level, AEProcessingPattern details) {
         return Boolean.TRUE.equals(call(type(CATALOG), "matchesRecipe", level, call(entry, "sourceId"), call(entry, "recipe"), details));
     }
+
+    private record PatternBinding(boolean supported, @Nullable Object data) { }
+
+    private static PatternBinding patternBinding(ItemStack pattern) {
+        final Class<?> access;
+        try {
+            access = Class.forName(BASE + "compat.forge1201.component.ComponentAccess", false,
+                    UselessModPatternBridge.class.getClassLoader());
+        } catch (ClassNotFoundException unavailableLegacyApi) {
+            return new PatternBinding(false, null);
+        }
+        try {
+            var holder = type("core.component.UComponents").getField("OMNIVERSAL_PATTERN_DATA").get(null);
+            var component = call(holder, "get");
+            return new PatternBinding(true, call(access, "get", pattern, component));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("Cannot read native omniversal recipe binding", failure);
+        }
+    }
+
+    private static String sourceId(Object data) {
+        try {
+            data.getClass().getMethod("sourceId");
+            return (String) call(data, "sourceId");
+        } catch (NoSuchMethodException legacyWithoutSourceId) {
+            return "";
+        }
+    }
+
+    private static Object resolveBinding(Level level, Object data, @Nullable AEProcessingPattern details) {
+        String sourceId = sourceId(data);
+        var identity = call(data, "identity");
+        var catalog = type(CATALOG);
+        String name = details == null ? "resolve" : "resolvePattern";
+        Object[] arguments = details == null
+                ? new Object[]{level, sourceId, identity}
+                : new Object[]{level, sourceId, identity, details};
+        boolean supportsSource = java.util.Arrays.stream(catalog.getMethods())
+                .anyMatch(method -> method.getName().equals(name)
+                        && method.getParameterCount() == arguments.length);
+        if (supportsSource) return ((Optional<?>) call(catalog, name, arguments)).orElse(null);
+        // A legacy resolver cannot authorize a binding to a specific external recipe source.
+        if (!sourceId.isBlank()) return null;
+        Object[] legacyArguments = details == null
+                ? new Object[]{level, identity} : new Object[]{level, identity, details};
+        return ((Optional<?>) call(catalog, name, legacyArguments)).orElse(null);
+    }
+
     static ItemStack encodeDraft(ItemStack pattern, Level level) {
         if (!UselessModCompat.isOmniversalPattern(pattern)) return ItemStack.EMPTY;
+        var source = source(pattern);
+        if (source.isEmpty()) return ItemStack.EMPTY;
+        var details = new AEProcessingPattern(Objects.requireNonNull(AEItemKey.of(source)));
+        var binding = patternBinding(pattern);
+        if (binding.supported()) {
+            if (binding.data() == null) return ItemStack.EMPTY;
+            var entry = resolveBinding(level, binding.data(), details);
+            String sourceId = sourceId(binding.data());
+            if (entry == null || (!sourceId.isBlank() && !sourceId.equals(call(entry, "sourceId")))
+                    || !matches(entry, level, details)) return ItemStack.EMPTY;
+            var result = (ItemStack) call(type(ENCODING), "encode", source, details, entry, level);
+            return nativeDetails(result, level) != null ? result : ItemStack.EMPTY;
+        }
+        // Older releases expose only decoded native details; preserve their recipe validation.
         var selected = nativeDetails(pattern, level);
         if (selected == null) return ItemStack.EMPTY;
-        var source = source(new OmniversalPatternDraft(pattern));if (source.isEmpty()) return ItemStack.EMPTY;
-        var details = new AEProcessingPattern(Objects.requireNonNull(AEItemKey.of(source)));
         var selectedRecipe = call(selected, "recipe");
         for (var entry : candidates(level, details)) {
             if (Objects.equals(selectedRecipe, call(entry, "recipe")) && matches(entry, level, details)) {
@@ -83,10 +148,25 @@ final class UselessModPatternBridge {
         return ItemStack.EMPTY;
     }
     static UselessModCompat.Preview preview(ItemStack pattern, Level level) {
-        var draft = new OmniversalPatternDraft(pattern);var details = nativeDetails(pattern, level);
-        var recipe = details == null ? null : call(details, "recipe");
-        return new UselessModCompat.Preview(draft.inputs().stream().filter(Objects::nonNull).toList(),
-                draft.outputs().stream().filter(Objects::nonNull).toList(), recipe == null ? List.of() : molds(recipe), "");
+        var payload = ProcessingPatternPayload.read(pattern);
+        if (payload == null) return UselessModCompat.Preview.EMPTY;
+        var binding = patternBinding(pattern);
+        Object recipe = null;
+        String recipeId = "";
+        if (binding.supported()) {
+            if (binding.data() != null) {
+                var entry = resolveBinding(level, binding.data(), null);
+                if (entry != null) recipe = call(entry, "recipe");
+                recipeId = call(binding.data(), "recipeId").toString();
+            }
+        } else {
+            var details = nativeDetails(pattern, level);
+            if (details != null) recipe = call(details, "recipe");
+        }
+        return new UselessModCompat.Preview(
+                payload.sparseInputs().stream().filter(Objects::nonNull).toList(),
+                payload.sparseOutputs().stream().filter(Objects::nonNull).toList(),
+                recipe == null ? List.of() : molds(recipe), recipeId);
     }
     @SuppressWarnings("unchecked")
     private static List<ItemStack> molds(Object recipe) {
@@ -96,12 +176,13 @@ final class UselessModPatternBridge {
     }
     @SuppressWarnings("unchecked")
     private static boolean matchesMolds(Object recipe, List<ItemStack> supplied) {
-        var required = (List<Object>) call(recipe, "molds");
+        var required = ((List<Ingredient>) call(recipe, "molds")).stream()
+                .filter(mold -> mold != null && !mold.isEmpty()).toList();
         return required.size() == supplied.size() && Boolean.TRUE.equals(call(
                 type("content.blockentities.multiblock.OmniversalMoldHubBlockEntity"), "matchesMolds", required, supplied));
     }
     static UselessModCompat.EncodingResult encodeMatchingDraft(ItemStack pattern, @Nullable List<ItemStack> editedMolds, Level level) {
-        var source = source(new OmniversalPatternDraft(pattern));
+        var source = source(pattern);
         if (source.isEmpty()) return noMatch();
         var supplied = (editedMolds == null ? preview(pattern, level).molds() : editedMolds).stream().filter(stack -> !stack.isEmpty()).toList();
         var selected = encodeDraft(pattern, level);

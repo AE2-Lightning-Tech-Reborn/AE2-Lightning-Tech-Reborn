@@ -62,6 +62,7 @@ sourceSets {
         if ((findProperty('ae2ltInscriberFixture') ?: 'false').toBoolean()) {
             resources.srcDir 'src/overloadTest/resources'
         }
+        java.include '**/debug/CoverageClientSequence.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
     }
@@ -204,6 +205,13 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    ivy {
+        name = 'UselessModReleases'
+        url = 'https://github.com/SorrowMist/UselessMod/releases/download'
+        patternLayout { artifact '[revision]/[artifact]-[revision].[ext]' }
+        metadataSources { artifact() }
+        content { includeModule 'com.sorrowmist.useless', 'useless_mod' }
+    }
     mavenLocal()
     if (githubPackagesUser && githubPackagesToken) {
         maven {
@@ -277,6 +285,11 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly fg.deobf("com.sorrowmist.useless:useless_mod:${useless_version}")
+    if ((findProperty('enable_useless_runtime') ?: 'false').toBoolean()) {
+        runtimeOnly fg.deobf("com.sorrowmist.useless:useless_mod:${useless_version}")
+        runtimeOnly fg.deobf('maven.modrinth:geckolib:aVW7Z5da') // Forge 1.20.1, 4.8.2
+    }
 
     implementation fg.deobf("appeng:appliedenergistics2-forge:${ae2_version}")
 
@@ -338,7 +351,7 @@ dependencies {
     // Thunderbolt Core — AE2 infrastructure layer (fast crafting planner, channel/batch algorithms).
     // Provided at runtime as a separate mod jar in the modpack. The GTL branch needs the Thunderbolt
     // 1.20.1_GTL planner-attach build: CPU dispatch stands down, computePlan wrapping stays on.
-    // Same GAV as earlier 2.0.0-beta.5 jars, so mavenLocal must be republished before this compile.
+    // Publish the matching GTL 2.0.4 build locally before compiling this port.
     compileOnly(fg.deobf("com.moakiee.thunderbolt:${thunderbolt_artifact_id}:${thunderbolt_version}")) {
         transitive = false
     }
@@ -365,7 +378,9 @@ dependencies {
         runtimeOnly fg.deobf("maven.modrinth:advancedae:${advancedae_version}")
         // AdvancedAE instantiates GeoItem implementations but its 1.20.1 metadata does not
         // declare GeckoLib. Mirror the dependency from its categorized 1.20.1 source project.
-        runtimeOnly fg.deobf("curse.maven:geckolib-388172:${advancedae_geckolib_file_id}")
+        if (!(findProperty('enable_useless_runtime') ?: 'false').toBoolean()) {
+            runtimeOnly fg.deobf("curse.maven:geckolib-388172:${advancedae_geckolib_file_id}")
+        }
     }
     // ExtendedAE Plus is optional in production. Pin and expose its real Forge 1.20.1
     // artifact for reproducible compatibility smoke tests:
@@ -403,7 +418,7 @@ dependencies {
         transitive = false
     }
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-    testRuntimeOnly "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
+    testImplementation "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))
@@ -413,7 +428,18 @@ dependencies {
     }
 }
 
+tasks.named('compileJava', JavaCompile).configure {
+    // The Mixin processor writes one aggregate refmap outside the classes directory.
+    // ABI-only dependency changes can otherwise compile no source files and discard
+    // that output, leaving processResources without a refmap. Process all main sources
+    // whenever compilation is needed; normal task up-to-date checks remain enabled.
+    options.incremental = false
+    outputs.file(layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json'))
+            .withPropertyName('mixinRefmap')
+}
+
 tasks.named('processResources', ProcessResources).configure {
+    filteringCharset = 'UTF-8'
     // MixinGradle includes the annotation-processor refmap in packaged jars, but ForgeGradle's
     // exploded development mod only exposes compiled classes and processed resources. Copy the
     // generated refmap so dev runs exercise the same remapped selectors as a published build.
