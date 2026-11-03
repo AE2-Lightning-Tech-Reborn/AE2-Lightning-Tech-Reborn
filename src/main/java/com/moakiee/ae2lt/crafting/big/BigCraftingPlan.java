@@ -15,9 +15,16 @@ import java.util.*;
 /** Native menu/CPU adapter. Projected long values are display-only, never execution inputs. */
 public record BigCraftingPlan(
         AEKey target, BigInteger amount, BigCraftingPlanner.Result<AEKey> exact, String failure)
-        implements ICraftingPlan {
+        implements com.moakiee.thunderbolt.api.crafting.ExactCraftingPlan {
     public BigCraftingPlan {
         BigAmounts.nonNegative(amount);
+    }
+
+    @Override
+    public net.minecraft.network.chat.Component planningError() {
+        String error = exact != null && !exact.verified() ? "unverified" : failure;
+        return error == null || error.isEmpty() ? net.minecraft.network.chat.Component.empty()
+                : net.minecraft.network.chat.Component.translatable("gui.ae2lt.crafting_report." + error);
     }
 
     public GenericStack finalOutput() {

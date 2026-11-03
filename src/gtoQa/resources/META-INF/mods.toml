@@ -11,3 +11,9 @@ mandatory=true
 versionRange="[${mod_version}]"
 ordering="AFTER"
 side="BOTH"
+[[dependencies.gto_compat_qa]]
+modId="thunderbolt"
+mandatory=true
+versionRange="${thunderbolt_version_range}"
+ordering="AFTER"
+side="BOTH"

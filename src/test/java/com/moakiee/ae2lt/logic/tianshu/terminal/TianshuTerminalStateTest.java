@@ -33,9 +33,9 @@ class TianshuTerminalStateTest {
     static Stream<Arguments> formats() {
         return Stream.of(
                 Arguments.of(TianshuTerminalState.NbtFormat.PART,
-                        "TianshuEncodingMode", "MaintainableView", "ClosedLoopDraft", "ProcessingDraft"),
+                        "TianshuEncodingMode", "MaintainableView", "ClosedLoopDraft", "ProcessingDraft", "OmniversalDraft"),
                 Arguments.of(TianshuTerminalState.NbtFormat.WIRELESS,
-                        "tianshuMode", "tianshuMaintainableView", "tianshuClosedLoopDraft", "tianshuProcessingDraft"));
+                        "tianshuMode", "tianshuMaintainableView", "tianshuClosedLoopDraft", "tianshuProcessingDraft", "tianshuOmniversalDraft"));
     }
 
     @Test
@@ -45,11 +45,13 @@ class TianshuTerminalStateTest {
         assertFalse(state.isMaintainableView());
         assertNull(state.getClosedLoopDraft());
         assertNull(state.getProcessingDraft());
+        assertTrue(state.getOmniversalDraft().isEmpty());
         assertFalse(state.setEncodingMode(null));
         assertFalse(state.setEncodingMode(TianshuEncodingMode.CRAFTING));
         assertFalse(state.setMaintainableView(false));
         assertFalse(state.setClosedLoopDraft(null));
         assertFalse(state.setProcessingDraft(null));
+        assertFalse(state.setOmniversalDraft(OmniversalPatternDraft.empty()));
         assertTrue(state.setEncodingMode(TianshuEncodingMode.CLOSED_LOOP));
         assertTrue(state.setMaintainableView(true));
         assertFalse(state.setEncodingMode(TianshuEncodingMode.CLOSED_LOOP));
@@ -57,22 +59,28 @@ class TianshuTerminalStateTest {
 
         var closed = closedLoopDraft();
         var processing = processingDraft();
+        var omniversal = omniversalDraft();
         assertTrue(state.setClosedLoopDraft(closed));
         assertTrue(state.setProcessingDraft(processing));
+        assertTrue(state.setOmniversalDraft(omniversal));
         assertFalse(state.setClosedLoopDraft(closedLoopDraft()));
         assertFalse(state.setProcessingDraft(processingDraft()));
+        assertFalse(state.setOmniversalDraft(omniversalDraft()));
         assertSame(closed, state.getClosedLoopDraft());
         assertSame(processing, state.getProcessingDraft());
+        assertSame(omniversal, state.getOmniversalDraft());
         assertTrue(state.setClosedLoopDraft(null));
         assertTrue(state.setProcessingDraft(null));
+        assertTrue(state.setOmniversalDraft(OmniversalPatternDraft.empty()));
         assertFalse(state.setClosedLoopDraft(null));
         assertFalse(state.setProcessingDraft(null));
+        assertFalse(state.setOmniversalDraft(OmniversalPatternDraft.empty()));
     }
 
     @ParameterizedTest
     @MethodSource("formats")
     void readsLegacyTagsAndWritesExactlyTheSameSchema(TianshuTerminalState.NbtFormat format,
-            String modeKey, String viewKey, String closedKey, String processingKey) {
+            String modeKey, String viewKey, String closedKey, String processingKey, String omniversalKey) {
         var legacy = new CompoundTag();
         legacy.putString(modeKey, "CLOSED_LOOP");
         legacy.putBoolean(viewKey, true);
@@ -86,6 +94,7 @@ class TianshuTerminalStateTest {
         assertTrue(state.isMaintainableView());
         assertTrue(ClosedLoopTerminalDraft.sameState(closedLoopDraft(), state.getClosedLoopDraft()));
         assertTrue(ProcessingPatternTerminalDraft.sameState(processingDraft(), state.getProcessingDraft()));
+        assertTrue(state.getOmniversalDraft().isEmpty());
 
         var saved = new CompoundTag();
         state.write(saved, format);
@@ -95,7 +104,7 @@ class TianshuTerminalStateTest {
     @ParameterizedTest
     @MethodSource("formats")
     void preservesNativeAndUnknownTagsWhileRemovingClearedDrafts(TianshuTerminalState.NbtFormat format,
-            String modeKey, String viewKey, String closedKey, String processingKey) {
+            String modeKey, String viewKey, String closedKey, String processingKey, String omniversalKey) {
         var nativeData = new CompoundTag();
         nativeData.putString("viewcells", "host-owned");
         nativeData.putString("singularity", "host-owned");
@@ -104,6 +113,7 @@ class TianshuTerminalStateTest {
         var saved = nativeData.copy();
         saved.put(closedKey, closedLoopDraft().write());
         saved.put(processingKey, processingDraft().write());
+        saved.put(omniversalKey, omniversalDraft().write());
         new TianshuTerminalState().write(saved, format);
         var expected = nativeData.copy();
         expected.putString(modeKey, "CRAFTING");
@@ -114,35 +124,39 @@ class TianshuTerminalStateTest {
     @ParameterizedTest
     @MethodSource("formats")
     void missingOrMalformedFieldsRestoreHistoricalDefaults(TianshuTerminalState.NbtFormat format,
-            String modeKey, String viewKey, String closedKey, String processingKey) {
+            String modeKey, String viewKey, String closedKey, String processingKey, String omniversalKey) {
         var missing = new CompoundTag();
         var wrongTypes = new CompoundTag();
         wrongTypes.putInt(modeKey, 99);
         wrongTypes.putString(viewKey, "true");
         wrongTypes.putString(closedKey, "not a compound");
         wrongTypes.putString(processingKey, "not a compound");
+        wrongTypes.putString(omniversalKey, "not a compound");
         var malformed = new CompoundTag();
         malformed.putString(modeKey, "UNKNOWN_MODE");
         malformed.put(closedKey, new CompoundTag());
         malformed.put(processingKey, new CompoundTag());
+        malformed.put(omniversalKey, new CompoundTag());
         for (var tag : List.of(missing, wrongTypes, malformed)) {
             var state = new TianshuTerminalState();
             state.setEncodingMode(TianshuEncodingMode.CLOSED_LOOP);
             state.setMaintainableView(true);
             state.setClosedLoopDraft(closedLoopDraft());
             state.setProcessingDraft(processingDraft());
+            state.setOmniversalDraft(omniversalDraft());
             state.read(tag, format);
             assertEquals(TianshuEncodingMode.CRAFTING, state.getEncodingMode());
             assertFalse(state.isMaintainableView());
             assertNull(state.getClosedLoopDraft());
             assertNull(state.getProcessingDraft());
+            assertTrue(state.getOmniversalDraft().isEmpty());
         }
     }
 
     @ParameterizedTest
     @MethodSource("formats")
     void everyEncodingModeRoundTrips(TianshuTerminalState.NbtFormat format,
-            String modeKey, String viewKey, String closedKey, String processingKey) {
+            String modeKey, String viewKey, String closedKey, String processingKey, String omniversalKey) {
         for (var mode : TianshuEncodingMode.values()) {
             var state = new TianshuTerminalState();
             state.setEncodingMode(mode);
@@ -153,6 +167,42 @@ class TianshuTerminalStateTest {
             restored.read(saved, format);
             assertEquals(mode, restored.getEncodingMode());
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("formats")
+    void omniversalDraftKeepsNativeBindingAndMoldsWithoutChangingLegacyKeys(TianshuTerminalState.NbtFormat format,
+            String modeKey, String viewKey, String closedKey, String processingKey, String omniversalKey) {
+        var state = new TianshuTerminalState();
+        state.setEncodingMode(TianshuEncodingMode.OMNIVERSAL);
+        state.setClosedLoopDraft(closedLoopDraft());
+        state.setProcessingDraft(processingDraft());
+        state.setOmniversalDraft(omniversalDraft());
+        var saved = new CompoundTag();
+        saved.putString("nativePatternData", "retain");
+        state.write(saved, format);
+        assertEquals(omniversalDraft().write(), saved.getCompound(omniversalKey));
+        assertEquals("OMNIVERSAL", saved.getString(modeKey));
+        assertEquals(closedLoopDraft().write(), saved.getCompound(closedKey));
+        assertEquals(processingDraft().write(), saved.getCompound(processingKey));
+        var restored = new TianshuTerminalState();
+        var beforeRead = saved.copy();
+        restored.read(saved, format);
+        assertEquals(beforeRead, saved, "Restoring must not edit native recipe metadata");
+        assertEquals(omniversalDraft(), restored.getOmniversalDraft());
+        restored.setOmniversalDraft(OmniversalPatternDraft.empty());
+        restored.write(saved, format);
+        assertFalse(saved.contains(omniversalKey));
+        assertEquals("retain", saved.getString("nativePatternData"));
+        assertEquals(closedLoopDraft().write(), saved.getCompound(closedKey));
+        assertEquals(processingDraft().write(), saved.getCompound(processingKey));
+    }
+
+    private static OmniversalPatternDraft omniversalDraft() {
+        var pattern = new ItemStack(Items.PAPER);
+        pattern.getOrCreateTag().putString("nativeRecipeBinding", "test:two_molds");
+        return new OmniversalPatternDraft(pattern,
+                List.of(new ItemStack(Items.STICK), new ItemStack(Items.BLAZE_ROD)));
     }
 
     private static ClosedLoopTerminalDraft closedLoopDraft() {

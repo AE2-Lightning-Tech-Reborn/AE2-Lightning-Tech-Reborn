@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -14,7 +15,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.BlockSnapshot;
-import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.Event.Result;
 import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
@@ -23,6 +24,9 @@ public final class PlayerWorldActions {
     private static final ThreadLocal<Boolean> CHECKING_INTERACTION = ThreadLocal.withInitial(() -> false);
 
     private PlayerWorldActions() {}
+    public static boolean withinReach(Player player, BlockPos pos) {
+        return player.canReach(pos, 1);
+    }
 
     /** Our interaction handlers must not perform actions during a permission probe. */
     public static boolean isCheckingInteraction() {
@@ -35,16 +39,29 @@ public final class PlayerWorldActions {
 
     public static boolean mayInteract(Player player, Level level, BlockPos pos,
                                       InteractionHand hand, Direction face, Vec3 hit) {
-        if (player == null || !(level instanceof ServerLevel) || player.level() != level
+        return player != null && player.level() == level && checkInteraction(player, level, pos, hand, face, hit);
+    }
+
+    /** The caller must first validate the menu/session that authorizes access to this target. */
+    public static boolean mayConfigure(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        return checkInteraction(player, level, pos, InteractionHand.MAIN_HAND, Direction.UP, Vec3.atCenterOf(pos));
+    }
+
+    private static boolean checkInteraction(Player player, Level level, BlockPos pos,
+                                            InteractionHand hand, Direction face, Vec3 hit) {
+        if (player == null || !(level instanceof ServerLevel targetLevel) || player.getServer() != targetLevel.getServer()
                 || player.isSpectator() || !level.isLoaded(pos) || !level.mayInteract(player, pos)
                 || isCheckingInteraction()) return false;
         CHECKING_INTERACTION.set(true);
         try {
             var event = new PlayerInteractEvent.RightClickBlock(
-                    player, hand, pos, new BlockHitResult(hit, face, pos, false));
+                    player, hand, pos, new BlockHitResult(hit, face, pos, false)) {
+                // Protection listeners must inspect the configured device's world.
+                @Override public Level getLevel() { return level; }
+            };
             MinecraftForge.EVENT_BUS.post(event);
-            return !event.isCanceled() && event.getUseBlock() != Event.Result.DENY
-                    && event.getUseItem() != Event.Result.DENY;
+            return !event.isCanceled() && event.getUseBlock() != Result.DENY
+                    && event.getUseItem() != Result.DENY;
         } finally {
             CHECKING_INTERACTION.remove();
         }
@@ -82,8 +99,9 @@ public final class PlayerWorldActions {
                 boolean restoring = level.restoringBlockSnapshots;
                 level.restoringBlockSnapshots = true;
                 try {
-                    for (int i = snapshots.size() - 1; i >= 0; i--) {
-                        snapshots.get(i).restore(true, true);
+                    for (int index = snapshots.size() - 1; index >= 0; index--) {
+                        BlockSnapshot snapshot = snapshots.get(index);
+                        snapshot.restore(true, false);
                     }
                 } finally {
                     level.restoringBlockSnapshots = restoring;
@@ -94,7 +112,7 @@ public final class PlayerWorldActions {
             var current = level.getBlockState(snapshot.getPos());
             current.onPlace(level, snapshot.getPos(), snapshot.getReplacedBlock(), false);
             level.markAndNotifyBlock(snapshot.getPos(), level.getChunkAt(snapshot.getPos()),
-                    snapshot.getReplacedBlock(), current, snapshot.getFlag(), 512);
+                    snapshot.getReplacedBlock(), current, Block.UPDATE_ALL, 512);
         }
         return true;
     }

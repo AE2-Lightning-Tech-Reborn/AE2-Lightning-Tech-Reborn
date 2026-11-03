@@ -22,10 +22,9 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 /** Real collectors, rods, AE grids and bolt events in disposable worlds; not shipped. */
 @GameTestHolder("ae2lt_collector")
@@ -41,7 +40,7 @@ public final class LightningCollectorGameTests {
         h.setBlock(pos.above(), Blocks.LIGHTNING_ROD);
         h.setBlock(pos.below(), AEBlocks.CREATIVE_ENERGY_CELL.block());
         h.setBlock(pos.north(), AEBlocks.DRIVE.block());
-        LightningCollectorBlockEntity collector = h.getBlockEntity(pos);
+        var collector = (LightningCollectorBlockEntity) h.getBlockEntity(pos);
         collector.getInventory().setStackInSlot(0, new ItemStack(ModItems.PERFECT_ELECTRO_CHIME_CRYSTAL.get()));
         var cell = new ItemStack(ModItems.BULK_LIGHTNING_STORAGE_COMPONENT.get());
         var storage = StorageCells.getCellInventory(cell, null);
@@ -49,7 +48,7 @@ public final class LightningCollectorGameTests {
         h.assertTrue(storage.insert(LightningKey.HIGH_VOLTAGE, initialHv, Actionable.MODULATE, ACTION) == initialHv,
                 "Could not initialize lightning storage");
         storage.persist();
-        DriveBlockEntity drive = h.getBlockEntity(pos.north());
+        var drive = (DriveBlockEntity) h.getBlockEntity(pos.north());
         drive.getInternalInventory().setItemDirect(0, cell);
         return collector;
     }
@@ -71,7 +70,7 @@ public final class LightningCollectorGameTests {
     }
 
     private static void dispatch(LightningBolt bolt) {
-        NeoForge.EVENT_BUS.post(new EntityTickEvent.Pre(bolt));
+        NaturalLightningTransformationHandler.handleLightningTick(bolt);
     }
 
     private static void allCells(GameTestHelper h, boolean natural) {
@@ -93,17 +92,17 @@ public final class LightningCollectorGameTests {
         h.runAtTickTime(50, h::succeed);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void artificialLightningAcceptsAll27Cells(GameTestHelper h) {
         allCells(h, false);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void naturalLightningAcceptsAll27Cells(GameTestHelper h) {
         allCells(h, true);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void bothTiersRejectOutsideEveryFace(GameTestHelper h) {
         var collector = collector(h, POS, 0);
         h.runAtTickTime(20, () -> {
@@ -118,7 +117,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void missingTopRodPreventsCapture(GameTestHelper h) {
         var collector = collector(h, POS, 0);
         h.setBlock(POS.above(), Blocks.AIR);
@@ -133,7 +132,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void overlappingCollectorsCaptureOncePerBoltForBothTiers(GameTestHelper h) {
         var first = collector(h, POS, 0);
         var second = collector(h, POS.east(2), 0);
@@ -152,7 +151,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void nearestCollectorWins(GameTestHelper h) {
         var first = collector(h, POS, 0);
         var second = collector(h, DIAGONAL, 0);
@@ -166,7 +165,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void fullNearestCollectorFallsThrough(GameTestHelper h) {
         var first = collector(h, POS, Long.MAX_VALUE);
         var second = collector(h, DIAGONAL, 0);
@@ -178,7 +177,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void partialInsertionStillConsumesTheBolt(GameTestHelper h) {
         var first = collector(h, POS, Long.MAX_VALUE - 1);
         var second = collector(h, DIAGONAL, 0);
@@ -195,7 +194,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void reentryAndReloadCannotRecaptureTheSameBolt(GameTestHelper h) {
         var first = collector(h, POS, 0);
         var second = collector(h, POS.east(2), 0);
@@ -209,14 +208,14 @@ public final class LightningCollectorGameTests {
                 // Bound recursion so a broken guard fails an assertion instead of overflowing.
                 if (calls.incrementAndGet() == 1) dispatch(bolt);
             };
-            NeoForge.EVENT_BUS.addListener(listener);
+            MinecraftForge.EVENT_BUS.addListener(listener);
             try {
                 dispatch(bolt);
                 dispatch(bolt);
                 h.assertTrue(calls.get() == 1, "Re-entry or a repeated tick dispatched capture twice");
                 bolt.saveWithoutId(saved);
             } finally {
-                NeoForge.EVENT_BUS.unregister(listener);
+                MinecraftForge.EVENT_BUS.unregister(listener);
             }
         });
         h.runAtTickTime(23, () -> {
@@ -234,7 +233,7 @@ public final class LightningCollectorGameTests {
         });
     }
 
-    @GameTest(template = "empty", timeoutTicks = 140)
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty", timeoutTicks = 140)
     public static void liveEntityTicksCannotFeedOverlappingCollectorsTwice(GameTestHelper h) {
         var first = collector(h, POS, 0);
         var second = collector(h, POS.east(2), 0);

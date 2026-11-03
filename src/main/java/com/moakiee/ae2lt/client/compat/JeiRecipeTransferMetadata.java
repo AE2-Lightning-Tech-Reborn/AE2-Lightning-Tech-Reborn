@@ -14,6 +14,41 @@ import mezz.jei.api.gui.IRecipeLayoutDrawable;
  */
 public final class JeiRecipeTransferMetadata {
     private static final ThreadLocal<Snapshot> CURRENT = new ThreadLocal<>();
+    private static mezz.jei.api.runtime.IJeiRuntime runtime;
+
+    public static void setRuntime(mezz.jei.api.runtime.IJeiRuntime value) { runtime = value; }
+
+    public static com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen<?> aliasEditor(
+            TianshuPatternEncodingTermMenu menu) {
+        var mc = net.minecraft.client.Minecraft.getInstance();
+        var parent = mc.screen instanceof mezz.jei.gui.recipes.RecipesGui recipesGui
+                ? ((com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipesGuiAccessor) recipesGui).ae2lt$getParentScreen()
+                : mc.screen;
+        if (!(parent instanceof com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen<?>)
+                && net.minecraftforge.fml.ModList.get().isLoaded("emi")) {
+            // JEMI invokes JEI handlers while EMI's recipe page is still the current screen.
+            parent = EmiParentScreen.current();
+        }
+        return parent instanceof com.moakiee.ae2lt.client.tianshu.TianshuUploadAliasEditScreen<?> editor
+                && editor.getMenu() == menu && mc.player != null && mc.player.containerMenu == menu
+                ? editor : null;
+    }
+
+    /** Keep optional EMI linkage behind the presence check in aliasEditor. */
+    private static final class EmiParentScreen {
+        static net.minecraft.client.gui.screens.Screen current() {
+            return dev.emi.emi.api.EmiApi.getHandledScreen();
+        }
+    }
+
+    /** The machines shown in JEI's left catalyst column, using stable item registry IDs. */
+    public static List<String> machineIds(mezz.jei.api.recipe.RecipeType<?> type) {
+        if (runtime == null || type == null) return List.of();
+        return runtime.getRecipeManager().createRecipeCatalystLookup(type).getItemStack()
+                .filter(stack -> !stack.isEmpty())
+                .map(stack -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())
+                .distinct().toList();
+    }
 
     private JeiRecipeTransferMetadata() {
     }
@@ -30,7 +65,21 @@ public final class JeiRecipeTransferMetadata {
         if (category.getTitle() != null && !category.getTitle().getString().isBlank()) {
             aliases.add(category.getTitle().getString());
         }
-        CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases)));
+        CURRENT.set(new Snapshot(menu, sourceKey, List.copyOf(aliases), machineIds(type)));
+    }
+
+    /** Scope metadata to the real transfer, restoring it even if a handler throws or nests a transfer. */
+    public static boolean withLayout(net.minecraft.world.inventory.AbstractContainerMenu menu,
+            IRecipeLayoutDrawable<?> layout, java.util.function.BooleanSupplier transfer) {
+        var previous = CURRENT.get();
+        try {
+            clear();
+            if (menu instanceof TianshuPatternEncodingTermMenu tianshuMenu) begin(tianshuMenu, layout);
+            return transfer.getAsBoolean();
+        } finally {
+            if (previous == null) clear();
+            else CURRENT.set(previous);
+        }
     }
 
     public static Snapshot snapshotFor(TianshuPatternEncodingTermMenu menu) {
@@ -43,7 +92,7 @@ public final class JeiRecipeTransferMetadata {
     }
 
     public record Snapshot(
-            TianshuPatternEncodingTermMenu menu, String sourceKey, List<String> defaultAliases) {
-        private static final Snapshot EMPTY = new Snapshot(null, "", List.of());
+            TianshuPatternEncodingTermMenu menu, String sourceKey, List<String> defaultAliases, List<String> machineIds) {
+        private static final Snapshot EMPTY = new Snapshot(null, "", List.of(), List.of());
     }
 }

@@ -62,6 +62,8 @@ These optional integrations run in Crystal Mode, with 100,000 FE and 1 High Volt
 
 These recipes load only with their corresponding mod. Pigmee cannot run them; Fluxite now requires the normal catalyzer. Existing water recipes retain their costs.
 
+The amethyst, flawless Certus Quartz, flawless Overload Crystal and compatible Neo ECO budding recipes follow the mature cluster's actual harvest product, including datapack loot changes and Forge global loot modifiers. Their base quantities and costs stay the same. Empty or ambiguous harvests disable the recipe until a valid single product is available.
+
 ## AE2 Crystal Science Mother Rocks
 
 With an AE2CS version that includes mother rocks, Crystal Mode also supports all 11 families: Nether Quartz, Energized Certus Quartz, Ender Quartz, Energized Fluix, Fluix, Redstone, Resonating, Quantum, Link, Meteor, and Entro.

@@ -1,0 +1,44 @@
+allprojects {
+    afterEvaluate {
+        def probes = [management: ['WirelessEnergyMenuClientProbe', 'wirelessEnergyMenuProbe', 'wireless-energy-menu-result.txt'],
+                      card: ['FrequencyCardClientProbe', 'frequencyCardClientProbe', 'frequency-card-result.txt'],
+                      remote: ['RemoteDeviceClientProbe', 'remoteDeviceClientProbe', 'remote-device-result.txt'],
+                      noappflux: ['NoAppFluxClientProbe', 'noAppFluxClientProbe', 'no-appflux-result.txt'],
+                      layout: ['JeiMultiblockLayoutClientProbe', 'multiblockLayoutProbe', 'multiblock-layout-result.txt']]
+        def probe = findProperty('wireless_client_probe') ?: 'management'
+        if (!probes.containsKey(probe)) throw new GradleException('Unknown wireless probe: ' + probe)
+        def selection = probes[probe]
+        def sources = ['**/' + selection[0] + '.java']
+        if (probe == 'card') sources.add('**/WirelessEnergyTestMachine.java')
+        sourceSets.jdb.java.setIncludes(sources)
+        // These probes open JEI itself; EMI would redirect the recipe viewer API.
+        if (probe in ['remote', 'layout']) {
+            configurations.runtimeOnly.dependencies.removeAll { it.group == 'dev.emi' }
+        }
+        def directory = project.file(findProperty('wireless_client_directory') ?: 'build/alpha-port-client-' + probe)
+        def worldName = 'WirelessQA-' + UUID.randomUUID().toString().substring(0, 8)
+        minecraft.runs.client {
+            workingDirectory directory
+            property 'ae2lt.' + selection[1], 'true'
+            property 'ae2lt.appFluxPresentTest', (findProperty('wireless_client_appflux_present') ?: 'false').toString()
+            args '--quickPlaySingleplayer', worldName, '--width', '1100', '--height', '800'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                def seed = project.file(findProperty('wireless_client_seed') ?: 'build/controller-ui-probe/saves/ControllerUIQA')
+                if (!new File(seed, 'level.dat').isFile()) throw new GradleException('Missing disposable client world: ' + seed)
+                def target = new File(directory, 'saves/' + worldName)
+                if (!new File(target, 'level.dat').isFile()) project.copy { from seed; into target; exclude 'session.lock' }
+                directory.mkdirs()
+                new File(directory, selection[2]).delete()
+                new File(directory, 'options.txt').text = 'version:3465\nonboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nguiScale:2\nrenderDistance:3\nsimulationDistance:5\nlang:zh_cn\n'
+            }
+            doLast {
+                def result = new File(directory, selection[2])
+                def passed = result.isFile() && (probe == 'layout' ? result.text.startsWith('PASS:') : result.text.contains('_PASS'))
+                if (!passed) throw new GradleException('Wireless client probe failed: ' + result)
+            }
+        }
+    }
+}

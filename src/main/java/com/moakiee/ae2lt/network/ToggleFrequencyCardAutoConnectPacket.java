@@ -1,33 +1,35 @@
 package com.moakiee.ae2lt.network;
 
+import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
+import com.moakiee.ae2lt.item.TerminalCardAccess;
 import java.util.Optional;
-import java.util.function.Supplier;
-
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
 
-import appeng.api.implementations.menuobjects.ItemMenuHost;
 import appeng.menu.AEBaseMenu;
+import appeng.api.implementations.menuobjects.ItemMenuHost;
+import appeng.menu.locator.MenuLocator;
 
-import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
-import com.moakiee.ae2lt.item.TerminalCardAccess;
-
-public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> hand, boolean terminalCard) {
+public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> hand, boolean terminalCard, boolean energy)
+        {
     public static ToggleFrequencyCardAutoConnectPacket forHand(InteractionHand hand) {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.of(hand), false);
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.of(hand), false, false);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket forPreferredCard() {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), false);
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), false, false);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket forTerminalCard() {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), true);
+        return forTerminalCard(false);
+    }
+
+    public static ToggleFrequencyCardAutoConnectPacket forTerminalCard(boolean energy) {
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), true, energy);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket decode(FriendlyByteBuf buf) {
@@ -35,27 +37,32 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
         Optional<InteractionHand> hand = buf.readBoolean()
                 ? Optional.of(buf.readEnum(InteractionHand.class))
                 : Optional.empty();
-        return new ToggleFrequencyCardAutoConnectPacket(hand, terminalCard);
+        return new ToggleFrequencyCardAutoConnectPacket(hand, terminalCard, buf.readBoolean());
     }
 
     public void write(FriendlyByteBuf buf) {
         buf.writeBoolean(terminalCard);
         buf.writeBoolean(hand.isPresent());
         hand.ifPresent(value -> buf.writeEnum(value));
+        buf.writeBoolean(energy);
     }
 
-    public static void handle(ToggleFrequencyCardAutoConnectPacket payload, Supplier<NetworkEvent.Context> context) {
-        var ctx = context.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-        if (player != null) {
+    public static void handle(ToggleFrequencyCardAutoConnectPacket payload, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> supplier) {
+        var context = supplier.get();
+        context.setPacketHandled(true);
+        context.enqueueWork(() -> {
+            if ((net.minecraft.world.entity.player.Player) context.getSender() instanceof ServerPlayer player) {
                 payload.handleOnServer(player);
             }
         });
-        ctx.setPacketHandled(true);
     }
 
     private void handleOnServer(ServerPlayer player) {
+        if (energy && !OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable()) {
+            player.displayClientMessage(Component.translatable("ae2lt.frequency_card.auto_energy_requires_appflux")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
         if (terminalCard) {
             handleTerminalCard(player);
             return;
@@ -93,29 +100,23 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        boolean enabled = OverloadedFrequencyCardItem.toggleAutoConnect(stack);
+        var updated = energy ? data.toggleAutoConnectEnergy() : data.toggleAutoConnect();
+        OverloadedFrequencyCardItem.setData(stack, updated);
+        boolean enabled = energy ? updated.autoConnectEnergy() : updated.autoConnect();
         messageAutoConnectState(player, enabled);
     }
 
     private void handleTerminalCard(ServerPlayer player) {
-        if (!(player.containerMenu instanceof AEBaseMenu aeMenu) || !aeMenu.stillValid(player)) {
+        if (!(player.containerMenu instanceof AEBaseMenu aeMenu)
+                || (aeMenu.getLocator() == null)
+                || !aeMenu.stillValid(player)) {
             player.displayClientMessage(
                     Component.translatable("ae2lt.gui.error.rejected").withStyle(ChatFormatting.RED),
                     true);
             return;
         }
 
-        // Use the host already owned by the open menu. Resolving the locator
-        // again creates another ItemMenuHost (and another cached upgrade
-        // inventory) on AE2 15.x, so changes made through it are not observed
-        // by the upgrade slots that the current menu synchronizes.
-        if (!(aeMenu.getTarget() instanceof ItemMenuHost terminalHost)) {
-            player.displayClientMessage(
-                    Component.translatable("ae2lt.gui.error.rejected").withStyle(ChatFormatting.RED),
-                    true);
-            return;
-        }
-
+        if (!(aeMenu.getTarget() instanceof ItemMenuHost terminalHost)) return;
         var upgrades = terminalHost.getUpgrades();
         if (!TerminalCardAccess.hasCard(upgrades)) {
             player.displayClientMessage(
@@ -134,7 +135,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        if (!TerminalCardAccess.updateCard(upgrades, cardData -> cardData.toggleAutoConnect())) {
+        if (!TerminalCardAccess.updateCard(upgrades, cardData -> energy ? cardData.toggleAutoConnectEnergy() : cardData.toggleAutoConnect())) {
             player.displayClientMessage(
                     Component.translatable("ae2lt.frequency_card.terminal_no_card")
                             .withStyle(ChatFormatting.RED),
@@ -142,14 +143,14 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        messageAutoConnectState(player, TerminalCardAccess.readCardData(upgrades).autoConnect());
+        var updated = TerminalCardAccess.readCardData(upgrades);
+        messageAutoConnectState(player, energy ? updated.autoConnectEnergy() : updated.autoConnect());
     }
 
-    private static void messageAutoConnectState(ServerPlayer player, boolean enabled) {
+    private void messageAutoConnectState(ServerPlayer player, boolean enabled) {
         player.displayClientMessage(
-                Component.translatable(enabled
-                                ? "ae2lt.frequency_card.auto_enabled"
-                                : "ae2lt.frequency_card.auto_disabled")
+                Component.translatable("ae2lt.frequency_card.auto_" + (energy ? "energy_" : "")
+                                + (enabled ? "enabled" : "disabled"))
                         .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.YELLOW),
                 true);
     }

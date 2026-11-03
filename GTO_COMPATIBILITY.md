@@ -2,7 +2,11 @@
 
 本分支面向 Forge 1.20.1 GTO，普通 `1.20.1` 分支用于同版本对照。按用户授权保留并维护指定 **NeoECO GTO 版**的可选兼容；以前的 NeoECO 排除记录只描述旧版本。本地开发约定已按授权同步更新。
 
-## 当前配套版本
+## 本轮移植候选
+
+本地候选为 LT `2.1.3-gto.1` 与精确固定的 Core `2.0.4-gto.3`，保留 NeoECO 和 Dev23／Dev25 适配。`.3` 的 NeoECO 契约、双版原生批量与共享种子、真实 FX、Dev25 exact 及各三个独立 JVM 的保存恢复均已通过；固定制品和本轮范围见 [Core gto.3 配套验收](GTO_CORE_GTO3_ACCEPTANCE_2026-10-31.md)。此前 `.2` 的失败保留为历史证据，整体移植及未完成的图形矩阵仍见 [2026-10-31 移植验证](GTO_UPSTREAM_PORT_2026-10-31.md)；热点调整见 [优化说明](GTOCORE_OPTIMIZATION_2026-10-31.md)。
+
+## 最近完成验证的配套版本（本轮移植前）
 
 当前 LT `2.1.2-gto.12` 支持已验证的 **GTO `0.6.0-dev-23` 与 `0.6.0-dev-25` 配套环境**。低于 Dev23 的整包不在本版支持范围内；其他版本仍需单独核对依赖并验证，不能仅凭版本号更高判定兼容。最新 Core 配套、图形双人、重连、真实 FX、可选集成与跨 JVM 恢复的实际制品和验证边界见 [2026-10-28 配套验证](GTO_CORE_PAIR_VALIDATION_2026-10-28.md)。此前记录保留为 [Dev25 客户端修复](GTO_DEV25_CLIENT_FIXES_2026-10-27.md) 和 [扩展修复](GTO_EXTENDED_FIXES_2026-10-27.md)。
 
@@ -42,7 +46,7 @@ NeoECO 兼容实现的历史起点见 [NeoECO GTO 兼容记录](GTO_NEOECO_GTO_C
 
 ## 构建
 
-使用 Java 21。当前已验证 Core 制品以 [最新配套记录](GTO_CORE_PAIR_VALIDATION_2026-10-28.md) 的哈希为准。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建该记录中的同一制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
+使用 Java 21。本轮候选固定 Core `2.0.4-gto.3`，精确哈希见 [配套验收](GTO_CORE_GTO3_ACCEPTANCE_2026-10-31.md)；移植前完整组合见 [此前配套记录](GTO_CORE_PAIR_VALIDATION_2026-10-28.md)。以下补丁保留历史重建路径，未包含 Core 后续增加的 NeoECO 远程 UI coremod 与批量适配器，不能据此重建当前制品。历史公共源码基线为 `7c7a066af9d404010fe0b9472fca687879b36281`，依次应用：
 
 1. [gto.5 完整补丁](docs/patches/core-gto.5-from-upstream.patch)
 2. [gto.6 增量补丁](docs/patches/core-gto.6-from-gto.5.patch)

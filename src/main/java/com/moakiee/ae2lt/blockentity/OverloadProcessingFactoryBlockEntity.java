@@ -440,10 +440,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
                         getOrientation(),
                         allowedOutputs,
                         outputTank::getFluid,
-                        amount -> {
-                            FluidStack drained = outputTank.drain(amount, FluidAction.EXECUTE);
-                            return drained.getAmount();
-                        },
+                        outputTank::exportFluid,
                         direction -> getExportTarget(serverLevel, direction));
 
         return pushedItem || pushedFluid;

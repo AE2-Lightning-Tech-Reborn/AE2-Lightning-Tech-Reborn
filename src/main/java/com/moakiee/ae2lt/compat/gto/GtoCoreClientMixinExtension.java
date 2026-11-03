@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.mixin.transformer.ext.*;
 
-/** Preserve Core gto.6's two text hooks after AE2-GTO .40 moved its title into a widget. */
+/** Preserve supported Core text hooks after AE2-GTO .40 moved its title into a widget. */
 public final class GtoCoreClientMixinExtension implements IExtension {
     private static final String TARGET = "appeng/client/gui/me/crafting/CraftConfirmScreen";
     private static final String MIXIN = "com.moakiee.thunderbolt.mixin.ae2.client.CraftConfirmScreenMixin";
@@ -90,7 +90,7 @@ public final class GtoCoreClientMixinExtension implements IExtension {
                         || !TEXT.equals(value(at, "target"))
                         || !Integer.valueOf(title ? 0 : 1).equals(value(at, "ordinal"))
                         || !Integer.valueOf(1).equals(value(annotation, "index"))) {
-                    throw new IllegalStateException("Core gto.6 confirmation hook changed: " + method.name);
+                    throw new IllegalStateException("Core confirmation hook changed: " + method.name);
                 }
                 // No callback, require count or feature is removed. Only its actual call site changes.
                 setValue(at, "target", title ? TITLE : TEXT);

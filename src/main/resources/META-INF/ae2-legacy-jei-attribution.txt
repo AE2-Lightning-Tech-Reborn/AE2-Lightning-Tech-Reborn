@@ -1,0 +1,20 @@
+AE2 legacy JEI conversion compatibility
+
+The LT-local GtoIngredientConverter, GtoIngredientConverters,
+GtoItemIngredientConverter and GtoFluidIngredientConverter adapt the conversion
+protocol and behavior of Applied Energistics 2's IngredientConverter,
+IngredientConverters, ItemIngredientConverter and FluidIngredientConverter.
+
+Original project: Applied Energistics 2
+Original authors: TeamAppliedEnergistics and AE2 contributors
+Original source version: forge/v15.4.11
+Source: https://github.com/AppliedEnergistics/Applied-Energistics-2/tree/forge/v15.4.11
+License: GNU Lesser General Public License, version 3 (LGPL-3.0).
+The full license is distributed with this project and its JAR as LICENSE.
+
+AE2 Lightning Tech changes: relocate the four types into LT's namespace and
+scope the registry to the supported Useless GTO integration; preserve the
+converter protocol, ingredient-type duplicate/fallback behavior, exact key/NBT
+conversion and legacy display-count saturation. The bytecode adapter retains
+Useless's original custom AEKey type, registration, rendering and bookmark
+implementation. No code is installed into AE2's package or dependency JAR.

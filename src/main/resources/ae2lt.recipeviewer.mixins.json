@@ -9,15 +9,19 @@
     "jei.GtoJeiPluginDiscoveryMixin",
     "emi.GtoEmiPluginDiscoveryMixin",
     "emi.GtoJemiLifecycleMixin",
-    "jei.JeiEncodePatternTransferMixin",
+    "emi.GtoJemiRecipeTypesMixin",
+    "emi.GtoJemiServicesMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
     "jei.JeiLegacyRecipeTransferButtonMixin",
     "jei.JeiMultiblockLayoutMixin",
+    "jei.JeiModernMultiblockLayoutMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",
     "jeisupply.JeiWirelessSupplyMixin",
     "jeisupply.JeiWirelessSupplyServiceMixin",
-    "jeisupply.JeiWirelessSupplyContextAccessor"
+    "jei.JeiRecipesGuiAccessor",
+    "useless.GtoUselessJeiAbiMixin",
+    "useless.OmniversalPatternJeiTransferMixin"
   ],
   "injectors": {
     "defaultRequire": 0

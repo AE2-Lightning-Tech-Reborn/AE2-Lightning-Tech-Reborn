@@ -264,7 +264,10 @@ public final class WirelessInterfaceGameTests {
                 if (owner.getMainNode().getGrid() == null) {
                     require(tick < 80, "fixture grid did not initialize within 80 ticks at " + owner.getBlockPos()
                             + "; removed=" + owner.isRemoved()
-                            + "; sameEntity=" + (helper.getLevel().getBlockEntity(owner.getBlockPos()) == owner));
+                            + "; sameEntity=" + (helper.getLevel().getBlockEntity(owner.getBlockPos()) == owner)
+                            + "; blockEntitiesTicking=" + appeng.util.Platform.areBlockEntitiesTicking(
+                                    helper.getLevel(), net.minecraft.world.level.ChunkPos.asLong(
+                                            owner.getBlockPos().getX() >> 4, owner.getBlockPos().getZ() >> 4)));
                     return -1;
                 }
                 offset = tick - 40;
@@ -278,7 +281,7 @@ public final class WirelessInterfaceGameTests {
         }
     }
 
-    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 140)
+    @GameTest(template = "wireless_io_empty", batch = "wireless_io_02_export_plan", timeoutTicks = 180)
     public static void emptyExportKeepsOwnedBufferFlush(GameTestHelper helper) {
         if (Boolean.getBoolean("ae2lt.wirelessIoBenchmark")) {
             helper.succeed();
@@ -289,8 +292,9 @@ public final class WirelessInterfaceGameTests {
         var stone = AEItemKey.of(Items.STONE);
         long[] blocker = {0};
         ExportVisitObservation[] observation = {null};
+        var clock = new GridStartClock();
         helper.onEachTick(() -> {
-            long tick = helper.getTick();
+            long tick = clock.tick(helper, owner);
             if (tick == 40) {
                 owner.setExportMode(ExportMode.AUTO);
                 blocker[0] = fillRejectingStorage(fixture);

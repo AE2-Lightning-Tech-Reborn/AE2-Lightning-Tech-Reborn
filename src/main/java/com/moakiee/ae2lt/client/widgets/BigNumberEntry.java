@@ -6,6 +6,8 @@ import java.util.Optional;
 public interface BigNumberEntry {
     void ae2lt$enableBig();
 
+    void ae2lt$setExtendedRange(boolean enabled, boolean exact);
+
     Optional<BigInteger> ae2lt$getBig();
 
     void ae2lt$setBig(BigInteger amount);

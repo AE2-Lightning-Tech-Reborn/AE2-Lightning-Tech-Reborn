@@ -59,12 +59,20 @@ public final class PigmeeSynthesisStationGameTests {
         templates.set(0, new ItemStack(Items.OAK_LOG));
         // Exercise the receiving constructor: AE2's sending constructor only writes the payload.
         var payload = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
-        payload.writeBoolean(false);
-        payload.writeInt(templates.size());
-        templates.forEach(payload::writeItem);
-        payload.writeBoolean(true);
-        var packet = new appeng.core.sync.packets.FillCraftingGridFromRecipePacket(payload);
-        payload.release();
+        appeng.core.sync.packets.FillCraftingGridFromRecipePacket packet;
+        try {
+            payload.writeBoolean(false);
+            payload.writeInt(templates.size());
+            templates.forEach(payload::writeItem);
+            payload.writeBoolean(true);
+            // Both AE2-GTO .31 and .40 require the fill-only request's trailing fields.
+            payload.writeBoolean(false); // takeToCursor
+            payload.writeVarInt(0); // resultShouldBeTakenAmount
+            packet = new appeng.core.sync.packets.FillCraftingGridFromRecipePacket(payload);
+            helper.assertTrue(!payload.isReadable(), "Native fill packet must consume the complete QA payload");
+        } finally {
+            payload.release();
+        }
         packet.serverPacketData(player);
         helper.assertTrue(menu.getCraftingMatrix().getStackInSlot(0).is(Items.OAK_LOG),
                 "Fill packet must use adjacent chest ingredients");
@@ -135,7 +143,7 @@ public final class PigmeeSynthesisStationGameTests {
         helper.assertTrue(menu.getCraftingMatrix() == matrix, "Menu must use the persistent matrix");
         var output = menu.getSlots(SlotSemantics.CRAFTING_RESULT).get(0);
         helper.assertTrue(output.getItem().is(Items.OAK_PLANKS) && output.getItem().getCount() == 4,
-                "Crafting terminal must resolve the real vanilla recipe");
+                "Crafting terminal must resolve the installed four-plank recipe; got " + output.getItem());
         player.containerMenu = menu;
         ((CraftingTermSlot) output).doClick(InventoryAction.CRAFT_ITEM, player);
         helper.assertTrue(menu.getCarried().is(Items.OAK_PLANKS) && menu.getCarried().getCount() == 4,

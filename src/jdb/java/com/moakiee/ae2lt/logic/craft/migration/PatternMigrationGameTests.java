@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.logic.craft.migration;
 
 import appeng.api.config.Actionable;
+import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.PartHelper;
@@ -15,6 +16,7 @@ import com.moakiee.ae2lt.blockentity.*;
 import com.moakiee.ae2lt.logic.craft.*;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.mojang.authlib.GameProfile;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -237,9 +239,11 @@ public final class PatternMigrationGameTests {
             var encoded=pattern(h,false);var details=PatternDetailsHelper.decodePattern(encoded,h.getLevel());
             var grid=f.port.getGrid();
             var cpu=(appeng.me.cluster.implementations.CraftingCPUCluster)grid.getCraftingService().getCpus().iterator().next();
+            var patternTimes=new Object2LongOpenHashMap<IPatternDetails>();
+            patternTimes.put(details,1L);
             var plan=new appeng.crafting.CraftingPlan(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.OAK_PLANKS),4),
                     8,false,false,new appeng.api.stacks.KeyCounter(),new appeng.api.stacks.KeyCounter(),
-                    new appeng.api.stacks.KeyCounter(),Map.of(details,1L));
+                    new appeng.api.stacks.KeyCounter(),patternTimes);
             h.assertTrue(cpu.submitJob(grid,plan,IActionSource.ofPlayer(f.player),null).successful(),"real native CPU accepts fixture job");
             var manager=f.controller.getPatternMigration();manager.start(f.player);
             h.assertTrue(manager.snapshot().reason()==PatternMigrationSnapshot.Reason.BUSY,"busy CPU rejects initial start");
@@ -290,28 +294,120 @@ public final class PatternMigrationGameTests {
     }
 
     @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
-    @SuppressWarnings("unchecked")
     public static void eaepAggregateDeduplicatesPhysicalCoreInventories(GameTestHelper h) throws Exception {
         if(!net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus")){System.out.println("MIGRATION_EAEP_SKIPPED");h.succeed();return;}
-        var first=place(h,new BlockPos(3,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
-        var last=place(h,new BlockPos(4,2,3),"extendedae_plus:assembler_matrix_hybrid_plus");
-        var aggregate=place(h,new BlockPos(5,2,3),"extendedae_plus:super_assembler_matrix_frame");
-        var type=Class.forName("com.extendedae_plus.content.matrix.supermatrix.SuperAssemblerMatrixCluster");
-        int capacity=100;
-        var cluster=type.getMethod("ultimate",BlockPos.class,BlockPos.class).invoke(null,first.getBlockPos(),aggregate.getBlockPos());
-        setField(first,"patternInventory",new appeng.util.inv.AppEngInternalInventory((appeng.util.inv.InternalInventoryHost)first,capacity-40,1));
-        setField(last,"patternInventory",new appeng.util.inv.AppEngInternalInventory((appeng.util.inv.InternalInventoryHost)last,40,1));
-        ((List<Object>)MigrationReflection.field(cluster,"patternCores")).addAll(List.of(first,last));
-        for(var owner:List.of(first,last))setField(owner,"superMatrixCluster",cluster);
-        setField(aggregate,"superCluster",cluster);
-        var adapter=new PatternMigrationSources();var sources=adapter.discover(proxyNode(aggregate),null);
-        h.assertTrue(sources.size()==2&&sources.stream().mapToInt(source->source.count).sum()==capacity,"aggregate maps underlying physical inventories");
-        h.assertTrue(sources.get(1).count==40,"last core exposes only actual forty physical slots");
-        h.assertTrue(adapter.discover(proxyNode(last),null).isEmpty(),"direct core and aggregate are not counted twice");
-        var pending=(it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap<appeng.api.stacks.AEKey>)MigrationReflection.field(cluster,"outputBuffer");
-        pending.addTo(AEItemKey.of(Items.OAK_PLANKS),1);
-        h.assertTrue(sources.get(0).busy.getAsBoolean(),"undelivered outputs mean executing even when capacity is available");
-        System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS capacity="+capacity);h.succeed();
+        // Forge EAEP 1.5.5 aggregates ordinary matrix cores through EAE's cluster membership.
+        // Use both native capacities so a shorter final inventory cannot be padded or counted twice.
+        var first=place(h,new BlockPos(3,2,3),"extendedae_plus:assembler_matrix_pattern_plus");
+        var last=place(h,new BlockPos(4,2,3),"expatternprovider:assembler_matrix_pattern");
+        net.minecraft.world.level.block.entity.BlockEntity crafter=null;
+        try {
+        var type=Class.forName("com.glodblock.github.extendedae.common.me.matrix.ClusterAssemblerMatrix");
+        var coreType=Class.forName(PatternMigrationSources.EAE_PATTERN);
+        var cluster=type.getConstructor(BlockPos.class,BlockPos.class).newInstance(first.getBlockPos(),last.getBlockPos());
+        for(var owner:List.of(first,last)){
+            setField(owner,"cluster",cluster);
+            type.getMethod("addPattern",coreType).invoke(cluster,owner);
+        }
+        var firstInventory=(appeng.api.inventories.InternalInventory)MigrationReflection.call(first,"getPatternInventory");
+        var lastInventory=(appeng.api.inventories.InternalInventory)MigrationReflection.call(last,"getPatternInventory");
+        h.assertTrue(firstInventory.size()==72&&lastInventory.size()==36,"actual EAEP and EAE physical capacities");
+        var firstPattern=pattern(h,false);var lastPattern=pattern(h,true);
+        firstInventory.setItemDirect(71,firstPattern.copy());lastInventory.setItemDirect(35,lastPattern.copy());
+
+        var members=(List<?>)MigrationReflection.call(cluster,"getPatterns");
+        h.assertTrue(members.size()==2&&members.get(0)==first&&members.get(1)==last,"actual cluster aggregates both physical owners");
+        var adapter=new PatternMigrationSources();var sources=new ArrayList<PatternMigrationSource>();
+        for(var owner:members)sources.addAll(adapter.discover(proxyNode(owner),null));
+        h.assertTrue(sources.size()==2&&sources.stream().mapToInt(source->source.count).sum()==108,"cluster members map exactly to physical inventories");
+        h.assertTrue(sources.get(0).inventory==firstInventory&&sources.get(0).count==72
+                &&sources.get(1).inventory==lastInventory&&sources.get(1).count==36,"last core exposes only its thirty-six physical slots");
+        for(var owner:members)h.assertTrue(adapter.discover(proxyNode(owner),null).isEmpty(),"repeated aggregate discovery cannot duplicate a physical core");
+        h.assertTrue(adapter.discover(proxyNode(last),null).isEmpty(),"direct core and cluster membership are not counted twice");
+        h.assertTrue(ItemStack.matches(firstPattern,sources.get(0).inventory.getStackInSlot(71))
+                &&ItemStack.matches(lastPattern,sources.get(1).inventory.getStackInSlot(35)),"each physical tail slot preserves its exact pattern");
+        var simulated=lastInventory.extractItem(35,1,true);
+        h.assertTrue(ItemStack.matches(simulated,lastPattern)&&ItemStack.matches(lastInventory.getStackInSlot(35),lastPattern),"simulated tail extraction is read-only");
+        try(var mutations=PatternMigrationMutationScope.open()){
+            var extracted=sources.get(1).inventory.extractItem(35,1,false);
+            h.assertTrue(ItemStack.matches(extracted,lastPattern)&&lastInventory.getStackInSlot(35).isEmpty()
+                    &&ItemStack.matches(firstInventory.getStackInSlot(71),firstPattern),"one physical tail extraction neither duplicates nor touches another core");
+        }
+
+        crafter=place(h,new BlockPos(5,2,3),"extendedae_plus:assembler_matrix_crafter_plus");
+        setField(crafter,"cluster",cluster);
+        type.getMethod("addCrafter",Class.forName("com.glodblock.github.extendedae.common.tileentities.matrix.TileAssemblerMatrixCrafter"))
+                .invoke(cluster,crafter);
+        h.assertTrue(sources.stream().noneMatch(source->source.busy.getAsBoolean()),"native empty crafter permits migration");
+        crafter.getClass().getMethod("addToBuffer",appeng.api.stacks.AEKey.class,long.class)
+                .invoke(crafter,AEItemKey.of(Items.OAK_PLANKS),1L);
+        h.assertTrue(!Boolean.TRUE.equals(MigrationReflection.call(cluster,"isBusy")),"native crafter still has spare capacity with one pending output");
+        h.assertTrue(sources.stream().allMatch(source->source.busy.getAsBoolean()),"one undelivered output blocks every core despite spare crafting capacity");
+        } finally {
+            // These real inventories share a test-owned cluster without a formed controller.
+            // Detach it before native grid ticks can attempt to deliver the pending probe output.
+            if(crafter!=null)setField(crafter,"cluster",null);
+            setField(first,"cluster",null);setField(last,"cluster",null);
+            if(crafter!=null)h.getLevel().removeBlock(crafter.getBlockPos(),false);
+            h.getLevel().removeBlock(first.getBlockPos(),false);
+            h.getLevel().removeBlock(last.getBlockPos(),false);
+        }
+        System.out.println("MIGRATION_EAEP_ACTUAL_JAR_PASS cluster=EAE first=72 last=36 capacity=108");h.succeed();
+    }
+
+    @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
+    public static void neoEcoPhysicalSlotsAndSharedLeaseUseActualApi(GameTestHelper h) throws Exception {
+        if(!net.minecraftforge.fml.ModList.get().isLoaded("neoecoae")){System.out.println("MIGRATION_ECO_SKIPPED");h.succeed();return;}
+        var bus=place(h,new BlockPos(3,2,3),"neoecoae:crafting_pattern_bus");
+        var controller=place(h,new BlockPos(4,2,3),"neoecoae:crafting_system_l4");
+        var grid=new Object();var ltOwner=new Object();var ecoOwner=new Object();
+        var budget=new PatternMigrationBudget(System::nanoTime);
+        var coordinatorType=Class.forName("cn.dancingsnow.neoecoae.grid.PatternMigrationCoordinator");
+        var coordinator=coordinatorType.getMethod("forGrid",Object.class).invoke(null,grid);
+        var acquire=coordinatorType.getMethod("tryAcquire",Object.class);
+        var owns=coordinatorType.getMethod("isOwner",Object.class);
+        var release=coordinatorType.getMethod("release",Object.class);
+        int slots;
+        try {
+            var clusterType=Class.forName("cn.dancingsnow.neoecoae.multiblock.cluster.NECraftingCluster");
+            var cluster=clusterType.getConstructor(BlockPos.class,BlockPos.class).newInstance(bus.getBlockPos(),controller.getBlockPos());
+            setField(cluster,"controller",controller);setField(bus,"cluster",cluster);setField(controller,"cluster",cluster);
+            var physical=(appeng.api.inventories.InternalInventory)MigrationReflection.call(bus,"getPatternSlotInventory");
+            var adapter=new PatternMigrationSources();var node=proxyNode(bus);var sources=adapter.discover(node,null);
+            slots=physical.size();
+            h.assertTrue(slots>1&&sources.size()==1&&sources.get(0).inventory==physical
+                    &&sources.get(0).firstSlot==0&&sources.get(0).count==slots,"NeoECO source uses exactly its real physical pattern slots");
+            h.assertTrue(adapter.discover(node,null).isEmpty(),"one physical NeoECO bus is not discovered twice");
+            var first=pattern(h,false);var last=pattern(h,true);
+            physical.setItemDirect(0,first.copy());physical.setItemDirect(slots-1,last.copy());
+            var raw=(appeng.api.inventories.InternalInventory)MigrationReflection.field(bus,"inventory");
+            h.assertTrue(ItemStack.matches(raw.getStackInSlot(0),first)
+                    &&ItemStack.matches(raw.getStackInSlot(slots-1),last),"physical boundary slots retain exact encoded patterns");
+            var source=sources.get(0);
+            var simulated=source.inventory.extractItem(slots-1,1,true);
+            h.assertTrue(ItemStack.matches(simulated,last)&&ItemStack.matches(raw.getStackInSlot(slots-1),last),"simulated extraction preserves its source");
+            source.beginBatch.run();
+            try {
+                var extracted=source.inventory.extractItem(slots-1,1,false);
+                h.assertTrue(ItemStack.matches(extracted,last)&&raw.getStackInSlot(slots-1).isEmpty()
+                        &&ItemStack.matches(raw.getStackInSlot(0),first),"one tail extraction neither duplicates nor changes another slot");
+            } finally { source.endBatch.run(); }
+
+            h.assertTrue(Boolean.TRUE.equals(acquire.invoke(coordinator,ecoOwner)),"native NeoECO acquires its grid lease");
+            h.assertTrue(!budget.acquire(grid,ltOwner),"LT cannot migrate while NeoECO owns the same grid");
+            release.invoke(coordinator,ecoOwner);
+            h.assertTrue(budget.acquire(grid,ltOwner)&&budget.acquire(grid,ltOwner)&&budget.isOwner(grid,ltOwner),"LT acquires the shared lease idempotently");
+            h.assertTrue(Boolean.TRUE.equals(owns.invoke(coordinator,ltOwner))
+                    &&!Boolean.TRUE.equals(acquire.invoke(coordinator,ecoOwner)),"NeoECO observes LT ownership and rejects a competing migration");
+            budget.release(grid,ltOwner);
+            h.assertTrue(Boolean.TRUE.equals(acquire.invoke(coordinator,ecoOwner)),"LT release permits the next native NeoECO migration");
+        } finally {
+            budget.release(grid,ltOwner);release.invoke(coordinator,ecoOwner);
+            // A test-owned cluster must not survive into the next native grid tick.
+            setField(bus,"cluster",null);setField(controller,"cluster",null);
+            h.getLevel().removeBlock(bus.getBlockPos(),false);h.getLevel().removeBlock(controller.getBlockPos(),false);
+        }
+        System.out.println("MIGRATION_ECO_ACTUAL_JAR_PASS slots="+slots+" sharedLease=true");h.succeed();
     }
 
     private static net.minecraft.world.level.block.entity.BlockEntity place(GameTestHelper h,BlockPos relative,String id){
@@ -349,10 +445,36 @@ public final class PatternMigrationGameTests {
 
     public static ItemStack pattern(GameTestHelper h,boolean substitute){return pattern(h.getLevel(),substitute);}
     public static ItemStack pattern(net.minecraft.server.level.ServerLevel level,boolean substitute){
-        var raw=level.getRecipeManager().byKey(new net.minecraft.resources.ResourceLocation("oak_planks")).orElseThrow();
-        var recipe=(CraftingRecipe)raw;
+        var id=new net.minecraft.resources.ResourceLocation("ae2lt_qa","oak_planks");
+        var raw=level.getRecipeManager().byKey(id)
+                .orElseThrow(()->new IllegalStateException("Missing real migration QA recipe: "+id));
+        if(!(raw instanceof CraftingRecipe recipe))throw new IllegalStateException("Not a crafting recipe: "+id);
         var input=new ItemStack[9];Arrays.fill(input,ItemStack.EMPTY);input[0]=new ItemStack(Items.OAK_LOG);
-        return PatternDetailsHelper.encodeCraftingPattern(recipe,input,new ItemStack(Items.OAK_PLANKS,4),substitute,false);
+        var container=new net.minecraft.world.inventory.TransientCraftingContainer(
+                new net.minecraft.world.inventory.AbstractContainerMenu(null,-1){
+                    @Override public boolean stillValid(net.minecraft.world.entity.player.Player player){return true;}
+                    @Override public ItemStack quickMoveStack(net.minecraft.world.entity.player.Player player,int slot){return ItemStack.EMPTY;}
+                },3,3);
+        for(int slot=0;slot<input.length;slot++)container.setItem(slot,input[slot].copy());
+        var output=new ItemStack(Items.OAK_PLANKS,4);
+        if(!recipe.matches(container,level)||!ItemStack.matches(recipe.assemble(container,level.registryAccess()),output)){
+            throw new IllegalStateException("Migration fixture must craft exactly one oak log into four oak planks");
+        }
+        // Exercise the installed FRS lookup too. GTO may prefer its two-plank log
+        // recipe; migration deliberately encodes the explicit four-plank QA recipe.
+        var nativeRecipe=level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING,container,level)
+                .orElseThrow(()->new IllegalStateException("Native crafting lookup rejected the real fixture input"));
+        if(!nativeRecipe.matches(container,level))throw new IllegalStateException("Native lookup selected a nonmatching recipe");
+        var encoded=PatternDetailsHelper.encodeCraftingPattern(recipe,input,output,substitute,false);
+        var decoded=PatternDetailsHelper.decodePattern(encoded,level);
+        if(decoded==null||!decoded.getDefinition().equals(AEItemKey.of(encoded))
+                ||decoded.getOutputs().length!=1||!decoded.getOutputs()[0].what().equals(AEItemKey.of(Items.OAK_PLANKS))
+                ||decoded.getOutputs()[0].amount()!=4){
+            throw new IllegalStateException("Real AE2 decoder changed the migration fixture's definition/output");
+        }
+        System.out.println("MIGRATION_QA_RECIPE explicit="+id+" native="+nativeRecipe.getId()
+                +" nativeOutput="+nativeRecipe.assemble(container,level.registryAccess())+" decodedOutput="+decoded.getOutputs()[0]);
+        return encoded;
     }
     private static long count(Fixture f,ItemStack item){
         long result=0;for(var storage:f.port.getPatternStorages())for(int i=0;i<storage.capacity();i++){
@@ -411,17 +533,25 @@ public final class PatternMigrationGameTests {
         player.setPos(control.getX()+.5,control.getY(),control.getZ()+.5);
         return new Fixture(controller,port,provider,drive,player);
     }
-    @SuppressWarnings("unchecked") public static void register(ServerPlayer player){
-        try{
-            var list=player.server.getPlayerList();var field=net.minecraft.server.players.PlayerList.class.getDeclaredField("playersByUUID");
-            field.setAccessible(true);((Map<UUID,ServerPlayer>)field.get(list)).put(player.getUUID(),player);
-        }catch(ReflectiveOperationException e){throw new AssertionError(e);}
+    private static Map<UUID,ServerPlayer> registeredPlayers(ServerPlayer player){
+        // 1.20.1's getPlayer(UUID) reads exactly playersByUUID / f_11197_. Forge
+        // reflection resolves this SRG name in both the development and release JVM.
+        return Objects.requireNonNull(net.minecraftforge.fml.util.ObfuscationReflectionHelper.getPrivateValue(
+                net.minecraft.server.players.PlayerList.class,player.server.getPlayerList(),"f_11197_"),
+                "The real PlayerList UUID index must exist");
     }
-    @SuppressWarnings("unchecked") public static void unregister(ServerPlayer player){
-        try{
-            var list=player.server.getPlayerList();var field=net.minecraft.server.players.PlayerList.class.getDeclaredField("playersByUUID");
-            field.setAccessible(true);((Map<UUID,ServerPlayer>)field.get(list)).remove(player.getUUID());
-        }catch(ReflectiveOperationException e){throw new AssertionError(e);}
+    public static void register(ServerPlayer player){
+        var previous=registeredPlayers(player).putIfAbsent(player.getUUID(),player);
+        if(previous!=null&&previous!=player)throw new AssertionError("Cannot replace another registered player");
+        if(player.server.getPlayerList().getPlayer(player.getUUID())!=player){
+            throw new AssertionError("The real PlayerList must resolve the registered fixture as online");
+        }
+    }
+    public static void unregister(ServerPlayer player){
+        registeredPlayers(player).remove(player.getUUID(),player);
+        if(player.server.getPlayerList().getPlayer(player.getUUID())!=null){
+            throw new AssertionError("The real PlayerList must resolve the unregistered fixture as offline");
+        }
     }
     private static void done(GameTestHelper h,Fixture f){
         f.controller.getPatternMigration().stop(PatternMigrationSnapshot.Reason.CANCELLED);unregister(f.player);

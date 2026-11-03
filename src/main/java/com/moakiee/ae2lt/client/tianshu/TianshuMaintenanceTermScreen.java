@@ -14,11 +14,11 @@ import appeng.api.client.AEKeyRendering;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
 import appeng.menu.me.common.GridInventoryEntry;
-import appeng.menu.me.common.IClientRepo;
 import appeng.api.stacks.AEItemKey;
 import appeng.util.prioritylist.IPartitionList;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 import com.moakiee.ae2lt.mixin.client.VerticalButtonBarAccessor;
+import com.moakiee.ae2lt.client.compat.ClientRepoAccess;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,34 +64,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
         super(menu, inventory, title, style);
         // Only network inventory updates invalidate the synthetic-entry reconciliation.
         // Keep AE2's own Repo (and its scrollbar listener) as the screen's repository.
-        menu.setClientRepo(new IClientRepo() {
-            @Override
-            public void handleUpdate(boolean fullUpdate, List<GridInventoryEntry> entries) {
-                syntheticMaintenanceDirty = true;
-                repo.handleUpdate(fullUpdate, entries);
-            }
-
-            @Override
-            public Set<appeng.api.stacks.AEKey> getCraftableKeys() {
-                return repo.getCraftableKeys();
-            }
-
-            @Override
-            public GridInventoryEntry getByKey(appeng.api.stacks.AEKey key) {
-                return repo.getByKey(key);
-            }
-
-            @Override
-            public Set<GridInventoryEntry> getAllEntries() {
-                return repo.getAllEntries();
-            }
-
-            @Override
-            public java.util.Collection<GridInventoryEntry> getByIngredient(
-                    net.minecraft.world.item.crafting.Ingredient ingredient) {
-                return repo.getByIngredient(ingredient);
-            }
-        });
+        menu.setClientRepo(ClientRepoAccess.trackUpdates(repo, () -> syntheticMaintenanceDirty = true));
         replaceViewModeButton();
         addToLeftToolbar(new MaintenanceOverviewButton());
     }
@@ -249,7 +222,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
     }
 
     List<GridInventoryEntry> getNetworkEntriesForMaintenance() {
-        return repo.getAllEntries().stream()
+        return ClientRepoAccess.allEntries(repo).stream()
                 .filter(entry -> entry.getWhat() != null && !isSyntheticMaintenanceEntry(entry))
                 .toList();
     }
@@ -270,7 +243,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
         syntheticMaintenanceDirty = false;
         syntheticMaintenanceRevision = revision;
 
-        var repoEntries = List.copyOf(repo.getAllEntries());
+        var repoEntries = List.copyOf(ClientRepoAccess.allEntries(repo));
         var presentEntries = new HashMap<Long, GridInventoryEntry>();
         var updates = new ArrayList<GridInventoryEntry>();
         var realKeys = new HashSet<appeng.api.stacks.AEKey>();

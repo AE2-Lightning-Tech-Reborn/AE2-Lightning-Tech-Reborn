@@ -1,0 +1,30 @@
+// Audit immutable release bytes independently of the development/runtime Core dependency.
+// This task does not change the production pin or put candidate jars on the runtime classpath.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    p.tasks.register('coreConsumerAudit', Test) {
+        group = 'verification'
+        description = 'Resolves LT release Core references against a SHA-pinned candidate and both AE2 forks.'
+        dependsOn p.tasks.named('testClasses')
+        testClassesDirs = p.sourceSets.test.output.classesDirs
+        classpath = p.sourceSets.test.runtimeClasspath
+        useJUnitPlatform()
+        filter { includeTestsMatching 'com.moakiee.ae2lt.compat.CoreConsumerAbiAuditTest' }
+        systemProperty 'ae2lt.coreConsumerAudit.enabled', 'true'
+        ['lt', 'core', 'ae2Dev23', 'ae2Dev25'].each { id ->
+            def archive = p.providers.gradleProperty("coreAudit.${id}.jar")
+            def digest = p.providers.gradleProperty("coreAudit.${id}.sha256")
+            if (!archive.isPresent() || !digest.isPresent()) {
+                throw new GradleException("Set -PcoreAudit.${id}.jar and -PcoreAudit.${id}.sha256; no implicit archive selection is allowed.")
+            }
+            def jar = p.file(archive.get())
+            inputs.file(jar).withPropertyName("${id}Release").withPathSensitivity(PathSensitivity.NONE)
+            inputs.property("${id}Sha256", digest.get())
+            systemProperty "ae2lt.coreConsumerAudit.${id}.jar", jar.absolutePath
+            systemProperty "ae2lt.coreConsumerAudit.${id}.sha256", digest.get()
+        }
+        def evidence = p.layout.buildDirectory.dir('reports/core-consumer-audit').get().asFile
+        outputs.dir(evidence)
+        systemProperty 'ae2lt.coreConsumerAudit.evidence', evidence.absolutePath
+    }
+}

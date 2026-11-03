@@ -1,0 +1,28 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "extendedae_plus"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "extendedae_plus:lattra_crystal_block"
+    },
+    {
+      "type": "forge:item_exists",
+      "item": "extendedae_plus:lattra_crystal"
+    }
+  ],
+  "type": "ae2lt:crystal_catalyzer",
+  "catalyst": {
+    "item": "extendedae_plus:lattra_crystal_block"
+  },
+  "catalystCount": 1,
+  "output": {
+    "id": "extendedae_plus:lattra_crystal",
+    "count": 1
+  },
+  "energyPerCycle": 100000,
+  "lightningCost": 1,
+  "lightningTier": "high_voltage"
+}

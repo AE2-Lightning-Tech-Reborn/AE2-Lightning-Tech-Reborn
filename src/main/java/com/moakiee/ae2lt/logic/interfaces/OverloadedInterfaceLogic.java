@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
 import com.moakiee.ae2lt.debug.WirelessIoPerformanceProbe;
+import com.moakiee.ae2lt.logic.ResourceIngressPolicy;
 import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 
 import appeng.api.config.Actionable;
@@ -492,7 +493,14 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
 
         @Override
         public boolean isAllowedIn(int slot, AEKey what) {
-            return isSupportedKey(what);
+            return isAllowed(what);
+        }
+
+        @Override
+        public boolean isAllowed(AEKey what) {
+            return isSupportedKey(what)
+                    && ResourceIngressPolicy.canAccept(what,
+                            ResourceIngressPolicy.isOnline(logic.owner, logic.mainNode));
         }
 
         @Override
@@ -569,7 +577,7 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         }
 
         public long proxyInsert(AEKey what, long amount, Actionable mode) {
-            if (proxying) return 0;
+            if (proxying || what == null || amount <= 0 || !isAllowed(what)) return 0;
             proxying = true;
             try {
                 var grid = logic.mainNode.getGrid();

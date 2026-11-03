@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/TianshuPatternUploadGameTests.java', '**/TianshuJdbHarness.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/alpha-port-upload-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_upload_retention,ae2lt,minecraft'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

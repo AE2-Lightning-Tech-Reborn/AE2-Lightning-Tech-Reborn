@@ -681,8 +681,30 @@ public final class BigIntegerPipelineGameTests {
         var amountMenu = new appeng.menu.me.crafting.CraftAmountMenu(117, player.getInventory(), host);
         require(((BigAmountMenu) amountMenu).ae2lt$bigAvailable(), "ordinary terminal did not enable exact amounts");
         var confirm = new appeng.menu.me.crafting.CraftConfirmMenu(118, player.getInventory(), host);
-        ((BigConfirmMenu) confirm).ae2lt$planBig(target, BigInteger.valueOf(60));
-        require(((BigConfirmMenu) confirm).ae2lt$isBig(), "ordinary confirmation did not select exact planning");
+        var normalRequest = (com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) confirm;
+        require(normalRequest.thunderbolt$planRequest(target, BigInteger.valueOf(60),
+                        appeng.api.networking.crafting.CalculationStrategy.CRAFT_LESS),
+                "ordinary confirmation rejected the 60-output request");
+        require(!normalRequest.thunderbolt$isExactRequest(), "a long-sized order bypassed the normal planner");
+        var initialNormalFuture = menuJob(confirm);
+        var exactAmount = BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE);
+        var exactConfirm = new appeng.menu.me.crafting.CraftConfirmMenu(119, player.getInventory(), host);
+        var exactRequest = (com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) exactConfirm;
+        require(exactRequest.thunderbolt$planRequest(target, exactAmount,
+                        appeng.api.networking.crafting.CalculationStrategy.CRAFT_LESS),
+                "over-long confirmation rejected the registered exact backend");
+        require(exactRequest.thunderbolt$isExactRequest(), "over-long confirmation did not select exact planning");
+        var exactFuture = menuJob(exactConfirm);
+        // Two open confirmation menus own separate calculations. Replanning the ordinary request
+        // must neither cancel the exact request nor reuse its amount or CPU-admission state.
+        confirm.replan();
+        var normalFuture = menuJob(confirm);
+        require(normalFuture != initialNormalFuture && normalFuture != exactFuture,
+                "concurrent confirmation menus shared their calculation future");
+        require(!normalRequest.thunderbolt$isExactRequest() && !exactFuture.isCancelled(),
+                "replanning one menu changed the other confirmation");
+        // Execution below deliberately exercises the exact service with a small mixed order.
+        // Entering an ordinary quantity through the common menu must still use the normal path.
         var future = BigCraftingService.preview(cpu.getGrid(), h.getLevel(), target, BigInteger.valueOf(60), SOURCE);
         int[] phase = {0};
         long[] receiptAt = {0};
@@ -692,6 +714,24 @@ public final class BigIntegerPipelineGameTests {
             require(plan.executable(), "mixed recipe graph was rejected");
             var service = cpu.bigCrafting();
             if (phase[0] == 0) {
+                h.assertTrue(normalFuture.isDone() && exactFuture.isDone(), "waiting for concurrent confirmation plans");
+                var normalPlan = menuPlan(normalFuture);
+                require(normalPlan.finalOutput().what().equals(target) && normalPlan.finalOutput().amount() == 60,
+                        "ordinary confirmation changed the requested output or quantity");
+                require(!(normalPlan instanceof com.moakiee.thunderbolt.api.crafting.ExactCraftingPlan),
+                        "the 60-output menu request was upgraded without overflowing long");
+                var exactPlan = menuPlan(exactFuture);
+                require(exactPlan instanceof BigCraftingPlan big && big.amount().equals(exactAmount),
+                        "over-long confirmation lost the exact quantity");
+                require(calls[0] == 0 && !service.busy()
+                                && BigStorageOps.snapshot(inventory, SOURCE).get(raw).equals(BigInteger.TEN),
+                        "confirmation planning consumed resources or dispatched machine work");
+                exactConfirm.removed(player);
+                require(!normalFuture.isCancelled() && menuPlan(normalFuture) == normalPlan,
+                        "closing the exact confirmation cancelled the ordinary order");
+                confirm.removed(player);
+                require(!future.isCancelled() && calls[0] == 0,
+                        "closing confirmation cancelled an independent execution preview");
                 boolean ordinary = false, matrix = false;
                 for (var block : plan.program().blocks()) for (var step : block.steps()) {
                     ordinary |= step.recipe().source() instanceof BigProviderRecipe;
@@ -729,6 +769,32 @@ public final class BigIntegerPipelineGameTests {
             require(calls[0] == 20, "restart repeated accepted work");
             providerNode.destroy();
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.concurrent.Future<appeng.api.networking.crafting.ICraftingPlan> menuJob(
+            appeng.menu.me.crafting.CraftConfirmMenu menu) {
+        try {
+            var field = appeng.menu.me.crafting.CraftConfirmMenu.class.getDeclaredField("job");
+            field.setAccessible(true);
+            var job = (java.util.concurrent.Future<appeng.api.networking.crafting.ICraftingPlan>) field.get(menu);
+            require(job != null, "confirmation did not publish a calculation future");
+            return job;
+        } catch (ReflectiveOperationException error) {
+            throw new GameTestAssertException("Cannot inspect confirmation job: " + error);
+        }
+    }
+
+    private static appeng.api.networking.crafting.ICraftingPlan menuPlan(
+            java.util.concurrent.Future<appeng.api.networking.crafting.ICraftingPlan> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new GameTestAssertException("Confirmation plan was interrupted");
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.CancellationException error) {
+            throw new GameTestAssertException("Confirmation planning failed: " + error);
+        }
     }
 
     private static void place(GameTestHelper h, BlockPos pos, BlockState state) {

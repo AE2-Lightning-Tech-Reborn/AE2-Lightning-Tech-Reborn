@@ -75,6 +75,7 @@ Source Code/
 *.ps1
 *.txt
 !src/main/resources/META-INF/recipesearch-attribution.txt
+!src/main/resources/META-INF/ae2-legacy-jei-attribution.txt
 libs/
 
 # Port debug scratch dirs

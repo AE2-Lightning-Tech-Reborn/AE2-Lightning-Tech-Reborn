@@ -19,6 +19,7 @@ import appeng.me.service.CraftingService;
 import appeng.me.storage.NetworkStorage;
 import appeng.me.storage.DelegatingMEInventory;
 import com.google.common.collect.ImmutableSet;
+import com.mojang.datafixers.util.Either;
 import com.moakiee.ae2lt.compat.gto.GtoCpuJobAccess;
 import com.moakiee.ae2lt.gametest.*;
 import com.moakiee.thunderbolt.api.crafting.*;
@@ -27,8 +28,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkHolder;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -44,7 +50,12 @@ public final class GtoCompatQA {
     private boolean reported;
     private int startupFailures;
     private List<TestFunction> pendingTests;
-    private final List<CompletableFuture<?>> testChunks = new ArrayList<>();
+    private static final int MAX_TEST_CHUNKS_IN_FLIGHT = 32;
+    private static final int TEST_CHUNK_REQUESTS_PER_TICK = 8;
+    private final Deque<ChunkPos> pendingTestChunks = new ArrayDeque<>();
+    private final Map<ChunkPos, CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>>> testChunks = new LinkedHashMap<>();
+    private int expectedTestChunks;
+    private int readyTestChunks;
     private CompletableFuture<Void> plannerCheck;
     private int preparationTicks;
     private static final net.minecraft.resources.ResourceLocation QA_ENGINE_ID = new net.minecraft.resources.ResourceLocation("gto_compat_qa","integration");
@@ -114,6 +125,7 @@ public final class GtoCompatQA {
             }
             try { checkCpu(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA CPU FAIL",failure); }
             try { checkStorage(); } catch(Throwable failure) { startupFailures++; LOGGER.error("GTO_COMPAT_QA STORAGE FAIL",failure); }
+            validateUpstreamSuite(suite);
             switch (suite) {
                 case "eaep" -> {
                     if (!net.minecraftforge.fml.ModList.get().isLoaded("extendedae_plus"))
@@ -121,6 +133,7 @@ public final class GtoCompatQA {
                     GameTestRegistry.register(GtoEaepGameTests.class);
                 }
                 case "neoeco" -> GameTestRegistry.register(com.moakiee.ae2lt.crafting.big.NeoEcoGtoGameTests.class);
+                case "core5-planning", "core5-ownership", "core5-boundaries" -> registerFixtures("crafting.big.CoreAlgorithmAcceptanceGameTests");
                 case "permissions" -> GameTestRegistry.register(
                         com.moakiee.ae2lt.network.FrequencyPermissionsGameTests.class);
                 case "machine" -> {
@@ -163,6 +176,43 @@ public final class GtoCompatQA {
                     GameTestRegistry.register(GtoRecipeGameTests.class);
                 }
                 case "batch" -> GameTestRegistry.register(com.moakiee.ae2lt.debug.GlobalBatchAdaptersGameTests.class);
+                case "upstream-content" -> registerFixtures(
+                        "gametest.UpstreamPortGameTests", "gametest.LightningCollectorGameTests",
+                        "gametest.OverloadedIOPortUpgradeGameTests", "blockentity.LightningCollectorGameTests",
+                        "debug.UpstreamReleaseRecipeGameTests");
+                case "upstream-resources" -> registerFixtures(
+                        "blockentity.AdjacentFluidExportReceiptGameTests", "debug.ManualInputTransferGameTests",
+                        "debug.PigmeeAdjacentStorageGameTests", "logic.provider.ReturnInventoryLimitGameTests");
+                case "upstream-nightvision" -> registerFixtures("debug.NightVisionArmorGameTests");
+                // Resource reload changes the server-wide recipe/loot catalog: run it alone.
+                case "upstream-reload" -> registerFixtures("blockentity.CrystalHarvestReloadGameTests");
+                case "upstream-catalyzer" -> registerFixtures("blockentity.PigmeeCrystalCatalyzerGameTests");
+                case "upstream-catalyzer-neoeco", "upstream-catalyzer-absent" -> registerFixtures("debug.NeoEcoCatalyzerGameTests");
+                case "upstream-native-fixes" -> registerFixtures("blockentity.UpstreamFixGameTests");
+                case "upstream-mining", "upstream-mining-benchmark" -> registerFixtures("blockentity.MiningFactoryStressGameTests");
+                case "upstream-interface", "upstream-interface-slow" -> registerFixtures("blockentity.WirelessInterfaceGameTests");
+                case "upstream-energy-api" -> registerFixtures("logic.energy.EnergyApiStressGameTests");
+                case "upstream-energy-routing" -> registerFixtures("debug.InterfaceEnergyRoutingGameTests", "debug.ProviderEnergyOutputGameTests");
+                case "upstream-wireless" -> registerFixtures("logic.energy.WirelessEnergyGameTests");
+                case "upstream-node-serialization" -> registerFixtures("logic.energy.WirelessEnergyNodeSerializationGameTests");
+                case "upstream-admission", "upstream-admission-slow" -> registerFixtures("logic.energy.WirelessEnergyAdmissionGameTests");
+                case "upstream-wireless-boundary", "upstream-wireless-boundary-slow", "upstream-wireless-dispatch" ->
+                        registerFixtures("logic.energy.WirelessEnergyBoundaryGameTests");
+                case "upstream-fallback" -> registerFixtures("logic.energy.WirelessAeFallbackGameTests");
+                case "upstream-management" -> registerFixtures("logic.energy.NetworkManagementGameTests");
+                case "upstream-upload" -> registerFixtures("debug.TianshuPatternUploadGameTests",
+                        "gametest.TianshuQuantumBridgeGameTests", "gametest.TianshuUploadRetentionGameTests",
+                        "gametest.TianshuWirelessBindingGameTests", "gametest.WirelessJeiSupplyGameTests");
+                case "upstream-request-routing" -> registerFixtures("crafting.big.CraftingRequestRoutingGameTests");
+                case "upstream-omni", "upstream-omni-absent" -> registerFixtures("debug.OmniversalTerminalGameTests");
+                case "upstream-omni-upgrades" -> registerFixtures("logic.energy.OmniUpgradesGameTests");
+                case "upstream-migration" -> registerFixtures("logic.craft.migration.PatternMigrationGameTests");
+                case "upstream-migration-slow" -> registerFixtures("logic.craft.migration.PatternMigrationGameTests", "debug.PatternMigrationPerformanceGameTests");
+                case "upstream-actual" -> registerFixtures("debug.ActualCompatibilityGameTests");
+                case "upstream-appgen" -> registerFixtures("debug.AppGenProcessorGameTests");
+                case "upstream-mgu" -> registerFixtures("debug.MguConveyorPhaseLockGameTests");
+                case "upstream-object-reuse" -> registerFixtures("gametest.ObjectReuseGameTests");
+                case "upstream-batch-native" -> registerFixtures("debug.GlobalBatchAdaptersGameTests");
                 case "none" -> { }
                 default -> throw new IllegalArgumentException("Unknown GTO QA suite: " + suite);
             }
@@ -171,6 +221,7 @@ public final class GtoCompatQA {
             pendingTests = new ArrayList<>();
             for (var function : GameTestRegistry.getAllTestFunctions()) {
                 var name = function.getTestName().toLowerCase(Locale.ROOT);
+                if (!includeUpstreamTest(suite, function)) continue;
                 var filter = System.getProperty("ae2lt.gtoQaTestFilter");
                 if (filter != null && !name.contains(filter.toLowerCase(Locale.ROOT))) continue;
                 if (name.contains("infinitereactionfactory") && !net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(
@@ -178,7 +229,8 @@ public final class GtoCompatQA {
                     LOGGER.info("GTO_COMPAT_QA SKIP " + function.getTestName() + " (optional reaction factory absent)");
                     continue;
                 }
-                if (!Boolean.getBoolean("ae2lt.exportFairnessBenchmark")
+                if (!"upstream-object-reuse".equals(suite) && !"upstream-mining-benchmark".equals(suite)
+                        && !Boolean.getBoolean("ae2lt.exportFairnessBenchmark")
                         && function.getTestName().toLowerCase(Locale.ROOT).contains("benchmark")) continue;
                 pendingTests.add(function);
             }
@@ -186,6 +238,7 @@ public final class GtoCompatQA {
                 throw new IllegalStateException("No tests registered for suite " + suite
                         + " and filter " + System.getProperty("ae2lt.gtoQaTestFilter", "<all>"));
             }
+            validateWirelessChunkCoverage(suite, pendingTests);
             LOGGER.info("GTO_COMPAT_QA PREPARE suite="+suite+" tests="+pendingTests.size());
         } catch(Throwable failure) {
             startupFailures++;
@@ -193,6 +246,131 @@ public final class GtoCompatQA {
             LOGGER.error("QA failure",failure);
             LOGGER.info("GTO_COMPAT_QA FAIL startup "+failure);
         }
+    }
+    private static void registerFixtures(String... classes) {
+        for (var name : classes) {
+            try {
+                GameTestRegistry.register(Class.forName("com.moakiee.ae2lt." + name));
+            } catch (ClassNotFoundException failure) {
+                throw new IllegalStateException("Missing opt-in QA fixture " + name, failure);
+            }
+        }
+    }
+
+    /** Native suites must fail setup instead of counting a fixture's absent-mod early return as a pass. */
+    private static void validateUpstreamSuite(String suite) {
+        switch (suite) {
+            case "upstream-native-fixes" -> requireMods(suite, "appflux", "advanced_ae", "silentgear");
+            case "upstream-mining", "upstream-mining-benchmark" -> requireMods(suite, "silentgear");
+            case "upstream-energy-api", "upstream-energy-routing", "upstream-wireless", "upstream-fallback",
+                    "upstream-management" -> requireMods(suite, "appflux");
+            case "upstream-admission", "upstream-admission-slow", "upstream-wireless-boundary",
+                    "upstream-wireless-boundary-slow", "upstream-wireless-dispatch" -> requireMods(suite, "appflux", "mekanism");
+            case "upstream-upload" -> requireMods(suite, "ae2wtlib", "jei");
+            case "upstream-omni" -> {
+                requireMods(suite, "useless_mod", "ae2wtlib");
+                if (!com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded())
+                    throw new IllegalStateException(suite + " requires the native omniversal pattern item");
+            }
+            case "upstream-omni-absent" -> requireAbsent(suite, "useless_mod");
+            case "upstream-migration" -> requireMods(suite, "expatternprovider", "extendedae_plus", "neoecoae");
+            case "upstream-migration-slow" -> requireMods(suite, "expatternprovider", "extendedae_plus");
+            case "upstream-catalyzer-neoeco" -> {
+                requireMods(suite, "neoecoae");
+                requireProperty(suite, "ae2lt.neoecoTestPresent");
+            }
+            case "upstream-catalyzer-absent" -> {
+                requireAbsent(suite, "neoecoae");
+                if (Boolean.getBoolean("ae2lt.neoecoTestPresent"))
+                    throw new IllegalStateException(suite + " requires ae2lt.neoecoTestPresent=false");
+            }
+            case "upstream-actual" -> {
+                requireMods(suite, "neoecoae", "extendedae_plus", "ldlib", "expatternprovider");
+                requireProperty(suite, "ae2lt.neoecoTestPresent");
+            }
+            case "upstream-appgen" -> requireMods(suite, "appgen", "advanced_ae");
+            case "upstream-mgu" -> requireMods(suite, "mob_grinding_utils");
+            case "upstream-omni-upgrades" -> {
+                try {
+                    Class.forName("com.sakurain.omni_upgrades.compat.CompatManager", false, GtoCompatQA.class.getClassLoader());
+                } catch (ClassNotFoundException failure) {
+                    throw new IllegalStateException(suite + " requires the real Omni Upgrades mod", failure);
+                }
+            }
+            case "upstream-batch-native" -> {
+                requireMods(suite, "neoecoae", "extendedae_plus");
+                requireProperty(suite, "ae2lt.neoecoBatchTestRequired");
+            }
+            default -> { }
+        }
+    }
+
+    private static void requireMods(String suite, String... mods) {
+        for (var mod : mods) {
+            if (!net.minecraftforge.fml.ModList.get().isLoaded(mod))
+                throw new IllegalStateException(suite + " requires real mod " + mod + "; no tests were run");
+            if ("appflux".equals(mod) && !com.moakiee.ae2lt.logic.energy.AppFluxBridge.canUseEnergyHandler())
+                throw new IllegalStateException(suite + " requires a working native Applied Flux energy API");
+        }
+    }
+
+    private static void requireAbsent(String suite, String mod) {
+        if (net.minecraftforge.fml.ModList.get().isLoaded(mod))
+            throw new IllegalStateException(suite + " tests the absent-mod boundary and requires " + mod + " to be removed");
+    }
+
+    private static void requireProperty(String suite, String property) {
+        if (!Boolean.getBoolean(property)) throw new IllegalStateException(suite + " requires -D" + property + "=true");
+    }
+
+    /** Renaming the fast boundary must not silently drop it or the real disk lifecycle coverage. */
+    private static void validateWirelessChunkCoverage(String suite, List<TestFunction> functions) {
+        if (!System.getProperty("ae2lt.gtoQaTestFilter", "").isBlank()) return;
+        int count, ticks;
+        String method;
+        switch (suite) {
+            case "upstream-wireless" -> {
+                count = 19;
+                ticks = 120;
+                method = "chunkInaccessibilityPreservesBindingAndResumesSupply";
+            }
+            case "upstream-admission-slow" -> {
+                count = 3;
+                ticks = 1600;
+                method = "repeatedDiskChunkUnloadReloadPreservesBindingWithoutProbe";
+            }
+            default -> { return; }
+        }
+        long matching = functions.stream().filter(function -> function.getMaxTicks() == ticks
+                && matchesTestMethod(function.getTestName().toLowerCase(Locale.ROOT), method.toLowerCase(Locale.ROOT))).count();
+        if (functions.size() != count || matching != 1)
+            throw new IllegalStateException(suite + " requires " + count + " tests including " + method
+                    + " at " + ticks + " ticks; selected=" + functions.size() + ", matching=" + matching);
+    }
+
+    private static boolean includeUpstreamTest(String suite, TestFunction function) {
+        var name = function.getTestName().toLowerCase(Locale.ROOT);
+        boolean slow = function.getMaxTicks() > 300;
+        return switch (suite) {
+            case "core5-planning" -> name.startsWith("planning") || name.contains(".planning");
+            case "core5-ownership" -> name.startsWith("ownership") || name.contains(".ownership");
+            case "upstream-interface", "upstream-admission", "upstream-migration" -> !slow;
+            case "upstream-interface-slow", "upstream-admission-slow", "upstream-migration-slow",
+                    "upstream-wireless-boundary-slow" -> slow;
+            case "upstream-wireless-boundary" -> !slow && !matchesTestMethod(name, "slowsimulationdefersworkbutbothreceiverseventuallygetpower");
+            // This fixture temporarily replaces the world-wide endpoints data and must run alone.
+            case "upstream-wireless-dispatch" -> matchesTestMethod(name, "slowsimulationdefersworkbutbothreceiverseventuallygetpower");
+            case "upstream-mining" -> !matchesTestMethod(name, "controlledminingthroughputbenchmark");
+            case "upstream-mining-benchmark" -> matchesTestMethod(name, "controlledminingthroughputbenchmark");
+            case "upstream-omni" -> !matchesTestMethod(name, "optionalboundary");
+            case "upstream-omni-absent" -> matchesTestMethod(name, "optionalboundary");
+            default -> true;
+        };
+    }
+
+    private static boolean matchesTestMethod(String name, String method) {
+        // Accept GTO's bare method names as well as class-qualified Forge test names.
+        return name.equals(method) || name.endsWith("." + method);
     }
     private int loginTraceTicks;
     private void tick(TickEvent.ServerTickEvent e) {
@@ -221,27 +399,55 @@ public final class GtoCompatQA {
         }
     }
     private void prepareTests(MinecraftServer server) {
-        if (++preparationTicks > 1000) throw new IllegalStateException("QA chunks/planner did not settle");
+        if (++preparationTicks > 1000) throw new IllegalStateException("QA chunks/planner did not settle: ready="
+                + readyTestChunks + "/" + expectedTestChunks + ", queued=" + pendingTestChunks.size()
+                + ", inFlight=" + testChunks.size());
         var level = server.overworld();
+        var chunkSource = level.getChunkSource();
         if (preparationTicks == 1) {
             for (int index = 0; index < pendingTests.size(); index++) {
-                // GameTest places its structure synchronously. Load new-world chunks through
-                // natural server ticks first; blocking generation in ServerStarted stalls GTO.
+                // Keep each test's original 5x5 area and the extra useless-mod fixture areas.
                 for (int z : new int[] {0, 300, 400}) {
                     if (z != 0 && !"useless".equals(System.getProperty("ae2lt.gtoQaSuite"))) continue;
                     for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
-                        var pos = new net.minecraft.world.level.ChunkPos(index * 64 + dx, (z >> 4) + dz);
-                        level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, pos, 2, pos);
-                        testChunks.add(level.getChunkSource().getChunkFuture(pos.x, pos.z,
-                                net.minecraft.world.level.chunk.ChunkStatus.FULL, true));
+                        pendingTestChunks.addLast(new ChunkPos(index * 64 + dx, (z >> 4) + dz));
                     }
                 }
             }
-            return;
+            expectedTestChunks = pendingTestChunks.size();
         }
-        if (testChunks.stream().anyMatch(future -> !future.isDone())) return;
-        testChunks.forEach(CompletableFuture::join);
+        for (var iterator = testChunks.entrySet().iterator(); iterator.hasNext();) {
+            var request = iterator.next();
+            var future = request.getValue();
+            if (!future.isDone()) continue;
+            Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> loaded;
+            try {
+                loaded = future.getNow(null);
+            } catch (CompletionException | CancellationException failure) {
+                throw new IllegalStateException("QA chunk request failed at " + request.getKey(), failure);
+            }
+            if (loaded == null || loaded.left().isEmpty())
+                throw new IllegalStateException("QA chunk did not load at " + request.getKey() + ": " + loaded);
+            var pos = request.getKey();
+            // A completed FULL future must also be visible to synchronous structure placement.
+            if (chunkSource.getChunkNow(pos.x, pos.z) == null) continue;
+            readyTestChunks++;
+            iterator.remove();
+        }
+        for (int submitted = 0; submitted < TEST_CHUNK_REQUESTS_PER_TICK
+                && testChunks.size() < MAX_TEST_CHUNKS_IN_FLIGHT && !pendingTestChunks.isEmpty(); submitted++) {
+            var pos = pendingTestChunks.removeFirst();
+            chunkSource.addRegionTicket(TicketType.FORCED, pos, 2, pos);
+            // On the server thread getChunkFuture itself calls managedBlock. Its public
+            // off-thread branch schedules on the server executor and returns without waiting.
+            testChunks.put(pos, CompletableFuture.supplyAsync(() ->
+                    chunkSource.getChunkFuture(pos.x, pos.z, ChunkStatus.FULL, true))
+                    .thenCompose(future -> future));
+        }
+        if (!pendingTestChunks.isEmpty() || !testChunks.isEmpty()) return;
+        check(readyTestChunks == expectedTestChunks, "QA chunk preparation count mismatch");
         if (plannerCheck == null) {
+            LOGGER.info("GTO_COMPAT_QA CHUNKS ready={} ticks={}", readyTestChunks, preparationTicks);
             plannerCheck = CompletableFuture.runAsync(() -> {
                 try { checkPlanner(server); }
                 catch (Exception failure) { throw new CompletionException(failure); }
@@ -249,7 +455,7 @@ public final class GtoCompatQA {
             return;
         }
         if (!plannerCheck.isDone()) return;
-        try { plannerCheck.join(); }
+        try { plannerCheck.getNow(null); }
         catch (CompletionException failure) {
             startupFailures++;
             LOGGER.error("GTO_COMPAT_QA PLANNER FAIL", failure.getCause());

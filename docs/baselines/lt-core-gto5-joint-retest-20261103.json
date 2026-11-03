@@ -1,0 +1,857 @@
+{
+  "schema_version": 1,
+  "run_id": "joint1103r1",
+  "status": "completed_with_retained_core_timeout",
+  "collected_utc": "2026-11-03T05:13:56.556858+00:00",
+  "inputs": {
+    "lt_tested_commit": "1d1cf9d8ef8e87bf5b325de8ccdc5c548f325fac",
+    "core_release_source_commit": "19e1e6fa3f9b93330f038b2d4d76f1d4fc3f9afb",
+    "core_test_source_commit": "1d6abc80c2f39a7c77c0d875a8e1489ce3c2d76e",
+    "core_test_source_delta": "Only three contract documents; production/tests/build identical to release source.",
+    "core_coordinate": "com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1:2.0.4-gto.5",
+    "core_release_bytes": 5472513,
+    "core_raw_release_sha256": "902c439f64c13ca776fb28c4c9c29aca70fe3083b0b65b5e744cad399f1bb2a1",
+    "lt_formal_sha256": "4d3cec2c987f8511fb427b495f92bb65319ebad225f044502f621660b714e8ae",
+    "lt_instrumented_sha256": "1dc6afdb1df387b3be0d8dc6e8cde8f7ecbe4f5ad52c92c3f0b9b7fbc2cf7727",
+    "lt_qa_sha256": "657978e869d42366aff885a9bdd50a391316ae8741c637163ad19d94d23a3437",
+    "production_classes_identical": 2370,
+    "platform": {
+      "minecraft": "1.20.1",
+      "forge": "47.4.20",
+      "jdk": "21.0.10"
+    },
+    "environments": {
+      "dev23": {
+        "gtocore": "26.10.10",
+        "ae2": "15.2610.31",
+        "raw_ae2_sha256": "f63917bf5a2ca0692c0550ad2d045991f7a493d89021bfb30b51026d4ad31a3d"
+      },
+      "dev25": {
+        "gtocore": "26.10.18",
+        "ae2": "15.2610.40",
+        "raw_ae2_sha256": "b0d97544e618d73ec0c8d8e54df36351bf7f98f7e1984c6455d81658b6320b5c"
+      }
+    }
+  },
+  "lt_totals": {
+    "lt_game_tests": 69,
+    "lt_preview_tests": 3,
+    "real_fx": 2,
+    "independent_recovery_jvms": 6,
+    "graphical_multiplayer_scenarios": 6,
+    "screenshots": 28,
+    "visual_review_panels": 12,
+    "gui_acks": 16,
+    "reconnect_logins": 32
+  },
+  "lt_runtime_phases": [
+    {
+      "label": "dev23-joint1103r1-upstream-batch-native",
+      "suite": "upstream-batch-native",
+      "phase": null,
+      "test_total": 5,
+      "passed": true,
+      "seconds": 203.3,
+      "receipt_sha256": "bc7dd2515cc081ccbef6e19bc4959917d83fb71a28f62d2bd80f46737dba7463"
+    },
+    {
+      "label": "dev23-joint1103r1-base",
+      "suite": "base",
+      "phase": null,
+      "test_total": 11,
+      "passed": true,
+      "seconds": 76.7,
+      "receipt_sha256": "c3d6e4eb3de67d6957a250026b900bf54d49bc7f62f05b7763bb38618a2d3b8a"
+    },
+    {
+      "label": "dev23-joint1103r1-neoeco",
+      "suite": "neoeco",
+      "phase": null,
+      "test_total": 2,
+      "passed": true,
+      "seconds": 58.6,
+      "receipt_sha256": "aa270267dbd62b2127373adb587e38a5f3f5d02bf5c1c409921349fb54be52b0"
+    },
+    {
+      "label": "dev23-joint1103r1-core5-boundaries",
+      "suite": "core5-boundaries",
+      "phase": null,
+      "test_total": 7,
+      "passed": true,
+      "seconds": 56.6,
+      "receipt_sha256": "65469eeb9c39220dcc2316484043d96ada85bad22243963c8611ef6918f2e6c4"
+    },
+    {
+      "label": "dev23-joint1103r1-fx",
+      "suite": "fx",
+      "phase": null,
+      "test_total": 0,
+      "passed": true,
+      "seconds": 70.3,
+      "receipt_sha256": "4183fdc9cab79753a515d8037d8fb3000baa7232ebb5878e0d09acecd840a6c3"
+    },
+    {
+      "label": "dev23-joint1103r1-restart-prepare",
+      "suite": "restart",
+      "phase": "prepare",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 55.8,
+      "receipt_sha256": "a83bd784b357976952743a6211195038e47cecbf4f746977d24d26e7f4e4c0ee"
+    },
+    {
+      "label": "dev23-joint1103r1-restart-resume",
+      "suite": "restart",
+      "phase": "resume",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 47.3,
+      "receipt_sha256": "0934ce312e600d7aa95d428338965da5af8ecee75a30c0242250ca73c0b9bbf0"
+    },
+    {
+      "label": "dev23-joint1103r1-restart-verify",
+      "suite": "restart",
+      "phase": "verify",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 47.3,
+      "receipt_sha256": "3b58c2d5ad5ee5f339fa52271bb3e07fc9679e08c010cd7e96992069e8ac01d5"
+    },
+    {
+      "label": "dev25-joint1103r1-upstream-batch-native",
+      "suite": "upstream-batch-native",
+      "phase": null,
+      "test_total": 5,
+      "passed": true,
+      "seconds": 50.1,
+      "receipt_sha256": "b9f41556c36c34c5f8c8d71941b76507570035243a8f6a9dfd363bc6976c1714"
+    },
+    {
+      "label": "dev25-joint1103r1-base",
+      "suite": "base",
+      "phase": null,
+      "test_total": 11,
+      "passed": true,
+      "seconds": 64.8,
+      "receipt_sha256": "4164270e58916677245a9251933213c657396a12b52cfe1d477d4cefaf0a30d2"
+    },
+    {
+      "label": "dev25-joint1103r1-neoeco",
+      "suite": "neoeco",
+      "phase": null,
+      "test_total": 2,
+      "passed": true,
+      "seconds": 58.5,
+      "receipt_sha256": "5ea6f1c1659875e066a800482ef20a920ed75f1d639121816f797a2b2b7cabd0"
+    },
+    {
+      "label": "dev25-joint1103r1-core5-boundaries",
+      "suite": "core5-boundaries",
+      "phase": null,
+      "test_total": 7,
+      "passed": true,
+      "seconds": 44.7,
+      "receipt_sha256": "b8515bc096f448bca71c19071faba39b980df37d709a8566faeb746af70d6d48"
+    },
+    {
+      "label": "dev25-joint1103r1-exact",
+      "suite": "exact",
+      "phase": null,
+      "test_total": 19,
+      "passed": true,
+      "seconds": 58.7,
+      "receipt_sha256": "32afee0d38c6d5cfd473cd9371feb8062b06f00639ab0dc30cd8388b10de55d5"
+    },
+    {
+      "label": "dev25-joint1103r1-fx",
+      "suite": "fx",
+      "phase": null,
+      "test_total": 0,
+      "passed": true,
+      "seconds": 53.8,
+      "receipt_sha256": "5cbad438c4627ace1da011fe3f0b102fe33dd9fd7d107739d7b447f077411695"
+    },
+    {
+      "label": "dev25-joint1103r1-restart-prepare",
+      "suite": "restart",
+      "phase": "prepare",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 43.8,
+      "receipt_sha256": "2ef1a38b24aea83d7d598d74b78b18738fa6adf1cc244a0d94eaa00ec2010296"
+    },
+    {
+      "label": "dev25-joint1103r1-restart-resume",
+      "suite": "restart",
+      "phase": "resume",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 45.3,
+      "receipt_sha256": "e57afd30c7a834248193ecc86d446d8682f077bfec0ae4e9e63d6ef2b0fc8910"
+    },
+    {
+      "label": "dev25-joint1103r1-restart-verify",
+      "suite": "restart",
+      "phase": "verify",
+      "test_total": 0,
+      "passed": true,
+      "seconds": 51.4,
+      "receipt_sha256": "5485757f4b8e9ca9f309defe73df517abdf4a04a62135fe96268f41d3ddd8271"
+    },
+    {
+      "label": "dev23-joint1103r1-stock",
+      "suite": "stock",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 102.2,
+      "receipt_sha256": "d64eb8abaf8f1c372fc3635053d0b12be05571976bc5a063ca992d12f709fe9d"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "suite": "multiplayer",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 151.6,
+      "receipt_sha256": "3d225e85a08fdeaf8c25d81caae7f5fa4393d9cb1eb46955d2c7a489ba0c7a2d"
+    },
+    {
+      "label": "dev23-joint1103r1-reconnect",
+      "suite": "reconnect",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 243.3,
+      "receipt_sha256": "5df8b2a2a294657062ab05c2c31734024b788ec95cf855595e0cf6f56319c572"
+    },
+    {
+      "label": "dev25-joint1103r1-stock",
+      "suite": "stock",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 99.1,
+      "receipt_sha256": "9ca31bdd8acbad5f7639b59d72f889b009e4eef8ab89fac806d6ed76c4b0fbec"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "suite": "multiplayer",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 151.3,
+      "receipt_sha256": "e9f43e8532d3e9b434a6ad2dd8d386672514e02e7dc8bab7faa6beb9b107dad3"
+    },
+    {
+      "label": "dev25-joint1103r1-reconnect",
+      "suite": "reconnect",
+      "phase": null,
+      "test_total": null,
+      "passed": true,
+      "seconds": 239.3,
+      "receipt_sha256": "f0f6d0484aafa75c97db4e38a90cb587adf7c4d3cb47f01b57e8cbc5bc529784"
+    }
+  ],
+  "lt_preview": {
+    "counts": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "gradle_exit": 0,
+    "source_commit": "1d1cf9d8ef8e87bf5b325de8ccdc5c548f325fac",
+    "evidence_sha256": "2d609e9403573a379cf80da3e072defd5ece05e2a995df6b29c08d58e240bb1d",
+    "methods": [
+      "queueTimeConsumesTheOriginalThreeSecondDeadline()",
+      "ordinaryPreviewRemainsExecutableWithoutWorkerAccessToTheLiveGrid()",
+      "cancellingAQueuedPreviewDoesNotStartAnOrderOrReenterTheGrid()"
+    ],
+    "scope": "Mapped LT/Core JUnit preview controls; not an original Forge process"
+  },
+  "core_source_and_mapped_abi_suites": [
+    {
+      "label": "targeted",
+      "counts": {
+        "tests": 93,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 92
+      },
+      "exit_code": 1,
+      "duration_seconds": 213.619,
+      "log_sha256": "3a8a8fc3fb6d6cb8df4b18e724013541ce6f36da4fc0585a2e2bae3b75b14afd",
+      "xml": [
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.algorithm.PlanningAttemptMonitorTest.xml",
+          "sha256": "c10f595045792fe1eddb3508e355543d52959bc462b732127020b02f60cd3705",
+          "counts": {
+            "tests": 3,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.algorithm.PlanningCandidateExecutorTest.xml",
+          "sha256": "eb07fe56fba5a232a5317f3b9bcc0fad89ab7c08bb0ecb7ff1d10ac9f5a93566",
+          "counts": {
+            "tests": 12,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.algorithm.RegisteredPlanningEngineCancellationContractTest.xml",
+          "sha256": "a9d33e1c42e4d6fc9c62b16091951630f67d6700fb52db893121fb52cd0f1c52",
+          "counts": {
+            "tests": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchAccountingOverloadsTest.xml",
+          "sha256": "fc75efc4dbdbe31d5de17432dc58a58c9b64ccd77eebe507e58fddbec426dcc4",
+          "counts": {
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchAdmissionDispatchTest.xml",
+          "sha256": "ba7970ca0709482bc7287216c4d606eb08f36eea830d534b7014a10c417e00b4",
+          "counts": {
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchExecutorSharedSemanticsTest.xml",
+          "sha256": "b25ab28ef978b44e8112d1c8ceabe48d85d46a9595246e51995cc71dd78ab8fc",
+          "counts": {
+            "tests": 5,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchExtractionAccountingTest.xml",
+          "sha256": "978b0029423ecb970ec4527678e0327182e0c98172ce6166878a5ffb2d04b806",
+          "counts": {
+            "tests": 12,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.PlannedInputDispatchTest.xml",
+          "sha256": "0f09ed163d01203e30e2b9492838916eacf0f43e7cb4294f80c36afefdf6ca96",
+          "counts": {
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.cpsatbridge.CpSatDeadlineTest.xml",
+          "sha256": "e6db882c1c7d28726d32548956a0c439d3cd9fe744d8a4ac2b82c99e080e245f",
+          "counts": {
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.CpSatBudgetBoundaryTest.xml",
+          "sha256": "2e573042b4ceb1f0e44adaf85e71949706795f1ea510a31dcc808a9c24659864",
+          "counts": {
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.FastPlannerUnknownOutcomeTest.xml",
+          "sha256": "5282c471777e9105cbba380ea065d353db76260973de7e7e00fac2e2ff5aaf99",
+          "counts": {
+            "tests": 4,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.SelfSeedReservationTest.xml",
+          "sha256": "74e95e3b9184ab25e9a05ed58dc00946ef10ed83a22ea700d5f9c9fba3abcb75",
+          "counts": {
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.SmallRecoveryBudgetStatusTest.xml",
+          "sha256": "083323fbe1c04e90ba7d1764552ca8670a0589b84c73f151cd93b2f60f68d5ac",
+          "counts": {
+            "tests": 13,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "monitor-isolated-1",
+      "counts": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 1
+      },
+      "exit_code": 0,
+      "duration_seconds": 5.106,
+      "log_sha256": "d21b090b8c5f2e629ba716e5331cb5d0212e2c084b8a15b74a374407497a09b4",
+      "xml": [
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.algorithm.PlanningAttemptMonitorTest.xml",
+          "sha256": "d3e439a6a5bc23aa0a7a994afda5d1ff4b5b99992fc9251403a075b67970d4ae",
+          "counts": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "abi31",
+      "counts": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 14
+      },
+      "exit_code": 0,
+      "duration_seconds": 13.031,
+      "log_sha256": "55aa2d35e002a3b2af92df9c0152b9630a242451b872b5b39097ca7798f27d0a",
+      "xml": [
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchAe2AbiTest.xml",
+          "sha256": "5124f1d55e4f92f382bb8a47045a139e967699efa9cc7670fa448578a7a30198",
+          "counts": {
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.PlannerAe2AbiTest.xml",
+          "sha256": "9de7e24cb6c8588845ac2cd6f93c497d6c825629da816df15ea7e35625133ff6",
+          "counts": {
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "actual_ae2": {
+        "filename": "appliedenergistics2-forge-1.20.1-15.2610.31.jar",
+        "sha256": "f63917bf5a2ca0692c0550ad2d045991f7a493d89021bfb30b51026d4ad31a3d",
+        "mapping": "ForgeGradle RenameJarSrg2Mcp official_1.20.1"
+      },
+      "mapped_jar": {
+        "filename": "abi31-dev.jar",
+        "sha256": "67547e0aa0464d91502140c155ccef33b1f86d424b398a8aa35e67942eef98ab",
+        "bytes": 8601439
+      }
+    },
+    {
+      "label": "abi40",
+      "counts": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 14
+      },
+      "exit_code": 0,
+      "duration_seconds": 17.554,
+      "log_sha256": "377715fbdf3689ad7aceb7c285f1fb1de2640fc9db0ef858627d145e03c9dab6",
+      "xml": [
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.batch.BatchAe2AbiTest.xml",
+          "sha256": "bc36c754cc5eaa939870e010910a68d15ac256b941be35b6272528364d40e9a2",
+          "counts": {
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "filename": "TEST-com.moakiee.thunderbolt.core.crafting.planner.PlannerAe2AbiTest.xml",
+          "sha256": "6b7581f3c82adb1c35b6a2fe94d28e90fd1f382ee36677dee725aeb30c77013c",
+          "counts": {
+            "tests": 6,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "actual_ae2": {
+        "filename": "appliedenergistics2-forge-1.20.1-15.2610.40.jar",
+        "sha256": "b0d97544e618d73ec0c8d8e54df36351bf7f98f7e1984c6455d81658b6320b5c",
+        "mapping": "ForgeGradle RenameJarSrg2Mcp official_1.20.1"
+      },
+      "mapped_jar": {
+        "filename": "abi40-dev.jar",
+        "sha256": "2060438d145d2d70cfe0f576e0eb983200e57daaac7291ca79df7c53538ecfb9",
+        "bytes": 8619514
+      }
+    }
+  ],
+  "core_failure": {
+    "class": "com.moakiee.thunderbolt.core.crafting.algorithm.PlanningAttemptMonitorTest",
+    "method": "unmanagedInterruptStillReportsNativeCancellation",
+    "line": 43,
+    "failure": "TimeoutException at outcome.get(2, SECONDS)",
+    "first_case_seconds": 2.105,
+    "isolated_same_budget_case_seconds": 1.292,
+    "root_cause": "Unestablished after read-only analysis and one unchanged-budget isolated rerun.",
+    "first_failure_retained": true,
+    "monitor_production_thresholds_ms": [
+      5000,
+      6000,
+      10000
+    ],
+    "observation_window_includes_first_use_initialization": true,
+    "failed_worker_boundary_stack_available": false,
+    "analysis_sha256": "20b8c589436056042f27bdd8d7a3a610791d0e0d4152f88baa9adbd502096ddb"
+  },
+  "core_p1": {
+    "passed": 17,
+    "scope": "Subset of the 93-case targeted run; not additive.",
+    "fixture": "A5/B14, T23 requested; two9T(A1/B5)+two4T(A1/B2)=T26 executable witness.",
+    "cases": [
+      "FastPlannerUnknownOutcomeTest.exhaustedRecoveryAllowanceDeclinesRepeatedNormalAndPreviewProbes",
+      "SmallRecoveryBudgetStatusTest.exhaustedRecoveryAllowanceKeepsTheNextQuantityProbeUnknown",
+      "SmallRecoveryBudgetStatusTest.exhaustedSharedWorkDoesNotCertifyAnAmbiguousMissingRoute"
+    ]
+  },
+  "core_member_separate_run": {
+    "source": "pixelsky_channel message 94454f1d-7ce4-46db-af22-1a6170c77ab2",
+    "reported_by": "Thunderbolt Core gto",
+    "junit_passed": 1693,
+    "junit_optional_skipped": 2,
+    "capability_reference_passed": 82,
+    "cold_jvm_passed": 23,
+    "mapped_abi_each_version_passed": 14,
+    "frozen_release_forge_each_version_passed": 8,
+    "scope": "Independent member-reported run, not rerun by LT and not added to LT totals.",
+    "erases_first_targeted_timeout": false
+  },
+  "refund_world_saveddata_recovery": {
+    "dev23": [
+      {
+        "phase": "prepare",
+        "owner_uuid": "bf32961d-a150-4fd8-85cb-4aadc9d53e3a",
+        "job_uuid": "369ee14b-a357-4d0e-aca6-a7d54f9e100f",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "d477ee0cb003048df225cc5537dc3402fbffda41338e14a48b4cfc1b9a23a7bb"
+      },
+      {
+        "phase": "resume",
+        "owner_uuid": "bf32961d-a150-4fd8-85cb-4aadc9d53e3a",
+        "job_uuid": "369ee14b-a357-4d0e-aca6-a7d54f9e100f",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "85256850a224decabc7a7ae53da675178714f5937db0271bda0c908cc2f648f1"
+      },
+      {
+        "phase": "verify",
+        "owner_uuid": "bf32961d-a150-4fd8-85cb-4aadc9d53e3a",
+        "job_uuid": "369ee14b-a357-4d0e-aca6-a7d54f9e100f",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "7e47a147922315e0d3d32bb524c71f93a588708f82f021adff5136c78ce4c80b"
+      }
+    ],
+    "dev25": [
+      {
+        "phase": "prepare",
+        "owner_uuid": "4625df14-152d-4b1e-bd20-33909853a9c1",
+        "job_uuid": "a75e14c7-a3dc-4d3a-b434-ffd563e5f004",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "bede07059f65aeb3edd68bba5e40cf596e0df26ae0b4994d4d6ec03ac122bc47"
+      },
+      {
+        "phase": "resume",
+        "owner_uuid": "4625df14-152d-4b1e-bd20-33909853a9c1",
+        "job_uuid": "a75e14c7-a3dc-4d3a-b434-ffd563e5f004",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "fe2a9d88bed7881fef4c7a17459c3738b35dea4d4d4718447f4cae4958938bf0"
+      },
+      {
+        "phase": "verify",
+        "owner_uuid": "4625df14-152d-4b1e-bd20-33909853a9c1",
+        "job_uuid": "a75e14c7-a3dc-4d3a-b434-ffd563e5f004",
+        "physical": 2,
+        "unresolved": 10,
+        "spendable": 0,
+        "log_sha256": "fdf1cbdde8152f2f20b6d73e695e1238233b8ae94d9e0bd1be35ee076dd103c1"
+      }
+    ]
+  },
+  "screenshot_manifest": [
+    {
+      "label": "dev23-joint1103r1-stock",
+      "screenshot": "dev23-joint1103r1-stock-screenshots/exact-terminal-0.png",
+      "sha256": "703fede63e4c6a82ca5a6718491a28483bd5eeb16d28f75511ca9ea5726026c0"
+    },
+    {
+      "label": "dev23-joint1103r1-stock",
+      "screenshot": "dev23-joint1103r1-stock-screenshots/exact-terminal-1.png",
+      "sha256": "3c756c3eed555ec99d8a1503e6ded9ac4d3717b7d06627dfcbdec6c1689a7a0b"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-one-screenshots/confirm-lt-report.png",
+      "sha256": "e9e4e5a6a5d4d85ac46abe2a7dde5f220058dec7d66f48a0c1d02b9c7d480341"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-one-screenshots/confirm-native-algorithm.png",
+      "sha256": "fa08a8d4d02f1ae1bc16c3daf6f5681d68e4a1efed9d11739dd1f2e7fe723e1c"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-one-screenshots/confirm-native-exact-preview.png",
+      "sha256": "680aafce399afebb52d7ed5bbf586a8d368e41832e7758e4da484ce720a03cab"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-one-screenshots/multiplayer-off.png",
+      "sha256": "d67e9f9d18a5b0de5845eacaa8641593e6a29b625b0d77033774634db1ae8e5a"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-one-screenshots/multiplayer-on-reopened.png",
+      "sha256": "c0ead80143786ff0550c0481f6cd031c3014d0a5c8331ae5f2a7182eb00f421d"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-two-screenshots/confirm-lt-report.png",
+      "sha256": "5c76882facfb30577d78bc39b7ca60a7d6f2f6a588d021221eacb7dcfc679296"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-two-screenshots/confirm-native-algorithm.png",
+      "sha256": "5e7c0b776ffbd3ce8f3c9728ed45ca1fa304d1cb7fa0e4a62d3b0ad84777c925"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-two-screenshots/confirm-native-exact-preview.png",
+      "sha256": "7b57ecdb4d42602140c97a846d1a497ca89c950cdb22169d7d6e7a64b06b5c6f"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-two-screenshots/multiplayer-off.png",
+      "sha256": "9f174213b7bc7cd763294a6a61204373b7f4567660b7edf304df2f844b691536"
+    },
+    {
+      "label": "dev23-joint1103r1-multiplayer",
+      "screenshot": "dev23-joint1103r1-multiplayer-two-screenshots/multiplayer-on-reopened.png",
+      "sha256": "41d785d5e71f2c3d2d0126a343930630e989aa0edcbbfff6ef3d61a58a0837fc"
+    },
+    {
+      "label": "dev23-joint1103r1-reconnect",
+      "screenshot": "dev23-joint1103r1-reconnect-one-screenshots/gto-compat-client.png",
+      "sha256": "ad3e683d5da35bdb09345ffce965505218524ccb3512ae79da4a507cb5e03d5f"
+    },
+    {
+      "label": "dev23-joint1103r1-reconnect",
+      "screenshot": "dev23-joint1103r1-reconnect-two-screenshots/gto-compat-client.png",
+      "sha256": "f7984f4c527f79c825353cfe11311f7463f5ec23dc2933605f21b48875216cce"
+    },
+    {
+      "label": "dev25-joint1103r1-stock",
+      "screenshot": "dev25-joint1103r1-stock-screenshots/exact-terminal-0.png",
+      "sha256": "3f97542bffd5c40750db314a738768690781836c1e48e8f006346c447d72d351"
+    },
+    {
+      "label": "dev25-joint1103r1-stock",
+      "screenshot": "dev25-joint1103r1-stock-screenshots/exact-terminal-1.png",
+      "sha256": "d9eb1ce697bd99b2356cbaeb03039f4d0d710c7fce858674f177a97ae97b49e2"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-one-screenshots/confirm-lt-report.png",
+      "sha256": "1d0beed8f24926fc60e1fda6005bb21c98902bd65b373dd0ad5096a5f38f6709"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-one-screenshots/confirm-native-algorithm.png",
+      "sha256": "5dda357d8d6f8340100f893da296fa0791fdb839afa95fd6571d113457a19321"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-one-screenshots/confirm-native-exact-preview.png",
+      "sha256": "a1c2f391e786142b9a5f8c92fecaff6da69ad98b4414d2516dcf00650c3ce717"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-one-screenshots/multiplayer-off.png",
+      "sha256": "7bf35cc6a6d287a6f69cbc0cc6b130ec4d8829436a653145814057a7468453b9"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-one-screenshots/multiplayer-on-reopened.png",
+      "sha256": "5858f63f6a3087d52f015711e4db557fafc029685d15f2f20725bac6eb6d84a7"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-two-screenshots/confirm-lt-report.png",
+      "sha256": "895137eea147f08e1f18f1a46529ec894f9c560536fe8e16f76f3a6cc6536aa9"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-two-screenshots/confirm-native-algorithm.png",
+      "sha256": "b3fbc3d001bfab21cf34600619a746b54180f2fecc63ad3415e87cf361753156"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-two-screenshots/confirm-native-exact-preview.png",
+      "sha256": "729180606d568e7efd7b0446a21e3be053a20a0cfb2d815a946e768bd60adea8"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-two-screenshots/multiplayer-off.png",
+      "sha256": "58c81d40f7caf3dddcc888c35f8669376647a9ee9dcfb8fa9fbd1835a13ba796"
+    },
+    {
+      "label": "dev25-joint1103r1-multiplayer",
+      "screenshot": "dev25-joint1103r1-multiplayer-two-screenshots/multiplayer-on-reopened.png",
+      "sha256": "b9f7e87053bc4059491a3f07d6c452d42ff88c06d6a45cf888f09df99d32a4dc"
+    },
+    {
+      "label": "dev25-joint1103r1-reconnect",
+      "screenshot": "dev25-joint1103r1-reconnect-one-screenshots/gto-compat-client.png",
+      "sha256": "3f58d558897ede1858ba6ee895385cca0e9b6eb01227b498703341642397083e"
+    },
+    {
+      "label": "dev25-joint1103r1-reconnect",
+      "screenshot": "dev25-joint1103r1-reconnect-two-screenshots/gto-compat-client.png",
+      "sha256": "67f129138a2e043714ae3fee37b6a7b9957e9900787af80c0b366708b1908e04"
+    }
+  ],
+  "visual_review": {
+    "dev23": {
+      "panels": 6,
+      "sheet_sha256": "c99bb2e9255c08554edb6bd02dcbd551ac291a7673f659bb696fa0c083d4147b",
+      "manually_reviewed": true,
+      "reviewed_utc": "2026-11-03T05:05:51.306829+00:00",
+      "observations": "Six actual panels inspected: full exact count tooltips in storage/pattern terminals; LT report; preserved native algorithm title; exact preview/quantity-limit status; actual reconnected world. No new rendering issue observed in these panels."
+    },
+    "dev25": {
+      "panels": 6,
+      "sheet_sha256": "dae9a32307c63f8448a764751885be3cb620fba4e029c9fd7eeffbbf3caa5bb7",
+      "manually_reviewed": true,
+      "reviewed_utc": "2026-11-03T05:13:56.162221+00:00",
+      "observations": "Six actual panels inspected plus full-resolution exact preview. Exact count tooltips and LT report render correctly; native algorithm callback and quantity-limit preview status retained. The existing Dev25 native title widget scrolls/clips long text as in prior R5. Reconnected world visible. No new rendering issue observed in these panels."
+    }
+  },
+  "source_manifest": [
+    {
+      "path": "gradle.properties",
+      "sha256_of_utf8_lf_source": "212a7cdea341cd9182d16085f090a4aaff787a57c6fa5e3d1f276ea1906b8f9a"
+    },
+    {
+      "path": "gradle/gto-qa.gradle",
+      "sha256_of_utf8_lf_source": "22feb3b4667796d03d61f5e5befe65e538425bfadd95f7da269066845187ef1e"
+    },
+    {
+      "path": "src/gtoQa/java/qa/GtoCompatQA.java",
+      "sha256_of_utf8_lf_source": "8bb51dac17cc8fc03ec013f2f851f5fa68faaa8cfde3ae37ca338c12d5a37ec7"
+    },
+    {
+      "path": "src/gtoQa/java/qa/GtoRestartQA.java",
+      "sha256_of_utf8_lf_source": "9b3d586dab3d7b13430ddf7291c9d53c6dbb23fe07039d34bcc93741c1682d9e"
+    },
+    {
+      "path": "src/gtoQa/java/qa/GtoRefundRestartQA.java",
+      "sha256_of_utf8_lf_source": "f4113daa8b7c96881cab42bbc1c480b04a585353c037480fcbecfaa94048eb40"
+    },
+    {
+      "path": "src/gtoQa/resources/META-INF/mods.toml",
+      "sha256_of_utf8_lf_source": "2362e71bfacf695afa1cac66becae0dc47402880c0915b314fac496a6d7e60a9"
+    },
+    {
+      "path": "src/main/java/com/moakiee/ae2lt/compat/gto/GtoCoreClientMixinExtension.java",
+      "sha256_of_utf8_lf_source": "64822de390372b76e96dd8d275d89407d3422052f2c529ba29b0384018f16b5d"
+    },
+    {
+      "path": "src/main/java/com/moakiee/ae2lt/crafting/big/BigCraftingJob.java",
+      "sha256_of_utf8_lf_source": "c2aa6bf725debfafd7c039cd77f7b1a01023b2cf7b04f75b995dadde270239fc"
+    },
+    {
+      "path": "src/main/java/com/moakiee/ae2lt/crafting/big/BigCraftingService.java",
+      "sha256_of_utf8_lf_source": "ae5cde7db456b2b376767c796688823485b552fe97476598ba1ef322f24c761c"
+    },
+    {
+      "path": "src/main/java/com/moakiee/ae2lt/mixin/AE2LTMixinConfigPlugin.java",
+      "sha256_of_utf8_lf_source": "bbbc6799d4d9cd395b2d7b0148cce50c64b462193c4170cbc606ada65e02069b"
+    },
+    {
+      "path": "src/jdb/java/com/moakiee/ae2lt/crafting/big/CoreAlgorithmAcceptanceGameTests.java",
+      "sha256_of_utf8_lf_source": "b69fc07d47977362d8006a4d7fa547affc3e0e78ddebe6bc4223152cf9942448"
+    },
+    {
+      "path": "src/test/java/com/moakiee/ae2lt/crafting/big/BigCraftingPreviewDeadlineTest.java",
+      "sha256_of_utf8_lf_source": "19ef2591fe9fc6f7b6566ff3f2c53b491eba274c17f32876e066e097dd2901fe"
+    }
+  ],
+  "local_raw_joint_manifest_sha256": "6746d10be12633b625d9fed9c1020dead2d032d5b64d8415f23067ed2b520227",
+  "local_raw_core_index_sha256": "0b02a8651138e9c1ebeaa03a6ffe85a375b81c53f9c69f37f421f1f00d7c6ef1",
+  "public_core_api_changes_required": false,
+  "external_neoeco_bridge_signature_changes_required": false,
+  "neoeco_integration_preserved": true,
+  "limits": [
+    "The initial Core 93-case targeted run is not all green; an isolated pass and separate full-suite pass do not erase its timeout.",
+    "All fresh LT runtime/graphics use final R6 production bytes; original Core/AE2 Forge and development-mapped JUnit/ABI are separate scopes.",
+    "UNKNOWN exposure remains nonspendable and paused until authoritative external reconciliation.",
+    "Restart coverage uses orderly saves; no cross-mod power-loss atomicity is claimed.",
+    "No performance benchmark was rerun and no stable speedup is claimed.",
+    "Raw machine logs, local paths and screenshot images remain uncommitted; this file contains reviewed summaries and hashes."
+  ],
+  "report": "../../GTO_CORE_JOINT_RETEST_2026-11-03.md"
+}

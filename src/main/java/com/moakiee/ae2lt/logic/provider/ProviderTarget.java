@@ -450,38 +450,39 @@ public class ProviderTarget extends TargetAddress {
         var state = runtime.batchSteps.computeIfAbsent(
                 pattern, ignored -> new BatchStepState());
         var previousState = state.snapshot();
-        state.expireIfIdle(
-                gameTick, preserveBatchHistoryOnRejection);
-        state.lastAttemptTick = gameTick;
+        try {
+            state.expireIfIdle(
+                    gameTick, preserveBatchHistoryOnRejection);
+            state.lastAttemptTick = gameTick;
 
-        BatchStepResult result;
-        int reservoirCapacity = state.reservoirMode && state.reservoirTailLower > 0
-                ? (int) Math.min(Integer.MAX_VALUE,
-                        2L * state.provenChunk + state.reservoirTailLower)
-                : 0;
-        if (preferSegmentedReservoirRefill && reservoirCapacity > 0
-                && maxCopies >= reservoirCapacity) {
-            // H,H,tail proves aggregate capacity, never an atomic sum request.
-            result = pushReservoirRamp(state, reservoirCapacity, gameTick,
-                    preserveBatchHistoryOnRejection, true, blocked, pushChunk);
-        } else if (!state.backingOff) {
-            result = state.reservoirMode
-                    ? pushReservoirRamp(state, maxCopies, gameTick,
-                            preserveBatchHistoryOnRejection, false, blocked, pushChunk)
-                    : pushSameTickRamp(state, maxCopies, gameTick,
-                            preserveBatchHistoryOnRejection, blocked, pushChunk);
-        } else {
-            result = pushBackoffStep(
-                    state,
-                    maxCopies,
-                    gameTick,
-                    preserveBatchHistoryOnRejection,
-                    pushChunk);
+            int reservoirCapacity = state.reservoirMode && state.reservoirTailLower > 0
+                    ? (int) Math.min(Integer.MAX_VALUE,
+                            2L * state.provenChunk + state.reservoirTailLower)
+                    : 0;
+            if (preferSegmentedReservoirRefill && reservoirCapacity > 0
+                    && maxCopies >= reservoirCapacity) {
+                // H,H,tail proves aggregate capacity, never an atomic sum request.
+                return pushReservoirRamp(state, reservoirCapacity, gameTick,
+                        preserveBatchHistoryOnRejection, true, blocked, pushChunk);
+            } else if (!state.backingOff) {
+                return state.reservoirMode
+                        ? pushReservoirRamp(state, maxCopies, gameTick,
+                                preserveBatchHistoryOnRejection, false, blocked, pushChunk)
+                        : pushSameTickRamp(state, maxCopies, gameTick,
+                                preserveBatchHistoryOnRejection, blocked, pushChunk);
+            } else {
+                return pushBackoffStep(
+                        state,
+                        maxCopies,
+                        gameTick,
+                        preserveBatchHistoryOnRejection,
+                        pushChunk);
+            }
+        } finally {
+            if (!previousState.equals(state.snapshot())) {
+                runtime.batchHistoryDirty = true;
+            }
         }
-        if (!previousState.equals(state.snapshot())) {
-            runtime.batchHistoryDirty = true;
-        }
-        return result;
     }
 
     /** Aggregate H,H,tail capacity; replay only as segmented insertions. */

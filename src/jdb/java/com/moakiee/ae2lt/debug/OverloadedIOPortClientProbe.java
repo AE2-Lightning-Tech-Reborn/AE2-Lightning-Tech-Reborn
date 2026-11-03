@@ -32,7 +32,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.event.TickEvent;
 
-/** Opt-in real screen, packet and JEI smoke test; only its disposable world is modified. */
+/** Opt-in real screen, packet and recipe-viewer smoke test in a disposable world. */
 @JeiPlugin
 @EventBusSubscriber(modid="ae2lt",value=Dist.CLIENT)
 public final class OverloadedIOPortClientProbe implements IModPlugin {
@@ -72,7 +72,7 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                 case 1->{
                     // A development window can lose focus while the integrated server loads.
                     if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
-                    if (jei == null || mc.screen != null || !(mc.level.getBlockEntity(POS) instanceof OverloadedIOPortBlockEntity)) {
+                    if ((!emi() && jei == null) || mc.screen != null || !(mc.level.getBlockEntity(POS) instanceof OverloadedIOPortBlockEntity)) {
                         require(ticks < 1200, "Waiting for client IO block: " + mc.level.getBlockState(POS) + ", screen=" + mc.screen + ", jei=" + (jei != null));
                         return;
                     }
@@ -124,15 +124,26 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,installed.index,0,ClickType.QUICK_MOVE,mc.player);
                     var installedMatrices=menu.slots.stream().filter(s->s.getItem().is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get()) && s.getItem().getCount()==8).findFirst().orElseThrow();
                     mc.gameMode.handleInventoryMouseClick(menu.containerId,installedMatrices.index,0,ClickType.QUICK_MOVE,mc.player);
+                    if (emi()) {
+                        var recipes = dev.emi.emi.api.EmiApi.getRecipeManager().getRecipes().stream()
+                                .filter(r -> r.getCategory().getId().equals(new ResourceLocation("ae2lt:lightning_assembly")))
+                                .filter(r -> r.getOutputs().stream().anyMatch(output -> output.getItemStack()
+                                        .is(ModBlocks.OVERLOADED_IO_PORT.get().asItem()))).toList();
+                        require(recipes.size() == 1, "Native EMI assembly recipe missing or duplicated: " + recipes.size());
+                        dev.emi.emi.api.EmiApi.displayRecipe(recipes.get(0));
+                    } else {
                     require(jei!=null,"JEI unavailable");
                     var manager=jei.getRecipeManager();var recipes=manager.createRecipeLookup(LightningAssemblyCategory.TYPE).get()
                             .filter(r->r.getResultItem(mc.level.registryAccess()).is(ModBlocks.OVERLOADED_IO_PORT.get().asItem())).toList();
                     require(recipes.size()==1,"JEI assembly recipe missing");
                     require(manager.createRecipeLayoutDrawable(manager.getRecipeCategory(LightningAssemblyCategory.TYPE),recipes.get(0),jei.getJeiHelpers().getFocusFactory().getEmptyFocusGroup()).isPresent(),"JEI layout failed");
                     jei.getRecipesGui().showRecipes(manager.getRecipeCategory(LightningAssemblyCategory.TYPE),recipes,List.of());
+                    }
                 }
                 case 5->{
-                    capture("overloaded-io-jei.png");
+                    if (emi()) require(mc.screen != null && mc.screen.getClass().getName().startsWith("dev.emi.emi.screen."),
+                            "Native EMI recipe screen did not open: " + mc.screen);
+                    capture(emi() ? "overloaded-io-emi.png" : "overloaded-io-jei.png");
                     server(()->{
                         var be=(OverloadedIOPortBlockEntity)mc.getSingleplayerServer().overworld().getBlockEntity(POS);
                         var player=mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
@@ -141,13 +152,14 @@ public final class OverloadedIOPortClientProbe implements IModPlugin {
                     });
                 }
                 case 6->{
-                    System.out.println("IO_PORT_QA PASS: native cell/filter/matrix backgrounds, 55 slots, filter and eight-matrix shift-click insertion/removal, 4-to-16 attempt and long-cap synchronization, operation button packet, lightning status, JEI recipe layout.");
-                    result("PASS");done=true;mc.setScreen(null);mc.stop();
+                    System.out.println("IO_PORT_QA PASS: native cell/filter/matrix backgrounds, 55 slots, filter and eight-matrix shift-click insertion/removal, 4-to-16 attempt and long-cap synchronization, operation button packet, lightning status, " + (emi() ? "native EMI" : "JEI") + " recipe layout.");
+                    result("PASS viewer=" + (emi() ? "EMI" : "JEI"));done=true;CoverageClientSequence.finish("ioClientProbe");
                 }
             }
             phase++;
         }catch(Throwable t){t.printStackTrace();System.out.println("IO_PORT_QA FAIL phase="+phase+": "+t);result("FAIL: " + t);done=true;mc.setScreen(null);mc.stop();}
     }
+    private static boolean emi() { return net.minecraftforge.fml.ModList.get().isLoaded("emi"); }
     private static void result(String value) {
         try { java.nio.file.Files.writeString(Minecraft.getInstance().gameDirectory.toPath().resolve("io-port-result.txt"), value); }
         catch (java.io.IOException failure) { throw new RuntimeException(failure); }

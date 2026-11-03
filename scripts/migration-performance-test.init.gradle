@@ -1,0 +1,17 @@
+// Focused real provider callbacks and catalog checks with 100,000 physical pattern slots.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                '**/PatternMigrationPerformanceGameTests.java', '**/PatternMigrationGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file(providers.gradleProperty('migrationPerformanceRunDirectory')
+                    .getOrElse('run-gametest/migration-performance'))
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_migration_perf'
+            property 'forge.logging.console.level', 'info'
+            property 'ae2lt.requireMigrationBudget', 'true'
+            property 'ae2lt.migration.baseline', project.findProperty('migrationPerformanceBaseline') ?: 'false'
+            mods { ae2lt { source sourceSets.jdb } }
+            jvmArgs '-Xms512m', '-Xmx2g'
+        }
+    }
+}

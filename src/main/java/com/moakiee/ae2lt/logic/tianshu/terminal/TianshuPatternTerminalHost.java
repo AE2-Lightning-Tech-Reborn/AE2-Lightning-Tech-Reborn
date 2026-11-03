@@ -7,6 +7,9 @@ public interface TianshuPatternTerminalHost extends IPatternTerminalMenuHost, Ti
     TianshuEncodingMode getTianshuEncodingMode();
     void setTianshuEncodingMode(TianshuEncodingMode mode);
 
+    default OmniversalPatternDraft getOmniversalPatternDraft() { return OmniversalPatternDraft.empty(); }
+    default void setOmniversalPatternDraft(OmniversalPatternDraft draft) { }
+
     default boolean isMaintainableView() {
         return false;
     }

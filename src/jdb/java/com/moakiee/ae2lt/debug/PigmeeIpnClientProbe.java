@@ -168,7 +168,8 @@ public final class PigmeeIpnClientProbe {
     }
 
     private static long amount(PigmeeSynthesisStationMenu menu, Item item) {
-        return menu.getClientRepo().getAllEntries().stream().filter(e -> e.getWhat().equals(AEItemKey.of(item)))
+        return com.moakiee.ae2lt.client.compat.ClientRepoAccess.allEntries(menu.getClientRepo()).stream()
+                .filter(e -> e.getWhat().equals(AEItemKey.of(item)))
                 .mapToLong(e -> e.getStoredAmount()).sum();
     }
 
