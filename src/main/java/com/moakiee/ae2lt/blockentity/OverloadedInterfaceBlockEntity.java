@@ -847,6 +847,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         }
     };
     private @Nullable GenericInternalInventory exposedGenericInv;
+    private net.minecraftforge.common.util.LazyOptional<GenericInternalInventory> passiveGeneric =
+            net.minecraftforge.common.util.LazyOptional.of(this::getExposedGenericInv);
     private net.minecraftforge.common.util.LazyOptional<net.minecraftforge.items.IItemHandler> passiveItems =
             net.minecraftforge.common.util.LazyOptional.of(() ->
                     new appeng.helpers.externalstorage.GenericStackItemStorage(getExposedGenericInv()));
@@ -858,7 +860,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     public <T> net.minecraftforge.common.util.LazyOptional<T> getCapability(
             net.minecraftforge.common.capabilities.Capability<T> capability, @Nullable Direction side) {
         // AE2's parent exposes its own storage first; attached capabilities cannot
-        // override it. Route automation through the admission/ownership boundary.
+        // override it. AppMek derives its four chemical handlers from the generic
+        // capability, so it must share the item/fluid admission/ownership boundary.
+        if (capability == appeng.capabilities.Capabilities.GENERIC_INTERNAL_INV) return passiveGeneric.cast();
         if (capability == ForgeCapabilities.ITEM_HANDLER) return passiveItems.cast();
         if (capability == ForgeCapabilities.FLUID_HANDLER) return passiveFluids.cast();
         return super.getCapability(capability, side);
@@ -867,6 +871,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     @Override
     public void invalidateCaps() {
         super.invalidateCaps();
+        passiveGeneric.invalidate();
         passiveItems.invalidate();
         passiveFluids.invalidate();
     }
@@ -874,6 +879,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     @Override
     public void reviveCaps() {
         super.reviveCaps();
+        passiveGeneric = net.minecraftforge.common.util.LazyOptional.of(this::getExposedGenericInv);
         passiveItems = net.minecraftforge.common.util.LazyOptional.of(() ->
                 new appeng.helpers.externalstorage.GenericStackItemStorage(getExposedGenericInv()));
         passiveFluids = net.minecraftforge.common.util.LazyOptional.of(() ->
