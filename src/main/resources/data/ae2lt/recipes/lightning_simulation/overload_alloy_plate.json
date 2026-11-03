@@ -4,7 +4,7 @@
   "inputs": [
     {
       "ingredient": {
-        "item": "ae2lt:overload_alloy"
+        "tag": "forge:ingots/overload_alloy"
       },
       "count": 16
     },
