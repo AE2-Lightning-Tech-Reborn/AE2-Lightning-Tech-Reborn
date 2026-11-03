@@ -8,6 +8,7 @@ import appeng.client.Point;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.BackgroundGenerator;
 import appeng.client.gui.style.Blitter;
+import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.style.StyleManager;
 import appeng.client.gui.widgets.AE2Button;
@@ -81,11 +82,6 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private static final int SCROLLBAR_Y = LIST_ROW_FIRST_Y;
     private static final int SCROLLBAR_WIDTH = 7;
 
-    // AE2 standard text tones matching MultiblockControllerScreen & Tianshu screens.
-    private static final int AE2_TEXT_TITLE = 0x2A2E3F;
-    private static final int AE2_TEXT_BODY = 0x14161F;
-    private static final int AE2_TEXT_LABEL = 0x363B4E;
-    private static final int AE2_TEXT_MUTED = 0x4E5370;
     private static final int COL_GREEN = 0x1C6B34;
     private static final int COL_RED = 0x8F2B23;
 
@@ -531,12 +527,12 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                         : Component.translatable("ae2lt.gui.frequency.none"));
         Component right = Component.translatable("ae2lt.gui.frequency.total").append(": " + rows.size());
         int rightX = LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(right);
-        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 31, AE2_TEXT_LABEL);
+        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), textColor());
+        drawFlat(g, right, rightX, 31, textColor());
 
         if (rows.isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.connection.none"),
-                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, AE2_TEXT_LABEL);
+                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, textColor());
             return;
         }
         for (int i = connectionScroll; i < Math.min(rows.size(), connectionScroll + ITEMS_PER_PAGE_LIST); i++) {
@@ -545,10 +541,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             var state = Component.translatable("ae2lt.management.state." + (row.loaded() ? "loaded" : "unloaded"));
             int stateColor = row.loaded() ? COL_GREEN : COL_RED;
             drawFlatFitted(g, Component.translatable(row.deviceName()), 13, y + 3,
-                    LIST_ROW_WIDTH - 18 - font.width(state), AE2_TEXT_BODY);
+                    LIST_ROW_WIDTH - 18 - font.width(state), textColor());
             drawFlat(g, state, LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(state), y + 3, stateColor);
             drawFlatFitted(g, row.dimension() + " · " + row.pos().getX() + " " + row.pos().getY() + " " + row.pos().getZ(),
-                    13, y + 13, LIST_ROW_WIDTH - 10, AE2_TEXT_LABEL);
+                    13, y + 13, LIST_ROW_WIDTH - 10, textColor());
         }
     }
 
@@ -1001,7 +997,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         fittedTextTooltips.clear();
 
-        drawFlat(g, Component.translatable(currentTab.getTranslationKey()), 8, 6, AE2_TEXT_TITLE);
+        drawFlat(g, Component.translatable(currentTab.getTranslationKey()), 8, 6, textColor());
 
         if (popupMemberUUID == null && !deleteConfirmOpen && passwordPromptFreqId == 0) {
             switch (currentTab) {
@@ -1020,13 +1016,13 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     imageWidth / 2, 55, COL_RED);
             drawFlatCentered(g,
                     Component.translatable("ae2lt.gui.delete_confirm.hint"),
-                    imageWidth / 2, 80, AE2_TEXT_LABEL);
+                    imageWidth / 2, 80, textColor());
         }
 
         if (passwordPromptFreqId > 0) {
             drawFlatCenteredFitted(g,
                     Component.translatable("ae2lt.gui.password_prompt.title", passwordPromptFreqName),
-                    imageWidth / 2, 55, GUI_WIDTH - 40, AE2_TEXT_TITLE);
+                    imageWidth / 2, 55, GUI_WIDTH - 40, textColor());
         }
 
         if (popupMemberUUID != null) {
@@ -1043,7 +1039,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     : (0xFF000000 | popupMemberAccess.getFormatting().getColor());
             g.fill(startX, 40, startX + 6, 46, 0xFF202430);
             g.fill(startX + 1, 41, startX + 5, 45, badgeRgb);
-            g.drawString(font, fitted, startX + 10, 39, AE2_TEXT_BODY, false);
+            g.drawString(font, fitted, startX + 10, 39, textColor(), false);
         }
 
         if (inlineError != null) {
@@ -1068,6 +1064,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 inlineError = null;
             }
         }
+    }
+
+    private int textColor() {
+        return ae2Style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
     }
 
     private void drawFlat(GuiGraphics g, Component text, int x, int y, int color) {
@@ -1125,8 +1125,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         Component frequency = freq == null ? Component.translatable("ae2lt.gui.frequency.none")
                 : Component.literal(freq.name());
         Integer freqSwatch = freq == null ? null : (0xFF000000 | (freq.color() & 0xFFFFFF));
-        homeWellRow(g, "ae2lt.gui.frequency.current", frequency, y0, AE2_TEXT_BODY, freqSwatch, true, step);
-        homeWellRow(g, "ae2lt.gui.home.device_type", Component.translatable(freqMenu().getDeviceName()), y0 + step, AE2_TEXT_BODY, null, true, step);
+        homeWellRow(g, "ae2lt.gui.frequency.current", frequency, y0, textColor(), freqSwatch, true, step);
+        homeWellRow(g, "ae2lt.gui.home.device_type", Component.translatable(freqMenu().getDeviceName()), y0 + step, textColor(), null, true, step);
         boolean active = freqMenu().isLinkActive();
         int statusColor = active ? COL_GREEN : COL_RED;
         homeWellRow(g, "ae2lt.gui.home.status",
@@ -1136,39 +1136,39 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (card) {
             renderFrequencyDetails(g, 74, 85, 14);
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_section"), 9, 126,
-                    imageWidth - 18, AE2_TEXT_MUTED);
+                    imageWidth - 18, textColor());
             boolean chAuto = freqMenu().isAutoConnect();
             boolean feAuto = freqMenu().isAutoConnectEnergy();
             g.fill(13, 152, 17, 156, chAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_channel_" + (chAuto ? "on" : "off")),
-                    20, 150, 68, chAuto ? COL_GREEN : AE2_TEXT_LABEL);
+                    20, 150, 68, chAuto ? COL_GREEN : textColor());
             g.fill(125, 152, 129, 156, feAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_energy_"
                             + (!OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable() ? "unavailable" : feAuto ? "on" : "off")),
-                    132, 150, 68, feAuto ? COL_GREEN : AE2_TEXT_LABEL);
+                    132, 150, 68, feAuto ? COL_GREEN : textColor());
             return;
         }
         int used = freqMenu().getUsedChannels(), max = freqMenu().getMaxChannels();
         Component channels = max < 0 ? Component.translatable("ae2lt.gui.home.grid_channels.infinite", used)
                 : Component.translatable("ae2lt.gui.home.grid_channels.value", used, max, Math.max(0, max - used));
         boolean controller = freqMenu().isController();
-        homeWellRow(g, "ae2lt.gui.home.grid_channels", channels, y0 + step * 3, AE2_TEXT_BODY, null, controller, step);
+        homeWellRow(g, "ae2lt.gui.home.grid_channels", channels, y0 + step * 3, textColor(), null, controller, step);
         if (controller) {
             boolean crossDim = freqMenu().isAdvanced();
             homeWellRow(g, "ae2lt.gui.home.cross_dimension",
                     Component.translatable(crossDim ? "ae2lt.gui.home.cross_dimension.yes" : "ae2lt.gui.home.cross_dimension.no"),
-                    y0 + step * 4, crossDim ? COL_GREEN : AE2_TEXT_LABEL, null, false, step);
+                    y0 + step * 4, crossDim ? COL_GREEN : textColor(), null, false, step);
         }
         renderFrequencyDetails(g, 118, 131, 16);
     }
 
     private void renderFrequencyDetails(GuiGraphics g, int headerY, int wellTop, int step) {
         var frequency = ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId());
-        drawFlat(g, Component.translatable("ae2lt.gui.home.frequency_details"), 9, headerY, AE2_TEXT_MUTED);
+        drawFlat(g, Component.translatable("ae2lt.gui.home.frequency_details"), 9, headerY, textColor());
         int row0Y = wellTop + (step == 16 ? 6 : 5);
         homeWellRow(g, "ae2lt.gui.frequency.security", frequency == null
                 ? Component.translatable("ae2lt.gui.frequency.none") : getSecurityLabel(frequency.security()),
-                row0Y, AE2_TEXT_BODY, null, true, step);
+                row0Y, textColor(), null, true, step);
         var access = selfAccess();
         Component permission = frequency == null ? Component.translatable("ae2lt.gui.frequency.none")
                 : !access.canUse() ? Component.translatable("ae2lt.gui.home.no_access")
@@ -1177,14 +1177,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 ? (0xFF000000 | access.getFormatting().getColor())
                 : null;
         homeWellRow(g, "ae2lt.gui.home.access", permission, row0Y + step,
-                frequency != null && !access.canUse() ? COL_RED : AE2_TEXT_BODY, accessColor, false, step);
+                frequency != null && !access.canUse() ? COL_RED : textColor(), accessColor, false, step);
     }
 
     /** Left-label / right-value row inside an AE2 recessed well, with optional indicator swatch and bottom divider. */
     private void homeWellRow(GuiGraphics g, String labelKey, Component value, int y, int valueColor,
             Integer badgeColor, boolean divider, int step) {
         Component label = Component.translatable(labelKey);
-        drawFlat(g, label, 13, y, AE2_TEXT_LABEL);
+        drawFlat(g, label, 13, y, textColor());
         int maxValW = Math.max(30, GUI_WIDTH - 28 - font.width(label) - (badgeColor != null ? 10 : 0));
         String full = value.getString();
         String fitted = FittingText.fit(full, maxValW, font::width);
@@ -1220,19 +1220,19 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         int leftX = 10;
         if (current != null) {
             int labelPrefixW = font.width(Component.translatable("ae2lt.gui.frequency.current").append(": "));
-            drawFlat(g, Component.translatable("ae2lt.gui.frequency.current").append(": "), leftX, 37, AE2_TEXT_MUTED);
+            drawFlat(g, Component.translatable("ae2lt.gui.frequency.current").append(": "), leftX, 37, textColor());
             int swatchX = leftX + labelPrefixW;
             g.fill(swatchX, 38, swatchX + 6, 44, 0xFF202430);
             g.fill(swatchX + 1, 39, swatchX + 5, 43, 0xFF000000 | (current.color() & 0xFFFFFF));
-            drawFlatFitted(g, current.name(), swatchX + 9, 37, Math.max(20, rightX - swatchX - 16), AE2_TEXT_BODY);
+            drawFlatFitted(g, current.name(), swatchX + 9, 37, Math.max(20, rightX - swatchX - 16), textColor());
         } else {
-            drawFlatFitted(g, left, leftX, 37, Math.max(20, rightX - 24), AE2_TEXT_MUTED);
+            drawFlatFitted(g, left, leftX, 37, Math.max(20, rightX - 24), textColor());
         }
-        drawFlat(g, right, rightX, 37, AE2_TEXT_MUTED);
+        drawFlat(g, right, rightX, 37, textColor());
 
         if (filteredFrequencies().isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.frequency.none"),
-                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, AE2_TEXT_LABEL);
+                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, textColor());
         }
     }
 
@@ -1240,7 +1240,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         int currentId = freqMenu().getCurrentFrequencyId();
         if (currentId <= 0) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"),
-                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, AE2_TEXT_LABEL);
+                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, textColor());
             return;
         }
 
@@ -1251,23 +1251,23 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         Component right = Component.translatable("ae2lt.gui.frequency.total")
                 .append(": " + members.size());
         int rightX = LIST_ROW_X + LIST_ROW_WIDTH - 5 - font.width(right);
-        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), AE2_TEXT_BODY);
-        drawFlat(g, right, rightX, 31, AE2_TEXT_LABEL);
+        drawFlatFitted(g, left, 12, 31, Math.max(20, rightX - 24), textColor());
+        drawFlat(g, right, rightX, 31, textColor());
 
         if (members.isEmpty()) {
             drawFlatCentered(g, Component.translatable("ae2lt.gui.member.none"),
-                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, AE2_TEXT_LABEL);
+                    LIST_ROW_X + LIST_ROW_WIDTH / 2, LIST_ROW_FIRST_Y + 56, textColor());
         }
     }
 
     private void renderFormLabels(GuiGraphics g) {
         if (currentTab == FrequencyPage.TAB_SETTING && ClientFrequencyCache.getFrequency(freqMenu().getCurrentFrequencyId()) == null) {
-            drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"), imageWidth / 2, 60, AE2_TEXT_MUTED);
+            drawFlatCentered(g, Component.translatable("ae2lt.gui.error.no_frequency"), imageWidth / 2, 60, textColor());
             return;
         }
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"), 12, 22, AE2_TEXT_MUTED);
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"), 12, 57, AE2_TEXT_MUTED);
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.password").append(":"), 12, 75, AE2_TEXT_MUTED);
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.name").append(":"), 12, 22, textColor());
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.security").append(":"), 12, 57, textColor());
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.password").append(":"), 12, 75, textColor());
         if (editSecurity != FrequencySecurityLevel.ENCRYPTED && passwordField != null) {
             var bounds = passwordField.getTooltipArea();
             int bx = bounds.getX() - leftPos;
@@ -1281,7 +1281,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             Blitter.texture("guis/text_field.png", 128, 128).src(127, 12, 1, 12).dest(bx + bw - 1, by).blit(g);
             drawFlatFitted(g, getSecurityLabel(editSecurity), bx + 2, by + 2, INPUT_MAX_WIDTH - 8, 0xFFA0A4B8);
         }
-        drawFlat(g, Component.translatable("ae2lt.gui.frequency.color").append(":"), 13, 111, AE2_TEXT_LABEL);
+        drawFlat(g, Component.translatable("ae2lt.gui.frequency.color").append(":"), 13, 111, textColor());
 
         // Live preview card inside the lower recessed well
         int px = 12, py = 143, pw = INPUT_MAX_WIDTH, ph = 22;
@@ -1298,7 +1298,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 : Component.translatable("ae2lt.gui.frequency.name").getString();
         String secSuffix = " [" + getSecurityLabel(editSecurity).getString() + "]";
         String fittedPreview = FittingText.fit(previewName + secSuffix, pw - 26, font::width);
-        g.drawString(font, fittedPreview, px + 18, py + 7, AE2_TEXT_BODY, false);
+        g.drawString(font, fittedPreview, px + 18, py + 7, textColor(), false);
     }
 
     private static Component getSecurityLabel(FrequencySecurityLevel level) {
@@ -1485,7 +1485,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 textX = x + 16;
             }
 
-            int textColor = bound ? 0xFF102840 : active ? AE2_TEXT_BODY : AE2_TEXT_LABEL;
+            int textColor = bound ? 0xFF102840 : textColor();
             String full = getMessage().getString();
             String fitted = FittingText.fit(full, labelWidth(), font::width);
             g.drawString(font, fitted, textX, textY, textColor, false);

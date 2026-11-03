@@ -25,12 +25,14 @@ import net.minecraft.world.item.ItemStack;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.core.localization.GuiText;
+import appeng.client.gui.style.PaletteColor;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.MatrixPortMenu;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 /**
- * Searchable, scrollable view of every pattern held by a matter warping matrix.
+ * Searchable, scrollable view of one matrix warehouse at a time.
  *
  * <p>The search behavior mirrors ExtendedAE's assembler matrix: a row remains visible if any
  * pattern in it has an input or output whose display name matches the ordered search tokens.
@@ -108,9 +110,9 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
                 Component.translatable("ae2lt.gui.matrix_port.search"));
         searchField.setBordered(false);
         searchField.setMaxLength(64);
-        searchField.setTextColor(0xF2F2F2);
+        searchField.setTextColor(AE2GuiPalette.color(PaletteColor.TEXTFIELD_TEXT));
         searchField.setHint(GuiText.SearchPlaceholder.text().copy().setStyle(
-                Style.EMPTY.withColor(TextColor.fromRgb(0xDEDFE3))));
+                Style.EMPTY.withColor(TextColor.fromRgb(AE2GuiPalette.color(PaletteColor.TEXTFIELD_PLACEHOLDER)))));
         searchField.setResponder(ignored -> refreshList(true));
         addRenderableWidget(searchField);
         setInitialFocus(searchField);
@@ -149,14 +151,14 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (migration != null) migration.render(graphics, font, 13, 129, 162, 0x404040);
-        graphics.drawString(
-                font,
-                Component.translatable("ae2lt.gui.matrix_port.title"),
-                7,
-                7,
-                0x404040,
-                false);
+        int textColor = AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR);
+        if (migration != null) migration.render(graphics, font, 13, 129, 162, textColor);
+        graphics.drawString(font, "<", 7, 7, textColor, false);
+        graphics.drawString(font,
+                Component.translatable("ae2lt.gui.matrix_port.warehouse",
+                        menu.getSelectedWarehouse() + 1, menu.getWarehouseCount()),
+                19, 7, textColor, false);
+        graphics.drawString(font, ">", 67, 7, textColor, false);
     }
 
     @Override
@@ -167,9 +169,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
 
     /**
      * Vanilla walks every menu slot twice per frame even when most slots are inactive. Keep the
-     * authoritative full slot list outside rendering, but expose only this six-row window while
-     * the vanilla renderer and render events are running. Slot.index remains the physical server
-     * slot id, so normal container clicks and synchronization keep their existing contract.
+     * authoritative warehouse slot list outside rendering, but expose only this six-row window
+     * while the vanilla renderer and render events are running.
      */
     private void renderVisibleBatch(
             GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -185,6 +186,17 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && mouseY >= topPos + 5 && mouseY < topPos + 18
+                && menu.getWarehouseCount() > 0) {
+            if (mouseX >= leftPos + 5 && mouseX < leftPos + 18) {
+                selectWarehouse(menu.getSelectedWarehouse() - 1);
+                return true;
+            }
+            if (mouseX >= leftPos + 63 && mouseX < leftPos + 77) {
+                selectWarehouse(menu.getSelectedWarehouse() + 1);
+                return true;
+            }
+        }
         if (button == 1 && searchField != null && searchField.isMouseOver(mouseX, mouseY)) {
             searchField.setValue("");
         }
@@ -227,13 +239,23 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
+    private void selectWarehouse(int index) {
+        if (index < 0 || index >= menu.getWarehouseCount()
+                || index == menu.getSelectedWarehouse() || minecraft == null
+                || minecraft.gameMode == null) return;
+        menu.selectWarehouseClient(index);
+        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, index);
+        if (searchField != null) searchField.setValue("");
+        refreshList(true);
+    }
+
     private void refreshList(boolean resetScroll) {
         filteredRows.clear();
         matchingPatternSlots.clear();
         nameMatchCache.clear();
 
         List<String> searchTokens = tokenize(searchField == null ? "" : searchField.getValue());
-        int rowCount = (menu.getPatternSlotCount() + MatrixPortMenu.COLUMNS - 1)
+        int rowCount = (menu.getSelectedWarehouseCapacity() + MatrixPortMenu.COLUMNS - 1)
                 / MatrixPortMenu.COLUMNS;
         for (int row = 0; row < rowCount; row++) {
             if (searchTokens.isEmpty() || rowMatches(row, searchTokens)) {
@@ -253,7 +275,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
     private boolean rowMatches(int row, List<String> searchTokens) {
         boolean rowMatches = false;
         int firstSlot = row * MatrixPortMenu.COLUMNS;
-        int lastSlot = Math.min(firstSlot + MatrixPortMenu.COLUMNS, menu.getPatternSlotCount());
+        int lastSlot = Math.min(firstSlot + MatrixPortMenu.COLUMNS,
+                menu.getSelectedWarehouseCapacity());
         for (int slotIndex = firstSlot; slotIndex < lastSlot; slotIndex++) {
             ItemStack stack = menu.getPatternSlots().get(slotIndex).getItem();
             if (patternMatches(stack, searchTokens)) {
@@ -355,7 +378,8 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
         for (int visibleRow = 0; visibleRow < visibleRows; visibleRow++) {
             int patternRow = filteredRows.get(scrollRow + visibleRow);
             int firstSlot = patternRow * MatrixPortMenu.COLUMNS;
-            int lastSlot = Math.min(firstSlot + MatrixPortMenu.COLUMNS, slots.size());
+            int lastSlot = Math.min(firstSlot + MatrixPortMenu.COLUMNS,
+                    menu.getSelectedWarehouseCapacity());
             for (int slotIndex = firstSlot; slotIndex < lastSlot; slotIndex++) {
                 int column = slotIndex - firstSlot;
                 var slot = slots.get(slotIndex);

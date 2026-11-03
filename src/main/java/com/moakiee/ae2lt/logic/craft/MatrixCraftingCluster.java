@@ -100,18 +100,8 @@ public final class MatrixCraftingCluster {
         return List.copyOf(result);
     }
 
-    public boolean hasPattern(IPatternDetails details) {
-        if (!formed.getAsBoolean() || !MatrixPatternRepository.isSupportedPattern(details)) return false;
-        for (var core : patternCores) {
-            if (core.hasPattern(details)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public long getBatchCapacity(IPatternDetails details) {
-        if (!hasPattern(details)) return 0;
+        if (!formed.getAsBoolean() || details == null) return 0;
         refreshLimiterBudget();
         if (providerCallsRemaining <= 0) return 0;
         long capacity = availableCapacity();
@@ -133,7 +123,6 @@ public final class MatrixCraftingCluster {
 
     public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long maxCraft,
                           @Nullable DeferredCraftingProvider.OutputSink returns) {
-        if (!hasPattern(details)) return maxCraft;
         long copies = Math.min(maxCraft, getBatchCapacity(details));
         if (copies <= 0) return maxCraft;
         providerCallsRemaining--;
@@ -154,7 +143,8 @@ public final class MatrixCraftingCluster {
 
     public boolean pushSingle(IPatternDetails details, KeyCounter[] oneCopyTemplate,
                               @Nullable DeferredCraftingProvider.OutputSink returns) {
-        if (!hasPattern(details) || availableCapacity() <= 0 || providerCallsRemaining <= 0
+        if (!formed.getAsBoolean() || details == null
+                || availableCapacity() <= 0 || providerCallsRemaining <= 0
                 || energy.affordableOperations(1L) < 1L) {
             return false;
         }

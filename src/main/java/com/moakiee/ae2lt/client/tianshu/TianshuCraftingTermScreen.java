@@ -6,6 +6,7 @@ import appeng.api.config.CopyMode;
 import appeng.api.config.Settings;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.Blitter;
+import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.IconButton;
 import appeng.client.gui.widgets.ToggleButton;
@@ -418,9 +419,9 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             // Center the range between the two controls, including when both row numbers have two digits.
             int centerX = (previousCell.getX() + previousCell.getWidth() + nextCell.getX()) / 2 - leftPos;
             int textY = previousCell.getY() - topPos + (previousCell.getHeight() - font.lineHeight) / 2;
-            graphics.drawString(font, rows, centerX - font.width(rows) / 2, textY, 0x413f54, false);
+            graphics.drawString(font, rows, centerX - font.width(rows) / 2, textY, getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         } else if (menu.workPage == TianshuWorkPage.ANVIL) {
-            graphics.drawString(font, "+", compact ? 115 : 58, imageHeight - (compact ? 133 : 129), 0x413f54, false);
+            graphics.drawString(font, "+", compact ? 115 : 58, imageHeight - (compact ? 133 : 129), getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             anvilCostView.renderCost(graphics, compact ? 92 : 8, imageHeight - 109, compact ? 93 : 160, mouseX, mouseY);
         }
     }

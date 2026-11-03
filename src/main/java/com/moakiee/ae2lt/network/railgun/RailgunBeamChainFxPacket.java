@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
@@ -77,6 +76,4 @@ public record RailgunBeamChainFxPacket(UUID shooterId, Vec3 firstHit, List<Vec3>
         ctx.enqueueWork(() -> RailgunClientBridge.beamChainFx(p));
     }
 
-    /** Compile-time guard. */
-    @SuppressWarnings("unused") private static final Object _IMPORT_GUARD = ByteBufCodecs.BYTE;
 }

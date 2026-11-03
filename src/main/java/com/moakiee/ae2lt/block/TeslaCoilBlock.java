@@ -112,6 +112,18 @@ public class TeslaCoilBlock extends AEBaseEntityBlock<TeslaCoilBlockEntity> {
     }
 
     @Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos,
+            Block neighbor, BlockPos fromPos, boolean moving) {
+        super.neighborChanged(state, level, pos, neighbor, fromPos, moving);
+        if (level.isClientSide()) return;
+        BlockPos lowerPos = state.getValue(HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
+        if (level.getBlockEntity(lowerPos) instanceof TeslaCoilBlockEntity coil
+                && coil.getRedstoneControl().hasCard()) {
+            coil.onRedstoneStateChanged();
+        }
+    }
+
+    @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide && state.getValue(HALF) == DoubleBlockHalf.LOWER) {

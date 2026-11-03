@@ -865,5 +865,7 @@
   "ae2lt.tianshu.gui.thunderbolt.unavailable": "Thunderbolt：オプション連携が読み込まれていません",
   "item.ae2lt.closed_loop_pattern": "閉ループパターン",
   "ae2lt.tianshu.closed_loop.members": "構成パターン",
-  "ae2lt.tianshu.closed_loop.result": "結果"
+  "ae2lt.tianshu.closed_loop.result": "結果",
+  "ae2lt.gui.status.redstone_paused": "レッドストーン信号により停止中",
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "レッドストーン信号により停止中"
 }

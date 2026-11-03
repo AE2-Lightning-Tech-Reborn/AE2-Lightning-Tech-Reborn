@@ -37,6 +37,12 @@ public final class CrystalCatalyzerLogic extends AbstractGridRecipeMachineLogic<
 
     @Override
     protected TickRateModulation tickMachine() {
+        if (host.getLevel() != null && !host.isRemoved() && !host.isClientSide()
+                && !host.getRedstoneControl().isEnabled()) {
+            host.setWorking(false);
+            // Keep exporting completed stock so a level emitter can observe it.
+            return host.pushOutResult() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+        }
         if (!host.isPigmeeVariant()) {
             return super.tickMachine();
         }

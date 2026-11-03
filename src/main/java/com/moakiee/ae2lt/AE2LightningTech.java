@@ -23,7 +23,6 @@ import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.config.AE2LTConfigMigration;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
-import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningAssemblyChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningCollectorBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
@@ -242,6 +241,7 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_THERMAL_CONTROL_UNIT_T2);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2);
+                        output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3);
                         output.accept(ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE);
 
                         // 基础材料与中间产物
@@ -1110,6 +1110,8 @@ public class AE2LightningTech {
             StorageCells.addCellHandler(BulkLightningCellHandler.INSTANCE);
             StorageCells.addCellHandler(FixedInfiniteCellHandler.INSTANCE);
             ModItems.registerStorageCellModels();
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.CRYSTAL_CATALYZER.get(), 1);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.TESLA_COIL.get(), 1);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get(),
                     LightningSimulationChamberBlockEntity.SPEED_CARD_SLOTS);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get(),

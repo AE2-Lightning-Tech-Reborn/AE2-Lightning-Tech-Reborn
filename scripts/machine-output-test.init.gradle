@@ -1,0 +1,15 @@
+// Real menu packets and all four machine output screens in a generated test world.
+allprojects {
+    layout.buildDirectory.set(file('build/machine-output-validation'))
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MachineOutputConfigClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.client {
+            logLevel = org.slf4j.event.Level.INFO
+            gameDirectory = project.layout.buildDirectory.dir('client').get().asFile
+            systemProperty 'ae2lt.machineOutputClientProbe', 'true'
+        }
+    }
+}

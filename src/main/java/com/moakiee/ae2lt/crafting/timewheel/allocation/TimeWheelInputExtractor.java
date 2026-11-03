@@ -24,7 +24,6 @@ import appeng.crafting.inv.ICraftingInventory;
 import appeng.crafting.inv.ListCraftingInventory;
 
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
-import com.moakiee.ae2lt.crafting.timewheel.allocation.CraftingInputAllocation;
 import com.moakiee.ae2lt.crafting.timewheel.allocation.CraftingInputAllocation.Choices;
 
 /** LT-local extraction and accounting, adapted from Thunderbolt's batch helper. The only native
