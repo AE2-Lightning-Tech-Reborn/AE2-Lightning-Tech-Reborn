@@ -212,7 +212,8 @@ modId = "omni_upgrades"
 type = "optional"
 # 1.0.4 restores frequency cards' own right-click actions instead of intercepting them as upgrades.
 versionRange = "[1.0.4-1.21.1,)"
-# Only the version constraint is needed; AFTER creates a cycle through Productive Bees Genesis.
+# Right-click compatibility needs no construction order. Genesis loads after AE2LT,
+# and Omni Upgrades loads after Genesis; ordering AE2LT after Omni closes that cycle.
 ordering = "NONE"
 side = "BOTH"
 

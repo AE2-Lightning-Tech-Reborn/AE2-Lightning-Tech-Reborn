@@ -12,7 +12,7 @@ allprojects {
             !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
                     'top.theillusivec4.curios', 'de.mari_023']
                     || dep.name in ['thunderbolt-core-1631756', 'mekanism-268560',
-                                    'mekanism-extras-1026040'])
+                                    'mekanism-extras-1026040', 'applied-mekanistics-574300'])
         }
         dependencies.add('runtimeOnly', 'curse.maven:mekanism-more-machine-1275257:8659501')
 

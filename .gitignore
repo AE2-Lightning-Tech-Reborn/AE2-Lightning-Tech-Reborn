@@ -51,7 +51,7 @@ logs/
 
 # Java
 *.class
-scripts/__pycache__/
+__pycache__/
 
 # Runtime / temporary files
 run/
