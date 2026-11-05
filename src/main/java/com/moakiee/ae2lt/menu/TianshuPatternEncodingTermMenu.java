@@ -195,8 +195,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private boolean pendingDirectUpload;
     private int pendingTriggeredUploadUntil;
     private int expectedTriggeredUploadAck;
-    private boolean directUploadTargetsRequested;
-    private int expectedDirectUploadTargetRevision;
+    private boolean encodedUploadTargetsRequested;
+    private int expectedEncodedUploadTargetRevision;
     private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo =
             new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo();
     /** Prevents a committed encoding result from being mistaken for a manually inserted pattern. */
@@ -422,10 +422,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return pendingTriggeredUpload && triggeredUploadAck != expectedTriggeredUploadAck;
     }
 
-    public boolean hasFreshDirectUploadTargets() {
+    public boolean hasFreshUploadTargetsAfterEncoding() {
         return isClientSide()
-                && directUploadTargetsRequested
-                && uploadTargetsRevision != expectedDirectUploadTargetRevision;
+                && encodedUploadTargetsRequested
+                && uploadTargetsRevision != expectedEncodedUploadTargetRevision;
     }
 
     /**
@@ -433,11 +433,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
      * Availability depends on the encoded stack, so a request sent before encoding would report
      * every provider as unwritable when the result slot was initially empty.
      */
-    public boolean requestDirectUploadTargetsAfterEncoding() {
-        if (!isClientSide() || !hasPendingDirectUpload() || !hasTriggeredUploadAck()) return false;
-        if (!directUploadTargetsRequested) {
-            expectedDirectUploadTargetRevision = uploadTargetsRevision;
-            directUploadTargetsRequested = true;
+    public boolean requestUploadTargetsAfterEncoding() {
+        if (!isClientSide() || !hasTriggeredUploadAck()) return false;
+        if (!encodedUploadTargetsRequested) {
+            expectedEncodedUploadTargetRevision = uploadTargetsRevision;
+            encodedUploadTargetsRequested = true;
             requestUploadTargets();
         }
         return true;
@@ -446,7 +446,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean consumeDirectUploadRequest() {
         boolean direct = pendingDirectUpload;
         pendingDirectUpload = false;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
         return direct;
     }
 
@@ -455,7 +455,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isClientSide()) return;
         pendingTriggeredUpload = false;
         pendingDirectUpload = false;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
     }
 
     public void clearClientUploadSelectionState() {
@@ -469,7 +469,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (pendingTriggeredUpload && getPlayer().tickCount > pendingTriggeredUploadUntil) {
             pendingTriggeredUpload = false;
             pendingDirectUpload = false;
-            directUploadTargetsRequested = false;
+            encodedUploadTargetsRequested = false;
         }
     }
 
@@ -2227,7 +2227,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         pendingDirectUpload = triggerUpload && directUpload;
         pendingTriggeredUploadUntil = getPlayer().tickCount + 200;
         expectedTriggeredUploadAck = triggeredUploadAck;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
         // Duplicate interception belongs to the upload flow. In the default NO_SHIFT mode,
         // holding Shift therefore bypasses both upload and duplicate interception while still
         // allowing the pattern to be encoded normally.

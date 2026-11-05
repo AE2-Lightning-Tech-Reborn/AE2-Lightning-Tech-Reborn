@@ -29,6 +29,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 
 /** Opt-in native UI probe in an isolated run directory; never packaged in the release jar. */
 @EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
@@ -42,8 +43,19 @@ public final class TianshuUploadAliasClientProbe {
     private static TianshuUploadAliasEditScreen<?> editor;
     private static List<String> originalAliases;
     private static com.moakiee.ae2lt.config.TianshuUploadMatchMode originalMode;
+    private static com.moakiee.ae2lt.config.TianshuUploadTrigger originalTrigger;
+    private static TianshuPatternEncodingTermScreen<?> encodingScreen;
+    private static int encodingPickerOpenings;
+    private static boolean watchingEncoding;
     private static String originalClipboard;
     private static final StringBuilder report = new StringBuilder();
+
+    @SubscribeEvent
+    public static void screenOpening(ScreenEvent.Opening event) {
+        if (watchingEncoding && event.getNewScreen() instanceof TianshuUploadTargetScreen<?>) {
+            encodingPickerOpenings++;
+        }
+    }
 
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
@@ -64,6 +76,7 @@ public final class TianshuUploadAliasClientProbe {
                     Files.writeString(Path.of("upload-alias-probe.txt"), "TIANSHU_ALIAS_QA RUNNING\n");
                     originalAliases = List.copyOf(config().get());
                     originalMode = AE2LTClientConfig.uploadMatchMode();
+                    originalTrigger = AE2LTClientConfig.uploadTrigger();
                     originalClipboard = mc.keyboardHandler.getClipboard();
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
                     mc.getWindow().setWindowed(1100, 800);
@@ -237,8 +250,49 @@ public final class TianshuUploadAliasClientProbe {
                     });
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
                 }
-                case 18 -> {
-                    report.append(wireless ? "wireless" : "wired").append(": PASS native editor, clipboard merge, three modes + real automatic uploads, machine IDs, exact deletion, conflict, cancellation, return paths, right-click undo\n");
+                case 18 -> server(TianshuUploadAliasClientProbe::prepareEncoding);
+                case 19 -> {
+                    AE2LTClientConfig.setUploadAlias(FIRST, "minecraft:furnace");
+                    clickEncode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.SAVED_ALIAS);
+                }
+                case 20 -> {
+                    assertSilentEncodingUpload();
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        ((TianshuPatternEncodingTermMenu) player.containerMenu).undoLastUpload();
+                    });
+                }
+                case 21 -> {
+                    AE2LTClientConfig.removeUploadAlias(FIRST);
+                    clickEncode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH);
+                }
+                case 22 -> {
+                    assertSilentEncodingUpload();
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        ((TianshuPatternEncodingTermMenu) player.containerMenu).undoLastUpload();
+                    });
+                }
+                case 23 -> clickEncode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.SAVED_ALIAS);
+                case 24 -> {
+                    watchingEncoding = false;
+                    require(mc.screen instanceof TianshuUploadTargetScreen<?>, "unmatched encoding opens manual picker");
+                    require(encodingPickerOpenings == 1, "unmatched encoding opens picker once");
+                    var picker = (TianshuUploadTargetScreen<?>) mc.screen;
+                    require(!picker.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(),
+                            "manual selection retains encoded pattern");
+                    require(!(boolean) field(picker, "awaitingUpload"), "manual selection does not upload automatically");
+                    picker.onClose();
+                    AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
+                        menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(ItemStack.EMPTY);
+                        menu.broadcastChanges();
+                    });
+                }
+                case 25 -> {
+                    report.append(wireless ? "wireless" : "wired").append(": PASS native editor, clipboard merge, three modes + real automatic uploads, no picker openings during saved-alias and machine encoding uploads, unmatched encoding fallback, machine IDs, exact deletion, conflict, cancellation, return paths, right-click undo\n");
                     if (!wireless) {
                         wireless = true;
                         phase = 0;
@@ -308,6 +362,54 @@ public final class TianshuUploadAliasClientProbe {
         var terminal = (TianshuPatternEncodingTermScreen<?>) Minecraft.getInstance().screen;
         TianshuRecipeTransferContext.publish(terminal.getMenu(), FIRST, "", List.of("minecraft:*"), List.of("minecraft:furnace"));
         switchScreen(terminal, new TianshuUploadTargetScreen<>(terminal, false));
+    }
+
+    private static void prepareEncoding() {
+        var mc = Minecraft.getInstance();
+        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+        var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
+        var input = appeng.api.stacks.AEItemKey.of(net.minecraft.world.item.Items.IRON_INGOT);
+        var output = appeng.api.stacks.AEItemKey.of(net.minecraft.world.item.Items.GOLD_INGOT);
+        menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(
+                appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
+                        List.of(new appeng.api.stacks.GenericStack(input, 1)),
+                        List.of(new appeng.api.stacks.GenericStack(output, 1))));
+        menu.setMode(appeng.parts.encoding.EncodingMode.PROCESSING);
+        menu.getSlots(SlotSemantics.PROCESSING_INPUTS).forEach(slot -> slot.set(ItemStack.EMPTY));
+        menu.getSlots(SlotSemantics.PROCESSING_OUTPUTS).forEach(slot -> slot.set(ItemStack.EMPTY));
+        menu.getSlots(SlotSemantics.PROCESSING_INPUTS).getFirst().set(input.toStack());
+        menu.getSlots(SlotSemantics.PROCESSING_OUTPUTS).getFirst().set(output.toStack());
+        menu.broadcastChanges();
+    }
+
+    private static void clickEncode(com.moakiee.ae2lt.config.TianshuUploadMatchMode mode) {
+        var mc = Minecraft.getInstance();
+        encodingScreen = (TianshuPatternEncodingTermScreen<?>) mc.screen;
+        var menu = encodingScreen.getMenu();
+        require(!menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "encoding starts with physical pattern");
+        AE2LTClientConfig.setUploadTrigger(com.moakiee.ae2lt.config.TianshuUploadTrigger.NO_SHIFT);
+        AE2LTClientConfig.setUploadMatchMode(mode);
+        TianshuRecipeTransferContext.publish(menu, FIRST, "", List.of("minecraft:*"), List.of("minecraft:furnace"));
+        // An old empty snapshot must not prevent a fresh availability request for this encoding.
+        menu.receiveUploadTargets(List.of(), 0);
+        encodingPickerOpenings = 0;
+        watchingEncoding = true;
+        var button = encodingScreen.children().stream()
+                .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
+                        .anyMatch(t -> t.getString().equals(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.encode_management").getString())))
+                .map(c -> (appeng.client.gui.widgets.ActionButton) c).findFirst().orElseThrow();
+        require(encodingScreen.mouseClicked(button.getX() + 2, button.getY() + 2, 0), "normal encode click handled");
+        encodingScreen.mouseReleased(button.getX() + 2, button.getY() + 2, 0);
+    }
+
+    private static void assertSilentEncodingUpload() {
+        watchingEncoding = false;
+        var mc = Minecraft.getInstance();
+        require(mc.screen == encodingScreen, "automatic encoding upload keeps original terminal screen");
+        require(encodingPickerOpenings == 0, "automatic encoding upload never opens picker");
+        require(encodingScreen.getMenu().uploadState == 1, "automatic encoding upload succeeds");
+        require(encodingScreen.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(),
+                "automatic encoding upload transfers physical pattern");
     }
 
     private static void openTerminal() {
@@ -688,6 +790,7 @@ public final class TianshuUploadAliasClientProbe {
     private static void restoreConfig() throws Exception {
         if (originalAliases != null) { config().set(originalAliases); AE2LTClientConfig.SPEC.save(); }
         if (originalMode != null) AE2LTClientConfig.setUploadMatchMode(originalMode);
+        if (originalTrigger != null) AE2LTClientConfig.setUploadTrigger(originalTrigger);
         if (originalClipboard != null) Minecraft.getInstance().keyboardHandler.setClipboard(originalClipboard);
     }
     private static void server(Runnable action) {
