@@ -15,7 +15,7 @@ allprojects {
             property 'forge.logging.console.level', 'info'
             mods { ae2lt { source sourceSets.jdb } }
         }
-        tasks.named('runGameTestServer') {
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
             doLast {
                 def log = project.file('build/issue47-mixin-forge-' + profile + '/logs/latest.log')
                 if (!log.isFile() || !log.text.contains('All 20 required tests passed')) {
@@ -31,7 +31,7 @@ allprojects {
                 property 'forge.logging.console.level', 'info'
                 mods { ae2lt { source sourceSets.jdb } }
             }
-            tasks.named('runClient') {
+            tasks.matching { it.name == 'runClient' }.configureEach {
                 doFirst {
                     clientDirectory.mkdirs()
                     new File(clientDirectory, 'client-startup-result.txt').delete()
