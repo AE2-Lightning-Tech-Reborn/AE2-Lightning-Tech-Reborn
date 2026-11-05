@@ -4,7 +4,6 @@
 allprojects {
     afterEvaluate {
         sourceSets.jdb.java.setIncludes([
-                '**/PigmeeBuildingGameTests.java',
                 '**/AppGenProcessorGameTests.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])

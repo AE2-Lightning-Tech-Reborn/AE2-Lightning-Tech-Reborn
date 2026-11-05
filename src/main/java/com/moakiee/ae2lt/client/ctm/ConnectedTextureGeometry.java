@@ -11,7 +11,6 @@ import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelState;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.state.properties.SlabType;
 import net.neoforged.neoforge.client.ChunkRenderTypeSet;
 import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
 import net.neoforged.neoforge.client.model.geometry.IUnbakedGeometry;
@@ -28,18 +27,14 @@ public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextu
     private final boolean ambientOcclusion;
     private final boolean gui3d;
     private final boolean usesBlockLight;
-    @Nullable
-    private final SlabType slabType;
 
     public ConnectedTextureGeometry(ResourceLocation connectionId, ChunkRenderTypeSet renderTypes,
-            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight,
-            @Nullable SlabType slabType) {
+            boolean ambientOcclusion, boolean gui3d, boolean usesBlockLight) {
         this.connectionId = connectionId;
         this.renderTypes = renderTypes;
         this.ambientOcclusion = ambientOcclusion;
         this.gui3d = gui3d;
         this.usesBlockLight = usesBlockLight;
-        this.slabType = slabType;
     }
 
     @Override
@@ -52,10 +47,6 @@ public class ConnectedTextureGeometry implements IUnbakedGeometry<ConnectedTextu
                 : null;
         // Keep inherited display transforms for inventory, held and dropped block items.
         var transforms = context.getTransforms();
-        if (slabType != null) {
-            return new ConnectedSlabBakedModel(base, ctm, overlay, renderTypes,
-                    ambientOcclusion, gui3d, usesBlockLight, transforms, slabType);
-        }
         ConnectionPredicate predicate = ConnectionPredicates.get(connectionId);
         return new ConnectedTextureBakedModel(base, ctm, overlay, predicate, renderTypes,
                 ambientOcclusion, gui3d, usesBlockLight, transforms);
