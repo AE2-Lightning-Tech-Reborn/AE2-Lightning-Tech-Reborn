@@ -67,6 +67,7 @@ import appeng.helpers.patternprovider.PatternContainer;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.config.Settings;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetGroupMatcher;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestClosedLoopResultPagePacket;
@@ -1379,8 +1380,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             var target = binding.target();
             if (activeTargets.stream().noneMatch(active -> active == target)) continue;
             try {
+                // The request still selects the exact captured group and provider/slot.
+                // Animated name/tooltip styles must not invalidate that same provider.
                 if (target.getGrid() != grid || !target.isVisibleInTerminal()
-                        || !target.getTerminalGroup().equals(group)) continue;
+                        || !TianshuUploadTargetGroupMatcher.matches(group, target.getTerminalGroup())) continue;
                 var inventory = target.getTerminalPatternInventory();
                 int slot = binding.slot();
                 if (slot < 0 || slot >= inventory.size()

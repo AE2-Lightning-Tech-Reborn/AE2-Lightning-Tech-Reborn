@@ -115,7 +115,7 @@ class TianshuPatternUploadRoutingTest {
         assertFalse(upload.contains("refreshUploadTargetsNow()"));
         assertTrue(upload.contains("activeTargets.stream().noneMatch(active -> active == target)"));
         assertTrue(upload.contains("target.getGrid() != grid || !target.isVisibleInTerminal()"));
-        assertTrue(upload.contains("!target.getTerminalGroup().equals(group)"));
+        assertTrue(upload.contains("!TianshuUploadTargetGroupMatcher.matches(group, target.getTerminalGroup())"));
         assertTrue(upload.contains("uploadToProvider(player, target, binding.slot(), stack)"));
         assertFalse(upload.contains("firstFreePatternSlot("));
         assertTrue(menu.contains("summary.slots.add(new BoundUploadSlot(target, i))"));

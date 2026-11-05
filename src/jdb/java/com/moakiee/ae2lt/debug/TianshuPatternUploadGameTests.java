@@ -35,6 +35,81 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
 @net.neoforged.neoforge.gametest.PrefixGameTestTemplate(false)
 public final class TianshuPatternUploadGameTests {
     @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    public static void wiredAnimatedTargetNameUploads(GameTestHelper helper) {
+        animatedTargetName(helper, false);
+    }
+
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
+    public static void wirelessAnimatedTargetNameUploads(GameTestHelper helper) {
+        animatedTargetName(helper, true);
+    }
+
+    private static void animatedTargetName(GameTestHelper helper, boolean wireless) {
+        var level = helper.getLevel();
+        var player = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "AnimatedUpload"));
+        var cable = helper.absolutePos(new BlockPos(3, 2, 3));
+        PartHelper.setPart(level, cable, null, player, AEParts.GLASS_CABLE.item(AEColor.TRANSPARENT));
+        var terminal = PartHelper.setPart(level, cable, Direction.SOUTH, player,
+                ModItems.TIANSHU_PATTERN_ENCODING_TERMINAL.get());
+        level.setBlockAndUpdate(cable.below(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
+        level.setBlockAndUpdate(cable.east(), AEBlocks.PATTERN_PROVIDER.block().defaultBlockState());
+        level.setBlockAndUpdate(cable.east(2), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+        level.setBlockAndUpdate(cable.north(), AEBlocks.WIRELESS_ACCESS_POINT.block().defaultBlockState());
+        var machine = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(cable.east(2));
+        var namedMachine = new ItemStack(Items.CHEST);
+        namedMachine.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.literal("Cosmic factory").withColor(0xFF5FED));
+        machine.applyComponentsFromItemStack(namedMachine);
+        player.setPos(cable.getX() + .5, cable.getY() + 1, cable.getZ() + .5);
+
+        helper.runAfterDelay(40, () -> {
+            var item = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
+            var stack = new ItemStack(item);
+            stack.set(AEComponents.WIRELESS_LINK_TARGET, GlobalPos.of(level.dimension(), cable.north()));
+            stack.set(AEComponents.STORED_ENERGY, 1000000.0);
+            player.getInventory().setItem(0, stack);
+            var wirelessHost = wireless ? new TianshuWirelessPatternEncodingTermMenuHost(
+                    item, player, MenuLocators.forInventorySlot(0), (p, m) -> {}) : null;
+            TianshuPatternEncodingTermMenu menu = wireless
+                    ? new TianshuWirelessPatternEncodingTermMenu(51, player.getInventory(), wirelessHost)
+                    : new TianshuPatternEncodingTermMenu(51, player.getInventory(), terminal);
+            player.containerMenu = menu;
+            var source = (wireless ? wirelessHost.getLogic() : terminal.getLogic()).getEncodedPatternInv();
+            var provider = (PatternProviderBlockEntity) level.getBlockEntity(cable.east());
+            var target = provider.getLogic().getPatternInv();
+            var pattern = processing(Items.IRON_INGOT, Items.GOLD_INGOT);
+            source.setItemDirect(0, pattern.copy());
+            menu.sendUploadTargets(player);
+            var captured = menu.getUploadTargets().getFirst().group();
+            check(helper, captured.name().getString().equals("Cosmic factory"), "picker captures adjacent machine name");
+
+            namedMachine.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                    net.minecraft.network.chat.Component.literal("Cosmic factory").withColor(0xFF81F1));
+            machine.applyComponentsFromItemStack(namedMachine);
+            check(helper, !captured.equals(provider.getLogic().getTerminalGroup()), "reproduce styled group mismatch");
+            menu.uploadTianshuPatternToTarget(player, captured, menu.getUploadTargetRequestRevision());
+            check(helper, menu.uploadState == 1 && source.isEmpty()
+                    && ItemStack.matches(pattern, target.getStackInSlot(0)), "color change permits upload into captured slot");
+            menu.undoLastUpload();
+            check(helper, target.isEmpty() && ItemStack.matches(pattern, source.getStackInSlot(0)),
+                    "animated-name upload retains a valid undo receipt");
+
+            menu.sendUploadTargets(player);
+            var beforeRename = menu.getUploadTargets().getFirst().group();
+            namedMachine.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                    net.minecraft.network.chat.Component.literal("Different factory").withColor(0xFF81F1));
+            machine.applyComponentsFromItemStack(namedMachine);
+            menu.uploadTianshuPatternToTarget(player, beforeRename, menu.getUploadTargetRequestRevision());
+            check(helper, menu.uploadState == 3 && target.isEmpty()
+                    && ItemStack.matches(pattern, source.getStackInSlot(0)), "actual rename still invalidates the captured target");
+            menu.removed(player);
+            player.containerMenu = player.inventoryMenu;
+            System.out.println("TIANSHU_ANIMATED_TARGET_PASS " + (wireless ? "wireless" : "wired"));
+            helper.succeed();
+        });
+    }
+
+    @net.minecraft.gametest.framework.GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 150)
     public static void wiredFullTargetRetainsEncodedPattern(GameTestHelper helper) {
         fullTarget(helper, false);
     }
