@@ -9,6 +9,7 @@ public enum MatrixMultiblockComponent {
     MATRIX_PORT,
     PATTERN_STORAGE_T1,
     PATTERN_STORAGE_T2,
+    PATTERN_STORAGE_T3,
     STABLE_MAIN_CORE,
     QUANTUM_MAIN_CORE,
     OVERLOAD_MAIN_CORE,
@@ -22,7 +23,7 @@ public enum MatrixMultiblockComponent {
     OTHER;
 
     public boolean isPatternStorage() {
-        return this == PATTERN_STORAGE_T1 || this == PATTERN_STORAGE_T2;
+        return this == PATTERN_STORAGE_T1 || this == PATTERN_STORAGE_T2 || this == PATTERN_STORAGE_T3;
     }
 
     public boolean isMainCore() {
@@ -52,6 +53,7 @@ public enum MatrixMultiblockComponent {
         return switch (this) {
             case PATTERN_STORAGE_T1 -> MatrixPatternStorageTier.T1;
             case PATTERN_STORAGE_T2 -> MatrixPatternStorageTier.T2;
+            case PATTERN_STORAGE_T3 -> MatrixPatternStorageTier.T3;
             default -> null;
         };
     }

@@ -74,7 +74,9 @@ class MatrixPortServerTraversalContractTest {
         String storageChanged = methodBody(storage, "private void setChangedAndUpdate()");
         String notifyPort = methodBody(storage, "private void notifyPortPatternsChanged()");
         assertTrue(storageChanged.contains("notifyPortPatternsChanged();"));
-        assertTrue(notifyPort.contains("port.patternsChanged();"));
+        assertTrue(notifyPort.contains("port.patternsChanged(this);"));
+        assertTrue(port.contains("storage.requestCraftingUpdate()"),
+                "The changed warehouse must refresh its own AE2 provider registration");
 
         int handlerStart = port.indexOf("class PortPatternItemHandler");
         String slotCount = methodBody(port, "public int getSlots()", handlerStart);

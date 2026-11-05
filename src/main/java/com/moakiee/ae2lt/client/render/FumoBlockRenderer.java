@@ -75,24 +75,22 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
         BlockPos pos = blockEntity.getBlockPos();
 
         if (level != null) {
-
-                ModelBlockRenderer modelRenderer = dispatcher.getModelRenderer();
-                for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
-                    modelRenderer.tesselateBlock(
-                            level,
-                            model,
-                            renderState,
-                            pos,
-                            poseStack,
-                            buffer.getBuffer(renderType),
-                            false,
-                            RAND,
-                            42L,
-                            packedOverlay,
-                            modelData,
-                            renderType);
-                }
-
+            ModelBlockRenderer modelRenderer = dispatcher.getModelRenderer();
+            for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
+                modelRenderer.tesselateBlock(
+                        level,
+                        model,
+                        renderState,
+                        pos,
+                        poseStack,
+                        buffer.getBuffer(renderType),
+                        false,
+                        RAND,
+                        42L,
+                        packedOverlay,
+                        modelData,
+                        renderType);
+            }
         } else {
             int color = Minecraft.getInstance().getBlockColors().getColor(renderState, null, null, 0);
             float r = (color >> 16 & 0xFF) / 255.0F;
@@ -100,18 +98,17 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
             float b = (color & 0xFF) / 255.0F;
             PoseStack.Pose pose = poseStack.last();
 
-                for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
-                    VertexConsumer consumer = buffer.getBuffer(renderType);
-                    for (Direction dir : Direction.values()) {
-                        RAND.setSeed(42L);
-                        renderQuads(pose, consumer, model.getQuads(renderState, dir, RAND, modelData, renderType),
-                                r, g, b, packedLight, packedOverlay);
-                    }
+            for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {
+                VertexConsumer consumer = buffer.getBuffer(renderType);
+                for (Direction dir : Direction.values()) {
                     RAND.setSeed(42L);
-                    renderQuads(pose, consumer, model.getQuads(renderState, null, RAND, modelData, renderType),
+                    renderQuads(pose, consumer, model.getQuads(renderState, dir, RAND, modelData, renderType),
                             r, g, b, packedLight, packedOverlay);
                 }
-
+                RAND.setSeed(42L);
+                renderQuads(pose, consumer, model.getQuads(renderState, null, RAND, modelData, renderType),
+                        r, g, b, packedLight, packedOverlay);
+            }
         }
 
         poseStack.popPose();

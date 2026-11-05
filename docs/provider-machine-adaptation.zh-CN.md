@@ -1,6 +1,6 @@
 # 供应器机器适配模式
 
-现有齿轮“高级设置”（用户所说的更多设置）新增独立总开关，默认开启，同时控制 Mekanism 物品槽保护和 Industrial Foregoing（工业先锋）的物品/流体回收保护。仅作用于 AUTO 周期回收和投料前回收；关闭后仍执行通用 AUTO 回收。正常投料、EJECT、原生 MEStorage 优先级及第三方 MachineAdapter 原接口保持原行为。
+现有齿轮“高级设置”（用户所说的更多设置）新增独立总开关，默认开启，同时控制 Mekanism 物品槽、流体罐、化学品罐保护和 Industrial Foregoing（工业先锋）的物品/流体回收保护。仅作用于 AUTO 周期回收和投料前回收；关闭后仍执行通用 AUTO 回收。正常投料、EJECT、原生 MEStorage 优先级及第三方 MachineAdapter 原接口保持原行为。
 
 ## 设置与兼容
 
@@ -39,6 +39,17 @@ Titanium `FluidTankComponent` 的 `Type` 是 GUI 大小，`Action` 才限制注�
 每次操作取当前侧面的 MultiInvCapabilityHandler，由其 `getFromSlot` 定位组件，再委托该实际能力执行操作。因此保留机器的插入/抽取谓词、侧面开关和即时槽位变化，补偿也不能写入输入/镜片槽。
 
 **未列入表的机器保留通用物品回收。** 例如石料工厂 `material_stonework_factory` 的中间阶段可成为配置后的终点，不能只把 `inventoryFour` 当产物；本次不猜测其多阶段配方终点。已识别机器若换成无法识别组件的能力包装器，则其专项物品视图为空，避免绕过包装器权限。原生 MEStorage 或第三方专用适配器仍走原有权威接口，不由此包装重新解释。
+
+## Mekanism 流体与化学品边界
+
+Mekanism 的 `setupIOConfig(type, tank, side)` 会把同一个罐同时登记为 INPUT、OUTPUT 和 INPUT_OUTPUT。锇压缩机、冶金灌注机、压缩/灌注工厂的副化学品罐（即界面上的“额外”储罐）就是这样，罐本身也允许外部抽取。只有物品保护时，appmek 的化学品存储视图会在 AUTO 回收中把它抽空。
+
+`MekanismOutputRoles` 判定产物罐：在 OUTPUT/OUTPUT_1/OUTPUT_2 中，不在 EXTRA 中，且不在任何“禁止外部抽取”的 INPUT/INPUT_1/INPUT_2 中。`alwaysAllow` 的双向罐（回旋式气液转换机、化学品储罐方块）仍按原行为可回收。
+
+- 流体：`MekanismOutputFluidHandler` 按面能力 `IExtendedFluidHandler` 的罐下标抽取，同种流体也不会从输入罐抽出；面能力不是该类型时对该机器流体失败关闭。
+- 化学品：`MekanismOutputChemicalStorage` 不编译依赖 appmek，按 key 类型 `appmek:chemical` 与化学品注册名匹配，经 Mekanism 化学品面能力按罐下标抽取/补偿。
+
+GameTest `adjacentReturnPreservesCompressorSecondaryChemical`、`wirelessReturnPreservesInfuserInfusionChemical` 验证副化学品保留，关闭适配后恢复通用回收；`provider-mekanism-return-test.init.gradle` 因此在运行时保留 Applied Mekanistics。
 
 ## 验证
 

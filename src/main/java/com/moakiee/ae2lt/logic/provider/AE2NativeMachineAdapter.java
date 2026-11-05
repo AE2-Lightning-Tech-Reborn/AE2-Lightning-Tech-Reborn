@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -34,6 +35,8 @@ import appeng.parts.automation.StackWorldBehaviors;
 
 import com.google.common.util.concurrent.Runnables;
 
+import com.moakiee.ae2lt.integration.mekanism.MekanismOutputChemicalStorage;
+import com.moakiee.ae2lt.integration.mekanism.MekanismOutputFluidHandler;
 import com.moakiee.ae2lt.integration.mekanism.MekanismOutputItemHandler;
 import com.moakiee.ae2lt.integration.industrialforegoing.IndustrialForegoingOutputFluidHandler;
 import com.moakiee.ae2lt.integration.industrialforegoing.IndustrialForegoingOutputItemHandler;
@@ -62,6 +65,10 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
      * don't trigger a block-entity swap (rare, but some mods do this).
      */
     private static final int WRAPPER_REFRESH_TICKS = 20;
+
+    /** Applied Mekanistics chemical key type; compared by id so appmek stays optional. */
+    private static final ResourceLocation MEKANISM_CHEMICAL_KEY_TYPE =
+            ResourceLocation.fromNamespaceAndPath("appmek", "chemical");
 
     private final Map<TargetFaceKey, StorageCacheEntry> storageCache = new HashMap<>();
 
@@ -128,11 +135,18 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
             for (var entry : strategies.entrySet()) {
                 var wrapper = entry.getValue().createWrapper(false, Runnables.doNothing());
                 var blockEntity = blockEntityRef.get();
-                if (machineAdaptationEnabled && wrapper != null && entry.getKey() == AEKeyType.items()
-                        && blockEntity != null
+                if (machineAdaptationEnabled && wrapper != null && blockEntity != null
                         && net.neoforged.fml.ModList.get() != null
                         && net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
-                    wrapper = MekanismOutputItemHandler.restrict(blockEntity, face, wrapper);
+                    if (entry.getKey() == AEKeyType.items()) {
+                        wrapper = MekanismOutputItemHandler.restrict(blockEntity, face, wrapper);
+                    } else if (entry.getKey() == AEKeyType.fluids()) {
+                        wrapper = MekanismOutputFluidHandler.restrict(blockEntity, face, wrapper);
+                    } else if (MEKANISM_CHEMICAL_KEY_TYPE.equals(entry.getKey().getId())) {
+                        // Mekanism registers secondary/extra chemical tanks (purification,
+                        // injection, compressing, infusing) as OUTPUT too; keep them in.
+                        wrapper = MekanismOutputChemicalStorage.restrict(blockEntity, face, wrapper);
+                    }
                 }
                 if (machineAdaptationEnabled && wrapper != null
                         && (entry.getKey() == AEKeyType.fluids() || entry.getKey() == AEKeyType.items())

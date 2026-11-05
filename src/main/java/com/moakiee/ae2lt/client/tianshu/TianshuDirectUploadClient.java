@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client.tianshu;
 import appeng.menu.SlotSemantics;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.lang.ref.WeakReference;
 import net.minecraft.client.Minecraft;
@@ -15,8 +16,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * Completes Alt recipe-viewer uploads while the recipe page remains open. The normal terminal
- * screen still owns every manual or modifier-configured upload.
+ * Completes Alt recipe-viewer uploads while the recipe page remains open and reports results
+ * for automatic uploads that keep their current screen.
  */
 @EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class TianshuDirectUploadClient {
@@ -75,15 +76,9 @@ public final class TianshuDirectUploadClient {
                 clearHeldRecipe();
             }
             case PROCESSING_PROVIDER -> {
-                if (!menu.requestDirectUploadTargetsAfterEncoding()) return;
-                if (!menu.hasFreshDirectUploadTargets()) return;
-                var selection = TianshuUploadSourceSelection.collect(menu);
-                var mode = com.moakiee.ae2lt.config.AE2LTClientConfig.uploadMatchMode();
-                String suggested = mode == com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH
-                        ? TianshuUploadTargetMatcher.findClosestUniqueAlias(menu.getUploadTargets(),
-                                selection.initialQuery(), selection.defaultAliases()) : "";
-                var target = TianshuUploadTargetMatcher.automaticCandidate(
-                        menu.getUploadTargets(), mode, selection.savedAlias(), suggested, selection.machineIds());
+                if (!menu.requestUploadTargetsAfterEncoding()) return;
+                if (!menu.hasFreshUploadTargetsAfterEncoding()) return;
+                var target = findAutomaticTarget(menu);
                 if (target != null && consumeDirectRequest(menu)) {
                     menu.uploadTianshuPatternToTarget(target.group(), true);
                     awaitResult(menu, target.group().name());
@@ -109,6 +104,17 @@ public final class TianshuDirectUploadClient {
         return menu.consumeTriggeredUpload() && menu.consumeDirectUploadRequest();
     }
 
+    static TianshuUploadTargetData findAutomaticTarget(
+            TianshuPatternEncodingTermMenu menu) {
+        var selection = TianshuUploadSourceSelection.collect(menu);
+        var mode = com.moakiee.ae2lt.config.AE2LTClientConfig.uploadMatchMode();
+        String suggested = mode == com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH
+                ? TianshuUploadTargetMatcher.findClosestUniqueAlias(menu.getUploadTargets(),
+                        selection.initialQuery(), selection.defaultAliases()) : "";
+        return TianshuUploadTargetMatcher.automaticCandidate(
+                menu.getUploadTargets(), mode, selection.savedAlias(), suggested, selection.machineIds());
+    }
+
     private static ItemStack firstEncodedPattern(TianshuPatternEncodingTermMenu menu) {
         return menu.getSlots(SlotSemantics.ENCODED_PATTERN).stream()
                 .map(slot -> slot.getItem())
@@ -117,7 +123,7 @@ public final class TianshuDirectUploadClient {
                 .orElse(ItemStack.EMPTY);
     }
 
-    private static void awaitResult(
+    static void awaitResult(
             TianshuPatternEncodingTermMenu menu, Component targetName) {
         awaitingResult = new WeakReference<>(menu);
         awaitingTargetName = targetName == null ? null : targetName.copy();

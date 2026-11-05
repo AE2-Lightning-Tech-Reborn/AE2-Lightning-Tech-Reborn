@@ -228,7 +228,8 @@ neoForge {
         patternMigrationGameTestServer {
             type = "gameTestServer"
             gameDirectory = project.file('run-pattern-migration-gametest')
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_migration'
+            systemProperty 'neoforge.enabledGameTestNamespaces', providers.gradleProperty('ae2ltPatternMigrationTestNamespaces')
+                    .getOrElse('ae2lt_migration,ae2lt_migration_disk')
         }
 
         globalBatchGameTestServer {
@@ -443,6 +444,7 @@ tasks.matching { it.name == 'runPatternMigrationClient' }.configureEach {
 }
 if (providers.gradleProperty('ae2ltPatternMigrationTestsOnly').getOrElse('false').toBoolean()) {
     sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/craft/migration/PatternMigrationGameTests.java',
+                                   'com/moakiee/ae2lt/logic/craft/migration/PatternMigrationDiskGameTests.java',
                                    'com/moakiee/ae2lt/debug/PatternMigrationClientProbe.java'])
 }
 if (providers.gradleProperty('ae2ltGlobalBatchTestsOnly').getOrElse('false').toBoolean()) {

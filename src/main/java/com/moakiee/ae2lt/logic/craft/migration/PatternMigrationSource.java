@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-/** A bounded view over real slots; the anchor can be a multiblock's aggregate network node. */
+/** A bounded physical or certified disk view; the anchor can be a multiblock's aggregate network node. */
 final class PatternMigrationSource {
     final Object owner;
     final IGridNode anchor;
@@ -61,6 +61,9 @@ final class PatternMigrationSource {
 
     PatternMigrationTransfer.Slot slot(int index, BooleanSupplier idle) {
         int physical = firstSlot + index;
+        if (inventory instanceof PatternMigrationDiskInventory disks) {
+            return disks.slot(physical, () -> valid(anchor.getGrid()) && !busy.getAsBoolean() && idle.getAsBoolean());
+        }
         return new PatternMigrationTransfer.Slot() {
             @Override public ItemStack read() { return inventory.getStackInSlot(physical); }
             @Override public ItemStack extract(boolean simulate) { return inventory.extractItem(physical, 1, simulate); }

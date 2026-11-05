@@ -171,8 +171,8 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(transferButton.contains("original.call(recipesGui)"));
         assertTrue(coordinator.contains("hasTriggeredUploadAck()"));
         assertTrue(coordinator.contains("isEncodingResultReady(menu, stack)"));
-        assertTrue(coordinator.contains("requestDirectUploadTargetsAfterEncoding()"));
-        assertTrue(coordinator.contains("hasFreshDirectUploadTargets()"));
+        assertTrue(coordinator.contains("requestUploadTargetsAfterEncoding()"));
+        assertTrue(coordinator.contains("hasFreshUploadTargetsAfterEncoding()"));
         assertTrue(coordinator.contains("recipeScreen.onClose()"));
         assertTrue(coordinator.contains("terminalScreen.openDirectUploadFallback()"));
         assertTrue(terminalScreen.contains("public boolean openDirectUploadFallback()"));
@@ -186,7 +186,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(coordinator.contains("displayClientMessage(result, false)"));
 
         int resultReady = coordinator.indexOf("isEncodingResultReady(menu, stack)");
-        int targetRefresh = coordinator.indexOf("requestDirectUploadTargetsAfterEncoding()");
+        int targetRefresh = coordinator.indexOf("requestUploadTargetsAfterEncoding()");
         assertTrue(resultReady >= 0 && targetRefresh > resultReady);
         int emiEncode = emi.indexOf("tianshuMenu.encodeAndUploadDirectly()");
         int emiHold = emi.indexOf("TianshuDirectUploadClient.holdRecipeScreen(");

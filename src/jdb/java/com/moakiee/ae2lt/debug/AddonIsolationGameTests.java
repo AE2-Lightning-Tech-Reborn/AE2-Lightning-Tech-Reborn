@@ -16,7 +16,7 @@ public final class AddonIsolationGameTests {
     @GameTest(template = "pigmee_station_empty")
     public static void coreHasNoPigmeeContent(GameTestHelper h) {
         for (var id : BuiltInRegistries.ITEM.keySet()) {
-            h.assertTrue(!id.getNamespace().equals("pigmeetech"), "addon accidentally loaded");
+            h.assertTrue(!id.getNamespace().equals("pigmeecraft"), "addon accidentally loaded");
             h.assertTrue(!id.getNamespace().equals("ae2lt") || !id.getPath().contains("pigmee"), "core still registers " + id);
         }
         h.assertTrue(!BuiltInRegistries.ITEM.containsKey(ResourceLocation.parse("ae2lt:research_note")), "research note still registered");
