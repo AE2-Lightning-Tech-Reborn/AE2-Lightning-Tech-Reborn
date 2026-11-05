@@ -25,13 +25,15 @@ final class PatternMigrationSources {
     static final String EAEP_CORE = "com.extendedae_plus.content.matrix.PatternCorePlusBlockEntity";
     static final String ECO_BUS = "cn.dancingsnow.neoecoae.blocks.entity.crafting.ECOCraftingPatternBusBlockEntity";
     static final String EAE_ASSEMBLER = "com.glodblock.github.extendedae.common.tileentities.TileExMolecularAssembler";
+    static final String DISK_BATCH_ASSEMBLER = "io.github.lounode.ae2pattern.common.block.entity.BatchAssemblerBlockEntity";
     private final Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
     static int priority(Class<?> type) {
         if (MigrationReflection.isType(type, EAE_PATTERN) || MigrationReflection.isType(type, EAEP_MATRIX)
                 || MigrationReflection.isType(type, ECO_BUS)) return 0;
         if (MatrixPatternStorageBlockEntity.class.isAssignableFrom(type)
-                || MolecularAssemblerBlockEntity.class.isAssignableFrom(type)) return 1;
+                || MolecularAssemblerBlockEntity.class.isAssignableFrom(type)
+                || MigrationReflection.isType(type, DISK_BATCH_ASSEMBLER)) return 1;
         if (PatternProviderLogicHost.class.isAssignableFrom(type)) return 2;
         if (PatternContainer.class.isAssignableFrom(type)) return 3;
         return -1;
@@ -40,6 +42,12 @@ final class PatternMigrationSources {
     /** Activity-only pass: no pattern catalog, inventory view or decoding is needed to certify idle. */
     static BooleanSupplier executionProbe(Object owner) {
         Class<?> type = owner.getClass();
+        if (MigrationReflection.isType(type, DISK_BATCH_ASSEMBLER)) {
+            // isBusy() means intake capacity here, not whether buffered jobs or outputs still exist.
+            return () -> Boolean.TRUE.equals(MigrationReflection.call(owner, "hasBufferedWork"))
+                    || Boolean.TRUE.equals(MigrationReflection.call(MigrationReflection.field(owner, "cellBuffer"), "hasContents"))
+                    || !Boolean.TRUE.equals(MigrationReflection.call(MigrationReflection.field(owner, "returns"), "isEmpty"));
+        }
         if (MigrationReflection.isType(type, EAEP_MATRIX)) {
             Object cluster = MigrationReflection.call(owner, "eap$getSuperMatrixCluster");
             return cluster == null ? null : () -> MigrationReflection.call(owner, "eap$getSuperMatrixCluster") == cluster
@@ -106,6 +114,16 @@ final class PatternMigrationSources {
         }
         if (!seen.add(owner)) return List.of();
 
+        if (MigrationReflection.isType(type, DISK_BATCH_ASSEMBLER)) {
+            var disks = (InternalInventory) MigrationReflection.call(owner, "getDiskInventory");
+            var physical = source(owner, node, disks,
+                    () -> (InternalInventory) MigrationReflection.call(owner, "getDiskInventory"),
+                    executionProbe(owner), 1, 0, disks.size(), false, () -> {}, () -> {});
+            var result = new ArrayList<PatternMigrationSource>();
+            addDisks(physical, disks, physical.currentInventory, result);
+            return result;
+        }
+
         if (MigrationReflection.isType(type, ECO_BUS)) {
             var inventory = (InternalInventory) MigrationReflection.call(owner, "getPatternSlotInventory");
             // Resolve the exact methods now; a mismatched version fails before any extraction.
@@ -120,7 +138,10 @@ final class PatternMigrationSources {
                     }, 0, 0, inventory.size(), false,
                     () -> MigrationReflection.call(owner, "beginPatternBatch"),
                     () -> MigrationReflection.call(owner, "endPatternBatch"));
-            return List.of(source);
+            var result = new ArrayList<PatternMigrationSource>();
+            result.add(source);
+            addDisks(source, inventory, source.currentInventory, result);
+            return result;
         }
         if (owner instanceof MatrixPatternStorageBlockEntity storage) {
             var inventory = storage.getTerminalPatternInventory();
@@ -144,6 +165,17 @@ final class PatternMigrationSources {
         }
         if (owner instanceof PatternProviderLogicHost host) {
             var logic = host.getLogic();
+            // Disk providers keep a derived pattern mirror in getPatternInv(). Never extract that copy.
+            if (PatternMigrationDiskInventory.isDiskHost(owner)) {
+                var disks = (InternalInventory) MigrationReflection.call(owner, "getDiskInventory");
+                var result = new ArrayList<PatternMigrationSource>();
+                var physical = source(owner, node, disks,
+                        () -> (InternalInventory) MigrationReflection.call(owner, "getDiskInventory"),
+                        () -> host.getLogic().isBusy() || !host.getLogic().getReturnInv().isEmpty(),
+                        2, 0, disks.size(), false, () -> {}, () -> {});
+                addDisks(physical, disks, physical.currentInventory, result);
+                return result;
+            }
             var inventory = logic.getPatternInv();
             var cached = ((PatternProviderLogicAccessor) logic).getPatterns();
             boolean hint = cached.stream().limit(32).anyMatch(pattern -> pattern instanceof IMolecularAssemblerSupportedPattern);
@@ -165,6 +197,15 @@ final class PatternMigrationSources {
                     () -> false, 3, 0, inventory.size(), false, () -> {}, () -> {}));
         }
         return List.of();
+    }
+
+    private static void addDisks(PatternMigrationSource physical, InternalInventory disks,
+            Supplier<InternalInventory> current, List<PatternMigrationSource> result) {
+        var recipes = PatternMigrationDiskInventory.create(physical.owner, disks, physical.anchor::getGrid);
+        if (recipes == null || recipes.size() == 0) return;
+        result.add(source(physical.owner, physical.anchor, recipes,
+                () -> current.get() == disks ? recipes : null, physical.busy,
+                physical.priority, 0, recipes.size(), false, physical.beginBatch, physical.endBatch));
     }
 
     private void addEaePattern(Object owner, IGridNode anchor, List<PatternMigrationSource> result) {

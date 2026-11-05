@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.logic.craft.migration;
 
 import static org.junit.jupiter.api.Assertions.*;
 import appeng.api.networking.IGridNode;
+import appeng.api.inventories.InternalInventory;
 import appeng.api.stacks.AEItemKey;
 import com.moakiee.ae2lt.network.MatrixPatternMigrationStatusPacket;
 import io.netty.buffer.Unpooled;
@@ -54,6 +55,60 @@ class PatternMigrationTest {
         var custody = new Custody();
         assertEquals(PatternMigrationTransfer.Result.BLOCKED, move(source, target, custody));
         assertEquals(4, source.stack.getCount()); assertEquals(0, source.extractions);
+    }
+
+    @Test void diskMigrationChargesBlankAndRemovesRecipeThroughGuard() {
+        var rows = new DiskRows(pattern(1, true), 2);
+        var source = new PatternMigrationDiskInventory(rows).slot(0, () -> true);
+        var target = new Destination(); var custody = new Custody();
+        assertEquals(PatternMigrationTransfer.Result.MOVED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        assertTrue(rows.recipe.isEmpty()); assertEquals(1, rows.blanks);
+        assertTrue(PatternMigrationTransfer.same(pattern(1, true), target.stack));
+        assertTrue(custody.stack.isEmpty());
+    }
+
+    @Test void diskMigrationWithoutBlankKeepsRecipe() {
+        var rows = new DiskRows(pattern(1, false), 0);
+        var source = new PatternMigrationDiskInventory(rows).slot(0, () -> true);
+        var target = new Destination(); var custody = new Custody();
+        assertEquals(PatternMigrationTransfer.Result.SOURCE_CHANGED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        assertFalse(rows.recipe.isEmpty()); assertEquals(0, rows.blanks);
+        assertTrue(target.stack.isEmpty()); assertTrue(custody.stack.isEmpty());
+    }
+
+    @Test void diskRollbackUsesOriginalGuardAndReturnsBlank() {
+        var rows = new DiskRows(pattern(1, true), 2);
+        var source = new PatternMigrationDiskInventory(rows).slot(0, () -> true);
+        var target = new Destination(); target.rejectCommit = true; var custody = new Custody();
+        assertEquals(PatternMigrationTransfer.Result.RESTORED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        assertTrue(PatternMigrationTransfer.same(pattern(1, true), rows.recipe));
+        assertEquals(2, rows.blanks); assertTrue(custody.stack.isEmpty());
+    }
+
+    @Test void diskFullDestinationAndBusySourceDoNotConsumeBlank() {
+        var rows = new DiskRows(pattern(1, false), 2);
+        var disks = new PatternMigrationDiskInventory(rows);
+        var target = new Destination(); target.full = true; var custody = new Custody();
+        var source = disks.slot(0, () -> true);
+        assertEquals(PatternMigrationTransfer.Result.BLOCKED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        target.full = false; source = disks.slot(0, () -> false);
+        assertEquals(PatternMigrationTransfer.Result.SOURCE_CHANGED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        assertEquals(2, rows.blanks); assertFalse(rows.recipe.isEmpty());
+    }
+
+    @Test void diskRollbackFailureRetainsMaterializedPatternInRecovery() {
+        var rows = new DiskRows(pattern(1, false), 2); rows.rejectRestore = true;
+        var source = new PatternMigrationDiskInventory(rows).slot(0, () -> true);
+        var target = new Destination(); target.rejectCommit = true; var custody = new Custody();
+        assertEquals(PatternMigrationTransfer.Result.RECOVERY_REQUIRED,
+                PatternMigrationTransfer.move(source, source.read().copy(), target, custody::hold));
+        assertTrue(rows.recipe.isEmpty()); assertEquals(1, rows.blanks);
+        assertTrue(PatternMigrationTransfer.same(pattern(1, false), custody.stack));
     }
 
     @Test void destinationRejectingAfterSimulationRestoresOriginalSlot() {
@@ -233,5 +288,35 @@ class PatternMigrationTest {
             return ItemStack.EMPTY;
         }
         public boolean received(ItemStack held) { return PatternMigrationTransfer.same(held, stack); }
+    }
+
+    /** Models the disk API's display rows and single captured swap guard, not a physical inventory. */
+    static class DiskRows implements InternalInventory {
+        ItemStack recipe; int blanks; boolean rejectRestore;
+        DiskRows(ItemStack recipe, int blanks) { this.recipe = recipe; this.blanks = blanks; }
+        public int size() { return 1; }
+        public ItemStack getStackInSlot(int slot) { return recipe.copy(); }
+        public void setItemDirect(int slot, ItemStack stack) { fail("Use the captured disk guard"); }
+        @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            throw new AssertionError("Split extraction cannot restore a disk row");
+        }
+        @Override public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            throw new AssertionError("Upload is not a rollback");
+        }
+        @Override public InternalInventory getSlotInv(int slot) {
+            if (recipe.isEmpty()) return InternalInventory.empty();
+            return new InternalInventory() {
+                ItemStack removed = ItemStack.EMPTY;
+                public int size() { return 1; }
+                public ItemStack getStackInSlot(int index) { return blanks > 0 ? recipe.copy() : ItemStack.EMPTY; }
+                public void setItemDirect(int index, ItemStack stack) {
+                    if (stack.isEmpty() && !recipe.isEmpty() && blanks > 0) {
+                        removed = recipe.copy(); recipe = ItemStack.EMPTY; blanks--;
+                    } else if (!rejectRestore && recipe.isEmpty() && PatternMigrationTransfer.same(removed, stack)) {
+                        recipe = removed.copy(); removed = ItemStack.EMPTY; blanks++;
+                    }
+                }
+            };
+        }
     }
 }

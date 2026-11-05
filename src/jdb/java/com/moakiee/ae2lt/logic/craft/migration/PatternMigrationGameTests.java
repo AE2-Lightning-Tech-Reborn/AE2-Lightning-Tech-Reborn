@@ -160,7 +160,8 @@ public final class PatternMigrationGameTests {
         });
     }
 
-    @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300)
+    // This assertion observes a four-tick window; other grids can consume the shared server budget.
+    @GameTest(templateNamespace="ae2lt_migration",template="migration_test",timeoutTicks=300,batch="migration_assembler_pause")
     public static void autonomousAssemblerOutputPreventsOtherSourceTransfer(GameTestHelper h) {
         fixture(h,f->{
             var pos=f.port.getBlockPos().east().south().east();
@@ -231,7 +232,8 @@ public final class PatternMigrationGameTests {
         });
     }
 
-    @GameTest(templateNamespace="ae2lt_migration", template="migration_test", timeoutTicks=300)
+    // Run this short pause observation separately from the large concurrent migration fixtures.
+    @GameTest(templateNamespace="ae2lt_migration", template="migration_test", timeoutTicks=300, batch="migration_cpu_pause")
     public static void nativeCpuRejectsStartThenPausesAndResumesTask(GameTestHelper h) {
         fixture(h,f->{
             var encoded=pattern(h,false);var details=PatternDetailsHelper.decodePattern(encoded,h.getLevel());
@@ -333,7 +335,11 @@ public final class PatternMigrationGameTests {
             physical.setItemDirect(0,disk.copy());
             var terminal=(appeng.api.inventories.InternalInventory)MigrationReflection.call(bus,"getTerminalPatternInventory");
             h.assertTrue(terminal.getStackInSlot(0).isEmpty()&&terminal.size()>physical.size(),"terminal hides disk and appends virtual recipes");
-            h.assertTrue(ItemStack.matches(disk,sources.getFirst().inventory.getStackInSlot(0))&&sources.getFirst().count==physical.size(),"migration only sees physical disk, never appended recipe");
+            sources = new PatternMigrationSources().discover(proxyNode(bus), null);
+            h.assertTrue(sources.size()==2 && sources.getFirst().inventory==physical
+                    && sources.get(1).inventory instanceof PatternMigrationDiskInventory
+                    && ItemStack.matches(pattern(h,false),sources.get(1).inventory.getStackInSlot(0)),
+                    "migration keeps physical slots and adds a certified disk view");
             System.out.println("MIGRATION_REAL_DISK_VIRTUAL_ROWS_PASS");
         }
         var coordinator=Class.forName("cn.dancingsnow.neoecoae.grid.PatternMigrationCoordinator");var grid=new Object();var owner=new Object();
@@ -379,12 +385,12 @@ public final class PatternMigrationGameTests {
         var input=new ItemStack[9];Arrays.fill(input,ItemStack.EMPTY);input[0]=new ItemStack(Items.OAK_LOG);
         return PatternDetailsHelper.encodeCraftingPattern(holder,input,new ItemStack(Items.OAK_PLANKS,4),substitute,false);
     }
-    private static long count(Fixture f,ItemStack item){
+    static long count(Fixture f,ItemStack item){
         long result=0;for(var storage:f.port.getPatternStorages())for(int i=0;i<storage.capacity();i++){
             var stack=storage.getInventory().getStackInSlot(i);if(ItemStack.isSameItemSameComponents(stack,item))result+=stack.getCount();
         }return result;
     }
-    private static void await(GameTestHelper h,Fixture f,Runnable checks){
+    static void await(GameTestHelper h,Fixture f,Runnable checks){
         h.runAfterDelay(1,()->{
             var s=f.controller.getPatternMigration().snapshot();
             if(s.active()){await(h,f,checks);return;}
@@ -392,7 +398,7 @@ public final class PatternMigrationGameTests {
             checks.run();
         });
     }
-    private static void fixture(GameTestHelper h,java.util.function.Consumer<Fixture> ready){
+    static void fixture(GameTestHelper h,java.util.function.Consumer<Fixture> ready){
         var f=build(h.getLevel(),h.absolutePos(new BlockPos(2,1,2)));
         h.runAfterDelay(50,()->{
             f.controller.scanAndForm(f.player);
@@ -448,7 +454,7 @@ public final class PatternMigrationGameTests {
             field.setAccessible(true);((Map<UUID,ServerPlayer>)field.get(list)).remove(player.getUUID());
         }catch(ReflectiveOperationException e){throw new AssertionError(e);}
     }
-    private static void done(GameTestHelper h,Fixture f){
+    static void done(GameTestHelper h,Fixture f){
         f.controller.getPatternMigration().stop(PatternMigrationSnapshot.Reason.CANCELLED);unregister(f.player);
         System.out.println("MIGRATION_GAMETEST_PASS");h.succeed();
     }

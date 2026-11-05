@@ -1046,7 +1046,7 @@
   "ae2lt.matrix.gui.upgrade": "升级样板仓",
   "ae2lt.matrix.migration.start": "一键迁移样板",
   "ae2lt.matrix.migration.stop": "停止迁移",
-  "ae2lt.matrix.migration.description": "移动同网兼容实体样板，优先矩阵与 F 系列。重复编码样板退回 ME，背包兜底；两处均满则留在原槽。",
+  "ae2lt.matrix.migration.description": "移动同网兼容样板，优先矩阵与 F 系列。每张磁盘内配方需从 ME 消耗一张空白样板。重复编码样板退回 ME，背包兜底；两处均满则留在原槽。",
   "ae2lt.matrix.migration.finished": "样板迁移完成：移入 %s，重复回收 %s",
   "ae2lt.matrix.migration.recovery_summary": "样板待送还：腾出空间后重开界面",
   "ae2lt.matrix.migration.counts": "移入 %s · 回收 %s",
