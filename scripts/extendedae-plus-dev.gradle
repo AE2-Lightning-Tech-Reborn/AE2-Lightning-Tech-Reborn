@@ -1,0 +1,81 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
+
+// ForgeGradle does not remap Minecraft references in nested Configuration jars.
+def release = configurations.maybeCreate('extendedaePlusRelease')
+release.transitive = false
+dependencies.add(release.name, "maven.modrinth:extendedae-plus:${extendedae_plus_version}")
+def repository = file(findProperty('ae2ltExtendedAePlusDevRepository') ?: '.gradle/extendedae-plus-dev/maven')
+def versionId = extendedae_plus_version.toString()
+def configurationVersion = '4710266'
+repositories.exclusiveContent {
+    forRepository { project.repositories.maven {
+        name = 'ExtendedAEPlusDevelopment'
+        url = repository.toURI()
+        metadataSources { artifact() }
+    } }
+    filter {
+        includeVersion 'ae2lt.dev', 'extendedae-plus', versionId
+        includeVersion 'ae2lt.dev', 'configuration', configurationVersion
+    }
+}
+dependencies.add('runtimeOnly', fg.deobf("ae2lt.dev:extendedae-plus:${versionId}"))
+dependencies.add('runtimeOnly', fg.deobf("ae2lt.dev:configuration:${configurationVersion}"))
+def prepared = false
+def prepare = {
+    if (prepared) return
+    def original = release.singleFile
+    def artifactDirectory = new File(repository, "ae2lt/dev/extendedae-plus/${versionId}")
+    artifactDirectory.mkdirs()
+    def adapted = new File(artifactDirectory, "extendedae-plus-${versionId}.jar")
+    def zip = new ZipFile(original)
+    try {
+        def metadataEntry = zip.getEntry('META-INF/jarjar/metadata.json')
+        def metadata = metadataEntry == null ? [jars: []] :
+                zip.getInputStream(metadataEntry).withCloseable { new JsonSlurper().parse(it) }
+        def configurationJars = metadata.jars.findAll {
+            it.identifier.artifact.startsWith('configuration-')
+        }
+        if (configurationJars.size() != 1) {
+            throw new GradleException('Expected one embedded Configuration jar in ExtendedAE Plus')
+        }
+        def configuration = configurationJars[0]
+        if (configuration.version.artifactVersion.toString() != configurationVersion) {
+            throw new GradleException("Expected Configuration ${configurationVersion} in ExtendedAE Plus")
+        }
+        def configurationDirectory = new File(repository, "ae2lt/dev/configuration/${configurationVersion}")
+        configurationDirectory.mkdirs()
+        def configurationJar = new File(configurationDirectory, "configuration-${configurationVersion}.jar")
+        zip.getInputStream(zip.getEntry(configuration.path)).withCloseable {
+            configurationJar.bytes = it.bytes
+        }
+        metadata.jars.remove(configuration)
+        new ZipOutputStream(new FileOutputStream(adapted)).withCloseable { output ->
+            zip.entries().each { entry ->
+                if (entry.name != configuration.path && entry.name != metadataEntry.name) {
+                    def copiedEntry = new ZipEntry(entry.name)
+                    copiedEntry.time = entry.time
+                    output.putNextEntry(copiedEntry)
+                    if (!entry.directory) zip.getInputStream(entry).withCloseable { it.transferTo(output) }
+                    output.closeEntry()
+                }
+            }
+            if (!metadata.jars.isEmpty()) {
+                def copiedMetadata = new ZipEntry(metadataEntry.name)
+                copiedMetadata.time = metadataEntry.time
+                output.putNextEntry(copiedMetadata)
+                output.write(JsonOutput.toJson(metadata).getBytes('UTF-8'))
+                output.closeEntry()
+            }
+        }
+    } finally {
+        zip.close()
+    }
+    prepared = true
+}
+configurations.configureEach { configuration ->
+    if (configuration.name != release.name) configuration.incoming.beforeResolve { prepare() }
+}

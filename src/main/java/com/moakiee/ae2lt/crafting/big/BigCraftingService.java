@@ -193,6 +193,7 @@ public final class BigCraftingService {
     }
 
     private void tickOrder() {
+        if (job.hasUnsettledRefunds()) return;
         if (!job.returning && (job.suspended || job.dispatchFailed)) return;
         long now = host.getLevel().getGameTime();
         if (budget.begin(now, host.getCoreProfile().successfulDispatchesPerTick(), Long.MAX_VALUE)) {
@@ -400,19 +401,22 @@ public final class BigCraftingService {
         }
         var storage = host.getGrid().getStorageService().getInventory();
         for (var e : new ArrayList<>(job.escrow.entrySet())) {
-            var inserted =
-                    BigStorageOps.insert(
-                            storage,
-                            e.getKey(),
-                            e.getValue(),
-                            Actionable.MODULATE,
-                            host.getActionSource());
-            if (inserted.signum() > 0) {
-                var left = e.getValue().subtract(inserted);
-                if (left.signum() == 0) job.escrow.remove(e.getKey());
-                else job.escrow.put(e.getKey(), left);
+            // Reserve before entering external code, including synchronous save/cancel callbacks.
+            // An absent/invalid receipt leaves an unresolved claim, never another refundable copy.
+            job.reserveRefund(e.getKey(), e.getValue());
+            host.markCpuDirty();
+            try {
+                var inserted = BigStorageOps.insert(storage, e.getKey(), e.getValue(),
+                        Actionable.MODULATE, host.getActionSource());
+                job.settleRefund(e.getKey(), e.getValue(), inserted);
+            } catch (RuntimeException failure) {
+                job.quarantineRefund();
                 host.markCpuDirty();
+                appeng.core.AELog.warn("[ae2lt] Exact order %s quarantined an indeterminate external refund: %s",
+                        job.id, failure);
+                return;
             }
+            host.markCpuDirty();
         }
         invalidate();
         if (job.escrow.isEmpty()) {

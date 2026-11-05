@@ -61,7 +61,7 @@ public record CreateFrequencyPacket(
                 // Send ownership before binding; the normal broadcast only reaches already-bound menus.
                 SyncFrequencyDetailPacket.sendInitialMembersIfNeeded(player, freq.getId());
             } else {
-                NetworkInit.sendToPlayer(player,
+                com.moakiee.ae2lt.network.NetworkInit.sendToPlayer(player,
                         new FrequencyResponsePacket(FrequencyResponsePacket.OWNER_LIMIT));
             }
         });

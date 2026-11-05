@@ -17,7 +17,9 @@ public final class GtoEaepMixinExtension implements IExtension {
     private static final Set<String> TARGETS = Set.of(
             "appeng/helpers/patternprovider/PatternProviderLogic",
             "appeng/menu/me/items/PatternEncodingTermMenu",
-            "appeng/menu/me/crafting/CraftingCPUMenu");
+            "appeng/menu/me/crafting/CraftingCPUMenu",
+            "appeng/client/gui/me/items/PatternEncodingTermScreen",
+            "appeng/client/gui/me/crafting/CraftConfirmScreen");
 
     public static void register() {
         var transformer = (IMixinTransformer) MixinEnvironment.getCurrentEnvironment().getActiveTransformer();
@@ -41,12 +43,16 @@ public final class GtoEaepMixinExtension implements IExtension {
                                 && !name.equals(EAEP + "helpers.patternprovider.PatternProviderLogicAdvancedMixin")
                                 && !name.equals(EAEP + "menu.PatternEncodingTermMenuMixin")
                                 && !name.equals(EAEP + "accessor.PatternEncodingTermMenuAccessor")
-                                && !name.equals(EAEP + "menu.CraftingCPUMenuManualStatusMixin")) continue;
+                                && !name.equals(EAEP + "menu.CraftingCPUMenuManualStatusMixin")
+                                && !name.equals(EAEP + "client.gui.CraftConfirmScreenMixin")
+                                && !name.equals(EAEP + "client.gui.PatternEncodingTermScreenMixin")) continue;
                         var node = mixin.getClassNode(0);
                         if (name.equals(PROVIDER_MIXIN)) adapt(node);
                         else if (name.endsWith(".PatternProviderLogicAdvancedMixin")) adaptAdvancedBlocking(node);
                         else if (name.endsWith(".PatternEncodingTermMenuAccessor")) adaptEncodingAccessor(node);
                         else if (name.endsWith(".PatternEncodingTermMenuMixin")) adaptEncoding(node, context.getClassNode());
+                        else if (name.endsWith(".PatternEncodingTermScreenMixin")) adaptEncodingScreen(node, context.getClassNode());
+                        else if (name.endsWith(".CraftConfirmScreenMixin")) adaptConfirmTitle(node);
                         else adaptCpuMenu(node, context.getClassNode());
                         publish(loader, mixin, node);
                     }
@@ -148,6 +154,89 @@ public final class GtoEaepMixinExtension implements IExtension {
 
     private static void adaptCpuMenu(ClassNode node, ClassNode target) {
         retargetBroadcast(node, target, "eap$syncManualWaitingStatus");
+    }
+
+    static void adaptConfirmTitle(ClassNode node) {
+        var methods = node.methods.stream().filter(method -> method.name.equals("eap$rewriteCraftingPlanTitle")
+                && method.desc.equals("(Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V")).toList();
+        if (methods.size() != 1) throw new IllegalStateException("EAEP confirmation title handler changed");
+        var method = methods.getFirst();
+        var calls = new java.util.ArrayList<MethodInsnNode>();
+        for (var instruction : method.instructions) {
+            if (instruction instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKEVIRTUAL
+                    && call.owner.equals(node.name) && call.name.equals("setTextContent")
+                    && call.desc.equals("(Ljava/lang/String;Lnet/minecraft/network/chat/Component;)V")) calls.add(call);
+        }
+        if (calls.size() != 1) throw new IllegalStateException("EAEP confirmation title write changed: " + calls.size());
+        var wrapper = new InsnList();
+        wrapper.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        wrapper.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
+                "com/moakiee/ae2lt/compat/gto/GtoEaepCraftConfirmSupport", "preserveCoreTitle",
+                "(Lnet/minecraft/network/chat/Component;Lappeng/client/gui/me/crafting/CraftConfirmScreen;)"
+                        + "Lnet/minecraft/network/chat/Component;", false));
+        method.instructions.insertBefore(calls.getFirst(), wrapper);
+        method.maxStack++;
+    }
+
+    static void adaptEncodingScreen(ClassNode node, ClassNode target) {
+        String button = "appeng/client/gui/widgets/ActionButton";
+        String constructor = "(Lappeng/api/config/ActionItems;Ljava/util/function/Consumer;)V";
+        int allocations = 0, constructors = 0, stores = 0;
+        for (var method : target.methods) {
+            if (!method.name.equals("<init>")) continue;
+            for (var instruction : method.instructions) {
+                if (instruction instanceof TypeInsnNode type && type.getOpcode() == Opcodes.NEW
+                        && type.desc.equals(button)) allocations++;
+                if (instruction instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESPECIAL
+                        && call.owner.equals(button) && call.name.equals("<init>")
+                        && call.desc.equals(constructor)) constructors++;
+                if (instruction instanceof FieldInsnNode field && field.getOpcode() == Opcodes.PUTFIELD
+                        && field.owner.equals(target.name) && field.name.equals("encodeBtn")
+                        && field.desc.equals("L" + button + ";")) stores++;
+            }
+        }
+        if (allocations != 1 || constructors != 1 || stores != 1) {
+            throw new IllegalStateException("GTO encoding button construction changed: "
+                    + allocations + "/" + constructors + "/" + stores);
+        }
+        int changed = 0;
+        for (var method : node.methods) {
+            if (!method.name.equals("eap$wrapEncodeButton")
+                    || !method.desc.equals("(L" + button + ";)L" + button + ";")
+                    || method.visibleAnnotations == null) continue;
+            for (int i = 0; i < method.visibleAnnotations.size(); i++) {
+                var original = method.visibleAnnotations.get(i);
+                if (!original.desc.equals("Lorg/spongepowered/asm/mixin/injection/ModifyVariable;")) continue;
+                var at = value(original, "at");
+                if (!java.util.List.of("<init>").equals(value(original, "method"))
+                        || !java.util.List.of("encodeBtn").equals(value(original, "name"))
+                        || !(at instanceof AnnotationNode point) || !"STORE".equals(value(point, "value"))) {
+                    throw new IllegalStateException("EAEP encoding button hook changed");
+                }
+                // GTO writes the constructed button directly to its field, without the
+                // legacy local STORE. Keep EAEP's complete replacement/callback body.
+                var allocation = new AnnotationNode("Lorg/spongepowered/asm/mixin/injection/At;");
+                setValue(allocation, "value", "NEW");
+                setValue(allocation, "target", constructor.substring(0, constructor.length() - 1) + "L" + button + ";");
+                setValue(allocation, "remap", false);
+                var replacement = new AnnotationNode(
+                        "Lcom/llamalad7/mixinextras/injector/ModifyExpressionValue;");
+                setValue(replacement, "method", java.util.List.of("<init>"));
+                setValue(replacement, "at", java.util.List.of(allocation));
+                setValue(replacement, "remap", false);
+                setValue(replacement, "require", 1);
+                setValue(replacement, "allow", 1);
+                method.visibleAnnotations.set(i, replacement);
+                changed++;
+            }
+        }
+        if (changed != 1) throw new IllegalStateException("Expected one EAEP encoding button hook, found " + changed);
+    }
+
+    private static Object value(AnnotationNode annotation, String key) {
+        if (annotation.values != null) for (int i = 0; i < annotation.values.size(); i += 2)
+            if (key.equals(annotation.values.get(i))) return annotation.values.get(i + 1);
+        return null;
     }
 
     private static void retargetBroadcast(ClassNode node, ClassNode target, String handler) {

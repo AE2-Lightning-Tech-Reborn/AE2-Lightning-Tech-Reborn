@@ -24,7 +24,7 @@ public final class NeoEcoCraftingCompat {
             throw new IllegalStateException("Unsupported NeoECO GTO facade", failure);
         }
         BatchProviderAdapters.register(new ResourceLocation("ae2lt", "neoeco_gto"), -100,
-                (provider, pattern, job) -> api.provider.isInstance(provider) ? new Adapter(provider) : null);
+                (provider, pattern, job) -> api.provider.isInstance(provider) ? new Adapter(provider, api) : null);
     }
 
     public static boolean supports(ICraftingProvider provider) {
@@ -79,7 +79,7 @@ public final class NeoEcoCraftingCompat {
         public boolean submit() { return (boolean) invoke(api.exactSubmit, batch); }
     }
 
-    private record Adapter(ICraftingProvider provider) implements IBatchCraftingProvider {
+    record Adapter(ICraftingProvider provider, Api api) implements IBatchCraftingProvider {
         public java.util.List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
         public boolean isBusy() { return provider.isBusy(); }
         public long getBatchCapacity(IPatternDetails pattern) { return isBusy() ? 0 : Long.MAX_VALUE; }
@@ -88,12 +88,13 @@ public final class NeoEcoCraftingCompat {
         }
         public PreparedBatch prepareBatch(IPatternDetails pattern, KeyCounter[] inputs,
                                            long copies, BatchJobView job) {
-            return prepare(pattern, inputs, copies, job);
+            // BatchJobView may be a CPU-owned scratch view rebound before a smaller submission.
+            return prepare(pattern, copyInputs(inputs), copies, job.level(), job.craftingId());
         }
         private PreparedBatch prepare(IPatternDetails pattern, KeyCounter[] inputs,
-                                       long copies, BatchJobView job) {
-            Object batch = invoke(api.prepare, null, provider, pattern, inputs, copies,
-                    job.level(), job.craftingId());
+                                       long copies, Level level, UUID jobId) {
+            Object batch = invoke(api.prepare, null, provider, pattern, copyInputs(inputs), copies,
+                    level, jobId);
             if (batch == null) return new PreparedBatch() {
                 public long capacity() { return 0; }
                 public long push(long offered) { return offered; }
@@ -106,8 +107,10 @@ public final class NeoEcoCraftingCompat {
                 public long push(long offered) {
                     if (submitted) throw new IllegalStateException("Batch already submitted");
                     submitted = true;
+                    if (offered < 0) throw new IllegalArgumentException("Negative batch offer");
+                    if (offered == 0) return 0;
                     if (offered < count) {
-                        var smaller = prepare(pattern, inputs, offered, job);
+                        var smaller = prepare(pattern, inputs, offered, level, jobId);
                         return smaller.push(offered);
                     }
                     try {
@@ -120,6 +123,16 @@ public final class NeoEcoCraftingCompat {
                 }
             };
         }
+    }
+
+    private static KeyCounter[] copyInputs(KeyCounter[] inputs) {
+        var copy = new KeyCounter[inputs.length];
+        for (int i = 0; i < inputs.length; i++) {
+            if (inputs[i] == null) continue;
+            copy[i] = new KeyCounter();
+            copy[i].addAll(inputs[i]);
+        }
+        return copy;
     }
 
     static final class Api {
@@ -165,7 +178,17 @@ public final class NeoEcoCraftingCompat {
             case "toString" -> "AE2LT CPU-owned energy reservation";
             case "hashCode" -> System.identityHashCode(proxy);
             case "equals" -> proxy == args[0];
-            default -> null; // commit/refund: the owning CPU retains the energy transaction.
+            case "commit", "refund" -> null; // The owning CPU retains the energy transaction.
+            default -> {
+                if (!method.isDefault()) throw new IllegalStateException("Unsupported NeoECO callback: " + method);
+                try {
+                    yield InvocationHandler.invokeDefault(proxy, method, args == null ? new Object[0] : args);
+                } catch (RuntimeException | Error failure) {
+                    throw failure;
+                } catch (Throwable failure) {
+                    throw new IllegalStateException("Cannot invoke NeoECO default callback", failure);
+                }
+            }
         };
     }
 

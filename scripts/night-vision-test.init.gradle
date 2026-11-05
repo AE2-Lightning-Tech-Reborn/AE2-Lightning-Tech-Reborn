@@ -1,0 +1,10 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/NightVisionArmorGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/night-vision-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_night_vision,minecraft'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

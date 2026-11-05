@@ -53,7 +53,14 @@ final class GtoCraftConfirmClientQA {
             case 1 -> {
                 require(mc.screen instanceof CraftConfirmScreen && !(mc.screen instanceof AE2LtCraftConfirmScreen),
                         "native confirmation was unexpectedly replaced");
-                require(nativeTitle(mc).getString().contains(ALGORITHM), "Core algorithm name hook was lost");
+                if (!nativeTitle(mc).getString().contains(ALGORITHM)) {
+                    Screenshot.grab(mc.gameDirectory, "confirm-algorithm-failed.png", mc.getMainRenderTarget(), message -> { });
+                    throw new AssertionError("Core algorithm name hook was lost: title=" + nativeTitle(mc)
+                            + " menu=" + menu.thunderbolt$getCraftingAlgorithmName()
+                            + " hooks=" + java.util.Arrays.stream(mc.screen.getClass().getDeclaredMethods())
+                                    .filter(method -> method.getName().contains("thunderbolt"))
+                                    .map(java.lang.reflect.Method::getName).toList());
+                }
                 Screenshot.grab(mc.gameDirectory, "confirm-native-algorithm.png", mc.getMainRenderTarget(), message -> { });
                 setExact(false);
             }

@@ -124,6 +124,7 @@ public final class GtoRestartQA {
                 require(logic.hasJob() && logic.getWaitingFor(variant("expected"))>0,"job did not reach a real pending machine output");
                 var data = new CompoundTag();data.putUUID("craftId",logic.getLastLink().getCraftingID());
                 data.putLong("inMachineAtCheckpoint",inMachine);data.putBoolean("finished",false);
+                GtoRefundRestartQA.prepare(level,data);
                 NbtIo.writeCompressed(data,checkpoint);block.setChanged();chest.setChanged();
                 LOG.info("GTO_EXTENDED_QA READY_TO_STOP phase=prepare craftId={} machineInputs={} remaining={} waiting={}",
                         logic.getLastLink().getCraftingID(),inMachine,logic.getRemainingOutputAmount(),logic.getWaitingFor(variant("expected")));
@@ -135,6 +136,7 @@ public final class GtoRestartQA {
                     require(logic.hasJob() && logic.usesLt(),"running LT job was not restored from disk");
                     require(logic.getLastLink().getCraftingID().equals(data.getUUID("craftId")),"crafting identity changed across JVMs");
                     require(logic.getRemainingOutputAmount()==3,"restored remaining amount changed");
+                    GtoRefundRestartQA.restore(level,data,"resume");
                     LOG.info("GTO_EXTENDED_QA RESTORED craftId={} remaining={} waiting={}",data.getUUID("craftId"),logic.getRemainingOutputAmount(),logic.getWaitingFor(variant("expected")));
                     submitted=true;
                 }
@@ -160,6 +162,7 @@ public final class GtoRestartQA {
                 var data=NbtIo.readCompressed(checkpoint);
                 require(data.getBoolean("finished") && data.getLong("processed")==3,"completion checkpoint missing");
                 require(!logic.hasJob(),"third JVM resurrected completed job");
+                GtoRefundRestartQA.restore(level,data,"verify");
                 require(inventory.extract(variant("actual"),10,Actionable.SIMULATE,IActionSource.empty())==3,"third JVM changed exact output count");
                 require(inventory.extract(RAW,10,Actionable.SIMULATE,IActionSource.empty())==0 && chest.isEmpty(),"third JVM duplicated input or external task");
                 LOG.info("GTO_EXTENDED_QA PASS phase=verify completed job stayed terminal; disk outputs=3; raw=0; processor empty");done=true;

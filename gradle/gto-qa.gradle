@@ -7,6 +7,7 @@ sourceSets.create('gtoQa') {
         include 'qa/**'
         include '**/FrequencyPermissionsGameTests.java'
         include '**/BigMixedProviderGameTests.java'
+        include '**/CoreAlgorithmAcceptanceGameTests.java'
         include '**/NeoEcoGtoGameTests.java'
         include '**/BigCandidateIndexGameTests.java'
         include '**/BigZeroTickGameTests.java'
@@ -26,22 +27,88 @@ sourceSets.create('gtoQa') {
         include '**/JeiMultiblockLayoutClientProbe.java'
         include '**/JeiTransferCompatibilityClientProbe.java'
         include '**/EmiMultiblockClientProbe.java'
+        // Upstream 2.1.3 regressions are opt-in fixtures, never production classes.
+        include '**/AdjacentFluidExportReceiptGameTests.java'
+        include '**/CrystalHarvestReloadGameTests.java'
+        include '**/PigmeeCrystalCatalyzerGameTests.java'
+        include '**/MiningFactoryStressGameTests.java'
+        include '**/UpstreamFixGameTests.java'
+        include '**/WirelessInterfaceGameTests.java'
+        include '**/ActualCompatibilityGameTests.java'
+        include '**/AppGenProcessorGameTests.java'
+        include '**/InterfaceEnergyRoutingGameTests.java'
+        include '**/ManualInputTransferGameTests.java'
+        include '**/MguConveyorPhaseLockGameTests.java'
+        include '**/NeoEcoCatalyzerGameTests.java'
+        include '**/NightVisionArmorGameTests.java'
+        include '**/OmniversalTerminalGameTests.java'
+        include '**/PatternMigrationGameTests.java'
+        include '**/PatternMigrationPerformanceGameTests.java'
+        include '**/PigmeeAdjacentStorageGameTests.java'
+        include '**/PigmeeBuildingGameTests.java'
+        include '**/ForgeCraftingInput.java'
+        include '**/ProviderEnergyOutputGameTests.java'
+        include '**/TianshuPatternUploadGameTests.java'
+        include '**/TianshuJdbHarness.java'
+        include '**/CoverageClientSequence.java'
+        include '**/UpstreamReleaseRecipeGameTests.java'
+        include '**/ReturnInventoryLimitGameTests.java'
+        include '**/CraftingRequestRoutingGameTests.java'
+        include 'com/moakiee/ae2lt/gametest/*GameTests.java'
+        include 'com/moakiee/ae2lt/blockentity/LightningCollectorGameTests.java'
+        include '**/EnergyApiStressGameTests.java'
+        include '**/NetworkManagementGameTests.java'
+        include '**/OmniUpgradesGameTests.java'
+        include '**/WirelessAeFallbackGameTests.java'
+        include '**/WirelessEnergyAdmissionGameTests.java'
+        include '**/WirelessEnergyBoundaryGameTests.java'
+        include '**/WirelessEnergyGameTests.java'
+        include '**/WirelessEnergyNodeSerializationGameTests.java'
+        include '**/WirelessEnergyTestMachine.java'
+        include '**/FrequencyCardClientProbe.java'
+        include '**/RemoteDeviceClientProbe.java'
+        include '**/WirelessEnergyMenuClientProbe.java'
+        include '**/NoAppFluxClientProbe.java'
+        include '**/TianshuUploadAliasClientProbe.java'
+        include '**/JeiCompatibilityClientProbe.java'
+        include '**/OmniversalProcessingClientProbe.java'
+        include '**/OmniversalTerminalClientProbe.java'
     }
     resources {
         srcDir 'src/jdb/resources'
-        include 'META-INF/mods.toml', 'pack.mcmeta'
+        include 'META-INF/mods.toml', 'pack.mcmeta', 'ae2lt-gto-qa.mixins.json'
         include 'data/ae2lt_migration/structures/migration_test.nbt'
         include 'data/ae2lt_global_batch/structures/empty.nbt'
         include 'data/ae2lt_frequency_permissions/structures/empty.nbt'
         include 'data/ae2lt_deferred/structures/empty.nbt'
         include 'data/ae2lt_io/structures/wireless_io_empty.nbt'
+        include 'data/ae2lt/structures/workstation_test.nbt'
+        include 'data/ae2lt/structures/pigmee_station_empty.nbt'
+        include 'data/ae2lt_catalyzer/structures/empty.nbt'
+        include 'data/ae2lt_harvest_reload/structures/empty.nbt'
+        include 'data/ae2lt_interface_input/structures/empty.nbt'
+        include 'data/ae2lt_machine_recharge/structures/empty.nbt'
+        include 'data/ae2lt_mgu/structures/workstation_test.nbt'
+        include 'data/ae2lt_migration_perf/structures/migration_test.nbt'
+        include 'data/ae2lt_omniversal/structures/empty.nbt'
+        include 'data/ae2lt_omniversal/recipes/**'
+        include 'data/ae2lt_omniversal/tags/**'
+        include 'data/ae2lt_release_recipes/structures/empty.nbt'
         include 'data/ae2lt_qa/recipes/**'
     }
 }
 tasks.named('processGtoQaResources', ProcessResources).configure {
     inputs.property 'mod_version', project.mod_version
+    inputs.property 'thunderbolt_version_range', project.thunderbolt_version_range
     filesMatching('META-INF/mods.toml') {
-        expand(mod_version: project.mod_version)
+        expand(mod_version: project.mod_version, thunderbolt_version_range: project.thunderbolt_version_range)
+    }
+    // Match the aliases used by upstream's actual-compatibility-test.init.gradle.
+    from('src/jdb/resources/data/ae2lt_migration/structures/migration_test.nbt') {
+        into 'data/ae2lt_actual/structures'
+    }
+    from('src/jdb/resources/data/ae2lt_machine_recharge/structures/empty.nbt') {
+        into 'data/ae2lt_actual/structures'
     }
 }
 // The reobfuscator resolves inherited Minecraft members from JAR libraries.
@@ -56,11 +123,12 @@ tasks.register('gtoQaJar', Jar) {
     description = 'Builds the disposable GTO server/client integration test mod.'
     archiveFileName = 'gto-compat-qa.jar'
     from(sourceSets.gtoQa.output) {
-        include 'qa/**', 'META-INF/mods.toml', 'pack.mcmeta'
+        include 'qa/**', 'META-INF/mods.toml', 'pack.mcmeta', 'ae2lt-gto-qa.mixins.json'
         // FX/restart probes also run with the formal LT jar, which has no QA recipes.
         include 'data/ae2lt_qa/recipes/**'
     }
     destinationDirectory = layout.buildDirectory.dir('gto-qa')
+    manifest { attributes 'MixinConfigs': 'ae2lt-gto-qa.mixins.json' }
 }
 reobf { gtoQaJar { libraries.from(tasks.named('gtoQaMainClassesJar')) } }
 tasks.named('gtoQaJar').configure { finalizedBy 'reobfGtoQaJar' }

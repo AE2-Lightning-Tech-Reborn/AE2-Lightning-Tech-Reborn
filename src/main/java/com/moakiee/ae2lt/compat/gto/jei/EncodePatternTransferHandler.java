@@ -4,6 +4,7 @@
  */
 package com.moakiee.ae2lt.compat.gto.jei;
 
+import com.moakiee.ae2lt.client.compat.ClientRepoAccess;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -133,7 +134,7 @@ public class EncodePatternTransferHandler<T extends PatternEncodingTermMenu>
             return List.of();
         }
 
-        var craftableKeys = repo.getAllEntries().stream()
+        var craftableKeys = ClientRepoAccess.allEntries(repo).stream()
                 .filter(GridInventoryEntry::isCraftable)
                 .map(GridInventoryEntry::getWhat)
                 .collect(Collectors.toSet());

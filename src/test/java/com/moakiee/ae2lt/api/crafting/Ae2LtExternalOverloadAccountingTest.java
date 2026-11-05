@@ -8,14 +8,12 @@ import appeng.api.stacks.*;
 import com.moakiee.ae2lt.overload.runtime.cpu.OverloadCpuStateManager;
 import com.moakiee.ae2lt.overload.runtime.model.*;
 import com.moakiee.ae2lt.overload.runtime.pattern.*;
+import com.moakiee.ae2lt.testing.MinecraftTestBootstrap;
 import java.util.*;
 import java.util.function.BiFunction;
-import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.*;
-import net.minecraftforge.fml.loading.LoadingModList;
 import org.junit.jupiter.api.*;
 
 class Ae2LtExternalOverloadAccountingTest {
@@ -26,10 +24,7 @@ class Ae2LtExternalOverloadAccountingTest {
     private final KeyCounter waiting = new KeyCounter();
 
     @BeforeAll static void bootstrap() throws Exception {
-        if (LoadingModList.get() == null)
-            LoadingModList.of(List.of(), List.of(), new net.minecraftforge.fml.loading.EarlyLoadingException("test", null, List.of()));
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        MinecraftTestBootstrap.bootstrap();
         keyRegistry = Class.forName("appeng.api.stacks.AEKeyTypesInternal").getDeclaredField("registry");
         keyRegistry.setAccessible(true);
         previousRegistry = keyRegistry.get(null);

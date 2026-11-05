@@ -20,6 +20,9 @@ public final class BigCraftingJob {
     public final BigExecutionProgram<AEKey> program;
     public final Map<AEKey, BigInteger> escrow = new LinkedHashMap<>();
     public final Map<AEKey, BigInteger> waiting = new LinkedHashMap<>();
+    // Unresolved transfer claims, never spendable inventory. A throwing storage call may have
+    // accepted any part of an offer; neither cancellation nor reload can infer that receipt.
+    final Map<AEKey, BigInteger> unsettledRefunds = new LinkedHashMap<>();
     // Derived from the current step and escrow; deliberately rebuilt after loading a snapshot.
     private final Set<AEKey> missingMaterials = new HashSet<>();
     public int blockIndex;
@@ -216,6 +219,28 @@ public final class BigCraftingJob {
         status = "dispatch_failed";
     }
 
+    boolean hasUnsettledRefunds() { return !unsettledRefunds.isEmpty(); }
+
+    void reserveRefund(AEKey key, BigInteger offered) {
+        if (hasUnsettledRefunds() || !offered.equals(escrow.get(key)) || offered.signum() <= 0)
+            throw new IllegalStateException("Refund ownership changed before transfer");
+        escrow.remove(key);
+        unsettledRefunds.put(key, offered);
+    }
+
+    void settleRefund(AEKey key, BigInteger offered, BigInteger accepted) {
+        if (!offered.equals(unsettledRefunds.get(key)) || accepted.signum() < 0 || accepted.compareTo(offered) > 0)
+            throw new IllegalStateException("Invalid external refund receipt");
+        unsettledRefunds.remove(key);
+        var remaining = offered.subtract(accepted);
+        if (remaining.signum() > 0) escrow.merge(key, remaining, BigInteger::add);
+    }
+
+    void quarantineRefund() {
+        failDispatch();
+        status = "refund_indeterminate";
+    }
+
     private static void put(Map<AEKey, BigInteger> values, AEKey key, BigInteger n) {
         if (n.signum() == 0) values.remove(key);
         else values.put(key, n);
@@ -229,16 +254,17 @@ public final class BigCraftingJob {
         // Its later outputs return to network storage through the normal insertion path.
         waiting.clear();
         missingMaterials.clear();
-        status = "returning";
+        status = hasUnsettledRefunds() ? "refund_indeterminate" : "returning";
     }
 
     public CompoundTag save(HolderLookup.Provider registries) {
         var tag = new CompoundTag();
-        tag.putInt("version", 2);
+        tag.putInt("version", 3);
         tag.putUUID("id", id);
         tag.put("target", target.toTagGeneric());
         tag.putByteArray("amount", amount.toByteArray());
         tag.put("escrow", BigStackCodec.write(escrow, registries));
+        tag.put("unsettledRefunds", BigStackCodec.write(unsettledRefunds, registries));
         tag.put("waiting", BigStackCodec.write(waiting, registries));
         tag.putInt("block", blockIndex);
         tag.putInt("acceptedStep", acceptedStep);
@@ -271,7 +297,7 @@ public final class BigCraftingJob {
 
     public static BigCraftingJob load(CompoundTag tag, HolderLookup.Provider registries) {
         int version = tag.getInt("version");
-        if (version != 1 && version != 2)
+        if (version != 1 && version != 2 && version != 3)
             throw new IllegalArgumentException("Unsupported exact crafting job version");
         var blocks = new ArrayList<BigExecutionProgram.Block<AEKey>>();
         for (var value : tag.getList("blocks", Tag.TAG_COMPOUND)) {
@@ -293,6 +319,8 @@ public final class BigCraftingJob {
                         number(tag, "amount"),
                         BigExecutionProgram.of(blocks));
         job.escrow.putAll(BigStackCodec.read(tag.getList("escrow", Tag.TAG_COMPOUND), registries));
+        if (version >= 3) job.unsettledRefunds.putAll(
+                BigStackCodec.read(tag.getList("unsettledRefunds", Tag.TAG_COMPOUND), registries));
         job.waiting.putAll(BigStackCodec.read(tag.getList("waiting", Tag.TAG_COMPOUND), registries));
         job.blockIndex = tag.getInt("block");
         job.acceptedStep = tag.getInt("acceptedStep");
@@ -308,6 +336,10 @@ public final class BigCraftingJob {
         job.suspended = tag.getBoolean("suspended");
         job.elapsedTicks = tag.getLong("elapsedTicks");
         if (job.dispatchFailed && !job.returning) job.status = "dispatch_failed";
+        if (job.hasUnsettledRefunds()) {
+            job.returning = true;
+            job.quarantineRefund();
+        }
         if (job.blockIndex < 0 || job.blockIndex > blocks.size())
             throw new IllegalArgumentException("Invalid exact job cursor");
         if (!job.returning

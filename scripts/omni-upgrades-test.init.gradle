@@ -1,0 +1,19 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OmniUpgradesGameTests.java'])
+        dependencies.add('runtimeOnly', fg.deobf('curse.maven:omni-upgrades-1626222:8893526'))
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/alpha-port-omni-upgrades-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt,minecraft'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = project.file('build/alpha-port-omni-upgrades-gametest/logs/latest.log')
+                if (!log.isFile() || !(log.text =~ /All \d+ required tests passed/).find()) {
+                    throw new GradleException('Omni Upgrades GameTests did not complete successfully')
+                }
+            }
+        }
+    }
+}

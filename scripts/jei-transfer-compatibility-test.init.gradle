@@ -1,7 +1,7 @@
 // JAVA_HOME=<Java 17> ./gradlew -I scripts/jei-transfer-compatibility-test.init.gradle runClient -Pjei_version=<version>
 allprojects {
     afterEvaluate {
-        sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java'])
+        sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java', '**/CoverageClientSequence.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
                     'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']

@@ -15,6 +15,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
+import com.moakiee.ae2lt.asm.IsolatedWrapOperation;
 import com.moakiee.ae2lt.celestweave.PhaseFlightControlRules;
 import com.moakiee.ae2lt.celestweave.PhaseFlightMovementGuard;
 import com.moakiee.ae2lt.celestweave.PhaseFlightPlayerState;
@@ -53,11 +54,18 @@ public abstract class EntityPhaseMovementMixin {
         original.call(entity, movement);
     }
 
-    @WrapOperation(
-            method = "move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/Entity;setDeltaMovement(DDD)V"))
+    // Explicit names keep the custom injector valid in both Mojmap and production SRG runtimes.
+    @IsolatedWrapOperation(
+            method = {
+                    "move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V",
+                    "m_6478_(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V"
+            },
+            at = {
+                    @At(value = "INVOKE", remap = false,
+                            target = "Lnet/minecraft/world/entity/Entity;setDeltaMovement(DDD)V"),
+                    @At(value = "INVOKE", remap = false,
+                            target = "Lnet/minecraft/world/entity/Entity;m_20334_(DDD)V")
+            })
     private void ae2lt$authorizeVanillaTravelMoveVelocityComponents(
             Entity entity,
             double x,

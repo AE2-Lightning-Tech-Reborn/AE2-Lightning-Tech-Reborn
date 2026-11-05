@@ -6,18 +6,29 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ae2lt.refmap.json",
   "mixins": [
+    "omni.OmniUpgradesAE2CompatMixin",
     "neoeco.NeoEcoRemoteMachineUiMixin",
     "PatternMigrationProviderBatchMixin",
     "PatternMigrationEaeBatchMixin",
     "PatternMigrationEaepBatchMixin",
     "PatternMigrationRefundMixin",
     "PatternMigrationStorageMountMixin",
-
     "appflux.InterfaceEnergyDistributionMixin",
+    "appflux.NetworkFEPowerTelemetryMixin",
+    "appflux.ForgeEnergyHandlerTelemetryMixin",
+    "appflux.ForgeFluxNetworkTelemetryMixin",
+    "appflux.GtoEnergyHandlerMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
     "ServerLevelMixin",
     "LightningBoltOriginMixin",
+    "neoecoae.NeoEcoLightningTransformMixin",
+    "WirelessTerminalCoverageMixin",
+    "WirelessEnergyTargetRemovalMixin",
+    "WirelessEnergyMachineTickMixin",
+    "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
+    "RunningNetworkFeFallbackMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",
@@ -64,6 +75,7 @@
     "GtoCraftingStatusMixin",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
+    "thunderbolt.TianshuPlanningServiceMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
     "ControllerValidatorMixin",
@@ -74,10 +86,11 @@
     "ShulkerBulletMixin",
     "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
-    "big.BigCraftConfirmMenuMixin",
-    "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
-    "big.BigCpuListEntryMixin"
+    "big.BigCpuListEntryMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -103,7 +116,10 @@
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
     "client.GtoTerminalKeyAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin",
+    "client.EncodingHelperAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

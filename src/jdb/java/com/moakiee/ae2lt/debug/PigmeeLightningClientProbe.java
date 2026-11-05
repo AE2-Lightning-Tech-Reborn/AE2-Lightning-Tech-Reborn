@@ -85,7 +85,7 @@ public final class PigmeeLightningClientProbe {
                             + "artificial vanilla; hand/ordinary helmet/unequipped vanilla; unchanged geometry and alpha; "
                             + "Curios=" + ModList.get().isLoaded("curios") + "; framebuffer screenshots saved.");
                     done = true;
-                    mc.stop();
+                    CoverageClientSequence.finish("pigmeeLightningClientProbe");
                 }
                 default -> throw new AssertionError("Unexpected phase " + phase);
             }

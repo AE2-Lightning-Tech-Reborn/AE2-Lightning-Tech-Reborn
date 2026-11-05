@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -45,25 +45,27 @@ public final class AdvancedAECompat {
     private static final @Nullable Class<?> ADV_ENCODER_CLASS =
             MixinReflectionSupport.findClassSafe("net.pedroksl.advanced_ae.common.patterns.AdvPatternDetailsEncoder");
     private static final @Nullable Method DIRECTIONAL_INPUTS_SET_METHOD =
-            MixinReflectionSupport.findDeclaredMethodSafe(ADV_PATTERN_DETAILS_CLASS, "directionalInputsSet");
+            findInstanceMethod(ADV_PATTERN_DETAILS_CLASS, "directionalInputsSet", boolean.class);
     private static final @Nullable Method GET_DIRECTION_SIDE_FOR_INPUT_KEY_METHOD =
-            MixinReflectionSupport.findDeclaredMethodSafe(
+            findInstanceMethod(
                     ADV_PATTERN_DETAILS_CLASS,
                     "getDirectionSideForInputKey",
+                    Direction.class,
                     AEKey.class);
     private static final @Nullable Method ADV_GET_SPARSE_INPUTS_METHOD =
             findSparseAccessor(ADV_PROCESSING_PATTERN_CLASS, "getSparseInputs");
     private static final @Nullable Method ADV_GET_SPARSE_OUTPUTS_METHOD =
             findSparseAccessor(ADV_PROCESSING_PATTERN_CLASS, "getSparseOutputs");
     private static final @Nullable Method ADV_GET_DIRECTION_MAP_METHOD =
-            findSparseAccessor(ADV_PROCESSING_PATTERN_CLASS, "getDirectionMap");
-    private static final @Nullable Method ADV_ENCODE_METHOD = findEncodeMethod();
+            findInstanceMethod(ADV_PROCESSING_PATTERN_CLASS, "getDirectionMap", Map.class);
+    private static final @Nullable Method ADV_ENCODE_METHOD = findEncodeMethod(ADV_ENCODER_CLASS);
 
     private static Boolean loaded;
 
     public static boolean isLoaded() {
         if (loaded == null) {
-            loaded = ModList.get().isLoaded("advanced_ae")
+            var modList = ModList.get();
+            loaded = modList != null && modList.isLoaded("advanced_ae")
                     && ADV_PATTERN_DETAILS_CLASS != null
                     && DIRECTIONAL_INPUTS_SET_METHOD != null
                     && GET_DIRECTION_SIDE_FOR_INPUT_KEY_METHOD != null;
@@ -110,21 +112,11 @@ public final class AdvancedAECompat {
                 || ADV_GET_DIRECTION_MAP_METHOD == null) {
             return false;
         }
-        var storedInputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_INPUTS_METHOD, storedUnwrapped, "read AdvancedAE sparse inputs"));
-        var candidateInputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_INPUTS_METHOD, candidateUnwrapped, "read AdvancedAE sparse inputs"));
-        var storedOutputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_OUTPUTS_METHOD, storedUnwrapped, "read AdvancedAE sparse outputs"));
-        var candidateOutputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_OUTPUTS_METHOD, candidateUnwrapped, "read AdvancedAE sparse outputs"));
-        var storedDirections = MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_DIRECTION_MAP_METHOD, storedUnwrapped, "read AdvancedAE direction map");
-        var candidateDirections = MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_DIRECTION_MAP_METHOD, candidateUnwrapped, "read AdvancedAE direction map");
-        return Objects.equals(storedInputs, candidateInputs)
-                && Objects.equals(storedOutputs, candidateOutputs)
-                && Objects.equals(storedDirections, candidateDirections);
+        var storedSemantics = readPatternSemantics(storedUnwrapped, ADV_GET_SPARSE_INPUTS_METHOD,
+                ADV_GET_SPARSE_OUTPUTS_METHOD, ADV_GET_DIRECTION_MAP_METHOD);
+        var candidateSemantics = readPatternSemantics(candidateUnwrapped, ADV_GET_SPARSE_INPUTS_METHOD,
+                ADV_GET_SPARSE_OUTPUTS_METHOD, ADV_GET_DIRECTION_MAP_METHOD);
+        return storedSemantics != null && storedSemantics.equals(candidateSemantics);
     }
 
     /**
@@ -256,18 +248,17 @@ public final class AdvancedAECompat {
         if (ADV_PROCESSING_PATTERN_CLASS == null
                 || !ADV_PROCESSING_PATTERN_CLASS.isInstance(unwrapped)
                 || ADV_GET_SPARSE_INPUTS_METHOD == null
-                || ADV_GET_SPARSE_OUTPUTS_METHOD == null) {
+                || ADV_GET_SPARSE_OUTPUTS_METHOD == null
+                || ADV_GET_DIRECTION_MAP_METHOD == null) {
             return null;
         }
-        Object sparseInputs = MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_INPUTS_METHOD, unwrapped, "read AdvancedAE sparse inputs");
-        Object sparseOutputs = MixinReflectionSupport.invokeMethodSafe(
-                ADV_GET_SPARSE_OUTPUTS_METHOD, unwrapped, "read AdvancedAE sparse outputs");
-        var sparseInputList = asStackList(sparseInputs);
-        var sparseOutputList = asStackList(sparseOutputs);
-        if (sparseInputList == null || sparseOutputList == null) {
+        var semantics = readPatternSemantics(unwrapped, ADV_GET_SPARSE_INPUTS_METHOD,
+                ADV_GET_SPARSE_OUTPUTS_METHOD, ADV_GET_DIRECTION_MAP_METHOD);
+        if (semantics == null) {
             return null;
         }
+        var sparseInputList = semantics.inputs();
+        var sparseOutputList = semantics.outputs();
         if (sparseInputList.size() > maxInputSlots || sparseOutputList.size() > maxOutputSlots) {
             return null;
         }
@@ -277,12 +268,8 @@ public final class AdvancedAECompat {
         for (int slot = 0; slot < inputs.size(); slot++) {
             var input = inputs.get(slot);
             if (input == null || input.what() == null) continue;
-            Object resolved = MixinReflectionSupport.invokeMethodSafe(
-                    GET_DIRECTION_SIDE_FOR_INPUT_KEY_METHOD,
-                    unwrapped,
-                    "read AdvancedAE input direction",
-                    input.what());
-            directions[slot] = resolved instanceof Direction direction ? direction.ordinal() + 1 : 0;
+            var direction = semantics.directions().get(input.what());
+            directions[slot] = direction == null ? 0 : direction.ordinal() + 1;
         }
         return new EditableProcessingPattern(inputs, outputs, directions);
     }
@@ -293,11 +280,12 @@ public final class AdvancedAECompat {
     }
 
     @Nullable
-    private static List<GenericStack> asStackList(@Nullable Object sparse) {
+    static List<GenericStack> asStackList(@Nullable Object sparse) {
         if (sparse instanceof List<?> list) {
             var result = new ArrayList<GenericStack>(list.size());
             for (var element : list) {
-                result.add(element instanceof GenericStack stack ? stack : null);
+                if (element != null && !(element instanceof GenericStack)) return null;
+                result.add((GenericStack) element);
             }
             return result;
         }
@@ -308,35 +296,65 @@ public final class AdvancedAECompat {
     }
 
     @Nullable
-    private static Method findSparseAccessor(@Nullable Class<?> owner, String name) {
+    static PatternSemantics readPatternSemantics(Object pattern, Method inputsMethod,
+            Method outputsMethod, Method directionsMethod) {
+        var inputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
+                inputsMethod, pattern, "read AdvancedAE sparse inputs"));
+        var outputs = asStackList(MixinReflectionSupport.invokeMethodSafe(
+                outputsMethod, pattern, "read AdvancedAE sparse outputs"));
+        var rawDirections = MixinReflectionSupport.invokeMethodSafe(
+                directionsMethod, pattern, "read AdvancedAE direction map");
+        if (inputs == null || outputs == null || !(rawDirections instanceof Map<?, ?> map)) return null;
+        var directions = new HashMap<AEKey, Direction>();
+        for (var entry : map.entrySet()) {
+            if (!(entry.getKey() instanceof AEKey key)
+                    || entry.getValue() != null && !(entry.getValue() instanceof Direction)) return null;
+            directions.put(key, (Direction) entry.getValue());
+        }
+        return new PatternSemantics(nullableCopy(inputs), nullableCopy(outputs),
+                Collections.unmodifiableMap(directions));
+    }
+
+    record PatternSemantics(List<GenericStack> inputs, List<GenericStack> outputs,
+            Map<AEKey, Direction> directions) {}
+
+    @Nullable
+    static Method findInstanceMethod(@Nullable Class<?> owner, String name,
+            Class<?> returnType, Class<?>... parameters) {
         if (owner == null) return null;
         try {
-            var method = owner.getMethod(name);
-            method.setAccessible(true);
-            return method;
-        } catch (Exception ignored) {
+            var method = owner.getMethod(name, parameters);
+            return !Modifier.isStatic(method.getModifiers())
+                    && returnType.isAssignableFrom(method.getReturnType()) ? method : null;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
             return null;
         }
     }
 
     @Nullable
-    private static Method findEncodeMethod() {
-        if (ADV_ENCODER_CLASS == null) return null;
+    private static Method findSparseAccessor(@Nullable Class<?> owner, String name) {
+        if (owner == null) return null;
         try {
-            for (var method : ADV_ENCODER_CLASS.getDeclaredMethods()) {
-                if (method.getName().equals("encodeProcessingPattern")
-                        && Modifier.isStatic(method.getModifiers())
-                        && Arrays.equals(method.getParameterTypes(), new Class<?>[] {
-                                GenericStack[].class, GenericStack[].class, HashMap.class
-                        })) {
-                    method.setAccessible(true);
-                    return method;
-                }
-            }
-        } catch (Exception ignored) {
-            // fall through
+            var method = owner.getMethod(name);
+            var type = method.getReturnType();
+            return !Modifier.isStatic(method.getModifiers())
+                    && (type == GenericStack[].class || List.class.isAssignableFrom(type)) ? method : null;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+            return null;
         }
-        return null;
+    }
+
+    @Nullable
+    static Method findEncodeMethod(@Nullable Class<?> owner) {
+        if (owner == null) return null;
+        try {
+            var method = owner.getMethod("encodeProcessingPattern",
+                    GenericStack[].class, GenericStack[].class, HashMap.class);
+            return Modifier.isStatic(method.getModifiers())
+                    && ItemStack.class.isAssignableFrom(method.getReturnType()) ? method : null;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+            return null;
+        }
     }
 
     public record EditableProcessingPattern(

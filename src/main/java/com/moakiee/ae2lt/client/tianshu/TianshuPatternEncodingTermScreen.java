@@ -6,6 +6,7 @@ import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
 import com.moakiee.ae2lt.client.gui.AE2Button;
+import com.moakiee.ae2lt.client.compat.ClientRepoAccess;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.TabButton.Style;
@@ -58,6 +59,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private final Map<TianshuEncodingMode, TabButton> modeTabs =
             new EnumMap<>(TianshuEncodingMode.class);
     private final TianshuClosedLoopEncodingPanel closedLoopPanel;
+    private final TianshuOmniversalEncodingPanel omniversalPanel;
     private final List<ProcessingMultiplierButton> processingModeButtons;
     private final AE2Button advancedEncoding;
     private final AE2Button overloadEncoding;
@@ -94,13 +96,49 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             modePanels.put(mode, panel);
         }
 
-        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()));
+        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
+            @Override
+            public boolean mouseClicked(double x, double y, int button) {
+                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
+                boolean rightClick = button == org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
+                if (rightClick && visible && active && isMouseOver(x, y)) {
+                    if (hasShiftDown()) {
+                        var selection = TianshuUploadSourceSelection.collect(menu);
+                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
+                    } else menu.undoLastUpload();
+                    return true;
+                }
+                return super.mouseClicked(x, y, button);
+            }
+
+            @Override
+            public List<Component> getTooltipMessage() {
+                var lines = new java.util.ArrayList<Component>(menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                        && TianshuUploadTriggerClient.shouldTrigger()
+                        ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
+                                Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
+                        : super.getTooltipMessage());
+                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+                lines.add(Component.translatable(menu.canUndoUpload
+                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+                return lines;
+            }
+        });
 
         addExtraTab(TianshuEncodingMode.CLOSED_LOOP, ModItems.CLOSED_LOOP_PATTERN.get().getDefaultInstance(),
                 Component.translatable("ae2lt.tianshu.terminal.mode.closed_loop"), "modeTabButton4");
         closedLoopPanel = new TianshuClosedLoopEncodingPanel(this, widgets,
                 () -> switchToScreen(new TianshuClosedLoopPatternConfigScreen<>(this)));
         widgets.add("closedLoopPanel", closedLoopPanel);
+        if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isLoaded()) {
+            addExtraTab(TianshuEncodingMode.OMNIVERSAL,
+                    com.moakiee.ae2lt.integration.useless.UselessModCompat.icon(),
+                    Component.translatable("ae2lt.tianshu.terminal.mode.omniversal"), "modeTabButton5");
+        }
+        omniversalPanel = new TianshuOmniversalEncodingPanel(this, widgets);
+        widgets.add("omniversalPanel", omniversalPanel);
 
         processingModeButtons = List.of(
                 addProcessingMultiplierButton("processingMultiply2", 2, 4),
@@ -196,6 +234,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 processing, hasDraftInput, "overload");
         boolean closedLoop = selected == TianshuEncodingMode.CLOSED_LOOP;
         closedLoopPanel.setVisible(closedLoop);
+        omniversalPanel.setVisible(selected == TianshuEncodingMode.OMNIVERSAL);
         setSlotsHidden(Ae2ltSlotSemantics.TIANSHU_GLOBAL_RESERVE_MARK, true);
     }
 
@@ -237,7 +276,8 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         // The server is authoritative for validating a closed-loop payload. Routing by the
         // item type here keeps the shared upload button responsive even when the client cannot
         // decode a registry-backed payload and lets the server report a proper upload failure.
-        if (stack.getItem() instanceof ClosedLoopPatternItem) {
+        if (stack.getItem() instanceof ClosedLoopPatternItem
+                || com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
             menu.uploadEncodedPattern();
             return;
         }
@@ -245,7 +285,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
                 : TianshuPatternUploadRouting.Route.INVALID;
         switch (route) {
-            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER -> menu.uploadEncodedPattern();
+            case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
             case PROCESSING_PROVIDER -> switchToScreen(
                     new TianshuUploadTargetScreen<>(this, directUploadRequested));
             case INVALID -> { }
@@ -307,6 +347,11 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
+        var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
+        if (menu.getCarried().isEmpty() && omniversalTooltip != null) {
+            drawTooltip(graphics, x, y, omniversalTooltip);
+            return;
+        }
         var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
                 x - leftPos, y - topPos);
         if (menu.getCarried().isEmpty() && multiplierTooltip != null) {
@@ -402,13 +447,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     private boolean shouldShowCraftableIndicatorForSlot(Slot slot) {
-        var semantic = menu.getSlotSemantic(slot);
-        if (semantic == SlotSemantics.CRAFTING_GRID
-                || semantic == SlotSemantics.PROCESSING_INPUTS
-                || semantic == SlotSemantics.SMITHING_TABLE_ADDITION
-                || semantic == SlotSemantics.SMITHING_TABLE_BASE
-                || semantic == SlotSemantics.SMITHING_TABLE_TEMPLATE
-                || semantic == SlotSemantics.STONECUTTING_INPUT) {
+        if (menu.isPatternIngredientSlot(slot)) {
             var slotContent = GenericStack.fromItemStack(slot.getItem());
             return slotContent != null && repo.isCraftable(slotContent.what());
         }
@@ -416,14 +455,15 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     private GridInventoryEntry findNetworkBlankPatternEntry() {
+        var entries = ClientRepoAccess.allEntries(repo);
         if (cachedNetworkBlankPatternEntry != null
-                && repo.getAllEntries().contains(cachedNetworkBlankPatternEntry)
+                && entries.contains(cachedNetworkBlankPatternEntry)
                 && isBlankPatternEntry(cachedNetworkBlankPatternEntry)) {
             return cachedNetworkBlankPatternEntry;
         }
 
         cachedNetworkBlankPatternEntry = null;
-        for (var entry : repo.getAllEntries()) {
+        for (var entry : entries) {
             if (isBlankPatternEntry(entry)) {
                 cachedNetworkBlankPatternEntry = entry;
                 return entry;

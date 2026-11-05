@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import com.moakiee.ae2lt.asm.IsolatedWrapOperationInjectionInfo;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -12,19 +15,25 @@ import net.minecraftforge.fml.loading.LoadingModList;
 
 /** Keeps mixins that target optional addons out of Mixin's target-resolution pass. */
 public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
-    private static final Map<String, String> REQUIRED_MODS = Map.of(
-            "GtoCraftingPatternValidityCacheMixin", "gtocore",
-            "AdvCraftingCpuAccessor", "advanced_ae",
-            "AdvCraftingCpuLogicMixin", "advanced_ae",
-            "InterfaceEnergyDistributionMixin", "appflux",
-            "NeoEcoRemoteMachineUiMixin", "neoecoae",
-            "IpnContainerClickerMixin", "inventoryprofilesnext",
-            "EntityConveyorPhaseLockMixin", "mob_grinding_utils");
+    private static final Map<String, String> REQUIRED_MODS = Map.ofEntries(
+            Map.entry("GtoCraftingPatternValidityCacheMixin", "gtocore"),
+            Map.entry("AdvCraftingCpuAccessor", "advanced_ae"),
+            Map.entry("AdvCraftingCpuLogicMixin", "advanced_ae"),
+            Map.entry("NeoEcoLightningTransformMixin", "neoecoae"),
+            Map.entry("InterfaceEnergyDistributionMixin", "appflux"),
+            Map.entry("NeoEcoRemoteMachineUiMixin", "neoecoae"),
+            Map.entry("NetworkFEPowerTelemetryMixin", "appflux"),
+            Map.entry("ForgeEnergyHandlerTelemetryMixin", "appflux"),
+            Map.entry("ConstructionStickPlacementMixin", "constructionstick"),
+            Map.entry("IpnContainerClickerMixin", "inventoryprofilesnext"),
+            Map.entry("EntityConveyorPhaseLockMixin", "mob_grinding_utils"));
 
     @Override
     public void onLoad(String mixinPackage) {
         if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()
-                && hasVersion("ae2", "15.2610.40") && hasVersion("thunderbolt", "2.0.3-gto.6")) {
+                && hasVersion("ae2", "15.2610.40")
+                && hasVersion("thunderbolt", "2.0.3-gto.6", "2.0.4-gto.1", "2.0.4-gto.2", "2.0.4-gto.3",
+                        "2.0.4-gto.4", "2.0.4-gto.5")) {
             com.moakiee.ae2lt.compat.gto.GtoCoreClientMixinExtension.register();
         }
         if (isModLoaded("gtocore") && hasVersion("extendedae_plus", "1.5.5", "1.6.3")) {
@@ -33,6 +42,8 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
         if (isModLoaded("gtocore") && hasVersion("useless_mod", "20.2.4.7", "20.2.4.7-gto.1")) {
             com.moakiee.ae2lt.compat.gto.GtoLegacyAddonMixins.registerUseless();
         }
+        MixinExtrasBootstrap.init();
+        InjectionInfo.register(IsolatedWrapOperationInjectionInfo.class);
     }
 
     @Override
@@ -58,6 +69,11 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
                 || simpleName.equals("GtoEaepManualStateMixin")) {
             return isModLoaded("gtocore") && hasVersion("extendedae_plus", "1.5.5", "1.6.3");
         }
+        if (simpleName.equals("ForgeFluxNetworkTelemetryMixin")) return isModLoaded("appflux") && isModLoaded("fluxnetworks");
+        if (simpleName.equals("GtoEnergyHandlerMixin")) {
+            return isModLoaded("appflux") && isModLoaded("gtocore") && isModLoaded("gtceu");
+        }
+        if (simpleName.equals("OmniUpgradesAE2CompatMixin")) return isModLoaded("omni_upgrades");
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
     }
@@ -113,6 +129,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             ClassNode targetClass,
             String mixinClassName,
             IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".NeoEcoLightningTransformMixin")) {
+            com.moakiee.ae2lt.compat.neoeco.NeoEcoLightningTransform.protect(targetClass);
+        }
         if (mixinClassName.endsWith(".GtoEaepProviderMixin")) {
             com.moakiee.ae2lt.compat.gto.GtoEaepProviderTransform.apply(targetClass);
         }

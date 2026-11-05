@@ -85,6 +85,7 @@ public final class CrystalCatalyzerLogic extends AbstractGridRecipeMachineLogic<
             CrystalCatalyzerLockedRecipe lockedRecipe) {
         return CrystalCatalyzerRecipeService.findRecipeById(host.getLevel(), lockedRecipe.recipeId())
                 .filter(candidate -> lockedRecipe.matchesFluidInput(candidate.recipe()))
+                .filter(candidate -> lockedRecipe.matchesHarvestOutput(candidate.recipe()))
                 .filter(candidate -> !host.isPigmeeVariant()
                         || (candidate.recipe().isWaterRecipe()
                                 && host.getInventory().getStackInSlot(CrystalCatalyzerInventory.SLOT_CATALYST).getCount()
@@ -103,6 +104,7 @@ public final class CrystalCatalyzerLogic extends AbstractGridRecipeMachineLogic<
         // changes to Strange Matter and the player supplies the new fluid.
         var candidate = CrystalCatalyzerRecipeService.findRecipeById(host.getLevel(), lockedRecipe.recipeId());
         if (candidate.isEmpty() || !lockedRecipe.matchesFluidInput(candidate.get().recipe())
+                || !lockedRecipe.matchesHarvestOutput(candidate.get().recipe())
                 || (host.isPigmeeVariant() && !candidate.get().recipe().isWaterRecipe())) {
             host.abortProcessing();
             return false;

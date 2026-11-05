@@ -2409,6 +2409,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     }
 
     public void addImportBufferDrops(List<ItemStack> drops) {
+        wirelessDistributor.consumeDismantleDropHandoff();
         // Passive inputs travel with the dismantled block item. AEKey.addDrops
         // truncates large item counts and does not preserve fluids.
         if (importBuffer.isEmpty()) {
@@ -2518,6 +2519,11 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         public int getValidTargetsVersion() {
             return validEnergyTargetsVersion;
         }
+
+        @Override
+        public Runnable getPendingEnergyPersistCallback() {
+            return OverloadedInterfaceBlockEntity.this::saveChanges;
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -2572,9 +2578,8 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
         if (!unloadingChunk) {
             unregisterEject();
         }
-        // Flush any FE the wireless distributor still has buffered back to
-        // the ME network — there is no persistent storage on this side and
-        // BufferedMEStorage discards on GC.
+        // Return buffered FE where possible; refused energy remains in the
+        // saved buffer or in the dismantled block item's handoff tag.
         wirelessDistributor.flushBufferToNetwork();
         super.setRemoved();
     }
@@ -2700,6 +2705,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     @Override
     public void saveAdditional(CompoundTag d) {
         super.saveAdditional(d);
+        wirelessDistributor.writeToNBT(d);
         d.putString(TAG_INTERFACE_MODE, interfaceMode.name());
         d.putString(TAG_IO_SPEED_MODE, ioSpeedMode.name());
         d.putString(TAG_EXPORT_MODE, exportMode.name());
@@ -2724,6 +2730,7 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
     @Override
     public void loadTag(CompoundTag d) {
         super.loadTag(d);
+        wirelessDistributor.readFromNBT(d);
         if (d.contains(TAG_INTERFACE_MODE)) {
             try { interfaceMode = InterfaceMode.valueOf(d.getString(TAG_INTERFACE_MODE)); }
             catch (IllegalArgumentException e) { interfaceMode = InterfaceMode.NORMAL; }
@@ -2783,6 +2790,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                                net.minecraft.nbt.CompoundTag output,
                                @Nullable Player player) {
         super.exportSettings(mode, output, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            wirelessDistributor.writeDismantleEnergyToNBT(output);
+        }
         if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM && !passiveInput.isEmpty()) {
             output.put(TAG_PASSIVE_INPUT, passiveInput.write());
         }
@@ -2805,6 +2815,9 @@ public class OverloadedInterfaceBlockEntity extends InterfaceBlockEntity
                                net.minecraft.nbt.CompoundTag input,
                                @Nullable Player player) {
         super.importSettings(mode, input, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            wirelessDistributor.importDismantleEnergyFromNBT(input);
+        }
         if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM
                 && input.contains(TAG_PASSIVE_INPUT, Tag.TAG_LIST)) {
             passiveInput.read(input.getList(TAG_PASSIVE_INPUT, Tag.TAG_COMPOUND));

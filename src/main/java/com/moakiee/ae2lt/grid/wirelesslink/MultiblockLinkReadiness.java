@@ -15,6 +15,27 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 public final class MultiblockLinkReadiness {
     private static final String FORMED_PROPERTY = "formed";
+    // Cache metadata, never owners/clusters/levels. ClassValue also releases an
+    // optional mod's metadata with its defining class loader.
+    private static final ClassValue<Accessors> ACCESSORS = new ClassValue<>() {
+        @Override
+        protected Accessors computeValue(Class<?> type) {
+            return new Accessors(findMethod(type, "getCluster"),
+                    findMethod(type, "getBoundsMin"), findMethod(type, "getBoundsMax"),
+                    findMethod(type, "updateSubType", boolean.class));
+        }
+    };
+
+    private record Accessors(Method cluster, Method boundsMin, Method boundsMax, Method updateSubType) {
+        Method noArg(String name) {
+            return switch (name) {
+                case "getCluster" -> cluster;
+                case "getBoundsMin" -> boundsMin;
+                case "getBoundsMax" -> boundsMax;
+                default -> null;
+            };
+        }
+    }
 
     private MultiblockLinkReadiness() {
     }
@@ -129,13 +150,12 @@ public final class MultiblockLinkReadiness {
         }
     }
 
-    private static Object invokeNoArg(Object target, String methodName) {
-        Method method = findMethod(target.getClass(), methodName);
+    static Object invokeNoArg(Object target, String methodName) {
+        Method method = ACCESSORS.get(target.getClass()).noArg(methodName);
         if (method == null) {
             return null;
         }
         try {
-            method.setAccessible(true);
             return method.invoke(target);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             return null;
@@ -165,13 +185,12 @@ public final class MultiblockLinkReadiness {
     }
 
     private static void invokeUpdateSubType(BlockEntity blockEntity) {
-        Method updateSubType = findMethod(blockEntity.getClass(), "updateSubType", boolean.class);
+        Method updateSubType = ACCESSORS.get(blockEntity.getClass()).updateSubType();
         if (updateSubType == null) {
             return;
         }
 
         try {
-            updateSubType.setAccessible(true);
             updateSubType.invoke(blockEntity, false);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
         }
@@ -181,9 +200,12 @@ public final class MultiblockLinkReadiness {
         Class<?> current = type;
         while (current != null) {
             try {
-                return current.getDeclaredMethod(name, parameterTypes);
+                Method method = current.getDeclaredMethod(name, parameterTypes);
+                return method.trySetAccessible() ? method : null;
             } catch (NoSuchMethodException ignored) {
                 current = current.getSuperclass();
+            } catch (RuntimeException ignored) {
+                return null;
             }
         }
         return null;

@@ -41,7 +41,7 @@ public record CelestweaveModuleContainer(
         toggles.forEach(togglesTag::putBoolean);
         tag.put("toggles", togglesTag);
         CompoundTag dataTag = new CompoundTag();
-        submoduleData.forEach(dataTag::put);
+        submoduleData.forEach((key, value) -> dataTag.put(key, value.copy()));
         tag.put("submodule_data", dataTag);
         energyModuleCapacityFe.ifPresent(v -> tag.putLong("energy_capacity_fe", v));
         return tag;

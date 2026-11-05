@@ -4,6 +4,7 @@ allprojects {
     afterEvaluate {
         def withCurios = providers.gradleProperty('pigmeeSenseWithCurios').getOrElse('true').toBoolean()
         sourceSets.jdb.java.setIncludes(['**/PigmeeLightningSenseGameTests.java', '**/PigmeeLightningClientProbe.java'])
+        sourceSets.jdb.java.include '**/CoverageClientSequence.java'
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'appeng']
                     || (withCurios && dep.group == 'top.theillusivec4.curios'))

@@ -32,6 +32,7 @@ import appeng.menu.locator.MenuLocator;
 import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
 import com.moakiee.ae2lt.block.PigmeePatternProviderBlock;
+import com.moakiee.ae2lt.logic.ResourceIngressPolicy;
 import com.moakiee.ae2lt.logic.provider.PigmeePatternProviderReturnInventory;
 import com.moakiee.ae2lt.menu.PigmeePatternProviderMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
@@ -74,6 +75,7 @@ public final class PigmeePatternProviderBlockEntity extends AENetworkBlockEntity
 
     public PigmeePatternProviderBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PIGMEE_PATTERN_PROVIDER.get(), pos, state);
+        returnInventory.setOnlineSupplier(() -> ResourceIngressPolicy.isOnline(this, getMainNode()));
     }
 
     @Override

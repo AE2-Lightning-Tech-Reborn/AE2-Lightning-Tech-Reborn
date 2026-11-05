@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.mixin.recipeviewer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -10,11 +12,37 @@ import net.minecraftforge.forgespi.language.IModFileInfo;
 import net.minecraftforge.forgespi.language.IModInfo;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 class RecipeViewerMixinPluginTest {
     private static final String MIXIN_PACKAGE = "com.moakiee.ae2lt.mixin.recipeviewer.jeisupply.";
+
+    @AfterEach
+    void clearOptionalUselessSelection() {
+        com.moakiee.ae2lt.compat.gto.GtoUselessJeiAbi.configure(false, "", "", getClass().getClassLoader());
+    }
+
+    @Test
+    void missingLegacyApiInstallsExtensionAndOnlyEnablesItsMarkerInsideTheExactGate() {
+        var plugin = new RecipeViewerMixinPlugin();
+        var installs = new java.util.concurrent.atomic.AtomicInteger();
+        var resources = new ClassLoader(null) {
+            @Override public java.io.InputStream getResourceAsStream(String name) { return null; }
+        };
+        plugin.configureUselessJei(true, "15.2610.40", "20.2.4.7-gto.1", resources, installs::incrementAndGet);
+        assertEquals(1, installs.get());
+        assertTrue(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.useless.GtoUselessJeiAbiMixin"));
+        assertTrue(com.moakiee.ae2lt.compat.gto.GtoUselessJeiAbi.restorePlugin());
+
+        plugin.configureUselessJei(false, "15.2610.40", "20.2.4.7-gto.1", resources,
+                () -> { throw new AssertionError("extension registered outside the client/GTO/addon gate"); });
+        assertFalse(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.useless.GtoUselessJeiAbiMixin"));
+        assertFalse(com.moakiee.ae2lt.compat.gto.GtoUselessJeiAbi.restorePlugin());
+    }
 
     @ParameterizedTest
     @CsvSource({
@@ -32,7 +60,7 @@ class RecipeViewerMixinPluginTest {
 
         assertEquals(legacy, applies(plugin, "JeiWirelessSupplyMixin"));
         assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyServiceMixin"));
-        assertEquals(!legacy, applies(plugin, "JeiWirelessSupplyContextAccessor"));
+        assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
     }
 
     @Test
@@ -55,8 +83,10 @@ class RecipeViewerMixinPluginTest {
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
         assertEquals(!controller, plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiLegacyRecipeTransferButtonMixin"));
-        assertEquals(true, plugin.shouldApplyMixin("unused",
-                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"));
+        assertNotEquals(plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockLayoutMixin"),
+                plugin.shouldApplyMixin("unused",
+                        "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiModernMultiblockLayoutMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyMixin"));
         assertFalse(applies(plugin, "JeiWirelessSupplyServiceMixin"));
     }

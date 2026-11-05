@@ -69,12 +69,14 @@ public class JEIPlugin implements IModPlugin {
     public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
         JeiBookmarkAccessImpl.setRuntime(runtime);
         com.moakiee.ae2lt.compat.gto.jei.GtoJeiRuntime.set(runtime);
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(runtime);
     }
 
     @Override
     public void onRuntimeUnavailable() {
         JeiBookmarkAccessImpl.clearRuntime();
         com.moakiee.ae2lt.compat.gto.jei.GtoJeiRuntime.set(null);
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(null);
     }
 
     @Override
@@ -89,6 +91,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
+        com.moakiee.ae2lt.client.compat.GtoVanillaJeiServices.categories(registration);
         var guiHelper = registration.getJeiHelpers().getGuiHelper();
         registration.addRecipeCategories(
                 new OverloadGrowthCategory(guiHelper),
@@ -102,16 +105,17 @@ public class JEIPlugin implements IModPlugin {
                 new FirmamentConversionCategory(guiHelper));
         // EMI has a native adapter for this highly interactive page. Avoid also feeding
         // the JEI version through EMI's JEI bridge when both viewers are installed.
-        if (!isEmiLoaded()) {
+        if (!isEmiLoaded() || com.moakiee.ae2lt.client.compat.GtoVanillaJeiServices.enabled()) {
             registration.addRecipeCategories(new MultiblockStructureCategory(guiHelper));
         }
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
+        com.moakiee.ae2lt.client.compat.GtoVanillaJeiServices.recipes(registration);
         registration.addRecipes(OverloadGrowthCategory.TYPE, List.of(OverloadGrowthCategory.Page.values()));
         registration.addRecipes(TeslaCoilCategory.TYPE, List.of(TeslaCoilCategory.Page.values()));
-        if (!isEmiLoaded()) {
+        if (!isEmiLoaded() || com.moakiee.ae2lt.client.compat.GtoVanillaJeiServices.enabled()) {
             registration.addRecipes(MultiblockStructureCategory.TYPE, MultiblockStructureRecipes.all());
         }
         registration.addIngredientInfo(
@@ -188,6 +192,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
+        com.moakiee.ae2lt.client.compat.GtoVanillaJeiServices.catalysts(registration);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get()), LightningAssemblyCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get()), LightningSimulationCategory.TYPE);
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get()), OverloadProcessingCategory.TYPE);
@@ -214,15 +219,15 @@ public class JEIPlugin implements IModPlugin {
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
-        registration.addUniversalRecipeTransferHandler(new UniversalEncodePatternTransferHandler<>(
+        registration.addUniversalRecipeTransferHandler(new TianshuPatternTransferHandler<>(new UniversalEncodePatternTransferHandler<>(
                 TianshuPatternEncodingTermMenu.TYPE,
                 TianshuPatternEncodingTermMenu.class,
-                helper));
+                helper)));
         if (TianshuWirelessTerminalFactory.isAvailable()) {
-            registration.addUniversalRecipeTransferHandler(new UniversalEncodePatternTransferHandler<>(
+            registration.addUniversalRecipeTransferHandler(new TianshuPatternTransferHandler<>(new UniversalEncodePatternTransferHandler<>(
                     TianshuWirelessPatternEncodingTermMenu.TYPE,
                     TianshuWirelessPatternEncodingTermMenu.class,
-                    helper));
+                    helper)));
         }
 
     }

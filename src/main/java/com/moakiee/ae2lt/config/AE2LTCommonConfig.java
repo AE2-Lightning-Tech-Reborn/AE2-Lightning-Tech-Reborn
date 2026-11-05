@@ -62,6 +62,7 @@ public final class AE2LTCommonConfig {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         VALUES = new Values(builder);
         com.moakiee.ae2lt.machine.miningfactory.MiningFactoryConfig.define(builder);
+        com.moakiee.ae2lt.logic.energy.WirelessEnergySettings.define(builder);
         SPEC = builder.build();
     }
 
@@ -346,6 +347,7 @@ public final class AE2LTCommonConfig {
     }
 
     private static final class Values {
+        final ForgeConfigSpec.IntValue maxOwnedFrequenciesPerPlayer;
         private final ForgeConfigSpec.IntValue configVersion;
         private final ForgeConfigSpec.IntValue lightningCollectorCooldownTicks;
         private final ForgeConfigSpec.IntValue electroChimeMaxCatalysis;
@@ -391,7 +393,6 @@ public final class AE2LTCommonConfig {
         private final ForgeConfigSpec.IntValue teslaCoilExtremeHighVoltageInput;
         private final ForgeConfigSpec.IntValue teslaCoilExtremeHighVoltageFe;
         private final ForgeConfigSpec.BooleanValue pigmeeFumoGiftOnFirstJoin;
-        private final ForgeConfigSpec.IntValue maxOwnedFrequenciesPerPlayer;
         private final ForgeConfigSpec.BooleanValue frequencyCardEnableAutoCleanup;
         private final ForgeConfigSpec.IntValue frequencyCardCleanupIntervalSeconds;
         private final ForgeConfigSpec.IntValue frequencyCardInvalidCleanupDelaySeconds;

@@ -4,17 +4,20 @@ import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
-import appeng.core.network.serverbound.FillCraftingGridFromRecipePacket;
+import appeng.core.sync.packets.FillCraftingGridFromRecipePacket;
 import appeng.helpers.InventoryAction;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.CraftingTermSlot;
 import appeng.parts.reporting.CraftingTerminalPart;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
+import com.moakiee.ae2lt.gametest.PigmeeSynthesisStationGameTests;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.mojang.authlib.GameProfile;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -23,54 +26,74 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
+import io.netty.buffer.Unpooled;
 
 /** Opt-in real-world regressions; never included in the published jar. */
 @GameTestHolder("ae2lt_pigmee_storage")
 @PrefixGameTestTemplate(false)
-@EventBusSubscriber(modid = "ae2lt", bus = EventBusSubscriber.Bus.MOD)
 public final class PigmeeAdjacentStorageGameTests {
     private static final BlockPos STATION = new BlockPos(2, 2, 2);
     private static final IActionSource ACTION = IActionSource.empty();
     private static final Map<BlockPos, IItemHandler> ITEM_PORTS = new HashMap<>();
     private static final Map<BlockPos, IFluidHandler> FLUID_PORTS = new HashMap<>();
 
-    @SubscribeEvent
-    public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        if (!Boolean.getBoolean("ae2lt.pigmeeStorageRegression")) {
-            return;
+    // Capability-only port: a Container fallback would outlive revoked capabilities.
+    private static final class PortBlockEntity extends BlockEntity {
+        private PortBlockEntity(BlockPos pos, BlockState state) {
+            super(BlockEntityType.BARREL, pos, state);
         }
-        event.registerBlock(Capabilities.ItemHandler.BLOCK,
-                (level, pos, state, be, side) -> ITEM_PORTS.get(pos), Blocks.STRUCTURE_VOID);
-        event.registerBlock(Capabilities.FluidHandler.BLOCK,
-                (level, pos, state, be, side) -> FLUID_PORTS.get(pos), Blocks.STRUCTURE_VOID);
+
+        @Override
+        public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction side) {
+            if (capability == ForgeCapabilities.ITEM_HANDLER) {
+                var handler = ITEM_PORTS.get(getBlockPos());
+                return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler).cast();
+            }
+            if (capability == ForgeCapabilities.FLUID_HANDLER) {
+                var handler = FLUID_PORTS.get(getBlockPos());
+                return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler).cast();
+            }
+            return super.getCapability(capability, side);
+        }
     }
 
     private static PigmeeSynthesisStationBlockEntity station(GameTestHelper helper) {
         helper.setBlock(STATION, ModBlocks.PIGMEE_SYNTHESIS_STATION.get());
-        return helper.getBlockEntity(STATION);
+        return (PigmeeSynthesisStationBlockEntity) helper.getBlockEntity(STATION);
     }
 
     private static BarrelBlockEntity barrel(GameTestHelper helper, Direction side, ItemStack stack) {
         helper.setBlock(STATION.relative(side), Blocks.BARREL);
-        BarrelBlockEntity barrel = helper.getBlockEntity(STATION.relative(side));
+        var barrel = (BarrelBlockEntity) helper.getBlockEntity(STATION.relative(side));
         barrel.setItem(0, stack);
         return barrel;
     }
@@ -79,8 +102,8 @@ public final class PigmeeAdjacentStorageGameTests {
         var pos = helper.absolutePos(STATION.relative(side));
         if (items != null) ITEM_PORTS.put(pos, items);
         if (fluids != null) FLUID_PORTS.put(pos, fluids);
-        helper.setBlock(STATION.relative(side), Blocks.STRUCTURE_VOID);
-        helper.getLevel().invalidateCapabilities(pos);
+        helper.setBlock(STATION.relative(side), Blocks.BARREL);
+        helper.getLevel().setBlockEntity(new PortBlockEntity(pos, Blocks.BARREL.defaultBlockState()));
     }
 
     private static void clearPorts(GameTestHelper helper) {
@@ -88,26 +111,102 @@ public final class PigmeeAdjacentStorageGameTests {
             var pos = helper.absolutePos(STATION.relative(side));
             ITEM_PORTS.remove(pos);
             FLUID_PORTS.remove(pos);
-            helper.getLevel().invalidateCapabilities(pos);
         }
     }
 
-    @GameTest(template = "empty")
+    private static void withCraftingFixture(GameTestHelper helper, CraftingRecipe fixture,
+            List<ItemStack> template, Runnable test) {
+        var level = helper.getLevel();
+        var manager = level.getRecipeManager();
+        var input = ForgeCraftingInput.of(3, 3, template);
+        helper.assertTrue(fixture.getType() == RecipeType.CRAFTING && fixture.matches(input, level),
+                "The isolated fixture must match the real crafting input");
+        Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> originalTypes =
+                net.minecraftforge.fml.util.ObfuscationReflectionHelper.getPrivateValue(
+                        RecipeManager.class, manager, "f_44007_");
+        Map<ResourceLocation, Recipe<?>> originalNames =
+                net.minecraftforge.fml.util.ObfuscationReflectionHelper.getPrivateValue(
+                        RecipeManager.class, manager, "f_199900_");
+        var types = new HashMap<>(originalTypes);
+        var names = new HashMap<>(originalNames);
+        var crafting = new LinkedHashMap<ResourceLocation, Recipe<?>>();
+        crafting.put(fixture.getId(), fixture);
+        for (var entry : originalTypes.getOrDefault(RecipeType.CRAFTING, Map.of()).entrySet()) {
+            // GTO's log recipe yields two planks. Keep this four-plank ownership
+            // contract isolated from recipes matching the same physical input.
+            if (entry.getKey().equals(fixture.getId())
+                    || entry.getValue() instanceof CraftingRecipe candidate && candidate.matches(input, level)) {
+                names.remove(entry.getKey());
+            } else {
+                crafting.put(entry.getKey(), entry.getValue());
+            }
+        }
+        types.put(RecipeType.CRAFTING, crafting);
+        names.put(fixture.getId(), fixture);
+        var optimizedIndexes = optimizedRecipeIndexes(manager);
+        var originalIndex = optimizedIndexes == null ? null : optimizedIndexes.get(RecipeType.CRAFTING);
+        try {
+            net.minecraftforge.fml.util.ObfuscationReflectionHelper.setPrivateValue(
+                    RecipeManager.class, manager, types, "f_44007_");
+            net.minecraftforge.fml.util.ObfuscationReflectionHelper.setPrivateValue(
+                    RecipeManager.class, manager, names, "f_199900_");
+            // FastRecipeSearch queries a separate immutable database. Rebuild only
+            // this disposable crafting index, keeping its real search path enabled.
+            if (optimizedIndexes != null) optimizedIndexes.remove(RecipeType.CRAFTING);
+            var selected = manager.getRecipeFor(RecipeType.CRAFTING, input, level);
+            helper.assertTrue(selected.orElse(null) == fixture,
+                    "Native recipe lookup must select the isolated fixture; selected "
+                            + selected.map(Recipe::getId).orElse(null));
+            test.run();
+        } finally {
+            net.minecraftforge.fml.util.ObfuscationReflectionHelper.setPrivateValue(
+                    RecipeManager.class, manager, originalTypes, "f_44007_");
+            net.minecraftforge.fml.util.ObfuscationReflectionHelper.setPrivateValue(
+                    RecipeManager.class, manager, originalNames, "f_199900_");
+            if (optimizedIndexes != null) {
+                if (originalIndex == null) optimizedIndexes.remove(RecipeType.CRAFTING);
+                else optimizedIndexes.put(RecipeType.CRAFTING, originalIndex);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<RecipeType<?>, Object> optimizedRecipeIndexes(RecipeManager manager) {
+        for (Class<?> type = manager.getClass(); type != null; type = type.getSuperclass()) {
+            if (!type.getName().equals("io.github.nutant.fastrecipesearch.RecipeManager")) continue;
+            try {
+                var field = type.getDeclaredField("cachedDBMap");
+                field.setAccessible(true);
+                return (Map<RecipeType<?>, Object>) field.get(manager);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("Cannot isolate the installed FastRecipeSearch index", failure);
+            }
+        }
+        return null;
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void existingStorageAndPowerContract(GameTestHelper helper) {
         PigmeeSynthesisStationGameTests.liveStorageAndPower(helper);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void existingMeExclusionContract(GameTestHelper helper) {
         PigmeeSynthesisStationGameTests.rejectsMeInterface(helper);
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void existingCraftingAndPersistenceContract(GameTestHelper helper) {
-        PigmeeSynthesisStationGameTests.menuCraftingAndPersistence(helper);
+        var template = NonNullList.withSize(9, ItemStack.EMPTY);
+        template.set(0, new ItemStack(Items.OAK_LOG, 2));
+        var fixture = new ShapelessRecipe(new ResourceLocation("ae2lt_qa", "oak_planks"), "",
+                CraftingBookCategory.MISC, new ItemStack(Items.OAK_PLANKS, 4),
+                NonNullList.of(Ingredient.EMPTY, Ingredient.of(Items.OAK_LOG)));
+        withCraftingFixture(helper, fixture, template,
+                () -> PigmeeSynthesisStationGameTests.menuCraftingAndPersistence(helper));
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void allSixSidesAndSplitItemTransfers(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -139,11 +238,11 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void cuttingBoardAndNativeRecipeFill(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
-        var board = BuiltInRegistries.BLOCK.get(ResourceLocation.parse("farmersdelight:cutting_board"));
+        var board = BuiltInRegistries.BLOCK.get(new ResourceLocation("farmersdelight:cutting_board"));
         helper.assertTrue(board != Blocks.AIR, "This suite requires the real Farmer's Delight jar");
         var north = barrel(helper, Direction.NORTH, new ItemStack(Items.OAK_PLANKS, 2));
         var east = barrel(helper, Direction.EAST, new ItemStack(Items.OAK_PLANKS, 1));
@@ -156,8 +255,8 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.assertTrue(storage.getAvailableStacks().get(AEItemKey.of(Items.OAK_PLANKS)) == 3,
                 "Empty cutting board must not hide side inventories");
         helper.assertTrue(matrix.getStackInSlot(0).getCount() == 7, "Placement preserves crafting slots");
-        var boardItems = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,
-                helper.absolutePos(STATION.above()), Direction.DOWN);
+        var boardItems = helper.getLevel().getBlockEntity(helper.absolutePos(STATION.above()))
+                .getCapability(ForgeCapabilities.ITEM_HANDLER, Direction.DOWN).orElse(null);
         helper.assertTrue(boardItems != null && boardItems.insertItem(0, new ItemStack(Items.CARROT), false).isEmpty(),
                 "Real cutting board inventory accepts fixture item");
         helper.assertTrue(storage.getAvailableStacks().get(AEItemKey.of(Items.CARROT)) == 1
@@ -170,6 +269,7 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.setBlock(STATION.above(), board);
         matrix.clear();
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "PigmeeMergeQA"));
+        player.setPos(host.getBlockPos().getX() + .5, host.getBlockPos().getY() + .5, host.getBlockPos().getZ() + .5);
         player.getInventory().clearContent();
         var menu = new PigmeeSynthesisStationMenu(1, player.getInventory(), host);
         player.containerMenu = menu;
@@ -178,24 +278,47 @@ public final class PigmeeAdjacentStorageGameTests {
         for (int slot : new int[] {3, 5, 6, 8}) template.set(slot, new ItemStack(Items.COBBLESTONE));
         template.set(4, new ItemStack(Items.IRON_INGOT));
         template.set(7, new ItemStack(Items.REDSTONE));
-        new FillCraftingGridFromRecipePacket(ResourceLocation.parse("minecraft:piston"), template, false).handleOnServer(player);
-        for (int slot = 0; slot < 9; slot++) {
-            helper.assertTrue(ItemStack.isSameItemSameComponents(matrix.getStackInSlot(slot), template.get(slot))
-                    && matrix.getStackInSlot(slot).getCount() == 1, "Native recipe fill slot " + slot);
+        var ingredients = NonNullList.withSize(9, Ingredient.EMPTY);
+        for (int slot = 0; slot < template.size(); slot++) {
+            ingredients.set(slot, Ingredient.of(template.get(slot)));
         }
-        for (var barrel : new BarrelBlockEntity[] {north, east, south, west, down}) {
-            helper.assertTrue(barrel.isEmpty(), "Recipe fill debits each physical source");
-        }
-        var output = menu.getSlots(SlotSemantics.CRAFTING_RESULT).getFirst();
-        helper.assertTrue(output.getItem().is(Items.PISTON), "Native menu resolves the filled recipe");
-        ((CraftingTermSlot) output).doClick(InventoryAction.CRAFT_ITEM, player);
-        helper.assertTrue(menu.getCarried().is(Items.PISTON) && menu.getCarried().getCount() == 1,
-                "Craft piston from ingredients sourced across five faces");
-        helper.assertTrue(host.getInventory() == storage, "Menu storage identity stays stable");
+        var fixture = new ShapedRecipe(new ResourceLocation("ae2lt_qa", "pigmee_piston"), "",
+                CraftingBookCategory.MISC, 3, 3, ingredients, new ItemStack(Items.PISTON));
+        withCraftingFixture(helper, fixture, template, () -> {
+            var payload = new FriendlyByteBuf(Unpooled.buffer());
+            FillCraftingGridFromRecipePacket packet;
+            try {
+                payload.writeBoolean(false);
+                payload.writeInt(template.size());
+                template.forEach(payload::writeItem);
+                payload.writeBoolean(true);
+                // Both AE2-GTO .31 and .40 require these trailing fields, even for fill-only requests.
+                payload.writeBoolean(false); // takeToCursor
+                payload.writeVarInt(0); // resultShouldBeTakenAmount
+                packet = new FillCraftingGridFromRecipePacket(payload);
+                helper.assertTrue(!payload.isReadable(), "Native fill packet must consume the complete QA payload");
+            } finally {
+                payload.release();
+            }
+            packet.serverPacketData(player);
+            for (int slot = 0; slot < 9; slot++) {
+                helper.assertTrue(ItemStack.isSameItemSameTags(matrix.getStackInSlot(slot), template.get(slot))
+                        && matrix.getStackInSlot(slot).getCount() == 1, "Native recipe fill slot " + slot);
+            }
+            for (var barrel : new BarrelBlockEntity[] {north, east, south, west, down}) {
+                helper.assertTrue(barrel.isEmpty(), "Recipe fill debits each physical source");
+            }
+            var output = menu.getSlots(SlotSemantics.CRAFTING_RESULT).get(0);
+            helper.assertTrue(output.getItem().is(Items.PISTON), "Native menu resolves the filled recipe");
+            ((CraftingTermSlot) output).doClick(InventoryAction.CRAFT_ITEM, player);
+            helper.assertTrue(menu.getCarried().is(Items.PISTON) && menu.getCarried().getCount() == 1,
+                    "Craft piston from ingredients sourced across five faces");
+            helper.assertTrue(host.getInventory() == storage, "Menu storage identity stays stable");
+        });
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void liveRemovalAndReplacement(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -210,11 +333,11 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.assertTrue(storage.extract(iron, 99, Actionable.MODULATE, ACTION) == 27, "No stale source can be extracted");
         helper.setBlock(STATION.north(), Blocks.AIR);
         helper.setBlock(STATION.east(), Blocks.AIR);
-        helper.assertTrue(!host.getLinkStatus().connected(), "Disconnect when all sources are removed");
+        helper.assertTrue(!host.hasAdjacentStorage(), "Disconnect when all sources are removed");
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void sharedHandlersCountAndSimulateOnce(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -242,8 +365,6 @@ public final class PigmeeAdjacentStorageGameTests {
             ITEM_PORTS.remove(helper.absolutePos(STATION.north()));
             FLUID_PORTS.remove(helper.absolutePos(STATION.north()));
             helper.setBlock(STATION.north(), Blocks.AIR);
-            // This test-only capability has no block entity to invalidate it on removal.
-            helper.getLevel().invalidateCapabilities(helper.absolutePos(STATION.north()));
             helper.assertTrue(storage.getAvailableStacks().get(water) == 4000, "Remaining port still exposes shared storage");
             helper.succeed();
         } finally {
@@ -251,7 +372,7 @@ public final class PigmeeAdjacentStorageGameTests {
         }
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void silentMultiblockHandlerReplacementAndRemoval(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -270,7 +391,7 @@ public final class PigmeeAdjacentStorageGameTests {
             port(helper, Direction.EAST, oldItems, oldFluid);
             helper.assertTrue(storage.getAvailableStacks().get(iron) == 16
                     && storage.getAvailableStacks().get(water) == 2000, "Prime both cached multiblock ports");
-            // Deliberately omit invalidateCapabilities: the part blocks remain
+            // Deliberately omit capability invalidation: the part blocks remain
             // while their remote controller changes the backing inventory.
             for (var side : new Direction[] {Direction.NORTH, Direction.EAST}) {
                 var pos = helper.absolutePos(STATION.relative(side));
@@ -293,7 +414,7 @@ public final class PigmeeAdjacentStorageGameTests {
             helper.assertTrue(storage.insert(iron, 1, Actionable.MODULATE, ACTION) == 0
                     && storage.extract(water, 4000, Actionable.MODULATE, ACTION) == 0,
                     "Revoked capabilities must immediately reject writes and extraction");
-            helper.assertTrue(storage.getAvailableStacks().isEmpty() && !host.getLinkStatus().connected(),
+            helper.assertTrue(storage.getAvailableStacks().isEmpty() && !host.hasAdjacentStorage(),
                     "Revoked multiblock must disappear without reopening");
             helper.assertTrue(oldItems.getStackInSlot(0).getCount() == 16 && oldFluid.getFluidAmount() == 2000,
                     "Detached inventories must never be read as live stock or mutated");
@@ -305,7 +426,7 @@ public final class PigmeeAdjacentStorageGameTests {
         }
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void removedHostAndRemovedNeighbourRejectAccess(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();
@@ -328,7 +449,7 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "empty")
+    @GameTest(templateNamespace = "ae2lt", template = "pigmee_station_empty")
     public static void independentFluidTanksCombine(GameTestHelper helper) {
         var host = station(helper);
         var storage = host.getInventory();

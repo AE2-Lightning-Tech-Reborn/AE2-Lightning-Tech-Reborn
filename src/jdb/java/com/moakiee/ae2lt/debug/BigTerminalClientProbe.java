@@ -97,7 +97,7 @@ public final class BigTerminalClientProbe {
                 require(mc.screen instanceof MEStorageScreen<?>, "native terminal screen");
                 var menu = ((MEStorageScreen<?>) mc.screen).getMenu();
                 require(menu instanceof BigTerminalMenu, "native menu mixin");
-                var entry = menu.getClientRepo().getAllEntries().stream()
+                var entry = com.moakiee.ae2lt.client.compat.ClientRepoAccess.allEntries(menu.getClientRepo()).stream()
                         .filter(e -> key().equals(e.getWhat())).findFirst().orElseThrow();
                 var exact = ((BigTerminalMenu) menu).ae2lt$getBigStock(key());
                 if (phase == 1 || phase == 3) {
@@ -138,7 +138,7 @@ public final class BigTerminalClientProbe {
     public static void render(net.minecraftforge.client.event.ScreenEvent.Render.Post event) {
         if (!Boolean.getBoolean("ae2lt.bigTerminalProbe") || phase != 1 || done
                 || !(event.getScreen() instanceof MEStorageScreen<?> screen)) return;
-        var entry = screen.getMenu().getClientRepo().getAllEntries().stream()
+        var entry = com.moakiee.ae2lt.client.compat.ClientRepoAccess.allEntries(screen.getMenu().getClientRepo()).stream()
                 .filter(e -> key().equals(e.getWhat())).findFirst().orElse(null);
         if (entry == null) return;
         try {

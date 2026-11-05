@@ -60,7 +60,15 @@ public final class GtoClientQA {
         }
         if (Boolean.getBoolean("ae2lt.bigTerminalProbe") || Boolean.getBoolean("ae2lt.multiblockLayoutProbe")
                 || Boolean.getBoolean("ae2lt.emiMultiblockProbe") || Boolean.getBoolean("ae2lt.phaseFreecamClientProbe")
-                || Boolean.getBoolean("ae2lt.providerGuiProbe") || Boolean.getBoolean("ae2lt.multiplayerProbe")) return;
+                || Boolean.getBoolean("ae2lt.providerGuiProbe") || Boolean.getBoolean("ae2lt.multiplayerProbe")
+                || Boolean.getBoolean("ae2lt.uploadAliasClientProbe")
+                || Boolean.getBoolean("ae2lt.jeiCompatibilityProbe")
+                || Boolean.getBoolean("ae2lt.jeiServiceEmiProbe")
+                || Boolean.getBoolean("ae2lt.omniversalProcessingProbe")
+                || Boolean.getBoolean("ae2lt.noAppFluxClientProbe")
+                || Boolean.getBoolean("ae2lt.frequencyCardClientProbe")
+                || Boolean.getBoolean("ae2lt.remoteDeviceClientProbe")
+                || Boolean.getBoolean("ae2lt.wirelessEnergyMenuProbe")) return;
         if(++loading%100==0)LOGGER.info("GTO_CLIENT_QA SCREEN "+(mc.screen==null?"none":mc.screen.getClass().getName())+" world="+(mc.level!=null));
         if(mc.level==null || mc.player==null) return;
         if(++ticks<120)return;

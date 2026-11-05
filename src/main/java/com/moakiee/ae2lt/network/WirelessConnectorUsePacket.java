@@ -13,7 +13,6 @@ import com.moakiee.ae2lt.logic.WirelessConnectorTargetHelper;
 import com.moakiee.ae2lt.api.patternprovider.WirelessPatternProviderHost;
 import com.moakiee.ae2lt.logic.wireless.support.WirelessConnectionRef;
 import java.util.ArrayList;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,8 +21,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.ForgeMod;
-import net.minecraftforge.network.NetworkEvent;
 
 public record WirelessConnectorUsePacket(
         InteractionHand hand,
@@ -31,7 +28,6 @@ public record WirelessConnectorUsePacket(
         Direction face,
         boolean contiguous
 ) {
-
     public static WirelessConnectorUsePacket decode(FriendlyByteBuf buf) {
         return new WirelessConnectorUsePacket(
                 buf.readEnum(InteractionHand.class),
@@ -40,22 +36,22 @@ public record WirelessConnectorUsePacket(
                 buf.readBoolean());
     }
 
-    public static void encode(WirelessConnectorUsePacket payload, FriendlyByteBuf buf) {
-        buf.writeEnum(payload.hand);
-        buf.writeBlockPos(payload.pos);
-        buf.writeEnum(payload.face);
-        buf.writeBoolean(payload.contiguous);
+    public static void encode(WirelessConnectorUsePacket p, net.minecraft.network.FriendlyByteBuf b) { p.write(b); }
+    public void write(FriendlyByteBuf buf) {
+        buf.writeEnum(hand);
+        buf.writeBlockPos(pos);
+        buf.writeEnum(face);
+        buf.writeBoolean(contiguous);
     }
 
-    public static void handle(WirelessConnectorUsePacket payload, Supplier<NetworkEvent.Context> ctxSupplier) {
-        var ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player != null) {
+    public static void handle(WirelessConnectorUsePacket payload, java.util.function.Supplier<net.minecraftforge.network.NetworkEvent.Context> supplier) {
+        var context = supplier.get();
+        context.setPacketHandled(true);
+        context.enqueueWork(() -> {
+            if ((net.minecraft.world.entity.player.Player) context.getSender() instanceof ServerPlayer player) {
                 payload.handleOnServer(player);
             }
         });
-        ctx.setPacketHandled(true);
     }
 
     private void handleOnServer(ServerPlayer player) {
@@ -64,9 +60,7 @@ public record WirelessConnectorUsePacket(
 
         ItemStack stack = player.getItemInHand(hand);
         if (!(stack.getItem() instanceof OverloadedWirelessConnectorItem)) return;
-        double reach = player.getAttributeValue(ForgeMod.BLOCK_REACH.get()) + 1.0D;
-        if (player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) > reach * reach) return;
-
+        if (!com.moakiee.ae2lt.logic.world.PlayerWorldActions.withinReach(player, pos)) return;
         if (!PlayerWorldActions.mayInteract(player, level, pos,
                 hand, face, net.minecraft.world.phys.Vec3.atCenterOf(pos))) return;
 
@@ -583,4 +577,3 @@ public record WirelessConnectorUsePacket(
         }
     }
 }
-

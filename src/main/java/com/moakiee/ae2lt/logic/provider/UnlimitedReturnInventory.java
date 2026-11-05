@@ -1,12 +1,18 @@
 package com.moakiee.ae2lt.logic.provider;
 
+import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
+
 import org.jetbrains.annotations.Nullable;
 
 import appeng.api.config.Actionable;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AEKeyType;
 import appeng.api.stacks.GenericStack;
 import appeng.helpers.patternprovider.PatternProviderReturnInventory;
+import com.moakiee.ae2lt.logic.ResourceIngressPolicy;
 
 /**
  * Return inventory (9 slots, or pages*9 for extended providers) with unlimited
@@ -21,6 +27,8 @@ public class UnlimitedReturnInventory extends PatternProviderReturnInventory {
 
     @Nullable
     private ReturnSlotFilter slotFilter;
+    private Predicate<AEKey> admissionPolicy = key -> true;
+    private boolean inserting;
 
     private UnlimitedReturnInventory(Runnable listener) {
         super(listener);
@@ -31,6 +39,24 @@ public class UnlimitedReturnInventory extends PatternProviderReturnInventory {
         var inv = new UnlimitedReturnInventory(listener);
         inv.slotFilter = filter;
         return inv;
+    }
+
+    public void setAdmissionPolicy(Predicate<AEKey> admissionPolicy) {
+        this.admissionPolicy = Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+    }
+
+    public void setOnlineSupplier(BooleanSupplier online) {
+        Objects.requireNonNull(online, "online");
+        setAdmissionPolicy(key -> ResourceIngressPolicy.canAccept(key, online.getAsBoolean()));
+    }
+
+    public boolean canAcceptNewResource(AEKey key) {
+        return isAllowed(key);
+    }
+
+    @Override
+    public boolean isAllowed(AEKey key) {
+        return key != null && super.isAllowed(key) && admissionPolicy.test(key);
     }
 
     public static UnlimitedReturnInventory create(Runnable listener,
@@ -57,29 +83,59 @@ public class UnlimitedReturnInventory extends PatternProviderReturnInventory {
      */
     @Override
     public long insert(int slot, AEKey what, long amount, Actionable mode) {
-        if (what == null || amount <= 0) return 0;
-        if (!isAllowed(what)) return 0;
-        if (slotFilter != null && !slotFilter.isAllowed(slot, what)) return 0;
+        if (slot < 0 || slot >= size()) return 0;
+        return insertMerged(slot, what, amount, mode);
+    }
 
-        for (int i = 0; i < size(); i++) {
-            if (what.equals(getKey(i))) {
-                if (mode == Actionable.MODULATE) {
-                    setStack(i, new GenericStack(what, getAmount(i) + amount));
+    @Override
+    public long insert(AEKey what, long amount, Actionable mode, IActionSource source) {
+        return insertMerged(-1, what, amount, mode);
+    }
+
+    private long insertMerged(int requestedSlot, AEKey what, long amount, Actionable mode) {
+        if (what == null || amount <= 0 || inserting || !canInsert()) return 0;
+        Objects.requireNonNull(mode, "mode");
+        inserting = true;
+        try {
+            if (!canAcceptNewResource(what)) return 0;
+            if (slotFilter != null) {
+                if (requestedSlot >= 0) {
+                    if (!slotFilter.isAllowed(requestedSlot, what)) return 0;
+                } else {
+                    boolean allowed = false;
+                    for (int i = 0; i < size(); i++) {
+                        if (slotFilter.isAllowed(i, what)) {
+                            allowed = true;
+                            break;
+                        }
+                    }
+                    if (!allowed) return 0;
                 }
-                return amount;
             }
-        }
 
-        for (int i = 0; i < size(); i++) {
-            if (getKey(i) == null) {
-                if (mode == Actionable.MODULATE) {
-                    setStack(i, new GenericStack(what, amount));
+            for (int i = 0; i < size(); i++) {
+                if (what.equals(getKey(i))) {
+                    long stored = getAmount(i);
+                    long accepted = Math.min(amount, Long.MAX_VALUE - stored);
+                    if (accepted > 0 && mode == Actionable.MODULATE) {
+                        setStack(i, new GenericStack(what, stored + accepted));
+                    }
+                    return accepted;
                 }
-                return amount;
             }
-        }
 
-        return 0;
+            for (int i = 0; i < size(); i++) {
+                if (getKey(i) == null) {
+                    if (mode == Actionable.MODULATE) {
+                        setStack(i, new GenericStack(what, amount));
+                    }
+                    return amount;
+                }
+            }
+            return 0;
+        } finally {
+            inserting = false;
+        }
     }
 
     @Override

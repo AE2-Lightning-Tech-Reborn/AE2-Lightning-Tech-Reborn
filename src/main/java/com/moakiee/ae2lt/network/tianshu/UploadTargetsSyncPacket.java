@@ -12,7 +12,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
-public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetData> targets) {
+public record UploadTargetsSyncPacket(int containerId, int revision, List<TianshuUploadTargetData> targets) {
     public UploadTargetsSyncPacket {
         targets = targets == null ? List.of() : List.copyOf(targets);
         TianshuPacketLimits.requireListSize("upload targets", targets.size());
@@ -20,6 +20,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
 
     public void write(FriendlyByteBuf buf) {
         buf.writeVarInt(containerId);
+        buf.writeVarInt(revision);
         buf.writeVarInt(targets.size());
         for (var target : targets) {
             target.group().writeToPacket(buf);
@@ -30,6 +31,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
 
     public static UploadTargetsSyncPacket decode(FriendlyByteBuf buf) {
         int containerId = buf.readVarInt();
+        int revision = buf.readVarInt();
         int size = TianshuPacketLimits.requireDecodedListSize(
                 "upload targets", buf.readVarInt());
         var targets = new ArrayList<TianshuUploadTargetData>(size);
@@ -37,7 +39,7 @@ public record UploadTargetsSyncPacket(int containerId, List<TianshuUploadTargetD
             targets.add(new TianshuUploadTargetData(
                     PatternContainerGroup.readFromPacket(buf), buf.readVarInt(), buf.readVarInt()));
         }
-        return new UploadTargetsSyncPacket(containerId, targets);
+        return new UploadTargetsSyncPacket(containerId, revision, targets);
     }
 
     public static void handle(UploadTargetsSyncPacket packet, Supplier<NetworkEvent.Context> context) {

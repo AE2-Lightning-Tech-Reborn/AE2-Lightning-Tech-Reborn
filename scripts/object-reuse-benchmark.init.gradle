@@ -1,0 +1,26 @@
+// Run the real Forge/Mixin runtime with independently switchable object optimizations.
+// Supply -PobjectReuseMode=baseline|keys|nbt|both and an isolated run/report directory.
+def reuseMode = gradle.startParameter.projectProperties['objectReuseMode'] ?: 'both'
+if (!(reuseMode in ['baseline', 'keys', 'nbt', 'both'])) throw new GradleException('Invalid objectReuseMode')
+def reuseMicroOnly = (gradle.startParameter.projectProperties['objectReuseMicroOnly'] ?: 'true').toBoolean()
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(reuseMicroOnly ? ['**/gametest/ObjectReuseGameTests.java'] : [
+                '**/gametest/ObjectReuseGameTests.java', '**/WirelessInterfaceGameTests.java',
+                '**/WirelessInterfaceExportGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')
+        }
+        [minecraft.runs.interfaceIoGameTestServer, minecraft.runs.wirelessIoGameTestServer].each { run ->
+            run.workingDirectory project.file(providers.gradleProperty('ae2ltBenchmarkRunDirectory')
+                    .getOrElse('run-object-reuse'))
+            run.property 'forge.enabledGameTestNamespaces', 'ae2lt_io,minecraft'
+            run.property 'ae2lt.objectReuse.plainKeys', (reuseMode in ['keys', 'both']).toString()
+            run.property 'ae2lt.objectReuse.fastNbtCopies', (reuseMode in ['nbt', 'both']).toString()
+            run.property 'ae2lt.objectReuse.benchmark', 'true'
+            run.property 'ae2lt.objectReuse.report', providers.gradleProperty('objectReuseReport')
+                    .getOrElse('object-reuse-result.json')
+            run.jvmArgs '-Xms512m', '-Xmx2g'
+        }
+    }
+}
