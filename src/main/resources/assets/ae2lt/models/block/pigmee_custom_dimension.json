@@ -1,0 +1,145 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "side": "ae2lt:block/pigmee_building/purple_pigmee_framed_building_panel",
+    "floor": "ae2lt:block/pigmee_building/white_pigmee_building_panel",
+    "core": "ae2lt:block/pigmee_building/pink_pigmee_building_panel",
+    "particle": "#side",
+    "pink": "ae2lt:block/pigmee_building/pink_pigmee_building_panel",
+    "blue": "ae2lt:block/pigmee_building/light_blue_pigmee_building_panel",
+    "yellow": "ae2lt:block/pigmee_building/yellow_pigmee_building_panel",
+    "green": "ae2lt:block/pigmee_building/lime_pigmee_building_panel"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#side",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#side",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#side",
+          "cullface": "west"
+        },
+        "down": {
+          "texture": "#side",
+          "cullface": "down"
+        },
+        "up": {
+          "texture": "#floor",
+          "cullface": "up"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        16.002,
+        2
+      ],
+      "to": [
+        7,
+        16.002,
+        7
+      ],
+      "faces": {
+        "up": {
+          "texture": "#pink",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        9,
+        16.002,
+        2
+      ],
+      "to": [
+        14,
+        16.002,
+        7
+      ],
+      "faces": {
+        "up": {
+          "texture": "#blue",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        16.002,
+        9
+      ],
+      "to": [
+        7,
+        16.002,
+        14
+      ],
+      "faces": {
+        "up": {
+          "texture": "#yellow",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        9,
+        16.002,
+        9
+      ],
+      "to": [
+        14,
+        16.002,
+        14
+      ],
+      "faces": {
+        "up": {
+          "texture": "#green",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "ae2lt:pigmee_building",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    "BPB",
+    "BBB"
+  ],
+  "key": {
+    "B": {
+      "item": "ae2lt:pigmee_building_block"
+    },
+    "P": {
+      "item": "ae2lt:pigmee_fumo"
+    }
+  },
+  "result": {
+    "id": "ae2lt:pigmee_odd_dimension",
+    "count": 1
+  }
+}

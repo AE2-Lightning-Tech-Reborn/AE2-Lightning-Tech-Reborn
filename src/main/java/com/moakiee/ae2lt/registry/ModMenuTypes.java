@@ -152,6 +152,11 @@ public final class ModMenuTypes {
     private ModMenuTypes() {
     }
 
+    public static final DeferredHolder<MenuType<?>, MenuType<com.moakiee.ae2lt.menu.PigmeeDimensionMenu>>
+            PIGMEE_DIMENSION = MENU_TYPES.register("pigmee_dimension", () ->
+                    net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
+                            com.moakiee.ae2lt.menu.PigmeeDimensionMenu::new));
+
     public static final DeferredHolder<MenuType<?>, MenuType<com.moakiee.ae2lt.menu.TianshuCraftingTermMenu>>
             TIANSHU_CRAFTING_TERMINAL = MENU_TYPES.register("tianshu_crafting_terminal",
                     () -> com.moakiee.ae2lt.menu.TianshuCraftingTermMenu.TYPE);

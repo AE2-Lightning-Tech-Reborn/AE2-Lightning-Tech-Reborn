@@ -338,7 +338,12 @@ public final class AE2LTCommonConfig {
         return VALUES.frequencyCardCleanupBatchSize.get();
     }
 
+    public static int maxOwnedPigmeeDimensionsPerPlayer() {
+        return VALUES.maxOwnedPigmeeDimensionsPerPlayer.get();
+    }
+
     private static final class Values {
+        private final ModConfigSpec.IntValue maxOwnedPigmeeDimensionsPerPlayer;
         private final ModConfigSpec.IntValue configVersion;
         private final ModConfigSpec.IntValue lightningCollectorCooldownTicks;
         private final ModConfigSpec.IntValue electroChimeMaxCatalysis;
@@ -441,6 +446,11 @@ public final class AE2LTCommonConfig {
         private final ModConfigSpec.IntValue overloadExecutionMaxTracked;
 
         private Values(ModConfigSpec.Builder builder) {
+            builder.push("pigmeeDimensions");
+            maxOwnedPigmeeDimensionsPerPlayer = builder
+                    .comment("Maximum Pigmee dimensions in which a player has OWNER access. Co-ownership also counts; frequency quotas are separate.")
+                    .defineInRange("maxOwnedPerPlayer", 2, 1, Integer.MAX_VALUE);
+            builder.pop();
             configVersion = builder
                     .comment("Internal config schema version. Do not edit; used by the mod for upgrade migrations.")
                     .defineInRange("configVersion", CURRENT_CONFIG_VERSION, 1, Integer.MAX_VALUE);

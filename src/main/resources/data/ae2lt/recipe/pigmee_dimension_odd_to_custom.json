@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "ae2lt:pigmee_odd_dimension"
+    }
+  ],
+  "result": {
+    "id": "ae2lt:pigmee_custom_dimension",
+    "count": 1
+  }
+}

@@ -296,4 +296,9 @@ public final class ModBlockEntities {
 
     private ModBlockEntities() {
     }
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.moakiee.ae2lt.blockentity.PigmeeDimensionBlockEntity>>
+            PIGMEE_DIMENSION = BLOCK_ENTITY_TYPES.register("pigmee_dimension", () -> BlockEntityType.Builder.of(
+                    com.moakiee.ae2lt.blockentity.PigmeeDimensionBlockEntity::new,
+                    ModBlocks.PIGMEE_ODD_DIMENSION.get(), ModBlocks.PIGMEE_EVEN_DIMENSION.get(), ModBlocks.PIGMEE_CUSTOM_DIMENSION.get()).build(null));
 }

@@ -351,6 +351,9 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.PIGMEE_MOLECULAR_ASSEMBLER);
                         output.accept(ModBlocks.PIGMEE_SYNTHESIS_STATION);
                         output.accept(ModBlocks.PIGMEE_BUILDING_BLOCK);
+                        output.accept(ModBlocks.PIGMEE_ODD_DIMENSION);
+                        output.accept(ModBlocks.PIGMEE_EVEN_DIMENSION);
+                        output.accept(ModBlocks.PIGMEE_CUSTOM_DIMENSION);
                         for (var color : net.minecraft.world.item.DyeColor.values()) {
                             output.accept(ModBlocks.PIGMEE_BUILDING_PANELS.get(color));
                             output.accept(ModBlocks.PIGMEE_FRAMED_BUILDING_PANELS.get(color));
@@ -385,6 +388,7 @@ public class AE2LightningTech {
         ModSounds.SOUND_EVENTS.register(modEventBus);
         ModStructureTypes.STRUCTURE_TYPES.register(modEventBus);
         ModStructureTypes.STRUCTURE_PIECES.register(modEventBus);
+        com.moakiee.ae2lt.dimension.PigmeeDimensions.GENERATORS.register(modEventBus);
         ModLootModifiers.LOOT_MODIFIER_SERIALIZERS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         modEventBus.addListener(ModAEKeyTypes::register);

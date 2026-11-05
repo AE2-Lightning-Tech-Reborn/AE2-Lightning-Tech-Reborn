@@ -70,6 +70,16 @@ public final class ModBlocks {
     public static final DeferredBlock<PigmeeBuildingBlock> PIGMEE_BUILDING_BLOCK =
             registerBlock("pigmee_building_block", PigmeeBuildingBlock::new);
 
+    public static final DeferredBlock<com.moakiee.ae2lt.block.PigmeeDimensionBlock> PIGMEE_ODD_DIMENSION =
+            registerBlock("pigmee_odd_dimension", () -> new com.moakiee.ae2lt.block.PigmeeDimensionBlock(false));
+    public static final DeferredBlock<com.moakiee.ae2lt.block.PigmeeDimensionBlock> PIGMEE_EVEN_DIMENSION =
+            registerBlock("pigmee_even_dimension", () -> new com.moakiee.ae2lt.block.PigmeeDimensionBlock(true));
+    public static final DeferredBlock<com.moakiee.ae2lt.block.PigmeeDimensionBlock> PIGMEE_CUSTOM_DIMENSION =
+            registerBlock("pigmee_custom_dimension", () -> new com.moakiee.ae2lt.block.PigmeeDimensionBlock(
+                    com.moakiee.ae2lt.dimension.PigmeeDimensionKind.CUSTOM));
+    public static final DeferredBlock<com.moakiee.ae2lt.block.PigmeeDimensionReturnBlock> PIGMEE_DIMENSION_RETURN =
+            BLOCKS.register("pigmee_dimension_return", com.moakiee.ae2lt.block.PigmeeDimensionReturnBlock::new);
+
     public static final Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> PIGMEE_BUILDING_PANELS =
             registerPigmeePanels(false);
     public static final Map<DyeColor, DeferredBlock<PigmeeBuildingPanelBlock>> PIGMEE_FRAMED_BUILDING_PANELS =

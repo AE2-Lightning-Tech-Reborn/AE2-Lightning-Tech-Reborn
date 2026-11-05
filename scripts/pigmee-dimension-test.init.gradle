@@ -1,0 +1,26 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/PigmeeDimensionGameTests.java', '**/PigmeeDimensionClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-dimension-gametest').get().asFile
+        }
+        neoForge.runs.client {
+            gameDirectory = project.layout.buildDirectory.dir('pigmee-dimension-client').get().asFile
+            systemProperty 'ae2lt.pigmeeDimensionClientProbe', 'true'
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+        }
+        tasks.named('runClient').configure {
+            doFirst {
+                // The client fixture visits all three kinds; the shipped default remains two.
+                def config = project.layout.buildDirectory.file('pigmee-dimension-client/config/ae2lt-common.toml').get().asFile
+                if (!config.exists()) {
+                    config.parentFile.mkdirs()
+                    config.text = 'configVersion = 3\n[pigmeeDimensions]\nmaxOwnedPerPlayer = 3\n'
+                }
+            }
+        }
+    }
+}
