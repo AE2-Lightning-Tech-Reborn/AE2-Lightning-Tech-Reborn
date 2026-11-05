@@ -76,13 +76,25 @@
     "ShulkerBulletMixin",
     "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
-    "big.BigCraftConfirmMenuMixin",
-    "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
     "big.BigCpuListEntryMixin",
     "OverloadAlloyAnvilMenuMixin",
     "OverloadAlloyAnvilFallingMixin",
-    "TianshuStonecutterMenuMixin"
+    "TianshuStonecutterMenuMixin",
+    "omni.OmniUpgradesAE2CompatMixin",
+    "appflux.NetworkFEPowerTelemetryMixin",
+    "appflux.ForgeEnergyHandlerTelemetryMixin",
+    "appflux.ForgeFluxNetworkTelemetryMixin",
+    "WirelessTerminalCoverageMixin",
+    "WirelessEnergyTargetRemovalMixin",
+    "WirelessEnergyMachineTickMixin",
+    "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
+    "RunningNetworkFeFallbackMixin",
+    "thunderbolt.TianshuPlanningServiceMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -108,7 +120,9 @@
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
     "client.BigCpuListMixin",
-    "client.EncodingHelperAccessor"
+    "client.EncodingHelperAccessor",
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

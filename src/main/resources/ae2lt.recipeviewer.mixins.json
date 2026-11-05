@@ -7,16 +7,16 @@
   "plugin": "com.moakiee.ae2lt.mixin.recipeviewer.RecipeViewerMixinPlugin",
   "client": [
     "jemi.JemiTagRecipeIdMixin",
-    "useless.OmniversalPatternJeiTransferMixin",
-    "jei.JeiEncodePatternTransferMixin",
-    "jei.JeiLegacyRecipeTransferButtonMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
+    "jei.JeiLegacyRecipeTransferButtonMixin",
     "jei.JeiMultiblockLayoutMixin",
+    "jei.JeiModernMultiblockLayoutMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",
     "jeisupply.JeiWirelessSupplyMixin",
     "jeisupply.JeiWirelessSupplyServiceMixin",
-    "jeisupply.JeiWirelessSupplyContextAccessor"
+    "jei.JeiRecipesGuiAccessor",
+    "useless.OmniversalPatternJeiTransferMixin"
   ],
   "injectors": {
     "defaultRequire": 0

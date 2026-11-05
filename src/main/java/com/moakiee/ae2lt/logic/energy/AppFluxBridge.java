@@ -40,16 +40,23 @@ public final class AppFluxBridge {
     public static final long TRANSFER_RATE;
 
     static {
-        boolean available;
+        boolean available = false;
+        AEKey key = null;
+        long rate = 0L;
         try {
-            Class.forName("com.glodblock.github.appflux.api.IFluxCell");
-            available = true;
-        } catch (ClassNotFoundException e) {
-            available = false;
+            Class.forName("com.glodblock.github.appflux.api.IFluxCell", false,
+                    AppFluxBridge.class.getClassLoader());
+            key = AppFluxAccess.FE_KEY;
+            rate = AppFluxAccess.TRANSFER_RATE;
+            available = key != null && rate > 0L;
+        } catch (ClassNotFoundException | LinkageError | RuntimeException unavailable) {
+            // Publish the entire optional capability only after its API has initialized.
+            key = null;
+            rate = 0L;
         }
         LOADED = available;
-        FE_KEY = LOADED ? AppFluxAccess.FE_KEY : null;
-        TRANSFER_RATE = LOADED ? AppFluxAccess.TRANSFER_RATE : 0L;
+        FE_KEY = available ? key : null;
+        TRANSFER_RATE = available ? rate : 0L;
     }
 
     private AppFluxBridge() {}
@@ -104,22 +111,22 @@ public final class AppFluxBridge {
 
     public static long sendToTarget(@Nullable TargetAccess target, IStorageService storage,
                                     IActionSource source, long maxFe) {
-        return LOADED ? AppFluxAccess.sendToTarget(target, storage, source, maxFe) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTarget(target, storage, source, maxFe)) : 0L;
     }
 
     public static long sendToTargetKnownDemand(@Nullable TargetAccess target, IStorageService storage,
                                                IActionSource source, long requested) {
-        return LOADED ? AppFluxAccess.sendToTargetKnownDemand(target, storage, source, requested) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetKnownDemand(target, storage, source, requested)) : 0L;
     }
 
     public static long sendToTargetKnownDemand(@Nullable TargetAccess target, BufferedMEStorage buffer,
                                                IActionSource source, long requested) {
-        return LOADED ? AppFluxAccess.sendToTargetKnownDemand(target, buffer, source, requested) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetKnownDemand(target, buffer, source, requested)) : 0L;
     }
 
     public static long sendToTargetRepeatedOptimistic(@Nullable TargetAccess target, BufferedMEStorage buffer,
                                                       IActionSource source, long maxFe, int maxCalls) {
-        return LOADED ? AppFluxAccess.sendToTargetRepeatedOptimistic(target, buffer, source, maxFe, maxCalls) : 0L;
+        return LOADED ? com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, target, AppFluxAccess.sendToTargetRepeatedOptimistic(target, buffer, source, maxFe, maxCalls)) : 0L;
     }
 
     public static boolean hasEnergyCapability(ServerLevel level, BlockPos pos,

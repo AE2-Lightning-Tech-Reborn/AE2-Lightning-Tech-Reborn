@@ -207,8 +207,8 @@ public final class TianshuJdbHarness {
             var decodedRoundTrip = appeng.api.crafting.PatternDetailsHelper.decodePattern(
                     restoredDefinition, level);
             var controlStack = appeng.api.crafting.PatternDetailsHelper.encodeProcessingPattern(
-                    List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_INGOT), 9)),
-                    List.of(new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_BLOCK), 1)));
+                    new appeng.api.stacks.GenericStack[]{new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_INGOT), 9)},
+                    new appeng.api.stacks.GenericStack[]{new appeng.api.stacks.GenericStack(AEItemKey.of(Items.IRON_BLOCK), 1)});
             var controlDefinition = AEItemKey.of(controlStack);
             require(controlDefinition != null, "AE2 control definition is null");
             var controlTag = controlDefinition.toTag();

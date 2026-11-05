@@ -16,6 +16,7 @@ import appeng.core.definitions.AEItems;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.AppEngSlot;
 import appeng.menu.slot.FakeSlot;
+import net.minecraft.world.inventory.Slot;
 import appeng.api.inventories.InternalInventory;
 import appeng.util.inv.AppEngInternalInventory;
 import appeng.util.inv.InternalInventoryHost;
@@ -51,7 +52,6 @@ import com.moakiee.ae2lt.me.GridNodeAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,6 +125,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean encodedClosedLoop;
     @GuiSync(124)
     public int triggeredUploadAck;
+    @GuiSync(146)
+    public boolean canUndoUpload;
     /** 0=none, 1=member cannot be decoded, 2=other invalid closed-loop declaration. */
     @GuiSync(125)
     public int closedLoopEncodeState;
@@ -153,14 +155,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             ProcessingPatternTerminalDraft.empty();
     @GuiSync(140)
     public int closedLoopResultRevision;
-
-    @GuiSync(141) public OmniversalPatternDraft omniversalDraft = OmniversalPatternDraft.empty();
-    @GuiSync(142) public String omniversalStatus = "ae2lt.tianshu.omniversal.choose";
-    private final appeng.util.ConfigInventory omniversalInputs;
-    private final appeng.util.ConfigInventory omniversalOutputs;
-    private final appeng.util.ConfigInventory omniversalMolds;
-    private final FakeSlot[] omniversalInputSlots, omniversalOutputSlots, omniversalMoldSlots;
-    private boolean omniversalBulkUpdating;
+    @GuiSync(141)
+    public OmniversalPatternDraft omniversalDraft = OmniversalPatternDraft.empty();
+    @GuiSync(142)
+    public String omniversalStatus = "ae2lt.tianshu.omniversal.choose";
 
     protected final TianshuPatternTerminalHost tianshuHost;
     private final TianshuMaintenanceSession maintenanceSession;
@@ -189,6 +187,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private List<PatternContainer> uploadTargets = List.of();
     /** Server-side slot bindings captured by the same refresh that produced uploadTargetGroups. */
     private Map<PatternContainerGroup, List<BoundUploadSlot>> boundUploadTargets = Map.of();
+    private ItemStack boundUploadPattern = ItemStack.EMPTY;
+    private ItemStack boundUploadLivePattern = ItemStack.EMPTY;
+    private int boundUploadRevision;
+    private ItemStack lastAutoUploadPattern = ItemStack.EMPTY;
+    private ItemStack lastAutoUploadContents = ItemStack.EMPTY;
     private List<TianshuUploadTargetData> uploadTargetGroups = List.of();
     private int uploadTargetsRevision;
     private boolean pendingTriggeredUpload;
@@ -197,11 +200,19 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private int expectedTriggeredUploadAck;
     private boolean directUploadTargetsRequested;
     private int expectedDirectUploadTargetRevision;
+    private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo =
+            new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo();
     /** Prevents a committed encoding result from being mistaken for a manually inserted pattern. */
     private boolean ae2EncodingInProgress;
     /** Exact encoded stack that still represents one blank pattern extracted by this menu. */
     private ItemStack refundableEncodedPattern = ItemStack.EMPTY;
-
+    private final appeng.util.ConfigInventory omniversalInputs;
+    private final appeng.util.ConfigInventory omniversalOutputs;
+    private final appeng.util.ConfigInventory omniversalMolds;
+    private final appeng.menu.slot.FakeSlot[] omniversalInputSlots;
+    private final appeng.menu.slot.FakeSlot[] omniversalOutputSlots;
+    private final appeng.menu.slot.FakeSlot[] omniversalMoldSlots;
+    private boolean omniversalBulkUpdating;
 
 
     public TianshuPatternEncodingTermMenu(
@@ -215,12 +226,9 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         this.tianshuHost = host;
         this.maintenanceSession = new TianshuMaintenanceSession(this, this::resolveBoundTianshu,
                 () -> tianshuSelectionRevision, action -> sendClientAction("maintenanceAction", action));
-        omniversalInputs = appeng.util.ConfigInventory.configStacks(null, getProcessingInputSlots().length,
-                this::persistOmniversalSlots, true);
-        omniversalOutputs = appeng.util.ConfigInventory.configStacks(null, getProcessingOutputSlots().length,
-                this::persistOmniversalSlots, true);
-        omniversalMolds = appeng.util.ConfigInventory.configTypes(key -> key instanceof AEItemKey,
-                getProcessingOutputSlots().length, this::persistOmniversalSlots);
+        omniversalInputs = appeng.util.ConfigInventory.configStacks(null, getProcessingInputSlots().length, this::persistOmniversalSlots, true);
+        omniversalOutputs = appeng.util.ConfigInventory.configStacks(null, getProcessingOutputSlots().length, this::persistOmniversalSlots, true);
+        omniversalMolds = appeng.util.ConfigInventory.configTypes(key -> key instanceof AEItemKey, getProcessingOutputSlots().length, this::persistOmniversalSlots);
         omniversalInputSlots = addOmniversalSlots(omniversalInputs, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_INPUTS);
         omniversalOutputSlots = addOmniversalSlots(omniversalOutputs, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS);
         omniversalMoldSlots = addOmniversalSlots(omniversalMolds, Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_MOLDS);
@@ -282,13 +290,18 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             getConfigManager().putSetting(Settings.VIEW_MODE, ViewItems.ALL);
         }
         if (!inventory.player.level().isClientSide) {
-            if (tianshuMode == TianshuEncodingMode.OMNIVERSAL && !UselessModCompat.isLoaded()) applyTianshuModeState(TianshuEncodingMode.CRAFTING);
+            if (tianshuMode == TianshuEncodingMode.OMNIVERSAL && !UselessModCompat.isLoaded()) {
+                applyTianshuModeState(TianshuEncodingMode.CRAFTING);
+            }
             omniversalDraft = host.getOmniversalPatternDraft();
             restoreOmniversalSlots();
+            if (!omniversalDraft.isEmpty()) {
+                configuredSource = host.getLogic().getEncodedPatternInv().getStackInSlot(0).copy();
+                omniversalStatus = "ae2lt.tianshu.omniversal.selected";
+            }
             restoreProcessingDraft(host.getProcessingPatternTerminalDraft());
             restoreClosedLoopDraft(host.getClosedLoopTerminalDraft());
         }
-        registerClientAction("clearOmniversalDraft", this::clearOmniversalDraft);
         registerClientAction("setTianshuMode", TianshuEncodingMode.class, this::setTianshuModeServer);
         registerClientAction("multiplyProcessing", Integer.class, this::multiplyProcessingServer);
         registerClientAction("armAdvancedEncoding",
@@ -314,7 +327,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         registerClientAction("refillClosedLoopSeeds", this::refillClosedLoopSeedsServer);
         registerClientAction("clearClosedLoopDraft", this::clearClosedLoopDraftServer);
         registerClientAction("encodeTianshu", Boolean.class, this::encodeServerWithOptions);
+        registerClientAction("clearOmniversalDraft", this::clearOmniversalDraft);
+        registerClientAction("cycleOmniversalOutput", this::cycleOmniversalOutput);
         registerClientAction("uploadEncodedPattern", Integer.class, this::uploadEncodedPatternServer);
+        registerClientAction("undoLastUpload", this::undoLastUpload);
         registerClientAction("setMaintainableView", Boolean.class, this::setMaintainableView);
         registerClientAction("setTerminalViewMode", TianshuTerminalViewMode.class, this::setTerminalViewMode);
         registerClientAction("setTemporaryTerminalViewMode", TianshuTerminalViewMode.class, mode -> applyTerminalViewMode(mode, false));
@@ -328,6 +344,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return;
         }
         if (isServerSide()) {
+            canUndoUpload = uploadUndo.available();
             returnLegacyBlankPatternsToNetwork();
             tianshuMode = tianshuHost.getTianshuEncodingMode();
             var selected = resolveOrBindTianshu();
@@ -341,7 +358,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             closedLoopSeedMultiplier = closedLoopExecutionSeedMultiplier;
             refreshClosedLoopDraftSync();
             persistClosedLoopDraft();
-            if (tianshuMode == TianshuEncodingMode.CLOSED_LOOP
+            persistOmniversalSlots();
+            // Additional pages have no AE2 EncodingMode. Keep the inherited menu field
+            // aligned with the logic without routing the old native mode through our override.
+            if (!tianshuMode.isAe2Mode()
                     && getMode() != tianshuHost.getLogic().getMode()) {
                 super.setMode(tianshuHost.getLogic().getMode());
             }
@@ -359,6 +379,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     @Override
     public void removed(Player player) {
         if (isServerSide()) {
+            uploadUndo.clear();
+            lastAutoUploadPattern = lastAutoUploadContents = ItemStack.EMPTY;
             if (closedLoopDraftDirty && tianshuMode == TianshuEncodingMode.CLOSED_LOOP) {
                 rebuildClosedLoopDraft();
             }
@@ -381,6 +403,9 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         }
         var extended = TianshuEncodingMode.fromAe2(mode);
         if (isClientSide()) {
+            // AE2's recipe-viewer helper immediately follows this mode change with fake-slot
+            // updates and may encode in the same input event. Send its authoritative logic-mode
+            // action before the Tianshu mirror so the server never observes a stale native mode.
             super.setMode(mode);
             sendClientAction("setTianshuMode", extended);
         } else {
@@ -436,11 +461,17 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return direct;
     }
 
-    public void clearClientUploadSelectionState() {
+    /** Entering alias management must also cancel an encoding acknowledgement still in flight. */
+    public void cancelPendingClientUpload() {
         if (!isClientSide()) return;
         pendingTriggeredUpload = false;
         pendingDirectUpload = false;
         directUploadTargetsRequested = false;
+    }
+
+    public void clearClientUploadSelectionState() {
+        if (!isClientSide()) return;
+        cancelPendingClientUpload();
         uploadTargetGroups = List.of();
         uploadTargetsRevision++;
     }
@@ -482,11 +513,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void applyTianshuModeState(TianshuEncodingMode mode) {
+        if (tianshuMode != mode && tianshuHost != null) {
+            UselessModCompat.clearPendingRecipe(tianshuHost.getLogic());
+        }
         if (tianshuMode != mode) resetProcessingEncodingType();
         tianshuMode = mode;
         tianshuHost.setTianshuEncodingMode(mode);
     }
 
+    /** A recipe viewer selects a fully bound native recipe. */
     public void selectOmniversalPattern(ItemStack pattern) {
         if (!UselessModCompat.isLoaded() || !UselessModCompat.isOmniversalPattern(pattern)) return;
         if (isClientSide()) {
@@ -543,8 +578,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         var wrapper = inventory.createMenuWrapper();
         for (int i = 0; i < slots.length; i++) {
             slots[i] = new appeng.menu.slot.FakeSlot(wrapper, i);
-            slots[i].x = CLOSED_LOOP_OFFSCREEN;
-            slots[i].y = CLOSED_LOOP_OFFSCREEN;
+            SlotPositionAccess.set(slots[i], CLOSED_LOOP_OFFSCREEN, CLOSED_LOOP_OFFSCREEN);
             addSlot(slots[i], semantic);
         }
         return slots;
@@ -558,10 +592,45 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return omniversalOutputSlots;
     }
 
+    public boolean canCycleOmniversalOutputs() {
+        return tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                && java.util.Arrays.stream(omniversalOutputSlots).filter(Slot::hasItem).count() > 1;
+    }
+
+    /** Rotate occupied output slots together, preserving exact item/fluid amounts and empty slots. */
+    public void cycleOmniversalOutput() {
+        if (!canCycleOmniversalOutputs()) return;
+        if (isClientSide()) {
+            sendClientAction("cycleOmniversalOutput");
+            return;
+        }
+        var occupied = new ArrayList<Integer>();
+        var outputs = new ArrayList<GenericStack>();
+        for (int i = 0; i < omniversalOutputs.size(); i++) {
+            var output = omniversalOutputs.getStack(i);
+            if (output != null) {
+                occupied.add(i);
+                outputs.add(output);
+            }
+        }
+        omniversalBulkUpdating = true;
+        try {
+            for (int i = 0; i < occupied.size(); i++) {
+                omniversalOutputs.setStack(occupied.get(i), outputs.get((i + 1) % outputs.size()));
+            }
+        } finally {
+            omniversalBulkUpdating = false;
+        }
+        persistOmniversalSlots();
+        broadcastChanges();
+    }
+
     public appeng.menu.slot.FakeSlot[] getOmniversalMoldSlots() {
         return omniversalMoldSlots;
     }
 
+    /** Reuse the processing amount editor and container-to-fluid actions for the independent draft. */
+    @Override
     public boolean isProcessingPatternSlot(@Nullable Slot slot) {
         if (slot == null) return false;
         if (tianshuMode != TianshuEncodingMode.OMNIVERSAL) return super.isProcessingPatternSlot(slot);
@@ -570,6 +639,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 || semantic == Ae2ltSlotSemantics.TIANSHU_OMNIVERSAL_OUTPUTS;
     }
 
+    /** Inputs and reusable molds can show the network's craftable marker; outputs cannot. */
     public boolean isPatternIngredientSlot(@Nullable Slot slot) {
         if (slot == null) return false;
         var semantic = getSlotSemantic(slot);
@@ -584,19 +654,18 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void restoreOmniversalSlots() {
-        var inputs = omniversalDraft.inputs();
-        var outputs = omniversalDraft.outputs();
+        var data = com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternPayload.read(omniversalDraft.pattern());
         var molds = omniversalDraft.molds();
         if (molds == null) molds = UselessModCompat.preview(omniversalDraft, getPlayer().level()).molds();
         omniversalBulkUpdating = true;
         try {
             for (int i = 0; i < omniversalInputs.size(); i++) {
-                omniversalInputs.setStack(i, i < inputs.size()
-                        ? inputs.get(i) : null);
+                omniversalInputs.setStack(i, data != null && i < data.sparseInputs().size()
+                        ? data.sparseInputs().get(i) : null);
             }
             for (int i = 0; i < omniversalOutputs.size(); i++) {
-                omniversalOutputs.setStack(i, i < outputs.size()
-                        ? outputs.get(i) : null);
+                omniversalOutputs.setStack(i, data != null && i < data.sparseOutputs().size()
+                        ? data.sparseOutputs().get(i) : null);
             }
             for (int i = 0; i < omniversalMolds.size(); i++) {
                 omniversalMolds.setStack(i, i < molds.size() ? GenericStack.fromItemStack(molds.get(i)) : null);
@@ -616,93 +685,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         tianshuHost.setOmniversalPatternDraft(updated);
         omniversalStatus = "ae2lt.tianshu.omniversal.edited";
     }
-
-    private void uploadOmniversalPatternServer(ItemStack stack) {
-        if (!(getPlayer() instanceof ServerPlayer player)) {
-            finishUpload(false);
-            return;
-        }
-        String failureReason = "ae2lt.tianshu.omniversal.upload.no_target";
-        var candidates = new ArrayList<OmniversalUploadTarget>();
-        for (var target : discoverUploadTargets()) {
-            var state = UselessModCompat.targetState(target, stack, player.level());
-            if (state == null) continue;
-            if (!state.supported() || !state.ready()) {
-                if (failureReason.equals("ae2lt.tianshu.omniversal.upload.no_target")) {
-                    failureReason = state.reason();
-                }
-                continue;
-            }
-            int slot = firstFreePatternSlot(target.getTerminalPatternInventory(), stack);
-            if (slot < 0) {
-                failureReason = "ae2lt.tianshu.omniversal.upload.full";
-                continue;
-            }
-            candidates.add(new OmniversalUploadTarget(target, slot, state.multiblock()));
-        }
-        // Only machines with matching molds are eligible; preserve discovery order within each kind.
-        candidates.sort(java.util.Comparator.comparing(OmniversalUploadTarget::multiblock).reversed());
-        if (candidates.isEmpty()) {
-            omniversalStatus = failureReason;
-            finishUpload(false);
-            notifyEncodingFailure(omniversalStatus);
-            return;
-        }
-        var selected = candidates.get(0);
-        uploadToProvider(player, selected.target(), selected.slot(), stack);
-        omniversalStatus = uploadState == 1
-                ? "ae2lt.tianshu.omniversal.upload.success"
-                : "ae2lt.tianshu.omniversal.upload.rejected";
-        broadcastChanges();
-    }
-
-    private void encodeOmniversalPatternServer(boolean interceptDuplicates) {
-        persistOmniversalSlots();
-        var encoded = UselessModCompat.encodeMatchingDraft(omniversalDraft, getPlayer().level());
-        var result = encoded.pattern();
-        if (result.isEmpty()) {
-            omniversalStatus = omniversalDraft.isEmpty()
-                    ? "ae2lt.tianshu.omniversal.choose" : encoded.reason();
-            notifyEncodingFailure(omniversalStatus);
-            broadcastChanges();
-            return;
-        }
-        if (shouldInterceptDuplicateEncoding(result, interceptDuplicates)) {
-            omniversalStatus = "ae2lt.tianshu.encode.duplicate_blocked";
-            notifyDuplicateEncodingIntercepted();
-            broadcastChanges();
-            return;
-        }
-        var inventory = tianshuHost.getLogic().getEncodedPatternInv();
-        var previous = inventory.getStackInSlot(0);
-        if (!previous.isEmpty() && !previous.is(AEItems.BLANK_PATTERN.asItem())
-                && !PatternDetailsHelper.isEncodedPattern(previous)) return;
-        boolean carriesNetworkBlank = isRefundableEncodedPattern(previous);
-        boolean staged = false;
-        ae2EncodingInProgress = true;
-        try {
-            UselessModCompat.clearPendingRecipe(tianshuHost.getLogic());
-            if (previous.isEmpty()) {
-                staged = stageNetworkBlankPattern();
-                if (!staged) return;
-            }
-            inventory.setItemDirect(0, result);
-            configuredSource = result.copy();
-            omniversalDraft = new OmniversalPatternDraft(result, omniversalDraft.molds());
-            restoreOmniversalSlots();
-            tianshuHost.setOmniversalPatternDraft(omniversalDraft);
-            if (staged || carriesNetworkBlank) refundableEncodedPattern = result.copy();
-            omniversalStatus = "ae2lt.tianshu.omniversal.encoded";
-            uploadState = 0;
-            triggeredUploadAck++;
-        } finally {
-            ae2EncodingInProgress = false;
-            if (staged) returnStagedBlankPatternToNetwork();
-            broadcastChanges();
-        }
-    }
-
-    private record OmniversalUploadTarget(PatternContainer target, int slot, boolean multiblock) {}
 
     public void multiplyProcessing(int factor) {
         if (isClientSide()) sendClientAction("multiplyProcessing", factor);
@@ -1140,6 +1122,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isServerSide() || tianshuMode != TianshuEncodingMode.CLOSED_LOOP) return;
         var result = TianshuSeedRefillService.refillAll(resolveOrBindTianshu());
         seedRefillSync = SeedRefillSync.of(result);
+        // The refill outcome is the newest status; stop showing the last upload result.
         uploadState = 0;
         broadcastChanges();
     }
@@ -1196,6 +1179,32 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, (long) value + delta));
     }
 
+    /** Reclaims only this player's last upload in this menu session. */
+    public void undoLastUpload() {
+        if (isClientSide()) {
+            cancelPendingClientUpload();
+            sendClientAction("undoLastUpload");
+            return;
+        }
+        if (!(getPlayer() instanceof ServerPlayer player) || player.containerMenu != this || !stillValid(player)) return;
+        var node = tianshuHost.getActionableNode();
+        var grid = node != null && node.isActive() ? node.getGrid() : null;
+        var result = uploadUndo.undo(grid, tianshuHost.getLogic().getEncodedPatternInv(), discoverUploadTargets(),
+                com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternReturnBuffer.forPlayer(player));
+        if (result == com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo.Result.SUCCESS) {
+            uploadState = 0;
+            rememberAutoUploadPattern(tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
+            settleNetworkBlankCharge();
+        } else if (result == com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo.Result.QUEUED) {
+            uploadState = 0;
+            lastAutoUploadPattern = lastAutoUploadContents = ItemStack.EMPTY;
+            settleNetworkBlankCharge();
+        }
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                "ae2lt.tianshu.upload.undo." + result.name().toLowerCase(java.util.Locale.ROOT)), false);
+        broadcastChanges();
+    }
+
     /** Uploads the encoded pattern through the shared terminal upload action. */
     public void uploadEncodedPattern() {
         if (isClientSide()) {
@@ -1223,6 +1232,48 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         }
     }
 
+    private void uploadOmniversalPatternServer(ItemStack stack) {
+        if (!(getPlayer() instanceof ServerPlayer player)) {
+            finishUpload(false);
+            return;
+        }
+        String failureReason = "ae2lt.tianshu.omniversal.upload.no_target";
+        var candidates = new ArrayList<OmniversalUploadTarget>();
+        for (var target : discoverUploadTargets()) {
+            var state = UselessModCompat.targetState(target, stack, player.level());
+            if (state == null) continue;
+            if (!state.supported() || !state.ready()) {
+                if (failureReason.equals("ae2lt.tianshu.omniversal.upload.no_target")) {
+                    failureReason = state.reason();
+                }
+                continue;
+            }
+            int slot = firstFreePatternSlot(target.getTerminalPatternInventory(), stack);
+            if (slot < 0) {
+                failureReason = "ae2lt.tianshu.omniversal.upload.full";
+                continue;
+            }
+            candidates.add(new OmniversalUploadTarget(target, slot, state.multiblock()));
+        }
+        // Only machines with matching molds are eligible; preserve discovery order within each kind.
+        candidates.sort(java.util.Comparator.comparing(OmniversalUploadTarget::multiblock).reversed());
+        if (candidates.isEmpty()) {
+            omniversalStatus = failureReason;
+            finishUpload(false);
+            notifyEncodingFailure(omniversalStatus);
+            return;
+        }
+        var selected = candidates.get(0);
+        uploadToProvider(player, selected.target(), selected.slot(), stack);
+        omniversalStatus = uploadState == 1
+                ? "ae2lt.tianshu.omniversal.upload.success"
+                : "ae2lt.tianshu.omniversal.upload.rejected";
+        broadcastChanges();
+    }
+
+    private record OmniversalUploadTarget(PatternContainer target, int slot, boolean multiblock) {
+    }
+
     private void uploadClosedLoopPatternServer(ItemStack stack) {
         if (!(stack.getItem() instanceof ClosedLoopPatternItem item)) {
             finishUpload(false);
@@ -1240,6 +1291,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         var result = ClosedLoopPatternUploadService.upload(target, payload);
         var success = result == ClosedLoopPatternRepository.PutResult.ADDED
                 || result == ClosedLoopPatternRepository.PutResult.UPDATED;
+        if (success) uploadUndo.closedLoop(target, target.getClosedLoopPatternRepository(), payload, removed);
         if (!success) sourceInventory.addItems(removed);
         finishUpload(success);
     }
@@ -1279,11 +1331,12 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isServerSide() || player == null) return;
         refreshUploadTargetsNow();
         PacketSender.sendToPlayer(player,
-                new UploadTargetsSyncPacket(containerId, uploadTargetGroups));
+                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups));
     }
 
-    public void receiveUploadTargets(List<TianshuUploadTargetData> targets) {
+    public void receiveUploadTargets(List<TianshuUploadTargetData> targets, int revision) {
         if (!isClientSide()) return;
+        boundUploadRevision = revision;
         uploadTargetGroups = targets == null ? List.of() : List.copyOf(targets);
         uploadTargetsRevision++;
     }
@@ -1297,17 +1350,36 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     public void uploadTianshuPatternToTarget(PatternContainerGroup group) {
-        if (!isClientSide() || group == null) return;
-        uploadState = 2;
-        PacketSender.sendToServer(new UploadPatternToTargetPacket(containerId, group));
+        uploadTianshuPatternToTarget(group, false);
     }
 
-    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group) {
-        if (!isServerSide() || player == null || group == null) return;
+    public void uploadTianshuPatternToTarget(PatternContainerGroup group, boolean automatic) {
+        if (!isClientSide() || group == null) return;
         uploadState = 2;
+        PacketSender.sendToServer(new UploadPatternToTargetPacket(containerId, boundUploadRevision,
+                automatic ? triggeredUploadAck : -1, group));
+    }
+
+    public int getUploadTargetRequestRevision() { return boundUploadRevision; }
+
+    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group, int revision) {
+        uploadTianshuPatternToTarget(player, group, revision, -1);
+    }
+
+    public void uploadTianshuPatternToTarget(ServerPlayer player, PatternContainerGroup group, int revision, int encodingRevision) {
+        if (!isServerSide() || player == null || group == null
+                || player != getPlayer() || player.containerMenu != this || !stillValid(player)) return;
+        uploadState = 2;
+        if (revision != boundUploadRevision) {
+            finishProviderUpload(player, false);
+            return;
+        }
         var stack = tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0);
         if (TianshuPatternUploadRouting.classify(stack, getPlayer().level())
-                != TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER) {
+                != TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER
+                || stack != boundUploadLivePattern || !ItemStack.matches(stack, boundUploadPattern)
+                || (encodingRevision >= 0 && (encodingRevision != triggeredUploadAck
+                        || stack != lastAutoUploadPattern || !ItemStack.matches(stack, lastAutoUploadContents)))) {
             finishProviderUpload(player, false);
             return;
         }
@@ -1318,10 +1390,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             finishProviderUpload(player, false);
             return;
         }
+        var activeTargets = discoverUploadTargets();
         for (var binding : targets) {
             var target = binding.target();
+            if (activeTargets.stream().noneMatch(active -> active == target)) continue;
             try {
-                if (target.getGrid() != grid || !target.isVisibleInTerminal()) continue;
+                if (target.getGrid() != grid || !target.isVisibleInTerminal()
+                        || !target.getTerminalGroup().equals(group)) continue;
                 var inventory = target.getTerminalPatternInventory();
                 int slot = binding.slot();
                 if (slot < 0 || slot >= inventory.size()
@@ -1330,6 +1405,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                     continue;
                 }
             } catch (RuntimeException ignored) {
+                // A captured machine can disappear between target discovery and the upload click.
                 continue;
             }
             uploadToProvider(player, target, binding.slot(), stack);
@@ -1379,9 +1455,12 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 finishProviderUpload(player, false);
                 return;
             }
+            uploadUndo.provider(selected, selectedSlot, removed);
             if (selected instanceof PatternProviderLogicHost logicHost) logicHost.saveChanges();
             finishProviderUpload(player, true);
         } catch (RuntimeException failure) {
+            // insertItem is the provider-owned write path. Only return the source stack if
+            // the provider demonstrably did not take ownership, otherwise avoid duplication.
             try {
                 if (!ItemStack.isSameItemSameTags(
                         targetInventory.getStackInSlot(selectedSlot), removed)) {
@@ -1394,11 +1473,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void finishProviderUpload(ServerPlayer player, boolean success) {
+        // Bind a concurrently replaced source before publishing this request's failure result.
+        refreshDerivedConfiguration();
         settleNetworkBlankCharge();
         uploadState = success ? 1 : 3;
         refreshUploadTargetsNow();
         PacketSender.sendToPlayer(player,
-                new UploadTargetsSyncPacket(containerId, uploadTargetGroups));
+                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups));
         broadcastChanges();
     }
 
@@ -1408,6 +1489,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     private void refreshUploadTargetsNow(ItemStack stack) {
+        // Different players can share a wired terminal's encoded slot. A previous target list
+        // must never authorize uploading a newly replaced pattern from that shared inventory.
+        boundUploadRevision++;
+        boundUploadLivePattern = stack;
+        boundUploadPattern = stack.copy();
         uploadTargets = discoverUploadTargets();
         if (uploadTargets.isEmpty()) {
             boundUploadTargets = Map.of();
@@ -1535,9 +1621,13 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             return;
         }
         encodedClosedLoop = source.getItem() instanceof ClosedLoopPatternItem;
+        // Preserve the result when a successful provider upload empties the source slot.
+        // A newly inserted/encoded pattern starts a fresh upload state.
         if (!source.isEmpty()) {
             uploadState = 0;
             seedRefillSync = SeedRefillSync.none();
+            // The encoded item is authoritative. Never retain advanced/overload flags merely
+            // because the newly loaded pattern happens to have the same fake-slot contents.
             resetProcessingEncodingType();
         }
         if (source.isEmpty() || !(source.getItem() instanceof ClosedLoopPatternItem)) {
@@ -1603,6 +1693,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 persistProcessingDraft();
             }
         } catch (RuntimeException ignored) {
+            // A malformed or unsupported third-party pattern must not poison the terminal draft.
         }
     }
 
@@ -2150,7 +2241,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private void beginClientEncoding(boolean triggerUpload, boolean directUpload) {
         if (tianshuMode == TianshuEncodingMode.OMNIVERSAL) {
             var preview = UselessModCompat.preview(omniversalDraft, getPlayer().level());
-            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.publish(this, "useless_mod:advanced_alloy_furnace", preview.recipeId(), List.of());
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.publish(
+                    this, "useless_mod:advanced_alloy_furnace", preview.recipeId(), List.of());
         }
         com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.beginEncoding(
                 this, tianshuHost.getLogic().getEncodedPatternInv().getStackInSlot(0));
@@ -2159,14 +2251,25 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         pendingTriggeredUploadUntil = getPlayer().tickCount + 200;
         expectedTriggeredUploadAck = triggeredUploadAck;
         directUploadTargetsRequested = false;
+        // Duplicate interception belongs to the upload flow. In the default NO_SHIFT mode,
+        // holding Shift therefore bypasses both upload and duplicate interception while still
+        // allowing the pattern to be encoded normally.
         sendClientAction("encodeTianshu", triggerUpload
                 && com.moakiee.ae2lt.config.AE2LTClientConfig.interceptDuplicatePatternEncoding());
+    }
+
+    private void rememberAutoUploadPattern(ItemStack pattern) {
+        lastAutoUploadPattern = pattern;
+        lastAutoUploadContents = pattern.copy();
     }
 
     private void encodeServerWithOptions(Boolean interceptDuplicateUpload) {
         if (!isServerSide()) return;
         boolean interceptDuplicates = Boolean.TRUE.equals(interceptDuplicateUpload);
-        if (tianshuMode == TianshuEncodingMode.OMNIVERSAL) { encodeOmniversalPatternServer(interceptDuplicates);return; }
+        if (tianshuMode == TianshuEncodingMode.OMNIVERSAL) {
+            encodeOmniversalPatternServer(interceptDuplicates);
+            return;
+        }
         if (tianshuMode.isAe2Mode()) {
             var encodedInventory = tianshuHost.getLogic().getEncodedPatternInv();
             boolean carriesNetworkBlank = isRefundableEncodedPattern(
@@ -2196,6 +2299,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                     broadcastChanges();
                     return;
                 }
+                rememberAutoUploadPattern(encodedInventory.getStackInSlot(0));
                 triggeredUploadAck++;
             }
             broadcastChanges();
@@ -2221,8 +2325,56 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
                 refundableEncodedPattern = result.copy();
             }
             if (TianshuPatternUploadRouting.isValidEncodingResult(result, getPlayer().level())) {
+                rememberAutoUploadPattern(encodedInventory.getStackInSlot(0));
                 triggeredUploadAck++;
             }
+            broadcastChanges();
+        }
+    }
+
+    private void encodeOmniversalPatternServer(boolean interceptDuplicates) {
+        persistOmniversalSlots();
+        var encoded = UselessModCompat.encodeMatchingDraft(omniversalDraft, getPlayer().level());
+        var result = encoded.pattern();
+        if (result.isEmpty()) {
+            omniversalStatus = omniversalDraft.isEmpty()
+                    ? "ae2lt.tianshu.omniversal.choose" : encoded.reason();
+            notifyEncodingFailure(omniversalStatus);
+            broadcastChanges();
+            return;
+        }
+        if (shouldInterceptDuplicateEncoding(result, interceptDuplicates)) {
+            omniversalStatus = "ae2lt.tianshu.encode.duplicate_blocked";
+            notifyDuplicateEncodingIntercepted();
+            broadcastChanges();
+            return;
+        }
+        var inventory = tianshuHost.getLogic().getEncodedPatternInv();
+        var previous = inventory.getStackInSlot(0);
+        if (!previous.isEmpty() && !AEItems.BLANK_PATTERN.isSameAs(previous)
+                && !PatternDetailsHelper.isEncodedPattern(previous)) return;
+        boolean carriesNetworkBlank = isRefundableEncodedPattern(previous);
+        boolean staged = false;
+        ae2EncodingInProgress = true;
+        try {
+            UselessModCompat.clearPendingRecipe(tianshuHost.getLogic());
+            if (previous.isEmpty()) {
+                staged = stageNetworkBlankPattern();
+                if (!staged) return;
+            }
+            inventory.setItemDirect(0, result);
+            configuredSource = result.copy();
+            omniversalDraft = new OmniversalPatternDraft(result, omniversalDraft.molds());
+            restoreOmniversalSlots();
+            tianshuHost.setOmniversalPatternDraft(omniversalDraft);
+            if (staged || carriesNetworkBlank) refundableEncodedPattern = result.copy();
+            omniversalStatus = "ae2lt.tianshu.omniversal.encoded";
+            uploadState = 0;
+            rememberAutoUploadPattern(inventory.getStackInSlot(0));
+            triggeredUploadAck++;
+        } finally {
+            ae2EncodingInProgress = false;
+            if (staged) returnStagedBlankPatternToNetwork();
             broadcastChanges();
         }
     }

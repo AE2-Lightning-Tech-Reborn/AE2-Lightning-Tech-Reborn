@@ -1,7 +1,7 @@
 // JAVA_HOME=<Java 17> ./gradlew -I scripts/jei-transfer-compatibility-test.init.gradle runClient -Pjei_version=<version>
 allprojects {
     afterEvaluate {
-        sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java'])
+        sourceSets.jdb.java.setIncludes(['**/JeiTransferCompatibilityClientProbe.java', '**/CoverageClientSequence.java'])
         def fixtureClasses = layout.buildDirectory.dir('classes/java/jei-transfer-client')
         sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
         tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }

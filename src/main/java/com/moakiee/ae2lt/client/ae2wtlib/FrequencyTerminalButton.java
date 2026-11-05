@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.client.ae2wtlib;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 
@@ -8,7 +10,6 @@ import appeng.client.gui.AEBaseScreen;
 
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
-import com.moakiee.ae2lt.item.OverloadedFrequencyCardItem;
 import com.moakiee.ae2lt.item.TerminalCardAccess;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 
@@ -36,7 +37,14 @@ public final class FrequencyTerminalButton {
             return false;
         }
 
-        return screen instanceof IUniversalTerminalCapable;
+        return findTerminalHost(screen) != null;
+    }
+
+    @Nullable
+    static ItemMenuHost findTerminalHost(Object screen) {
+        return screen instanceof AEBaseScreen<?> aeScreen
+                && screen instanceof IUniversalTerminalCapable
+                && aeScreen.getMenu().getTarget() instanceof ItemMenuHost host ? host : null;
     }
 
     public static ToolbarButtons addToToolbar(AEBaseScreen<?> screen) {
@@ -45,11 +53,8 @@ public final class FrequencyTerminalButton {
         // AEBaseScreen.init() will populate the toolbar into renderables after
         // this hook runs.
         var toolbar = ((AEBaseScreenAccessor) screen).ae2lt$getVerticalToolbar();
-        var buttons = new ToolbarButtons(
-                FrequencyBindingClient.createCardToolbarButton(),
-                FrequencyBindingClient.createCardAutoConnectToolbarButton());
+        var buttons = new ToolbarButtons(FrequencyBindingClient.createCardToolbarButton());
         toolbar.add(buttons.configureButton());
-        toolbar.add(buttons.autoConnectButton());
         buttons.update(screen);
         return buttons;
     }
@@ -67,15 +72,10 @@ public final class FrequencyTerminalButton {
         return TerminalCardAccess.findCard(terminalHost.getUpgrades());
     }
 
-    public record ToolbarButtons(TextureToggleButton configureButton, TextureToggleButton autoConnectButton) {
+    public record ToolbarButtons(TextureToggleButton configureButton) {
         public void update(AEBaseScreen<?> screen) {
             var card = findInstalledFrequencyCard(screen);
-            boolean hasCard = !card.isEmpty();
-            configureButton.setVisibility(hasCard);
-            autoConnectButton.setVisibility(hasCard);
-            if (hasCard) {
-                autoConnectButton.setState(OverloadedFrequencyCardItem.getData(card).autoConnect());
-            }
+            configureButton.setVisibility(!card.isEmpty());
         }
     }
 }

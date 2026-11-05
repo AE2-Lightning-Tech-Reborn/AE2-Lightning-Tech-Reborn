@@ -70,11 +70,13 @@ public class JEIPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(mezz.jei.api.runtime.IJeiRuntime runtime) {
         JeiBookmarkAccessImpl.setRuntime(runtime);
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(runtime);
     }
 
     @Override
     public void onRuntimeUnavailable() {
         JeiBookmarkAccessImpl.clearRuntime();
+        com.moakiee.ae2lt.client.compat.JeiRecipeTransferMetadata.setRuntime(null);
     }
 
     @Override
@@ -221,15 +223,15 @@ public class JEIPlugin implements IModPlugin {
         registration.addRecipeTransferHandler(new UseCraftingRecipeTransfer<>(
                 PigmeeSynthesisStationMenu.class, PigmeeSynthesisStationMenu.TYPE, helper),
                 mezz.jei.api.constants.RecipeTypes.CRAFTING);
-        registration.addUniversalRecipeTransferHandler(new UniversalEncodePatternTransferHandler<>(
+        registration.addUniversalRecipeTransferHandler(new TianshuPatternTransferHandler<>(new UniversalEncodePatternTransferHandler<>(
                 TianshuPatternEncodingTermMenu.TYPE,
                 TianshuPatternEncodingTermMenu.class,
-                helper));
+                helper)));
         if (TianshuWirelessTerminalFactory.isAvailable()) {
-            registration.addUniversalRecipeTransferHandler(new UniversalEncodePatternTransferHandler<>(
+            registration.addUniversalRecipeTransferHandler(new TianshuPatternTransferHandler<>(new UniversalEncodePatternTransferHandler<>(
                     TianshuWirelessPatternEncodingTermMenu.TYPE,
                     TianshuWirelessPatternEncodingTermMenu.class,
-                    helper));
+                    helper)));
         }
 
     }

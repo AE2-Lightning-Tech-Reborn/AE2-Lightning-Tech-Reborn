@@ -26,6 +26,7 @@ import com.glodblock.github.appflux.common.me.cell.FluxCellInventory;
 import com.glodblock.github.appflux.common.me.key.FluxKey;
 import com.glodblock.github.appflux.common.me.key.type.EnergyType;
 import com.glodblock.github.appflux.config.AFConfig;
+import com.moakiee.ae2lt.util.MixinReflectionSupport;
 
 import mekanism.api.Action;
 import mekanism.api.energy.IStrictEnergyHandler;
@@ -75,20 +76,28 @@ final class AppFluxAccess {
         }
 
         TargetAccess target = resolveFluxNetworkTarget(cache, side);
-        if (target != null) {
-            return target;
-        }
-        target = resolveMekanismTarget(cache, side);
-        if (target != null) {
-            return target;
-        }
-        return ForgeEnergyTarget.resolve(cache, side);
+        if (target == null) target = resolveMekanismTarget(cache, side);
+        if (target == null) target = ForgeEnergyTarget.resolve(cache, side);
+        if (target == null) return null;
+        TargetAccess resolved = target;
+        var location = new com.moakiee.ae2lt.logic.management.PowerTelemetry.Target(
+                cache.level().dimension().location().toString(), cache.pos().relative(side), side.getOpposite().ordinal());
+        return new TargetAccess() {
+            public long simulateReceive(long amount) { return resolved.simulateReceive(amount); }
+            public long receive(long amount) { return resolved.receive(amount); }
+            public com.moakiee.ae2lt.logic.management.PowerTelemetry.Target telemetryTarget() { return location; }
+            public java.util.OptionalLong storedEnergyFe() { return resolved.storedEnergyFe(); }
+        };
     }
 
     static long simulateTarget(@Nullable TargetAccess access, long maxFe) {
-        return access != null && maxFe > 0L
-                ? Math.max(0L, access.simulateReceive(maxFe))
-                : 0L;
+        if (access == null || maxFe <= 0L) return 0L;
+        try {
+            return Math.min(maxFe, Math.max(0L, access.simulateReceive(maxFe)));
+        } catch (RuntimeException | LinkageError failure) {
+            MixinReflectionSupport.logReflectionFailure("simulate FE target " + access.getClass().getName(), failure);
+            return 0L;
+        }
     }
 
     static long sendToTarget(@Nullable TargetAccess access, IStorageService storage,
@@ -97,7 +106,16 @@ final class AppFluxAccess {
             return 0L;
         }
 
-        long requested = Math.max(0L, access.simulateReceive(maxFe));
+        if (storage.getInventory() instanceof BufferedMEStorage buffer) {
+            if (!buffer.beginTransfer()) return 0L;
+            try {
+                return sendToTargetKnownDemandPinned(access, buffer, source, simulateTarget(access, maxFe));
+            } finally {
+                buffer.endTransfer();
+            }
+        }
+
+        long requested = simulateTarget(access, maxFe);
         if (requested <= 0L) {
             return 0L;
         }
@@ -108,7 +126,14 @@ final class AppFluxAccess {
             return 0L;
         }
 
-        long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
+        long accepted;
+        try {
+            accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
+        } catch (RuntimeException | LinkageError uncertain) {
+            logUncertainTransfer(access, uncertain);
+            // The target may have accepted before throwing. Never refund this call.
+            return 0L;
+        }
         long leftover = extracted - accepted;
         if (leftover > 0L) {
             storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
@@ -122,13 +147,23 @@ final class AppFluxAccess {
             return 0L;
         }
 
+        if (storage.getInventory() instanceof BufferedMEStorage buffer) {
+            return sendToTargetKnownDemand(access, buffer, source, requested);
+        }
+
         long extracted = storage.getInventory().extract(
                 FE_KEY, requested, Actionable.MODULATE, source);
         if (extracted <= 0L) {
             return 0L;
         }
 
-        long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
+        long accepted;
+        try {
+            accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
+        } catch (RuntimeException | LinkageError uncertain) {
+            logUncertainTransfer(access, uncertain);
+            return 0L;
+        }
         long leftover = extracted - accepted;
         if (leftover > 0L) {
             storage.getInventory().insert(FE_KEY, leftover, Actionable.MODULATE, source);
@@ -145,7 +180,17 @@ final class AppFluxAccess {
      */
     static long sendToTargetKnownDemand(@Nullable TargetAccess access, BufferedMEStorage buffer,
                                         IActionSource source, long requested) {
-        if (access == null || requested <= 0L) {
+        if (!buffer.beginTransfer()) return 0L;
+        try {
+            return sendToTargetKnownDemandPinned(access, buffer, source, requested);
+        } finally {
+            buffer.endTransfer();
+        }
+    }
+
+    private static long sendToTargetKnownDemandPinned(@Nullable TargetAccess access, BufferedMEStorage buffer,
+                                                     IActionSource source, long requested) {
+        if (access == null || requested <= 0L || !buffer.isOnline()) {
             return 0L;
         }
 
@@ -154,16 +199,39 @@ final class AppFluxAccess {
             return 0L;
         }
 
-        long accepted = Math.min(extracted, Math.max(0L, access.receive(extracted)));
-        long leftover = extracted - accepted;
-        if (leftover > 0L) {
-            buffer.insert(FE_KEY, leftover, Actionable.MODULATE, source);
+        // Withdrawal can run storage callbacks. Funds have not reached a
+        // target yet, so an intervening disconnect authorizes a full refund.
+        if (!buffer.isOnline()) {
+            buffer.returnUndelivered(extracted, source);
+            return 0L;
         }
-        return accepted;
+
+        buffer.quarantineDelivery(extracted);
+        long accepted;
+        try {
+            accepted = access.receive(extracted);
+            if (accepted < 0 || accepted > extracted) return 0;
+        } catch (RuntimeException | LinkageError uncertain) {
+            if (buffer.isLedgerOwned()) throw new IllegalStateException("Unknown FE delivery receipt", uncertain);
+            logUncertainTransfer(access, uncertain);
+            return 0L;
+        }
+        buffer.settleDelivery(extracted, accepted);
+        return com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, access, accepted);
     }
 
     static long sendToTargetRepeatedOptimistic(@Nullable TargetAccess access, BufferedMEStorage buffer,
                                               IActionSource source, long maxFe, int maxCalls) {
+        if (!buffer.beginTransfer()) return 0L;
+        try {
+            return sendToTargetRepeatedPinned(access, buffer, source, maxFe, maxCalls);
+        } finally {
+            buffer.endTransfer();
+        }
+    }
+
+    private static long sendToTargetRepeatedPinned(@Nullable TargetAccess access, BufferedMEStorage buffer,
+                                                  IActionSource source, long maxFe, int maxCalls) {
         if (access == null || maxFe <= 0L || maxCalls <= 0) {
             return 0L;
         }
@@ -172,23 +240,40 @@ final class AppFluxAccess {
         long remaining = 0L;
         try {
             for (int i = 0; i < maxCalls; i++) {
+                // A successful receipt can still disconnect the host. Stop
+                // before another delivery and refund the unused batch budget.
+                if (!buffer.isOnline()) break;
                 if (remaining <= 0L) {
-                    remaining = extractRepeatedBudget(access, buffer, source, maxFe, maxCalls - i);
+                    try {
+                        remaining = extractRepeatedBudget(access, buffer, source, maxFe, maxCalls - i);
+                    } catch (RuntimeException | LinkageError failure) {
+                        MixinReflectionSupport.logReflectionFailure("prepare direct FE budget "
+                                + access.getClass().getName(), failure);
+                        break;
+                    }
                     if (remaining <= 0L) {
                         break;
                     }
                 }
 
+                if (!buffer.isOnline()) break;
+
                 long attempt = remaining < maxFe ? remaining : maxFe;
-                long accepted = access.receive(attempt);
-                if (accepted <= 0L) {
+                // Separate in-flight ownership BEFORE entering third-party code.
+                remaining -= attempt;
+                buffer.quarantineDelivery(attempt);
+                long accepted;
+                try {
+                    accepted = access.receive(attempt);
+                } catch (RuntimeException | LinkageError uncertain) {
+                    if (buffer.isLedgerOwned()) throw new IllegalStateException("Unknown FE delivery receipt", uncertain);
+                    logUncertainTransfer(access, uncertain);
                     break;
                 }
-                if (accepted > attempt) {
-                    accepted = attempt;
-                }
-
-                remaining -= accepted;
+                if (accepted < 0 || accepted > attempt) break;
+                buffer.settleDelivery(attempt, accepted);
+                if (accepted == 0) break;
+                com.moakiee.ae2lt.logic.management.PowerTelemetry.record(source, access, accepted);
                 totalAccepted = saturatingAdd(totalAccepted, accepted);
             }
         } finally {
@@ -199,6 +284,12 @@ final class AppFluxAccess {
         return totalAccepted;
     }
 
+    private static void logUncertainTransfer(TargetAccess access, Throwable cause) {
+        MixinReflectionSupport.logReflectionFailure(
+                "send FE to " + access.getClass().getName()
+                        + " (receipt unknown; in-flight FE will not be refunded or retried in this batch)", cause);
+    }
+
     private static long extractRepeatedBudget(TargetAccess access, BufferedMEStorage buffer,
                                              IActionSource source, long maxFe, int remainingCalls) {
         long budget = saturatingMul(maxFe, remainingCalls);
@@ -207,7 +298,8 @@ final class AppFluxAccess {
             return extracted;
         }
 
-        long simulated = access.simulateReceive(maxFe);
+        long simulated = simulateTarget(access, maxFe);
+        if (!buffer.isOnline()) return 0L;
         long currentDemand = simulated < maxFe ? simulated : maxFe;
         if (currentDemand <= 0L) {
             return 0L;
@@ -247,7 +339,7 @@ final class AppFluxAccess {
         try {
             IFNEnergyStorage target = getTargetCapability(cache, side, FluxCapabilities.FN_ENERGY_STORAGE);
             return target != null ? new FluxNetworkTarget(target) : null;
-        } catch (LinkageError ignored) {
+        } catch (LinkageError | RuntimeException ignored) {
             return null;
         }
     }
@@ -260,7 +352,7 @@ final class AppFluxAccess {
         try {
             IStrictEnergyHandler target = getTargetCapability(cache, side, Capabilities.STRICT_ENERGY);
             return target != null ? MekanismStrictTarget.create(target) : null;
-        } catch (LinkageError ignored) {
+        } catch (LinkageError | RuntimeException ignored) {
             return null;
         }
     }
@@ -273,7 +365,7 @@ final class AppFluxAccess {
 
         @Override
         public long receive(long amountFe) {
-            return Math.max(0L, target.receiveEnergyL(amountFe, false));
+            return target.receiveEnergyL(amountFe, false);
         }
     }
 
@@ -338,6 +430,7 @@ final class AppFluxAccess {
     }
 
     private record ForgeEnergyTarget(IEnergyStorage target) implements TargetAccess {
+        @Override public java.util.OptionalLong storedEnergyFe() { return new NativeFeTarget(target).storedEnergyFe(); }
         @Nullable
         static TargetAccess resolve(CapabilityTargetCache cache, Direction side) {
             IEnergyStorage target = getTargetCapability(cache, side, ForgeCapabilities.ENERGY);
@@ -351,7 +444,7 @@ final class AppFluxAccess {
 
         @Override
         public long receive(long amountFe) {
-            return Math.max(0, target.receiveEnergy(clampToInt(amountFe), false));
+            return target.receiveEnergy(clampToInt(amountFe), false);
         }
     }
 
@@ -407,7 +500,7 @@ final class AppFluxAccess {
         try {
             Class.forName(className, false, AppFluxAccess.class.getClassLoader());
             return true;
-        } catch (ClassNotFoundException | LinkageError ignored) {
+        } catch (ClassNotFoundException | LinkageError | SecurityException ignored) {
             return false;
         }
     }

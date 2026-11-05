@@ -705,6 +705,10 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                                net.minecraft.nbt.CompoundTag output,
                                @Nullable Player player) {
         super.exportSettings(mode, output, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            var logic = getOverloadedLogic();
+            if (logic != null) logic.writeDismantleEnergyToNBT(output);
+        }
         com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> {
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_PROVIDER_MODE, providerMode);
             com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.writeEnum(tag, TAG_RETURN_MODE, returnMode);
@@ -724,6 +728,10 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
                                net.minecraft.nbt.CompoundTag input,
                                @Nullable Player player) {
         super.importSettings(mode, input, player);
+        if (mode == appeng.util.SettingsFrom.DISMANTLE_ITEM) {
+            var logic = getOverloadedLogic();
+            if (logic != null) logic.importDismantleEnergyFromNBT(input);
+        }
         com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
             this.providerMode = com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport.readEnum(
                     tag, TAG_PROVIDER_MODE, ProviderMode.class, this.providerMode);
@@ -744,7 +752,7 @@ public class OverloadedPatternProviderBlockEntity extends PatternProviderBlockEn
             if (tag.contains(TAG_MACHINE_PARALLELISM)) {
                 machineParallelism = Math.max(1, tag.getInt(TAG_MACHINE_PARALLELISM));
             }
-            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+            FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
             recomputeIdlePower();
             notifyLogicStateChanged();
             saveChanges();

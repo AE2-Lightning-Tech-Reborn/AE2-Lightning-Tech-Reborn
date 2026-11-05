@@ -9,7 +9,8 @@ allprojects {
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'mezz.jei',
                     'dev.architectury', 'me.shedaniel.cloth', 'top.theillusivec4.curios']
-                    || (dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
+                    || (dep.group == 'maven.modrinth'
+                        && dep.name in ['applied-energistics-2-wireless-terminals', 'ldlib']))
         }
         // Optional local jars let the probe use the exact modpack versions.
         def extendedCrafting = project.findProperty('extended_crafting_test_jar')

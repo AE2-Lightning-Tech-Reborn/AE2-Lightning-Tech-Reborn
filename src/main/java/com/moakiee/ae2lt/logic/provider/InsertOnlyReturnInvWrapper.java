@@ -77,7 +77,7 @@ public class InsertOnlyReturnInvWrapper implements GenericInternalInventory {
 
     @Override
     public long insert(int slot, AEKey what, long amount, Actionable mode) {
-        if (what == null || amount <= 0) return 0;
+        if (what == null || amount <= 0 || !isAllowed(what)) return 0;
         long affordable = logic.maxAffordableExternalReturn(what, amount);
         if (affordable <= 0) return 0;
         long inserted = delegate.insert(slot, what, affordable, mode);
@@ -94,7 +94,10 @@ public class InsertOnlyReturnInvWrapper implements GenericInternalInventory {
 
     @Override
     public void setStack(int slot, @Nullable GenericStack stack) {
-        delegate.setStack(slot, stack);
+        // This read-empty capability is an ingress, never an inventory replacement path.
+        if (stack != null) {
+            insert(slot, stack.what(), stack.amount(), Actionable.MODULATE);
+        }
     }
 
     @Override

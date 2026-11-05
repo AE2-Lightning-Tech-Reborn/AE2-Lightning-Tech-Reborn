@@ -440,10 +440,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
                         getOrientation(),
                         allowedOutputs,
                         outputTank::getFluid,
-                        amount -> {
-                            FluidStack drained = outputTank.drain(amount, FluidAction.EXECUTE);
-                            return drained.getAmount();
-                        },
+                        outputTank::exportFluid,
                         direction -> getExportTarget(serverLevel, direction));
 
         return pushedItem || pushedFluid;
@@ -769,7 +766,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkBlockEntity
                 v -> this.autoExport = v,
                 sides -> this.allowedOutputs = sides,
                 tag -> {
-                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency);
+                    FrequencyBindingHelper.importMemoryFrequency(tag, this::setFrequency, player, this);
                     MemoryCardConfigSupport.restoreMatrixCount(tag, player, this);
                 },
                 () -> {

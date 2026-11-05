@@ -1,0 +1,80 @@
+// Run with: ./gradlew -I scripts/tianshu-pattern-return-test.init.gradle runGameTestServer
+// Optional: -Pae2ltPatternReturnRunDirectory=<run-directory>
+allprojects {
+    afterEvaluate {
+        def runDirectory = project.file(findProperty('ae2ltPatternReturnRunDirectory')
+                ?: 'run-gametest/tianshu-pattern-returns')
+        def resultFile = new File(runDirectory, 'tianshu-pattern-return-result.json')
+        def fixtureRoot = layout.buildDirectory.dir('tianshu-pattern-returns/fixtures').get().asFile
+        def fixtureClasses = new File(fixtureRoot, 'classes')
+        def fixtureResources = new File(fixtureRoot, 'resources')
+        def caseMarkers = [
+                'TIANSHU_PATTERN_RETURN_FULL_SAVE_PASS',
+                'TIANSHU_PATTERN_RETURN_ONCE_NBT_PASS',
+                'TIANSHU_PATTERN_RETURN_END_TICK_PASS',
+                'TIANSHU_PATTERN_RETURN_RESPAWN_PASS'
+        ]
+        sourceSets.jdb.java.setIncludes(['**/logic/tianshu/terminal/TianshuPatternReturnGameTests.java'])
+        sourceSets.jdb.resources.setIncludes(['data/ae2lt_pattern_returns/structures/empty.nbt'])
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        sourceSets.jdb.output.resourcesDir = fixtureResources
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+        tasks.named('processJdbResources').configure { destinationDir = fixtureResources }
+        minecraft.runs.gameTestServer {
+            workingDirectory runDirectory
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_pattern_returns'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        // ForgeGradle creates the run task after project evaluation.
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            long startedAt = 0L
+            doFirst {
+                startedAt = System.currentTimeMillis()
+                runDirectory.mkdirs()
+                resultFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                        status: 'RUNNING', startedAtEpochMillis: startedAt,
+                        expectedTestCount: 4, namespace: 'ae2lt_pattern_returns'
+                ]))
+            }
+            doLast {
+                def latest = new File(runDirectory, 'logs/latest.log')
+                if (!latest.isFile() || latest.lastModified() < startedAt) {
+                    throw new GradleException('Missing fresh native Tianshu pattern return log: ' + latest)
+                }
+                def log = latest.getText('UTF-8')
+                def registrations = (log =~ /([0-9]+) tests are now running!/).collect { it[1] as int }
+                if (registrations != [4]) {
+                    throw new GradleException('Expected exactly four native pattern return registrations, observed ' + registrations)
+                }
+                def completions = (log =~ /All ([0-9]+) required tests passed/).collect { it[1] as int }
+                if (completions != [4]) {
+                    throw new GradleException('Expected exactly four required native pattern return passes, observed ' + completions)
+                }
+                def markerCounts = caseMarkers.collectEntries { marker ->
+                    // These fixtures use the native logger, so their complete message tokens
+                    // appear in latest.log with its normal timestamp/logger prefix.
+                    def pattern = java.util.regex.Pattern.compile('(?m)^(?:[^\\r\\n]*[ \\t])?' +
+                            java.util.regex.Pattern.quote(marker) + '(?:[ \\t]|$)')
+                    def matcher = pattern.matcher(log)
+                    int count = 0
+                    while (matcher.find()) count++
+                    if (count != 1) {
+                        throw new GradleException('Expected one native pattern return PASS message: ' + marker +
+                                '; observed=' + count + '; source=' + latest)
+                    }
+                    [(marker): count]
+                }
+                resultFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                        status: 'PASS', startedAtEpochMillis: startedAt,
+                        expectedTestCount: 4, namespace: 'ae2lt_pattern_returns',
+                        observedRegistrationCounts: registrations,
+                        observedCompletionCounts: completions,
+                        observedMarkerCounts: markerCounts,
+                        log: latest.absolutePath,
+                        fixture: 'src/jdb/java/com/moakiee/ae2lt/logic/tianshu/terminal/TianshuPatternReturnGameTests.java'
+                ]))
+            }
+        }
+    }
+}

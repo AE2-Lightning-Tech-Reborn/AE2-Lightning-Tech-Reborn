@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.debug;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.networking.GridHelper;
+import appeng.api.networking.crafting.CalculationStrategy;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.*;
 import appeng.blockentity.storage.DriveBlockEntity;
@@ -16,6 +17,8 @@ import com.moakiee.ae2lt.logic.craft.*;
 import com.moakiee.ae2lt.logic.tianshu.*;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
+import com.moakiee.thunderbolt.api.crafting.CraftingAmountMenu;
+import com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu;
 import com.moakiee.thunderbolt.api.storage.BigMEStorage;
 import com.moakiee.thunderbolt.core.crafting.big.*;
 import com.moakiee.thunderbolt.core.crafting.planner.*;
@@ -572,9 +575,15 @@ public final class BigIntegerPipelineGameTests {
         var player = net.minecraftforge.common.util.FakePlayerFactory.getMinecraft(h.getLevel());
         var amountMenu = new appeng.menu.me.crafting.CraftAmountMenu(117, player.getInventory(), host);
         require(((BigAmountMenu) amountMenu).ae2lt$bigAvailable(), "ordinary terminal did not enable exact amounts");
+        ((CraftingAmountMenu) amountMenu).thunderbolt$setInitialAmount(N);
+        require(((BigAmountMenu) amountMenu).ae2lt$initialAmount().equals(N.toString()),
+                "ordinary amount menu truncated the exact request");
         var confirm = new appeng.menu.me.crafting.CraftConfirmMenu(118, player.getInventory(), host);
-        ((BigConfirmMenu) confirm).ae2lt$planBig(target, BigInteger.valueOf(60));
-        require(((BigConfirmMenu) confirm).ae2lt$isBig(), "ordinary confirmation did not select exact planning");
+        var exactRequest = (CraftingRequestMenu) confirm;
+        require(exactRequest.thunderbolt$planRequest(target, N, CalculationStrategy.CRAFT_LESS),
+                "ordinary confirmation rejected the exact request");
+        require(exactRequest.thunderbolt$isExactRequest(), "ordinary confirmation did not select exact planning");
+        confirm.removed(player);
         var future = BigCraftingService.preview(cpu.getGrid(), h.getLevel(), target, BigInteger.valueOf(60), SOURCE);
         int[] phase = {0};
         long[] receiptAt = {0};

@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.integration.emi;
 
-import appeng.integration.modules.emi.EmiEncodePatternHandler;
 import appeng.integration.modules.emi.EmiUseCraftingRecipeHandler;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
@@ -41,11 +40,11 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
                 new EmiUseCraftingRecipeHandler<>(PigmeeSynthesisStationMenu.class));
         registry.addRecipeHandler(
                 TianshuPatternEncodingTermMenu.TYPE,
-                new EmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class));
+                new TianshuEmiEncodePatternHandler<>(TianshuPatternEncodingTermMenu.class));
         if (TianshuWirelessTerminalFactory.isAvailable()) {
             registry.addRecipeHandler(
                     TianshuWirelessPatternEncodingTermMenu.TYPE,
-                    new EmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class));
+                    new TianshuEmiEncodePatternHandler<>(TianshuWirelessPatternEncodingTermMenu.class));
         }
         AE2LTEmiCategories.register(registry);
         if (net.minecraftforge.fml.ModList.get().isLoaded("advanced_ae")) AdvancedAeFactoryEmiCompat.registerWorkstation(registry);

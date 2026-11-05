@@ -16,24 +16,29 @@ import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Keeps the optional viewer's native handler from bypassing the dedicated Tianshu draft. */
+/** Only Tianshu owns this transfer; all other terminals retain the upstream behavior. */
 @Pseudo
 @Mixin(targets = "com.sorrowmist.useless.compat.jei.OmniversalPatternJeiTransferHandler", remap = false)
 public abstract class OmniversalPatternJeiTransferMixin {
     @Inject(method = "transferOmniversalRecipe", at = @At("HEAD"), cancellable = true, require = 1)
-    private static void ae2lt$selectDraft(PatternEncodingTermMenu menu, @Coerce Object entry,
+    private static void ae2lt$selectDedicatedOmniversalPage(
+            PatternEncodingTermMenu menu, @Coerce Object entry,
             IRecipeSlotsView slots, Player player, boolean maxTransfer, boolean doTransfer,
             IRecipeTransferHandlerHelper helper, CallbackInfoReturnable<IRecipeTransferError> cir) {
         if (!(menu instanceof TianshuPatternEncodingTermMenu tianshu)) return;
-        var pattern = UselessModClientTransfer.prepare(tianshu, entry);
-        if (pattern.isEmpty()) {
-            cir.setReturnValue(helper.createUserErrorWithTooltip(Component.translatable("ae2lt.tianshu.omniversal.invalid")));
-            return;
-        }
         if (doTransfer) {
+            var pattern = UselessModClientTransfer.prepare(tianshu, entry);
+            if (pattern.isEmpty()) {
+                cir.setReturnValue(helper.createUserErrorWithTooltip(
+                        Component.translatable("ae2lt.tianshu.omniversal.invalid")));
+                return;
+            }
             tianshu.selectOmniversalPattern(pattern);
             if (Screen.hasAltDown()) tianshu.encodeAndUploadDirectly();
         }
-        cir.setReturnValue(null);
+        cir.setReturnValue(doTransfer ? null
+                : new appeng.integration.modules.jei.transfer.EncodePatternTransferHandler<>(
+                        TianshuPatternEncodingTermMenu.TYPE, TianshuPatternEncodingTermMenu.class, helper)
+                        .transferRecipe(tianshu, entry, slots, player, maxTransfer, false));
     }
 }

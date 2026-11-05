@@ -10,8 +10,8 @@ import appeng.menu.SlotSemantics;
 import appeng.menu.slot.CraftingTermSlot;
 import appeng.parts.reporting.CraftingTerminalPart;
 import com.moakiee.ae2lt.blockentity.PigmeeSynthesisStationBlockEntity;
-import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.gametest.PigmeeSynthesisStationGameTests;
+import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.mojang.authlib.GameProfile;
 import java.util.EnumMap;
@@ -24,11 +24,14 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -51,9 +54,9 @@ public final class PigmeeAdjacentStorageGameTests {
     private static final Map<BlockPos, IItemHandler> ITEM_PORTS = new HashMap<>();
     private static final Map<BlockPos, IFluidHandler> FLUID_PORTS = new HashMap<>();
 
-    private static final class TestPort extends BarrelBlockEntity {
+    private static final class TestPort extends BlockEntity {
         TestPort(BlockPos pos) {
-            super(pos, Blocks.BARREL.defaultBlockState());
+            super(BlockEntityType.BARREL, pos, Blocks.BARREL.defaultBlockState());
         }
 
         @Override
@@ -67,9 +70,7 @@ public final class PigmeeAdjacentStorageGameTests {
                 var handler = FLUID_PORTS.get(getBlockPos());
                 return handler == null ? LazyOptional.empty() : LazyOptional.of(() -> handler).cast();
             }
-            // This controlled port exposes only the handlers installed by this fixture.
-            // Other suites attach FE/fluid capabilities to every BarrelBlockEntity;
-            // inheriting those would leave a live storage after our handlers are revoked.
+            // Expose only fixture handlers and no Container fallback after their revocation.
             return LazyOptional.empty();
         }
     }
@@ -185,6 +186,7 @@ public final class PigmeeAdjacentStorageGameTests {
         helper.setBlock(STATION.above(), board);
         matrix.clear();
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "PigmeeMergeQA"));
+        player.setPos(host.getBlockPos().getX() + .5, host.getBlockPos().getY() + .5, host.getBlockPos().getZ() + .5);
         player.getInventory().clearContent();
         var menu = new PigmeeSynthesisStationMenu(1, player.getInventory(), host);
         player.containerMenu = menu;
@@ -193,13 +195,17 @@ public final class PigmeeAdjacentStorageGameTests {
         for (int slot : new int[] {3, 5, 6, 8}) template.set(slot, new ItemStack(Items.COBBLESTONE));
         template.set(4, new ItemStack(Items.IRON_INGOT));
         template.set(7, new ItemStack(Items.REDSTONE));
-        var payload = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
-        payload.writeBoolean(false);
-        payload.writeInt(template.size());
-        template.forEach(payload::writeItem);
-        payload.writeBoolean(true);
-        var packet = new FillCraftingGridFromRecipePacket(payload);
-        payload.release();
+        var payload = new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        FillCraftingGridFromRecipePacket packet;
+        try {
+            payload.writeBoolean(false);
+            payload.writeInt(template.size());
+            template.forEach(payload::writeItem);
+            payload.writeBoolean(true);
+            packet = new FillCraftingGridFromRecipePacket(payload);
+        } finally {
+            payload.release();
+        }
         packet.serverPacketData(player);
         for (int slot = 0; slot < 9; slot++) {
             helper.assertTrue(ItemStack.isSameItemSameTags(matrix.getStackInSlot(slot), template.get(slot))
@@ -290,7 +296,7 @@ public final class PigmeeAdjacentStorageGameTests {
             port(helper, Direction.EAST, oldItems, oldFluid);
             helper.assertTrue(storage.getAvailableStacks().get(iron) == 16
                     && storage.getAvailableStacks().get(water) == 2000, "Prime both cached multiblock ports");
-            // Deliberately omit invalidateCapabilities: the part blocks remain
+            // Deliberately omit capability invalidation: the part blocks remain
             // while their remote controller changes the backing inventory.
             for (var side : new Direction[] {Direction.NORTH, Direction.EAST}) {
                 var pos = helper.absolutePos(STATION.relative(side));

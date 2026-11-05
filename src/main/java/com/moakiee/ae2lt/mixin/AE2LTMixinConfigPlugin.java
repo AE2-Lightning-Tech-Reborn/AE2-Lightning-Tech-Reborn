@@ -5,7 +5,10 @@ import java.util.Map;
 import java.util.Set;
 import java.nio.file.Files;
 
+import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+import com.moakiee.ae2lt.asm.IsolatedWrapOperationInjectionInfo;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -17,6 +20,9 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             Map.entry("AdvCraftingCpuAccessor", "advanced_ae"),
             Map.entry("AdvCraftingCpuLogicMixin", "advanced_ae"),
             Map.entry("InterfaceEnergyDistributionMixin", "appflux"),
+            Map.entry("NetworkFEPowerTelemetryMixin", "appflux"),
+            Map.entry("ForgeEnergyHandlerTelemetryMixin", "appflux"),
+            Map.entry("ConstructionStickPlacementMixin", "constructionstick"),
             Map.entry("IpnContainerClickerMixin", "inventoryprofilesnext"),
             Map.entry("EntityConveyorPhaseLockMixin", "mob_grinding_utils"),
             Map.entry("TransfiniteCraftingLogicMixin", "gtlcore"),
@@ -28,6 +34,8 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        MixinExtrasBootstrap.init();
+        InjectionInfo.register(IsolatedWrapOperationInjectionInfo.class);
     }
 
     @Override
@@ -39,11 +47,23 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         int separator = mixinClassName.lastIndexOf('.');
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
+        if (simpleName.equals("ForgeFluxNetworkTelemetryMixin")) return isModLoaded("appflux") && isModLoaded("fluxnetworks");
+        if (simpleName.equals("OmniUpgradesAE2CompatMixin")) return isModLoaded("omni_upgrades");
         String requiredMod = REQUIRED_MODS.get(simpleName);
         if (requiredMod == null) {
             return true;
         }
         return isTargetPresent(requiredMod, targetClassName);
+    }
+
+    private static boolean isModLoaded(String modId) {
+        try {
+            var loadingMods = LoadingModList.get();
+            return loadingMods != null && loadingMods.getModFileById(modId) != null;
+        } catch (RuntimeException ignored) {
+            // Mixin discovery runs before optional addon classes can safely be loaded.
+            return false;
+        }
     }
 
     private static boolean isTargetPresent(String modId, String targetClassName) {

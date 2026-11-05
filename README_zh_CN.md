@@ -4,7 +4,7 @@
 
 这是 [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) 的附属模组，添加闪电能源、进阶机器和过载 ME 网络组件。
 
-> 必需依赖 AE2 与 雷电核心：重生 · 适用于 Minecraft 1.20.1 / Forge 47.1.3+
+> 必需依赖 AE2 与 雷电核心：重生 · 适用于 Minecraft 1.20.1 / Forge 47.1.47+
 
 本分支是持续维护的 Forge 1.20.1 GTL 移植，包含按 GTLCore 是否加载启用的兼容层。主项目面向更新的 Minecraft 与 NeoForge；在 1.20.1 API 能支持的范围内，本分支会同步其行为修复和功能改进。
 
@@ -25,16 +25,18 @@
 | 模组 | 要求 |
 |------|------|
 | Minecraft 1.20.1 | 必需 |
-| Forge 47.1.3+ | 必需 |
+| Forge 47.1.47+ | 必需 |
 | Applied Energistics 2 15.4.10+ | 必需 |
-| 雷电核心：重生 GTL 2.0.3-beta4 至 `<2.1.0` | 必需 |
+| 雷电核心：重生 GTL 2.0.4 至 `<2.1.0` | 必需 |
 | JEI 或 EMI、Jade | 可选联动 |
 | AdvancedAE、ExtendedAE、Applied Flux、AE2WTLib | 可选联动 |
 | Mekanism、Curios、Flux Networks、Polymorph | 可选联动 |
 
 所有可选联动均已隔离，不安装时不应影响正常启动。
 
-雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入、包含批次准入 API 和默认 Radium NBT 兼容修复的配套构建，Maven 坐标为 `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.3-beta4`。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。GTL 与普通 Forge 构建须使用各自的构件坐标，避免覆盖彼此的映射缓存。
+搭配 Useless Mod 20.2.4.10 时，需使用 Forge 47.3.10+ 和 LDLib `>=1.0.52.a,<1.0.53`。默认开发依赖保持 GTL 基线；验证该可选联动时应使用匹配的依赖配置。
+
+雷电核心应使用其 `1.20.1_GTL` 分支中保留合成规划注入、包含批次准入 API 和默认 Radium NBT 兼容修复的配套构建，Maven 坐标为 `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.4`。开发构建前，请将该配套构建发布到 Maven 本地仓库，项目会优先从 `mavenLocal()` 解析。GTL 与普通 Forge 构建须使用各自的构件坐标，避免覆盖彼此的映射缓存。
 
 ## 构建
 
@@ -44,10 +46,10 @@
 .\gradlew.bat test build
 ```
 
-默认构建的可发布制品位于 `build/libs/ae2lt-forge-1.20.1-gtl-2.1.2-beta.jar`。
+默认构建的可发布制品位于 `build/libs/ae2lt-forge-1.20.1-gtl-2.1.3-beta1.jar`。
 带 `-slim.jar` 后缀的是开发中间制品，不应对外发布。
 
-该构建使用 GTL 网络协议 `gtl-10`，客户端与服务端需同时更新。
+该构建使用 GTL 网络协议 `15`，客户端与服务端需同时更新。
 
 ## 公开 API
 

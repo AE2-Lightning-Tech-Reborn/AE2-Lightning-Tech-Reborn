@@ -6,6 +6,7 @@ import appeng.crafting.inv.ListCraftingInventory;
 import appeng.crafting.pattern.AECraftingPattern;
 import appeng.crafting.pattern.AEProcessingPattern;
 import com.moakiee.ae2lt.overload.runtime.pattern.Ae2OverloadPatternDetails;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -53,7 +54,11 @@ final class CraftingMaterialReadiness {
         var missing = new HashSet<AEKey>();
         var fixedDemand = new HashMap<AEKey, Long>();
         var stock = new HashMap<AEKey, Long>();
-        for (var input : details.getInputs()) {
+        var inputs = details.getInputs();
+        var shared = inputs.length > 1 && inputs.length <= SharedInputAvailability.MAX_INPUTS
+                ? new ArrayList<SharedInputAvailability.Demand>(inputs.length) : null;
+        boolean saturatedFamily = false;
+        for (var input : inputs) {
             long multiplier = input.getMultiplier();
             if (multiplier <= 0) continue;
             var candidates = input.getPossibleInputs();
@@ -76,8 +81,12 @@ final class CraftingMaterialReadiness {
                 long held = stock.computeIfAbsent(entry.getKey(), key -> exact
                         ? Math.max(0, inventory.list.get(key))
                         : familyStock.computeIfAbsent(key, this::countFamilyStock));
+                // A projected family can contain several variants whose true total exceeds
+                // long. Do not use that projection to prove a joint shortage.
+                saturatedFamily |= !exact && held == Long.MAX_VALUE;
                 possibleUnits = add(possibleUnits, held / entry.getValue());
             }
+            if (shared != null) shared.add(new SharedInputAvailability.Demand(multiplier, units));
             if (possibleUnits < multiplier) missing.addAll(units.keySet());
             // Also catch several fixed slots competing for the same physical stock.
             if (units.size() == 1) {
@@ -89,6 +98,10 @@ final class CraftingMaterialReadiness {
         fixedDemand.forEach((key, amount) -> {
             if (stock.getOrDefault(key, 0L) < amount) missing.add(key);
         });
+        if (missing.isEmpty() && shared != null && !saturatedFamily
+                && SharedInputAvailability.hasShortage(shared, stock)) {
+            missing.addAll(stock.keySet());
+        }
         return missing;
     }
 

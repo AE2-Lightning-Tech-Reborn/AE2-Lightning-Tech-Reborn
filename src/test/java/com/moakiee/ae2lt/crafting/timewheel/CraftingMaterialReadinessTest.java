@@ -7,6 +7,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.*;
 import appeng.crafting.inv.ListCraftingInventory;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.Component;
@@ -85,6 +86,140 @@ class CraftingMaterialReadinessTest {
         inventory.insert(iron, Long.MAX_VALUE, Actionable.MODULATE);
         assertTrue(inventory.readiness.missing(
                 pattern(input(Long.MAX_VALUE, new GenericStack(iron, 1)))).isEmpty());
+    }
+
+    @Test
+    void alternativeSlotsCannotEachClaimTheSamePhysicalStock() {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var choices = new GenericStack[] {new GenericStack(iron, 1), new GenericStack(gold, 1)};
+        var pattern = pattern(input(2, choices), input(2, choices));
+        var inventory = inventory();
+        inventory.insert(iron, 1, Actionable.MODULATE);
+        inventory.insert(gold, 1, Actionable.MODULATE);
+
+        assertEquals(Set.of(iron, gold), inventory.readiness.missing(pattern));
+        assertEquals(1, inventory.list.get(iron));
+        assertEquals(1, inventory.list.get(gold));
+        inventory.insert(gold, 2, Actionable.MODULATE);
+        assertTrue(inventory.readiness.missing(pattern).isEmpty(), "new stock must release the shortage");
+    }
+
+    @Test
+    void surplusInAnOverlappingThirdSlotCannotHideASharedSubsetShortage() {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var diamond = AEItemKey.of(Items.DIAMOND);
+        var scarce = new GenericStack[] {new GenericStack(iron, 1), new GenericStack(gold, 1)};
+        var pattern = pattern(input(1, scarce), input(1, scarce),
+                input(1, new GenericStack(gold, 1), new GenericStack(diamond, 1)));
+        var inventory = inventory();
+        inventory.insert(iron, 1, Actionable.MODULATE);
+        inventory.insert(diamond, 100, Actionable.MODULATE);
+
+        assertFalse(inventory.readiness.missing(pattern).isEmpty());
+        inventory.insert(gold, 1, Actionable.MODULATE);
+        assertTrue(inventory.readiness.missing(pattern).isEmpty());
+    }
+
+    @Test
+    void sharedDemandAndSupplyMayBothExceedLongWithoutWrapping() {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var choices = new GenericStack[] {new GenericStack(iron, 1), new GenericStack(gold, 1)};
+        var pattern = pattern(input(Long.MAX_VALUE, choices), input(Long.MAX_VALUE, choices));
+        var inventory = inventory();
+        inventory.insert(iron, Long.MAX_VALUE - 1, Actionable.MODULATE);
+        inventory.insert(gold, Long.MAX_VALUE - 1, Actionable.MODULATE);
+
+        assertTrue(inventory.readiness.missing(
+                pattern(input(Long.MAX_VALUE - 1, choices), input(Long.MAX_VALUE - 1, choices))).isEmpty());
+        assertFalse(inventory.readiness.missing(pattern).isEmpty());
+        inventory.insert(iron, 1, Actionable.MODULATE);
+        inventory.insert(gold, 1, Actionable.MODULATE);
+        assertTrue(inventory.readiness.missing(pattern).isEmpty());
+    }
+
+    @Test
+    void saturatedVariantFamiliesRemainAvailableForNativeAllocation() {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var named = new ItemStack(Items.IRON_INGOT);
+        named.setHoverName(Component.literal("another physical stock"));
+        var inventory = inventory();
+        inventory.insert(iron, Long.MAX_VALUE, Actionable.MODULATE);
+        inventory.insert(AEItemKey.of(named), Long.MAX_VALUE, Actionable.MODULATE);
+        var choices = new GenericStack[] {new GenericStack(iron, 1), new GenericStack(gold, 1)};
+
+        assertTrue(inventory.readiness.missing(
+                pattern(input(Long.MAX_VALUE, choices), input(Long.MAX_VALUE, choices))).isEmpty(),
+                "a saturated family projection is not evidence of a physical shortage");
+    }
+
+    @Test
+    void oversizedCustomPatternsKeepTheOrdinaryAllocatorAvailable() {
+        var iron = AEItemKey.of(Items.IRON_INGOT);
+        var gold = AEItemKey.of(Items.GOLD_INGOT);
+        var inventory = inventory();
+        inventory.insert(iron, 1, Actionable.MODULATE);
+        var inputs = new IPatternDetails.IInput[SharedInputAvailability.MAX_INPUTS + 1];
+        java.util.Arrays.fill(inputs, input(1, new GenericStack(iron, 1), new GenericStack(gold, 1)));
+
+        assertTrue(inventory.readiness.missing(pattern(inputs)).isEmpty(),
+                "joint preflight must stay bounded for arbitrarily large addon input definitions");
+    }
+
+    @Test
+    void alternativeAssignmentAgreesWithIndependentSmallInventoryOracle() {
+        var random = new Random(0x45434f47544cL);
+        var keys = new AEKey[] {AEItemKey.of(Items.IRON_INGOT), AEItemKey.of(Items.GOLD_INGOT),
+                AEItemKey.of(Items.DIAMOND)};
+        for (int scenario = 0; scenario < 1000; scenario++) {
+            var inventory = inventory();
+            var stock = new long[keys.length];
+            for (int k = 0; k < keys.length; k++) {
+                stock[k] = random.nextInt(5);
+                inventory.insert(keys[k], stock[k], Actionable.MODULATE);
+            }
+            int slots = 2 + random.nextInt(3);
+            var counts = new int[slots];
+            var units = new int[slots][keys.length];
+            var inputs = new IPatternDetails.IInput[slots];
+            boolean uniformUnits = scenario % 2 == 0;
+            for (int slot = 0; slot < slots; slot++) {
+                counts[slot] = 1 + random.nextInt(2);
+                var choices = new java.util.ArrayList<GenericStack>();
+                int requiredChoice = random.nextInt(keys.length);
+                for (int k = 0; k < keys.length; k++) {
+                    if (k == requiredChoice || random.nextBoolean()) {
+                        units[slot][k] = uniformUnits ? 1 : 1 + random.nextInt(3);
+                        choices.add(new GenericStack(keys[k], units[slot][k]));
+                    }
+                }
+                inputs[slot] = input(counts[slot], choices.toArray(GenericStack[]::new));
+            }
+            boolean possible = assign(stock.clone(), units, counts.clone(), 0);
+            boolean ready = inventory.readiness.missing(pattern(inputs)).isEmpty();
+            if (uniformUnits) assertEquals(possible, ready, "unit-sized allocation scenario " + scenario);
+            else if (possible) assertTrue(ready, "optimistic probe must not park feasible scenario " + scenario);
+            for (int k = 0; k < keys.length; k++) assertEquals(stock[k], inventory.list.get(keys[k]));
+        }
+    }
+
+    private static boolean assign(long[] stock, int[][] units, int[] remaining, int slot) {
+        if (slot == remaining.length) return true;
+        if (remaining[slot] == 0) return assign(stock, units, remaining, slot + 1);
+        for (int k = 0; k < stock.length; k++) {
+            int amount = units[slot][k];
+            if (amount == 0 || stock[k] < amount) continue;
+            stock[k] -= amount;
+            remaining[slot]--;
+            boolean possible = assign(stock, units, remaining, slot);
+            remaining[slot]++;
+            stock[k] += amount;
+            if (possible) return true;
+        }
+        return false;
     }
 
     @Test

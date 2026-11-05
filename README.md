@@ -4,7 +4,7 @@
 
 An [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2) addon that introduces a lightning energy system, advanced machines, and overloaded network components.
 
-> Requires AE2 and Thunderbolt Core Reborn · Built for Minecraft 1.20.1 / Forge 47.1.3+
+> Requires AE2 and Thunderbolt Core Reborn · Built for Minecraft 1.20.1 / Forge 47.1.47+
 
 This branch is the maintained Forge 1.20.1 GTL port, including a compatibility layer enabled when GTLCore is loaded. The primary project targets newer Minecraft and NeoForge versions; behavior changes are ported back where the 1.20.1 APIs support them.
 
@@ -25,16 +25,18 @@ This branch is the maintained Forge 1.20.1 GTL port, including a compatibility l
 | Mod | Requirement |
 |-----|-------------|
 | Minecraft 1.20.1 | Required |
-| Forge 47.1.3+ | Required |
+| Forge 47.1.47+ | Required |
 | Applied Energistics 2 15.4.10+ | Required |
-| Thunderbolt Core Reborn GTL 2.0.3-beta4 to `<2.1.0` | Required |
+| Thunderbolt Core Reborn GTL 2.0.4 to `<2.1.0` | Required |
 | JEI or EMI, Jade | Optional integration |
 | AdvancedAE, ExtendedAE, Applied Flux, AE2WTLib | Optional integration |
 | Mekanism, Curios, Flux Networks, Polymorph | Optional integration |
 
 Optional integrations are isolated and are not required for normal startup.
 
-Use the matching Thunderbolt build from its `1.20.1_GTL` branch with crafting-planner injection, prepared batch admission, and the default Radium NBT compatibility fix. The Maven coordinate is `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.3-beta4`. Before a development build, publish the matching dependency to your local Maven repository; this project resolves `mavenLocal()` first. Keep the GTL artifact coordinate separate from ordinary Forge builds so their mapped caches cannot overwrite one another.
+Useless Mod 20.2.4.10 requires Forge 47.3.10+ and LDLib `>=1.0.52.a,<1.0.53` when used with this addon. The default development dependencies remain on the GTL baseline; use a matching dependency profile for this optional integration.
+
+Use the matching Thunderbolt build from its `1.20.1_GTL` branch with crafting-planner injection, prepared batch admission, and the default Radium NBT compatibility fix. The Maven coordinate is `com.moakiee.thunderbolt:thunderbolt-reborn-forge-1.20.1-gtl:2.0.4`. Before a development build, publish the matching dependency to your local Maven repository; this project resolves `mavenLocal()` first. Keep the GTL artifact coordinate separate from ordinary Forge builds so their mapped caches cannot overwrite one another.
 
 ## Build
 
@@ -44,10 +46,10 @@ Use Java 17 and run:
 .\gradlew.bat test build
 ```
 
-The default build's distributable artifact is `build/libs/ae2lt-forge-1.20.1-gtl-2.1.2-beta.jar`.
+The default build's distributable artifact is `build/libs/ae2lt-forge-1.20.1-gtl-2.1.3-beta1.jar`.
 The `-slim.jar` artifact is an intermediate development artifact and must not be distributed.
 
-This build uses GTL network protocol `gtl-10`; update clients and servers together.
+This build uses GTL network protocol `15`; update clients and servers together.
 
 ## Public API
 

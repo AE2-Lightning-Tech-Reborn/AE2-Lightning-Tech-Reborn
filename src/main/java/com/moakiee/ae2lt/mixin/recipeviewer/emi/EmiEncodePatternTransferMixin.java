@@ -65,6 +65,7 @@ public abstract class EmiEncodePatternTransferMixin {
         String recipeId = "";
         var defaultAliases = new ArrayList<String>();
         var workstationAliases = new ArrayList<String>();
+        var machineIds = new ArrayList<String>();
         if (emiRecipe != null) {
             var category = emiRecipe.getCategory();
             if (category != null) {
@@ -80,6 +81,11 @@ public abstract class EmiEncodePatternTransferMixin {
                     var workstationStacks = workstation.getEmiStacks();
                     for (int s = workstationStacks.size() - 1; s >= 0; s--) {
                         var stack = workstationStacks.get(s);
+                        if (!stack.getItemStack().isEmpty()) {
+                            TianshuRecipeTransferContext.addDefaultAlias(machineIds,
+                                    net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                            .getKey(stack.getItemStack().getItem()).toString());
+                        }
                         if (stack.getName() != null) {
                             TianshuRecipeTransferContext.addDefaultAlias(
                                     workstationAliases, stack.getName().getString());
@@ -104,10 +110,10 @@ public abstract class EmiEncodePatternTransferMixin {
             // A real recipe type is more stable and semantically precise than an EMI category.
             // Preserve category/workstation strings only as aliases for the right-hand field.
             TianshuRecipeTransferContext.captureVanillaRecipe(
-                    tianshuMenu, recipe, sourceKey, defaultAliases);
+                    tianshuMenu, recipe, sourceKey, defaultAliases, machineIds);
         } else {
             TianshuRecipeTransferContext.publish(
-                    tianshuMenu, sourceKey, recipeId, defaultAliases);
+                    tianshuMenu, sourceKey, recipeId, defaultAliases, machineIds);
         }
     }
 

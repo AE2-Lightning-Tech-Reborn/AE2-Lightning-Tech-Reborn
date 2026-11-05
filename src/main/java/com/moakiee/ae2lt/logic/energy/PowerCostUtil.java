@@ -36,15 +36,20 @@ public final class PowerCostUtil {
     private PowerCostUtil() {
     }
 
-    /** Pass-local lookup cache; never retains a balance or a stale grid's service. */
+    /** Owns prepaid transfer power, including refunds refused by a full grid. */
     public static final class EnergyAccess {
         private static final double BATCH_RESERVATION = 512.0;
         private IGrid grid;
         private IEnergyService service;
         private boolean batch;
+        private boolean refunding;
         private double storedEnergy;
         private double batchStartEnergy;
         private double batchMultiplier;
+        private double dismantleSnapshot;
+        private boolean dismantleDropsStarted;
+        /** Non-spendable receipt for recomputing this removal's loot. Never saved as owned power. */
+        private double dismantledEnergy;
 
         private IEnergyService resolve(@Nullable IGrid currentGrid) {
             if (currentGrid != grid) {
@@ -58,6 +63,7 @@ public final class PowerCostUtil {
 
         /** Prepay bounded chunks so inventory callbacks cannot spend the transfer's energy. */
         public void beginBatch(@Nullable IGrid currentGrid) {
+            clearDismantleHandoff();
             double initial = storedEnergy;
             endBatch();
             resolve(currentGrid);
@@ -74,7 +80,12 @@ public final class PowerCostUtil {
 
         private void refundBatch() {
             if (service != null && storedEnergy > 0.0) {
-                storedEnergy = service.injectPower(storedEnergy, Actionable.MODULATE);
+                refunding = true;
+                try {
+                    storedEnergy = service.injectPower(storedEnergy, Actionable.MODULATE);
+                } finally {
+                    refunding = false;
+                }
             }
         }
 
@@ -83,9 +94,58 @@ public final class PowerCostUtil {
             return storedEnergy;
         }
 
+        public boolean isBatchActive() {
+            return batch || refunding;
+        }
+
+        /**
+         * Snapshot settled power without spending a loot preview. Once the
+         * real drop stage retires its balance, repeated loot computations read
+         * the same non-spendable receipt, including player mining's later export.
+         */
+        public double exportDismantleEnergy() {
+            dismantleSnapshot = 0.0;
+            // A physical callback has not returned its receipt yet. Its later
+            // consume must remain the only owner of this active reservation.
+            if (isBatchActive()) return 0.0;
+            if (dismantledEnergy > 0.0) return dismantledEnergy;
+            dismantleSnapshot = storedEnergy;
+            return storedEnergy;
+        }
+
+        /** Commit once AE2 reaches its actual additional-drop stage. */
+        public void consumeDismantleDropHandoff() {
+            dismantleDropsStarted = true;
+            if (!isBatchActive() && dismantleSnapshot > 0.0 && storedEnergy == dismantleSnapshot) {
+                retireDismantleEnergy();
+            }
+            dismantleSnapshot = 0.0;
+        }
+
+        /** Player removal can reach addDrops before its first actual loot export. */
+        public void finishDismantleRemoval() {
+            if (dismantleDropsStarted && !isBatchActive()) retireDismantleEnergy();
+        }
+
+        private void retireDismantleEnergy() {
+            dismantledEnergy += storedEnergy;
+            storedEnergy = 0.0;
+            dismantleSnapshot = 0.0;
+            service = null;
+            grid = null;
+        }
+
+        private void clearDismantleHandoff() {
+            dismantleSnapshot = 0.0;
+            dismantleDropsStarted = false;
+            dismantledEnergy = 0.0;
+        }
+
         public void loadStoredEnergy(double energy) {
             storedEnergy = Double.isFinite(energy) ? Math.max(0.0, energy) : 0.0;
+            clearDismantleHandoff();
             batch = false;
+            refunding = false;
             service = null;
             grid = null;
         }

@@ -16,6 +16,8 @@ package com.moakiee.ae2lt.logic.energy;
  */
 public interface TargetAccess {
 
+    default com.moakiee.ae2lt.logic.management.PowerTelemetry.Target telemetryTarget() { return null; }
+
     /**
      * Returns how many FE this target would accept right now if asked for
      * {@code maxFe}. Must not mutate state. Implementations may clamp the
@@ -28,4 +30,7 @@ public interface TargetAccess {
      * were actually accepted. Mutates state.
      */
     long receive(long amountFe);
+
+    /** Exact, read-only FE storage observation when supported; unknown must not be represented as zero. */
+    default java.util.OptionalLong storedEnergyFe() { return java.util.OptionalLong.empty(); }
 }

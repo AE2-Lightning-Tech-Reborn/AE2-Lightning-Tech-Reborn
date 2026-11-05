@@ -25,7 +25,8 @@ public final class UselessModCompat {
     }
 
     public static boolean isLoaded() {
-        return ModList.get() != null && ModList.get().isLoaded("useless_mod");
+        return ModList.get() != null && ModList.get().isLoaded("useless_mod")
+                && BuiltInRegistries.ITEM.containsKey(PATTERN_ID);
     }
 
     public static boolean isOmniversalPattern(ItemStack stack) {

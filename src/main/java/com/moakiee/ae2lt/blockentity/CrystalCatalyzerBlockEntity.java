@@ -34,7 +34,6 @@ import org.jetbrains.annotations.Nullable;
 import appeng.api.config.Actionable;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
-import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.IStackWatcher;
 import appeng.api.networking.IManagedGridNode;
 import appeng.api.networking.security.IActionHost;
@@ -49,8 +48,6 @@ import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.util.AECableType;
 import appeng.blockentity.grid.AENetworkBlockEntity;
-import appeng.me.ManagedGridNode;
-import appeng.me.helpers.BlockEntityNodeListener;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocator;
 import appeng.me.ManagedGridNode;
@@ -108,6 +105,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     public static FluidStack getFixedFluidPerCycle() {
         return CrystalCatalyzerRecipe.defaultFluidInput();
     }
+
     private Mode mode = Mode.CRYSTAL;
 
     private final CrystalCatalyzerInventory inventory =
@@ -665,6 +663,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
         }
 
         if (!lockedRecipe.matchesFluidInput(candidate.recipe())
+                || !lockedRecipe.matchesHarvestOutput(candidate.recipe())
                 || (isPigmeeVariant() && !candidate.recipe().isWaterRecipe())) {
             return false;
         }

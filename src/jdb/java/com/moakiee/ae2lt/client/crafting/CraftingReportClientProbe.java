@@ -172,7 +172,7 @@ public final class CraftingReportClientProbe {
                                     + "fresh request reset; medium=210px/5 rows, 4 style buttons, "
                                     + "optional Crafting Tree routing, JEI item/fluid bookmarks, native missing popup and retry.");
                     done = true;
-                    mc.stop();
+                    com.moakiee.ae2lt.debug.CoverageClientSequence.finish("craftReportProbe");
                 }
                 default -> throw new AssertionError("phase " + phase);
             }

@@ -1,0 +1,60 @@
+// Run with: ./gradlew -I scripts/interface-energy-lifecycle-test.init.gradle runGameTestServer
+// Optional: -Pae2ltInterfaceEnergyRunDirectory=<run-directory>
+// This focused entry does not alter the default build or require an external log-capture runner.
+allprojects {
+    afterEvaluate {
+        def runDirectory = project.file(findProperty('ae2ltInterfaceEnergyRunDirectory')
+                ?: 'run-gametest/interface-energy-lifecycle')
+        def resultFile = new File(runDirectory, 'interface-energy-lifecycle-result.json')
+        def fixtureRoot = layout.buildDirectory.dir('interface-energy-lifecycle/fixtures').get().asFile
+        def fixtureClasses = new File(fixtureRoot, 'classes')
+        def fixtureResources = new File(fixtureRoot, 'resources')
+        sourceSets.jdb.java.setIncludes(['**/blockentity/InterfaceEnergyLifecycleGameTests.java'])
+        sourceSets.jdb.resources.setIncludes(['data/ae2lt_interface_ae/structures/empty.nbt'])
+        sourceSets.jdb.output.classesDirs.setFrom(fixtureClasses)
+        sourceSets.jdb.output.resourcesDir = fixtureResources
+        tasks.named('compileJdbJava').configure { destinationDirectory.set(fixtureClasses) }
+        tasks.named('processJdbResources').configure { destinationDir = fixtureResources }
+        minecraft.runs.gameTestServer {
+            workingDirectory runDirectory
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_interface_ae'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        // ForgeGradle creates run tasks after project evaluation.
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            long startedAt = 0L
+            doFirst {
+                startedAt = System.currentTimeMillis()
+                runDirectory.mkdirs()
+                resultFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                        status: 'RUNNING', startedAtEpochMillis: startedAt,
+                        expectedTestCount: 9, namespace: 'ae2lt_interface_ae'
+                ]))
+            }
+            doLast {
+                def latest = new File(runDirectory, 'logs/latest.log')
+                if (!latest.isFile() || latest.lastModified() < startedAt) {
+                    throw new GradleException('Missing fresh native interface energy lifecycle log: ' + latest)
+                }
+                def log = latest.getText('UTF-8')
+                def registrations = (log =~ /([0-9]+) tests are now running!/).collect { it[1] as int }
+                if (registrations != [9]) {
+                    throw new GradleException('Expected exactly nine interface energy lifecycle registrations, observed ' + registrations)
+                }
+                def completions = (log =~ /All ([0-9]+) required tests passed/).collect { it[1] as int }
+                if (completions != [9]) {
+                    throw new GradleException('Expected exactly nine required interface energy lifecycle passes, observed ' + completions)
+                }
+                resultFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                        status: 'PASS', startedAtEpochMillis: startedAt,
+                        expectedTestCount: 9, namespace: 'ae2lt_interface_ae',
+                        observedRegistrationCounts: registrations,
+                        observedCompletionCounts: completions,
+                        log: latest.absolutePath,
+                        fixture: 'src/jdb/java/com/moakiee/ae2lt/blockentity/InterfaceEnergyLifecycleGameTests.java'
+                ]))
+            }
+        }
+    }
+}
