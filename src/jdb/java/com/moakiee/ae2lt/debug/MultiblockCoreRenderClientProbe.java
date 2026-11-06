@@ -59,6 +59,9 @@ public final class MultiblockCoreRenderClientProbe {
     private static int configTicks;
     private static boolean configChangeChecked;
     private static boolean deformationRequested;
+    private static int reloadStage;
+    private static int reloadTicks;
+    private static java.util.concurrent.CompletableFuture<Void> reload;
 
     @SubscribeEvent
     public static void tick(TickEvent.ClientTickEvent event) {
@@ -82,6 +85,7 @@ public final class MultiblockCoreRenderClientProbe {
             }
             if (!ready || ticks < 100) return;
             if (current == FIXTURES.size()) {
+                if (Boolean.getBoolean("ae2lt.coreReloadCheck") && !verifyReload(mc)) return;
                 if (Boolean.getBoolean("ae2lt.coreShadersDisabled") && !configChangeChecked) {
                     var last = FIXTURES.get(FIXTURES.size() - 1);
                     if (configTicks++ == 0) {
@@ -158,6 +162,38 @@ public final class MultiblockCoreRenderClientProbe {
             failure.printStackTrace();
             finish(mc, "FAIL: " + failure);
         }
+    }
+
+    private static boolean verifyReload(Minecraft mc) throws Exception {
+        if (reloadStage >= 6) return true;
+        var fixture = FIXTURES.get(FIXTURES.size() - 1);
+        var setting = AE2LTClientConfig.class.getDeclaredField("DISABLE_CORE_SHADER_RENDERING");
+        setting.setAccessible(true);
+        var value = (net.minecraftforge.common.ForgeConfigSpec.BooleanValue) setting.get(null);
+        if (reload == null) {
+            value.set(reloadStage == 0 || reloadStage == 4);
+            System.out.println("CORE_RELOAD_BEGIN stage=" + reloadStage + " disabled=" + value.get());
+            reload = mc.reloadResourcePacks();
+            return false;
+        }
+        if (!reload.isDone() || mc.getOverlay() != null) return false;
+        reload.join();
+        if (reloadTicks++ == 0) {
+            instrument(mc);
+            resetCounters(fixture.pos());
+        }
+        if (reloadTicks < 40) return false;
+        boolean fallbackExpected = reloadStage == 0 || reloadStage == 4;
+        check(GEOMETRY.getOrDefault(fixture.pos(), 0) > 0, "Resource reload lost core geometry at stage " + reloadStage);
+        check((FALLBACK.getOrDefault(fixture.pos(), 0) > 0) == fallbackExpected,
+                "Resource reload picked the wrong shader at stage " + reloadStage);
+        System.out.println("CORE_RELOAD_PASS stage=" + reloadStage + " buffers="
+                + GEOMETRY.getOrDefault(fixture.pos(), 0) + " fallback=" + FALLBACK.getOrDefault(fixture.pos(), 0));
+        // Repeated native reloads must also refresh the shader supplied by the existing render types.
+        reloadStage++;
+        reloadTicks = 0;
+        reload = null;
+        return reloadStage >= 6;
     }
 
     private static void resetCounters(BlockPos pos) {

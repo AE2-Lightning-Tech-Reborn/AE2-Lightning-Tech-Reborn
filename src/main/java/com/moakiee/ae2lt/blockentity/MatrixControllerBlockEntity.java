@@ -33,6 +33,7 @@ import com.moakiee.ae2lt.logic.persistence.ControllerMachineIdentity;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData.MachineType;
 import com.moakiee.ae2lt.logic.persistence.CompletePhysicalStorageSet;
+import com.moakiee.ae2lt.logic.persistence.MultiblockRenderCleanupSavedData;
 import com.moakiee.ae2lt.network.MatrixControllerActionPacket;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -1102,15 +1103,24 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     // Toggle FORMED on connected-texture matrix blocks. Client-only update.
     private void setConnectedTextureFormed(BlockPos pos, boolean formedValue) {
-        if (level == null || !level.isLoaded(pos)) {
+        if (level == null) return;
+        if (!level.isLoaded(pos)) {
+            if (!formedValue && level instanceof ServerLevel serverLevel) {
+                MultiblockRenderCleanupSavedData.get(serverLevel).defer(pos);
+            }
             return;
+        }
+        if (formedValue && level instanceof ServerLevel serverLevel) {
+            var cleanup = MultiblockRenderCleanupSavedData.getIfPresent(serverLevel);
+            if (cleanup != null) cleanup.cancel(pos);
         }
         BlockState state = level.getBlockState(pos);
         if (state.getBlock() instanceof MatrixMultiblockComponentBlock componentBlock
                 && componentBlock.matrixComponent(state) != MatrixMultiblockComponent.MATRIX_CONTROLLER
                 && state.hasProperty(MatrixFormedBlock.FORMED)
                 && state.getValue(MatrixFormedBlock.FORMED) != formedValue) {
-            level.setBlock(pos, state.setValue(MatrixFormedBlock.FORMED, formedValue), Block.UPDATE_CLIENTS);
+            level.setBlock(pos, state.setValue(MatrixFormedBlock.FORMED, formedValue),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
     }
 
