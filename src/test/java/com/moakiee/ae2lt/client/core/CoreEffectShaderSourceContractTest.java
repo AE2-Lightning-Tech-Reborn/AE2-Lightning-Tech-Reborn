@@ -3,8 +3,11 @@ package com.moakiee.ae2lt.client.core;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +15,22 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class CoreEffectShaderSourceContractTest {
+    @Test
+    void nativeShaderAttributesMatchTheVertexBufferLayout() throws Exception {
+        var expected = DefaultVertexFormat.POSITION_COLOR_NORMAL.getElementAttributeNames().stream()
+                .filter(name -> !name.equals("Padding"))
+                .toList();
+        var directory = Path.of("src/main/resources/assets/ae2lt/shaders/core/multiblock");
+        for (var shader : List.of("tianshu_core.json", "matrix_core.json")) {
+            var definition = JsonParser.parseString(Files.readString(directory.resolve(shader))).getAsJsonObject();
+            var attributes = definition.getAsJsonArray("attributes");
+            assertNotNull(attributes, shader + " must enable explicit attribute binding in Minecraft 1.20.1");
+            var actual = new java.util.ArrayList<String>();
+            attributes.forEach(attribute -> actual.add(attribute.getAsString()));
+            assertEquals(expected, actual, shader + " must match the position/color/normal buffer layout");
+        }
+    }
+
     @Test
     void buildAndMetadataDeclareVeilAsOptional() throws Exception {
         String build = Files.readString(Path.of("build.gradle"));

@@ -1,6 +1,7 @@
 {
   "vertex": "ae2lt:multiblock/core",
   "fragment": "ae2lt:multiblock/tianshu_core",
+  "attributes": ["Position", "Color", "Normal"],
   "samplers": [],
   "uniforms": [
     {
