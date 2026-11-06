@@ -1,0 +1,24 @@
+// ./gradlew -I scripts/interface-subnet-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OverloadedInterfaceSubnetGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics')
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/interface-subnet-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_interface_input'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+            jvmArgs '-Xms256m', '-Xmx2g'
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = project.file('build/interface-subnet-gametest/logs/latest.log')
+                if (!log.isFile() || !log.text.contains('All 1 required tests passed')) {
+                    throw new GradleException('Expected the interface subnet test to run and pass')
+                }
+            }
+        }
+    }
+}
