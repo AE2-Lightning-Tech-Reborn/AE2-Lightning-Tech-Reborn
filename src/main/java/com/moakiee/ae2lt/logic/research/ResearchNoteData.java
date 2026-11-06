@@ -36,11 +36,6 @@ public record ResearchNoteData(
         return !tag.contains(TAG_GOAL, Tag.TAG_STRING);
     }
 
-    public static boolean isConsumed(ItemStack stack) {
-        ResearchNoteData data = read(stack);
-        return data != null && data.consumed();
-    }
-
     public static @Nullable ResearchNoteData read(ItemStack stack) {
         CompoundTag tag = ItemStackTagSupport.getTagCopy(stack);
         if (!tag.contains(TAG_GOAL, Tag.TAG_STRING)) {

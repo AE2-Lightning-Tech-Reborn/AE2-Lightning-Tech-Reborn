@@ -96,7 +96,9 @@ public class ResearchNoteItem extends AE2LTItem {
     }
 
     public static boolean isUsableGeneratedNote(ItemStack stack) {
-        return stack.getItem() instanceof ResearchNoteItem && isGenerated(stack) && !ResearchNoteData.isConsumed(stack);
+        if (!(stack.getItem() instanceof ResearchNoteItem)) return false;
+        ResearchNoteData data = ResearchNoteData.read(stack);
+        return data != null && !data.consumed();
     }
 
     public static boolean isGenerated(ItemStack stack) {

@@ -17,7 +17,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 @GameTestHolder("ae2lt_matrix_warehouse")
 @PrefixGameTestTemplate(false)
 public final class MatrixWarehouseGameTests {
-    @GameTest(templateNamespace = "ae2lt_migration", template = "migration_test", timeoutTicks = 200)
+    @GameTest(templateNamespace = "ae2lt_matrix_warehouse", template = "migration_test", timeoutTicks = 200)
     public static void warehousesAdvertiseTheirOwnPatternsAndMenuSwitchesPhysicalInventories(GameTestHelper h) {
         var fixture = PatternMigrationGameTests.build(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 2)));
         h.runAfterDelay(50, () -> {
@@ -62,7 +62,7 @@ public final class MatrixWarehouseGameTests {
         });
     }
 
-    @GameTest(templateNamespace = "ae2lt_migration", template = "migration_test", timeoutTicks = 200)
+    @GameTest(templateNamespace = "ae2lt_matrix_warehouse", template = "migration_test", timeoutTicks = 200)
     public static void upgradeToT3PreservesPatternsAndSavesTheLastPhysicalSlot(GameTestHelper h) {
         var fixture = PatternMigrationGameTests.build(h.getLevel(), h.absolutePos(new BlockPos(2, 1, 2)));
         h.runAfterDelay(50, () -> {

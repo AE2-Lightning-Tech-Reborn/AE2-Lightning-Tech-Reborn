@@ -1,24 +1,33 @@
 allprojects {
     afterEvaluate {
         boolean withAppFlux = providers.gradleProperty('providerAppFlux').getOrElse('true').toBoolean()
-        def directory = project.file('build/provider-panels-client-' + (withAppFlux ? 'appflux' : 'plain'))
+        boolean withWtlib = providers.gradleProperty('providerWtlib').getOrElse('false').toBoolean()
+        def directory = project.file('build/provider-panels-client-' + (withAppFlux ? 'appflux' : 'plain')
+                + (withWtlib ? '-wtlib' : ''))
         sourceSets.jdb.java.setIncludes(['**/ProviderPanelsClientProbe.java'])
         configurations.runtimeOnly.dependencies.removeIf { dep ->
             !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics'
                     || dep.group == 'curse.maven' && (dep.name == 'glodium-957920'
-                    || withAppFlux && dep.name == 'applied-flux-965012'))
+                    || withAppFlux && dep.name == 'applied-flux-965012')
+                    || withWtlib && (dep.group in ['top.theillusivec4.curios', 'dev.architectury', 'me.shedaniel.cloth']
+                    || dep.group == 'maven.modrinth' && dep.name == 'applied-energistics-2-wireless-terminals'))
         }
         minecraft.runs.client {
             workingDirectory directory
             property 'ae2lt.providerPanelsProbe', 'true'
             mods { ae2lt { source sourceSets.jdb } }
             args '--quickPlaySingleplayer', 'ProviderQA'
+            jvmArgs '-Xms256m', '-Xmx1536m', '-XX:ActiveProcessorCount=4'
         }
         tasks.matching { it.name == 'runClient' }.configureEach {
             doFirst {
+                def seed = project.file('build/resource-redstone-gametest/world')
+                if (!new File(seed, 'level.dat').isFile()) {
+                    throw new GradleException('Run resource-redstone-test.init.gradle first to create the client test world')
+                }
                 directory.mkdirs()
                 project.copy {
-                    from project.file('build/resource-redstone-gametest/world')
+                    from seed
                     into new File(directory, 'saves/ProviderQA')
                     exclude 'session.lock'
                 }

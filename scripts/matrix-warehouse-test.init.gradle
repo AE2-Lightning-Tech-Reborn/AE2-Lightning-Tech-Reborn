@@ -9,5 +9,13 @@ allprojects {
             mods { ae2lt { source sourceSets.jdb } }
             jvmArgs '-Xms256m', '-Xmx1536m', '-XX:ActiveProcessorCount=4'
         }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = project.file('build/matrix-warehouse-gametest/logs/latest.log')
+                if (!log.isFile() || !log.text.contains('All 10 required tests passed')) {
+                    throw new GradleException('Expected two warehouse and eight deferred return tests to run and pass')
+                }
+            }
+        }
     }
 }

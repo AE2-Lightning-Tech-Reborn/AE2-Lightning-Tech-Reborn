@@ -10,7 +10,6 @@ import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
 
-import com.moakiee.ae2lt.logic.energy.AppFluxBridge;
 
 /**
  * Backwards-compatible helper facade for existing direct FE transfer call-sites.

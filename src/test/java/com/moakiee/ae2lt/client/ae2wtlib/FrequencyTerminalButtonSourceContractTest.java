@@ -23,7 +23,10 @@ class FrequencyTerminalButtonSourceContractTest {
         assertFalse(Files.readString(mixinSource).contains(
                 "@Mixin(value = AEBaseScreen.class, remap = false)"));
         assertTrue(Files.readString(mixinSource).contains(
-                "@Inject(method = \"updateBeforeRender\", at = @At(\"TAIL\"), require = 1, remap = false)"));
+                "@Inject(method = \"render\", at = @At(value = \"INVOKE\","));
+        assertTrue(Files.readString(mixinSource).contains(
+                "target = \"Lappeng/client/gui/WidgetContainer;updateBeforeRender()V\", remap = false), require = 1)"));
+        assertFalse(Files.readString(mixinSource).contains("@Inject(method = \"updateBeforeRender\""));
         assertTrue(mixinConfig.contains("\"package\": \"com.moakiee.ae2lt.mixin.ae2wtlib\""));
         assertTrue(mixinConfig.contains("\"client.AEBaseScreenFrequencyTerminalButtonMixin\""));
         assertFalse(Files.exists(Path.of(

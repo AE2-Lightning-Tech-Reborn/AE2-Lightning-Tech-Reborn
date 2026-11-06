@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.debug;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import appeng.client.gui.AEBaseScreen;
@@ -62,19 +63,27 @@ public final class ProviderPanelsClientProbe {
             var panelsField = WidgetContainer.class.getDeclaredField("compositeWidgets");
             panelsField.setAccessible(true);
             var panels = (Map<?, ?>) panelsField.get(widgetsField.get(screen));
-            if (!(panels.get("upgrades") instanceof UpgradesPanel panel)) {
+            var widget = panels.get("upgrades");
+            var expectedSlots = screen.getMenu().getSlots(SlotSemantics.UPGRADE);
+            if ((widget == null && !expectedSlots.isEmpty())
+                    || (widget != null && !(widget instanceof UpgradesPanel))) {
                 throw new AssertionError("Missing upgrades panel");
             }
-            var slots = ((UpgradesPanelAccessor) (Object) panel).ae2lt$getSlots();
+            if (ModList.get().isLoaded("appflux") && expectedSlots.isEmpty()) {
+                throw new AssertionError("Missing AppliedFlux induction upgrade slot");
+            }
+            var slots = widget == null ? List.<Slot>of()
+                    : ((UpgradesPanelAccessor) widget).ae2lt$getSlots();
             var identities = Collections.newSetFromMap(new IdentityHashMap<Slot, Boolean>());
             identities.addAll(slots);
             if (identities.size() != slots.size()
-                    || !identities.containsAll(screen.getMenu().getSlots(SlotSemantics.UPGRADE))) {
+                    || !identities.containsAll(expectedSlots)) {
                 throw new AssertionError("Shared panel duplicated or lost upgrade slots");
             }
             Files.writeString(mc.gameDirectory.toPath().resolve("provider-panels-result.txt"),
                     "PASS: provider screen rendered; unique upgrade slots=" + slots.size()
-                            + "; appflux=" + ModList.get().isLoaded("appflux") + "\n");
+                            + "; appflux=" + ModList.get().isLoaded("appflux")
+                            + "; ae2wtlib=" + ModList.get().isLoaded("ae2wtlib") + "\n");
             done = true;
             mc.stop();
         } catch (Throwable failure) {

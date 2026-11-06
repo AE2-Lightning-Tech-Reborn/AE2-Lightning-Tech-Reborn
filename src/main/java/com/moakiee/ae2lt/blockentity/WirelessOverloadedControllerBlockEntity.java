@@ -5,7 +5,6 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.pathing.ControllerState;
 import appeng.api.util.DimensionalBlockPos;
 
-import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
