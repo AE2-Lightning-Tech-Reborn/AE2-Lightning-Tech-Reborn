@@ -19,6 +19,7 @@ import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.MaintenanceEditorData;
 import com.moakiee.ae2lt.menu.TianshuMaintenanceMenu;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.network.tianshu.SaveMaintenanceRulePacket;
 import java.util.ArrayList;
 import java.util.List;
@@ -155,11 +156,11 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         graphics.drawString(font, Component.translatable(draft.data.ruleId() == null
                         ? "ae2lt.tianshu.maintenance.create_title"
                         : "ae2lt.tianshu.maintenance.edit_title"),
-                10, 9, 0x30343B, false);
+                10, 9, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         graphics.renderItem(draft.data.target().wrapForDisplayOrFilter(), 16, 32);
         graphics.drawString(font,
                 font.plainSubstrByWidth(draft.data.target().getDisplayName().getString(), 147),
-                39, 29, 0x30343B, false);
+                39, 29, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         var stockAndStatus = Component.translatable("ae2lt.tianshu.maintenance.stock_and_status",
                 compactAmount(draft.data.target(), draft.data.currentStock()),
                 Component.translatable(statusKey(draft.data.status())));
@@ -167,34 +168,34 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
                 39, 41, statusColor(draft.data.status()), false);
 
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.lower"),
-                10, 57, 0x505760, false);
+                10, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.upper"),
-                73, 57, 0x505760, false);
+                73, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.batch"),
-                137, 57, 0x505760, false);
+                137, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
 
         Component validationError = validationError();
         if (validationError != null) {
             graphics.drawString(font,
                     font.plainSubstrByWidth(validationError.getString(), 181),
-                    10, 116, 0xB22F36, false);
+                    10, 116, style.getColor(PaletteColor.ERROR).toARGB(), false);
         } else if (draft.data.recoveryPage()) {
             graphics.drawString(font,
                     Component.translatable("ae2lt.tianshu.maintenance.recovery_page"),
-                    10, 116, 0xA73535, false);
+                    10, 116, style.getColor(PaletteColor.ERROR).toARGB(), false);
         } else {
             graphics.drawString(font,
                     Component.translatable("ae2lt.tianshu.maintenance.topology"),
-                    10, 116, 0x5D646D, false);
+                    10, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.stock"),
-                    117, 116, 0x5D646D);
+                    117, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.global_short"),
-                    151, 116, 0x5D646D);
+                    151, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
             drawCentered(graphics,
                     Component.translatable("ae2lt.tianshu.maintenance.column.rule_short"),
-                    179, 116, 0x5D646D);
+                    179, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
         }
         drawTopology(graphics, mouseX - leftPos, mouseY - topPos);
     }
@@ -214,13 +215,13 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
             graphics.renderItem(entry.key.wrapForDisplayOrFilter(), 11 + indent, y + 1);
             graphics.drawString(font,
                     font.plainSubstrByWidth(entry.key.getDisplayName().getString(), 69 - indent),
-                    31 + indent, y + 4, entry.craftable ? 0x30343B : 0xA73535, false);
+                    31 + indent, y + 4, entry.craftable ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : style.getColor(PaletteColor.ERROR).toARGB(), false);
             drawRightAligned(graphics, Component.literal(compactAmount(entry.key, entry.storedAmount)),
-                    125, y + 4, 0x444B53);
+                    125, y + 4, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
             drawRightAligned(graphics, reserveText(entry.globalAmount, entry.globalMode),
-                    158, y + 4, entry.globalAmount == 0L ? 0x7A8087 : 0x245E91);
+                    158, y + 4, entry.globalAmount == 0L ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : 0x245E91);
             drawRightAligned(graphics, reserveText(entry.ruleAmount, entry.ruleMode),
-                    185, y + 4, entry.ruleAmount == 0L ? 0x7A8087 : 0x794D91);
+                    185, y + 4, entry.ruleAmount == 0L ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : 0x794D91);
         }
     }
 
@@ -606,23 +607,23 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
             graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.title"),
-                    10, 9, 0x30343B, false);
+                    10, 9, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             graphics.renderItem(reserve.key.wrapForDisplayOrFilter(), 16, 32);
             graphics.drawString(font,
                     font.plainSubstrByWidth(reserve.key.getDisplayName().getString(), 147),
-                    39, 35, 0x30343B, false);
+                    39, 35, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.current_stock",
-                    compactAmount(reserve.key, reserve.storedAmount)), 10, 83, 0x59616B, false);
+                    compactAmount(reserve.key, reserve.storedAmount)), 10, 83, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
             var amountLabel = Component.translatable("ae2lt.tianshu.reserve.amount");
             graphics.drawString(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
-                    10, 99, 0x40464E, false);
+                    10, 99, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
 
             var selectedMode = global ? globalMode : ruleMode;
             if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY) {
                 if (!variants.isEmpty()) {
                     graphics.drawString(font,
                             Component.translatable("ae2lt.tianshu.reserve.variant_title"),
-                            10, 116, 0x555D66, false);
+                            10, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
                     int start = scrollbar.getCurrentScroll();
                     int end = Math.min(variants.size(), start + VISIBLE_VARIANTS);
                     for (int index = start; index < end; index++) {
@@ -632,16 +633,16 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
                         graphics.drawString(font,
                                 font.plainSubstrByWidth(
                                         variant.key().getDisplayName().getString(), 112),
-                                33, y + 4, 0x3C434B, false);
+                                33, y + 4, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
                         String stock = compactAmount(variant.key(), variant.storedAmount());
                         graphics.drawString(font, stock, 185 - font.width(stock), y + 4,
-                                variant.craftable() ? 0x2F6D3C : 0x5C636B, false);
+                                variant.craftable() ? 0x2F6D3C : style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
                     }
                 } else {
                     var emptyText = Component.translatable(
                             "ae2lt.tianshu.reserve.variant_empty");
                     graphics.drawString(font, emptyText,
-                            98 - font.width(emptyText) / 2, 156, 0x5D646D, false);
+                            98 - font.width(emptyText) / 2, 156, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
                 }
             }
         }

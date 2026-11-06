@@ -14,6 +14,7 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.style.Blitter;
 import com.moakiee.ae2lt.client.gui.AE2Button;
+import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.IconButton;
@@ -228,7 +229,8 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         pose.translate(x + CONTROL_X, y + labelY, 0);
         pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
         graphics.drawString(font, font.plainSubstrByWidth(
-                text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0, 0x404040, false);
+                text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0,
+                screen.getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         pose.popPose();
     }
 
@@ -354,7 +356,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
             case SeedRefillSync.STATE_UNAVAILABLE -> 0xAA2222;
             default -> switch (menu.closedLoopDraftStatus) {
                 case VALID, ENCODED -> 0x228822;
-                case EMPTY, NO_CANDIDATE -> 0x666666;
+                case EMPTY, NO_CANDIDATE -> screen.getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
                 case MISSING_PRIMARY_OUTPUT -> 0xAA7700;
                 default -> 0xAA2222;
             };

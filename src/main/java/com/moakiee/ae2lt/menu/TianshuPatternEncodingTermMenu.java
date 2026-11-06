@@ -71,6 +71,7 @@ import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.config.Settings;
 import appeng.api.config.ViewItems;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetGroupMatcher;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
 import com.moakiee.ae2lt.network.tianshu.ClosedLoopResultPagePacket;
 import com.moakiee.ae2lt.network.tianshu.RequestClosedLoopResultPagePacket;
@@ -198,8 +199,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private boolean pendingDirectUpload;
     private int pendingTriggeredUploadUntil;
     private int expectedTriggeredUploadAck;
-    private boolean directUploadTargetsRequested;
-    private int expectedDirectUploadTargetRevision;
+    private boolean encodedUploadTargetsRequested;
+    private int expectedEncodedUploadTargetRevision;
     private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo =
             new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo();
     /** Prevents a committed encoding result from being mistaken for a manually inserted pattern. */
@@ -213,7 +214,6 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private final appeng.menu.slot.FakeSlot[] omniversalOutputSlots;
     private final appeng.menu.slot.FakeSlot[] omniversalMoldSlots;
     private boolean omniversalBulkUpdating;
-
 
     public TianshuPatternEncodingTermMenu(
             int id, Inventory inventory, TianshuPatternTerminalHost host) {
@@ -433,10 +433,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         return pendingTriggeredUpload && triggeredUploadAck != expectedTriggeredUploadAck;
     }
 
-    public boolean hasFreshDirectUploadTargets() {
+    public boolean hasFreshUploadTargetsAfterEncoding() {
         return isClientSide()
-                && directUploadTargetsRequested
-                && uploadTargetsRevision != expectedDirectUploadTargetRevision;
+                && encodedUploadTargetsRequested
+                && uploadTargetsRevision != expectedEncodedUploadTargetRevision;
     }
 
     /**
@@ -444,11 +444,11 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
      * Availability depends on the encoded stack, so a request sent before encoding would report
      * every provider as unwritable when the result slot was initially empty.
      */
-    public boolean requestDirectUploadTargetsAfterEncoding() {
-        if (!isClientSide() || !hasPendingDirectUpload() || !hasTriggeredUploadAck()) return false;
-        if (!directUploadTargetsRequested) {
-            expectedDirectUploadTargetRevision = uploadTargetsRevision;
-            directUploadTargetsRequested = true;
+    public boolean requestUploadTargetsAfterEncoding() {
+        if (!isClientSide() || !hasTriggeredUploadAck()) return false;
+        if (!encodedUploadTargetsRequested) {
+            expectedEncodedUploadTargetRevision = uploadTargetsRevision;
+            encodedUploadTargetsRequested = true;
             requestUploadTargets();
         }
         return true;
@@ -457,7 +457,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean consumeDirectUploadRequest() {
         boolean direct = pendingDirectUpload;
         pendingDirectUpload = false;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
         return direct;
     }
 
@@ -466,7 +466,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (!isClientSide()) return;
         pendingTriggeredUpload = false;
         pendingDirectUpload = false;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
     }
 
     public void clearClientUploadSelectionState() {
@@ -480,7 +480,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         if (pendingTriggeredUpload && getPlayer().tickCount > pendingTriggeredUploadUntil) {
             pendingTriggeredUpload = false;
             pendingDirectUpload = false;
-            directUploadTargetsRequested = false;
+            encodedUploadTargetsRequested = false;
         }
     }
 
@@ -1390,8 +1390,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             var target = binding.target();
             if (activeTargets.stream().noneMatch(active -> active == target)) continue;
             try {
+                // The request still selects the exact captured group and provider/slot.
+                // Animated name/tooltip styles must not invalidate that same provider.
                 if (target.getGrid() != grid || !target.isVisibleInTerminal()
-                        || !target.getTerminalGroup().equals(group)) continue;
+                        || !TianshuUploadTargetGroupMatcher.matches(group, target.getTerminalGroup())) continue;
                 var inventory = target.getTerminalPatternInventory();
                 int slot = binding.slot();
                 if (slot < 0 || slot >= inventory.size()
@@ -2245,7 +2247,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
         pendingDirectUpload = triggerUpload && directUpload;
         pendingTriggeredUploadUntil = getPlayer().tickCount + 200;
         expectedTriggeredUploadAck = triggeredUploadAck;
-        directUploadTargetsRequested = false;
+        encodedUploadTargetsRequested = false;
         // Duplicate interception belongs to the upload flow. In the default NO_SHIFT mode,
         // holding Shift therefore bypasses both upload and duplicate interception while still
         // allowing the pattern to be encoded normally.

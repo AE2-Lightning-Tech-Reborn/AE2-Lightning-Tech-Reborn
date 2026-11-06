@@ -4,6 +4,7 @@ import appeng.client.gui.AEBaseScreen;
 import net.minecraft.client.gui.components.Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.UploadAliasRecords;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -127,10 +128,10 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
     @Override
     public void drawFG(GuiGraphics g, int x, int y, int mx, int my) {
         super.drawFG(g, x, y, mx, my);
-        g.drawString(font, heading, 7, 6, 0x252525, false);
+        g.drawString(font, heading, 7, 6, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         Component message = footerMessage();
         g.drawString(font, font.plainSubstrByWidth(message.getString(), imageWidth - 16),
-                8, imageHeight - 39, save.active ? 0x404040 : 0xa02020, false);
+                8, imageHeight - 39, save.active ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : style.getColor(PaletteColor.ERROR).toARGB(), false);
     }
 
     private Component footerMessage() {

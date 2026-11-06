@@ -1,0 +1,36 @@
+allprojects {
+    afterEvaluate {
+        boolean withAppFlux = providers.gradleProperty('providerAppFlux').getOrElse('true').toBoolean()
+        def directory = project.file('build/provider-panels-client-' + (withAppFlux ? 'appflux' : 'plain'))
+        sourceSets.jdb.java.setIncludes(['**/ProviderPanelsClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == 'com.moakiee.thunderbolt' || dep.group == 'org.appliedenergistics'
+                    || dep.group == 'curse.maven' && (dep.name == 'glodium-957920'
+                    || withAppFlux && dep.name == 'applied-flux-965012'))
+        }
+        minecraft.runs.client {
+            workingDirectory directory
+            property 'ae2lt.providerPanelsProbe', 'true'
+            mods { ae2lt { source sourceSets.jdb } }
+            args '--quickPlaySingleplayer', 'ProviderQA'
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                directory.mkdirs()
+                project.copy {
+                    from project.file('build/resource-redstone-gametest/world')
+                    into new File(directory, 'saves/ProviderQA')
+                    exclude 'session.lock'
+                }
+                new File(directory, 'provider-panels-result.txt').delete()
+                new File(directory, 'options.txt').text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:2\nsimulationDistance:2\nmaxFps:60\n'
+            }
+            doLast {
+                def result = new File(directory, 'provider-panels-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS:')) {
+                    throw new GradleException(result.isFile() ? result.text : 'Provider panel client probe did not complete')
+                }
+            }
+        }
+    }
+}

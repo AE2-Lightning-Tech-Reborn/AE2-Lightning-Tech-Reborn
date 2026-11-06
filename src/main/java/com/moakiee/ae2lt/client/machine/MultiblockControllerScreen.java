@@ -1,6 +1,8 @@
 package com.moakiee.ae2lt.client.machine;
 
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 import java.util.Locale;
 
@@ -28,14 +30,14 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
     protected static final int FOOTER_ROW_Y = 138;
     protected static final int FOOTER_MID_Y = 144;
 
-    protected static final int COL_TITLE = 0x2A2E3F;
-    protected static final int COL_LABEL = 0x4E5370;
-    protected static final int COL_VALUE = 0x14161F;
-    protected static final int COL_MUTED = 0x565C78;
     protected static final int COL_GREEN = 0x1C6B34;
     protected static final int COL_AMBER = 0x7A5E14;
     protected static final int COL_RED = 0x8F2B23;
     protected static final int COL_BLUE = 0x1F4E79;
+
+    protected static int textColor() {
+        return AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR);
+    }
 
     protected MultiblockControllerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -58,7 +60,7 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
     }
 
     protected void drawTitle(GuiGraphics guiGraphics) {
-        guiGraphics.drawString(font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
+        guiGraphics.drawString(font, title, TEXT_X - 4, TITLE_Y, textColor(), false);
     }
 
     /** Status strip line with an indicator dot, inside the upper recess. */
@@ -69,13 +71,13 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
 
     /** Data row: label on the left, value right-aligned. */
     protected void drawRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
+        guiGraphics.drawString(font, label, TEXT_X, y, textColor(), false);
         guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
     }
 
     /** A longer summary uses a second line so translated labels never overlap its value. */
     protected void drawStackedRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
+        guiGraphics.drawString(font, label, TEXT_X, y, textColor(), false);
         guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y + LINE_H, valueColor, false);
     }
 
@@ -87,7 +89,7 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
             y += 11;
         }
         guiGraphics.drawString(font, Component.translatable(hintKey),
-                TEXT_X, y - 11 + HINT_GAP, COL_MUTED, false);
+                TEXT_X, y - 11 + HINT_GAP, textColor(), false);
     }
 
     /** Footer gauge: recessed frame, quarter ticks, beveled fill; markLo/markHi < 0 hides the target zone. */

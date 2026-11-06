@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import appeng.client.gui.widgets.AETextField;
 import appeng.client.gui.widgets.TabButton;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -99,7 +100,7 @@ abstract class TianshuUploadAliasScreen<M extends MEStorageMenu> extends AESubSc
 
     @Override
     public void drawFG(GuiGraphics g, int x, int y, int mouseX, int mouseY) {
-        g.drawString(font, clipped(heading.getString(), imageWidth - 42), 10, 7, 0x2A2E3F, false);
+        g.drawString(font, clipped(heading.getString(), imageWidth - 42), 10, 7, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 
     @Override

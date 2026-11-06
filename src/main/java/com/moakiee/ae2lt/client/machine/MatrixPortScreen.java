@@ -26,6 +26,8 @@ import net.minecraft.world.item.ItemStack;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.core.localization.GuiText;
+import appeng.client.gui.style.PaletteColor;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.MatrixPortMenu;
@@ -109,9 +111,9 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
                 Component.translatable("ae2lt.gui.matrix_port.search"));
         searchField.setBordered(false);
         searchField.setMaxLength(64);
-        searchField.setTextColor(0xF2F2F2);
+        searchField.setTextColor(AE2GuiPalette.color(PaletteColor.TEXTFIELD_TEXT));
         searchField.setHint(GuiText.SearchPlaceholder.text().copy().setStyle(
-                Style.EMPTY.withColor(TextColor.fromRgb(0xDEDFE3))));
+                Style.EMPTY.withColor(TextColor.fromRgb(AE2GuiPalette.color(PaletteColor.TEXTFIELD_PLACEHOLDER)))));
         searchField.setResponder(ignored -> refreshList(true));
         addRenderableWidget(searchField);
         setInitialFocus(searchField);
@@ -150,13 +152,13 @@ public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (migration != null) migration.render(graphics, font, 13, 129, 162, 0x404040);
+        if (migration != null) migration.render(graphics, font, 13, 129, 162, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR));
         graphics.drawString(
                 font,
                 Component.translatable("ae2lt.gui.matrix_port.title"),
                 7,
                 7,
-                0x404040,
+                AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR),
                 false);
     }
 

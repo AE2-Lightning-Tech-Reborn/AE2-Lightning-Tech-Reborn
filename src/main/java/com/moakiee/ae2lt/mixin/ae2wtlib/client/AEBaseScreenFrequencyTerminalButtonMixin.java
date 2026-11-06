@@ -41,7 +41,8 @@ public abstract class AEBaseScreenFrequencyTerminalButtonMixin {
         }
     }
 
-    @Inject(method = "updateBeforeRender", at = @At("TAIL"), require = 1, remap = false)
+    @Inject(method = "render", at = @At(value = "INVOKE",
+            target = "Lappeng/client/gui/WidgetContainer;updateBeforeRender()V", remap = false), require = 1)
     private void ae2lt$updateFrequencyTerminalButtons(CallbackInfo ci) {
         var screen = (AEBaseScreen<?>) (Object) this;
         if (ae2lt$frequencyTerminalButtons != null) {

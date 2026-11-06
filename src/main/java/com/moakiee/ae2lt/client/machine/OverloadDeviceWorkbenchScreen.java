@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client.machine;
 
+import appeng.client.gui.style.PaletteColor;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
@@ -12,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<OverloadDeviceWorkbenchMenu> {
 
@@ -22,7 +24,6 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 245;
 
-    private static final int TEXT_ON_LIGHT_BG = 0xFF6E748C;
     private static final int TEXT_ON_DARK_BG = 0xFFFFFFFF;
 
     private static final int STATUS_X = 44;
@@ -136,7 +137,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         Component header = Component.translatable(
                 "ae2lt.overload_device_workbench.screen.module_types",
                 modules.size());
-        gfx.drawString(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+        gfx.drawString(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
 
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             int moduleIndex = scrollOffset + row;
@@ -158,7 +159,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
             String amount = cap > 0 ? "x" + stack.getCount() + "/" + cap : "x" + stack.getCount();
             int amountWidth = font.width(amount);
             int amountX = REMOVE_BUTTON_X - amountWidth - 4;
-            int rowTextColor = hovered ? TEXT_ON_LIGHT_BG : TEXT_ON_DARK_BG;
+            int rowTextColor = hovered ? AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR) : TEXT_ON_DARK_BG;
             gfx.drawString(font, Component.literal(amount),
                     leftPos + amountX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
 
@@ -234,8 +235,8 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     @Override
     protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
         gfx.drawString(font, Component.translatable("block.ae2lt.overload_device_workbench"),
-                42, 6, TEXT_ON_LIGHT_BG, false);
-        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, TEXT_ON_LIGHT_BG, false);
+                42, 6, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
+        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
     }
 
     @Override

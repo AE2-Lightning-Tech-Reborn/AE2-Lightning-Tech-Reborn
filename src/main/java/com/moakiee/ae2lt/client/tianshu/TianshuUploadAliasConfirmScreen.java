@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client.tianshu;
 import appeng.client.gui.AEBaseScreen;
 import net.minecraft.client.gui.components.Button;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.client.gui.style.PaletteColor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
@@ -41,6 +42,6 @@ final class TianshuUploadAliasConfirmScreen<M extends MEStorageMenu> extends Tia
         int count = Math.max(1, (imageHeight - 64) / font.lineHeight);
         scroll = Math.min(scroll, Math.max(0, lines.size() - count));
         for (int row = 0; row < count && row + scroll < lines.size(); row++)
-            g.drawString(font, lines.get(row + scroll), 8, 30 + row * font.lineHeight, 0x252525, false);
+            g.drawString(font, lines.get(row + scroll), 8, 30 + row * font.lineHeight, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 }

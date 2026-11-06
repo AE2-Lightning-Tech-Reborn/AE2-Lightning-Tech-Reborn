@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client.hub;
 import com.moakiee.ae2lt.network.NetworkInit;
 
+import appeng.client.gui.style.PaletteColor;
 import java.util.List;
 
 import net.minecraft.client.gui.Font;
@@ -22,6 +23,7 @@ import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
 import com.moakiee.ae2lt.network.hub.DeviceHubActionPacket;
 import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 import com.moakiee.ae2lt.registry.ModItems;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
@@ -33,7 +35,6 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 223;
 
-    private static final int TEXT_ON_LIGHT_BG = 0xFF6E748C;
     private static final int TEXT_ON_DARK_BG = 0xFFFFFFFF;
     private static final int ROW_HOVER = 0x304D4D67;
     private static final int ROW_SELECTED = 0x404D4D67;
@@ -249,7 +250,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         List<Boolean> moduleEnabled = menu.getModuleEnabled();
 
         gfx.drawString(font, Component.translatable("ae2lt.device_hub.modules"),
-                leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+                leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
 
         scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
                 scrollOffset, moduleNameKeys.size(), MODULE_VISIBLE_ROWS);
@@ -314,7 +315,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
         gfx.drawString(font, Component.translatable("ae2lt.celestweave.screen.module_options"),
-                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
         int count = moduleConfigCount();
         if (count <= 0) {
             return;
@@ -344,7 +345,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         int x = leftPos + CONFIG_ROW_X;
         int y = topPos + CONFIG_Y;
         gfx.drawString(font, Component.translatable("ae2lt.device_hub.settings"),
-                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, TEXT_ON_LIGHT_BG, false);
+                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
 
         configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
                 configScrollOffset, railgunSettingCount(), CONFIG_VISIBLE_ROWS);

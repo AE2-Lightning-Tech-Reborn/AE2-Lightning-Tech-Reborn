@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.client.gui;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.Blitter;
+import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import com.moakiee.ae2lt.client.gui.AE2Button;
 import appeng.client.gui.widgets.AETextField;
@@ -39,10 +40,7 @@ import org.lwjgl.glfw.GLFW;
 
 /** AE2's generated chassis, text field, tabs, buttons, scrollbar and palette. */
 public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagementMenu> {
-    private static final int COL_PRIMARY = 0xFF14161F;
-    private static final int COL_SECONDARY = 0xFF3E445B;
     private static final int COL_MUTED = 0xFF4A5068;
-    private static final int COL_WELL_HINT = 0xFF363C52;
     private static final int COL_RATE = 0xFF144673;
     private static final int COL_LOADED = 0xFF1C6B34;
     private static final int COL_UNLOADED = 0xFF8F2B23;
@@ -344,13 +342,13 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         int wellCenterY = 66 + (105 - 8) / 2;
         if (searchTooBroad) {
             Component msg = tr("search_too_broad");
-            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_WELL_HINT, false);
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, textColor(), false);
         } else if (!error.isEmpty()) {
             Component msg = Component.translatable("ae2lt.wireless_energy." + error);
             graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_UNLOADED, false);
         } else if (snapshot != null && snapshot.rows().isEmpty()) {
             Component msg = tr("empty");
-            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, COL_WELL_HINT, false);
+            graphics.drawString(font, msg, wellCenterX - font.width(msg) / 2, wellCenterY, textColor(), false);
         }
 
         var selectedRow = selection();
@@ -361,9 +359,9 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
         int selectionBoxWidth = 138;
         if (selectedRow != null) {
             graphics.fill(9, footerTop + 5, 14, footerTop + 10, 0xFF1864AB);
-            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 14), 18, footerTop + 4, COL_PRIMARY, false);
+            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 14), 18, footerTop + 4, textColor(), false);
         } else {
-            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 4), 9, footerTop + 4, COL_MUTED, false);
+            graphics.drawString(font, fit(selectionLabel, selectionBoxWidth - 4), 9, footerTop + 4, textColor(), false);
         }
         if (selectedRow != null && isHovering(8, footerTop, selectionBoxWidth, 16, mx, my))
             drawTooltip(graphics, mx - ox, my - oy, List.of(tooltip(selectedRow)));
@@ -372,7 +370,7 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             Component summary = energy() ? tr("summary_power", snapshot.total(), rate(snapshot.totals()[window]))
                     : tr(mode == ManagementMode.CONNECTIONS ? "summary_connections" : "summary_devices", snapshot.devices(), snapshot.total());
             if (snapshot.limited()) summary = tr("incomplete").append(summary);
-            graphics.drawString(font, fit(summary, imageWidth - 18), 9, footerTop - 10, COL_MUTED, false);
+            graphics.drawString(font, fit(summary, imageWidth - 18), 9, footerTop - 10, textColor(), false);
             if (snapshot.limited() && isHovering(8, footerTop - 12, imageWidth - 16, 12, mx, my))
                 drawTooltip(graphics, mx - ox, my - oy, List.of(tr("history_limit")));
         }
@@ -502,21 +500,25 @@ public final class NetworkManagementScreen extends AEBaseScreen<NetworkManagemen
             boolean power = displayedView != null && displayedView.mode() == ManagementMode.ENERGY;
             String right = row.group() ? "×" + row.count() : power ? compactRate(row.rates()[window]) + " FE/t"
                     : row.kind().equals("connection") ? tr("state." + row.state()).getString() : "";
-            int rightColor = row.group() ? COL_PRIMARY
-                    : power ? (row.rates()[window] > 0 ? COL_RATE : COL_SECONDARY)
+            int rightColor = row.group() ? textColor()
+                    : power ? (row.rates()[window] > 0 ? COL_RATE : textColor())
                     : row.state().equals("loaded") ? COL_LOADED : COL_UNLOADED;
             int rightX = x + width - 5 - font.width(right);
             int leftMaxW = right.isEmpty() ? (x + width - textX - 4) : Math.max(24, rightX - textX - 6);
-            graphics.drawString(font, fit(name, leftMaxW), textX, y + 2, COL_PRIMARY, false);
+            graphics.drawString(font, fit(name, leftMaxW), textX, y + 2, textColor(), false);
             if (!right.isEmpty()) {
                 graphics.drawString(font, right, rightX, y + (height - 8) / 2, rightColor, false);
             }
             Component secondary = row.group()
                     ? tr(row.state().equals("expanded") ? "collapse" : "expand", row.count())
                     : Component.literal(shortAddress(row.target()));
-            graphics.drawString(font, fit(secondary, leftMaxW), textX, y + 11, COL_SECONDARY, false);
+            graphics.drawString(font, fit(secondary, leftMaxW), textX, y + 11, textColor(), false);
         }
     }
+    private int textColor() {
+        return style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+    }
+
     private Component fit(Component value, int max) {
         String text = value.getString();
         return Component.literal(font.width(text) <= max ? text : font.plainSubstrByWidth(text, Math.max(0, max - font.width("…"))) + "…");

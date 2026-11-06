@@ -12,7 +12,6 @@ import appeng.blockentity.networking.CableBusBlockEntity;
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.TabButton;
-import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.menu.MachineOutputConfigMenu;
 import appeng.menu.AEBaseMenu;
@@ -56,7 +55,12 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     @Override
     protected void init() {
         super.init();
-        setSlotsHidden(SlotSemantics.TOOLBOX, true);
+        for (var slot : menu.slots) {
+            var semantic = menu.getSlotSemantic(slot);
+            if (semantic != null) {
+                setSlotsHidden(semantic, true);
+            }
+        }
     }
 
     @Override

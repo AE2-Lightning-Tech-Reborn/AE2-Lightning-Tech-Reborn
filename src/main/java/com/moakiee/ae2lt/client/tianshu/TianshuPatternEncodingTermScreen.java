@@ -27,6 +27,9 @@ import appeng.api.stacks.AEItemKey;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
+import com.moakiee.ae2lt.config.AE2LTClientConfig;
+import com.moakiee.ae2lt.config.TianshuUploadMatchMode;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -214,10 +217,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         modeTabs.forEach((mode, button) -> button.setSelected(mode == selected));
         if (menu.hasTriggeredUploadAck()
                 && TianshuRecipeTransferContext.isEncodingResultReady(
-                        menu, firstEncodedPattern())
-                && menu.consumeTriggeredUpload()) {
-            openUploadScreen(menu.consumeDirectUploadRequest());
-            return;
+                        menu, firstEncodedPattern())) {
+            uploadAfterEncoding();
+            if (minecraft.screen != this) return;
         }
         boolean processing = selected == TianshuEncodingMode.PROCESSING;
         boolean shifted = hasShiftDown();
@@ -269,24 +271,40 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 .map(Slot::getItem).filter(item -> !item.isEmpty()).findFirst().orElse(ItemStack.EMPTY);
     }
 
-    private void openUploadScreen(boolean directUploadRequested) {
+    private void uploadAfterEncoding() {
         var stack = firstEncodedPattern();
         if (stack.isEmpty()) return;
         // The server is authoritative for validating a closed-loop payload. Routing by the
         // item type here keeps the shared upload button responsive even when the client cannot
         // decode a registry-backed payload and lets the server report a proper upload failure.
-        if (stack.getItem() instanceof ClosedLoopPatternItem
-                || com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
-            menu.uploadEncodedPattern();
-            return;
+        TianshuPatternUploadRouting.Route route;
+        if (stack.getItem() instanceof ClosedLoopPatternItem) {
+            route = TianshuPatternUploadRouting.Route.CLOSED_LOOP_STORAGE;
+        } else if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
+            route = TianshuPatternUploadRouting.Route.OMNIVERSAL_FURNACE;
+        } else {
+            route = minecraft.level != null
+                    ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
+                    : TianshuPatternUploadRouting.Route.INVALID;
         }
-        var route = minecraft.level != null
-                ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
-                : TianshuPatternUploadRouting.Route.INVALID;
+        TianshuUploadTargetData target = null;
+        if (route == TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER
+                && AE2LTClientConfig.uploadMatchMode() != TianshuUploadMatchMode.OFF) {
+            if (!menu.requestUploadTargetsAfterEncoding() || !menu.hasFreshUploadTargetsAfterEncoding()) return;
+            target = TianshuDirectUploadClient.findAutomaticTarget(menu);
+        }
+        if (!menu.consumeTriggeredUpload()) return;
+        boolean directUploadRequested = menu.consumeDirectUploadRequest();
         switch (route) {
             case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
-            case PROCESSING_PROVIDER -> switchToScreen(
-                    new TianshuUploadTargetScreen<>(this, directUploadRequested));
+            case PROCESSING_PROVIDER -> {
+                if (target != null) {
+                    menu.uploadTianshuPatternToTarget(target.group(), true);
+                    TianshuDirectUploadClient.awaitResult(menu, target.group().name());
+                } else {
+                    switchToScreen(new TianshuUploadTargetScreen<>(this, directUploadRequested));
+                }
+            }
             case INVALID -> { }
         }
     }
