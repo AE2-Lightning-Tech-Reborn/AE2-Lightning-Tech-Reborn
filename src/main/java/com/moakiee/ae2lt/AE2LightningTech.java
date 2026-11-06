@@ -884,6 +884,7 @@ public class AE2LightningTech {
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
             com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
+            com.moakiee.ae2lt.event.FloatingMatterBrewingHandler.register();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
                     com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);

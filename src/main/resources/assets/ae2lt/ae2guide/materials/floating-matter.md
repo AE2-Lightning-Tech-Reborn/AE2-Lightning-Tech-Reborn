@@ -27,3 +27,7 @@ Conditions:
 The projectile does not need to be shot down. Simply letting it reach the Silk Touch Annihilation Plane is enough.
 
 > The configuration file can disable this collection mechanic.
+
+## Brewing
+
+With **Apotheosis** installed and its potion module enabled, brew an **Awkward Potion** with <ItemLink id="ae2lt:floating_matter" /> to obtain its **Levitation Potion**, granting **Levitation I for 2 minutes**.
