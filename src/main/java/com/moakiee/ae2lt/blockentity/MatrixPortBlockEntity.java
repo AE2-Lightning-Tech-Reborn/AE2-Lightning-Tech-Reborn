@@ -5,15 +5,12 @@ import com.moakiee.ae2lt.logic.batch.BatchSnapshots;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import com.moakiee.ae2lt.block.MatrixPortBlock;
-import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
-import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
-import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
-import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.ae2lt.logic.craft.MatrixCraftingMath;
 import com.moakiee.ae2lt.logic.craft.MatrixCraftingProfile;
 import com.moakiee.ae2lt.api.tianshu.synthesis.TianshuSynthesizer;
@@ -39,7 +36,6 @@ import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IManagedGridNode;
-import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.orientation.BlockOrientation;
 import appeng.api.stacks.AEKey;
@@ -49,7 +45,7 @@ import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.me.helpers.MachineSource;
 
 public class MatrixPortBlockEntity extends AENetworkBlockEntity
-        implements IBatchCraftingProvider, TianshuSynthesizer, DeferredCraftingProvider {
+        implements TianshuSynthesizer {
     private static final String TAG_CONTROLLER_POS = "ControllerPos";
     private static final String TAG_FORMED = "Formed";
     private static final String TAG_CLUSTER = "Cluster";
@@ -62,7 +58,7 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     private UUID boundMachineId;
     private CompoundTag legacyClusterState;
     private boolean formed;
-    private boolean patternUpdatePending;
+    private final Set<MatrixPatternStorageBlockEntity> dirtyPatternStorages = new HashSet<>();
     private List<MatrixPatternStorageBlockEntity> exposedPatternStorages = List.of();
     private boolean exposedPatternStorageDirty = true;
     private List<TerminalPatternSlot> terminalPatternSlots = List.of();
@@ -96,8 +92,7 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
                 .setTagName("matter_warping_matrix_port")
                 .setVisualRepresentation(ModBlocks.MATTER_WARPING_MATRIX_PORT.get())
                 .setIdlePowerUsage(8.0D)
-                .setFlags(GridFlags.REQUIRE_CHANNEL)
-                .addService(ICraftingProvider.class, this);
+                .setFlags(GridFlags.REQUIRE_CHANNEL);
     }
 
     @Override
@@ -174,7 +169,6 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         }
         saveChanges();
         markForUpdate();
-        requestCraftingUpdate();
     }
 
     public boolean isFormed() {
@@ -225,10 +219,11 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
 
     public void patternsChanged() {
         invalidateExposedPatternStorage();
-        // Several slots can change in one server tick (pattern-terminal transfers and storage
-        // upgrades do this). Publish once on the next block-entity tick, after every mutation,
-        // instead of refreshing on the first mutation and dropping the remaining changes.
-        patternUpdatePending = true;
+    }
+
+    public void patternsChanged(MatrixPatternStorageBlockEntity storage) {
+        patternsChanged();
+        dirtyPatternStorages.add(storage);
     }
 
     public IGrid getGrid() {
@@ -240,48 +235,13 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     }
 
     @Override
-    public List<IPatternDetails> getAvailablePatterns() {
-        var controller = getController();
-        return controller != null ? controller.getAvailablePatterns() : List.of();
-    }
-
-    @Override
-    public boolean isBusy() {
-        var controller = getController();
-        return controller == null || controller.isMatrixBusy();
-    }
-
-    @Override
-    public long getBatchCapacity(IPatternDetails details) {
-        var controller = getController();
-        return controller != null ? controller.getBatchCapacity(details) : 0;
-    }
-
-    @Override
-    public boolean supportsSharedBatchInputs() {
-        return isFormed();
-    }
-
-    @Override
-    public BatchDispatchMode getBatchDispatchMode(IPatternDetails details) {
-        var controller = getController();
-        return controller != null ? controller.getBatchDispatchMode() : BatchDispatchMode.NORMAL;
-    }
-
-    @Override
-    public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long maxCraft) {
-        var controller = getController();
-        return controller != null
-                ? controller.pushBatch(details, oneCopyTemplate, maxCraft) : maxCraft;
-    }
-
-    @Override
     public SynthesizerCapability inspect(SynthesisRequest request) {
         var rejection = validateSynthesisRequest(request);
         if (rejection != RejectionReason.NONE) return rejectedSynthesisCapability(rejection);
-        var pattern = findSynthesisPattern(request);
-        if (pattern == null) return rejectedSynthesisCapability(RejectionReason.UNSUPPORTED_PROCESSING);
-        long capacity = BatchSnapshots.safeCapacity(java.util.Arrays.asList(pattern.getOutputs()), getBatchCapacity(pattern));
+        var target = findSynthesisPattern(request);
+        if (target == null) return rejectedSynthesisCapability(RejectionReason.UNSUPPORTED_PROCESSING);
+        long capacity = BatchSnapshots.safeCapacity(java.util.Arrays.asList(target.pattern().getOutputs()),
+                target.storage().getBatchCapacity(target.pattern()));
         if (capacity <= 0L) return rejectedSynthesisCapability(RejectionReason.BUSY);
         return new SynthesizerCapability(API_VERSION, CAPABILITY_ID,
                 Math.min(request.requestedAmount(), capacity), capacity, RejectionReason.NONE);
@@ -304,18 +264,18 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         if (capability.acceptedAmount() <= 0L) {
             return rejectedSynthesis(request, capability.rejectionReason());
         }
-        var pattern = findSynthesisPattern(request);
-        if (pattern == null) {
+        var target = findSynthesisPattern(request);
+        if (target == null) {
             return rejectedSynthesis(request, RejectionReason.UNSUPPORTED_PROCESSING);
         }
-        var outputs = List.copyOf(java.util.Arrays.asList(pattern.getOutputs()));
+        var outputs = List.copyOf(java.util.Arrays.asList(target.pattern().getOutputs()));
         long offered = BatchSnapshots.safeCapacity(outputs, capability.acceptedAmount());
         var inputs = request.inputsPerCraft().stream().map(slot -> {
             var counter = new KeyCounter();
             for (var stack : slot) counter.add(stack.what(), stack.amount());
             return counter;
         }).toArray(KeyCounter[]::new);
-        long leftover = pushBatch(pattern, inputs, offered);
+        long leftover = target.storage().pushBatch(target.pattern(), inputs, offered);
         if (leftover < 0L || leftover > offered) {
             throw new IllegalStateException("Provider returned an invalid remainder");
         }
@@ -335,11 +295,15 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         return RejectionReason.NONE;
     }
 
-    private IPatternDetails findSynthesisPattern(SynthesisRequest request) {
-        for (var pattern : getAvailablePatterns()) {
-            if (pattern.getDefinition().equals(request.processingId())) return pattern;
+    private SynthesisPattern findSynthesisPattern(SynthesisRequest request) {
+        for (var storage : getPatternStorages()) {
+            var pattern = storage.patternByDefinition(request.processingId());
+            if (pattern != null) return new SynthesisPattern(storage, pattern);
         }
         return null;
+    }
+
+    private record SynthesisPattern(MatrixPatternStorageBlockEntity storage, IPatternDetails pattern) {
     }
 
     private static SynthesizerCapability rejectedSynthesisCapability(RejectionReason reason) {
@@ -349,28 +313,6 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
     private static SynthesisSubmission rejectedSynthesis(SynthesisRequest request, RejectionReason reason) {
         return new SynthesisSubmission(Status.REJECTED, 0L, List.of(), request.requestedAmount(),
                 reason == RejectionReason.BUSY || reason == RejectionReason.NO_CAPACITY, reason);
-    }
-
-    @Override
-    public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long maxCraft,
-                          BatchJobView job) {
-        var controller = getController();
-        var returns = job instanceof DeferredCraftingProvider.Job deferred
-                ? deferred.deferredOutputSink() : null;
-        return controller != null
-                ? controller.pushBatch(details, oneCopyTemplate, maxCraft, returns) : maxCraft;
-    }
-
-    @Override
-    public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputHolder, OutputSink returns) {
-        var controller = getController();
-        return controller != null && controller.pushPattern(patternDetails, inputHolder, returns);
-    }
-
-    @Override
-    public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputHolder) {
-        var controller = getController();
-        return controller != null && controller.pushPattern(patternDetails, inputHolder);
     }
 
     public boolean isLinkConnected() {
@@ -544,16 +486,16 @@ public class MatrixPortBlockEntity extends AENetworkBlockEntity
         return writable != null ? List.of(readable, writable) : List.of(readable);
     }
 
-    private void requestCraftingUpdate() {
-        if (getMainNode().isReady()) {
-            ICraftingProvider.requestUpdate(getMainNode());
-            patternUpdatePending = false;
-        }
-    }
-
     private void flushPatternUpdate() {
-        if (patternUpdatePending) {
-            requestCraftingUpdate();
+        if (dirtyPatternStorages.isEmpty()) return;
+        var pending = List.copyOf(dirtyPatternStorages);
+        dirtyPatternStorages.clear();
+        for (var storage : pending) {
+            if (!storage.isRemoved() && controllerPos != null
+                    && controllerPos.equals(storage.getControllerPos())
+                    && !storage.requestCraftingUpdate()) {
+                dirtyPatternStorages.add(storage);
+            }
         }
     }
 

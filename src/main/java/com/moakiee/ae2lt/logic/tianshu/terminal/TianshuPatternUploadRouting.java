@@ -19,6 +19,7 @@ public final class TianshuPatternUploadRouting {
             new ResourceLocation("expatternprovider", "ex_molecular_assembler"),
             new ResourceLocation("expatternprovider", "assembler_matrix_pattern"),
             new ResourceLocation("extendedae_plus", "assembler_matrix_pattern_plus"),
+            new ResourceLocation("extendedae_plus", "super_assembler_matrix_frame"),
             new ResourceLocation("neoecoae", "crafting_system_l4"),
             new ResourceLocation("neoecoae", "crafting_system_l6"),
             new ResourceLocation("neoecoae", "crafting_system_l9"),

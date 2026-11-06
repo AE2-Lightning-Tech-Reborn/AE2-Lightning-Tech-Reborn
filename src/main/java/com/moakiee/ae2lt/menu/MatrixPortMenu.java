@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 
 import appeng.api.crafting.PatternDetailsHelper;
+import appeng.api.inventories.BaseInternalInventory;
 import appeng.api.inventories.InternalInventory;
 import appeng.crafting.pattern.EncodedPatternItem;
 import appeng.menu.slot.AppEngSlot;
@@ -26,13 +27,13 @@ import appeng.util.inv.AppEngInternalInventory;
 
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
 import com.moakiee.ae2lt.util.SlotPositionAccess;
+import com.moakiee.ae2lt.blockentity.MatrixPatternStorageBlockEntity;
 
 /**
  * Pattern inventory exposed by a formed matter warping matrix port.
  *
- * <p>Every physical pattern slot is kept in the menu so normal container synchronization and
- * click handling remain authoritative on the server. The screen only repositions the currently
- * visible rows when searching or scrolling.</p>
+ * <p>The menu synchronizes one physical warehouse at a time. This bounds each container update
+ * even when a matrix contains 50 full T3 warehouses.</p>
  */
 public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigrationMenu {
     public static final MenuType<MatrixPortMenu> TYPE =
@@ -40,7 +41,8 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
 
     public static final int COLUMNS = 9;
     public static final int VISIBLE_ROWS = 6;
-    public static final int MAX_PATTERN_SLOTS = 50 * 72;
+    public static final int MAX_PATTERN_SLOTS = 50 * 288;
+    public static final int WAREHOUSE_SLOTS = 288;
 
     public static final int PATTERN_X = 13;
     public static final int PATTERN_Y = 21;
@@ -54,8 +56,13 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
     private final BlockPos blockPos;
     @Nullable
     private final MatrixPortBlockEntity host;
+    @Nullable
+    private final AppEngInternalInventory clientInventory;
     private final List<MatrixPatternSlot> patternSlots = new ArrayList<>();
     private final int patternSlotCount;
+    private final int[] warehouseCapacities;
+    private final List<MatrixPatternStorageBlockEntity> openingStorages;
+    private int selectedWarehouse;
     private long patternContentRevision;
     private final MatrixMigrationMenuState migrationState = new MatrixMigrationMenuState();
 
@@ -64,24 +71,30 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
                 playerInventory,
                 host.getBlockPos(),
                 host,
-                host.getTerminalPatternInventory(),
-                host.getTerminalPatternInventory().size());
+                null,
+                host.getPatternStorages().stream().mapToInt(storage -> storage.capacity()).toArray());
     }
 
     private MatrixPortMenu(int containerId,
                            Inventory playerInventory,
                            BlockPos blockPos,
                            @Nullable MatrixPortBlockEntity host,
-                           InternalInventory patternInventory,
-                           int patternSlotCount) {
+                           @Nullable AppEngInternalInventory clientInventory,
+                           int[] warehouseCapacities) {
         super(TYPE, containerId);
         this.blockPos = blockPos;
         this.host = host;
-        this.patternSlotCount = patternSlotCount;
+        this.clientInventory = clientInventory;
+        this.warehouseCapacities = warehouseCapacities;
+        this.openingStorages = host == null ? List.of() : List.copyOf(host.getPatternStorages());
+        this.patternSlotCount = WAREHOUSE_SLOTS;
+        InternalInventory patternInventory = host != null
+                ? new WarehousePageInventory()
+                : clientInventory;
         migrationState.bind(playerInventory, this::getMigrationController);
 
         for (int slot = 0; slot < patternSlotCount; slot++) {
-            var patternSlot = new MatrixPatternSlot(patternInventory, slot);
+            var patternSlot = new MatrixPatternSlot(patternInventory, slot, this);
             // 1.20.1: Slot.x/y are final; shuffle positions via reflection like AE2 does.
             SlotPositionAccess.set(patternSlot, OFFSCREEN_SLOT, OFFSCREEN_SLOT);
             patternSlots.add(patternSlot);
@@ -110,17 +123,21 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
                                                Inventory playerInventory,
                                                FriendlyByteBuf buffer) {
         BlockPos blockPos = buffer.readBlockPos();
-        int slotCount = Mth.clamp(buffer.readVarInt(), 0, MAX_PATTERN_SLOTS);
-        var clientInventory = new AppEngInternalInventory(slotCount);
-        var blockEntity = playerInventory.player.level().getBlockEntity(blockPos);
-        var host = blockEntity instanceof MatrixPortBlockEntity port ? port : null;
+        int warehouseCount = Mth.clamp(buffer.readVarInt(), 0, 50);
+        int[] capacities = new int[warehouseCount];
+        for (int i = 0; i < warehouseCount; i++) {
+            capacities[i] = Mth.clamp(buffer.readVarInt(), 0, WAREHOUSE_SLOTS);
+        }
+        var clientInventory = new AppEngInternalInventory(WAREHOUSE_SLOTS);
         return new MatrixPortMenu(
-                containerId, playerInventory, blockPos, host, clientInventory, slotCount);
+                containerId, playerInventory, blockPos, null, clientInventory, capacities);
     }
 
     public static void writeExtraData(FriendlyByteBuf buffer, MatrixPortBlockEntity host) {
         buffer.writeBlockPos(host.getBlockPos());
-        buffer.writeVarInt(host.getTerminalPatternInventory().size());
+        var storages = host.getPatternStorages();
+        buffer.writeVarInt(storages.size());
+        for (var storage : storages) buffer.writeVarInt(storage.capacity());
     }
 
     @Override public BlockPos getMigrationMenuPos() { return blockPos; }
@@ -132,13 +149,15 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
     @Override
     public boolean stillValid(Player player) {
         if (host != null) {
-            if (host.isRemoved() || host.getLevel() == null || player.level() != host.getLevel()) {
+            if (host.isRemoved() || host.getLevel() == null || player.level() != host.getLevel()
+                    || !host.isFormed()) {
                 return false;
             }
             BlockEntity current = host.getLevel().getBlockEntity(blockPos);
             if (current != host) {
                 return false;
             }
+            if (!host.getPatternStorages().equals(openingStorages)) return false;
         }
         return player.distanceToSqr(
                 blockPos.getX() + 0.5D,
@@ -185,6 +204,35 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
         return patternSlotCount;
     }
 
+    public int getWarehouseCount() {
+        return warehouseCapacities.length;
+    }
+
+    public int getSelectedWarehouse() {
+        return selectedWarehouse;
+    }
+
+    public int getSelectedWarehouseCapacity() {
+        return selectedWarehouse < warehouseCapacities.length
+                ? warehouseCapacities[selectedWarehouse] : 0;
+    }
+
+    public void selectWarehouseClient(int warehouse) {
+        if (clientInventory == null || warehouse < 0 || warehouse >= warehouseCapacities.length) return;
+        selectedWarehouse = warehouse;
+        clientInventory.clear();
+        patternContentRevision++;
+    }
+
+    @Override
+    public boolean clickMenuButton(Player player, int warehouse) {
+        if (host == null || !stillValid(player) || warehouse < 0
+                || warehouse >= warehouseCapacities.length) return false;
+        selectedWarehouse = warehouse;
+        broadcastFullState();
+        return true;
+    }
+
     /**
      * Monotonic client-side revision used by the search screen to avoid hashing every encoded
      * pattern every tick. Vanilla calls these update methods when a synchronized slot changes.
@@ -213,12 +261,69 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
         return Collections.unmodifiableList(patternSlots);
     }
 
+    private MatrixPatternStorageBlockEntity selectedStorage() {
+        if (host == null || selectedWarehouse >= openingStorages.size()) return null;
+        var storage = openingStorages.get(selectedWarehouse);
+        return storage.isRemoved() ? null : storage;
+    }
+
+    private final class WarehousePageInventory extends BaseInternalInventory {
+        @Override
+        public int size() {
+            return WAREHOUSE_SLOTS;
+        }
+
+        private InternalInventory inventoryFor(int slot) {
+            var storage = selectedStorage();
+            return storage != null && slot >= 0 && slot < storage.capacity()
+                    ? storage.getTerminalPatternInventory() : null;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            var inventory = inventoryFor(slot);
+            return inventory == null ? ItemStack.EMPTY : inventory.getStackInSlot(slot);
+        }
+
+        @Override
+        public void setItemDirect(int slot, ItemStack stack) {
+            var inventory = inventoryFor(slot);
+            if (inventory != null) inventory.setItemDirect(slot, stack);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            var inventory = inventoryFor(slot);
+            return inventory == null ? stack : inventory.insertItem(slot, stack, simulate);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            var inventory = inventoryFor(slot);
+            return inventory == null ? ItemStack.EMPTY : inventory.extractItem(slot, amount, simulate);
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            var inventory = inventoryFor(slot);
+            return inventory == null ? 0 : inventory.getSlotLimit(slot);
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            var inventory = inventoryFor(slot);
+            return inventory != null && inventory.isItemValid(slot, stack);
+        }
+    }
+
     public static final class MatrixPatternSlot extends AppEngSlot {
         private final int patternIndex;
+        private final MatrixPortMenu menu;
 
-        private MatrixPatternSlot(InternalInventory inventory, int patternIndex) {
+        private MatrixPatternSlot(InternalInventory inventory, int patternIndex, MatrixPortMenu menu) {
             super(inventory, patternIndex);
             this.patternIndex = patternIndex;
+            this.menu = menu;
         }
 
         public int getPatternIndex() {
@@ -227,7 +332,8 @@ public class MatrixPortMenu extends AbstractContainerMenu implements MatrixMigra
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return PatternDetailsHelper.isEncodedPattern(stack) && super.mayPlace(stack);
+            return patternIndex < menu.getSelectedWarehouseCapacity()
+                    && PatternDetailsHelper.isEncodedPattern(stack) && super.mayPlace(stack);
         }
 
         @Override

@@ -100,7 +100,8 @@ class ControllerOwnedRuntimeArchitectureTest {
         int bindingIntervalCheck = port.indexOf(
                 "level.getGameTime() < port.nextBindingCheckTick", serverTick);
 
-        assertTrue(port.contains("patternUpdatePending = true;"));
+        assertTrue(port.contains("dirtyPatternStorages.add(storage);"));
+        assertTrue(port.contains("storage.requestCraftingUpdate()"));
         assertFalse(port.contains("lastPatternUpdateTick"));
         assertTrue(flushUpdate > serverTick);
         assertTrue(bindingIntervalCheck > flushUpdate,

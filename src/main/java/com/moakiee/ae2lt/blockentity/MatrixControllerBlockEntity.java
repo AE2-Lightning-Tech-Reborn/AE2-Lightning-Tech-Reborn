@@ -3,7 +3,10 @@ package com.moakiee.ae2lt.blockentity;
 import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
@@ -98,10 +101,6 @@ public class MatrixControllerBlockEntity extends BlockEntity
             return collectAvailablePatterns();
         }
 
-        @Override
-        public boolean hasPattern(IPatternDetails details) {
-            return hasAvailablePattern(details);
-        }
     };
     private final MatrixCraftCore craftCore = new MatrixCraftCore() {
         @Override
@@ -120,6 +119,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
     private UUID loadedRuntimeId;
     private List<BlockPos> patternStoragePositions = List.of();
     private List<MatrixPatternStorageBlockEntity> cachedPatternStorages = List.of();
+    private Set<MatrixPatternStorageBlockEntity> cachedPatternStorageSet = Set.of();
     private List<CraftingUnitCacheEntry> craftingUnitCacheEntries = List.of();
     private List<MatrixCraftingUnit> cachedCraftingUnits = List.of();
     private boolean structureCacheValid;
@@ -551,40 +551,57 @@ public class MatrixControllerBlockEntity extends BlockEntity
         }
 
         var t1Storages = new ArrayList<MatrixPatternStorageBlockEntity>();
+        var t2Storages = new ArrayList<MatrixPatternStorageBlockEntity>();
         for (var member : attempt.result().patternMembers()) {
-            if (member.component() != MatrixMultiblockComponent.PATTERN_STORAGE_T1) {
+            if (member.component() != MatrixMultiblockComponent.PATTERN_STORAGE_T1
+                    && member.component() != MatrixMultiblockComponent.PATTERN_STORAGE_T2) {
                 continue;
             }
             if (level.getBlockEntity(member.worldPos()) instanceof MatrixPatternStorageBlockEntity storage) {
-                t1Storages.add(storage);
+                (member.component() == MatrixMultiblockComponent.PATTERN_STORAGE_T1
+                        ? t1Storages : t2Storages).add(storage);
             }
         }
 
-        if (t1Storages.isEmpty()) {
+        if (t1Storages.isEmpty() && t2Storages.isEmpty()) {
             player.displayClientMessage(Component.translatable("ae2lt.matrix.upgrade_none")
                     .withStyle(ChatFormatting.YELLOW), true);
             return;
         }
 
-        int available = countUpgradeItems(player);
-        if (available <= 0 && !player.getAbilities().instabuild) {
+        int availableT1Upgrades = countItem(player, ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE.get());
+        int availableT2Upgrades = countItem(player, ModItems.DENSE_TOPOLOGICAL_LATTICE.get());
+        if (availableT1Upgrades <= 0 && availableT2Upgrades <= 0 && !player.getAbilities().instabuild) {
             player.displayClientMessage(Component.translatable("ae2lt.matrix.upgrade_missing")
                     .withStyle(ChatFormatting.RED), true);
             return;
         }
 
-        int toUpgrade = player.getAbilities().instabuild ? t1Storages.size() : Math.min(available, t1Storages.size());
-        for (int i = 0; i < toUpgrade; i++) {
-            upgradeStorageInPlace(t1Storages.get(i));
+        int t1Upgrades = player.getAbilities().instabuild ? t1Storages.size()
+                : Math.min(availableT1Upgrades, t1Storages.size());
+        int t2Upgrades = player.getAbilities().instabuild ? t2Storages.size()
+                : Math.min(availableT2Upgrades, t2Storages.size());
+        if (t1Upgrades == 0 && t2Upgrades == 0) {
+            player.displayClientMessage(Component.translatable("ae2lt.matrix.upgrade_missing")
+                    .withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        for (int i = 0; i < t1Upgrades; i++) {
+            upgradeStorageInPlace(t1Storages.get(i),
+                    ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2.get());
+        }
+        for (int i = 0; i < t2Upgrades; i++) {
+            upgradeStorageInPlace(t2Storages.get(i),
+                    ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3.get());
         }
         if (!player.getAbilities().instabuild) {
-            consumeUpgradeItems(player, toUpgrade);
+            consumeItem(player, ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE.get(), t1Upgrades);
+            consumeItem(player, ModItems.DENSE_TOPOLOGICAL_LATTICE.get(), t2Upgrades);
         }
         scanAndForm(player);
         player.displayClientMessage(Component.translatable(
-                "ae2lt.matrix.upgraded",
-                toUpgrade,
-                t1Storages.size()).withStyle(ChatFormatting.GREEN), true);
+                "ae2lt.matrix.upgraded_tiers", t1Upgrades, t2Upgrades)
+                .withStyle(ChatFormatting.GREEN), true);
     }
 
     public List<MatrixPatternStorageBlockEntity> findPatternStorages() {
@@ -594,6 +611,20 @@ public class MatrixControllerBlockEntity extends BlockEntity
         ensureStructureCache();
         if (!validateStructureCacheForCurrentTick()) return List.of();
         return cachedPatternStorages;
+    }
+
+    public boolean ownsPatternStorage(MatrixPatternStorageBlockEntity storage) {
+        if (storage == null || level == null || !isFormed()) return false;
+        ensureStructureCache();
+        return validateStructureCacheForCurrentTick() && cachedPatternStorageSet.contains(storage);
+    }
+
+    private void cachePatternStorages(List<MatrixPatternStorageBlockEntity> storages) {
+        cachedPatternStorages = storages;
+        var identities = Collections.newSetFromMap(
+                new IdentityHashMap<MatrixPatternStorageBlockEntity, Boolean>());
+        identities.addAll(storages);
+        cachedPatternStorageSet = identities;
     }
 
     public List<MatrixCraftingUnit> findCraftingUnits() {
@@ -788,14 +819,6 @@ public class MatrixControllerBlockEntity extends BlockEntity
         return List.copyOf(result);
     }
 
-    private boolean hasAvailablePattern(IPatternDetails details) {
-        if (details == null || !isFormed() || level == null) return false;
-        for (var storage : findPatternStorages()) {
-            if (storage.hasPattern(details)) return true;
-        }
-        return false;
-    }
-
     private MatrixMultiblockScanAttempt scanCurrent() {
         var attempt = MatrixMultiblockScanner.scan(level, worldPosition, getOrientation());
         primaryScanIssue = attempt.issues().isEmpty() ? null : attempt.issues().get(0);
@@ -838,7 +861,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         patternStorageCount = result.patternMembers().size();
         craftingUnitCount = result.craftingMembers().size();
         patternStoragePositions = newPatternStoragePositions;
-        cachedPatternStorages = resolvePatternStorages(result);
+        cachePatternStorages(resolvePatternStorages(result));
         craftingUnitCacheEntries = createCraftingUnitCacheEntries(result);
         cachedCraftingUnits = craftingUnitCacheEntries.stream()
                 .map(CraftingUnitCacheEntry::unit)
@@ -869,7 +892,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         patternStorageCount = 0;
         craftingUnitCount = 0;
         patternStoragePositions = List.of();
-        cachedPatternStorages = List.of();
+        cachePatternStorages(List.of());
         craftingUnitCacheEntries = List.of();
         cachedCraftingUnits = List.of();
         structureCacheValid = false;
@@ -937,7 +960,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
             nextChunkCheckTick = level.getGameTime();
             return false;
         }
-        cachedPatternStorages = storages.orElseThrow();
+        cachePatternStorages(storages.orElseThrow());
         cachedCraftingUnits = units.orElseThrow();
         return true;
     }
@@ -993,7 +1016,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         structureAvailable = false;
         structureCacheValid = false;
         rememberStructureCacheValidation(false);
-        cachedPatternStorages = List.of();
+        cachePatternStorages(List.of());
         craftingUnitCacheEntries = List.of();
         cachedCraftingUnits = List.of();
         if (changed && level != null && portPos != null && level.isLoaded(portPos)
@@ -1251,45 +1274,13 @@ public class MatrixControllerBlockEntity extends BlockEntity
         result.append(name).append(" x").append(Integer.toString(count));
     }
 
-    private void upgradeStorageInPlace(MatrixPatternStorageBlockEntity oldStorage) {
+    private void upgradeStorageInPlace(MatrixPatternStorageBlockEntity oldStorage, Block targetBlock) {
         var pos = oldStorage.getBlockPos();
         var contents = oldStorage.copyContents();
-        level.setBlock(pos, ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2.get().defaultBlockState(),
-                Block.UPDATE_ALL);
+        level.setBlock(pos, targetBlock.defaultBlockState(), Block.UPDATE_ALL);
         if (level.getBlockEntity(pos) instanceof MatrixPatternStorageBlockEntity newStorage) {
             newStorage.loadContents(contents);
             newStorage.setControllerPos(worldPosition);
-        }
-    }
-
-    private int countUpgradeItems(Player player) {
-        Item upgrade = ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE.get();
-        int count = 0;
-        var inventory = player.getInventory();
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
-            var stack = inventory.getItem(i);
-            if (stack.is(upgrade)) {
-                count += stack.getCount();
-            }
-        }
-        return count;
-    }
-
-    private void consumeUpgradeItems(Player player, int amount) {
-        Item upgrade = ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE.get();
-        int remaining = amount;
-        var inventory = player.getInventory();
-        for (int i = 0; i < inventory.getContainerSize() && remaining > 0; i++) {
-            var stack = inventory.getItem(i);
-            if (!stack.is(upgrade)) {
-                continue;
-            }
-            int consumed = Math.min(remaining, stack.getCount());
-            stack.shrink(consumed);
-            if (stack.isEmpty()) {
-                inventory.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
-            }
-            remaining -= consumed;
         }
     }
 
@@ -1372,7 +1363,7 @@ public class MatrixControllerBlockEntity extends BlockEntity
         waitingForChunks = false;
         nextChunkCheckTick = 0L;
         patternStoragePositions = List.of();
-        cachedPatternStorages = List.of();
+        cachePatternStorages(List.of());
         craftingUnitCacheEntries = List.of();
         cachedCraftingUnits = List.of();
         orientation = Direction.from3DDataValue(tag.getInt(TAG_ORIENTATION));

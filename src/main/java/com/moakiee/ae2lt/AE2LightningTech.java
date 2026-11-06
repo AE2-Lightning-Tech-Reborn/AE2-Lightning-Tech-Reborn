@@ -259,6 +259,7 @@ public class AE2LightningTech {
                         acceptCreative(output, ModBlocks.MATTER_WARPING_MATRIX_THERMAL_CONTROL_UNIT_T2);
                         acceptCreative(output, ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1);
                         acceptCreative(output, ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2);
+                        acceptCreative(output, ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3);
                         acceptCreative(output, ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE);
 
                         // 基础材料与中间产物

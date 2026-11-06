@@ -55,7 +55,7 @@ class MatrixPatternExposureTest {
     }
 
     @Test
-    void clusterRejectsNonMolecularPatterns() {
+    void clusterAdvertisesOnlyMolecularPatternsAndDefersDispatchValidationToAssembler() {
         var assembler = new FakeAssembler();
         var cluster = cluster(new FakeHost(), List.of(new FakeCraftCore(
                 MatrixCraftingUnit.quantumCore(),
@@ -67,7 +67,7 @@ class MatrixPatternExposureTest {
         cluster.addPatternCore(repository);
 
         assertEquals(List.of(PATTERN), cluster.getAvailablePatterns());
-        assertEquals(0, cluster.getBatchCapacity(plainPattern));
+        assertTrue(cluster.getBatchCapacity(plainPattern) > 0);
         assertEquals(7, cluster.pushBatch(plainPattern, emptyInputs(), 7));
         assertEquals(0, assembler.calls);
     }

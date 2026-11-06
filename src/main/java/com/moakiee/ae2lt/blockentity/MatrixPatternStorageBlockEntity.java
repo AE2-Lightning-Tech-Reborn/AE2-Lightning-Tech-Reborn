@@ -4,10 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.moakiee.ae2lt.crafting.runtime.RecipeCandidateIndex;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.ae2lt.logic.craft.MatrixMultiblockComponent;
 import com.moakiee.ae2lt.logic.craft.MatrixPatternCore;
 import com.moakiee.ae2lt.logic.craft.MatrixPatternStorageTier;
+import com.moakiee.ae2lt.logic.craft.MatrixWarehousePatternCatalog;
 import com.moakiee.ae2lt.logic.terminal.InternalPatternContainerLink;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
+import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
@@ -34,24 +39,27 @@ import appeng.api.inventories.BaseInternalInventory;
 import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.IGrid;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.KeyCounter;
 import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 import appeng.helpers.patternprovider.PatternContainer;
 
 public class MatrixPatternStorageBlockEntity extends BlockEntity
-        implements MatrixPatternCore, PatternContainer {
+        implements MatrixPatternCore, PatternContainer, IBatchCraftingProvider, DeferredCraftingProvider {
     private static final String TAG_ITEMS = "Items";
     private static final String TAG_SLOT = "Slot";
     private static final String TAG_STACK = "Stack";
     private static final int T1_CAPACITY = 36;
     private static final int T2_CAPACITY = 72;
+    private static final int T3_CAPACITY = 288;
 
-    private final NonNullList<ItemStack> items = NonNullList.withSize(T2_CAPACITY, ItemStack.EMPTY);
+    private final NonNullList<ItemStack> items = NonNullList.withSize(T3_CAPACITY, ItemStack.EMPTY);
     private final PatternInventory inventory = new PatternInventory();
     private final InternalInventory terminalPatternInventory = new TerminalPatternInventory();
     private final InternalPatternContainerLink terminalLink;
     private List<IPatternDetails> cachedPatterns = List.of();
     private RecipeCandidateIndex<AEItemKey, IPatternDetails> patternIndex =
             new RecipeCandidateIndex<>(List.of(), IPatternDetails::getDefinition);
+    private final MatrixWarehousePatternCatalog patternCatalog = new MatrixWarehousePatternCatalog();
     private BlockPos controllerPos;
     private boolean patternsDirty = true;
     private long patternContentRevision;
@@ -69,7 +77,12 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
     }
 
     public int capacity() {
-        return tier() == MatrixPatternStorageTier.T2 ? T2_CAPACITY : T1_CAPACITY;
+        return switch (tier()) {
+            case T1 -> T1_CAPACITY;
+            case T2 -> T2_CAPACITY;
+            case T3 -> T3_CAPACITY;
+            case CUSTOM -> throw new IllegalStateException("A physical storage has no tier");
+        };
     }
 
     public PatternInventory getInventory() {
@@ -159,6 +172,10 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         }
     }
 
+    public boolean requestCraftingUpdate() {
+        return terminalLink.requestCraftingUpdate();
+    }
+
     @Override
     public IGrid getGrid() {
         return terminalLink.getGrid();
@@ -212,7 +229,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         if (patternsDirty) {
             rebuildPatternCache();
         }
-        return cachedPatterns;
+        return patternCatalog.patterns();
     }
 
     /** Definition is only a coarse key; exact execution must still validate the returned patterns. */
@@ -223,20 +240,74 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
 
     @Override
     public boolean hasPattern(IPatternDetails details) {
-        if (details == null) {
-            return false;
-        }
         if (patternsDirty) {
             rebuildPatternCache();
         }
-        if (!patternIndex.candidates(details.getDefinition()).isEmpty()) return true;
-        // Preserve native identity/equals fallback, including custom patterns with no definition.
-        for (var pattern : cachedPatterns) {
-            if (MatrixPatternCore.samePattern(pattern, details)) {
-                return true;
-            }
-        }
-        return false;
+        return patternCatalog.contains(details);
+    }
+
+    public IPatternDetails patternByDefinition(AEItemKey definition) {
+        if (patternsDirty) rebuildPatternCache();
+        return patternCatalog.byDefinition(definition);
+    }
+
+    @Override
+    public boolean isBusy() {
+        var controller = linkedController();
+        return controller == null || controller.isMatrixBusy();
+    }
+
+    @Override
+    public long getBatchCapacity(IPatternDetails details) {
+        var controller = linkedController();
+        return controller != null && hasPattern(details) ? controller.getBatchCapacity(details) : 0L;
+    }
+
+    @Override
+    public BatchDispatchMode getBatchDispatchMode(IPatternDetails details) {
+        var controller = linkedController();
+        return controller != null && hasPattern(details)
+                ? controller.getBatchDispatchMode() : BatchDispatchMode.NORMAL;
+    }
+
+    @Override
+    public boolean supportsSharedBatchInputs() {
+        return linkedController() != null;
+    }
+
+    @Override
+    public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long maxCraft) {
+        return pushBatch(details, oneCopyTemplate, maxCraft, null);
+    }
+
+    @Override
+    public long pushBatch(IPatternDetails details, KeyCounter[] oneCopyTemplate, long maxCraft,
+                          BatchJobView job) {
+        if (maxCraft <= 0L) return 0L;
+        var controller = linkedController();
+        var returns = job instanceof DeferredCraftingProvider.Job deferred
+                ? deferred.deferredOutputSink() : null;
+        return controller != null && oneCopyTemplate != null && hasPattern(details)
+                ? controller.pushBatch(details, oneCopyTemplate, maxCraft, returns) : maxCraft;
+    }
+
+    @Override
+    public boolean pushPattern(IPatternDetails details, KeyCounter[] oneCopyTemplate, OutputSink returns) {
+        var controller = linkedController();
+        return controller != null && oneCopyTemplate != null && hasPattern(details)
+                && controller.pushPattern(details, oneCopyTemplate, returns);
+    }
+
+    @Override
+    public boolean pushPattern(IPatternDetails details, KeyCounter[] oneCopyTemplate) {
+        return pushPattern(details, oneCopyTemplate, null);
+    }
+
+    private MatrixControllerBlockEntity linkedController() {
+        if (controllerPos == null || level == null || isRemoved() || !terminalLink.isActive()
+                || !level.isLoaded(controllerPos)) return null;
+        if (!(level.getBlockEntity(controllerPos) instanceof MatrixControllerBlockEntity controller)) return null;
+        return controller.ownsPatternStorage(this) ? controller : null;
     }
 
     private void rebuildPatternCache() {
@@ -257,6 +328,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
         var indexed = new RecipeCandidateIndex<>(decoded, IPatternDetails::getDefinition);
         cachedPatterns = List.copyOf(decoded);
         patternIndex = indexed;
+        patternCatalog.replace(cachedPatterns);
         patternsDirty = false;
     }
 
@@ -285,7 +357,7 @@ public class MatrixPatternStorageBlockEntity extends BlockEntity
             var portPos = controller.getPortPos();
             if (portPos != null && level.isLoaded(portPos)
                     && level.getBlockEntity(portPos) instanceof MatrixPortBlockEntity port) {
-                port.patternsChanged();
+                port.patternsChanged(this);
             }
         }
     }

@@ -1,0 +1,13 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MatrixWarehouseGameTests.java',
+                '**/PatternMigrationGameTests.java', '**/TianshuDeferredReturnsGameTests.java'])
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/matrix-warehouse-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_matrix_warehouse,ae2lt_deferred'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+            jvmArgs '-Xms256m', '-Xmx1536m', '-XX:ActiveProcessorCount=4'
+        }
+    }
+}

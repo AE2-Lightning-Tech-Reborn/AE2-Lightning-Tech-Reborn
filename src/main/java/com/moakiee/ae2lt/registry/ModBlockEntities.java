@@ -281,7 +281,8 @@ public final class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             MatrixPatternStorageBlockEntity::new,
                             ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1.get(),
-                            ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2.get())
+                            ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2.get(),
+                            ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3.get())
                             .build(null));
 
     @SuppressWarnings("DataFlowIssue")

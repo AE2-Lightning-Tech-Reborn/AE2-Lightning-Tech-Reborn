@@ -3,7 +3,8 @@ package com.moakiee.ae2lt.logic.craft;
 public enum MatrixPatternStorageTier {
     CUSTOM(0),
     T1(MatrixPatternStorageUnit.T1_CAPACITY),
-    T2(MatrixPatternStorageUnit.T2_CAPACITY);
+    T2(MatrixPatternStorageUnit.T2_CAPACITY),
+    T3(MatrixPatternStorageUnit.T3_CAPACITY);
 
     private final int capacity;
 
