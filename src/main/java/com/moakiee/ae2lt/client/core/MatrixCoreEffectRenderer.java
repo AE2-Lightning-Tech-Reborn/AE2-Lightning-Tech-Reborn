@@ -30,11 +30,17 @@ public final class MatrixCoreEffectRenderer implements BlockEntityRenderer<Matri
     }
 
     @Override
+    public boolean shouldRenderOffScreen(MatrixControllerBlockEntity controller) {
+        // Keep the core eligible when only the controller's render section is outside the view.
+        // Forge still culls it against the controller's finite multiblock render bounds.
+        return true;
+    }
+
+    @Override
     public void render(MatrixControllerBlockEntity controller, float partialTick,
                        PoseStack stack, MultiBufferSource buffers, int packedLight, int packedOverlay) {
         var state = controller.getBlockState();
-        if (!AE2LTClientConfig.useCoreShaderRendering()
-                || !AE2LTClientConfig.renderMultiblockCoreEffects()
+        if (!AE2LTClientConfig.renderMultiblockCoreEffects()
                 || !state.hasProperty(MatrixControllerBlock.FORMED)
                 || !state.getValue(MatrixControllerBlock.FORMED)
                 || controller.getLevel() == null) {

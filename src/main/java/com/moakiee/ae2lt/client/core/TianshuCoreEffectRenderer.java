@@ -32,11 +32,17 @@ public final class TianshuCoreEffectRenderer
     }
 
     @Override
+    public boolean shouldRenderOffScreen(TianshuSupercomputerControllerBlockEntity controller) {
+        // The controller's section can be hidden while the elevated core is still visible.
+        // Forge still culls it against the controller's finite multiblock render bounds.
+        return true;
+    }
+
+    @Override
     public void render(TianshuSupercomputerControllerBlockEntity controller, float partialTick,
                        PoseStack stack, MultiBufferSource buffers, int packedLight, int packedOverlay) {
         var state = controller.getBlockState();
-        if (!AE2LTClientConfig.useCoreShaderRendering()
-                || !AE2LTClientConfig.renderMultiblockCoreEffects()
+        if (!AE2LTClientConfig.renderMultiblockCoreEffects()
                 || !state.hasProperty(TianshuSupercomputerControllerBlock.FORMED)
                 || !state.getValue(TianshuSupercomputerControllerBlock.FORMED)
                 || controller.getLevel() == null) {

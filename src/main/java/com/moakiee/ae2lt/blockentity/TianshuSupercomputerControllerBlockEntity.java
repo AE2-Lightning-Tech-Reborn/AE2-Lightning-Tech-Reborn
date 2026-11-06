@@ -9,6 +9,7 @@ import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanAttempt;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanResult;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanner;
+import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockTemplate;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanIssue;
 import com.moakiee.ae2lt.logic.tianshu.TianshuAutoBuildPlan;
 import com.moakiee.ae2lt.logic.tianshu.CpuInternalCoreProfile;
@@ -76,6 +77,7 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         implements TimeWheelCraftingCpuPoolHost, TianshuInventoryMaintenanceHost,
@@ -150,6 +152,20 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
 
     public TianshuSupercomputerControllerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TIANSHU_SUPERCOMPUTER_CONTROLLER.get(), pos, state);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        // The animated core is above and behind this controller, potentially in another section.
+        if (!getBlockState().getValue(TianshuSupercomputerControllerBlock.FORMED)) {
+            return new AABB(worldPosition);
+        }
+        var facing = getBlockState().getValue(TianshuSupercomputerControllerBlock.FACING);
+        var corner = TianshuMultiblockScanner.worldPos(worldPosition, BlockPos.ZERO, facing);
+        int last = TianshuMultiblockTemplate.SIZE - 1;
+        var oppositeCorner = TianshuMultiblockScanner.worldPos(
+                worldPosition, new BlockPos(last, last, last), facing);
+        return new AABB(corner).minmax(new AABB(oppositeCorner));
     }
 
     @Nullable

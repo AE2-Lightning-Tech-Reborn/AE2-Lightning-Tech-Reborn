@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client.core;
 
 import com.moakiee.ae2lt.client.core.veil.VeilCoreEffectShaders;
+import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.mojang.logging.LogUtils;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -21,7 +22,7 @@ final class CoreEffectBackend {
     }
 
     static boolean useVeil() {
-        return veilUsable;
+        return veilUsable && AE2LTClientConfig.useCoreShaderRendering();
     }
 
     static void disableVeil(Throwable cause) {
@@ -32,7 +33,9 @@ final class CoreEffectBackend {
     }
 
     static boolean useShaderPackFallback() {
-        return ShaderPackDetectorHolder.INSTANCE.isShaderPackInUse();
+        return !AE2LTClientConfig.useCoreShaderRendering()
+                || !CoreEffectShaders.isReady()
+                || ShaderPackDetectorHolder.INSTANCE.isShaderPackInUse();
     }
 
     private static boolean detectCompatibleVeil() {

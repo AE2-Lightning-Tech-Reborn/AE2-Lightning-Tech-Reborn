@@ -65,6 +65,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 public class MatrixControllerBlockEntity extends BlockEntity
         implements CraftingCoreHost, MatrixCraftingEnergy {
@@ -143,6 +144,20 @@ public class MatrixControllerBlockEntity extends BlockEntity
     public MatrixControllerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATRIX_CONTROLLER.get(), pos, blockState);
         orientation = orientationFromState(blockState);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        // Client rendering follows the synchronized block state, not the server-only structure cache.
+        if (!getBlockState().getValue(MatrixControllerBlock.FORMED)) {
+            return new AABB(worldPosition);
+        }
+        var corner = MatrixMultiblockScanner.worldPos(worldPosition, BlockPos.ZERO, getOrientation());
+        var oppositeCorner = MatrixMultiblockScanner.worldPos(worldPosition, new BlockPos(
+                MatrixMultiblockTemplate.SIZE_X - 1,
+                MatrixMultiblockTemplate.SIZE_Y - 1,
+                MatrixMultiblockTemplate.SIZE_Z - 1), getOrientation());
+        return new AABB(corner).minmax(new AABB(oppositeCorner));
     }
 
     public static void serverTick(net.minecraft.world.level.Level level,
