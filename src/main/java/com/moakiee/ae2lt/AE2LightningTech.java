@@ -1177,6 +1177,8 @@ public class AE2LightningTech {
             StorageCells.addCellHandler(FixedInfiniteCellHandler.INSTANCE);
             StorageCells.addCellHandler(VoidCellHandler.INSTANCE);
             ModItems.registerStorageCellModels();
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.CRYSTAL_CATALYZER.get(), 1);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.TESLA_COIL.get(), 1);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get(),
                     LightningSimulationChamberBlockEntity.SPEED_CARD_SLOTS);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get(),

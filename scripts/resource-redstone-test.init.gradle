@@ -1,0 +1,15 @@
+// Forge 1.20.1: native AE2 grids, level emitters, menus and save/load.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/ResourceMachineRedstoneGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/resource-redstone-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_redstone'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+    }
+}

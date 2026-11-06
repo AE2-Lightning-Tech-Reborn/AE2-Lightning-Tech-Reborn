@@ -22,6 +22,8 @@ import com.moakiee.ae2lt.grid.FrequencyBindingHelper;
 import com.moakiee.ae2lt.grid.FrequencyBindingHost;
 import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
+import com.moakiee.ae2lt.machine.common.MachineRedstoneControl;
+import com.moakiee.ae2lt.machine.common.RedstoneControlledMachine;
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilAutomationInventory;
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilEnergyStorage;
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilInventory;
@@ -54,7 +56,7 @@ import com.moakiee.ae2lt.me.GridLightningEnergyHandler;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
 public class TeslaCoilBlockEntity extends AENetworkBlockEntity
-        implements IActionHost, FrequencyBindingHost, LightningCollapseMatrixHost {
+        implements IActionHost, FrequencyBindingHost, LightningCollapseMatrixHost, RedstoneControlledMachine {
     public static final int ENERGY_CAPACITY = 16_000_000;
     private static final String TAG_INVENTORY = "Inventory";
     private static final String TAG_ENERGY = "Energy";
@@ -69,6 +71,10 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     private final TeslaCoilEnergyStorage energyStorage = new TeslaCoilEnergyStorage(
             ENERGY_CAPACITY,
             this::onEnergyChanged);
+    private final MachineRedstoneControl redstoneControl = new MachineRedstoneControl(
+            ModBlocks.TESLA_COIL.get(), 1,
+            () -> level != null && (level.hasNeighborSignal(worldPosition)
+                    || level.hasNeighborSignal(worldPosition.above())), this::onUpgradesChanged);
     private final TeslaCoilLogic logic;
     private final FrequencyBindingHelper frequencyBinding = new FrequencyBindingHelper(this);
 
@@ -143,6 +149,11 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
 
     public TeslaCoilEnergyStorage getEnergyStorage() {
         return energyStorage;
+    }
+
+    private void onUpgradesChanged() {
+        saveChanges();
+        onRedstoneStateChanged();
     }
 
     public TeslaCoilLogic getLogic() {
@@ -278,6 +289,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     }
 
     public TeslaCoilStatus getStatus() {
+        if (!redstoneControl.isEnabled()) return TeslaCoilStatus.REDSTONE_PAUSED;
         if (lockedMode == null) {
             return TeslaCoilStatus.IDLE;
         }
@@ -346,6 +358,17 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
         return true;
     }
 
+    @Override
+    public MachineRedstoneControl getRedstoneControl() {
+        return redstoneControl;
+    }
+
+    public void onRedstoneStateChanged() {
+        if (level == null || level.isClientSide()) return;
+        if (!redstoneControl.isEnabled()) setWorking(false);
+        logic.onStateChanged();
+    }
+
     public void openMenu(Player player, MenuLocator locator) {
         MenuOpener.open(TeslaCoilMenu.TYPE, player, locator);
     }
@@ -374,7 +397,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     public void onReady() {
         super.onReady();
         frequencyBinding.onReady();
-        setWorking(hasLockedMode());
+        setWorking(hasLockedMode() && redstoneControl.isEnabled());
         if (level != null) {
             TeslaCoilUpperBlockEntity.ensurePresent(level, worldPosition);
         }
@@ -401,6 +424,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     @Override
     public void saveAdditional(CompoundTag data) {
         super.saveAdditional(data);
+        redstoneControl.save(data);
         inventory.saveToTag(data, TAG_INVENTORY);
         data.putLong(TAG_ENERGY, energyStorage.getStoredEnergyLong());
         data.putLong(TAG_CONSUMED_ENERGY, consumedEnergy);
@@ -419,6 +443,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     @Override
     public void loadTag(CompoundTag data) {
         super.loadTag(data);
+        redstoneControl.load(data);
         inventory.loadFromTag(data, TAG_INVENTORY);
         energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
         selectedMode = TeslaCoilMode.fromName(data.getString(TAG_SELECTED_MODE));
@@ -447,6 +472,9 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     @Override
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
+        for (var upgrade : getUpgrades()) {
+            if (!upgrade.isEmpty()) NativeStackDropHelper.addDrops(drops, upgrade);
+        }
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
             ItemStack stack = inventory.getStackInSlot(slot);
             if (!stack.isEmpty()) {
@@ -458,6 +486,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
     @Override
     public void clearContent() {
         super.clearContent();
+        getUpgrades().clear();
         inventory.clear();
     }
 
@@ -467,6 +496,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
                                @org.jetbrains.annotations.Nullable Player player) {
         super.exportSettings(mode, output, player);
         MemoryCardConfigSupport.exportMemoryCardSettings(mode, output, tag -> {
+            redstoneControl.writeSettings(tag);
             MemoryCardConfigSupport.writeEnum(tag, TAG_SELECTED_MODE, selectedMode);
             FrequencyBindingHelper.writeMemoryFrequency(tag, getFrequencyId());
             MemoryCardConfigSupport.writeMatrixCount(tag, this);
@@ -479,6 +509,7 @@ public class TeslaCoilBlockEntity extends AENetworkBlockEntity
                                @org.jetbrains.annotations.Nullable Player player) {
         super.importSettings(mode, input, player);
         MemoryCardConfigSupport.importMemoryCardSettings(mode, input, tag -> {
+            redstoneControl.readSettings(tag);
             var mode2 = MemoryCardConfigSupport.readEnum(
                     tag, TAG_SELECTED_MODE, TeslaCoilMode.class, selectedMode);
             this.selectedMode = mode2;

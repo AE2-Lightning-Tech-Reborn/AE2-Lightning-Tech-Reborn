@@ -44,8 +44,6 @@ import appeng.api.orientation.BlockOrientation;
 import appeng.api.orientation.RelativeSide;
 import appeng.api.stacks.AEKey;
 import appeng.api.upgrades.IUpgradeInventory;
-import appeng.api.upgrades.IUpgradeableObject;
-import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.util.AECableType;
 import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.menu.MenuOpener;
@@ -62,6 +60,8 @@ import com.moakiee.ae2lt.logic.FluidStackHelper;
 import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
+import com.moakiee.ae2lt.machine.common.MachineRedstoneControl;
+import com.moakiee.ae2lt.machine.common.RedstoneControlledMachine;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerAutomationInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerFluidHandler;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
@@ -81,7 +81,7 @@ import com.moakiee.ae2lt.util.LargeStackStreamCodecs;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
 public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
-        implements IActionHost, IUpgradeableObject,
+        implements IActionHost, RedstoneControlledMachine,
         LightningCollapseMatrixHost,
         GridRecipeMachineHost<CrystalCatalyzerLockedRecipe, CrystalCatalyzerRecipeCandidate> {
 
@@ -119,8 +119,9 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             new CrystalCatalyzerFluidHandler(tank);
     private final OverloadProcessingFactoryEnergyStorage energyStorage =
             new OverloadProcessingFactoryEnergyStorage(ENERGY_CAPACITY, this::onEnergyChanged);
-    private final IUpgradeInventory upgrades =
-            UpgradeInventories.forMachine(ModBlocks.CRYSTAL_CATALYZER.get(), 0, this::onUpgradesChanged);
+    private final MachineRedstoneControl redstoneControl = new MachineRedstoneControl(
+            ModBlocks.CRYSTAL_CATALYZER.get(), isPigmeeVariant() ? 0 : 1,
+            () -> level != null && level.hasNeighborSignal(worldPosition), this::onUpgradesChanged);
     private final CrystalCatalyzerLogic logic;
     // Only the normal registered subtype implements FrequencyBindingHost.
     protected final FrequencyBindingHelper frequencyBinding = this instanceof FrequencyBindingHost host
@@ -273,7 +274,18 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     @Override
     public IUpgradeInventory getUpgrades() {
-        return upgrades;
+        return redstoneControl.getUpgrades();
+    }
+
+    @Override
+    public MachineRedstoneControl getRedstoneControl() {
+        return redstoneControl;
+    }
+
+    public void onRedstoneStateChanged() {
+        if (level == null || level.isClientSide()) return;
+        if (!redstoneControl.isEnabled()) setWorking(false);
+        logic.onStateChanged();
     }
 
     public void openMenu(Player player, MenuLocator locator) {
@@ -292,7 +304,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
             legacyPigmeeFrequencyId = -1;
         }
         inventory.setLevel(level);
-        setWorking(lockedRecipe != null);
+        setWorking(lockedRecipe != null && redstoneControl.isEnabled());
     }
 
     @Override
@@ -622,6 +634,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     }
 
     public void onNeighborChanged(BlockPos changedPos) {
+        if (redstoneControl.hasCard()) onRedstoneStateChanged();
         if (changedPos != null && worldPosition.distManhattan(changedPos) == 1) {
             exportTargetCache.invalidate();
         }
@@ -768,6 +781,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     @Override
     public void saveAdditional(CompoundTag data) {
         super.saveAdditional(data);
+        redstoneControl.save(data);
         inventory.saveToTag(data, TAG_INVENTORY);
         data.put(TAG_TANK, tank.writeToNBT(new CompoundTag()));
         data.putLong(TAG_ENERGY, energyStorage.getStoredEnergyLong());
@@ -799,6 +813,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     @Override
     public void loadTag(CompoundTag data) {
         super.loadTag(data);
+        redstoneControl.load(data);
         inventory.loadFromTag(data, TAG_INVENTORY);
         tank.readFromNBT(data.getCompound(TAG_TANK));
         energyStorage.loadStoredEnergy(data.getLong(TAG_ENERGY));
@@ -900,6 +915,9 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     @Override
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
+        for (var upgrade : getUpgrades()) {
+            if (!upgrade.isEmpty()) NativeStackDropHelper.addDrops(drops, upgrade);
+        }
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
             ItemStack stack = inventory.getStackInSlot(slot);
             if (!stack.isEmpty()) {
@@ -911,6 +929,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
     @Override
     public void clearContent() {
         super.clearContent();
+        getUpgrades().clear();
         abortProcessing();
         inventory.clear();
         tank.setFluid(FluidStack.EMPTY);
@@ -929,6 +948,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                                @org.jetbrains.annotations.Nullable Player player) {
         super.exportSettings(mode, output, player);
         MemoryCardConfigSupport.exportAutoExportSettings(mode, output, autoExport, allowedOutputs, tag -> {
+            redstoneControl.writeSettings(tag);
             MemoryCardConfigSupport.writeEnum(tag, TAG_MODE, this.mode);
             if (frequencyBinding != null) {
                 FrequencyBindingHelper.writeMemoryFrequency(tag, frequencyBinding.getFrequencyId());
@@ -946,6 +966,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
                 v -> this.autoExport = v,
                 sides -> this.allowedOutputs = sides,
                 tag -> {
+                    redstoneControl.readSettings(tag);
                     Mode importedMode = MemoryCardConfigSupport.readEnum(
                             tag, TAG_MODE, Mode.class, this.mode);
                     if (isPigmeeVariant()) {
@@ -1007,7 +1028,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkBlockEntity
 
     private void onUpgradesChanged() {
         saveChanges();
-        logic.onStateChanged();
+        onRedstoneStateChanged();
     }
 
     private long simulateLightningExtract(LightningKey key, long amount) {

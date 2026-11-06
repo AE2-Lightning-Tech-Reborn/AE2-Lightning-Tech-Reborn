@@ -17,7 +17,6 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.fluids.FluidStack;
 
 import appeng.api.orientation.RelativeSide;
-import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
 import appeng.menu.guisync.GuiSync;
 import appeng.menu.implementations.MenuTypeBuilder;
@@ -28,7 +27,7 @@ import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerInventory;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.CrystalCatalyzerLogic;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 
-public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBindingMenu, MachineOutputConfigMenu {
+public class CrystalCatalyzerMenu extends RedstoneMachineMenu<CrystalCatalyzerBlockEntity> implements FrequencyBindingMenu, MachineOutputConfigMenu {
     public static final MenuType<CrystalCatalyzerMenu> TYPE = Ae2ltMenuBuilder.buildUnregistered(
             MenuTypeBuilder
                     .create(CrystalCatalyzerMenu::new, CrystalCatalyzerBlockEntity.class)
@@ -87,6 +86,7 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
                 new LargeStackAppEngSlot(inventory, CrystalCatalyzerInventory.SLOT_OUTPUT),
                 SlotSemantics.MACHINE_OUTPUT);
 
+        setupUpgrades(host.getUpgrades());
         createPlayerInventorySlots(playerInventory);
 
         registerClientAction("toggleAutoExport", this::toggleAutoExport);
@@ -341,6 +341,8 @@ public class CrystalCatalyzerMenu extends AEBaseMenu implements FrequencyBinding
     }
 
     private ItemStack moveFromPlayerInventory(ItemStack stack) {
+        stack = moveIntoRedstoneUpgrade(stack);
+        if (stack.isEmpty()) return stack;
         return moveIntoSlots(stack, List.of(matrixSlot, catalystSlot));
     }
 

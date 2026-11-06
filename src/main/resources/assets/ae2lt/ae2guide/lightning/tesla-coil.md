@@ -47,3 +47,16 @@ High Voltage mode supports batch processing. The coil locks in the full amount o
 <ItemImage id="ae2lt:lightning_collapse_matrix" scale="2" float="left" />
 
 Extreme High Voltage mode requires a **Lightning Collapse Matrix** in the coil's matrix slot. The matrix is **not consumed** during processing, but it must stay in the slot.
+
+## Redstone Control
+
+The upgrade panel accepts one AE2 Redstone Card. With the card installed, the toolbar button cycles through **Ignore Redstone**, **Active with Signal**, and **Active without Signal**. Without a card, automatic operation is unchanged. Pulse mode is not supported.
+
+- To limit output stock, configure an ME Level Emitter to signal when the output reaches its stop condition, and select Active without Signal on the machine.
+- To preserve input stock, monitor the consumed resource, signal while enough remains, and select Active with Signal.
+
+A redstone stop preserves the current recipe and paid progress, pausing processing energy, material consumption and new output. Processing resumes when allowed. Automation can still remove existing items. The emitter measures only its own ME network inventory; export catalyzer products into that network for output-stock control.
+
+This is a signal gate: one output batch, one input debit or concurrent machines can cross a threshold. Leave room for a full operation when protecting an input reserve, and reduce batch size when a tighter output limit is needed.
+
+Either half of the Tesla Coil can receive the control signal.
