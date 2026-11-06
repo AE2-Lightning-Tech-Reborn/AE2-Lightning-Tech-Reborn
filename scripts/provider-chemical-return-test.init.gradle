@@ -1,0 +1,26 @@
+allprojects {
+    afterEvaluate {
+        dependencies.add('jdbImplementation', fg.deobf('maven.modrinth:applied-mekanistics:1.4.3'))
+        dependencies.add('runtimeOnly', fg.deobf('maven.modrinth:applied-mekanistics:1.4.3'))
+        sourceSets.jdb.java.setIncludes(['**/ProviderChemicalReturnGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics', 'mekanism']
+                    || dep.group == 'maven.modrinth' && dep.name == 'applied-mekanistics')
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file('build/provider-chemical-return-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_provider_chemical'
+            property 'forge.logging.console.level', 'info'
+            mods { ae2lt { source sourceSets.jdb } }
+            jvmArgs '-Xms256m', '-Xmx1536m', '-XX:ActiveProcessorCount=4'
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doLast {
+                def log = project.file('build/provider-chemical-return-gametest/logs/latest.log')
+                if (!log.isFile() || !log.text.contains('All 9 required tests passed')) {
+                    throw new GradleException('Expected all nine provider chemical return tests to run and pass')
+                }
+            }
+        }
+    }
+}
