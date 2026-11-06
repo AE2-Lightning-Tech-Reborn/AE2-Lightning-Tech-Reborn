@@ -792,6 +792,13 @@ public class AE2LightningTech {
                 ModBlockEntities.PIGMEE_PATTERN_PROVIDER.get(),
                 (blockEntity, context) -> blockEntity.getReturnInventory());
 
+        // Match vanilla interfaces: storage buses use ME_STORAGE to access
+        // the grid, or the interface inventory when stocking is configured.
+        event.registerBlockEntity(
+                AECapabilities.ME_STORAGE,
+                ModBlockEntities.OVERLOADED_INTERFACE.get(),
+                (blockEntity, context) -> blockEntity.getInterfaceLogic().getInventory());
+
         event.registerBlock(
                 AECapabilities.GENERIC_INTERNAL_INV,
                 (level, pos, state, blockEntity, context) -> {
