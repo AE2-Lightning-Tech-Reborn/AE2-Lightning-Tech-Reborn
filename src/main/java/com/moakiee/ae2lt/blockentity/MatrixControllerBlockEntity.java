@@ -36,6 +36,7 @@ import com.moakiee.ae2lt.logic.persistence.ControllerMachineIdentity;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData.MachineType;
 import com.moakiee.ae2lt.logic.persistence.CompletePhysicalStorageSet;
+import com.moakiee.ae2lt.logic.persistence.MultiblockRenderCleanupSavedData;
 import com.moakiee.ae2lt.network.MatrixControllerActionPacket;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -68,6 +69,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 public class MatrixControllerBlockEntity extends BlockEntity
         implements CraftingCoreHost, MatrixCraftingEnergy {
@@ -143,6 +145,20 @@ public class MatrixControllerBlockEntity extends BlockEntity
     public MatrixControllerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATRIX_CONTROLLER.get(), pos, blockState);
         orientation = orientationFromState(blockState);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        // Client rendering follows the synchronized block state, not the server-only structure cache.
+        if (!getBlockState().getValue(MatrixControllerBlock.FORMED)) {
+            return new AABB(worldPosition);
+        }
+        var corner = MatrixMultiblockScanner.worldPos(worldPosition, BlockPos.ZERO, getOrientation());
+        var oppositeCorner = MatrixMultiblockScanner.worldPos(worldPosition, new BlockPos(
+                MatrixMultiblockTemplate.SIZE_X - 1,
+                MatrixMultiblockTemplate.SIZE_Y - 1,
+                MatrixMultiblockTemplate.SIZE_Z - 1), getOrientation());
+        return new AABB(corner).minmax(new AABB(oppositeCorner));
     }
 
     public static void serverTick(net.minecraft.world.level.Level level,
@@ -1110,15 +1126,24 @@ public class MatrixControllerBlockEntity extends BlockEntity
 
     // Toggle FORMED on connected-texture matrix blocks. Client-only update.
     private void setConnectedTextureFormed(BlockPos pos, boolean formedValue) {
-        if (level == null || !level.isLoaded(pos)) {
+        if (level == null) return;
+        if (!level.isLoaded(pos)) {
+            if (!formedValue && level instanceof ServerLevel serverLevel) {
+                MultiblockRenderCleanupSavedData.get(serverLevel).defer(pos);
+            }
             return;
+        }
+        if (formedValue && level instanceof ServerLevel serverLevel) {
+            var cleanup = MultiblockRenderCleanupSavedData.getIfPresent(serverLevel);
+            if (cleanup != null) cleanup.cancel(pos);
         }
         BlockState state = level.getBlockState(pos);
         if (state.getBlock() instanceof MatrixMultiblockComponentBlock componentBlock
                 && componentBlock.matrixComponent(state) != MatrixMultiblockComponent.MATRIX_CONTROLLER
                 && state.hasProperty(MatrixFormedBlock.FORMED)
                 && state.getValue(MatrixFormedBlock.FORMED) != formedValue) {
-            level.setBlock(pos, state.setValue(MatrixFormedBlock.FORMED, formedValue), Block.UPDATE_CLIENTS);
+            level.setBlock(pos, state.setValue(MatrixFormedBlock.FORMED, formedValue),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
     }
 

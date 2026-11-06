@@ -9,6 +9,7 @@ import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanAttempt;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanResult;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanner;
+import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockTemplate;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockScanIssue;
 import com.moakiee.ae2lt.logic.tianshu.TianshuAutoBuildPlan;
 import com.moakiee.ae2lt.logic.tianshu.CpuInternalCoreProfile;
@@ -24,6 +25,7 @@ import com.moakiee.ae2lt.logic.persistence.ControllerMachineIdentity;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData;
 import com.moakiee.ae2lt.logic.persistence.ControllerMachineStateSavedData.MachineType;
 import com.moakiee.ae2lt.logic.persistence.CompletePhysicalStorageSet;
+import com.moakiee.ae2lt.logic.persistence.MultiblockRenderCleanupSavedData;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -76,6 +78,7 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         implements TimeWheelCraftingCpuPoolHost, TianshuInventoryMaintenanceHost,
@@ -150,6 +153,20 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
 
     public TianshuSupercomputerControllerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TIANSHU_SUPERCOMPUTER_CONTROLLER.get(), pos, state);
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        // The animated core is above and behind this controller, potentially in another section.
+        if (!getBlockState().getValue(TianshuSupercomputerControllerBlock.FORMED)) {
+            return new AABB(worldPosition);
+        }
+        var facing = getBlockState().getValue(TianshuSupercomputerControllerBlock.FACING);
+        var corner = TianshuMultiblockScanner.worldPos(worldPosition, BlockPos.ZERO, facing);
+        int last = TianshuMultiblockTemplate.SIZE - 1;
+        var oppositeCorner = TianshuMultiblockScanner.worldPos(
+                worldPosition, new BlockPos(last, last, last), facing);
+        return new AABB(corner).minmax(new AABB(oppositeCorner));
     }
 
     @Nullable
@@ -684,10 +701,10 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
         if (level == null || minPos == null || maxPos == null) return;
         for (BlockPos mutable : BlockPos.betweenClosed(minPos, maxPos)) {
             BlockPos pos = mutable.immutable();
+            setMemberFormed(pos, false);
             if (!level.isLoaded(pos)) {
                 continue;
             }
-            setMemberFormed(pos, false);
             if (level.getBlockEntity(pos) instanceof TianshuSupercomputerPortBlockEntity port
                     && worldPosition.equals(port.getControllerPos())) {
                 port.bindToController(null);
@@ -700,16 +717,26 @@ public class TianshuSupercomputerControllerBlockEntity extends BlockEntity
     }
 
     private void setMemberFormed(BlockPos pos, boolean value) {
-        if (level == null || !level.isLoaded(pos)) {
+        if (level == null) return;
+        if (!level.isLoaded(pos)) {
+            if (!value && level instanceof ServerLevel serverLevel) {
+                MultiblockRenderCleanupSavedData.get(serverLevel).defer(pos);
+            }
             return;
+        }
+        if (value && level instanceof ServerLevel serverLevel) {
+            var cleanup = MultiblockRenderCleanupSavedData.getIfPresent(serverLevel);
+            if (cleanup != null) cleanup.cancel(pos);
         }
         BlockState state = level.getBlockState(pos);
         if (state.hasProperty(TianshuSupercomputerStructureBlock.FORMED)
                 && state.getValue(TianshuSupercomputerStructureBlock.FORMED) != value) {
-            level.setBlock(pos, state.setValue(TianshuSupercomputerStructureBlock.FORMED, value), Block.UPDATE_CLIENTS);
+            level.setBlock(pos, state.setValue(TianshuSupercomputerStructureBlock.FORMED, value),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         } else if (state.hasProperty(TianshuSupercomputerPortBlock.FORMED)
                 && state.getValue(TianshuSupercomputerPortBlock.FORMED) != value) {
-            level.setBlock(pos, state.setValue(TianshuSupercomputerPortBlock.FORMED, value), Block.UPDATE_CLIENTS);
+            level.setBlock(pos, state.setValue(TianshuSupercomputerPortBlock.FORMED, value),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
     }
 

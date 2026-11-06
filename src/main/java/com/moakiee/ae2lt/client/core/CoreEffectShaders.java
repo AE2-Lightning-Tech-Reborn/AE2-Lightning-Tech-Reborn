@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client.core;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.mojang.blaze3d.shaders.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -33,6 +34,13 @@ public final class CoreEffectShaders {
 
     @SubscribeEvent
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
+        // A reload can disable shaders that were previously registered and are about to be closed.
+        TIANSHU.setInstance(null);
+        MATRIX.setInstance(null);
+        if (!AE2LTClientConfig.useCoreShaderRendering()) {
+            LOGGER.info("Custom core shaders disabled; using the vanilla core-effect shader fallback");
+            return;
+        }
         if (CoreEffectBackend.useVeil()) {
             LOGGER.info("Compatible Veil detected; preparing native core-effect shaders as fallback");
         } else {
@@ -41,6 +49,10 @@ public final class CoreEffectShaders {
 
         registerShader(event, TIANSHU_SHADER, TIANSHU);
         registerShader(event, MATRIX_SHADER, MATRIX);
+    }
+
+    static boolean isReady() {
+        return TIANSHU.instance != null && MATRIX.instance != null;
     }
 
     static RenderStateShard.ShaderStateShard tianshu() {

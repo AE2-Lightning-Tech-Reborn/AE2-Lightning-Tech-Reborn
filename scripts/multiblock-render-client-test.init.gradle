@@ -1,0 +1,60 @@
+// Run with Java 17 and a disposable Forge 1.20.1 world:
+// ./gradlew -I scripts/multiblock-render-client-test.init.gradle runClient \
+//   -Pae2ltRenderSeed=<world> -Pae2ltRenderRunDirectory=<new directory>
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MultiblockCoreRenderClientProbe.java'])
+        tasks.named('compileJdbJava').configure {
+            source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/MultiblockCoreRenderClientProbe.java')
+        }
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics',
+                            'io.github.llamalad7'])
+        }
+        def directory = project.file(project.findProperty('ae2ltRenderRunDirectory')
+                ?: 'build/multiblock-render-client')
+        def shadersDisabled = (project.findProperty('ae2ltCoreShadersDisabled') ?: 'false').toBoolean()
+        def brokenShader = (project.findProperty('ae2ltCoreBrokenShader') ?: 'false').toBoolean()
+        minecraft.runs.client {
+            workingDirectory directory
+            property 'ae2lt.multiblockCoreRenderProbe', 'true'
+            property 'ae2lt.coreShadersDisabled', shadersDisabled.toString()
+            property 'ae2lt.coreReloadCheck', (project.findProperty('ae2ltCoreReloadCheck') ?: 'false').toString()
+            property 'forge.logging.console.level', 'info'
+            args '--quickPlaySingleplayer', 'CoreRenderQA', '--width', '1100', '--height', '800'
+            jvmArgs '-Xms256m', '-Xmx2g'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runClient' }.configureEach {
+            doFirst {
+                def seed = project.findProperty('ae2ltRenderSeed')
+                if (!seed || !new File(seed.toString(), 'level.dat').isFile())
+                    throw new GradleException('ae2ltRenderSeed must name a disposable Forge 1.20.1 world')
+                def marker = new File(directory, '.core-render-probe-started')
+                if (marker.exists()) throw new GradleException('Use a new ae2ltRenderRunDirectory')
+                directory.mkdirs()
+                marker.text = java.time.Instant.now().toString()
+                project.copy { from seed; into new File(directory, 'saves/CoreRenderQA'); exclude 'session.lock' }
+                def config = new File(directory, 'config')
+                config.mkdirs()
+                new File(config, 'ae2lt-client.toml').text = "[compatibility]\ndisableCoreShaderRendering = ${shadersDisabled}\n[rendering]\nmultiblockCoreEffects = true\n"
+                def options = 'version:3465\nonboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:5\nsimulationDistance:5\nfov:0.0\n'
+                if (brokenShader) {
+                    def pack = new File(directory, 'resourcepacks/core-shader-fault')
+                    pack.mkdirs()
+                    new File(pack, 'pack.mcmeta').text = '{"pack":{"pack_format":15,"description":"AE2LT shader fault injection"}}'
+                    def shader = new File(pack, 'assets/ae2lt/shaders/core/multiblock/tianshu_core.json')
+                    shader.parentFile.mkdirs()
+                    shader.text = '{'
+                    options += 'resourcePacks:["vanilla","file/core-shader-fault"]\n'
+                }
+                new File(directory, 'options.txt').text = options
+            }
+            doLast {
+                def result = new File(directory, 'multiblock-core-render-result.txt')
+                if (!result.isFile() || !result.text.startsWith('PASS'))
+                    throw new GradleException('Core render probe failed: ' + (result.isFile() ? result.text : 'no result'))
+            }
+        }
+    }
+}

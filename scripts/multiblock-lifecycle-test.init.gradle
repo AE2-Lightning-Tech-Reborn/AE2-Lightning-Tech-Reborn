@@ -1,0 +1,29 @@
+// Isolated real-chunk unload/reload regression, excluded from release jars.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/MultiblockLifecycleGameTests.java'])
+        tasks.named('compileJdbJava').configure {
+            source = project.files('src/jdb/java/com/moakiee/ae2lt/debug/MultiblockLifecycleGameTests.java')
+        }
+        configurations.runtimeOnly.dependencies.removeAll { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'appeng', 'org.appliedenergistics', 'io.github.llamalad7'])
+        }
+        minecraft.runs.gameTestServer {
+            workingDirectory project.file(project.findProperty('ae2ltLifecycleRunDirectory')
+                    ?: 'build/multiblock-lifecycle-gametest')
+            property 'forge.enabledGameTestNamespaces', 'ae2lt_multiblock_lifecycle,ae2lt_migration'
+            property 'forge.logging.console.level', 'info'
+            jvmArgs '-Xms256m', '-Xmx2g'
+            mods { ae2lt { source sourceSets.jdb } }
+        }
+        tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+            doFirst {
+                def directory = project.file(project.findProperty('ae2ltLifecycleRunDirectory')
+                        ?: 'build/multiblock-lifecycle-gametest')
+                directory.mkdirs()
+                def propertiesFile = new File(directory, 'server.properties')
+                if (!propertiesFile.exists()) propertiesFile.text = 'level-type=minecraft\\:flat\ngenerate-structures=false\n'
+            }
+        }
+    }
+}
