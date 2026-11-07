@@ -19,6 +19,8 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -26,8 +28,16 @@ import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 
 public class FirmamentConversionCoreBlock extends Block implements EntityBlock {
+    public static final BooleanProperty ADVANCED = BooleanProperty.create("advanced");
+
     public FirmamentConversionCoreBlock(BlockBehaviour.Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(ADVANCED, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(ADVANCED);
     }
 
     @Override
