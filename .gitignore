@@ -87,3 +87,4 @@ run-cell-workbench-gametest/
 /run-pattern-migration-gametest/
 /run-pattern-migration-client/
 !docs/tianshu-pattern-migration.md
+!docs/tianshu-omniversal-tab-crash-2026-11-07.md
