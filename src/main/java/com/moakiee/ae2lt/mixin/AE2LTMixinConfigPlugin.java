@@ -26,6 +26,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
             Map.entry("IpnContainerClickerMixin", "inventoryprofilesnext"),
             Map.entry("EntityConveyorPhaseLockMixin", "mob_grinding_utils"),
             Map.entry("TransfiniteCraftingLogicMixin", "gtlcore"),
+            Map.entry("GtlGraphPlanningMixin", "gtlcore"),
             Map.entry("TransfiniteComputationArrayMachineMixin", "gtlcore"),
             Map.entry("MECraftingCPUInterfacePartMachineMixin", "gtlcore"),
             Map.entry("PatternMigrationEaeBatchMixin", "expatternprovider"),

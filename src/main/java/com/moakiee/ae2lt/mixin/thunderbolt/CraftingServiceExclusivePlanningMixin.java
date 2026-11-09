@@ -3,6 +3,8 @@ package com.moakiee.ae2lt.mixin.thunderbolt;
 import java.util.concurrent.Future;
 
 import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,6 +23,7 @@ import net.minecraft.world.level.Level;
 
 import com.moakiee.ae2lt.crafting.algorithm.ExclusiveCraftingPlanning;
 import com.moakiee.ae2lt.crafting.algorithm.ExclusivePlanningLock;
+import com.moakiee.ae2lt.crafting.algorithm.ExclusivePlanningContext;
 import com.moakiee.thunderbolt.ae2.crafting.CraftingPlanningControl;
 
 /**
@@ -36,6 +39,15 @@ public abstract class CraftingServiceExclusivePlanningMixin {
     @Shadow
     @Final
     private IGrid grid;
+
+    /** GTLCore's GRAPH HEAD injector must not bypass this grid's explicit algorithm selection. */
+    @WrapMethod(method = "beginCraftingCalculation")
+    private Future<ICraftingPlan> ae2lt$scopePlanningRouter(
+            Level level, ICraftingSimulationRequester requester, AEKey what, long amount,
+            CalculationStrategy strategy, Operation<Future<ICraftingPlan>> original) {
+        return ExclusivePlanningContext.calculate(this.grid,
+                () -> original.call(level, requester, what, amount, strategy));
+    }
 
     @Inject(
             method = "beginCraftingCalculation",

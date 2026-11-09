@@ -38,6 +38,7 @@ import appeng.hooks.ticking.TickHandler;
 
 import com.moakiee.ae2lt.crafting.runtime.CraftingExecutionState;
 import com.moakiee.ae2lt.crafting.runtime.CraftingTickBudget;
+import com.moakiee.ae2lt.compat.BatchProviderAdapterContext;
 import com.moakiee.thunderbolt.core.crafting.batch.TickProviderDispatchSchedule;
 import com.moakiee.thunderbolt.core.crafting.plan.LoopCraftingPlan;
 import com.moakiee.thunderbolt.api.crafting.cpu.ExtendedCraftingCpuCluster;
@@ -67,6 +68,7 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
     private final CraftingExecutionState execution = new CraftingExecutionState();
     private final CraftingTickBudget tickBudget = new CraftingTickBudget();
     private final TickProviderDispatchSchedule dispatchSchedule = new TickProviderDispatchSchedule();
+    private final BatchProviderAdapterContext batchAdapters = new BatchProviderAdapterContext();
 
     public TimeWheelCraftingCpuPool(TimeWheelCraftingCpuPoolHost host,
                                     long totalStorage,
@@ -223,7 +225,7 @@ public final class TimeWheelCraftingCpuPool implements ExtendedCraftingCpuCluste
                     craftingService,
                     dispatchBudget,
                     scheduled.remainingCopies,
-                    dispatchSchedule);
+                    dispatchSchedule, batchAdapters);
             if (scheduled.remainingCopies != Long.MAX_VALUE) {
                 scheduled.remainingCopies = Math.max(
                         0L,

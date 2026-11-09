@@ -22,10 +22,24 @@ class TianshuWorkstationResourceTest {
     @Test
     void retainedTerminalStyleIncludesResolveAgainstInstalledForgeAssets() throws Exception {
         var visited = new HashSet<String>();
-        for (var path : new String[]{"ae2lt_craft_confirm.json", "tianshu_terminal_settings.json",
+        for (var path : new String[]{"ae2lt_craft_confirm.json", "ae2lt_crafting_report.json", "tianshu_terminal_settings.json",
                 "terminals/tianshu_crafting_terminal.json", "wireless_tianshu_crafting_terminal.json"}) {
             checkStyle(Path.of(path), visited);
         }
+    }
+
+    @Test
+    void reportStyleHostsNativeAddonWidgetWithoutCoveringItsOwnBookmarkButton() throws Exception {
+        var legacy = json("assets/ae2/screens/ae2lt_craft_confirm.json");
+        var report = json("assets/ae2/screens/ae2lt_crafting_report.json");
+        var widgets = report.getAsJsonObject("widgets");
+        // GTLCore adds its native bookmark during the superclass constructor. The report
+        // provides the visible bookmark (with exact-amount handling), so host that duplicate
+        // outside the report rather than allowing a missing-widget crash or overlapping buttons.
+        var nativeBookmark = widgets.remove("favoriteMissing").getAsJsonObject();
+        assertTrue(nativeBookmark.get("left").getAsInt() + nativeBookmark.get("width").getAsInt() <= 0);
+        assertTrue(widgets.getAsJsonObject("bookmarkMissing").get("left").getAsInt() >= 0);
+        assertEquals(legacy, report, "Keep the retained resource and active report layout aligned");
     }
 
     private void checkStyle(Path path, HashSet<String> visited) throws Exception {

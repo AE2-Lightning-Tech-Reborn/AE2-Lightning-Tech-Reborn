@@ -1,7 +1,6 @@
 package com.moakiee.ae2lt.gametest;
 
 import java.math.BigInteger;
-import java.util.List;
 import java.util.Map;
 import appeng.api.config.CpuSelectionMode;
 import appeng.api.stacks.AEItemKey;
@@ -10,6 +9,7 @@ import appeng.core.sync.BasePacket;
 import appeng.core.sync.packets.CraftConfirmPlanPacket;
 import appeng.menu.me.crafting.*;
 import com.moakiee.ae2lt.crafting.big.BigDisplayAmounts;
+import com.moakiee.ae2lt.crafting.big.BigCraftingPlan;
 import com.moakiee.ae2lt.crafting.big.BigStatusEntry;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReport;
 import com.moakiee.thunderbolt.ae2.crafting.ExactPlanReports;
@@ -52,7 +52,8 @@ public final class BigForgePacketGameTests {
     public static void exactConfirmConstructorRoundTrip(GameTestHelper helper) throws Exception {
         var key = AEItemKey.of(Items.STONE);
         var n = BigInteger.TEN.pow(100);
-        var summary = new CraftingPlanSummary(Long.MAX_VALUE, true, List.of());
+        // Exercise the production exact-plan factory, including optional Crafting Tree metadata.
+        var summary = new BigCraftingPlan(key, n, null, "unverified").summary();
         var report = new ExactPlanReport(n, Map.of(key, new ExactPlanReport.Amounts(n, n, n)), true);
         ExactPlanReports.attach(summary, report);
         var packet = new CraftConfirmPlanPacket(summary);
