@@ -1,0 +1,5 @@
+{
+  "ignoredSlotClasses": [
+    "appeng.client.gui.me.common.RepoSlot"
+  ]
+}
