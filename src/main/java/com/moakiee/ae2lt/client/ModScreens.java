@@ -21,6 +21,7 @@ import com.moakiee.ae2lt.client.machine.PigmeeSynthesisStationScreen;
 import com.moakiee.ae2lt.client.machine.TeslaCoilScreen;
 import com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen;
 import com.moakiee.ae2lt.client.tianshu.TianshuPatternEncodingTermScreen;
+import com.moakiee.ae2lt.client.tianshu.TianshuPatternStorageScreen;
 import com.moakiee.ae2lt.client.tianshu.TianshuSeedStorageScreen;
 import com.moakiee.ae2lt.client.tianshu.TianshuSupercomputerControllerScreen;
 import com.moakiee.ae2lt.client.tianshu.TianshuWirelessCraftingTermScreen;
@@ -61,6 +62,7 @@ import com.moakiee.ae2lt.menu.TeslaCoilMenu;
 import com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuPatternStorageMenu;
 import com.moakiee.ae2lt.menu.TianshuSeedStorageMenu;
 import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -104,6 +106,7 @@ public class ModScreens {
         event.register(TianshuWirelessPatternEncodingTermMenu.TYPE,
                 ModScreens::createTianshuWirelessPatternEncodingTermScreen);
         event.register(TianshuSeedStorageMenu.TYPE, ModScreens::createTianshuSeedStorageScreen);
+        event.register(TianshuPatternStorageMenu.TYPE, TianshuPatternStorageScreen::new);
     }
 
     private static com.moakiee.ae2lt.client.gui.NetworkManagementScreen createNetworkManagementScreen(

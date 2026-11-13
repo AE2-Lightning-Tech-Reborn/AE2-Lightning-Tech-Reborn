@@ -23,6 +23,7 @@ import com.moakiee.ae2lt.menu.TeslaCoilMenu;
 import com.moakiee.ae2lt.menu.TianshuSupercomputerControllerMenu;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
+import com.moakiee.ae2lt.menu.TianshuPatternStorageMenu;
 import com.moakiee.ae2lt.menu.TianshuSeedStorageMenu;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
@@ -58,6 +59,10 @@ public final class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<TianshuSeedStorageMenu>>
             TIANSHU_SEED_STORAGE = MENU_TYPES.register(
                     "closed_loop_seed_storage", () -> TianshuSeedStorageMenu.TYPE);
+
+    public static final DeferredHolder<MenuType<?>, MenuType<TianshuPatternStorageMenu>>
+            TIANSHU_PATTERN_STORAGE = MENU_TYPES.register(
+                    "closed_loop_pattern_storage", () -> TianshuPatternStorageMenu.TYPE);
 
     public static final DeferredHolder<MenuType<?>, MenuType<OverloadPatternEncoderMenu>>
             OVERLOAD_PATTERN_ENCODER = MENU_TYPES.register(

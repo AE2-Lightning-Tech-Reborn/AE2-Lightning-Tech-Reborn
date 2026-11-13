@@ -6,6 +6,7 @@ import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternPayload;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternRepository;
 import com.moakiee.ae2lt.logic.tianshu.loop.ClosedLoopPatternValidator;
 import com.moakiee.ae2lt.logic.terminal.InternalPatternContainerLink;
+import com.moakiee.ae2lt.menu.TianshuPatternStorageMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
@@ -16,12 +17,15 @@ import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.IGrid;
 import appeng.api.stacks.AEItemKey;
 import appeng.helpers.patternprovider.PatternContainer;
+import appeng.menu.MenuOpener;
+import appeng.menu.locator.MenuLocators;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -45,6 +49,10 @@ public final class TianshuPatternStorageBlockEntity extends BlockEntity implemen
 
     public List<ClosedLoopPatternPayload> patterns() {
         return patterns.patterns();
+    }
+
+    public void openMenu(Player player) {
+        MenuOpener.open(TianshuPatternStorageMenu.TYPE, player, MenuLocators.forBlockEntity(this));
     }
 
     public void replacePatterns(List<ClosedLoopPatternPayload> payloads) {

@@ -1,0 +1,13 @@
+// ./gradlew -I scripts/pattern-storage-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/TianshuPatternStorageGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('pattern-storage-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt,ae2lt_pattern_storage'
+        }
+    }
+}

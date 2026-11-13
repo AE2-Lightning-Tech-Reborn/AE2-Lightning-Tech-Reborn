@@ -3,10 +3,13 @@ package com.moakiee.ae2lt.block;
 import com.moakiee.ae2lt.blockentity.TianshuPatternStorageBlockEntity;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockComponent;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 /** Physical warehouse installed in a Tianshu cooling position for encoded closed-loop patterns. */
@@ -19,6 +22,16 @@ public final class TianshuPatternStorageBlock extends TianshuSupercomputingUnitB
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TianshuPatternStorageBlockEntity(pos, state);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(
+            BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (level.getBlockEntity(pos) instanceof TianshuPatternStorageBlockEntity storage) {
+            if (!level.isClientSide) storage.openMenu(player);
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return InteractionResult.PASS;
     }
 
     @Override

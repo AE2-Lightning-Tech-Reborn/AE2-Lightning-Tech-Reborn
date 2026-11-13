@@ -484,7 +484,12 @@ public final class WirelessLinkRegistry extends SavedData {
                     .toList();
             for (var neighbourNode : PhysicalGridCluster.directNeighbours(changedNodes)) {
                 var neighbour = locateNode(neighbourNode);
-                if (neighbour != null) {
+                // A part/block may own isolated nodes. Quartz fiber's outer node,
+                // for example, shares the part's location but that locator resolves
+                // to its inner node. Never move frequency inheritance across such
+                // a boundary by persisting a different node under the same locator.
+                var restored = neighbour == null ? null : resolveLocator(neighbour.locator(), level.getServer());
+                if (restored != null && restored.target().node() == neighbourNode) {
                     pending.inheritedSeeds.add(new InheritedClusterSeed(
                             neighbour.locator(),
                             inheritance));

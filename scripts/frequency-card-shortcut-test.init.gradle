@@ -1,0 +1,14 @@
+// ./gradlew -I scripts/frequency-card-shortcut-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/FrequencyCardShortcutGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                           'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('frequency-card-shortcut-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt,ae2lt_frequency_shortcut'
+        }
+    }
+}

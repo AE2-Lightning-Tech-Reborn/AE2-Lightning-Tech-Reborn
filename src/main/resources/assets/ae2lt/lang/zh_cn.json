@@ -1139,6 +1139,7 @@
   "block.ae2lt.parallel_supercomputing_unit": "天枢超算并行单元",
   "block.ae2lt.tianshu_amplifier_unit": "天枢增幅单元",
   "block.ae2lt.closed_loop_pattern_storage": "天枢超算闭环样板仓",
+  "ae2lt.tianshu.pattern_storage.title": "闭环样板仓",
   "block.ae2lt.closed_loop_seed_storage": "天枢超算闭环种子仓",
   "ae2lt.tianshu.gui.formed": "运行中 · 主核心：%s",
   "ae2lt.tianshu.gui.unformed": "结构未成形",

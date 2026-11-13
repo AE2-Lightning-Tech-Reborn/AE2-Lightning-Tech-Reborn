@@ -1139,6 +1139,7 @@
   "block.ae2lt.parallel_supercomputing_unit": "Tianshu Supercomputer Parallel Unit",
   "block.ae2lt.tianshu_amplifier_unit": "Tianshu Amplifier Unit",
   "block.ae2lt.closed_loop_pattern_storage": "Tianshu Supercomputer Closed-Loop Pattern Storage",
+  "ae2lt.tianshu.pattern_storage.title": "Closed-Loop Patterns",
   "block.ae2lt.closed_loop_seed_storage": "Tianshu Supercomputer Closed-Loop Seed Storage",
   "ae2lt.tianshu.gui.formed": "Online · Main Core: %s",
   "ae2lt.tianshu.gui.unformed": "Structure Not Formed",
