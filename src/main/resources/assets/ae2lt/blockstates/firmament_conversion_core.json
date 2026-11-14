@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "advanced=false": {
       "model": "ae2lt:block/firmament_conversion_core"
+    },
+    "advanced=true": {
+      "model": "ae2lt:block/advanced_firmament_conversion_core"
     }
   }
 }

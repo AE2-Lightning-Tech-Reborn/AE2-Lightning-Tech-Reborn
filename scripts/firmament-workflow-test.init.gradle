@@ -1,0 +1,14 @@
+// ./gradlew -I scripts/firmament-workflow-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/FirmamentWorkflowGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                            'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_firmament'
+            gameDirectory = project.layout.buildDirectory.dir('firmament-workflow-gametest').get().asFile
+        }
+    }
+}
