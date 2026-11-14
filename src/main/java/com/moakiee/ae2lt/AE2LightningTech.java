@@ -824,6 +824,7 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.ae2lt.compat.mmcr.MmcrBatchIntegration.initialize();
             com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
                     com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
                     com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);

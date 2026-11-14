@@ -28,6 +28,66 @@ class ProviderTargetTest {
             Level.OVERWORLD, BlockPos.ZERO, Direction.NORTH);
 
     @Test
+    void nativeStartsGrowAcrossIdleCyclesAndBusyVisitsPreserveTheProbe() {
+        var pattern = new EmptyPattern();
+        var chunks = new ArrayList<Integer>();
+        var busy = new boolean[1];
+        for (int cycle = 0; cycle < 6; cycle++) {
+            busy[0] = false;
+            var result = target.pushStartPattern(pattern, 64, () -> busy[0], copies -> {
+                chunks.add(copies);
+                busy[0] = true;
+                return new ProviderTarget.BatchChunk(copies, true, false);
+            });
+            assertTrue(result.ownedCopies() > 0);
+            assertEquals(0, target.pushStartPattern(pattern, 64, () -> busy[0], copies -> {
+                throw new AssertionError("Busy machine must not accept another native start");
+            }).ownedCopies());
+        }
+        assertEquals(List.of(1, 1, 2, 4, 8, 16), chunks);
+    }
+
+    @Test
+    void nativeStartTailDoesNotReplaceTheLargerCandidate() {
+        var pattern = new EmptyPattern();
+        for (int cycle = 0; cycle < 4; cycle++) {
+            target.pushStartPattern(pattern, 64, () -> false,
+                    copies -> new ProviderTarget.BatchChunk(copies, true, false));
+        }
+        assertEquals(8, target.startBatchOffer(pattern, 64));
+        assertEquals(3, target.pushStartPattern(pattern, 3, () -> false,
+                copies -> new ProviderTarget.BatchChunk(copies, true, false)).ownedCopies());
+        assertEquals(8, target.startBatchOffer(pattern, 64));
+    }
+
+    @Test
+    void nativeStartBusyRejectionPausesButCapacityRejectionBacksOff() {
+        var pattern = new EmptyPattern();
+        for (int cycle = 0; cycle < 4; cycle++) {
+            target.pushStartPattern(pattern, 64, () -> false,
+                    copies -> new ProviderTarget.BatchChunk(copies, true, false));
+        }
+        var busy = new boolean[1];
+        target.pushStartPattern(pattern, 64, () -> busy[0], copies -> {
+            busy[0] = true;
+            return ProviderTarget.BatchChunk.REJECTED;
+        });
+        assertEquals(8, target.startBatchOffer(pattern, 64));
+        target.pushStartPattern(pattern, 64, () -> false, copies -> ProviderTarget.BatchChunk.REJECTED);
+        assertEquals(4, target.startBatchOffer(pattern, 64));
+    }
+
+    @Test
+    void acceptedOwnershipWithoutCompleteStartCannotProveGrowth() {
+        var pattern = new EmptyPattern();
+        for (int cycle = 0; cycle < 3; cycle++) {
+            target.pushStartPattern(pattern, 64, () -> false,
+                    copies -> new ProviderTarget.BatchChunk(copies, false, false));
+        }
+        assertEquals(1, target.startBatchOffer(pattern, 64));
+    }
+
+    @Test
     void addressIdentityIncludesFaceButMachineMatchDoesNot() {
         var north = new ProviderTarget(
                 Level.OVERWORLD, new BlockPos(1, 2, 3), Direction.NORTH);
