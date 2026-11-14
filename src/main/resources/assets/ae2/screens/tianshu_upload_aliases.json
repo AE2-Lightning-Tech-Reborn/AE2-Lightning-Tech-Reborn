@@ -52,6 +52,12 @@
       "width": 72,
       "height": 20
     },
+    "autoUpload": {
+      "left": 10,
+      "bottom": 28,
+      "width": 234,
+      "height": 20
+    },
     "exportAliases": {
       "left": 8,
       "top": 24,

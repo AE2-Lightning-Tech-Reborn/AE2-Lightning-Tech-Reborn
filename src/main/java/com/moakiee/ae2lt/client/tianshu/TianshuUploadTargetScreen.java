@@ -76,7 +76,6 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
     private boolean uploadFailed;
     private boolean updatingAliasField;
     private boolean configuredAliasInserted;
-    private boolean directUploadAttempted;
     private boolean initialAliasSelectionPending;
     private String aliasBeforeManagement;
     private String configuredAlias = "";
@@ -146,7 +145,6 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
 
         if (aliasEditor) {
             uploadMenu.cancelPendingClientUpload();
-            directUploadAttempted = true;
             defaultAliases.clear();
         }
 
@@ -249,7 +247,7 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         }
         if (awaitingUpload && uploadMenu.uploadState == 3) {
             awaitingUpload = false;
-            uploadFailed = true;
+            showUploadFailure();
             requestedRevision = uploadMenu.getUploadTargetsRevision();
             queryRefresh = true;
         }
@@ -258,7 +256,6 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
             queryRefresh = false;
             rebuildDefaultAliasTooltip();
             rebuildFilteredTargets();
-            tryDirectUpload();
         }
     }
 
@@ -289,17 +286,6 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
 
     private static boolean matches(TianshuUploadTargetData target, String query) {
         return TianshuUploadTargetMatcher.matches(target, query);
-    }
-
-    private void tryDirectUpload() {
-        if (aliasEditor || directUploadAttempted || awaitingTargets || awaitingUpload) {
-            return;
-        }
-        directUploadAttempted = true;
-        var selected = TianshuUploadTargetMatcher.automaticCandidate(uploadMenu.getUploadTargets(),
-                AE2LTClientConfig.uploadMatchMode(),
-                AE2LTClientConfig.findUploadAlias(sourceField.getValue()), aliasField.getValue(), machineIds);
-        if (selected != null) select(new IndexedTarget(-1, selected), true);
     }
 
     @Override
@@ -517,27 +503,32 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         returnToParent();
     }
 
-    private void select(IndexedTarget selected) { select(selected, false); }
-
-    private void select(IndexedTarget selected, boolean automatic) {
+    private void select(IndexedTarget selected) {
         if (aliasEditor) {
             bindAliasFromTarget(selected);
             return;
         }
         if (selected.target().availableSlots() <= 0) {
-            uploadFailed = true;
+            showUploadFailure();
             return;
         }
         awaitingUpload = true;
         uploadFailed = false;
         uploadTargetName = selected.target().group().name().copy();
-        uploadMenu.uploadTianshuPatternToTarget(selected.target().group(), automatic);
+        uploadMenu.uploadTianshuPatternToTarget(selected.target().group());
+    }
+
+    private void showUploadFailure() {
+        uploadFailed = true;
+        if (minecraft.player != null) {
+            minecraft.player.displayClientMessage(
+                    Component.translatable("ae2lt.tianshu.upload.failed"), false);
+        }
     }
 
     private void addMapping() {
         if (awaitingUpload) return;
         uploadMenu.cancelPendingClientUpload();
-        directUploadAttempted = true;
         initialAliasSelectionPending = false;
         String source = sourceField.getValue().strip();
         String alias = aliasField.getValue().strip();
@@ -577,7 +568,6 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
 
     private void openAliasManagement() {
         if (awaitingUpload) return;
-        directUploadAttempted = true;
         initialAliasSelectionPending = false;
         aliasBeforeManagement = AE2LTClientConfig.findUploadAlias(sourceField.getValue());
         switchToScreen(new TianshuUploadAliasManagementScreen<>(this, sourceField.getValue(), aliasField.getValue()));
