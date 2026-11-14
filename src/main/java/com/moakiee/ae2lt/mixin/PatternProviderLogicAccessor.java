@@ -15,6 +15,7 @@ import appeng.api.networking.IManagedGridNode;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.helpers.patternprovider.PatternProviderLogic;
+import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.helpers.patternprovider.PatternProviderReturnInventory;
 import appeng.util.inv.AppEngInternalInventory;
 
@@ -24,6 +25,9 @@ import appeng.util.inv.AppEngInternalInventory;
  */
 @Mixin(PatternProviderLogic.class)
 public interface PatternProviderLogicAccessor {
+
+    @Accessor("host")
+    PatternProviderLogicHost getHost();
 
     @Invoker("onPushPatternSuccess")
     void invokeOnPushPatternSuccess(IPatternDetails pattern);
