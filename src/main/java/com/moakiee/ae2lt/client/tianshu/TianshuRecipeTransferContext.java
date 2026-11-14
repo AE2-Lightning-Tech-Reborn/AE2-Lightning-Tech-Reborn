@@ -1,33 +1,18 @@
 package com.moakiee.ae2lt.client.tianshu;
 
-import appeng.api.implementations.menuobjects.ItemMenuHost;
-import appeng.menu.SlotSemantics;
-import appeng.menu.locator.MenuHostLocator;
-import appeng.menu.locator.MenuLocators;
-import appeng.parts.AEBasePart;
-import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 
 /**
- * Recipe-viewer context carrying recipe/category identity into the provider picker, retained
- * across menu reopenings while the same terminal draft is still present.
+ * One-screen recipe-viewer context carrying recipe/category identity into the provider picker.
  * This class does not start encoding itself; the optional Alt shortcut starts it only after the
  * viewer confirms a successful transfer, while this remains a reusable metadata bridge.
  *
@@ -37,7 +22,6 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
  * alias field. Viewer keywords are retained only as default values that can be copied into the
  * alias field.
  */
-@EventBusSubscriber(modid = AE2LightningTech.MODID, value = Dist.CLIENT)
 public final class TianshuRecipeTransferContext {
     private static final int ENCODING_RESULT_GRACE_TICKS = 5;
     private static WeakReference<TianshuPatternEncodingTermMenu> owner = new WeakReference<>(null);
@@ -46,8 +30,6 @@ public final class TianshuRecipeTransferContext {
     private static boolean encodingPending;
     private static boolean encodingAckReceived;
     private static int encodingBindingDeadline;
-    private static final int MAX_RETAINED_TERMINALS = 64;
-    private static final LinkedHashMap<TerminalKey, RetainedContext> retained = new LinkedHashMap<>();
 
     private TianshuRecipeTransferContext() {
     }
@@ -151,77 +133,11 @@ public final class TianshuRecipeTransferContext {
     }
 
     public static synchronized Snapshot snapshotFor(TianshuPatternEncodingTermMenu menu) {
-        restore(menu);
         return owner.get() == menu ? snapshot : Snapshot.EMPTY;
     }
 
-    /** Keep metadata with the terminal draft, not the short-lived menu that displayed it. */
-    public static synchronized void remember(TianshuPatternEncodingTermMenu menu) {
-        if (owner.get() != menu) return;
-        var key = terminalKey(menu);
-        if (key == null) return;
-        retained.remove(key);
-        if (!snapshot.sourceKey().isBlank()) {
-            retained.put(key, new RetainedContext(snapshot, menu.tianshuMode, draft(menu)));
-            while (retained.size() > MAX_RETAINED_TERMINALS) retained.remove(retained.keySet().iterator().next());
-        }
-        // Screen changes also remove the old screen while keeping this menu alive. Preserve
-        // any encoding acknowledgement still in flight; a newly restored menu resets it.
-    }
-
-    private static void restore(TianshuPatternEncodingTermMenu menu) {
-        if (menu == null || owner.get() == menu) return;
-        var saved = retained.get(terminalKey(menu));
-        if (saved == null || saved.mode() != menu.tianshuMode || !sameDraft(saved.draft(), draft(menu))) return;
-        owner = new WeakReference<>(menu);
-        snapshot = saved.snapshot();
-        resetPendingEncoding();
-    }
-
-    private static TerminalKey terminalKey(TianshuPatternEncodingTermMenu menu) {
-        // AE2 populates the menu locator only on the server; derive it from the client host.
-        var locator = switch (menu.getTarget()) {
-            case AEBasePart part -> MenuLocators.forPart(part);
-            case ItemMenuHost<?> item -> item.getLocator();
-            default -> menu.getLocator();
-        };
-        return locator == null ? null
-                : new TerminalKey(menu.getPlayer().level().dimension(), locator);
-    }
-
-    private static List<ItemStack> draft(TianshuPatternEncodingTermMenu menu) {
-        var result = new ArrayList<ItemStack>();
-        for (var semantic : List.of(SlotSemantics.CRAFTING_GRID, SlotSemantics.PROCESSING_INPUTS,
-                SlotSemantics.PROCESSING_OUTPUTS, SlotSemantics.SMITHING_TABLE_TEMPLATE,
-                SlotSemantics.SMITHING_TABLE_BASE, SlotSemantics.SMITHING_TABLE_ADDITION,
-                SlotSemantics.STONECUTTING_INPUT)) {
-            menu.getSlots(semantic).forEach(slot -> result.add(slot.getItem().copy()));
-        }
-        return List.copyOf(result);
-    }
-
-    private static boolean sameDraft(List<ItemStack> left, List<ItemStack> right) {
-        if (left.size() != right.size()) return false;
-        for (int i = 0; i < left.size(); i++) {
-            if (!ItemStack.matches(left.get(i), right.get(i))) return false;
-        }
-        return true;
-    }
-
-    @SubscribeEvent
-    public static synchronized void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
-        retained.clear();
-        owner = new WeakReference<>(null);
-        snapshot = Snapshot.EMPTY;
-        resetPendingEncoding();
-    }
-
-    private record TerminalKey(ResourceKey<Level> dimension, MenuHostLocator locator) { }
-    private record RetainedContext(Snapshot snapshot, TianshuEncodingMode mode, List<ItemStack> draft) { }
-
     public static synchronized void clear(TianshuPatternEncodingTermMenu menu) {
         if (menu == null) return;
-        retained.remove(terminalKey(menu));
         owner = new WeakReference<>(menu);
         snapshot = Snapshot.EMPTY;
         resetPendingEncoding();
@@ -233,7 +149,6 @@ public final class TianshuRecipeTransferContext {
      */
     public static synchronized void beginEncoding(
             TianshuPatternEncodingTermMenu menu, ItemStack currentPattern) {
-        restore(menu);
         if (owner.get() != menu || snapshot.sourceKey().isBlank()) {
             resetPendingEncoding();
             return;

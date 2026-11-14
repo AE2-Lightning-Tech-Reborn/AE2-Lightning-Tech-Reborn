@@ -13,7 +13,7 @@ allprojects {
                 'com/moakiee/ae2lt/debug/TianshuPatternUploadGameTests.java',
                 'com/moakiee/ae2lt/debug/TianshuJdbHarness.java'])
         tasks.withType(Test).configureEach {
-            include '**/UploadAlias*Test*', '**/TianshuUpload*Test*', '**/TianshuPatternUpload*Test*',
+            include '**/UploadAlias*Test*', '**/TianshuUpload*Test*',
                     '**/TianshuRecipe*Test*', '**/RecipeViewerMixinPluginTest*',
                     '**/TianshuPatternEncodingTermMenuSourceContractTest*'
         }

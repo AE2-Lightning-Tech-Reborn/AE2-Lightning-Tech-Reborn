@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record RequestUploadTargetsPacket(int containerId, int requestId) implements CustomPacketPayload {
+public record RequestUploadTargetsPacket(int containerId) implements CustomPacketPayload {
     public static final Type<RequestUploadTargetsPacket> TYPE =
             new Type<>(NetworkInit.id("request_upload_targets"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RequestUploadTargetsPacket> STREAM_CODEC =
@@ -16,11 +16,10 @@ public record RequestUploadTargetsPacket(int containerId, int requestId) impleme
 
     private void write(RegistryFriendlyByteBuf buf) {
         buf.writeVarInt(containerId);
-        buf.writeVarInt(requestId);
     }
 
     private static RequestUploadTargetsPacket decode(RegistryFriendlyByteBuf buf) {
-        return new RequestUploadTargetsPacket(buf.readVarInt(), buf.readVarInt());
+        return new RequestUploadTargetsPacket(buf.readVarInt());
     }
 
     @Override public Type<RequestUploadTargetsPacket> type() { return TYPE; }
@@ -30,7 +29,7 @@ public record RequestUploadTargetsPacket(int containerId, int requestId) impleme
             if (context.player() instanceof ServerPlayer player
                     && player.containerMenu instanceof TianshuPatternEncodingTermMenu menu
                     && menu.containerId == packet.containerId()) {
-                menu.sendUploadTargets(player, packet.requestId());
+                menu.sendUploadTargets(player);
             }
         });
     }

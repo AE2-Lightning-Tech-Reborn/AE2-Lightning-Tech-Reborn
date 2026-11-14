@@ -221,7 +221,7 @@ public final class NetworkInit {
                 SelectOmniversalPatternPacket.TYPE,
                 SelectOmniversalPatternPacket.STREAM_CODEC,
                 SelectOmniversalPatternPacket::handle);
-        registrar.versioned("upload-target-query-3").playToServer(
+        registrar.playToServer(
                 RequestUploadTargetsPacket.TYPE,
                 RequestUploadTargetsPacket.STREAM_CODEC,
                 RequestUploadTargetsPacket::handle);
@@ -233,7 +233,7 @@ public final class NetworkInit {
                 UploadPatternToTargetPacket.TYPE,
                 UploadPatternToTargetPacket.STREAM_CODEC,
                 UploadPatternToTargetPacket::handle);
-        registrar.versioned("upload-target-query-3").playToClient(
+        registrar.versioned("upload-target-2").playToClient(
                 UploadTargetsSyncPacket.TYPE,
                 UploadTargetsSyncPacket.STREAM_CODEC,
                 UploadTargetsSyncPacket::handle);

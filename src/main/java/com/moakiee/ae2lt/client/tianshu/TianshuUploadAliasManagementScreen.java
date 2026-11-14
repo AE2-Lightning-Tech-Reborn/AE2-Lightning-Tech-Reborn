@@ -25,7 +25,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     private static final int CELL_PADDING = 6;
     private final AETextField search;
     private final Scrollbar scroll;
-    private final AE2Button add, edit, delete, clear, importAliases, exportAliases, autoUpload;
+    private final AE2Button add, edit, delete, clear, importAliases, exportAliases;
     private final String currentSource, currentAlias;
     private List<UploadAliasRecords.Entry> all = List.of(), filtered = List.of();
     private String selected;
@@ -59,8 +59,6 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         widgets.add("clear", clear);
         importAliases = widgets.addButton("importAliases", text("import"), this::importFromClipboard);
         exportAliases = widgets.addButton("exportAliases", text("export"), this::exportToClipboard);
-        autoUpload = widgets.addButton("autoUpload", autoUploadLabel(), this::cycleAutoUpload);
-        autoUpload.setTooltip(Tooltip.create(text("auto_mode_help")));
         clear.setTooltip(Tooltip.create(text("clear_search")));
         search.setResponder(value -> { filter(); revealSelection(); });
         refresh();
@@ -68,23 +66,10 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     }
 
     @Override
-    protected int preferredHeight() { return 296; }
+    protected int preferredHeight() { return 270; }
 
     @Override
     protected int preferredWidth() { return 254; }
-
-    private Component autoUploadLabel() {
-        return text("auto_mode", text("auto_mode."
-                + AE2LTClientConfig.uploadMatchMode().name().toLowerCase(Locale.ROOT)));
-    }
-
-    private void cycleAutoUpload() {
-        if (AE2LTClientConfig.setUploadMatchMode(AE2LTClientConfig.uploadMatchMode().next())) {
-            autoUpload.setMessage(autoUploadLabel());
-        } else {
-            status = text("save_failed");
-        }
-    }
 
     private void exportToClipboard() {
         try {
@@ -119,23 +104,20 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         boolean compact = imageHeight < 206;
         listTop = compact ? 54 : 60;
         rowHeight = compact ? 20 : 24;
-        rows = Math.max(0, (imageHeight - listTop - 108) / rowHeight);
+        rows = Math.max(0, (imageHeight - listTop - 82) / rowHeight);
         int searchY = compact ? 24 : 28;
         place(search, 10, searchY, imageWidth - 38);
         place(clear, imageWidth - 23, searchY, 12);
         clear.setHeight(12);
         int buttonWidth = (imageWidth - 32) / 3;
-        place(add, 10, imageHeight - 80, buttonWidth);
-        place(edit, 16 + buttonWidth, imageHeight - 80, buttonWidth);
-        place(delete, 22 + buttonWidth * 2, imageHeight - 80, imageWidth - 32 - buttonWidth * 2);
+        place(add, 10, imageHeight - 54, buttonWidth);
+        place(edit, 16 + buttonWidth, imageHeight - 54, buttonWidth);
+        place(delete, 22 + buttonWidth * 2, imageHeight - 54, imageWidth - 32 - buttonWidth * 2);
         int half = (imageWidth - 26) / 2;
-        place(importAliases, 10, imageHeight - 54, half);
-        place(exportAliases, 16 + half, imageHeight - 54, imageWidth - 26 - half);
-        place(autoUpload, 10, imageHeight - 28, imageWidth - 20);
-        autoUpload.setMessage(autoUploadLabel());
+        place(importAliases, 10, imageHeight - 28, half);
+        place(exportAliases, 16 + half, imageHeight - 28, imageWidth - 26 - half);
         scroll.setPosition(new Point(imageWidth - 18, listTop));
         scroll.setHeight(Math.max(15, rows * rowHeight));
-        scroll.setVisible(rows > 0);
         filter();
         revealSelection();
     }
@@ -267,8 +249,8 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
                     split + CELL_PADDING, textY, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
         g.drawString(font, clipped(text("count", filtered.size(), all.size()).getString(), imageWidth - 16),
-                10, imageHeight - 105, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 93, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+                10, imageHeight - 79, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+        g.drawString(font, clipped(status.getString(), imageWidth - 20), 10, imageHeight - 67, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
     }
 
     private int listRight() { return imageWidth - 24; }
@@ -276,7 +258,6 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
     @Override
     public void drawBG(GuiGraphics g, int x, int y, int mx, int my, float partialTicks) {
         super.drawBG(g, x, y, mx, my, partialTicks);
-        if (rows == 0) return;
         int listHeight = scroll.getBounds().getHeight();
         drawRecess(g, x + LIST_LEFT, y + listTop - 1, listRight() - LIST_LEFT, listHeight + 2);
         SmallScrollbarTrack.draw(g, scroll, x, y);
