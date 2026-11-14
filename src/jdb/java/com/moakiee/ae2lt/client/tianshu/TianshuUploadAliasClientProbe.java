@@ -46,14 +46,36 @@ public final class TianshuUploadAliasClientProbe {
     private static com.moakiee.ae2lt.config.TianshuUploadTrigger originalTrigger;
     private static TianshuPatternEncodingTermScreen<?> encodingScreen;
     private static int encodingPickerOpenings;
-    private static boolean watchingEncoding;
+    private static boolean watchingEncoding, staleSnapshotInjected;
     private static String originalClipboard;
+    private static net.minecraft.client.gui.screens.Screen heldRecipe;
+    private static long craftingFailureMessages;
     private static final StringBuilder report = new StringBuilder();
 
     @SubscribeEvent
     public static void screenOpening(ScreenEvent.Opening event) {
         if (watchingEncoding && event.getNewScreen() instanceof TianshuUploadTargetScreen<?>) {
             encodingPickerOpenings++;
+        }
+    }
+
+    @SubscribeEvent
+    public static void beforeRender(ScreenEvent.Render.Pre event) {
+        if (!Boolean.getBoolean("ae2lt.uploadAliasClientProbe") || done) return;
+        // Reproduce a late response to an older lookup between encoding and the fresh lookup.
+        if (watchingEncoding && !staleSnapshotInjected && event.getScreen() == encodingScreen
+                && encodingScreen.getMenu().tianshuMode == com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode.PROCESSING) {
+            var menu = encodingScreen.getMenu();
+            if (menu.hasTriggeredUploadAck()) {
+                TianshuRecipeTransferContext.acceptEncodedPattern(menu, encodingScreen.firstEncodedPattern());
+            }
+            if (menu.hasTriggeredUploadAck()
+                    && TianshuRecipeTransferContext.isEncodingResultReady(menu, encodingScreen.firstEncodedPattern())
+                    && menu.requestUploadTargetsAfterEncoding() && !menu.hasFreshUploadTargetsAfterEncoding()) {
+                menu.receiveUploadTargets(List.of(), menu.getUploadTargetRequestRevision());
+                require(!menu.hasFreshUploadTargetsAfterEncoding(), "unsolicited snapshot cannot complete encoding lookup");
+                staleSnapshotInjected = true;
+            }
         }
     }
 
@@ -94,6 +116,8 @@ public final class TianshuUploadAliasClientProbe {
                         level.setBlockAndUpdate(CABLE.below(), AEBlocks.CREATIVE_ENERGY_CELL.block().defaultBlockState());
                         level.setBlockAndUpdate(CABLE.east(), AEBlocks.PATTERN_PROVIDER.block().defaultBlockState());
                         level.setBlockAndUpdate(CABLE.east(2), net.minecraft.world.level.block.Blocks.FURNACE.defaultBlockState());
+                        var provider = (appeng.blockentity.crafting.PatternProviderBlockEntity) level.getBlockEntity(CABLE.east());
+                        provider.getLogic().getPatternInv().clear();
                         level.setBlockAndUpdate(CABLE.north(), AEBlocks.WIRELESS_ACCESS_POINT.block().defaultBlockState());
                     });
                 }
@@ -187,7 +211,7 @@ public final class TianshuUploadAliasClientProbe {
                     net.minecraft.client.Screenshot.grab(mc.gameDirectory, (wireless ? "wireless" : "wired") + "-alias-management.png", mc.getMainRenderTarget(), ignored -> {});
                     var list = (TianshuUploadAliasManagementScreen<?>) mc.screen;
                     list.init(mc, 270, 190);
-                    require((int) field(list, "listTop") + (int) field(list, "rows") * (int) field(list, "rowHeight") <= 170 - 73,
+                    require((int) field(list, "listTop") + (int) field(list, "rows") * (int) field(list, "rowHeight") <= 170 - 105,
                             "narrow management list does not overlap footer");
                     require(((Button) field(list, "exportAliases")).getY() + 20 <= 190, "narrow clipboard controls remain reachable");
                     list.init(mc, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight());
@@ -212,7 +236,7 @@ public final class TianshuUploadAliasClientProbe {
                 }
                 case 13 -> {
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.SAVED_ALIAS);
-                    openAutomaticPicker();
+                    openManualPicker();
                 }
                 case 14 -> {
                     require(mc.screen instanceof TianshuUploadTargetScreen<?>, "saved-only mode retains picker without explicit alias");
@@ -221,35 +245,23 @@ public final class TianshuUploadAliasClientProbe {
                     require(!picker.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "saved-only mode retains physical pattern");
                     picker.onClose();
                     AE2LTClientConfig.setUploadAlias(FIRST, "minecraft:furnace");
-                    openAutomaticPicker();
+                    openManualPicker();
                 }
                 case 15 -> {
-                    require(mc.screen instanceof TianshuPatternEncodingTermScreen<?>, "saved unique alias auto uploads and returns to terminal");
-                    var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
-                    require(terminal.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "auto upload emptied encoded slot");
-                    server(() -> {
-                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        ((TianshuPatternEncodingTermMenu) player.containerMenu).undoLastUpload();
-                    });
-                }
-                case 16 -> {
+                    require(mc.screen instanceof TianshuUploadTargetScreen<?>, "visible fallback picker stays manual even with a saved match");
+                    var picker = (TianshuUploadTargetScreen<?>) mc.screen;
+                    require(!(boolean) field(picker, "awaitingUpload"), "visible picker never starts automatic uploads");
+                    picker.onClose();
                     AE2LTClientConfig.removeUploadAlias(FIRST);
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH);
-                    openAutomaticPicker();
+                    openManualPicker();
                 }
-                case 17 -> {
-                    require(mc.screen instanceof TianshuPatternEncodingTermScreen<?>, "unique machine ID auto uploads in any-match mode");
-                    var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
-                    require(terminal.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(), "machine upload transferred the physical pattern");
-                    server(() -> {
-                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
-                        var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
-                        menu.undoLastUpload();
-                        menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(ItemStack.EMPTY);
-                        menu.broadcastChanges();
-                    });
+                case 16 -> {
+                    require(mc.screen instanceof TianshuUploadTargetScreen<?>, "visible picker remains manual with a machine match");
+                    mc.screen.onClose();
                     AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
                 }
+                case 17 -> { }
                 case 18 -> server(TianshuUploadAliasClientProbe::prepareEncoding);
                 case 19 -> {
                     AE2LTClientConfig.setUploadAlias(FIRST, "minecraft:furnace");
@@ -291,9 +303,84 @@ public final class TianshuUploadAliasClientProbe {
                         menu.broadcastChanges();
                     });
                 }
-                case 25 -> {
-                    report.append(wireless ? "wireless" : "wired").append(": PASS native editor, clipboard merge, three modes + real automatic uploads, no picker openings during saved-alias and machine encoding uploads, unmatched encoding fallback, machine IDs, exact deletion, conflict, cancellation, return paths, right-click undo\n");
+                case 25 -> exerciseNormalViewerTransfer();
+                case 26 -> {
+                    var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
+                    require(TianshuRecipeTransferContext.snapshotFor(terminal.getMenu()).sourceKey().equals("minecraft:smelting"),
+                            "actual viewer metadata is present before closing");
+                    terminal.onClose();
+                }
+                case 27 -> server(TianshuUploadAliasClientProbe::openTerminal);
+                case 28 -> {
+                    var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
+                    var restored = TianshuRecipeTransferContext.snapshotFor(terminal.getMenu());
+                    require(restored.sourceKey().equals("minecraft:smelting"), "recipe source survives reopening");
+                    require(restored.machineIds().contains("minecraft:furnace"), "machine metadata survives reopening");
+                    terminal.getMenu().clear();
+                }
+                case 29 -> mc.screen.onClose();
+                case 30 -> server(TianshuUploadAliasClientProbe::openTerminal);
+                case 31 -> {
+                    var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
+                    require(TianshuRecipeTransferContext.snapshotFor(terminal.getMenu()).sourceKey().isEmpty(),
+                            "cleared recipe metadata does not return after reopening");
+                }
+                case 32 -> server(() -> {
+                    prepareEncoding();
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
+                    menu.setMode(appeng.parts.encoding.EncodingMode.CRAFTING);
+                    menu.getSlots(SlotSemantics.CRAFTING_GRID).forEach(slot -> slot.set(ItemStack.EMPTY));
+                    menu.getSlots(SlotSemantics.CRAFTING_GRID).getFirst().set(new ItemStack(net.minecraft.world.item.Items.OAK_LOG));
+                    menu.broadcastChanges();
+                });
+                case 33 -> {
+                    craftingFailureMessages = failureMessageCount();
+                    clickEncode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
+                }
+                case 34 -> {
+                    watchingEncoding = false;
+                    require(mc.screen == encodingScreen && encodingPickerOpenings == 0, "crafting upload never opens provider picker");
+                    require(encodingScreen.getMenu().uploadState == 3, "crafting upload without assembler fails");
+                    require(!encodingScreen.firstEncodedPattern().isEmpty(), "failed crafting upload keeps encoded pattern");
+                    require(failureMessageCount() == craftingFailureMessages + 1, "crafting failure appears once in chat");
+                    report.append("Crafting upload failure -> chat + retained pattern: PASS\n");
+                    server(TianshuUploadAliasClientProbe::prepareEncoding);
+                }
+                case 35 -> {
+                    encodingScreen = (TianshuPatternEncodingTermScreen<?>) mc.screen;
+                    var menu = encodingScreen.getMenu();
+                    AE2LTClientConfig.removeUploadAlias(FIRST);
+                    AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH);
+                    TianshuRecipeTransferContext.publish(menu, FIRST, "", List.of(), List.of("minecraft:furnace"));
+                    menu.encodeAndUploadDirectly();
+                    heldRecipe = new net.minecraft.client.gui.screens.Screen(net.minecraft.network.chat.Component.literal("Upload QA")) {
+                        @Override public void onClose() { Minecraft.getInstance().setScreen(encodingScreen); }
+                    };
+                    mc.setScreen(heldRecipe);
+                    require(TianshuDirectUploadClient.holdRecipeScreen(menu, heldRecipe), "recipe page can hold direct upload");
+                    watchingEncoding = true;
+                    encodingPickerOpenings = 0;
+                }
+                case 36 -> {
+                    watchingEncoding = false;
+                    require(mc.screen == heldRecipe && encodingPickerOpenings == 0, "direct upload stays on recipe page without picker");
+                    require(encodingScreen.getMenu().uploadState == 1 && encodingScreen.firstEncodedPattern().isEmpty(), "direct upload succeeds");
+                    heldRecipe.onClose();
+                    server(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        var menu = (TianshuPatternEncodingTermMenu) player.containerMenu;
+                        menu.undoLastUpload();
+                        menu.getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().set(ItemStack.EMPTY);
+                        menu.broadcastChanges();
+                    });
+                }
+                case 37 -> {
+
+
+                    report.append(wireless ? "wireless" : "wired").append(": PASS native editor, clipboard merge, three modes + real automatic uploads, no picker openings during saved-alias and machine encoding uploads, unmatched encoding fallback, stale-response rejection, recipe context retained across reopen and cleared on demand, machine IDs, exact deletion, conflict, cancellation, return paths, right-click undo\n");
                     if (!wireless) {
+                        AE2LTClientConfig.setUploadMatchMode(com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF);
                         wireless = true;
                         phase = 0;
                     } else {
@@ -358,7 +445,14 @@ public final class TianshuUploadAliasClientProbe {
         report.append("Actual recipe transfer -> furnace ID: PASS\n");
     }
 
-    private static void openAutomaticPicker() throws Exception {
+    private static long failureMessageCount() throws Exception {
+        var messages = (List<?>) field(Minecraft.getInstance().gui.getChat(), "allMessages");
+        var expected = net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.failed").getString();
+        return messages.stream().filter(entry -> entry instanceof net.minecraft.client.GuiMessage message
+                && message.content().getString().equals(expected)).count();
+    }
+
+    private static void openManualPicker() throws Exception {
         var terminal = (TianshuPatternEncodingTermScreen<?>) Minecraft.getInstance().screen;
         TianshuRecipeTransferContext.publish(terminal.getMenu(), FIRST, "", List.of("minecraft:*"), List.of("minecraft:furnace"));
         switchScreen(terminal, new TianshuUploadTargetScreen<>(terminal, false));
@@ -394,6 +488,7 @@ public final class TianshuUploadAliasClientProbe {
         menu.receiveUploadTargets(List.of(), 0);
         encodingPickerOpenings = 0;
         watchingEncoding = true;
+        staleSnapshotInjected = false;
         var button = encodingScreen.children().stream()
                 .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
                         .anyMatch(t -> t.getString().equals(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.encode_management").getString())))
@@ -407,6 +502,7 @@ public final class TianshuUploadAliasClientProbe {
         var mc = Minecraft.getInstance();
         require(mc.screen == encodingScreen, "automatic encoding upload keeps original terminal screen");
         require(encodingPickerOpenings == 0, "automatic encoding upload never opens picker");
+        require(staleSnapshotInjected, "automatic upload ignored an injected stale snapshot");
         require(encodingScreen.getMenu().uploadState == 1, "automatic encoding upload succeeds");
         require(encodingScreen.getMenu().getSlots(SlotSemantics.ENCODED_PATTERN).getFirst().getItem().isEmpty(),
                 "automatic encoding upload transfers physical pattern");
@@ -419,10 +515,13 @@ public final class TianshuUploadAliasClientProbe {
         player.teleportTo(.5, 101, 2.5);
         if (wireless) {
             var item = ModItems.TIANSHU_WIRELESS_PATTERN_ENCODING_TERMINAL.get();
-            var stack = new ItemStack(item);
-            stack.set(AEComponents.WIRELESS_LINK_TARGET, GlobalPos.of(player.level().dimension(), CABLE.north()));
-            stack.set(AEComponents.STORED_ENERGY, 1000000.0);
-            player.getInventory().setItem(0, stack);
+            var stack = player.getInventory().getItem(0);
+            if (!stack.is(item)) {
+                stack = new ItemStack(item);
+                stack.set(AEComponents.WIRELESS_LINK_TARGET, GlobalPos.of(player.level().dimension(), CABLE.north()));
+                stack.set(AEComponents.STORED_ENERGY, 1000000.0);
+                player.getInventory().setItem(0, stack);
+            }
             player.inventoryMenu.broadcastChanges();
             item.open(player, MenuLocators.forInventorySlot(0), false);
         } else {
@@ -527,8 +626,15 @@ public final class TianshuUploadAliasClientProbe {
         var mc = Minecraft.getInstance();
         var list = (TianshuUploadAliasManagementScreen<?>) mc.screen;
         var off = com.moakiee.ae2lt.config.TianshuUploadMatchMode.OFF;
+        require(AE2LTClientConfig.uploadMatchMode() == off, "management starts with shared mode");
+        press(list, "autoUpload");
+        require(AE2LTClientConfig.uploadMatchMode() == off.next(), "management cycles shared mode");
         list.onClose();
-        require(mc.screen instanceof TianshuTerminalSettingsScreen<?>, "auto upload belongs to terminal settings");
+        require(mc.screen instanceof TianshuTerminalSettingsScreen<?>, "management returns to terminal settings");
+        var sharedSettings = (TianshuTerminalSettingsScreen<?>) mc.screen;
+        require(((Button) field(sharedSettings, "autoUploadButton")).getMessage().getString().equals(
+                TianshuUploadAliasScreen.text("auto_mode.saved_alias").getString()), "settings label reflects management changes");
+        AE2LTClientConfig.setUploadMatchMode(off);
         var settings = (TianshuTerminalSettingsScreen<?>) mc.screen;
         require(AE2LTClientConfig.uploadMatchMode() == off, "automatic upload starts off");
         press(settings, "autoUploadButton");
@@ -642,7 +748,6 @@ public final class TianshuUploadAliasClientProbe {
         mc.screen.onClose();
         require(mc.screen == upload, "upload return path");
         require(input(upload, "aliasField").getValue().equals("new alias"), "return refreshes current source alias");
-        require((boolean) field(upload, "directUploadAttempted"), "return disarms direct upload");
         upload.containerTick();
         require(!(boolean) field(upload, "awaitingUpload"), "return does not upload");
         upload.onClose();

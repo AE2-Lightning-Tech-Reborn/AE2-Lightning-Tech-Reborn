@@ -266,6 +266,11 @@ public final class TianshuPatternUploadGameTests {
             a.sendUploadTargets(alice);
             a.uploadTianshuPatternToTarget(alice, group, a.getUploadTargetRequestRevision());
             check(helper, a.uploadState == 1 && source.isEmpty() && !target.isEmpty(), "Alice upload succeeds");
+            a.removed(alice);
+            a = new TianshuPatternEncodingTermMenu(33, alice.getInventory(), terminal);
+            alice.containerMenu = a;
+            a.broadcastChanges();
+            check(helper, a.canUndoUpload, "Alice keeps her receipt after reopening the terminal");
             b.undoLastUpload();
             check(helper, source.isEmpty() && !target.isEmpty(), "Bob cannot undo Alice's receipt");
             a.undoLastUpload();
@@ -370,6 +375,11 @@ public final class TianshuPatternUploadGameTests {
             menu.broadcastChanges();
             menu.uploadEncodedPattern();
             check(helper, source.isEmpty() && repository.size() == 1 && menu.canUndoUpload, "closed-loop upload creates receipt");
+            menu.removed(player);
+            menu = new TianshuPatternEncodingTermMenu(42, player.getInventory(), terminal);
+            player.containerMenu = menu;
+            menu.broadcastChanges();
+            check(helper, menu.canUndoUpload, "closed-loop receipt survives reopening the terminal");
             menu.undoLastUpload();
             check(helper, repository.size() == 0 && ItemStack.matches(pattern, source.getStackInSlot(0)), "closed-loop undo restores paid stack");
             menu.uploadEncodedPattern();

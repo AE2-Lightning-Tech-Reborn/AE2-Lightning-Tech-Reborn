@@ -11,7 +11,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record UploadTargetsSyncPacket(int containerId, int revision, List<TianshuUploadTargetData> targets)
+public record UploadTargetsSyncPacket(int containerId, int revision, List<TianshuUploadTargetData> targets, int requestId)
         implements CustomPacketPayload {
     public static final Type<UploadTargetsSyncPacket> TYPE =
             new Type<>(NetworkInit.id("upload_targets_sync"));
@@ -23,9 +23,14 @@ public record UploadTargetsSyncPacket(int containerId, int revision, List<Tiansh
         TianshuPacketLimits.requireListSize("upload targets", targets.size());
     }
 
+    public UploadTargetsSyncPacket(int containerId, int revision, List<TianshuUploadTargetData> targets) {
+        this(containerId, revision, targets, 0);
+    }
+
     private void write(RegistryFriendlyByteBuf buf) {
         buf.writeVarInt(containerId);
         buf.writeVarInt(revision);
+        buf.writeVarInt(requestId);
         buf.writeVarInt(targets.size());
         for (var target : targets) {
             target.group().writeToPacket(buf);
@@ -37,6 +42,7 @@ public record UploadTargetsSyncPacket(int containerId, int revision, List<Tiansh
     private static UploadTargetsSyncPacket decode(RegistryFriendlyByteBuf buf) {
         int containerId = buf.readVarInt();
         int revision = buf.readVarInt();
+        int requestId = buf.readVarInt();
         int size = TianshuPacketLimits.requireDecodedListSize(
                 "upload targets", buf.readVarInt());
         var targets = new ArrayList<TianshuUploadTargetData>(size);
@@ -44,7 +50,7 @@ public record UploadTargetsSyncPacket(int containerId, int revision, List<Tiansh
             targets.add(new TianshuUploadTargetData(
                     PatternContainerGroup.readFromPacket(buf), buf.readVarInt(), buf.readVarInt()));
         }
-        return new UploadTargetsSyncPacket(containerId, revision, targets);
+        return new UploadTargetsSyncPacket(containerId, revision, targets, requestId);
     }
 
     @Override public Type<UploadTargetsSyncPacket> type() { return TYPE; }
@@ -53,7 +59,7 @@ public record UploadTargetsSyncPacket(int containerId, int revision, List<Tiansh
         context.enqueueWork(() -> {
             if (context.player().containerMenu instanceof TianshuPatternEncodingTermMenu menu
                     && menu.containerId == packet.containerId()) {
-                menu.receiveUploadTargets(packet.targets(), packet.revision());
+                menu.receiveUploadTargets(packet.targets(), packet.revision(), packet.requestId());
             }
         });
     }

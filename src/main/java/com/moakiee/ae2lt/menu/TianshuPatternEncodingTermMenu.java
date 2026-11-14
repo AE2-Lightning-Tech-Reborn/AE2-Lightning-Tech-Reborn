@@ -191,14 +191,15 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     private ItemStack lastAutoUploadContents = ItemStack.EMPTY;
     private List<TianshuUploadTargetData> uploadTargetGroups = List.of();
     private int uploadTargetsRevision;
+    private int uploadTargetRequestId;
+    private int receivedUploadTargetRequestId;
     private boolean pendingTriggeredUpload;
     private boolean pendingDirectUpload;
     private int pendingTriggeredUploadUntil;
     private int expectedTriggeredUploadAck;
     private boolean encodedUploadTargetsRequested;
-    private int expectedEncodedUploadTargetRevision;
-    private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo =
-            new com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo();
+    private int expectedEncodedUploadTargetRequestId;
+    private final com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo uploadUndo;
     /** Prevents a committed encoding result from being mistaken for a manually inserted pattern. */
     private boolean ae2EncodingInProgress;
     /** Exact encoded stack that still represents one blank pattern extracted by this menu. */
@@ -220,6 +221,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
             MenuType<?> type, int id, Inventory inventory, TianshuPatternTerminalHost host) {
         super(type, id, inventory, host, true);
         this.tianshuHost = host;
+        this.uploadUndo = inventory.player.getData(
+                com.moakiee.ae2lt.registry.ModAttachmentTypes.TIANSHU_UPLOAD_UNDO);
         this.maintenanceSession = new TianshuMaintenanceSession(this, this::resolveBoundTianshu,
                 () -> tianshuSelectionRevision, action -> sendClientAction("maintenanceAction", action));
         omniversalInputs = appeng.util.ConfigInventory.configStacks(getProcessingInputSlots().length)
@@ -367,8 +370,10 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
 
     @Override
     public void removed(Player player) {
+        if (isClientSide()) {
+            com.moakiee.ae2lt.client.tianshu.TianshuRecipeTransferContext.remember(this);
+        }
         if (isServerSide()) {
-            uploadUndo.clear();
             lastAutoUploadPattern = lastAutoUploadContents = ItemStack.EMPTY;
             if (closedLoopDraftDirty && tianshuMode == TianshuEncodingMode.CLOSED_LOOP) {
                 rebuildClosedLoopDraft();
@@ -425,7 +430,7 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean hasFreshUploadTargetsAfterEncoding() {
         return isClientSide()
                 && encodedUploadTargetsRequested
-                && uploadTargetsRevision != expectedEncodedUploadTargetRevision;
+                && receivedUploadTargetRequestId == expectedEncodedUploadTargetRequestId;
     }
 
     /**
@@ -436,9 +441,8 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     public boolean requestUploadTargetsAfterEncoding() {
         if (!isClientSide() || !hasTriggeredUploadAck()) return false;
         if (!encodedUploadTargetsRequested) {
-            expectedEncodedUploadTargetRevision = uploadTargetsRevision;
             encodedUploadTargetsRequested = true;
-            requestUploadTargets();
+            expectedEncodedUploadTargetRequestId = requestUploadTargetsWithId();
         }
         return true;
     }
@@ -1307,20 +1311,38 @@ public class TianshuPatternEncodingTermMenu extends PatternEncodingTermMenu impl
     }
 
     public void requestUploadTargets() {
+        requestUploadTargetsWithId();
+    }
+
+    private int requestUploadTargetsWithId() {
         if (isClientSide()) {
-            PacketDistributor.sendToServer(new RequestUploadTargetsPacket(containerId));
+            PacketDistributor.sendToServer(new RequestUploadTargetsPacket(containerId, ++uploadTargetRequestId));
         }
+        return uploadTargetRequestId;
     }
 
     public void sendUploadTargets(ServerPlayer player) {
+        sendUploadTargets(player, 0);
+    }
+
+    public void sendUploadTargets(ServerPlayer player, int requestId) {
         if (!isServerSide() || player == null) return;
         refreshUploadTargetsNow();
         PacketDistributor.sendToPlayer(player,
-                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups));
+                new UploadTargetsSyncPacket(containerId, boundUploadRevision, uploadTargetGroups, requestId));
     }
 
     public void receiveUploadTargets(List<TianshuUploadTargetData> targets, int revision) {
+        receiveUploadTargets(targets, revision, 0);
+    }
+
+    public void receiveUploadTargets(List<TianshuUploadTargetData> targets, int revision, int requestId) {
         if (!isClientSide()) return;
+        // A previous picker request or an unsolicited upload result must not complete the
+        // post-encoding lookup. Otherwise its empty snapshot briefly opens the picker before
+        // the actual lookup arrives and uploads successfully.
+        if (requestId != 0 && requestId != uploadTargetRequestId) return;
+        receivedUploadTargetRequestId = requestId;
         boundUploadRevision = revision;
         uploadTargetGroups = targets == null ? List.of() : List.copyOf(targets);
         uploadTargetsRevision++;

@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.registry;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadUndo;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -10,6 +11,11 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 public final class ModAttachmentTypes {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, AE2LightningTech.MODID);
+
+    /** One private receipt per player connection, retained when a terminal menu is closed. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TianshuPatternUploadUndo>> TIANSHU_UPLOAD_UNDO =
+            ATTACHMENT_TYPES.register("tianshu_upload_undo",
+                    () -> AttachmentType.builder(TianshuPatternUploadUndo::new).build());
 
     /** Rendering metadata; the authoritative origin remains the bolt's persistent weather tag. */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> NATURAL_LIGHTNING =
