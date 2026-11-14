@@ -552,7 +552,21 @@ def enableVeilDevRuntime = providers.gradleProperty('ae2ltEnableVeilDevRuntime')
         .getOrElse('false')
         .toBoolean()
 
+// The MMCR public API is under review. Compile from its real apiJar without bundling it or
+// inventing a release coordinate; replace this override with a pinned published API after review.
+def mmcrApiPath = providers.gradleProperty('mmcr_api_jar').orNull
+def mmcrApiJar = mmcrApiPath ? file(mmcrApiPath) : null
+tasks.named('compileJava') {
+    inputs.property('mmcr_api_jar', mmcrApiPath ?: '')
+    doFirst {
+        if (mmcrApiJar == null || !mmcrApiJar.isFile()) {
+            throw new GradleException('MMCR public API is not published yet. Build its apiJar and pass -Pmmcr_api_jar=<absolute API Jar path>.')
+        }
+    }
+}
+
 dependencies {
+    if (mmcrApiJar != null) compileOnly files(mmcrApiJar)
     // Thunderbolt Core — the extracted AE2 infrastructure layer (fast crafting planner,
     // channel/batch/cell/matrix algorithms). Release CI stages this exact version from
     // GitHub Release assets; local development can use publishToMavenLocal.
