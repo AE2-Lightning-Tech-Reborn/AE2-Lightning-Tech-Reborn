@@ -9,6 +9,7 @@ import com.moakiee.thunderbolt.ae2.crafting.*;
 import com.moakiee.thunderbolt.core.crafting.big.BigCraftingPlanner;
 import com.moakiee.thunderbolt.core.storage.big.BigAmounts;
 import com.moakiee.thunderbolt.core.crafting.planner.CraftPattern;
+import com.moakiee.ae2lt.integration.ae2ct.CraftingTreeSummaryCompat;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -97,6 +98,7 @@ public record BigCraftingPlan(
     public CraftingPlanSummary summary() {
         var stored = new LinkedHashMap<AEKey, BigInteger>();
         var crafted = new LinkedHashMap<AEKey, BigInteger>();
+        var treeRecipes = new ArrayList<CraftingTreeSummaryCompat.Recipe>();
         var missing = exact == null ? Map.<AEKey, BigInteger>of() : exact.missing();
         if (exact != null && exact.program() != null) {
             exact.program()
@@ -111,6 +113,17 @@ public record BigCraftingPlan(
                 for (var step : block.steps()) {
                     var recipe = (BigCraftingRecipe) step.recipe().source();
                     var copies = step.copies().multiply(block.repetitions());
+                    var treeInputs = recipe.pattern().inputs().stream()
+                            .map(input -> new GenericStack(input.key(), input.amount())).toList();
+                    var treeOutputs = new ArrayList<GenericStack>();
+                    treeOutputs.add(new GenericStack(recipe.pattern().output(),
+                            BigAmounts.project(recipe.pattern().exactOutputAmount())));
+                    recipe.pattern().byproducts().forEach(output -> treeOutputs.add(
+                            new GenericStack(output.key(), BigAmounts.project(output.exactAmount()))));
+                    if (copies.signum() > 0) {
+                        treeRecipes.add(new CraftingTreeSummaryCompat.Recipe(
+                                treeInputs, treeOutputs, BigAmounts.project(copies)));
+                    }
                     crafted.merge(
                             recipe.pattern().output(),
                             recipe.pattern().exactOutputAmount().multiply(copies),
@@ -152,6 +165,7 @@ public record BigCraftingPlan(
         ExactPlanReports.attach(
                 summary,
                 new ExactPlanReport(bytes, precise, exact == null || !exact.verified(), false));
+        CraftingTreeSummaryCompat.attach(summary, finalOutput(), treeRecipes);
         return summary;
     }
 

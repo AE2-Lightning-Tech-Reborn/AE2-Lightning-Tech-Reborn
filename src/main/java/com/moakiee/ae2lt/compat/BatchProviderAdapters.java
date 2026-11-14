@@ -19,6 +19,10 @@ public final class BatchProviderAdapters {
     private BatchProviderAdapters() {
     }
 
+    static List<BatchProviderAdapter> snapshot() {
+        return snapshot;
+    }
+
     public static synchronized void register(ResourceLocation id, BatchProviderAdapter adapter) {
         ADAPTERS.put(Objects.requireNonNull(id), Objects.requireNonNull(adapter));
         snapshot = List.copyOf(ADAPTERS.values());

@@ -56,6 +56,10 @@ public final class LightningCompatibilityGameTests {
         var level = helper.getLevel();
         BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
         var area = new AABB(pos).inflate(3);
+        // SkyblockBuilder redirects even artificial bolts to a nearby lightning rod on join.
+        // Anchor this strike over its own inputs so parallel structure tests cannot attract it.
+        var previousRodBase = level.getBlockState(pos.below());
+        level.setBlockAndUpdate(pos.below(), Blocks.LIGHTNING_ROD.defaultBlockState());
         // The tiny vanilla template does not clear this entire observation area.
         // Remove outputs retained in the reused test world before spawning inputs.
         level.getEntitiesOfClass(ItemEntity.class, area).forEach(ItemEntity::discard);
@@ -70,6 +74,8 @@ public final class LightningCompatibilityGameTests {
         var lightning = new NoSuperTickLightningBolt(level);
         lightning.setPos(Vec3.atBottomCenterOf(pos));
         level.addFreshEntity(lightning);
+        helper.assertTrue(lightning.blockPosition().equals(pos),
+                "Optional rod attraction must keep the artificial strike over its own test inputs");
         helper.runAfterDelay(2, () -> {
             var output = BuiltInRegistries.ITEM.get(new ResourceLocation("ae2lt", "overload_alloy"));
             var outputs = level.getEntitiesOfClass(ItemEntity.class, area);
@@ -79,6 +85,7 @@ public final class LightningCompatibilityGameTests {
             helper.assertTrue(count == 1, "Artificial subclass lightning must produce exactly one alloy, got " + count);
             helper.assertTrue(!blank.isAlive() && !dust.isAlive(), "The recipe must consume both inputs");
             outputs.forEach(ItemEntity::discard);
+            level.setBlockAndUpdate(pos.below(), previousRodBase);
             helper.succeed();
         });
     }

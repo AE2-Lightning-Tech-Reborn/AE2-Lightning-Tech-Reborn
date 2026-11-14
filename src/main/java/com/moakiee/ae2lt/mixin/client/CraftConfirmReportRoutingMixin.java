@@ -41,7 +41,8 @@ public abstract class CraftConfirmReportRoutingMixin extends AEBaseScreen<CraftC
         if (!((Object) this instanceof AE2LtCraftConfirmScreen)
                 && menu instanceof CraftingReportMenuState state && state.ae2lt$shouldShowReport()) {
             switchToScreen(new AE2LtCraftConfirmScreen(menu, ae2lt$inventory, ae2lt$title,
-                    StyleManager.loadStyleDoc("/screens/ae2lt_craft_confirm.json")));
+                    // Older GTLCore redirects every path containing "craft_confirm.json".
+                    StyleManager.loadStyleDoc("/screens/ae2lt_crafting_report.json")));
         }
     }
 

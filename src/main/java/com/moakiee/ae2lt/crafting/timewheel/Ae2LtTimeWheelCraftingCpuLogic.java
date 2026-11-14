@@ -71,6 +71,7 @@ import com.moakiee.ae2lt.compat.OptionalBatchProviders;
 import com.moakiee.ae2lt.crafting.runtime.CraftingDispatch;
 import com.moakiee.ae2lt.crafting.runtime.CraftingExecutionState;
 import com.moakiee.ae2lt.crafting.runtime.CraftingTickBudget;
+import com.moakiee.ae2lt.compat.BatchProviderAdapterContext;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 import com.moakiee.thunderbolt.core.crafting.support.FinalOutputProgress;
 import com.moakiee.thunderbolt.core.crafting.loop.CraftingTaskPersistenceDefinition;
@@ -159,6 +160,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     // cleared on every job lifecycle transition below.
     private final Map<IPatternDetails, Double> patternPowerCache = new IdentityHashMap<>();
     private final TickProviderDispatchSchedule standaloneDispatchSchedule = new TickProviderDispatchSchedule();
+    private final BatchProviderAdapterContext standaloneBatchAdapters = new BatchProviderAdapterContext();
     private final KeyCounter seedReturnQuota = new KeyCounter();
     private final KeyCounter retainedFinalOutputs = new KeyCounter();
     private final KeyCounter pendingRequesterOutputs = new KeyCounter();
@@ -421,9 +423,20 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                        int maxOps,
                                        long maxCopies,
                                        TickProviderDispatchSchedule dispatchSchedule) {
+        return tickCraftingLogic(energyService, craftingService, maxOps, maxCopies,
+                dispatchSchedule, standaloneBatchAdapters);
+    }
+
+    public TickUsage tickCraftingLogic(IEnergyService energyService,
+                                       CraftingService craftingService,
+                                       int maxOps, long maxCopies,
+                                       TickProviderDispatchSchedule dispatchSchedule,
+                                       BatchProviderAdapterContext batchAdapters) {
         if (!execution.tryEnter()) return TickUsage.EMPTY;
         try {
-            return tickCraftingLogicGuarded(energyService, craftingService, maxOps, maxCopies, dispatchSchedule);
+            batchAdapters.beginTick(craftingService, TickHandler.instance().getCurrentTick(), OPTIONAL_BATCH_ADAPTER);
+            return tickCraftingLogicGuarded(energyService, craftingService, maxOps, maxCopies,
+                    dispatchSchedule, batchAdapters);
         } finally {
             execution.leave();
         }
@@ -432,7 +445,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
     private TickUsage tickCraftingLogicGuarded(IEnergyService energyService,
                                               CraftingService craftingService,
                                               int maxOps, long maxCopies,
-                                              TickProviderDispatchSchedule dispatchSchedule) {
+                                              TickProviderDispatchSchedule dispatchSchedule,
+                                              BatchProviderAdapterContext batchAdapters) {
         resolvePendingLoad();
         if (this.pendingJobTag != null) {
             return TickUsage.EMPTY;
@@ -517,7 +531,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 craftingService,
                 energyService,
                 level,
-                dispatchSchedule);
+                dispatchSchedule, batchAdapters);
     }
 
     public int executeCrafting(int maxOps, CraftingService craftingService, IEnergyService energyService,
@@ -525,13 +539,14 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
         if (!execution.tryEnter()) return 0;
         try {
             standaloneDispatchSchedule.beginTick(TickHandler.instance().getCurrentTick());
+            standaloneBatchAdapters.beginTick(craftingService, TickHandler.instance().getCurrentTick(), OPTIONAL_BATCH_ADAPTER);
             return executeCraftingBudgeted(
                     maxOps,
                     cpu.hasUnboundedBatch() ? Long.MAX_VALUE : cpu.getMaxCopiesPerTick(),
                     craftingService,
                     energyService,
                     level,
-                    standaloneDispatchSchedule).successfulDispatches();
+                    standaloneDispatchSchedule, standaloneBatchAdapters).successfulDispatches();
         } finally {
             execution.leave();
             finishPhysicalSchedulingTick();
@@ -543,7 +558,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                               CraftingService craftingService,
                                               IEnergyService energyService,
                                               Level level,
-                                              TickProviderDispatchSchedule dispatchSchedule) {
+                                              TickProviderDispatchSchedule dispatchSchedule,
+                                              BatchProviderAdapterContext batchAdapters) {
         var activeJob = this.job;
         if (activeJob == null || maxOps <= 0 || requestedCopyLimit <= 0L) {
             return TickUsage.EMPTY;
@@ -600,7 +616,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                             remainingCopies,
                             craftingService,
                             energyService,
-                            dispatchSchedule);
+                            dispatchSchedule, batchAdapters);
                     if (batchResult.consumedCpuOps() > 0) {
                         tickBudget.consume(batchResult.consumedCpuOps(), batchResult.dispatchedCopies());
                         usedOps += batchResult.consumedCpuOps();
@@ -724,7 +740,8 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                                                          long remainingCopies,
                                                          CraftingService craftingService,
                                                          IEnergyService energyService,
-                                                         TickProviderDispatchSchedule dispatchSchedule) {
+                                                         TickProviderDispatchSchedule dispatchSchedule,
+                                                         BatchProviderAdapterContext batchAdapters) {
         var activeJob = this.job;
         if (activeJob == null) {
             return BatchExecutor.BatchRunResult.EMPTY;
@@ -764,7 +781,7 @@ public final class Ae2LtTimeWheelCraftingCpuLogic {
                 remainingCopies,
                 cpu.hasUnboundedBatch(),
                 dispatchSchedule,
-                com.moakiee.ae2lt.compat.BatchProviderAdapters.withRegistered(OPTIONAL_BATCH_ADAPTER)));
+                batchAdapters));
         if (result.dispatchedCopies() > 0) {
             // T is a per-virtual-CPU tick budget, not a per-call width. Let the time wheel revisit
             // the task while its private T and the physical CPU's shared successful-dispatch
