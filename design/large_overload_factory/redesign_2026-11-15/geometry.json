@@ -1,0 +1,4847 @@
+[
+  {
+    "name": "bottom",
+    "from": [
+      0,
+      0,
+      0
+    ],
+    "to": [
+      48,
+      6,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": null,
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "top",
+    "from": [
+      0,
+      43,
+      32
+    ],
+    "to": [
+      48,
+      45,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": null,
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_rear_cover_left",
+    "from": [
+      0,
+      45,
+      32
+    ],
+    "to": [
+      17,
+      48,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_rear_cover_right",
+    "from": [
+      31,
+      45,
+      32
+    ],
+    "to": [
+      48,
+      48,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_rear_cover_end",
+    "from": [
+      17,
+      45,
+      45
+    ],
+    "to": [
+      31,
+      48,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "inner_base",
+    "from": [
+      12,
+      6,
+      13
+    ],
+    "to": [
+      36,
+      11,
+      36
+    ],
+    "material": "mechanism",
+    "kind": "dark",
+    "group": null,
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "pillar_front_left",
+    "from": [
+      0,
+      6,
+      0
+    ],
+    "to": [
+      5,
+      43,
+      5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side_pillar",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "pillar_front_right",
+    "from": [
+      43,
+      6,
+      0
+    ],
+    "to": [
+      48,
+      43,
+      5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side_pillar",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "pillar_rear_left",
+    "from": [
+      0,
+      6,
+      32
+    ],
+    "to": [
+      5,
+      43,
+      40
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side_pillar",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_housing_lower_rear_left",
+    "from": [
+      0,
+      6,
+      40
+    ],
+    "to": [
+      5,
+      20,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_housing_upper_rear_left",
+    "from": [
+      0,
+      39,
+      40
+    ],
+    "to": [
+      5,
+      43,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "pillar_rear_right",
+    "from": [
+      43,
+      6,
+      32
+    ],
+    "to": [
+      48,
+      43,
+      40
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side_pillar",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_housing_lower_rear_right",
+    "from": [
+      43,
+      6,
+      40
+    ],
+    "to": [
+      48,
+      20,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_housing_upper_rear_right",
+    "from": [
+      43,
+      39,
+      40
+    ],
+    "to": [
+      48,
+      43,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "front_crown",
+    "from": [
+      0,
+      43,
+      0
+    ],
+    "to": [
+      48,
+      48,
+      7
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_rail_left",
+    "from": [
+      0,
+      43,
+      7
+    ],
+    "to": [
+      5,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_rail_right",
+    "from": [
+      43,
+      43,
+      7
+    ],
+    "to": [
+      48,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "drive_spine",
+    "from": [
+      16,
+      43,
+      7
+    ],
+    "to": [
+      32,
+      47,
+      30
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_service_rail_left",
+    "from": [
+      16,
+      47,
+      7
+    ],
+    "to": [
+      18,
+      48,
+      30
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_entry_cheek_left",
+    "from": [
+      16,
+      45,
+      30
+    ],
+    "to": [
+      18,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_service_rail_right",
+    "from": [
+      30,
+      47,
+      7
+    ],
+    "to": [
+      32,
+      48,
+      30
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_entry_cheek_right",
+    "from": [
+      30,
+      45,
+      30
+    ],
+    "to": [
+      32,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_service_front_cap",
+    "from": [
+      18,
+      47,
+      7
+    ],
+    "to": [
+      30,
+      48,
+      9
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_emblem_plate",
+    "from": [
+      18,
+      47,
+      9
+    ],
+    "to": [
+      30,
+      48,
+      17
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_front_rim",
+    "from": [
+      18,
+      47,
+      17
+    ],
+    "to": [
+      30,
+      48,
+      18
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_rear_rim",
+    "from": [
+      18,
+      47,
+      29
+    ],
+    "to": [
+      30,
+      48,
+      30
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_slat_1",
+    "from": [
+      19,
+      47,
+      19
+    ],
+    "to": [
+      29,
+      48,
+      20
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_slat_2",
+    "from": [
+      19,
+      47,
+      22
+    ],
+    "to": [
+      29,
+      48,
+      23
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_slat_3",
+    "from": [
+      19,
+      47,
+      25
+    ],
+    "to": [
+      29,
+      48,
+      26
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_recess_slat_4",
+    "from": [
+      19,
+      47,
+      28
+    ],
+    "to": [
+      29,
+      48,
+      29
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_floor_front",
+    "from": [
+      16,
+      43,
+      30
+    ],
+    "to": [
+      32,
+      45,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "top_drive",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_left",
+    "from": [
+      19,
+      45,
+      32
+    ],
+    "to": [
+      22,
+      47,
+      43
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_socket_left_front",
+    "from": [
+      18,
+      45,
+      30
+    ],
+    "to": [
+      23,
+      48,
+      33
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "dark",
+      "south": "dark"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_socket_left_rear",
+    "from": [
+      18,
+      45,
+      42
+    ],
+    "to": [
+      23,
+      48,
+      45
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "dark",
+      "south": "dark"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_clamp_left",
+    "from": [
+      18,
+      45,
+      37
+    ],
+    "to": [
+      23,
+      48,
+      39
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_right",
+    "from": [
+      26,
+      45,
+      32
+    ],
+    "to": [
+      29,
+      47,
+      43
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_socket_right_front",
+    "from": [
+      25,
+      45,
+      30
+    ],
+    "to": [
+      30,
+      48,
+      33
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "dark",
+      "south": "dark"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_socket_right_rear",
+    "from": [
+      25,
+      45,
+      42
+    ],
+    "to": [
+      30,
+      48,
+      45
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "dark",
+      "south": "dark"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_cable_clamp_right",
+    "from": [
+      25,
+      45,
+      37
+    ],
+    "to": [
+      30,
+      48,
+      39
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "lower_shroud_left",
+    "from": [
+      0,
+      6,
+      5
+    ],
+    "to": [
+      4,
+      14,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "upper_shroud_left",
+    "from": [
+      0,
+      37,
+      5
+    ],
+    "to": [
+      4,
+      43,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "lower_shroud_right",
+    "from": [
+      44,
+      6,
+      5
+    ],
+    "to": [
+      48,
+      14,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "upper_shroud_right",
+    "from": [
+      44,
+      37,
+      5
+    ],
+    "to": [
+      48,
+      43,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "front_sill",
+    "from": [
+      5,
+      6,
+      0
+    ],
+    "to": [
+      43,
+      8,
+      6
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "service_wall_4u_thick",
+    "from": [
+      5,
+      16,
+      36
+    ],
+    "to": [
+      43,
+      43,
+      40
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "inner_wall",
+      "south": "dark"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_port_plinth",
+    "from": [
+      5,
+      6,
+      36
+    ],
+    "to": [
+      43,
+      16,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "front_window_frame",
+    "from": [
+      5,
+      22,
+      0
+    ],
+    "to": [
+      43,
+      43,
+      4
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "south"
+    ]
+  },
+  {
+    "name": "front_observation",
+    "from": [
+      5,
+      22,
+      1
+    ],
+    "to": [
+      43,
+      43,
+      3
+    ],
+    "material": "glass",
+    "kind": "glass",
+    "group": "glass",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "south"
+    ]
+  },
+  {
+    "name": "window_reveal_front_lower_left",
+    "from": [
+      3.974873734152917,
+      24.474873734152915,
+      0
+    ],
+    "to": [
+      10.974873734152917,
+      24.474873734152915,
+      4
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "z",
+      "angle": -45,
+      "origin": [
+        7.474873734152917,
+        24.474873734152915,
+        2
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_front_lower_right",
+    "from": [
+      37.025126265847085,
+      24.474873734152915,
+      0
+    ],
+    "to": [
+      44.025126265847085,
+      24.474873734152915,
+      4
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "z",
+      "angle": 45,
+      "origin": [
+        40.525126265847085,
+        24.474873734152915,
+        2
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_front_upper_left",
+    "from": [
+      3.974873734152917,
+      40.525126265847085,
+      0
+    ],
+    "to": [
+      10.974873734152917,
+      40.525126265847085,
+      4
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "z",
+      "angle": 45,
+      "origin": [
+        7.474873734152917,
+        40.525126265847085,
+        2
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_front_upper_right",
+    "from": [
+      37.025126265847085,
+      40.525126265847085,
+      0
+    ],
+    "to": [
+      44.025126265847085,
+      40.525126265847085,
+      4
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "z",
+      "angle": -45,
+      "origin": [
+        40.525126265847085,
+        40.525126265847085,
+        2
+      ]
+    }
+  },
+  {
+    "name": "side_window_frame_left",
+    "from": [
+      0,
+      14,
+      5
+    ],
+    "to": [
+      4,
+      37,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "west",
+      "east"
+    ]
+  },
+  {
+    "name": "side_observation_left",
+    "from": [
+      1,
+      14,
+      5
+    ],
+    "to": [
+      3,
+      37,
+      32
+    ],
+    "material": "glass",
+    "kind": "glass",
+    "group": "glass",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "west",
+      "east"
+    ]
+  },
+  {
+    "name": "window_reveal_left_lower_front",
+    "from": [
+      0,
+      16.474873734152915,
+      3.974873734152917
+    ],
+    "to": [
+      4,
+      16.474873734152915,
+      10.974873734152917
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": 45,
+      "origin": [
+        2,
+        16.474873734152915,
+        7.474873734152917
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_left_lower_rear",
+    "from": [
+      0,
+      16.474873734152915,
+      26.025126265847085
+    ],
+    "to": [
+      4,
+      16.474873734152915,
+      33.025126265847085
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": -45,
+      "origin": [
+        2,
+        16.474873734152915,
+        29.525126265847085
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_left_upper_front",
+    "from": [
+      0,
+      34.525126265847085,
+      3.974873734152917
+    ],
+    "to": [
+      4,
+      34.525126265847085,
+      10.974873734152917
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": -45,
+      "origin": [
+        2,
+        34.525126265847085,
+        7.474873734152917
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_left_upper_rear",
+    "from": [
+      0,
+      34.525126265847085,
+      26.025126265847085
+    ],
+    "to": [
+      4,
+      34.525126265847085,
+      33.025126265847085
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": 45,
+      "origin": [
+        2,
+        34.525126265847085,
+        29.525126265847085
+      ]
+    }
+  },
+  {
+    "name": "side_window_frame_right",
+    "from": [
+      44,
+      14,
+      5
+    ],
+    "to": [
+      48,
+      37,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "west",
+      "east"
+    ]
+  },
+  {
+    "name": "side_observation_right",
+    "from": [
+      45,
+      14,
+      5
+    ],
+    "to": [
+      47,
+      37,
+      32
+    ],
+    "material": "glass",
+    "kind": "glass",
+    "group": "glass",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "west",
+      "east"
+    ]
+  },
+  {
+    "name": "window_reveal_right_lower_front",
+    "from": [
+      44,
+      16.474873734152915,
+      3.974873734152917
+    ],
+    "to": [
+      48,
+      16.474873734152915,
+      10.974873734152917
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": 45,
+      "origin": [
+        46,
+        16.474873734152915,
+        7.474873734152917
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_right_lower_rear",
+    "from": [
+      44,
+      16.474873734152915,
+      26.025126265847085
+    ],
+    "to": [
+      48,
+      16.474873734152915,
+      33.025126265847085
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": -45,
+      "origin": [
+        46,
+        16.474873734152915,
+        29.525126265847085
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_right_upper_front",
+    "from": [
+      44,
+      34.525126265847085,
+      3.974873734152917
+    ],
+    "to": [
+      48,
+      34.525126265847085,
+      10.974873734152917
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": -45,
+      "origin": [
+        46,
+        34.525126265847085,
+        7.474873734152917
+      ]
+    }
+  },
+  {
+    "name": "window_reveal_right_upper_rear",
+    "from": [
+      44,
+      34.525126265847085,
+      26.025126265847085
+    ],
+    "to": [
+      48,
+      34.525126265847085,
+      33.025126265847085
+    ],
+    "material": "mechanism",
+    "kind": "window_reveal",
+    "group": "side",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "down"
+    ],
+    "rotation": {
+      "axis": "x",
+      "angle": 45,
+      "origin": [
+        46,
+        34.525126265847085,
+        29.525126265847085
+      ]
+    }
+  },
+  {
+    "name": "roof_window_outer_rail_left",
+    "from": [
+      5,
+      44,
+      7
+    ],
+    "to": [
+      7,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_inner_rail_left",
+    "from": [
+      14,
+      44,
+      7
+    ],
+    "to": [
+      16,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_front_sill_left",
+    "from": [
+      7,
+      44,
+      7
+    ],
+    "to": [
+      14,
+      48,
+      9
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_rear_sill_left",
+    "from": [
+      7,
+      44,
+      30
+    ],
+    "to": [
+      14,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_observation_left",
+    "from": [
+      7,
+      44,
+      9
+    ],
+    "to": [
+      14,
+      46,
+      30
+    ],
+    "material": "glass",
+    "kind": "glass",
+    "group": "glass",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_outer_rail_right",
+    "from": [
+      32,
+      44,
+      7
+    ],
+    "to": [
+      34,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_inner_rail_right",
+    "from": [
+      41,
+      44,
+      7
+    ],
+    "to": [
+      43,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_front_sill_right",
+    "from": [
+      34,
+      44,
+      7
+    ],
+    "to": [
+      41,
+      48,
+      9
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_window_rear_sill_right",
+    "from": [
+      34,
+      44,
+      30
+    ],
+    "to": [
+      41,
+      48,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "side",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "roof_observation_right",
+    "from": [
+      34,
+      44,
+      9
+    ],
+    "to": [
+      41,
+      46,
+      30
+    ],
+    "material": "glass",
+    "kind": "glass",
+    "group": "glass",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "console_top_frame",
+    "from": [
+      5,
+      20,
+      0
+    ],
+    "to": [
+      43,
+      22,
+      6
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "operator_console",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "console_side_frame_left",
+    "from": [
+      5,
+      8,
+      0
+    ],
+    "to": [
+      7,
+      20,
+      6
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "operator_console",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "console_side_frame_right",
+    "from": [
+      41,
+      8,
+      0
+    ],
+    "to": [
+      43,
+      20,
+      6
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "operator_console",
+    "outer": true,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "console_wide_display",
+    "from": [
+      7,
+      8,
+      1
+    ],
+    "to": [
+      41,
+      20,
+      6
+    ],
+    "material": "console",
+    "kind": "dark",
+    "group": "operator_console",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "north": "screen"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "reactor_table",
+    "from": [
+      13,
+      11,
+      14
+    ],
+    "to": [
+      35,
+      14,
+      36
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "lower_focusing_head",
+    "from": [
+      17,
+      14,
+      16
+    ],
+    "to": [
+      31,
+      17,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "upper_focusing_head",
+    "from": [
+      17,
+      35,
+      16
+    ],
+    "to": [
+      31,
+      38,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "reaction_gantry_left",
+    "from": [
+      13,
+      14,
+      33
+    ],
+    "to": [
+      16,
+      35,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "reaction_gantry_right",
+    "from": [
+      32,
+      14,
+      33
+    ],
+    "to": [
+      35,
+      35,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "reaction_gantry_bridge",
+    "from": [
+      13,
+      35,
+      28
+    ],
+    "to": [
+      35,
+      38,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "dark",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "opposed_magnetic_jaw_left",
+    "from": [
+      8,
+      18,
+      16
+    ],
+    "to": [
+      12,
+      32,
+      26
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "jaw_mount_left",
+    "from": [
+      6,
+      6,
+      17
+    ],
+    "to": [
+      14,
+      19,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "dark",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_insulator_left_1",
+    "from": [
+      8.5,
+      32,
+      16.5
+    ],
+    "to": [
+      11.5,
+      34,
+      19.5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_contact_left_1",
+    "from": [
+      9,
+      34,
+      17
+    ],
+    "to": [
+      11,
+      35,
+      19
+    ],
+    "material": "power",
+    "kind": "contact",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "discharge_contact_left_1"
+  },
+  {
+    "name": "discharge_pin_left_1",
+    "from": [
+      9.5,
+      35,
+      17.5
+    ],
+    "to": [
+      10.5,
+      39,
+      18.5
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_insulator_left_2",
+    "from": [
+      8.5,
+      32,
+      22.5
+    ],
+    "to": [
+      11.5,
+      34,
+      25.5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_contact_left_2",
+    "from": [
+      9,
+      34,
+      23
+    ],
+    "to": [
+      11,
+      35,
+      25
+    ],
+    "material": "power",
+    "kind": "contact",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "discharge_contact_left_2"
+  },
+  {
+    "name": "discharge_pin_left_2",
+    "from": [
+      9.5,
+      35,
+      23.5
+    ],
+    "to": [
+      10.5,
+      39,
+      24.5
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "opposed_magnetic_jaw_right",
+    "from": [
+      36,
+      18,
+      16
+    ],
+    "to": [
+      40,
+      32,
+      26
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "jaw_mount_right",
+    "from": [
+      34,
+      6,
+      17
+    ],
+    "to": [
+      42,
+      19,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "dark",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_insulator_right_1",
+    "from": [
+      36.5,
+      32,
+      16.5
+    ],
+    "to": [
+      39.5,
+      34,
+      19.5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_contact_right_1",
+    "from": [
+      37,
+      34,
+      17
+    ],
+    "to": [
+      39,
+      35,
+      19
+    ],
+    "material": "power",
+    "kind": "contact",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "discharge_contact_right_1"
+  },
+  {
+    "name": "discharge_pin_right_1",
+    "from": [
+      37.5,
+      35,
+      17.5
+    ],
+    "to": [
+      38.5,
+      39,
+      18.5
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_insulator_right_2",
+    "from": [
+      36.5,
+      32,
+      22.5
+    ],
+    "to": [
+      39.5,
+      34,
+      25.5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "discharge_contact_right_2",
+    "from": [
+      37,
+      34,
+      23
+    ],
+    "to": [
+      39,
+      35,
+      25
+    ],
+    "material": "power",
+    "kind": "contact",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "discharge_contact_right_2"
+  },
+  {
+    "name": "discharge_pin_right_2",
+    "from": [
+      37.5,
+      35,
+      23.5
+    ],
+    "to": [
+      38.5,
+      39,
+      24.5
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "reactor",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "overload_crystal",
+    "from": [
+      18,
+      20,
+      18
+    ],
+    "to": [
+      30,
+      32,
+      26
+    ],
+    "material": "crystal",
+    "kind": "crystal",
+    "group": "crystal",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "rotation": {
+      "axis": "z",
+      "angle": 45,
+      "origin": [
+        24,
+        26,
+        22
+      ]
+    },
+    "render_layer": "emissive",
+    "emissive_source": "overload_crystal"
+  },
+  {
+    "name": "capacitor_left",
+    "from": [
+      6,
+      12,
+      28
+    ],
+    "to": [
+      12,
+      36,
+      36
+    ],
+    "material": "power",
+    "kind": "coil",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "capacitor_foot_left",
+    "from": [
+      5,
+      6,
+      27
+    ],
+    "to": [
+      13,
+      12,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "capacitor_cap_left",
+    "from": [
+      5,
+      36,
+      27
+    ],
+    "to": [
+      13,
+      39,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "bank_bus_riser_left",
+    "from": [
+      8,
+      39,
+      30
+    ],
+    "to": [
+      11,
+      43,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "bank_bus_elbow_left",
+    "from": [
+      8,
+      39,
+      26
+    ],
+    "to": [
+      11,
+      42,
+      30
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "capacitor_right",
+    "from": [
+      36,
+      12,
+      28
+    ],
+    "to": [
+      42,
+      36,
+      36
+    ],
+    "material": "power",
+    "kind": "coil",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "capacitor_foot_right",
+    "from": [
+      35,
+      6,
+      27
+    ],
+    "to": [
+      43,
+      12,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "capacitor_cap_right",
+    "from": [
+      35,
+      36,
+      27
+    ],
+    "to": [
+      43,
+      39,
+      37
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "bank_bus_riser_right",
+    "from": [
+      38,
+      39,
+      30
+    ],
+    "to": [
+      41,
+      43,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "bank_bus_elbow_right",
+    "from": [
+      38,
+      39,
+      26
+    ],
+    "to": [
+      41,
+      42,
+      30
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "overhead_busbar",
+    "from": [
+      11,
+      39,
+      30
+    ],
+    "to": [
+      38,
+      42,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "driver_feed",
+    "from": [
+      22,
+      38,
+      26
+    ],
+    "to": [
+      26,
+      41,
+      32
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_data_trunk",
+    "from": [
+      21,
+      10,
+      32
+    ],
+    "to": [
+      27,
+      35,
+      36
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "energy",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "top_actuator_housing",
+    "from": [
+      17,
+      39,
+      17
+    ],
+    "to": [
+      31,
+      43,
+      31
+    ],
+    "material": "mechanism",
+    "kind": "vent",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "top_actuator_ram",
+    "from": [
+      21,
+      37,
+      18
+    ],
+    "to": [
+      27,
+      39,
+      24
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "top_drive",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_lower_mount_left",
+    "from": [
+      5,
+      16,
+      38
+    ],
+    "to": [
+      18,
+      20,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_upper_mount_left",
+    "from": [
+      5,
+      39,
+      38
+    ],
+    "to": [
+      18,
+      43,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_heat_pipe_left_1",
+    "from": [
+      7,
+      19,
+      42
+    ],
+    "to": [
+      10,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_heat_pipe_left_2",
+    "from": [
+      13,
+      19,
+      42
+    ],
+    "to": [
+      16,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_left_1",
+    "from": [
+      3,
+      21,
+      39
+    ],
+    "to": [
+      18,
+      23,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_left_2",
+    "from": [
+      3,
+      25,
+      39
+    ],
+    "to": [
+      18,
+      27,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_left_3",
+    "from": [
+      3,
+      29,
+      39
+    ],
+    "to": [
+      18,
+      31,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_left_4",
+    "from": [
+      3,
+      33,
+      39
+    ],
+    "to": [
+      18,
+      35,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_left_5",
+    "from": [
+      3,
+      37,
+      39
+    ],
+    "to": [
+      18,
+      39,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_lower_mount_right",
+    "from": [
+      30,
+      16,
+      38
+    ],
+    "to": [
+      43,
+      20,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_upper_mount_right",
+    "from": [
+      30,
+      39,
+      38
+    ],
+    "to": [
+      43,
+      43,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_heat_pipe_right_1",
+    "from": [
+      32,
+      19,
+      42
+    ],
+    "to": [
+      35,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_heat_pipe_right_2",
+    "from": [
+      38,
+      19,
+      42
+    ],
+    "to": [
+      41,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_right_1",
+    "from": [
+      30,
+      21,
+      39
+    ],
+    "to": [
+      45,
+      23,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_right_2",
+    "from": [
+      30,
+      25,
+      39
+    ],
+    "to": [
+      45,
+      27,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_right_3",
+    "from": [
+      30,
+      29,
+      39
+    ],
+    "to": [
+      45,
+      31,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_right_4",
+    "from": [
+      30,
+      33,
+      39
+    ],
+    "to": [
+      45,
+      35,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_radiator_fin_right_5",
+    "from": [
+      30,
+      37,
+      39
+    ],
+    "to": [
+      45,
+      39,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {
+      "up": "metal"
+    },
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_vertical_manifold",
+    "from": [
+      22,
+      16,
+      42
+    ],
+    "to": [
+      26,
+      43,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_link_upper_left",
+    "from": [
+      18,
+      40,
+      42
+    ],
+    "to": [
+      22,
+      42,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_link_upper_right",
+    "from": [
+      26,
+      40,
+      42
+    ],
+    "to": [
+      30,
+      42,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_link_lower_left",
+    "from": [
+      18,
+      17,
+      42
+    ],
+    "to": [
+      22,
+      19,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_link_lower_right",
+    "from": [
+      26,
+      17,
+      42
+    ],
+    "to": [
+      30,
+      19,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_clamp_1",
+    "from": [
+      20,
+      22,
+      39
+    ],
+    "to": [
+      28,
+      24,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "rear_manifold_clamp_2",
+    "from": [
+      20,
+      33,
+      39
+    ],
+    "to": [
+      28,
+      35,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "rear_cooling",
+    "outer": false,
+    "shade": true,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ]
+  },
+  {
+    "name": "bottom_emissive",
+    "from": [
+      0,
+      0,
+      0
+    ],
+    "to": [
+      48,
+      6,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "south",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "bottom"
+  },
+  {
+    "name": "pillar_front_left_emissive",
+    "from": [
+      0,
+      6,
+      0
+    ],
+    "to": [
+      5,
+      43,
+      5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "west"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "pillar_front_left"
+  },
+  {
+    "name": "pillar_front_right_emissive",
+    "from": [
+      43,
+      6,
+      0
+    ],
+    "to": [
+      48,
+      43,
+      5
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "pillar_front_right"
+  },
+  {
+    "name": "rear_housing_lower_rear_right_emissive",
+    "from": [
+      43,
+      6,
+      40
+    ],
+    "to": [
+      48,
+      20,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "south"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_housing_lower_rear_right"
+  },
+  {
+    "name": "front_crown_emissive",
+    "from": [
+      0,
+      43,
+      0
+    ],
+    "to": [
+      48,
+      48,
+      7
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "front_crown"
+  },
+  {
+    "name": "drive_spine_emissive",
+    "from": [
+      16,
+      43,
+      7
+    ],
+    "to": [
+      32,
+      47,
+      30
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "drive_spine"
+  },
+  {
+    "name": "roof_emblem_plate_emissive",
+    "from": [
+      18,
+      47,
+      9
+    ],
+    "to": [
+      30,
+      48,
+      17
+    ],
+    "material": "mechanism",
+    "kind": "ceramic",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "up"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "roof_emblem_plate"
+  },
+  {
+    "name": "roof_cable_left_emissive",
+    "from": [
+      19,
+      45,
+      32
+    ],
+    "to": [
+      22,
+      47,
+      43
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "roof_cable_left"
+  },
+  {
+    "name": "roof_cable_right_emissive",
+    "from": [
+      26,
+      45,
+      32
+    ],
+    "to": [
+      29,
+      47,
+      43
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "roof_cable_right"
+  },
+  {
+    "name": "lower_shroud_left_emissive",
+    "from": [
+      0,
+      6,
+      5
+    ],
+    "to": [
+      4,
+      14,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "west"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "lower_shroud_left"
+  },
+  {
+    "name": "lower_shroud_right_emissive",
+    "from": [
+      44,
+      6,
+      5
+    ],
+    "to": [
+      48,
+      14,
+      32
+    ],
+    "material": "mechanism",
+    "kind": "metal",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "east"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "lower_shroud_right"
+  },
+  {
+    "name": "rear_port_plinth_emissive",
+    "from": [
+      5,
+      6,
+      36
+    ],
+    "to": [
+      43,
+      16,
+      48
+    ],
+    "material": "mechanism",
+    "kind": "structure",
+    "group": "emissive",
+    "outer": true,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "south"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_port_plinth"
+  },
+  {
+    "name": "console_wide_display_emissive",
+    "from": [
+      7,
+      8,
+      1
+    ],
+    "to": [
+      41,
+      20,
+      6
+    ],
+    "material": "console",
+    "kind": "dark",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {
+      "north": "screen"
+    },
+    "faces": [
+      "north"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "console_wide_display"
+  },
+  {
+    "name": "lower_focusing_head_emissive",
+    "from": [
+      17,
+      14,
+      16
+    ],
+    "to": [
+      31,
+      17,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "lower_focusing_head"
+  },
+  {
+    "name": "upper_focusing_head_emissive",
+    "from": [
+      17,
+      35,
+      16
+    ],
+    "to": [
+      31,
+      38,
+      28
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "upper_focusing_head"
+  },
+  {
+    "name": "opposed_magnetic_jaw_left_emissive",
+    "from": [
+      8,
+      18,
+      16
+    ],
+    "to": [
+      12,
+      32,
+      26
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "opposed_magnetic_jaw_left"
+  },
+  {
+    "name": "opposed_magnetic_jaw_right_emissive",
+    "from": [
+      36,
+      18,
+      16
+    ],
+    "to": [
+      40,
+      32,
+      26
+    ],
+    "material": "mechanism",
+    "kind": "magnet",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "opposed_magnetic_jaw_right"
+  },
+  {
+    "name": "capacitor_left_emissive",
+    "from": [
+      6,
+      12,
+      28
+    ],
+    "to": [
+      12,
+      36,
+      36
+    ],
+    "material": "power",
+    "kind": "coil",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "capacitor_left"
+  },
+  {
+    "name": "bank_bus_riser_left_emissive",
+    "from": [
+      8,
+      39,
+      30
+    ],
+    "to": [
+      11,
+      43,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "bank_bus_riser_left"
+  },
+  {
+    "name": "bank_bus_elbow_left_emissive",
+    "from": [
+      8,
+      39,
+      26
+    ],
+    "to": [
+      11,
+      42,
+      30
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "bank_bus_elbow_left"
+  },
+  {
+    "name": "capacitor_right_emissive",
+    "from": [
+      36,
+      12,
+      28
+    ],
+    "to": [
+      42,
+      36,
+      36
+    ],
+    "material": "power",
+    "kind": "coil",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "capacitor_right"
+  },
+  {
+    "name": "bank_bus_riser_right_emissive",
+    "from": [
+      38,
+      39,
+      30
+    ],
+    "to": [
+      41,
+      43,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "bank_bus_riser_right"
+  },
+  {
+    "name": "bank_bus_elbow_right_emissive",
+    "from": [
+      38,
+      39,
+      26
+    ],
+    "to": [
+      41,
+      42,
+      30
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "bank_bus_elbow_right"
+  },
+  {
+    "name": "overhead_busbar_emissive",
+    "from": [
+      11,
+      39,
+      30
+    ],
+    "to": [
+      38,
+      42,
+      34
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "overhead_busbar"
+  },
+  {
+    "name": "driver_feed_emissive",
+    "from": [
+      22,
+      38,
+      26
+    ],
+    "to": [
+      26,
+      41,
+      32
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "driver_feed"
+  },
+  {
+    "name": "rear_data_trunk_emissive",
+    "from": [
+      21,
+      10,
+      32
+    ],
+    "to": [
+      27,
+      35,
+      36
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_data_trunk"
+  },
+  {
+    "name": "rear_heat_pipe_left_1_emissive",
+    "from": [
+      7,
+      19,
+      42
+    ],
+    "to": [
+      10,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_heat_pipe_left_1"
+  },
+  {
+    "name": "rear_heat_pipe_left_2_emissive",
+    "from": [
+      13,
+      19,
+      42
+    ],
+    "to": [
+      16,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_heat_pipe_left_2"
+  },
+  {
+    "name": "rear_heat_pipe_right_1_emissive",
+    "from": [
+      32,
+      19,
+      42
+    ],
+    "to": [
+      35,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_heat_pipe_right_1"
+  },
+  {
+    "name": "rear_heat_pipe_right_2_emissive",
+    "from": [
+      38,
+      19,
+      42
+    ],
+    "to": [
+      41,
+      40,
+      45
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_heat_pipe_right_2"
+  },
+  {
+    "name": "rear_vertical_manifold_emissive",
+    "from": [
+      22,
+      16,
+      42
+    ],
+    "to": [
+      26,
+      43,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_vertical_manifold"
+  },
+  {
+    "name": "rear_manifold_link_upper_left_emissive",
+    "from": [
+      18,
+      40,
+      42
+    ],
+    "to": [
+      22,
+      42,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_manifold_link_upper_left"
+  },
+  {
+    "name": "rear_manifold_link_upper_right_emissive",
+    "from": [
+      26,
+      40,
+      42
+    ],
+    "to": [
+      30,
+      42,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_manifold_link_upper_right"
+  },
+  {
+    "name": "rear_manifold_link_lower_left_emissive",
+    "from": [
+      18,
+      17,
+      42
+    ],
+    "to": [
+      22,
+      19,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_manifold_link_lower_left"
+  },
+  {
+    "name": "rear_manifold_link_lower_right_emissive",
+    "from": [
+      26,
+      17,
+      42
+    ],
+    "to": [
+      30,
+      19,
+      46
+    ],
+    "material": "power",
+    "kind": "bus",
+    "group": "emissive",
+    "outer": false,
+    "shade": false,
+    "face_kinds": {},
+    "faces": [
+      "north",
+      "east",
+      "south",
+      "west",
+      "up",
+      "down"
+    ],
+    "render_layer": "emissive",
+    "emissive_source": "rear_manifold_link_lower_right"
+  }
+]

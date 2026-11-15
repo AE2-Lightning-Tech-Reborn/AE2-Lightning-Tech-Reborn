@@ -19,6 +19,7 @@ public abstract class LargeFactoryChunkChangeMixin {
             CallbackInfoReturnable<BlockState> callback) {
         // Close the gate before replacement callbacks can re-enter a provider, including interior air edits.
         var self = (LevelChunk) (Object) this;
-        if (self.getBlockState(position) != next) LargeFactoryWorld.changed(getLevel(), position);
+        if (!LargeFactoryWorld.onlyVisualStateChanged(self.getBlockState(position), next))
+            LargeFactoryWorld.changed(getLevel(), position);
     }
 }

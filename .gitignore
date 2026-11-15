@@ -48,7 +48,10 @@ logs/
 
 # Java
 *.class
-scripts/__pycache__/
+
+# Python
+__pycache__/
+*.py[cod]
 
 # Runtime / temporary files
 run/

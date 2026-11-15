@@ -36,21 +36,22 @@ public final class LargeFactoryBuilder {
             var item = LargeFactoryRegistration.block(component).asItem();
             int source = -1;
             for (int slot = 0; slot < 36; slot++) if (actor.getInventory().getItem(slot).is(item)) { source = slot; break; }
-            if (source < 0) continue;
+            boolean creative = actor.isCreative();
+            if (source < 0 && !creative) continue;
             var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
-            if (source == actor.getInventory().selected) {
+            if (!creative && source == actor.getInventory().selected) {
                 if (actor.mayUseItemAt(pos, Direction.UP, actor.getMainHandItem())) actor.getMainHandItem().useOn(new UseOnContext(actor, InteractionHand.MAIN_HAND, hit));
             } else {
-                // Server-thread synchronous item-use, with the real inventory stack, never a generated block.
+                // Normal item-use hooks apply to both real survival stacks and temporary creative stacks.
                 ItemStack held = actor.getMainHandItem();
-                ItemStack material = actor.getInventory().removeItemNoUpdate(source);
+                ItemStack material = creative ? new ItemStack(item) : actor.getInventory().removeItemNoUpdate(source);
                 actor.setItemInHand(InteractionHand.MAIN_HAND, material);
                 try {
                     if (actor.mayUseItemAt(pos, Direction.UP, material)) material.useOn(new UseOnContext(actor, InteractionHand.MAIN_HAND, hit));
                 } finally {
                     var remaining = actor.getMainHandItem();
                     actor.setItemInHand(InteractionHand.MAIN_HAND, held);
-                    actor.getInventory().setItem(source, remaining);
+                    if (!creative) actor.getInventory().setItem(source, remaining);
                 }
             }
         }

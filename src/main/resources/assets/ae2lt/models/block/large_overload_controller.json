@@ -1,8 +1,10 @@
 {
-  "parent": "minecraft:block/orientable",
+  "parent": "minecraft:block/orientable_with_bottom",
   "textures": {
-    "front": "ae2lt:block/overload_processing_factory/crystal_on",
-    "side": "ae2lt:block/overload_processing_factory/frame",
-    "top": "ae2lt:block/overload_processing_factory/frame"
+    "front": "ae2lt:block/large_overload_factory/controller_front",
+    "side": "ae2lt:block/generics/back",
+    "top": "ae2lt:block/generics/top",
+    "bottom": "ae2lt:block/generics/bottom",
+    "particle": "ae2lt:block/generics/back"
   }
 }

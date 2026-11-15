@@ -22,6 +22,8 @@ import com.moakiee.ae2lt.integration.jei.category.TeslaCoilCategory;
 import com.moakiee.ae2lt.integration.jei.compat.ae2jeiintegration.AE2JeiIntegrationCompat;
 import com.moakiee.ae2lt.integration.jei.compat.AdvancedAeFactoryJeiCompat;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -44,6 +46,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.fml.ModList;
 import tamaized.ae2jeiintegration.integration.modules.jei.transfer.EncodePatternTransferHandler;
@@ -207,6 +210,8 @@ public class JEIPlugin implements IModPlugin {
                     MultiblockStructureCategory.TYPE);
             registration.addRecipeCatalyst(
                     ModBlocks.TIANSHU_SUPERCOMPUTER_CONTROLLER.toStack(),
+                    MultiblockStructureCategory.TYPE);
+            registration.addRecipeCatalyst(new ItemStack(LargeFactoryRegistration.block(LargeFactoryComponent.CONTROLLER)),
                     MultiblockStructureCategory.TYPE);
         }
     }

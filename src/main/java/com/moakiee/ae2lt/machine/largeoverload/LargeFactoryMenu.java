@@ -7,6 +7,7 @@ import appeng.api.inventories.PlatformInventoryWrapper;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.AppEngSlot;
+import appeng.menu.slot.RestrictedInputSlot;
 import com.moakiee.ae2lt.network.LargeFactoryStatusPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -47,7 +48,8 @@ public final class LargeFactoryMenu extends AEBaseMenu {
         this.host = host; this.position = position; this.playerInventory = inventory; this.component = component;
         machineSlots = items.getSlots();
         var wrapped = new PlatformInventoryWrapper(items);
-        for (int slot = 0; slot < machineSlots; slot++) addSlot(new PagedSlot(wrapped, slot),
+        for (int slot = 0; slot < machineSlots; slot++) addSlot(component.isPatternHatch()
+                        ? new PagedPatternSlot(wrapped, slot) : new AppEngSlot(wrapped, slot),
                 component.isPatternHatch() ? SlotSemantics.ENCODED_PATTERN : SlotSemantics.CONFIG);
         createPlayerInventorySlots(inventory);
     }
@@ -70,11 +72,17 @@ public final class LargeFactoryMenu extends AEBaseMenu {
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
+    public static InteractionResult openController(Level level, BlockPos part, Player player) {
+        if (level.isClientSide) return InteractionResult.SUCCESS;
+        var binding = LargeFactoryWorld.get(level).ownership.at(part);
+        return binding == null ? InteractionResult.PASS : open(level, binding.formation().controller(), player);
+    }
     @Override public boolean stillValid(Player player) {
         return player.distanceToSqr(position.getCenter()) <= 64
                 && (host == null || !host.isRemoved() && host.getLevel() == player.level() && player.level().getBlockEntity(position) == host);
     }
     public int page() { return page; }
+    public BlockPos position() { return position; }
     public int pages() { return Math.max(1, (machineSlots + 35) / 36); }
     public int machineSlots() { return machineSlots; }
     public void setPage(int page) { this.page = Math.clamp(page, 0, pages() - 1); }
@@ -151,9 +159,12 @@ public final class LargeFactoryMenu extends AEBaseMenu {
         if (!snapshot.equals(sent)) PacketDistributor.sendToPlayer(player, new LargeFactoryStatusPacket(containerId, snapshot));
         sent = snapshot; nextSync = player.server.getTickCount() + 4;
     }
-    private final class PagedSlot extends AppEngSlot {
+    private final class PagedPatternSlot extends RestrictedInputSlot {
         private final int index;
-        PagedSlot(InternalInventory items, int index) { super(items, index); this.index = index; }
+        PagedPatternSlot(InternalInventory items, int index) {
+            super(PlacableItemType.PROVIDER_PATTERN, items, index);
+            this.index = index;
+        }
         @Override public boolean isActive() { return super.isActive() && index / 36 == page; }
         @Override public boolean mayPickup(Player player) { return isActive() && super.mayPickup(player); }
         @Override public boolean mayPlace(ItemStack stack) { return isActive() && super.mayPlace(stack); }

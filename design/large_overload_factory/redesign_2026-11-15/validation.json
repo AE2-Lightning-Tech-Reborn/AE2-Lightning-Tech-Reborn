@@ -1,0 +1,492 @@
+{
+  "target": "Minecraft Java 1.21.1 / NeoForge",
+  "stage": "textured",
+  "footprint_blocks": [
+    3,
+    3,
+    3
+  ],
+  "dimensions_units": [
+    48,
+    48,
+    48
+  ],
+  "world_bounds_units": [
+    [
+      0,
+      48
+    ],
+    [
+      0,
+      48
+    ],
+    [
+      0,
+      48
+    ]
+  ],
+  "export_bounds_units": [
+    -16,
+    32
+  ],
+  "origin_cell": [
+    1,
+    1,
+    1
+  ],
+  "front": "north",
+  "controller_cell": [
+    1,
+    1,
+    0
+  ],
+  "core_cell": [
+    1,
+    1,
+    1
+  ],
+  "rear_function_cells": 3,
+  "rear_function_layout": {
+    "row": "bottom",
+    "left_to_right": [
+      "cable_connector",
+      "output",
+      "pattern"
+    ],
+    "left_artwork": "original 12x12 cable socket; no IO port texture",
+    "other_native_source_crop": [
+      2,
+      2,
+      14,
+      14
+    ],
+    "texture_positions": [
+      [
+        2,
+        34
+      ],
+      [
+        18,
+        34
+      ],
+      [
+        34,
+        34
+      ]
+    ]
+  },
+  "cubes": 176,
+  "groups": {
+    "top_drive": 27,
+    "side_pillar": 4,
+    "side": 37,
+    "glass": 5,
+    "operator_console": 4,
+    "reactor": 18,
+    "crystal": 1,
+    "energy": 13,
+    "rear_cooling": 25,
+    "emissive": 39
+  },
+  "structural_cubes_before_emissive_split": 141,
+  "textured_faces": 913,
+  "emissive": {
+    "enabled": true,
+    "surface_cubes": 35,
+    "faces": 189,
+    "fully_moved_cubes": [
+      "discharge_contact_left_1",
+      "discharge_contact_left_2",
+      "discharge_contact_right_1",
+      "discharge_contact_right_2",
+      "overload_crystal"
+    ],
+    "base_emissive_alpha_overlap_pixels": 0,
+    "surface_offset_units": 0,
+    "static_atlas": "emissive",
+    "animated_atlas": "console_emissive",
+    "block_light": 15,
+    "sky_light": 15,
+    "ambient_occlusion": false,
+    "metal_emits": false,
+    "off_state": "same light components, dim artwork, ordinary lighting and no animation",
+    "new_surface_names": [
+      "bottom_emissive",
+      "pillar_front_left_emissive",
+      "pillar_front_right_emissive",
+      "rear_housing_lower_rear_right_emissive",
+      "front_crown_emissive",
+      "drive_spine_emissive",
+      "roof_emblem_plate_emissive",
+      "roof_cable_left_emissive",
+      "roof_cable_right_emissive",
+      "lower_shroud_left_emissive",
+      "lower_shroud_right_emissive",
+      "rear_port_plinth_emissive",
+      "console_wide_display_emissive",
+      "lower_focusing_head_emissive",
+      "upper_focusing_head_emissive",
+      "opposed_magnetic_jaw_left_emissive",
+      "opposed_magnetic_jaw_right_emissive",
+      "capacitor_left_emissive",
+      "bank_bus_riser_left_emissive",
+      "bank_bus_elbow_left_emissive",
+      "capacitor_right_emissive",
+      "bank_bus_riser_right_emissive",
+      "bank_bus_elbow_right_emissive",
+      "overhead_busbar_emissive",
+      "driver_feed_emissive",
+      "rear_data_trunk_emissive",
+      "rear_heat_pipe_left_1_emissive",
+      "rear_heat_pipe_left_2_emissive",
+      "rear_heat_pipe_right_1_emissive",
+      "rear_heat_pipe_right_2_emissive",
+      "rear_vertical_manifold_emissive",
+      "rear_manifold_link_upper_left_emissive",
+      "rear_manifold_link_upper_right_emissive",
+      "rear_manifold_link_lower_left_emissive",
+      "rear_manifold_link_lower_right_emissive"
+    ]
+  },
+  "textures_per_project": 13,
+  "logical_uv_resolution": [
+    48,
+    48
+  ],
+  "exterior_resolution": {
+    "face_front": [
+      48,
+      48
+    ],
+    "face_back": [
+      48,
+      48
+    ],
+    "face_left": [
+      48,
+      48
+    ],
+    "face_right": [
+      48,
+      48
+    ],
+    "face_top": [
+      48,
+      48
+    ],
+    "face_bottom": [
+      48,
+      48
+    ]
+  },
+  "material_frame_resolutions": {
+    "face_front": [
+      48,
+      48
+    ],
+    "face_back": [
+      48,
+      48
+    ],
+    "face_left": [
+      48,
+      48
+    ],
+    "face_right": [
+      48,
+      48
+    ],
+    "face_top": [
+      48,
+      48
+    ],
+    "face_bottom": [
+      48,
+      48
+    ],
+    "deck": [
+      48,
+      48
+    ],
+    "mechanism": [
+      256,
+      256
+    ],
+    "power": [
+      64,
+      64
+    ],
+    "glass": [
+      64,
+      64
+    ],
+    "console": [
+      64,
+      64
+    ],
+    "emissive": [
+      128,
+      128
+    ],
+    "console_emissive": [
+      64,
+      64
+    ]
+  },
+  "material_resolutions": {
+    "face_front": [
+      48,
+      48
+    ],
+    "face_back": [
+      48,
+      48
+    ],
+    "face_left": [
+      48,
+      48
+    ],
+    "face_right": [
+      48,
+      48
+    ],
+    "face_top": [
+      48,
+      48
+    ],
+    "face_bottom": [
+      48,
+      48
+    ],
+    "deck": [
+      48,
+      48
+    ],
+    "mechanism": [
+      256,
+      256
+    ],
+    "power": [
+      64,
+      64
+    ],
+    "glass": [
+      64,
+      64
+    ],
+    "console": [
+      64,
+      64
+    ],
+    "emissive": [
+      128,
+      128
+    ],
+    "console_emissive": [
+      64,
+      1024
+    ]
+  },
+  "pixel_density": [
+    1,
+    1
+  ],
+  "uv_density_errors": [],
+  "glass_alpha": [
+    0,
+    72,
+    96,
+    123
+  ],
+  "render_layers": {
+    "body": "cutout",
+    "emissive": "cutout",
+    "windows": "translucent"
+  },
+  "window_braces": 0,
+  "rear_cooling": {
+    "banks": 2,
+    "fins_per_bank": 5,
+    "pipe_count": 4,
+    "connected_manifold": true,
+    "housing_depth_units": 16,
+    "fin_depth_units": 9,
+    "fin_width_units": 15,
+    "outward_extension_per_bank_units": 2,
+    "side_housing_wall_units": 5
+  },
+  "roof_windows": {
+    "solid_frame_height_units": 4,
+    "solid_frame_width_units": 2,
+    "glass_thickness_units": 2,
+    "glass_recess_below_roof_units": 2
+  },
+  "roof_service": {
+    "vent_recess_depth_units": 1,
+    "solid_vent_slats": 4,
+    "emblem_plate_height_units": 1,
+    "cable_well_depth_units": 3,
+    "cable_runs": 2,
+    "cable_cross_section_units": [
+      3,
+      2
+    ],
+    "sockets_per_cable": 2,
+    "clamps_per_cable": 1,
+    "texture_layout": "closed lid seam, service island, framed openings and four corner fasteners"
+  },
+  "magnetic_jaws": {
+    "upright": true,
+    "discharge_pins_per_jaw": 2,
+    "insulated_contacts": true
+  },
+  "front_console": {
+    "integrated": true,
+    "frame_width_units": 38,
+    "frame_height_units": 16,
+    "screen_pixels": [
+      34,
+      12
+    ],
+    "screen_recess_units": 1,
+    "screen_off": "dark idle glass",
+    "animation_frames": 16,
+    "frame_ticks": 2,
+    "loop_seconds": 1.6,
+    "interpolation": false,
+    "animation_geometry": "unchanged"
+  },
+  "observation_windows": {
+    "style": "flush outer frame and recessed glass with visible window-well walls",
+    "flush_frame_elements": 3,
+    "frame_depth_units": 4,
+    "front_and_side_glass_inset_units": 1,
+    "glass_thickness_units": 2,
+    "separate_glass_material": true,
+    "old_corner_castings": 0,
+    "frame_textured_faces": 6,
+    "diagonal_inner_faces": 12,
+    "straight_walls_reuse_existing_shell": true,
+    "independent_glass_panes": true
+  },
+  "metal_finish": "Five close tones, stepped directional shading, coherent grain and sparse short scuffs.",
+  "back_wall_thickness_units": 4,
+  "source_artwork_reused": true,
+  "source_reuse_method": "Cropped native pixels, extended neutral metal runs, newly connected full-face compositions. No bitmap scaling.",
+  "source_materials": {
+    "frame": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/overload_processing_factory/frame.png",
+      "resolution": [
+        32,
+        32
+      ],
+      "sha256": "f9e04c40a0e3be51ff4dc4050f006dfaea94f06092196f27dd277691f6d65192"
+    },
+    "top": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/generics/top.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "13a93224628e0addb926004dd204802c97d8f70d49af20d4f8aaa646fd381f41"
+    },
+    "bottom": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/generics/bottom.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "8f3c904c41e4069429fe828a01b231a603d0622005761f8ba37da2404b223710"
+    },
+    "back": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/generics/back.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "45d05e102788d60b03ff405472b214d50e64618eadb121dc6497cb9eeca56240"
+    },
+    "crystal": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/overload_crystal_block.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "b048db2e6720d0b1d755640a2bf12c8e735156f3a5e9c2182f77f49c0de803ff"
+    },
+    "glass": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/overload_processing_factory/frame.png",
+      "resolution": [
+        32,
+        32
+      ],
+      "sha256": "f9e04c40a0e3be51ff4dc4050f006dfaea94f06092196f27dd277691f6d65192"
+    },
+    "vent": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/matter_warping_matrix/matter_warping_matrix_constraint_frame.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "242796cf7bb655e2f869cb112af665728b46ad71464a65303e3711ab414b6248"
+    },
+    "thread": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/matter_warping_matrix/matter_warping_matrix_thread_unit_t2.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "fdbd896e8c68bde0980e5e1f2b66bbc0cb1dc12254436d71986736e32c6d8368"
+    },
+    "overload": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/matter_warping_matrix/matter_warping_matrix_overload_main_core.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "a750806c9d8bff53d61e881ea008fec42b5c2da86db878e11a2976f46783efc6"
+    },
+    "output": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/overloaded_interface.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "4ddba5989e8aca75d284a0e477877140cc51bbee1f6c503052fb2413b748b597"
+    },
+    "pattern": {
+      "path": "src/main/resources/assets/ae2lt/textures/block/matter_warping_matrix/matter_warping_matrix_pattern_storage_t1.png",
+      "resolution": [
+        16,
+        16
+      ],
+      "sha256": "2bb49f8dd6110aedb0cfa74defc50fab105369bdda0920b2c16b20299354bce2"
+    }
+  },
+  "production_resources_changed": false,
+  "in_game_verified": false,
+  "blockbench_preview_verified": true,
+  "material_sha256": {
+    "console_emissive_off.png": "89959117c9573bf4a211e0d6d6b69483f995acd41b9e4a6d3ae986c4558ef567",
+    "console_emissive_on.png": "fb9fa7c06e1a01d42c1b87ce72b334feed7b3ae2763854fe5774c3b717e43bb0",
+    "console_off.png": "15e0ea71273df41f68028fe9370b193f58bdc98cce6d7ac81983956efd06614f",
+    "console_on.png": "15e0ea71273df41f68028fe9370b193f58bdc98cce6d7ac81983956efd06614f",
+    "deck.png": "4beb0311901af373ede610611ee15bf563292908c89d0f099d4b6c2373569a1a",
+    "emissive_off.png": "fa23026c6dcc91955086c04859f6ef286a95e4c2e11ddfd19472ba7f52dfb4dd",
+    "emissive_on.png": "aac79ef8bb8bc28cdbe8a8107eb7b7620eb44c2f31cc85bb9db66f64ffcad9c2",
+    "face_back.png": "08dc0adf68251c2cb85b2fd6556ea396ace2258a061c6a5e74e9c3d179d547e7",
+    "face_bottom.png": "844c939c52f79ecdad57581fa03895b4d2fc4b71e7419d73437a3ef5f3be5e0f",
+    "face_front.png": "4cea214f7ee70d002bbb6c4fd1e98e309a0bebe80cd7fbf6d0832bdfc03056fe",
+    "face_left.png": "4db8a2e557ae65edba95dad57b78da0566a737e4bb198ffd084f11ea976fc7da",
+    "face_right.png": "fe4ac4504e4278d3c049ad7253a489b0ee94eeb8658a6b3c25726748998d242e",
+    "face_top.png": "64b7274a453860f1cc326329a863f943b3e1c24cc8675013ef48906ac91aaa57",
+    "glass.png": "428f5b6af07e42d81ddb713e5da0cd1f82dbfac4691c3870938f413d0a57c49e",
+    "mechanism.png": "10cb145738fb6de226342cf3f21b6204dcc9d751bcf7da2a9d1424657ab1420d",
+    "power_off.png": "452c8fea41d7c4d23f310864c7c55dc1050f9432e5e5dba23dc6317aac7b25f4",
+    "power_on.png": "452c8fea41d7c4d23f310864c7c55dc1050f9432e5e5dba23dc6317aac7b25f4"
+  },
+  "animation_metadata": [
+    "console_emissive_on.png.mcmeta"
+  ],
+  "delivery_validation": "delivery_validation.json"
+}

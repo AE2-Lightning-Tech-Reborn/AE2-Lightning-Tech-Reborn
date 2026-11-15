@@ -1,35 +1,36 @@
 {
   "$schema": "schema.json",
   "includes": [
-    "overloaded_pattern_provider.json"
+    "large_factory.json"
   ],
-  "text": {
-    "dialog_title": {
-      "text": "",
-      "position": {
-        "left": 8,
-        "top": 6
-      }
-    },
-    "interface_stored_items": {
-      "text": "",
-      "position": {
-        "left": 8,
-        "top": 116
-      }
-    }
+  "generatedBackground": {
+    "width": 176,
+    "height": 218
   },
   "slots": {
+    "PLAYER_HOTBAR": {
+      "left": 8,
+      "bottom": 28,
+      "grid": "HORIZONTAL"
+    },
+    "ENCODED_PATTERN": {
+      "left": 8,
+      "top": 32,
+      "grid": "BREAK_AFTER_9COLS"
+    },
     "CONFIG": {
       "left": 8,
-      "top": 42,
+      "top": 32,
       "grid": "BREAK_AFTER_9COLS"
     }
   },
-  "widgets": {
-    "lightningStatus": {
-      "left": 156,
-      "top": 4
+  "text": {
+    "interface_config": {
+      "text": "",
+      "position": {
+        "left": 8,
+        "top": 21
+      }
     }
   }
 }

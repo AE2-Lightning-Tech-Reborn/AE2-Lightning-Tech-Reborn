@@ -177,6 +177,15 @@
   "jei.ae2lt.multiblock.title": "Multiblock Structures",
   "jei.ae2lt.multiblock.matrix": "Tianshu Matter Warping Matrix",
   "jei.ae2lt.multiblock.tianshu": "Tianshu Supercomputer",
+  "jei.ae2lt.multiblock.large_factory": "Large Overload Processing Factory",
+  "jei.ae2lt.multiblock.large_factory_firmament": "Large Overload Processing Factory - Firmament",
+  "jei.ae2lt.multiblock.role.large_factory_hatch": "Rear hatch position",
+  "jei.ae2lt.multiblock.rule.large_factory_core": "Place one T1-T4 processing core in the center to set the shared factory throughput.",
+  "jei.ae2lt.multiblock.rule.large_factory_firmament": "Build around an existing Firmament Conversion Core inside its starship. Empty its inventory and finish old jobs first. Requires a pattern hatch and only processes Firmament recipes.",
+  "jei.ae2lt.multiblock.rule.large_factory_hatch": "All nine rear cells accept casings or hatches. Normal mode needs a pattern or crystal hatch. At most one process-core hatch. Example: one pattern hatch and eight casings.",
+  "jei.ae2lt.multiblock.rule.large_factory_network": "Processing hatches connect to ME only on the outward rear face, using one channel each. Process-core and energy hatches use no channels.",
+  "ae2lt.large_factory.projection_hint": "Toggle world projection: missing blocks show translucent models; incorrect blocks are outlined red. Recipe pages place the projection at your crosshair target.",
+  "ae2lt.large_factory.build_hint": "Fill frames and casings from your inventory. Creative mode needs no materials. Place the core and functional hatches yourself.",
   "jei.ae2lt.multiblock.mode.full": "Full",
   "jei.ae2lt.multiblock.mode.up_to": "Below",
   "jei.ae2lt.multiblock.mode.single": "Layer",
@@ -1656,5 +1665,9 @@
   "ae2lt.large_factory.recover_count": "Recover (%s types)",
   "ae2lt.large_factory.catalysts": "Catalysts",
   "ae2lt.large_factory.process_cores": "Process cores",
-  "ae2lt.large_factory.status.network_offline": "ME network offline, unpowered or missing a channel"
+  "ae2lt.large_factory.status.network_offline": "ME network offline, unpowered or missing a channel",
+  "ae2lt.large_factory.active_hint": "Process encoded patterns on demand from ME crafting requests.",
+  "ae2lt.large_factory.passive_hint": "Automatically consume network ingredients for enabled entries.",
+  "ae2lt.large_factory.entry_summary": "Entries %s · Returns %s types",
+  "ae2lt.large_factory.entry_summary_compact": "%s entries · %s held"
 }

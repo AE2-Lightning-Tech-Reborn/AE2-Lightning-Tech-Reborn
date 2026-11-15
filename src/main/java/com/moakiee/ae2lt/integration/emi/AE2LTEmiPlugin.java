@@ -5,6 +5,8 @@ import appeng.integration.modules.emi.EmiUseCraftingRecipeHandler;
 import com.moakiee.ae2lt.menu.PigmeeSynthesisStationMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
 import com.moakiee.ae2lt.registry.ModBlocks;
@@ -51,5 +53,6 @@ public final class AE2LTEmiPlugin implements EmiPlugin {
         MultiblockStructureRecipes.all().stream()
                 .map(EmiMultiblockStructureRecipe::new)
                 .forEach(registry::addRecipe);
+        registry.addWorkstation(MULTIBLOCK_STRUCTURE, EmiStack.of(LargeFactoryRegistration.block(LargeFactoryComponent.CONTROLLER)));
     }
 }

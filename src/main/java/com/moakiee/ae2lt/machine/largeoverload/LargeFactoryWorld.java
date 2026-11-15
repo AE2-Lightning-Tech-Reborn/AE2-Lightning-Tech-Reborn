@@ -46,6 +46,20 @@ public final class LargeFactoryWorld {
         for (var controller : runtime.candidates.getOrDefault(new net.minecraft.world.level.ChunkPos(position), java.util.Set.of()))
             if (controller.contains(position)) controller.requestScan();
     }
+    public static boolean onlyVisualStateChanged(net.minecraft.world.level.block.state.BlockState before,
+            net.minecraft.world.level.block.state.BlockState after) {
+        if (before == after) return true;
+        if (before.getBlock() != after.getBlock()
+                || !(before.getBlock() instanceof LargeFactoryRegistration.Part
+                    || before.getBlock() instanceof com.moakiee.ae2lt.block.FirmamentConversionCoreBlock)) return false;
+        var normalized = before;
+        if (before.hasProperty(LargeFactoryPartBlock.FORMED))
+            normalized = normalized.setValue(LargeFactoryPartBlock.FORMED, after.getValue(LargeFactoryPartBlock.FORMED));
+        if (before.hasProperty(LargeFactoryControllerBlock.WORKING))
+            normalized = normalized.setValue(LargeFactoryControllerBlock.WORKING, after.getValue(LargeFactoryControllerBlock.WORKING));
+        // Facing and every non-visual property still close the execution gate.
+        return normalized == after;
+    }
     public static boolean firmamentOwned(Level level, BlockPos position) {
         var runtime = WORLDS.get(level);
         var binding = runtime == null ? null : runtime.ownership.at(position);

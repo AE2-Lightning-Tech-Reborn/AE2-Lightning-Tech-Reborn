@@ -1,0 +1,85 @@
+{
+  "target": "Minecraft Java 1.21.1 / NeoForge 21.1.220",
+  "in_game_verified": false,
+  "states": {
+    "on": {
+      "cubes": 176,
+      "groups": 10,
+      "textures": 13,
+      "textured_faces": 913,
+      "layer_cubes": {
+        "body": 131,
+        "emissive": 40,
+        "windows": 5
+      },
+      "embedded_textures_match_export": true,
+      "native_geometry_uv_textures_match": true,
+      "original_141_transforms_preserved": true,
+      "pixel_density": [
+        1,
+        1
+      ]
+    },
+    "off": {
+      "cubes": 176,
+      "groups": 10,
+      "textures": 13,
+      "textured_faces": 913,
+      "layer_cubes": {
+        "body": 131,
+        "emissive": 40,
+        "windows": 5
+      },
+      "embedded_textures_match_export": true,
+      "native_geometry_uv_textures_match": true,
+      "original_141_transforms_preserved": true,
+      "pixel_density": [
+        1,
+        1
+      ]
+    }
+  },
+  "original_faces_reconstructed": 754,
+  "base_emissive_alpha_overlap_pixels": 0,
+  "coplanar_surfaces_have_disjoint_alpha": true,
+  "exported_pngs": 17,
+  "animation": {
+    "frames": 16,
+    "frame_ticks": 2,
+    "loop_seconds": 1.6,
+    "unique_frames": 16,
+    "stable_alpha_mask": true,
+    "blockbench_native_frames_observed": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "blockbench_wrap_frame_observed": 0,
+    "off_state_animated": false
+  },
+  "emissive_api": "ExtraFaceData in pinned NeoForge 21.1.220; block_light=15, sky_light=15, ambient_occlusion=false, element shade=false",
+  "blockbench_preview_verified": true,
+  "dark_preview_method": "Temporarily fix emissive material brightness while lowering ambient color on ordinary materials; PNG alpha is unchanged. Not an in-game screenshot.",
+  "preview_files": [
+    "previews/front_emissive_day.png",
+    "previews/front_emissive_dark.png",
+    "previews/rear_emissive_day.png",
+    "previews/rear_emissive_dark.png",
+    "previews/front_off_day.png",
+    "previews/front_off_dark.png",
+    "previews/console_animation.gif"
+  ]
+}

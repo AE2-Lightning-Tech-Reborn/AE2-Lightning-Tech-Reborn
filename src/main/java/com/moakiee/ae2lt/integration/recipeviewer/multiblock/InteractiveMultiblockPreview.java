@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 import appeng.client.render.overlay.OverlayRenderType;
+import com.moakiee.ae2lt.client.machine.LargeFactoryProjection;
 
 /** Viewer-neutral, interactive orthographic 3D multiblock preview. */
 public final class InteractiveMultiblockPreview {
@@ -75,6 +76,7 @@ public final class InteractiveMultiblockPreview {
     private final int viewHeight;
     private final float baseScale;
     private final SlotDelegate slots;
+    private final Runnable projectionAction;
 
     private final UiRect resetButton = new UiRect(2, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
     private final UiRect autoButton = new UiRect(20, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
@@ -82,6 +84,7 @@ public final class InteractiveMultiblockPreview {
     private final UiRect layerModeButton = new UiRect(56, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
     private final UiRect layerDownButton = new UiRect(76, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
     private final UiRect layerUpButton = new UiRect(145, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
+    private final UiRect projectionButton = new UiRect(165, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
 
     private float yaw = DEFAULT_YAW;
     private float pitch = DEFAULT_PITCH;
@@ -104,6 +107,12 @@ public final class InteractiveMultiblockPreview {
             int width,
             int height,
             SlotDelegate slots) {
+        this(recipe, width, height, slots, LargeFactoryProjection.supports(recipe)
+                ? () -> LargeFactoryProjection.toggleFromCrosshair(recipe) : null);
+    }
+
+    public InteractiveMultiblockPreview(MultiblockStructureRecipe recipe, int width, int height,
+            SlotDelegate slots, Runnable projectionAction) {
         this.recipe = recipe;
         this.width = width;
         this.height = height;
@@ -114,6 +123,7 @@ public final class InteractiveMultiblockPreview {
         this.viewHeight = panelHeight;
         this.layer = (recipe.sizeY() - 1) / 2;
         this.slots = slots;
+        this.projectionAction = projectionAction;
 
         float horizontal = (float) Math.hypot(recipe.sizeX(), recipe.sizeZ());
         float projectedHeight = recipe.sizeY() * 0.866F + horizontal * 0.5F;
@@ -144,6 +154,10 @@ public final class InteractiveMultiblockPreview {
     }
 
     private void drawToolbar(GuiGraphics guiGraphics, Font font, double mouseX, double mouseY) {
+        if (projectionAction != null) {
+            drawControlButton(guiGraphics, projectionButton, MultiblockPreviewControls.PixelIcon.SHELL_HIDDEN,
+                    LargeFactoryProjection.active(), true, mouseX, mouseY);
+        }
         drawControlButton(
                 guiGraphics,
                 resetButton,
@@ -679,6 +693,11 @@ public final class InteractiveMultiblockPreview {
     }
 
     private boolean handleToolbarClick(double mouseX, double mouseY) {
+        if (projectionAction != null && projectionButton.contains(mouseX, mouseY)) {
+            playButtonClick();
+            projectionAction.run();
+            return true;
+        }
         if (resetButton.contains(mouseX, mouseY)) {
             pressButton(resetButton);
             playButtonClick();
@@ -737,6 +756,7 @@ public final class InteractiveMultiblockPreview {
             return inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY);
         }
         return resetButton.contains(mouseX, mouseY)
+                || projectionAction != null && projectionButton.contains(mouseX, mouseY)
                 || autoButton.contains(mouseX, mouseY)
                 || shellButton.contains(mouseX, mouseY)
                 || layerModeButton.contains(mouseX, mouseY)
@@ -748,6 +768,9 @@ public final class InteractiveMultiblockPreview {
     }
 
     private Component toolbarTooltip(double mouseX, double mouseY) {
+        if (projectionAction != null && projectionButton.contains(mouseX, mouseY)) {
+            return Component.translatable("ae2lt.large_factory.projection_hint");
+        }
         if (resetButton.contains(mouseX, mouseY)) {
             return Component.translatable("jei.ae2lt.multiblock.tooltip.reset");
         }

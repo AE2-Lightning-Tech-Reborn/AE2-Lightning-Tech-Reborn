@@ -124,14 +124,29 @@ public final class LargeFactoryGameTests {
     @GameTest(template = "empty", timeoutTicks = 300)
     public static void rearHatchesStayIndependentAndFrameChangesCloseImmediately(GameTestHelper h) {
         new Fixture(h, false, false).ready(f -> {
+            for (var cell : LargeFactoryStructure.cells()) {
+                var state = h.getBlockState(f.pos(cell.localPosition()));
+                h.assertTrue(state.getValue(LargeFactoryPartBlock.FORMED), "formed parts hide their standalone model");
+                h.assertTrue(state.getRenderShape() == (cell.role() == LargeFactoryStructure.Role.CONTROLLER
+                        ? net.minecraft.world.level.block.RenderShape.MODEL : net.minecraft.world.level.block.RenderShape.INVISIBLE),
+                        "only the controller renders the composite model");
+            }
             h.assertTrue(f.hatch.inventory().size() == 36 && f.expanded.inventory().size() == 144, "36 and 144 real slots");
             h.assertTrue(f.hatch.getMainNode().getGrid() != f.expanded.getMainNode().getGrid(), "adjacent hatches must not bridge external networks");
             h.assertTrue(f.hatch.getGridConnectableSides(null).equals(Set.of(Direction.SOUTH)), "rear connection only");
             var staleEnergy = f.energy.energy();
             h.assertTrue(staleEnergy.receiveEnergy(100, false) == 100, "real external FE capability");
+            var binding = f.controller.membership(f.hatch.getBlockPos(), f.controller.machineId());
+            h.setBlock(CONTROLLER, h.getBlockState(CONTROLLER).setValue(LargeFactoryControllerBlock.WORKING, true));
+            h.assertTrue(f.controller.owns(binding) && f.hatch.ready(), "lighting changes must keep the live execution binding");
             h.setBlock(f.pos(BlockPos.ZERO), Blocks.STONE);
             h.assertTrue(!f.controller.formed() && !f.hatch.ready(), "frame change must revoke execution synchronously");
             h.assertTrue(staleEnergy.receiveEnergy(100, false) == 0, "stale FE handle must stop immediately");
+            for (var cell : LargeFactoryStructure.cells()) {
+                var state = h.getBlockState(f.pos(cell.localPosition()));
+                if (state.hasProperty(LargeFactoryPartBlock.FORMED))
+                    h.assertTrue(!state.getValue(LargeFactoryPartBlock.FORMED), "dismantling restores standalone members immediately");
+            }
             h.succeed();
         });
     }
@@ -155,7 +170,15 @@ public final class LargeFactoryGameTests {
             h.assertTrue(f.controller.energyStored() == 9360 && input[0].get(STONE) == 4, "2x source FE and immutable caller template");
             h.assertTrue(f.hatch.account().commitSequence == 1 && f.hatch.account().lastOperations == 32
                     && f.hatch.account().lastEnergyFE == 640 && f.hatch.account().lastHigh == 32, "saved commit audit records the actual accepted cost");
-            h.succeed();
+            h.runAfterDelay(2, () -> {
+                h.assertTrue(f.controller.formed() && f.controller.getBlockState().getValue(LargeFactoryControllerBlock.WORKING),
+                        "a real committed recipe switches the formed model on");
+                h.runAfterDelay(41, () -> {
+                    h.assertTrue(f.controller.formed() && !f.controller.getBlockState().getValue(LargeFactoryControllerBlock.WORKING),
+                            "idle timeout switches the animation off without losing formation");
+                    h.succeed();
+                });
+            });
         });
     }
 
@@ -609,9 +632,15 @@ public final class LargeFactoryGameTests {
             h.assertTrue(f.hatch.find(caller) == null, "disabled entry is not retained by identity cache");
             f.hatch.toggleEntry(0);
             h.assertTrue(f.hatch.find(caller) == entry, "enabled entry resolves again");
-            f.pattern(2);
+            f.hatch.inventory().setItemDirect(0, PatternDetailsHelper.encodeProcessingPattern(
+                    List.of(new GenericStack(STONE, 2)), List.of(new GenericStack(DIAMOND, 4))));
             h.assertTrue(f.hatch.find(caller) == null, "replaced definition is not retained by identity cache");
-            h.succeed();
+            h.startSequence().thenWaitUntil(() -> h.assertTrue(!f.hatch.patternIndexing(), "replacement catalog published within native work budget"))
+                    .thenExecute(() -> {
+                        h.assertTrue(f.hatch.find(caller) == null, "old execution object stays revoked after publication");
+                        var replacement = f.hatch.entries().getFirst();
+                        h.assertTrue(f.hatch.find(replacement.pattern) == replacement, "replacement definition resolves normally");
+                    }).thenSucceed();
         });
     }
 
@@ -737,17 +766,26 @@ public final class LargeFactoryGameTests {
     }
 
     @GameTest(template = "empty", timeoutTicks = 100)
-    @SuppressWarnings("unchecked")
     public static void builderUsesActualInventoryAndHonorsCancelledPlacements(GameTestHelper h) {
+        checkBuilder(h, false);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void creativeBuilderNeedsNoMaterialsAndHonorsCancelledPlacements(GameTestHelper h) {
+        checkBuilder(h, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void checkBuilder(GameTestHelper h, boolean creative) {
         h.setBlock(CONTROLLER, LargeFactoryRegistration.block(LargeFactoryComponent.CONTROLLER));
         LargeFactoryControllerBlockEntity controller = h.getBlockEntity(CONTROLLER);
         var level = h.getLevel();
         var player = net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,
                 new com.mojang.authlib.GameProfile(UUID.randomUUID(), "FactoryBuilderQA"));
-        player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setGameMode(creative ? net.minecraft.world.level.GameType.CREATIVE : net.minecraft.world.level.GameType.SURVIVAL);
         player.setPos(controller.getBlockPos().getX() + .5, controller.getBlockPos().getY(), controller.getBlockPos().getZ() - 1.5);
         player.getInventory().setItem(0, new ItemStack(Items.DIAMOND));
-        player.getInventory().setItem(8, new ItemStack(LargeFactoryRegistration.block(LargeFactoryComponent.FRAME), 2));
+        if (!creative) player.getInventory().setItem(8, new ItemStack(LargeFactoryRegistration.block(LargeFactoryComponent.FRAME), 2));
         var protectedPos = LargeFactoryStructure.worldPosition(controller.getBlockPos(), BlockPos.ZERO, Direction.NORTH);
         Consumer<net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent> denied = event -> {
             if (event.getLevel() == level && event.getPos().equals(protectedPos)) event.setCanceled(true);
@@ -765,10 +803,37 @@ public final class LargeFactoryGameTests {
             int placed = 0;
             for (var cell : LargeFactoryStructure.cells()) if (level.getBlockState(LargeFactoryStructure.worldPosition(controller.getBlockPos(), cell.localPosition(), Direction.NORTH))
                     .is(LargeFactoryRegistration.block(LargeFactoryComponent.FRAME))) placed++;
-            h.assertTrue(placed == 2 && player.getInventory().getItem(8).isEmpty(), "only two real frame items placed");
+            h.assertTrue((creative ? placed > 2 : placed == 2) && player.getInventory().getItem(8).isEmpty(),
+                    creative ? "creative places frames without material stacks" : "only two real frame items placed");
+            if (creative) {
+                var rear = LargeFactoryStructure.worldPosition(controller.getBlockPos(), new BlockPos(1, 0, 2), Direction.NORTH);
+                h.assertTrue(level.getBlockState(rear).is(LargeFactoryRegistration.block(LargeFactoryComponent.CASING)),
+                        "creative also fills rear casings without materials");
+                h.assertTrue(level.getBlockState(LargeFactoryStructure.worldPosition(controller.getBlockPos(),
+                        LargeFactoryStructure.CORE, Direction.NORTH)).isAir(), "builder leaves processing core to the player");
+            }
             h.assertTrue(player.getMainHandItem().is(Items.DIAMOND), "held item restored after building");
             h.assertTrue(LargeFactoryWorkBudget.snapshot(level)[LargeFactoryWorkBudget.Work.BUILD.ordinal()] <= 16, "bounded per-tick builder work");
         } finally { players.remove(player.getUUID()); net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(denied); }
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void recipeViewerExamplesFormAndMatchTheirMaterialLists(GameTestHelper h) {
+        for (boolean firmament : new boolean[]{false, true}) {
+            var recipe = com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipes.largeFactory(firmament);
+            h.assertTrue(recipe.cells().size() == 27 && recipe.materials().stream().mapToInt(m -> m.count()).sum() == 27,
+                    "preview has exactly 27 cells and matching material counts");
+            for (var facing : Direction.Plane.HORIZONTAL) {
+                Map<BlockPos, LargeFactoryComponent> parts = new HashMap<>();
+                for (var cell : recipe.cells()) parts.put(LargeFactoryStructure.worldPosition(CONTROLLER, cell.localPos(), facing),
+                        LargeFactoryRegistration.component(cell.state()));
+                var scan = LargeFactoryStructure.scan(CONTROLLER, facing, p -> true, parts::get,
+                        p -> LargeFactoryStructure.FirmamentReadiness.READY);
+                h.assertTrue(scan.status() == LargeFactoryStructure.Status.VALID,
+                        "recipe viewer example must satisfy the real scanner at " + facing + ": " + scan.diagnostics());
+            }
+        }
         h.succeed();
     }
 

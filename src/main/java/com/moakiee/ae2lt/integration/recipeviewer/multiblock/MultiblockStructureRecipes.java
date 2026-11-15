@@ -9,6 +9,9 @@ import com.moakiee.ae2lt.logic.craft.MatrixMultiblockTemplate;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockRole;
 import com.moakiee.ae2lt.logic.tianshu.TianshuMultiblockTemplate;
 import com.moakiee.ae2lt.registry.ModBlocks;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryComponent;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryRegistration;
+import com.moakiee.ae2lt.machine.largeoverload.LargeFactoryStructure;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,7 +22,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Builds the two code-defined multiblock pages exposed through JEI and EMI. */
+/** Builds code-defined multiblock pages exposed through JEI and EMI. */
 public final class MultiblockStructureRecipes {
     private static final BlockPos MATRIX_DEFAULT_PATTERN = new BlockPos(1, 1, 1);
     private static final BlockPos MATRIX_DEFAULT_PORT = new BlockPos(6, 5, 3);
@@ -31,7 +34,45 @@ public final class MultiblockStructureRecipes {
             .orElseThrow(() -> new IllegalStateException("Matrix template has no peripheral crafting slot"));
 
     public static List<MultiblockStructureRecipe> all() {
-        return List.of(matrix(), tianshu());
+        return List.of(matrix(), tianshu(), largeFactory(false), largeFactory(true));
+    }
+
+    public static MultiblockStructureRecipe largeFactory(boolean firmament) {
+        Block frame = LargeFactoryRegistration.block(LargeFactoryComponent.FRAME);
+        Block casing = LargeFactoryRegistration.block(LargeFactoryComponent.CASING);
+        Block controller = LargeFactoryRegistration.block(LargeFactoryComponent.CONTROLLER);
+        Block pattern = LargeFactoryRegistration.block(LargeFactoryComponent.PATTERN_HATCH);
+        List<Block> cores = firmament ? List.of(ModBlocks.FIRMAMENT_CONVERSION_CORE.get()) : List.of(
+                LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T1),
+                LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T2),
+                LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T3),
+                LargeFactoryRegistration.block(LargeFactoryComponent.CORE_T4));
+        List<Block> hatches = List.of(casing, pattern,
+                LargeFactoryRegistration.block(LargeFactoryComponent.EXPANDED_PATTERN_HATCH),
+                LargeFactoryRegistration.block(LargeFactoryComponent.CRYSTAL_HATCH),
+                LargeFactoryRegistration.block(LargeFactoryComponent.PROCESS_CORE_HATCH),
+                LargeFactoryRegistration.block(LargeFactoryComponent.ENERGY_HATCH));
+        var cells = new ArrayList<MultiblockStructureRecipe.Cell>();
+        for (var entry : LargeFactoryStructure.cells()) {
+            BlockPos pos = entry.localPosition();
+            switch (entry.role()) {
+                case FRAME -> cells.add(cell(pos, frame, role("constraint_frame"), List.of(frame), true));
+                case CASING -> cells.add(cell(pos, casing, role("casing"), List.of(casing), true));
+                case CONTROLLER -> cells.add(cell(pos, facing(controller, Direction.NORTH), role("controller"),
+                        List.of(controller), List.of(), false));
+                case CORE -> cells.add(cell(pos, cores.getFirst(), role("main_core"), cores,
+                        List.of(rule(firmament ? "large_factory_firmament" : "large_factory_core")), false));
+                case HATCH -> cells.add(cell(pos, facing(pos.equals(new BlockPos(1, 1, 2)) ? pattern : casing,
+                        Direction.SOUTH), role("large_factory_hatch"), hatches,
+                        List.of(rule("large_factory_hatch"), rule("large_factory_network")), false));
+                case AIR -> { }
+            }
+        }
+        return MultiblockStructureRecipe.create(id(firmament ? "large_overload_factory_firmament" : "large_overload_factory"),
+                Component.translatable("jei.ae2lt.multiblock." + (firmament ? "large_factory_firmament" : "large_factory")),
+                LargeFactoryStructure.WIDTH, LargeFactoryStructure.HEIGHT, LargeFactoryStructure.DEPTH, cells,
+                List.of(material(frame), material(casing), material(controller), material(cores.getFirst()),
+                        material(pattern, rule("large_factory_hatch"))));
     }
 
     private static MultiblockStructureRecipe matrix() {

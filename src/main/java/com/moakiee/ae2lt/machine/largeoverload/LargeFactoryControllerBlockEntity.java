@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /** Coordinates only this fixed factory; all physical job resources belong to individual hatches. */
 public final class LargeFactoryControllerBlockEntity extends BlockEntity {
+    private static final int WORKING_VISUAL_TICKS = 40;
     private final LargeFactoryBuilder builder = new LargeFactoryBuilder();
     private int[] missing = new int[2];
     private long passiveWorkTick = Long.MIN_VALUE;
@@ -87,12 +88,42 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
     }
     public void requestScan() { scanRequested = true; scanCursor = null; }
     public void suspend() {
+        var previous = binding;
         if (binding != null) LargeFactoryWorld.get(level).ownership.release(binding);
         binding = null;
         for (var hatch : hatches) hatch.bind(null, null);
         hatches = List.of();
         capabilityVersion++;
         status = "unformed";
+        if (previous != null) {
+            for (var member : previous.formation().members()) setFormedVisual(member.position(), false);
+        }
+        setFormedVisual(worldPosition, false);
+    }
+    private void setFormedVisual(BlockPos pos, boolean formed) {
+        if (level == null || level.isClientSide || !level.isLoaded(pos)) return;
+        var state = level.getBlockState(pos);
+        if (!(state.getBlock() instanceof LargeFactoryRegistration.Part
+                || state.getBlock() instanceof com.moakiee.ae2lt.block.FirmamentConversionCoreBlock)) return;
+        var next = state.setValue(LargeFactoryPartBlock.FORMED, formed);
+        if (!formed && next.hasProperty(LargeFactoryControllerBlock.WORKING))
+            next = next.setValue(LargeFactoryControllerBlock.WORKING, false);
+        if (next != state) level.setBlock(pos, next, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+    }
+    private void clearUnclaimedVisuals() {
+        var ownership = LargeFactoryWorld.get(level).ownership;
+        for (var cell : LargeFactoryStructure.cells()) {
+            var pos = LargeFactoryStructure.worldPosition(worldPosition, cell.localPosition(), facing());
+            if (ownership.at(pos) == null) setFormedVisual(pos, false);
+        }
+    }
+    private void updateWorkingVisual(boolean working) {
+        var state = getBlockState();
+        if (level != null && !level.isClientSide && !isRemoved() && state.getValue(LargeFactoryPartBlock.FORMED)
+                && state.getValue(LargeFactoryControllerBlock.WORKING) != working) {
+            level.setBlock(worldPosition, state.setValue(LargeFactoryControllerBlock.WORKING, working),
+                    net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+        }
     }
     public void tick() {
         long start = LargeFactoryTiming.begin();
@@ -108,6 +139,9 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         }
         if (preview && tick % 20 == 0) LargeFactoryPreview.show(this);
         if (!formed()) return;
+        boolean working = lastOperationTick != Long.MIN_VALUE && tick - lastOperationTick < WORKING_VISUAL_TICKS;
+        updateWorkingVisual(working);
+        if (!working && status.equals("working")) status = "ready";
         if (!executing) budget.reconfigure(tick, LargeFactoryConfig.operations(core));
         for (var hatch : hatches) hatch.flushRetained();
         if ((completionWake || tick >= nextPassiveWake) && !executing) {
@@ -132,13 +166,14 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         scanCursor = null; scanRequested = false;
         if (lastScan.status() != LargeFactoryStructure.Status.VALID) {
             status = lastScan.status() == LargeFactoryStructure.Status.INCOMPLETE ? "chunk_unloaded" : "invalid_structure";
+            clearUnclaimedVisuals();
             return;
         }
         var formation = lastScan.formation();
-        if (energyAccount() == null) { status = "identity_conflict"; return; }
+        if (energyAccount() == null) { status = "identity_conflict"; clearUnclaimedVisuals(); return; }
         if (core != null && core != formation.core() && lastOperationTick == level.getGameTime()) { requestScan(); return; }
         var claim = LargeFactoryWorld.get(level).ownership.claim(machineId, formation);
-        if (claim.isEmpty()) { status = "overlap"; return; }
+        if (claim.isEmpty()) { status = "overlap"; clearUnclaimedVisuals(); return; }
         binding = claim.get();
         boolean changedCore = core != formation.core();
         core = formation.core();
@@ -157,6 +192,7 @@ public final class LargeFactoryControllerBlockEntity extends BlockEntity {
         permissionsChanged();
         nextPassiveWake = level.getGameTime() + Math.floorMod(worldPosition.hashCode(), 100);
         status = "ready";
+        for (var member : formation.members()) setFormedVisual(member.position(), true);
         setChanged();
     }
     public void permissionsChanged() {
