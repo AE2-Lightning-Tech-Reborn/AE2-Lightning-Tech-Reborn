@@ -109,6 +109,8 @@ jobs:
 
   publish-platforms:
     name: Publish to CurseForge and Modrinth
+    # Add this marker to the release body to publish only on GitHub.
+    if: ${{ !contains(github.event.release.body, '<!-- github-only -->') }}
     needs: [build, upload-github-release]
     runs-on: ubuntu-latest
     permissions:
