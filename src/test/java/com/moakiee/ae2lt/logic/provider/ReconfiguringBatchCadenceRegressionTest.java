@@ -17,8 +17,39 @@ import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.Wirele
 class ReconfiguringBatchCadenceRegressionTest {
     @BeforeAll
     static void bootstrap() {
+        if (net.neoforged.fml.loading.LoadingModList.get() == null) {
+            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), java.util.Map.of());
+        }
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
+    }
+
+    @Test
+    void declaredUnboundedTargetReceivesEachNewBatchWithoutCadenceCapacityClamps() {
+        var dispatch = new ProviderWirelessDispatch();
+        var target = new WirelessConnection(Level.OVERWORLD, BlockPos.ZERO, Direction.NORTH);
+        var pattern = new ProviderSchedulerRetentionTest.Pattern();
+        var chunks = new java.util.ArrayList<Integer>();
+        for (int tick = 0; tick < 8; tick++) {
+            long requested = 128L << tick;
+            int currentTick = tick;
+            dispatch.prepare(List.of(target), tick, false);
+            long remaining = dispatch.dispatchBatch(WirelessDispatchMode.EVEN_DISTRIBUTION, pattern,
+                    requested, tick, false, 1,
+                    (connection, allowance, exploratory, preserve) -> {
+                        assertFalse(exploratory);
+                        var step = connection.pushPatternStep(pattern, allowance, currentTick,
+                                true, preserve, true, () -> false, copies -> {
+                                    chunks.add(copies);
+                                    return new ProviderTarget.BatchChunk(copies, true, false);
+                                });
+                        return new ProviderWirelessDispatch.BatchAttemptResult(step.ownedCopies(),
+                                step.attemptedCopies(), step.acceptedFullChunk(), step.requestLimited(),
+                                step.baselineStatus(), WirelessPushOutcome.SUCCESS);
+                    }, ignored -> true, ignored -> { throw new AssertionError(); }, ignored -> true);
+            assertEquals(0, remaining);
+        }
+        assertEquals(List.of(128, 256, 512, 1024, 2048, 4096, 8192, 16384), chunks);
     }
 
     @Test

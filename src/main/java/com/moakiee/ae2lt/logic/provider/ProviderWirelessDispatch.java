@@ -236,6 +236,21 @@ final class ProviderWirelessDispatch {
             BatchAttempt attempt,
             Predicate<WirelessConnection> alive,
             Consumer<WirelessConnection> targetRemoved) {
+        return dispatchBatch(mode, pattern, maxCopies, gameTick, fastMode, machineParallelism,
+                attempt, alive, targetRemoved, connection -> false);
+    }
+
+    long dispatchBatch(
+            WirelessDispatchMode mode,
+            IPatternDetails pattern,
+            long maxCopies,
+            long gameTick,
+            boolean fastMode,
+            int machineParallelism,
+            BatchAttempt attempt,
+            Predicate<WirelessConnection> alive,
+            Consumer<WirelessConnection> targetRemoved,
+            Predicate<WirelessConnection> unboundedInputs) {
         if (mode == WirelessDispatchMode.SINGLE_TARGET) {
             touchPattern(pattern, gameTick);
             return dispatchSingleTargetBatch(
@@ -244,7 +259,7 @@ final class ProviderWirelessDispatch {
         }
         return dispatchFairBatch(
                 pattern, maxCopies, gameTick, fastMode, machineParallelism,
-                attempt, alive, targetRemoved);
+                attempt, alive, targetRemoved, unboundedInputs);
     }
 
     boolean dispatchSingleCopy(
@@ -458,7 +473,8 @@ final class ProviderWirelessDispatch {
             int machineParallelism,
             BatchAttempt attempt,
             Predicate<WirelessConnection> alive,
-            Consumer<WirelessConnection> targetRemoved) {
+            Consumer<WirelessConnection> targetRemoved,
+            Predicate<WirelessConnection> unboundedInputs) {
         long remaining = maxCopies;
         try (var pass = beginFairPass(pattern, gameTick)) {
             int attemptBudget = pass.activeTargetsAtStart();
@@ -480,7 +496,9 @@ final class ProviderWirelessDispatch {
                     continue;
                 }
 
-                long retryAfter = retryAfter(connection, pattern, gameTick);
+                boolean declaredUnbounded = unboundedInputs.test(connection);
+                if (declaredUnbounded) batchCadence.removePattern(connection, pattern);
+                long retryAfter = declaredUnbounded ? gameTick : retryAfter(connection, pattern, gameTick);
                 if (retryAfter > gameTick) {
                     pass.cooldown(connection, retryAfter);
                     continue;
@@ -498,7 +516,7 @@ final class ProviderWirelessDispatch {
                 }
 
                 boolean probing = isProbing(state, gameTick);
-                boolean exploratoryAttempt =
+                boolean exploratoryAttempt = !declaredUnbounded &&
                         batchCadence.isExploratoryAttempt(
                                 connection, pattern);
                 boolean reopenReservoirTail =
@@ -523,7 +541,7 @@ final class ProviderWirelessDispatch {
                 long equalShareLimit = targetsLeft <= 0
                         ? 0L
                         : remaining / targetsLeft;
-                long rampAllowance = ((ProviderTarget) connection)
+                long rampAllowance = declaredUnbounded ? equalShareLimit : ((ProviderTarget) connection)
                         .batchStepRampAllowance(
                                 pattern, equalShareLimit, gameTick);
                 int reservoirCapacity = ((ProviderTarget) connection)
@@ -537,7 +555,7 @@ final class ProviderWirelessDispatch {
                             pass.raiseRampAllowance(
                                     connection, rampAllowance));
                 }
-                if (!bulkRefill && batchCadence.usesSingleChunkRefill(connection, pattern)
+                if (!declaredUnbounded && !bulkRefill && batchCadence.usesSingleChunkRefill(connection, pattern)
                         && (!exploratoryAttempt || !reopenReservoirTail)) {
                     int candidate = ((ProviderTarget) connection)
                             .batchStepProvenChunk(
@@ -577,7 +595,7 @@ final class ProviderWirelessDispatch {
                     if (!grouped || result.ownedCopies >= groupedShare) {
                         successfulTargets++;
                     }
-                    int coverageTicks = batchCadence.recordSuccess(
+                    int coverageTicks = declaredUnbounded ? 1 : batchCadence.recordSuccess(
                             connection,
                             pattern,
                             gameTick,

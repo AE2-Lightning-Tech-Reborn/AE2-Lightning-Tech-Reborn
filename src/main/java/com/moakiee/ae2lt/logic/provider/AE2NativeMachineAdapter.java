@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import appeng.api.AECapabilities;
 import appeng.api.behaviors.ExternalStorageStrategy;
+import appeng.api.behaviors.GenericInternalInventory;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -224,6 +225,34 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
     public boolean supportsBatch(
             ServerLevel level, BlockPos pos, Direction face, IPatternDetails pattern) {
         return ICraftingMachine.of(level, pos, face) == null;
+    }
+
+    @Override
+    public boolean hasUnboundedInputCapacity(
+            ServerLevel level, BlockPos pos, Direction face, KeyCounter[] inputs) {
+        if (!level.isLoaded(pos) || ICraftingMachine.of(level, pos, face) != null) return false;
+        return hasUnboundedInputCapacity(level.getCapability(AECapabilities.ME_STORAGE, pos, face), inputs);
+    }
+
+    static boolean hasUnboundedInputCapacity(@Nullable MEStorage storage, KeyCounter[] inputs) {
+        if (!(storage instanceof GenericInternalInventory inventory) || !inventory.canInsert()) return false;
+        var assigned = new java.util.HashSet<Integer>();
+        var keys = new java.util.HashSet<AEKey>();
+        for (var counter : inputs) for (var entry : counter) {
+            if (entry.getLongValue() <= 0L || !keys.add(entry.getKey())) continue;
+            var key = entry.getKey();
+            if (inventory.getMaxAmount(key) != Long.MAX_VALUE) return false;
+            int selected = -1;
+            for (int slot = 0; slot < inventory.size(); slot++) {
+                if (assigned.contains(slot) || !inventory.isAllowedIn(slot, key)) continue;
+                var stored = inventory.getKey(slot);
+                if (key.equals(stored)) { selected = slot; break; }
+                if (stored == null && selected < 0) selected = slot;
+            }
+            if (selected < 0) return false;
+            assigned.add(selected);
+        }
+        return !keys.isEmpty();
     }
 
     // ---- pushCopies -------------------------------------------------------------

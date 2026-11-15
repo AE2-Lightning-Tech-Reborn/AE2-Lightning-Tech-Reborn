@@ -78,6 +78,21 @@ class PowerCostServiceAccessTest {
         assertEquals(1, second.lookups.get());
     }
 
+    @Test void countedBatchUsesTheAffordablePrefixAndPreservesIdlePower() {
+        var energy = new Energy();
+        int copies = PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096);
+        assertEquals(32, copies);
+        assertEquals(100, energy.stored);
+        assertTrue(PowerCostUtil.canAfford(energy.grid, 3.0 * copies));
+        PowerCostUtil.consumeRaw(energy.grid, 3.0 * copies);
+        assertEquals(4, energy.stored);
+        assertEquals(0, PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096));
+        energy.stored = 100;
+        energy.idle = 10;
+        assertEquals(30, PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096));
+        assertEquals(0, PowerCostUtil.maxAffordableCopies(energy.grid, Double.POSITIVE_INFINITY, 4096));
+    }
+
     @Test void failedLookupDoesNotPublishAnIncompleteCachedGrid() {
         var energy = new Energy(); var attempts = new AtomicInteger();
         var unreliable = (IGrid) Proxy.newProxyInstance(IGrid.class.getClassLoader(), new Class<?>[]{IGrid.class},

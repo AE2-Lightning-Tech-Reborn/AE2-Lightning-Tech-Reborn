@@ -212,6 +212,11 @@ public class ProviderTarget extends TargetAddress {
                 level, pos(), boundFace(), pattern);
     }
 
+    public final boolean hasUnboundedInputCapacity(ServerLevel level, KeyCounter[] inputs) {
+        var adapter = resolveAdapter(level);
+        return adapter != null && adapter.hasUnboundedInputCapacity(level, pos(), boundFace(), inputs);
+    }
+
     /**
      * Returns the configured per-call copy limit for this physical machine.
      * The wildcard rules are evaluated only when the target block or rule version changes.
@@ -322,6 +327,16 @@ public class ProviderTarget extends TargetAddress {
             boolean batchSupported,
             BooleanSupplier blocked,
             IntFunction<BatchChunk> pushChunk) {
+        return pushPattern(pattern, maxCopies, batchSupported, false, blocked, pushChunk);
+    }
+
+    public final BatchDispatchResult pushPattern(
+            IPatternDetails pattern,
+            long maxCopies,
+            boolean batchSupported,
+            boolean unboundedInputs,
+            BooleanSupplier blocked,
+            IntFunction<BatchChunk> pushChunk) {
         if (maxCopies <= 0L) {
             return BatchDispatchResult.EMPTY;
         }
@@ -332,6 +347,12 @@ public class ProviderTarget extends TargetAddress {
             var single = pushChunk.apply(1);
             return new BatchDispatchResult(
                     single.ownedCopies(), single.globalAbort());
+        }
+
+        if (unboundedInputs) {
+            if (blocked.getAsBoolean()) return BatchDispatchResult.EMPTY;
+            var chunk = pushChunk.apply((int) Math.min(maxCopies, Integer.MAX_VALUE));
+            return new BatchDispatchResult(chunk.ownedCopies(), chunk.globalAbort());
         }
 
         int rememberedChunk = runtime.batchChunks.getOrDefault(pattern, 1);
@@ -482,6 +503,19 @@ public class ProviderTarget extends TargetAddress {
             boolean preserveBatchHistoryOnRejection,
             BooleanSupplier blocked,
             IntFunction<BatchChunk> pushChunk) {
+        return pushPatternStep(pattern, maxCopies, gameTick, batchSupported,
+                preserveBatchHistoryOnRejection, false, blocked, pushChunk);
+    }
+
+    public final BatchStepResult pushPatternStep(
+            IPatternDetails pattern,
+            long maxCopies,
+            long gameTick,
+            boolean batchSupported,
+            boolean preserveBatchHistoryOnRejection,
+            boolean unboundedInputs,
+            BooleanSupplier blocked,
+            IntFunction<BatchChunk> pushChunk) {
         var pendingState = runtime.batchSteps.get(pattern);
         boolean preferSegmentedReservoirRefill = pendingState != null
                 && pendingState.preferSegmentedReservoirRefill;
@@ -494,6 +528,11 @@ public class ProviderTarget extends TargetAddress {
         if (!batchSupported) {
             var single = pushChunk.apply(1);
             return BatchStepResult.from(single, 1, false);
+        }
+
+        if (unboundedInputs) {
+            int copies = (int) Math.min(maxCopies, Integer.MAX_VALUE);
+            return BatchStepResult.from(pushChunk.apply(copies), copies, maxCopies > copies);
         }
 
         var state = runtime.batchSteps.computeIfAbsent(

@@ -11,6 +11,9 @@ import appeng.api.crafting.IPatternDetails;
 /** Executable regression coverage of the three P2 review comments on PR #12. */
 class Pr12ReviewFixRegressionTest {
     @BeforeAll static void bootstrap() {
+        if (net.neoforged.fml.loading.LoadingModList.get() == null) {
+            net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+        }
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
     }

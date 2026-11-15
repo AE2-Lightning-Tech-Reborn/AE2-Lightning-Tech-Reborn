@@ -31,10 +31,43 @@ import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.externalstorage.GenericStackInv;
 
 class AE2NativeMachineAdapterTest {
     private static final TestKey STICK = new TestKey("stick");
     private static final TestKey COBBLESTONE = new TestKey("cobblestone");
+
+    @Test
+    void unlimitedDeclarationMustCoverEveryInputWithoutInsertionProbes() {
+        var inventory = new GenericStackInv(Set.of(STICK.getType()), () -> {}, GenericStackInv.Mode.STORAGE, 2) {
+            @Override public long getMaxAmount(AEKey key) {
+                return key == STICK ? Long.MAX_VALUE : 64L;
+            }
+            @Override public boolean isAllowedIn(int slot, AEKey key) { return true; }
+            @Override public long insert(AEKey key, long amount, Actionable mode, IActionSource source) {
+                throw new AssertionError("Capacity declarations must not perform insertion probes");
+            }
+        };
+        var inputs = new KeyCounter();
+        inputs.add(STICK, 1);
+        assertTrue(AE2NativeMachineAdapter.hasUnboundedInputCapacity(inventory, new KeyCounter[]{inputs}));
+        inputs.add(COBBLESTONE, 1);
+        assertFalse(AE2NativeMachineAdapter.hasUnboundedInputCapacity(inventory, new KeyCounter[]{inputs}));
+        assertFalse(AE2NativeMachineAdapter.hasUnboundedInputCapacity(
+                storage("unknown"), new KeyCounter[]{inputs}));
+    }
+
+    @Test
+    void unlimitedSlotsCannotBeCountedTwiceForDifferentInputs() {
+        var inventory = new GenericStackInv(Set.of(STICK.getType()), () -> {}, GenericStackInv.Mode.STORAGE, 1) {
+            @Override public long getMaxAmount(AEKey key) { return Long.MAX_VALUE; }
+            @Override public boolean isAllowedIn(int slot, AEKey key) { return true; }
+        };
+        var inputs = new KeyCounter();
+        inputs.add(STICK, 1);
+        inputs.add(COBBLESTONE, 1);
+        assertFalse(AE2NativeMachineAdapter.hasUnboundedInputCapacity(inventory, new KeyCounter[]{inputs}));
+    }
 
     @Test
     void vanillaSingleCopyDispatchesTheAcceptedPrefixAndOwnsTheRemainder() {

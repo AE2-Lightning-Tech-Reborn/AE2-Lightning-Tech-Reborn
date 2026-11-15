@@ -62,6 +62,12 @@ public interface MachineAdapter {
         return true;
     }
 
+    /** Explicit input-capacity declaration, never inferred from successful insertion probes. */
+    default boolean hasUnboundedInputCapacity(
+            ServerLevel level, BlockPos pos, Direction face, KeyCounter[] inputs) {
+        return false;
+    }
+
     /**
      * Attempt to push up to {@code maxCopies} copies of the pattern's inputs.
      *

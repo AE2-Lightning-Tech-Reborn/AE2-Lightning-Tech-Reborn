@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -113,8 +112,6 @@ public final class MmcrBatchIntegration {
         private final PatternProviderLogic provider;
         private final BlockEntity host;
         private final ServerLevel level;
-        private final ProviderTarget target;
-        private final Map<AEItemKey, IPatternDetails> canonical = new LinkedHashMap<>();
         private boolean uncertain;
 
         private Endpoint(Access api, PatternProviderLogic provider, BlockEntity host, ServerLevel level) {
@@ -122,7 +119,6 @@ public final class MmcrBatchIntegration {
             this.provider = provider;
             this.host = host;
             this.level = level;
-            target = new ProviderTarget(level.dimension(), host.getBlockPos(), Direction.UP);
         }
 
         @Override public List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
@@ -131,7 +127,7 @@ public final class MmcrBatchIntegration {
         @Override
         public long getBatchCapacity(IPatternDetails details) {
             if (uncertain || !current() || !isBatchPattern(details) || provider.isBusy()) return 0L;
-            // A >1 advisory bound opts in; concrete preparation may deliberately offer just the first proof.
+            // MMCR publishes its recipe bound; preparation also checks the live idle-lane bound.
             // Unsafe/nonlinear recipes retain MMCR's ordinary one-pattern path.
             return liveLimit(details);
         }
@@ -144,8 +140,7 @@ public final class MmcrBatchIntegration {
             if (!current.idle()) return unavailable();
             long limit = Math.min(Math.min(maxCraft, liveLimit(details)), current.maximum());
             if (limit <= 0L) return unavailable();
-            IPatternDetails key = canonical(details);
-            int offer = target.startBatchOffer(key, limit);
+            long offer = limit;
             KeyCounter[] borrowed = copy(prototype, 1L);
             return new PreparedBatch() {
                 private boolean used;
@@ -155,15 +150,14 @@ public final class MmcrBatchIntegration {
                     used = true;
                     if (copies <= 0L) return 0L;
                     if (copies > offer) throw new IllegalArgumentException("MMCR offer exceeds prepared input slice");
-                    return dispatch(details, key, borrowed, copies);
+                    return dispatch(details, borrowed, copies);
                 }
             };
         }
 
         @Override
         public long pushBatch(IPatternDetails details, KeyCounter[] prototype, long maxCraft) {
-            // Callers bypassing PreparedBatch still submit exactly one owned slice. They must not
-            // mistake the adaptive candidate for ownership of a larger extracted request.
+            // Callers bypassing PreparedBatch still submit exactly one owned slice within the live limit.
             if (maxCraft <= 0L) return 0L;
             if (uncertain || !current() || !isBatchPattern(details)) return maxCraft;
             View current;
@@ -172,34 +166,24 @@ public final class MmcrBatchIntegration {
             if (!current.idle()) return maxCraft;
             long limit = Math.min(liveLimit(details), current.maximum());
             if (maxCraft > limit) return maxCraft;
-            return dispatch(details, canonical(details), prototype, maxCraft);
+            return dispatch(details, prototype, maxCraft);
         }
 
-        private long dispatch(IPatternDetails details, IPatternDetails key, KeyCounter[] prototype, long copies) {
+        private long dispatch(IPatternDetails details, KeyCounter[] prototype, long copies) {
             if (uncertain || !current() || copies > liveLimit(details)) return copies;
             View before;
             try { before = view(details); }
             catch (RuntimeException | LinkageError incompatible) { return copies; }
             if (!before.idle() || copies > before.maximum()) return copies;
-            // Prepared input extraction is bounded to this one packet. Do not silently offer a
-            // smaller adaptive chunk after extraction: an uncertain native call owns its whole slice.
-            if (copies > target.startBatchOffer(key, copies)) return copies;
-            var unavailable = new boolean[1];
-            var result = target.pushStartPattern(key, copies,
-                    () -> unavailable[0] || !available(details),
-                    offered -> {
-                        var accepted = push(details, prototype, offered, before);
-                        // MMCR's bool does not distinguish an occupied special lane, a beforeStart
-                        // condition, or missing auxiliary resources. Only its pure live cap is a
-                        // capacity fact; a clean native refusal cannot erase the proven baseline.
-                        unavailable[0] = accepted.ownedCopies() <= 0L;
-                        return accepted;
-                    });
+            if (!available(details)) return copies;
+            // The published native limits replace capacity learning. Submit the prepared slice once;
+            // a refusal owns nothing, while uncertain acceptance must never be retried or refunded.
+            var result = push(details, prototype, copies, before);
             return copies - result.ownedCopies();
         }
 
         private ProviderTarget.BatchChunk push(IPatternDetails details, KeyCounter[] prototype,
-                int copies, View before) {
+                long copies, View before) {
             Object data;
             long parallelism;
             IPatternDetails execution;
@@ -257,16 +241,6 @@ public final class MmcrBatchIntegration {
             } catch (RuntimeException incompatible) {
                 return 0L;
             }
-        }
-
-        private IPatternDetails canonical(IPatternDetails details) {
-            // The identity map in ProviderTarget receives one stable object per bound definition.
-            // Recipe bindings are part of this key; no bare original pattern is interned here.
-            if (canonical.size() >= 1024 && !canonical.containsKey(details.getDefinition())) {
-                canonical.clear();
-                target.clearRuntimeState();
-            }
-            return canonical.computeIfAbsent(details.getDefinition(), ignored -> details);
         }
 
         private boolean current() {

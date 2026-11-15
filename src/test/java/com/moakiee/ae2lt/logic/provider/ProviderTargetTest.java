@@ -28,6 +28,45 @@ class ProviderTargetTest {
             Level.OVERWORLD, BlockPos.ZERO, Direction.NORTH);
 
     @Test
+    void declaredUnboundedInputsUseTheWholeOfferWithoutWarmupOrRetryProbes() {
+        var pattern = new EmptyPattern();
+        var chunks = new ArrayList<Integer>();
+        var normal = target.pushPattern(pattern, 4096, true, true, () -> false, copies -> {
+            chunks.add(copies);
+            return new ProviderTarget.BatchChunk(copies, true, false);
+        });
+        assertEquals(4096, normal.ownedCopies());
+        var wireless = target.pushPatternStep(pattern, 8192, 1, true, false, true, () -> false, copies -> {
+            chunks.add(copies);
+            return new ProviderTarget.BatchChunk(copies, false, false);
+        });
+        assertEquals(8192, wireless.ownedCopies());
+        assertFalse(wireless.fullyInserted());
+        var rejected = target.pushPatternStep(pattern, 16384, 2, true, false, true, () -> false, copies -> {
+            chunks.add(copies);
+            return ProviderTarget.BatchChunk.REJECTED;
+        });
+        assertEquals(0, rejected.ownedCopies());
+        assertEquals(List.of(4096, 8192, 16384), chunks);
+        assertTrue(target.adaptiveBatchSnapshots().isEmpty());
+    }
+
+    @Test
+    void unboundedInputsStillRespectBlockingAndNativeTransactionLimits() {
+        var pattern = new EmptyPattern();
+        assertEquals(0, target.pushPattern(pattern, 4096, true, true, () -> true, copies -> {
+            throw new AssertionError("Blocked targets cannot receive inputs");
+        }).ownedCopies());
+        var result = target.pushPatternStep(pattern, Long.MAX_VALUE, 1, true, false, true,
+                () -> false, copies -> {
+                    assertEquals(Integer.MAX_VALUE, copies);
+                    return new ProviderTarget.BatchChunk(copies, true, false);
+                });
+        assertEquals(Integer.MAX_VALUE, result.ownedCopies());
+        assertTrue(result.requestLimited());
+    }
+
+    @Test
     void nativeStartsGrowAcrossIdleCyclesAndBusyVisitsPreserveTheProbe() {
         var pattern = new EmptyPattern();
         var chunks = new ArrayList<Integer>();
