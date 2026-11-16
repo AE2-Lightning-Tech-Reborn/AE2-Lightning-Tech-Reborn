@@ -28,6 +28,7 @@
   "ae2lt.tooltip.open_device_hub": "Press %s to open Overload Device Config",
   "key.ae2lt.toggle_frequency_card_auto_connect": "Toggle Frequency Card Auto Connect",
   "key.ae2lt.toggle_frequency_card_link": "Toggle Frequency Card Link",
+  "gui.ae2lt.device_hub.entity": "%s's Device Configuration",
   "gui.ae2lt.device_hub": "Overload Device Hub",
   "curios.identifier.overloaded_frequency_card": "Overloaded Frequency Card",
   "curios.modifiers.overloaded_frequency_card": "Overloaded Frequency Card",

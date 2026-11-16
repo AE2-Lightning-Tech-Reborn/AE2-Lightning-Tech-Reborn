@@ -4,7 +4,8 @@ import java.util.List;
 
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -29,12 +30,12 @@ public final class ArmorMovementAssistService {
     private ArmorMovementAssistService() {
     }
 
-    public static void tick(ServerPlayer player, List<ActiveCapability> capabilities) {
+    public static void tick(LivingEntity player, List<ActiveCapability> capabilities) {
         boolean active = false;
         double movementMultiplier = 1.0D;
         double stepHeight = MovementAssistRules.VANILLA_STEP_HEIGHT;
-        boolean flightSneaking = FlightSneakMovement.isActive(player);
-        boolean suppressGroundMovement = player.getAbilities().flying && !flightSneaking
+        boolean flightSneaking = player instanceof Player realPlayer && FlightSneakMovement.isActive(realPlayer);
+        boolean suppressGroundMovement = player instanceof Player realPlayer && realPlayer.getAbilities().flying && !flightSneaking
                 || player.isFallFlying()
                 || player.isSwimming();
 
@@ -75,7 +76,7 @@ public final class ArmorMovementAssistService {
     }
 
     private static void updateModifier(
-            ServerPlayer player,
+            LivingEntity player,
             Holder<Attribute> attribute,
             ResourceLocation id,
             double amount,

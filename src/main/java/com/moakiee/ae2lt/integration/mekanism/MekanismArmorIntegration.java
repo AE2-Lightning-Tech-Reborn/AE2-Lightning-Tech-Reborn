@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.integration.mekanism;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
@@ -79,7 +80,7 @@ public final class MekanismArmorIntegration {
         return CelestweaveArmorState.isSubmoduleRuntimeActive(stack, submoduleId);
     }
 
-    public static void tickRadiationRegeneration(ServerPlayer player) {
+    public static void tickRadiationRegeneration(LivingEntity player) {
         var radiationManager = IRadiationManager.INSTANCE;
         double radiationLevel = radiationManager.getRadiationLevel(player);
         if (!MekanismProtectionRules.shouldRegenerate(
@@ -93,8 +94,8 @@ public final class MekanismArmorIntegration {
         float healthBefore = player.getHealth();
         player.heal(MekanismProtectionRules.radiationHealing(
                 RadiationScale.getScaledDoseSeverity(radiationLevel)));
-        if (player.getHealth() > healthBefore) {
-            CelestweaveAdvancementService.awardRadiationAssimilation(player);
+        if (player.getHealth() > healthBefore && player instanceof ServerPlayer serverPlayer) {
+            CelestweaveAdvancementService.awardRadiationAssimilation(serverPlayer);
         }
     }
 
@@ -107,10 +108,10 @@ public final class MekanismArmorIntegration {
             LivingEntity target,
             long availableJoules,
             double dissipationPercent) {
-        if (dissipation != FULL_LASER_DISSIPATION || !(target instanceof ServerPlayer player)) {
+        if (dissipation != FULL_LASER_DISSIPATION || !ArmorWearer.canRun(target)) {
             return;
         }
-        ItemStack chest = CelestweaveEquipmentAccess.findArmor(player, EquipmentSlot.CHEST);
+        ItemStack chest = CelestweaveEquipmentAccess.findArmor(target, EquipmentSlot.CHEST);
         if (chest.isEmpty()
                 || !CelestweaveArmorState.isSubmoduleRuntimeActive(
                         chest,
@@ -123,6 +124,6 @@ public final class MekanismArmorIntegration {
         long forgeEnergy = MekanismProtectionRules.joulesToForgeEnergy(
                 absorbedJoules,
                 UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.getConversion());
-        ArmorEnergyService.receiveExternalEnergy(player, chest, forgeEnergy);
+        ArmorEnergyService.receiveExternalEnergy(target, chest, forgeEnergy);
     }
 }

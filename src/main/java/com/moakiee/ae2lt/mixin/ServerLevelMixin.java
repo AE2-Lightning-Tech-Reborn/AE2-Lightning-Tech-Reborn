@@ -3,7 +3,7 @@ package com.moakiee.ae2lt.mixin;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorUndyingHandler;
 import com.moakiee.ae2lt.event.NaturalLightningTransformationHandler;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityEvent;
 import net.minecraft.world.entity.LightningBolt;
@@ -42,7 +42,7 @@ public abstract class ServerLevelMixin {
             byte eventId,
             CallbackInfo ci) {
         if (eventId == EntityEvent.DEATH
-                && entity instanceof ServerPlayer player
+                && entity instanceof LivingEntity player
                 && CelestweaveArmorUndyingHandler.protectBeforeDeathSideEffect(player)) {
             ci.cancel();
         }

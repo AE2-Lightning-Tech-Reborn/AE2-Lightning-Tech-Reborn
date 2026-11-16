@@ -1,0 +1,28 @@
+// ./gradlew -I scripts/owned-entity-armor-test.init.gradle runGameTestServer
+// Optional: -Pae2ltThunderboltJar=/path/to/thunderbolt.jar -Pae2ltJdbProbeMods=/path/to/touhoulittlemaid.jar
+allprojects {
+    afterEvaluate {
+        def thunderboltJar = providers.gradleProperty('ae2ltThunderboltJar').orNull
+        if (thunderboltJar != null) {
+            configurations.configureEach {
+                dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+            }
+            dependencies.add('compileOnly', files(thunderboltJar))
+            dependencies.add('runtimeOnly', files(thunderboltJar))
+            dependencies.add('testRuntimeOnly', files(thunderboltJar))
+        }
+        sourceSets.jdb.java.setIncludes([
+                '**/OwnedEntityArmorGameTests.java',
+                '**/ArmorProtectionGameTests.java',
+                '**/NightVisionArmorGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios']
+                    || dep.name in ['applied-flux-965012', 'glodium-957920'])
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt,ae2lt_owned_armor,ae2lt_protection'
+            gameDirectory = project.layout.buildDirectory.dir('owned-entity-armor-gametest').get().asFile
+        }
+    }
+}

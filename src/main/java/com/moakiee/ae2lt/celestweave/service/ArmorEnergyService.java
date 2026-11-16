@@ -9,7 +9,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.HolderLookup;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -46,17 +47,17 @@ public final class ArmorEnergyService {
     private ArmorEnergyService() {
     }
 
-    public static long refillFromBoundNetworkIfLow(Player player, ItemStack armor, HolderLookup.Provider registries) {
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+    public static long refillFromBoundNetworkIfLow(LivingEntity player, ItemStack armor, HolderLookup.Provider registries) {
+        if (!ArmorWearer.canRun(player)) {
             return 0L;
         }
         long stored = ArmorEnergyBuffer.read(armor, registries);
         long capacity = ArmorEnergyBuffer.capacity(armor, registries);
         long request = ArmorNetworkRechargePolicy.passiveRechargeRequest(stored, capacity);
-        return rechargeFromNetwork(serverPlayer, armor, request, false);
+        return rechargeFromNetwork(player, armor, request, false);
     }
 
-    public static boolean consumePassiveDrain(Player player, ItemStack armor, HolderLookup.Provider registries) {
+    public static boolean consumePassiveDrain(LivingEntity player, ItemStack armor, HolderLookup.Provider registries) {
         return consumePassiveDrain(
                 player,
                 armor,
@@ -65,32 +66,32 @@ public final class ArmorEnergyService {
     }
 
     public static boolean consumePassiveDrain(
-            Player player,
+            LivingEntity player,
             ItemStack armor,
             List<CelestweaveArmorState.InstalledSubmodule> installedSubmodules,
             HolderLookup.Provider registries) {
-        if (!(player instanceof ServerPlayer serverPlayer)) {
-            return true;
-        }
-        var cost = computePassiveCost(serverPlayer, armor, installedSubmodules, registries);
-        if (!ArmorLightningService.hasCost(serverPlayer, armor, cost.lightning())) {
-            ArmorResourceFeedback.noLightning(serverPlayer, armor, cost.lightning());
+        if (!ArmorWearer.canRun(player)) {
             return false;
         }
-        EnergyPayment payment = consumeBufferedCost(serverPlayer, armor, cost.fe());
+        var cost = computePassiveCost(player, armor, installedSubmodules, registries);
+        if (!ArmorLightningService.hasCost(player, armor, cost.lightning())) {
+            ArmorResourceFeedback.noLightning(player, armor, cost.lightning());
+            return false;
+        }
+        EnergyPayment payment = consumeBufferedCost(player, armor, cost.fe());
         if (!payment.paid()) {
-            ArmorResourceFeedback.noFe(serverPlayer);
+            ArmorResourceFeedback.noFe(player);
             return false;
         }
-        if (ArmorLightningService.consume(serverPlayer, armor, cost.lightning())) {
+        if (ArmorLightningService.consume(player, armor, cost.lightning())) {
             return true;
         }
-        ArmorResourceFeedback.noLightning(serverPlayer, armor, cost.lightning());
+        ArmorResourceFeedback.noLightning(player, armor, cost.lightning());
         payment.refund();
         return false;
     }
 
-    public static boolean consumeActiveCost(Player player, ItemStack armor, long amount) {
+    public static boolean consumeActiveCost(LivingEntity player, ItemStack armor, long amount) {
         return consumeActiveCostPayment(player, armor, amount).paid();
     }
 
@@ -99,16 +100,16 @@ public final class ArmorEnergyService {
      * networks. Active abilities must not fail merely because one armor buffer cannot hold their
      * complete atomic cost.
      */
-    public static EnergyPayment consumeActiveCostPayment(Player player, ItemStack armor, long amount) {
+    public static EnergyPayment consumeActiveCostPayment(LivingEntity player, ItemStack armor, long amount) {
         return consumeCost(player, armor, amount, true, true);
     }
 
-    private static EnergyPayment consumeBufferedCost(Player player, ItemStack armor, long amount) {
+    private static EnergyPayment consumeBufferedCost(LivingEntity player, ItemStack armor, long amount) {
         return consumeCost(player, armor, amount, false, false);
     }
 
     private static EnergyPayment consumeCost(
-            Player player,
+            LivingEntity player,
             ItemStack armor,
             long amount,
             boolean activeRecharge,
@@ -116,17 +117,17 @@ public final class ArmorEnergyService {
         if (amount <= 0L) {
             return EnergyPayment.paid(player, List.of(), List.of());
         }
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+        if (!ArmorWearer.canRun(player)) {
             return EnergyPayment.unpaid(player);
         }
-        List<ItemStack> candidates = collectEnergyCandidates(serverPlayer, armor);
+        List<ItemStack> candidates = collectEnergyCandidates(player, armor);
         if (activeRecharge) {
-            rechargeCandidatesForCost(serverPlayer, candidates, amount);
+            rechargeCandidatesForCost(player, candidates, amount);
         }
-        return consumePlannedCost(serverPlayer, candidates, amount, includeBoundNetworks);
+        return consumePlannedCost(player, candidates, amount, includeBoundNetworks);
     }
 
-    private static long rechargeFromNetwork(ServerPlayer player, ItemStack armor, long request, boolean ignoreCooldown) {
+    private static long rechargeFromNetwork(LivingEntity player, ItemStack armor, long request, boolean ignoreCooldown) {
         if (request <= 0L) {
             return 0L;
         }
@@ -152,7 +153,7 @@ public final class ArmorEnergyService {
         return received;
     }
 
-    public static void refundCost(ServerPlayer player, ItemStack armor, long amount) {
+    public static void refundCost(LivingEntity player, ItemStack armor, long amount) {
         if (amount <= 0L) {
             return;
         }
@@ -162,7 +163,7 @@ public final class ArmorEnergyService {
                 ArmorEnergyBuffer.read(armor, player.registryAccess()) + amount);
     }
 
-    private static void rechargeCandidatesForCost(ServerPlayer player, List<ItemStack> candidates, long amount) {
+    private static void rechargeCandidatesForCost(LivingEntity player, List<ItemStack> candidates, long amount) {
         long remaining = amount;
         for (ItemStack candidate : candidates) {
             if (remaining <= 0L) {
@@ -177,7 +178,7 @@ public final class ArmorEnergyService {
     }
 
     private static EnergyPayment consumePlannedCost(
-            ServerPlayer player,
+            LivingEntity player,
             List<ItemStack> candidates,
             long amount,
             boolean includeBoundNetworks) {
@@ -229,14 +230,14 @@ public final class ArmorEnergyService {
     }
 
     private static List<NetworkEnergySource> collectNetworkEnergySources(
-            ServerPlayer player,
+            LivingEntity player,
             List<ItemStack> candidates,
             long maximumRequest) {
         if (maximumRequest <= 0L || !AppFluxBridge.isAvailable() || AppFluxBridge.FE_KEY == null) {
             return List.of();
         }
         Set<IGrid> seenGrids = Collections.newSetFromMap(new IdentityHashMap<>());
-        IActionSource actionSource = IActionSource.ofPlayer(player);
+        IActionSource actionSource = ArmorWearer.actionSource(player);
         var sources = new ArrayList<NetworkEnergySource>();
         for (ItemStack candidate : candidates) {
             var bound = ArmorNetworkBinding.INSTANCE.resolve(candidate, player);
@@ -257,7 +258,7 @@ public final class ArmorEnergyService {
         return List.copyOf(sources);
     }
 
-    private static void refundEnergyDebits(ServerPlayer player, List<EnergyDebit> debits) {
+    private static void refundEnergyDebits(LivingEntity player, List<EnergyDebit> debits) {
         for (int i = debits.size() - 1; i >= 0; i--) {
             EnergyDebit debit = debits.get(i);
             refundCost(player, debit.armor(), debit.amount());
@@ -280,7 +281,7 @@ public final class ArmorEnergyService {
 
     /** Fills the preferred piece first, then the remaining equipped/private Celestweave pieces. */
     public static long receiveExternalEnergy(
-            ServerPlayer player,
+            LivingEntity player,
             ItemStack preferredArmor,
             long amount) {
         if (player == null || amount <= 0L) {
@@ -303,7 +304,7 @@ public final class ArmorEnergyService {
         return received;
     }
 
-    private static List<ItemStack> collectEnergyCandidates(ServerPlayer player, ItemStack preferredArmor) {
+    private static List<ItemStack> collectEnergyCandidates(LivingEntity player, ItemStack preferredArmor) {
         var candidates = new ArrayList<ItemStack>();
         if (isEnergyCandidate(preferredArmor)) {
             candidates.add(preferredArmor);
@@ -337,7 +338,7 @@ public final class ArmorEnergyService {
     }
 
     private static PassiveCost computePassiveCost(
-            ServerPlayer player,
+            LivingEntity player,
             ItemStack armor,
             List<CelestweaveArmorState.InstalledSubmodule> installedSubmodules,
             HolderLookup.Provider registries) {
@@ -349,7 +350,8 @@ public final class ArmorEnergyService {
         LightningCost lightning = LightningCost.NONE;
         Set<ItemStack> chargedStacks = Collections.newSetFromMap(new IdentityHashMap<>());
         for (var entry : installedSubmodules) {
-            if (!CelestweaveArmorState.isSubmoduleEnabled(armor, entry.submodule())) {
+            if (!entry.submodule().supportsWearer(player)
+                    || !CelestweaveArmorState.isSubmoduleEnabled(armor, entry.submodule())) {
                 continue;
             }
             ItemStack module = entry.stack();
@@ -362,7 +364,8 @@ public final class ArmorEnergyService {
             List<DeviceCapability> capabilities = provider.capabilities(module);
             boolean movingFlight = hasFlightMode(capabilities) && isMovingInFlight(player);
             boolean phaseTraversalActive = hasPhaseTraversal(capabilities)
-                    && PhaseFlightSubmodule.shouldUsePhaseTraversal(player, armor);
+                    && player instanceof Player realPlayer
+                    && PhaseFlightSubmodule.shouldUsePhaseTraversal(realPlayer, armor);
             int count = Math.max(1, entry.count());
             LightningCost moduleLightning = ArmorModuleLightningPolicy.passiveCost(
                             capabilities,
@@ -411,9 +414,12 @@ public final class ArmorEnergyService {
         return false;
     }
 
-    private static boolean isMovingInFlight(ServerPlayer player) {
-        if (!player.getAbilities().flying
-                && !PhaseFlightPlayerState.isFlying(player)
+    private static boolean isMovingInFlight(LivingEntity player) {
+        if (!(player instanceof Player realPlayer)) {
+            return player.isFallFlying() && player.getDeltaMovement().lengthSqr() > 1.0E-4D;
+        }
+        if (!realPlayer.getAbilities().flying
+                && !PhaseFlightPlayerState.isFlying(realPlayer)
                 && !player.isFallFlying()) {
             return false;
         }
@@ -434,13 +440,13 @@ public final class ArmorEnergyService {
     }
 
     public static final class EnergyPayment {
-        private final Player player;
+        private final LivingEntity player;
         private final boolean paid;
         private final List<EnergyDebit> debits;
         private final List<NetworkEnergyDebit> networkDebits;
 
         private EnergyPayment(
-                Player player,
+                LivingEntity player,
                 boolean paid,
                 List<EnergyDebit> debits,
                 List<NetworkEnergyDebit> networkDebits) {
@@ -451,13 +457,13 @@ public final class ArmorEnergyService {
         }
 
         private static EnergyPayment paid(
-                Player player,
+                LivingEntity player,
                 List<EnergyDebit> debits,
                 List<NetworkEnergyDebit> networkDebits) {
             return new EnergyPayment(player, true, debits, networkDebits);
         }
 
-        private static EnergyPayment unpaid(Player player) {
+        private static EnergyPayment unpaid(LivingEntity player) {
             return new EnergyPayment(player, false, List.of(), List.of());
         }
 
@@ -466,11 +472,11 @@ public final class ArmorEnergyService {
         }
 
         public void refund() {
-            if (!(player instanceof ServerPlayer serverPlayer)) {
+            if (player == null || player.level().isClientSide()) {
                 return;
             }
             refundNetworkDebits(networkDebits);
-            refundEnergyDebits(serverPlayer, debits);
+            refundEnergyDebits(player, debits);
         }
     }
 }

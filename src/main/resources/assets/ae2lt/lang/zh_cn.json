@@ -29,6 +29,7 @@
   "ae2lt.tooltip.open_device_hub": "按 %s 打开配置界面",
   "key.ae2lt.toggle_frequency_card_auto_connect": "切换频率卡频率自动连接",
   "key.ae2lt.toggle_frequency_card_link": "切换过载频率卡链接",
+  "gui.ae2lt.device_hub.entity": "%s 的过载设备配置",
   "gui.ae2lt.device_hub": "过载设备中枢",
   "curios.identifier.overloaded_frequency_card": "过载频率卡",
   "curios.modifiers.overloaded_frequency_card": "过载频率卡",

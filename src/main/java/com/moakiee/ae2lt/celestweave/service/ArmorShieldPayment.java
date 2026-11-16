@@ -6,7 +6,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 
@@ -22,12 +23,15 @@ public final class ArmorShieldPayment {
     private ArmorShieldPayment() {
     }
 
-    public static boolean pay(ServerPlayer player, ItemStack armor, ShieldChargeWindow.Quote quote) {
+    public static boolean pay(LivingEntity player, ItemStack armor, ShieldChargeWindow.Quote quote) {
         return pay(player, armor, quote, null);
     }
 
-    public static boolean pay(ServerPlayer player, ItemStack armor, ShieldChargeWindow.Quote quote,
+    public static boolean pay(LivingEntity player, ItemStack armor, ShieldChargeWindow.Quote quote,
             DamageContainer damage) {
+        if (!ArmorWearer.canRun(player)) {
+            return false;
+        }
         var armorId = CelestweaveArmorState.ensureArmorId(armor);
         if (damage != null && PAID_DAMAGE.getOrDefault(damage, Set.of()).contains(armorId)) {
             return true;

@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.celestweave.module;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 
@@ -11,6 +12,11 @@ public final class DigAffinitySubmodule extends AbstractCelestweaveArmorSubmodul
     public static final DigAffinitySubmodule INSTANCE = new DigAffinitySubmodule();
 
     private DigAffinitySubmodule() {
+    }
+
+    @Override
+    public boolean supportsWearer(@Nullable LivingEntity wearer) {
+        return wearer instanceof Player;
     }
 
     @Override

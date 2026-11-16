@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.extensions.IPlayerExtension;
@@ -33,6 +34,11 @@ public final class PhaseLockSubmodule extends AbstractCelestweaveArmorSubmodule 
     public static final String BLOCK_EXTERNAL_TELEPORTS_CONFIG_KEY = "phase_block_external_teleports";
 
     private PhaseLockSubmodule() {
+    }
+
+    @Override
+    public boolean supportsWearer(@Nullable LivingEntity wearer) {
+        return wearer instanceof Player;
     }
 
     @Override

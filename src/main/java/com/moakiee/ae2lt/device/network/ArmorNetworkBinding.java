@@ -8,6 +8,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import appeng.api.ids.AEComponents;
@@ -36,6 +38,13 @@ public final class ArmorNetworkBinding implements DeviceNetworkBinding {
 
     @Override
     public BindingResolveResult resolve(ItemStack stack, ServerPlayer player) {
+        return resolve(stack, (LivingEntity) player);
+    }
+
+    public BindingResolveResult resolve(ItemStack stack, LivingEntity player) {
+        if (!ArmorWearer.canRun(player)) {
+            return BindingResolveResult.fail(BindingResolveResult.FailureReason.NOT_BOUND);
+        }
         GlobalPos pos = getBoundPos(stack);
         if (pos == null) {
             return BindingResolveResult.fail(BindingResolveResult.FailureReason.NOT_BOUND);

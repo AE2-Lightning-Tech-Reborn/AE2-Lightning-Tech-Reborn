@@ -1,0 +1,36 @@
+// Use together with -I scripts/owned-entity-armor-test.init.gradle and
+// -PownedArmorSeedWorld=<existing save>; only level.dat is copied to the disposable test save.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/OwnedEntityArmorClientProbe.java'])
+        def directory = project.layout.buildDirectory.dir('owned-entity-armor-client').get().asFile
+        def output = project.layout.buildDirectory.dir('reports/owned-entity-armor-client').get().asFile
+        neoForge.runs.client {
+            gameDirectory = directory
+            systemProperty 'ae2lt.ownedArmorClientProbe', 'true'
+            systemProperty 'ae2lt.ownedArmorClientOutput', output.absolutePath
+            jvmArguments.set(jvmArguments.get().findAll { !it.startsWith('-agentlib:jdwp=') })
+            programArguments.addAll '--username', 'ArmorOwnerQA', '--quickPlaySingleplayer', 'OwnedArmorQA',
+                    '--width', '1280', '--height', '720'
+        }
+        def prepare = tasks.register('prepareOwnedArmorClientWorld') {
+            doLast {
+                def source = new File(providers.gradleProperty('ownedArmorSeedWorld').get(), 'level.dat').toPath()
+                def target = directory.toPath().resolve('saves/OwnedArmorQA/level.dat')
+                java.nio.file.Files.createDirectories(target.parent)
+                if (!java.nio.file.Files.exists(target)) java.nio.file.Files.copy(source, target)
+                new File(directory, 'options.txt').text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:4\nsimulationDistance:2\nmaxFps:60\nlang:zh_cn\nguiScale:2\n'
+                output.mkdirs()
+            }
+        }
+        tasks.named('runClient').configure {
+            dependsOn prepare
+            doFirst { new File(output, 'result.txt').text = 'RUNNING\n' }
+            doLast {
+                if (!new File(output, 'result.txt').text.startsWith('PASS:')) {
+                    throw new GradleException('Owned armor client probe failed; inspect ' + output)
+                }
+            }
+        }
+    }
+}

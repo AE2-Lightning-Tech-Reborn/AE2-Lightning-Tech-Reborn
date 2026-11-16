@@ -7,9 +7,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -52,7 +50,8 @@ public final class CelestweaveArmorDamageHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onDamageTypeImmunity(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
         for (var active : ArmorCapabilityCollector.collectPerInstalledStack(player)) {
@@ -67,7 +66,8 @@ public final class CelestweaveArmorDamageHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onShieldIncoming(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
         float incoming = event.getAmount();
@@ -106,7 +106,8 @@ public final class CelestweaveArmorDamageHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPre(LivingDamageEvent.Pre event) {
-        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) return;
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) return;
         if (!isReflectingDamage()) {
             reflectIncomingDamage(player, event.getSource(), event.getOriginalDamage());
         }
@@ -166,7 +167,7 @@ public final class CelestweaveArmorDamageHandler {
     }
 
     private static boolean payMitigationLightning(
-            Player player,
+            LivingEntity player,
             ActiveCapability mitigation,
             DeviceCapability.StagedMitigation staged,
             float preventedDamage,
@@ -174,13 +175,13 @@ public final class CelestweaveArmorDamageHandler {
         if (MultidimensionalProtectionSubmodule.ID.equals(staged.stage())) {
             return true;
         }
-        if (!(player instanceof ServerPlayer serverPlayer) || preventedDamage <= 0.0F) {
+        if (preventedDamage <= 0.0F) {
             return true;
         }
         if ("phase_shield".equals(staged.stage()) || OverloadProtectionSubmodule.ID.equals(staged.stage())) {
-            return ArmorShieldPayment.pay(serverPlayer, mitigation.armor(), ShieldChargeWindow.quote(
+            return ArmorShieldPayment.pay(player, mitigation.armor(), ShieldChargeWindow.quote(
                     mitigation.armor(), ShieldChargeWindow.Profile.forStage(staged.stage()),
-                    serverPlayer.level().getGameTime(), preventedDamage), damage);
+                    player.level().getGameTime(), preventedDamage), damage);
         }
         long amount = (long) Math.ceil(preventedDamage
                 * ArmorModuleLightningPolicy.triggeredCost(ArmorModuleLightningPolicy.Trigger.MATRIX_SHIELD)
@@ -193,32 +194,32 @@ public final class CelestweaveArmorDamageHandler {
         int comboIndex = ArmorOverloadCombo.nextComboIndex(
                 mitigation.armor(),
                 ResistanceSubmodule.T1,
-                serverPlayer.level().getGameTime());
+                player.level().getGameTime());
         long finalAmount = ArmorOverloadCombo.scaledCost(amount, comboIndex);
         ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
-                serverPlayer,
+                player,
                 mitigation.armor(),
                 feCost);
         if (!payment.paid()) {
-            ArmorResourceFeedback.noFe(serverPlayer);
+            ArmorResourceFeedback.noFe(player);
             return false;
         }
         var lightningCost = ArmorModuleLightningPolicy
                 .triggeredCost(ArmorModuleLightningPolicy.Trigger.MATRIX_SHIELD)
                 .times(finalAmount);
-        if (!ArmorLightningService.consume(serverPlayer, mitigation.armor(), lightningCost)) {
+        if (!ArmorLightningService.consume(player, mitigation.armor(), lightningCost)) {
             payment.refund();
             if (lightningCost.extremeHighVoltage() > 0L) {
-                ArmorResourceFeedback.noExtremeHighVoltage(serverPlayer);
+                ArmorResourceFeedback.noExtremeHighVoltage(player);
             } else {
-                ArmorResourceFeedback.noHighVoltage(serverPlayer);
+                ArmorResourceFeedback.noHighVoltage(player);
             }
             return false;
         }
         ArmorOverloadCombo.recordTrigger(
                 mitigation.armor(),
                 ResistanceSubmodule.T1,
-                serverPlayer.level().getGameTime(),
+                player.level().getGameTime(),
                 AE2LTCommonConfig.overloadArmorShieldComboWindowTicks(),
                 comboIndex);
         return true;
@@ -259,14 +260,14 @@ public final class CelestweaveArmorDamageHandler {
 
     private static void markSuppressShieldHitFeedback(LivingEntity entity) {
         SUPPRESSING_SHIELD_HIT_FEEDBACK.get().add(entity.getId());
-        if (entity instanceof ServerPlayer serverPlayer) {
-            PacketDistributor.sendToPlayer(
-                    serverPlayer,
-                    new ShieldHitFeedbackSuppressionPacket(serverPlayer.getId()));
+        if (!entity.level().isClientSide()) {
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(
+                    entity,
+                    new ShieldHitFeedbackSuppressionPacket(entity.getId()));
         }
     }
 
-    private static void reflectIncomingDamage(Player player, DamageSource source, float incomingDamage) {
+    private static void reflectIncomingDamage(LivingEntity player, DamageSource source, float incomingDamage) {
         if (!(source.getEntity() instanceof LivingEntity attacker)) return;
         float reflected = collectReflectedDamage(player, incomingDamage);
         if (reflected > 0.0F) {
@@ -288,8 +289,8 @@ public final class CelestweaveArmorDamageHandler {
         }
     }
 
-    private static float collectReflectedDamage(Player player, float damage) {
-        if (!(player instanceof ServerPlayer serverPlayer)) {
+    private static float collectReflectedDamage(LivingEntity player, float damage) {
+        if (!ArmorWearer.canRun(player)) {
             return 0.0F;
         }
         if (damage <= 0.0F) {
@@ -308,11 +309,11 @@ public final class CelestweaveArmorDamageHandler {
             }
             long cost = (long) Math.ceil(amount * Math.max(0L, reflect.fePerDamage()));
             ArmorEnergyService.EnergyPayment payment = ArmorEnergyService.consumeActiveCostPayment(
-                    serverPlayer,
+                    player,
                     active.armor(),
                     cost);
             if (!payment.paid()) {
-                ArmorResourceFeedback.noFe(serverPlayer);
+                ArmorResourceFeedback.noFe(player);
                 continue;
             }
             reflected += amount;

@@ -4,6 +4,7 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.network.hub.DeviceHubActionPacket;
 import com.moakiee.ae2lt.network.hub.DeviceHubSyncPacket;
 import com.moakiee.ae2lt.network.hub.OpenDeviceHubPacket;
+import com.moakiee.ae2lt.network.hub.OpenEntityDeviceHubPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamChainFxPacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamTogglePacket;
 import com.moakiee.ae2lt.network.railgun.RailgunBeamUpdatePacket;
@@ -187,6 +188,10 @@ public final class NetworkInit {
                 OpenDeviceHubPacket.TYPE,
                 OpenDeviceHubPacket.STREAM_CODEC,
                 OpenDeviceHubPacket::handle);
+        registrar.playToServer(
+                OpenEntityDeviceHubPacket.TYPE,
+                OpenEntityDeviceHubPacket.STREAM_CODEC,
+                OpenEntityDeviceHubPacket::handle);
         registrar.playToServer(
                 DeviceHubActionPacket.TYPE,
                 DeviceHubActionPacket.STREAM_CODEC,

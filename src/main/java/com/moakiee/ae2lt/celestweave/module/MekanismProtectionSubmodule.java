@@ -7,8 +7,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModList;
 
@@ -82,11 +82,16 @@ public final class MekanismProtectionSubmodule extends AbstractCelestweaveArmorS
 
     @Override
     public int tickActive(@Nullable Player player, Dist dist, ItemStack armor) {
+        return tickActive((LivingEntity) player, dist, armor);
+    }
+
+    @Override
+    public int tickActive(@Nullable LivingEntity player, Dist dist, ItemStack armor) {
         if (this == RADIATION
                 && dist == Dist.DEDICATED_SERVER
-                && player instanceof ServerPlayer serverPlayer
+                && player != null && !player.level().isClientSide()
                 && ModList.get().isLoaded("mekanism")) {
-            MekanismArmorIntegration.tickRadiationRegeneration(serverPlayer);
+            MekanismArmorIntegration.tickRadiationRegeneration(player);
         }
         return 0;
     }

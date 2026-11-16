@@ -1,10 +1,10 @@
 package com.moakiee.ae2lt.celestweave.service;
 
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.Actionable;
-import appeng.api.networking.security.IActionSource;
 
 import com.moakiee.ae2lt.device.energy.LightningCompensationPolicy;
 import com.moakiee.ae2lt.device.network.ArmorNetworkBinding;
@@ -14,7 +14,7 @@ public final class ArmorLightningService {
     private ArmorLightningService() {
     }
 
-    public static boolean hasCost(ServerPlayer player, ItemStack armor, LightningKey key, long amount) {
+    public static boolean hasCost(LivingEntity player, ItemStack armor, LightningKey key, long amount) {
         if (amount <= 0L) {
             return true;
         }
@@ -29,14 +29,14 @@ public final class ArmorLightningService {
                         : LightningCost.hv(amount));
     }
 
-    public static boolean hasCost(ServerPlayer player, ItemStack armor, LightningCost cost) {
+    public static boolean hasCost(LivingEntity player, ItemStack armor, LightningCost cost) {
         if (cost.isEmpty()) {
             return true;
         }
         return plan(player, armor, cost).canPay();
     }
 
-    public static boolean consume(ServerPlayer player, ItemStack armor, LightningKey key, long amount) {
+    public static boolean consume(LivingEntity player, ItemStack armor, LightningKey key, long amount) {
         if (amount <= 0L) {
             return true;
         }
@@ -51,7 +51,7 @@ public final class ArmorLightningService {
                         : LightningCost.hv(amount));
     }
 
-    public static boolean consume(ServerPlayer player, ItemStack armor, LightningCost cost) {
+    public static boolean consume(LivingEntity player, ItemStack armor, LightningCost cost) {
         if (cost.isEmpty()) {
             return true;
         }
@@ -84,7 +84,7 @@ public final class ArmorLightningService {
     }
 
     private static LightningCompensationPolicy.Plan plan(
-            ServerPlayer player,
+            LivingEntity player,
             ItemStack armor,
             LightningCost cost) {
         long availableEhv = cost.extremeHighVoltage() <= 0L
@@ -120,8 +120,8 @@ public final class ArmorLightningService {
                 compensationRatio);
     }
 
-    private static long extract(ServerPlayer player, ItemStack armor, LightningKey key, long amount, Actionable action) {
-        if (player == null || armor == null || armor.isEmpty() || key == null || amount <= 0L) {
+    private static long extract(LivingEntity player, ItemStack armor, LightningKey key, long amount, Actionable action) {
+        if (!ArmorWearer.canRun(player) || armor == null || armor.isEmpty() || key == null || amount <= 0L) {
             return 0L;
         }
         var bound = ArmorNetworkBinding.INSTANCE.resolve(armor, player);
@@ -132,11 +132,11 @@ public final class ArmorLightningService {
                 key,
                 amount,
                 action,
-                IActionSource.ofPlayer(player));
+                ArmorWearer.actionSource(player));
     }
 
-    private static void refund(ServerPlayer player, ItemStack armor, LightningKey key, long amount) {
-        if (player == null || armor == null || armor.isEmpty() || key == null || amount <= 0L) {
+    private static void refund(LivingEntity player, ItemStack armor, LightningKey key, long amount) {
+        if (!ArmorWearer.canRun(player) || armor == null || armor.isEmpty() || key == null || amount <= 0L) {
             return;
         }
         var bound = ArmorNetworkBinding.INSTANCE.resolve(armor, player);
@@ -147,7 +147,7 @@ public final class ArmorLightningService {
                 key,
                 amount,
                 Actionable.MODULATE,
-                IActionSource.ofPlayer(player));
+                ArmorWearer.actionSource(player));
     }
 
     public record LightningCost(long highVoltage, long extremeHighVoltage) {

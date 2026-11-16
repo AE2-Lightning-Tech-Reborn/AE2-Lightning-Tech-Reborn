@@ -3,11 +3,9 @@ package com.moakiee.ae2lt.celestweave;
 import java.util.List;
 
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.damagesource.DamageContainer;
 import net.neoforged.bus.api.EventPriority;
@@ -36,7 +34,8 @@ public final class CelestweaveArmorUndyingHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onIncomingFatalDamage(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
         float damage = event.getAmount();
@@ -55,7 +54,8 @@ public final class CelestweaveArmorUndyingHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onFatalDamage(LivingDamageEvent.Pre event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
         float damage = event.getNewDamage();
@@ -70,7 +70,8 @@ public final class CelestweaveArmorUndyingHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onDeath(LivingDeathEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) {
+        LivingEntity player = event.getEntity();
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
         if (tryProtectForcedDeath(player)) {
@@ -88,17 +89,17 @@ public final class CelestweaveArmorUndyingHandler {
         tryProtectDeadOrDying(event.getEntity());
     }
 
-    private static void tryProtectDeadOrDying(Player player) {
-        if (!(player instanceof ServerPlayer serverPlayer) || serverPlayer.level().isClientSide()) {
+    public static void tryProtectDeadOrDying(LivingEntity player) {
+        if (!ArmorWearer.canRun(player)) {
             return;
         }
-        if (serverPlayer.dead || serverPlayer.isDeadOrDying() || serverPlayer.getHealth() <= 0.0F) {
-            tryProtectForcedDeath(serverPlayer);
+        if (player.dead || player.isDeadOrDying() || player.getHealth() <= 0.0F) {
+            tryProtectForcedDeath(player);
         }
     }
 
-    public static boolean tryProtectForcedDeath(ServerPlayer player) {
-        if (player == null || player.level().isClientSide()) {
+    public static boolean tryProtectForcedDeath(LivingEntity player) {
+        if (!ArmorWearer.canRun(player)) {
             return false;
         }
         if (wasProtectedThisTick(player)) {
@@ -110,12 +111,12 @@ public final class CelestweaveArmorUndyingHandler {
     }
 
     public static boolean wasProtectedThisTick(LivingEntity entity) {
-        if (!(entity instanceof ServerPlayer player)) {
+        if (!ArmorWearer.canRun(entity)) {
             return false;
         }
-        var data = player.getPersistentData();
+        var data = entity.getPersistentData();
         return data.contains(TAG_PROTECTED_TICK)
-                && data.getLong(TAG_PROTECTED_TICK) == player.level().getGameTime();
+                && data.getLong(TAG_PROTECTED_TICK) == entity.level().getGameTime();
     }
 
     /**
@@ -123,8 +124,8 @@ public final class CelestweaveArmorUndyingHandler {
      * side effects. Vanilla death normally never reaches these hooks because the earlier
      * damage/death guards cancel it; this closes routines that copy LivingEntity#die instead.
      */
-    public static boolean protectBeforeDeathSideEffect(ServerPlayer player) {
-        if (player == null || player.level().isClientSide()) {
+    public static boolean protectBeforeDeathSideEffect(LivingEntity player) {
+        if (!ArmorWearer.canRun(player)) {
             return false;
         }
         if (wasProtectedThisTick(player)) {
@@ -137,7 +138,7 @@ public final class CelestweaveArmorUndyingHandler {
         return tryProtectForcedDeath(player);
     }
 
-    private static boolean tryTrigger(ServerPlayer player, long now,
+    private static boolean tryTrigger(LivingEntity player, long now,
             DamageContainer damage) {
         for (var active : collectActiveLastStand(player)) {
             if (MultidimensionalProtectionSubmodule.ID.equals(active.submoduleId())) {
@@ -156,7 +157,7 @@ public final class CelestweaveArmorUndyingHandler {
         return false;
     }
 
-    private static boolean hasActiveLastStand(ServerPlayer player) {
+    private static boolean hasActiveLastStand(LivingEntity player) {
         return !collectActiveLastStand(player).isEmpty();
     }
 
@@ -176,12 +177,13 @@ public final class CelestweaveArmorUndyingHandler {
                 || source.is(ModDamageTypes.ELECTROMAGNETIC);
     }
 
-    private static void recordProtectedTick(ServerPlayer player, long now) {
+    private static void recordProtectedTick(LivingEntity player, long now) {
         player.getPersistentData().putLong(TAG_PROTECTED_TICK, now);
     }
 
-    private static void restoreSurvivalState(ServerPlayer player) {
+    private static void restoreSurvivalState(LivingEntity player) {
         player.dead = false;
+        player.deathTime = 0;
         player.clearFire();
         player.setRemainingFireTicks(0);
         player.resetFallDistance();
@@ -194,7 +196,7 @@ public final class CelestweaveArmorUndyingHandler {
         player.hurtDuration = 0;
     }
 
-    private static List<ActiveLastStand> collectActiveLastStand(ServerPlayer player) {
+    private static List<ActiveLastStand> collectActiveLastStand(LivingEntity player) {
         return ArmorCapabilityCollector.collectPerInstalledStack(player).stream()
                 .flatMap(active -> {
                     if (active.capability() instanceof DeviceCapability.LastStandTuning) {

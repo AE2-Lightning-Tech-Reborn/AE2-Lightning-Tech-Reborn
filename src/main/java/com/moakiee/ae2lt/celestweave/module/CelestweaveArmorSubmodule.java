@@ -10,6 +10,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 
@@ -17,6 +18,28 @@ import com.moakiee.ae2lt.device.module.OverloadDeviceSubmodule;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
 
 public interface CelestweaveArmorSubmodule extends OverloadDeviceSubmodule {
+    /** Whether this module has semantics for the actual wearer (independent of its owner). */
+    default boolean supportsWearer(@Nullable LivingEntity wearer) {
+        return true;
+    }
+
+    // Keep the existing Player hooks for third-party modules. Generic hooks never pass the owner.
+    default void onInstalled(@Nullable LivingEntity wearer, Dist dist, ItemStack armor) {
+        onInstalled(wearer instanceof Player player ? player : null, dist, armor);
+    }
+
+    default void onActivated(@Nullable LivingEntity wearer, Dist dist, ItemStack armor) {
+        onActivated(wearer instanceof Player player ? player : null, dist, armor);
+    }
+
+    default void onDeactivated(@Nullable LivingEntity wearer, Dist dist, ItemStack armor) {
+        onDeactivated(wearer instanceof Player player ? player : null, dist, armor);
+    }
+
+    default int tickActive(@Nullable LivingEntity wearer, Dist dist, ItemStack armor) {
+        return tickActive(wearer instanceof Player player ? player : null, dist, armor);
+    }
+
     @Override
     String id();
 

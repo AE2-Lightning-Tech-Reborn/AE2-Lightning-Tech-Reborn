@@ -7,11 +7,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import com.moakiee.ae2lt.device.capability.DeviceCapability;
+import com.moakiee.ae2lt.celestweave.ArmorWearer;
 import com.moakiee.ae2lt.device.module.OverloadDeviceModuleItem;
 import com.moakiee.ae2lt.celestweave.CelestweaveArmorState;
 import com.moakiee.ae2lt.celestweave.module.CelestweaveArmorSubmodule;
@@ -29,24 +30,27 @@ public final class ArmorCapabilityCollector {
     private ArmorCapabilityCollector() {
     }
 
-    public static List<ActiveCapability> collectPerInstalledStack(Player player) {
+    public static List<ActiveCapability> collectPerInstalledStack(LivingEntity player) {
         return collect(player, false);
     }
 
-    public static List<ActiveCapability> collectPerInstalledUnit(Player player) {
+    public static List<ActiveCapability> collectPerInstalledUnit(LivingEntity player) {
         return collect(player, true);
     }
 
-    public static void clearCache(Player player) {
+    public static void clearCache(LivingEntity player) {
         CACHE.remove(player.getUUID());
     }
 
-    private static List<ActiveCapability> collect(Player player, boolean expandByCount) {
+    private static List<ActiveCapability> collect(LivingEntity player, boolean expandByCount) {
+        if (!ArmorWearer.isEligible(player)) {
+            return List.of();
+        }
         return CACHE.computeIfAbsent(player.getUUID(), ignored -> new CachedCapabilities())
                 .get(player, expandByCount);
     }
 
-    private static List<ActiveCapability> collectUncached(Player player, boolean expandByCount) {
+    private static List<ActiveCapability> collectUncached(LivingEntity player, boolean expandByCount) {
         var out = new ArrayList<ActiveCapability>();
         for (EquipmentSlot slot : ARMOR_SLOTS) {
             ItemStack armor = CelestweaveEquipmentAccess.findArmor(player, slot);
@@ -91,7 +95,10 @@ public final class ArmorCapabilityCollector {
         return List.copyOf(out);
     }
 
-    private static boolean isSubmoduleActiveForSide(Player player, ItemStack armor, CelestweaveArmorSubmodule submodule) {
+    private static boolean isSubmoduleActiveForSide(LivingEntity player, ItemStack armor, CelestweaveArmorSubmodule submodule) {
+        if (!submodule.supportsWearer(player)) {
+            return false;
+        }
         if (player.level().isClientSide()) {
             // Client derives active state from the synced stack; no client-side cache.
             return CelestweaveArmorState.isSubmoduleActiveClient(armor, submodule, player.level().getGameTime());
@@ -109,7 +116,7 @@ public final class ArmorCapabilityCollector {
         private List<ActiveCapability> perInstalledStack;
         private List<ActiveCapability> perInstalledUnit;
 
-        synchronized List<ActiveCapability> get(Player player, boolean expandByCount) {
+        synchronized List<ActiveCapability> get(LivingEntity player, boolean expandByCount) {
             long currentGameTime = player.level().getGameTime();
             boolean currentClientSide = player.level().isClientSide();
             ResourceKey<Level> currentDimension = player.level().dimension();

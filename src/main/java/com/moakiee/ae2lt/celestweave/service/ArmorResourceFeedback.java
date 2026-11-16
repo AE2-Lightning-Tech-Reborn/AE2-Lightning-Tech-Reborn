@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.celestweave.service;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.celestweave.service.ArmorLightningService.LightningCost;
@@ -14,19 +15,19 @@ public final class ArmorResourceFeedback {
     private ArmorResourceFeedback() {
     }
 
-    public static void noFe(ServerPlayer player) {
+    public static void noFe(LivingEntity player) {
         notify(player, "ae2lt.celestweave.fail.no_fe", "fe");
     }
 
-    public static void noHighVoltage(ServerPlayer player) {
+    public static void noHighVoltage(LivingEntity player) {
         notify(player, "ae2lt.celestweave.fail.no_hv", "hv");
     }
 
-    public static void noExtremeHighVoltage(ServerPlayer player) {
+    public static void noExtremeHighVoltage(LivingEntity player) {
         notify(player, "ae2lt.celestweave.fail.no_ehv", "ehv");
     }
 
-    public static void noLightning(ServerPlayer player, ItemStack armor, LightningCost cost) {
+    public static void noLightning(LivingEntity player, ItemStack armor, LightningCost cost) {
         if (cost == null || cost.isEmpty()) {
             return;
         }
@@ -51,8 +52,8 @@ public final class ArmorResourceFeedback {
         }
     }
 
-    private static void notify(ServerPlayer player, String key, String resource) {
-        if (player == null) {
+    private static void notify(LivingEntity player, String key, String resource) {
+        if (!(player instanceof ServerPlayer recipient)) {
             return;
         }
         long now = player.level().getGameTime();
@@ -61,7 +62,7 @@ public final class ArmorResourceFeedback {
             return;
         }
         player.getPersistentData().putLong(tag, saturatingAdd(now, COOLDOWN_TICKS));
-        player.displayClientMessage(Component.translatable(key), true);
+        recipient.displayClientMessage(Component.translatable(key), true);
     }
 
     private static long saturatingAdd(long left, long right) {
