@@ -1,0 +1,6 @@
+{
+  "parent": "ae2lt:block/firmament_conversion_core",
+  "textures": {
+    "top": "ae2lt:item/lightning_collapse_matrix"
+  }
+}

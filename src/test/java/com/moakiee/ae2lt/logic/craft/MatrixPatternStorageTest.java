@@ -23,9 +23,10 @@ import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 
 class MatrixPatternStorageTest {
     @Test
-    void t1AndT2UnitsExposeDocumentedCapacities() {
+    void storageTiersExposeDocumentedCapacities() {
         assertEquals(36, MatrixPatternStorageUnit.t1().capacity());
         assertEquals(72, MatrixPatternStorageUnit.t2().capacity());
+        assertEquals(288, MatrixPatternStorageUnit.t3().capacity());
     }
 
     @Test
@@ -146,6 +147,26 @@ class MatrixPatternStorageTest {
 
         assertFalse(unit.canUpgradeToT2());
         assertSame(unit, unit.upgradeToT2());
+    }
+
+    @Test
+    void t2UpgradeToT3PreservesAllExistingSlots() {
+        var unit = MatrixPatternStorageUnit.t2();
+        var first = pattern("first");
+        var last = pattern("last");
+        unit.insert(first);
+        for (int i = 1; i < 71; i++) unit.insert(pattern("mid-" + i));
+        unit.insert(last);
+
+        var upgraded = unit.upgradeToT3();
+
+        assertEquals(MatrixPatternStorageTier.T3, upgraded.tier());
+        assertEquals(288, upgraded.capacity());
+        assertSame(first, upgraded.get(0));
+        assertSame(last, upgraded.get(71));
+        assertNull(upgraded.get(72));
+        assertEquals(72, upgraded.usedSlots());
+        assertFalse(upgraded.canUpgradeToT3());
     }
 
     @Test

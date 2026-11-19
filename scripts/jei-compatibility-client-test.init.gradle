@@ -1,0 +1,28 @@
+// Opt-in regression. Seed a disposable build/jei-compat-client/saves/JeiQA world first.
+// Supply -PjeiCompatJar=/path/to/published-jei.jar and a NeoForge version that JEI supports.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/debug/JeiCompatibilityClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'com.lowdragmc.ldlib2'] || dep.name == 'ae2-jei-integration-1074338')
+        }
+        dependencies.add('runtimeOnly', project.files(project.property('jeiCompatJar')))
+        neoForge.runs.client {
+            gameDirectory = project.file('build/jei-compat-client')
+            systemProperty 'ae2lt.jeiCompatibilityProbe', 'true'
+            programArguments.addAll '--quickPlaySingleplayer', 'JeiQA'
+        }
+        tasks.named('runClient') {
+            doFirst {
+                project.file('build/jei-compat-client/jei-compatibility-probe.txt').text = 'JEI_CLIENT_QA RUNNING\n'
+            }
+            doLast {
+                def result = project.file('build/jei-compat-client/jei-compatibility-probe.txt')
+                if (!result.exists() || !result.text.startsWith('JEI_CLIENT_QA PASS:')) {
+                    throw new GradleException('JEI client regression failed; inspect ' + result)
+                }
+            }
+        }
+    }
+}

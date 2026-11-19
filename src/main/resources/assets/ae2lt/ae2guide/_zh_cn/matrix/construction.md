@@ -39,7 +39,7 @@ item_ids:
 | <ItemLink id="ae2lt:matter_warping_matrix_constraint_frame" /> | 132 |
 | <ItemLink id="ae2lt:matter_warping_matrix_glass" /> | 44 |
 | <ItemLink id="ae2lt:matter_warping_matrix_port" /> | 1 |
-| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" /> 或 <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> | 1-50 |
+| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" />、<ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> 或 <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t3" /> | 1-50 |
 ▲自动搭建会放的方块；▼自动搭建不会放的方块
 | 材料 | 数量(个) |
 |------|-----:|
@@ -60,7 +60,7 @@ item_ids:
 | <ItemLink id="ae2lt:matter_warping_matrix_constraint_frame" /> | 132 | 包括两个未安装端口的候选位置 |
 | <ItemLink id="ae2lt:matter_warping_matrix_glass" /> | 44 | 固定观察层 |
 | <ItemLink id="ae2lt:matter_warping_matrix_port" /> | 1 | 未预先放置端口时安装在控制器正对面 |
-| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" /> 或 <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> | 1–50 | 至少需要 1 个；继续消耗背包中的样板仓并填入空位，最多 50 个 |
+| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" />、<ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> 或 <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t3" /> | 1–50 | 至少需要 1 个；继续消耗背包中的样板仓并填入空位，最多 50 个 |
 
 控制器已经放置，因此不在按钮消耗的材料中。完整成形还必须手动准备并放置：
 

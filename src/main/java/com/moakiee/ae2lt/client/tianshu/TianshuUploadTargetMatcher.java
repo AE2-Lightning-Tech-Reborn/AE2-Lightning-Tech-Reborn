@@ -13,6 +13,31 @@ final class TianshuUploadTargetMatcher {
     private TianshuUploadTargetMatcher() {
     }
 
+    static TianshuUploadTargetData automaticCandidate(List<TianshuUploadTargetData> targets,
+            com.moakiee.ae2lt.config.TianshuUploadMatchMode mode, String savedAlias, String suggestedAlias) {
+        String query = mode.query(savedAlias, suggestedAlias);
+        // A blank query means no configured decision, never "all targets" for automatic uploads.
+        return query.isBlank() ? null : findUniqueCandidate(targets, query);
+    }
+
+    static TianshuUploadTargetData automaticCandidate(List<TianshuUploadTargetData> targets,
+            com.moakiee.ae2lt.config.TianshuUploadMatchMode mode, String savedAlias,
+            String suggestedAlias, List<String> machineIds) {
+        if (mode == com.moakiee.ae2lt.config.TianshuUploadMatchMode.ANY_MATCH
+                && (savedAlias == null || savedAlias.isBlank()) && !machineIds.isEmpty()) {
+            // Evaluate every catalyst together; selecting the first unique machine would hide ambiguity.
+            return findUniqueCandidate(targets,
+                    target -> machineIds.stream().anyMatch(id -> matches(target, id)),
+                    target -> target.availableSlots() > 0);
+        }
+        return automaticCandidate(targets, mode, savedAlias, suggestedAlias);
+    }
+
+    static String initialMachineAlias(List<TianshuUploadTargetData> targets, List<String> machineIds) {
+        return machineIds.stream().filter(id -> targets.stream().anyMatch(t -> matches(t, id)))
+                .findFirst().orElse(machineIds.getFirst());
+    }
+
     static boolean matches(TianshuUploadTargetData target, String query) {
         if (target == null || query == null || query.isBlank()) return true;
         String normalizedQuery = normalize(query.strip());

@@ -16,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import appeng.menu.AEBaseMenu;
 import appeng.menu.locator.ItemMenuHostLocator;
 
-public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> hand, boolean terminalCard)
+public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> hand, boolean terminalCard, boolean energy)
         implements CustomPacketPayload {
     public static final Type<ToggleFrequencyCardAutoConnectPacket> TYPE =
             new Type<>(NetworkInit.id("toggle_frequency_card_auto_connect"));
@@ -30,15 +30,19 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
     }
 
     public static ToggleFrequencyCardAutoConnectPacket forHand(InteractionHand hand) {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.of(hand), false);
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.of(hand), false, false);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket forPreferredCard() {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), false);
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), false, false);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket forTerminalCard() {
-        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), true);
+        return forTerminalCard(false);
+    }
+
+    public static ToggleFrequencyCardAutoConnectPacket forTerminalCard(boolean energy) {
+        return new ToggleFrequencyCardAutoConnectPacket(Optional.empty(), true, energy);
     }
 
     public static ToggleFrequencyCardAutoConnectPacket decode(RegistryFriendlyByteBuf buf) {
@@ -46,13 +50,14 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
         Optional<InteractionHand> hand = buf.readBoolean()
                 ? Optional.of(buf.readEnum(InteractionHand.class))
                 : Optional.empty();
-        return new ToggleFrequencyCardAutoConnectPacket(hand, terminalCard);
+        return new ToggleFrequencyCardAutoConnectPacket(hand, terminalCard, buf.readBoolean());
     }
 
     public void write(RegistryFriendlyByteBuf buf) {
         buf.writeBoolean(terminalCard);
         buf.writeBoolean(hand.isPresent());
         hand.ifPresent(value -> buf.writeEnum(value));
+        buf.writeBoolean(energy);
     }
 
     public static void handle(ToggleFrequencyCardAutoConnectPacket payload, IPayloadContext context) {
@@ -64,6 +69,11 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
     }
 
     private void handleOnServer(ServerPlayer player) {
+        if (energy && !OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable()) {
+            player.displayClientMessage(Component.translatable("ae2lt.frequency_card.auto_energy_requires_appflux")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
         if (terminalCard) {
             handleTerminalCard(player);
             return;
@@ -101,7 +111,9 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        boolean enabled = OverloadedFrequencyCardItem.toggleAutoConnect(stack);
+        var updated = energy ? data.toggleAutoConnectEnergy() : data.toggleAutoConnect();
+        OverloadedFrequencyCardItem.setData(stack, updated);
+        boolean enabled = energy ? updated.autoConnectEnergy() : updated.autoConnect();
         messageAutoConnectState(player, enabled);
     }
 
@@ -133,7 +145,7 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        if (!TerminalCardAccess.updateCard(terminal, cardData -> cardData.toggleAutoConnect())) {
+        if (!TerminalCardAccess.updateCard(terminal, cardData -> energy ? cardData.toggleAutoConnectEnergy() : cardData.toggleAutoConnect())) {
             player.displayClientMessage(
                     Component.translatable("ae2lt.frequency_card.terminal_no_card")
                             .withStyle(ChatFormatting.RED),
@@ -141,14 +153,14 @@ public record ToggleFrequencyCardAutoConnectPacket(Optional<InteractionHand> han
             return;
         }
 
-        messageAutoConnectState(player, TerminalCardAccess.readCardData(terminal).autoConnect());
+        var updated = TerminalCardAccess.readCardData(terminal);
+        messageAutoConnectState(player, energy ? updated.autoConnectEnergy() : updated.autoConnect());
     }
 
-    private static void messageAutoConnectState(ServerPlayer player, boolean enabled) {
+    private void messageAutoConnectState(ServerPlayer player, boolean enabled) {
         player.displayClientMessage(
-                Component.translatable(enabled
-                                ? "ae2lt.frequency_card.auto_enabled"
-                                : "ae2lt.frequency_card.auto_disabled")
+                Component.translatable("ae2lt.frequency_card.auto_" + (energy ? "energy_" : "")
+                                + (enabled ? "enabled" : "disabled"))
                         .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.YELLOW),
                 true);
     }

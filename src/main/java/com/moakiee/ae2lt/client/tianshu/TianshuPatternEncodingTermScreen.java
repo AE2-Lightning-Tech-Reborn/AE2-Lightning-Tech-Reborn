@@ -1,52 +1,42 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.client.gui.Icon;
-import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.IconButton;
-import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.TabButton.Style;
 import appeng.api.behaviors.ContainerItemStrategies;
 import appeng.api.behaviors.EmptyingAction;
 import appeng.api.config.ActionItems;
-import appeng.api.config.Settings;
-import appeng.api.config.ViewItems;
-import appeng.api.client.AEKeyRendering;
 import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
 import appeng.core.definitions.AEItems;
 import appeng.core.network.ServerboundPacket;
-import appeng.core.network.bidirectional.ConfigValuePacket;
 import appeng.core.network.serverbound.InventoryActionPacket;
 import appeng.helpers.InventoryAction;
 import appeng.menu.SlotSemantics;
 import appeng.menu.me.common.GridInventoryEntry;
 import appeng.parts.encoding.EncodingMode;
 import appeng.api.stacks.AEItemKey;
-import appeng.util.prioritylist.IPartitionList;
 import guideme.PageAnchor;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuEncodingMode;
 import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuPatternUploadRouting;
+import com.moakiee.ae2lt.logic.tianshu.terminal.TianshuUploadTargetData;
+import com.moakiee.ae2lt.config.AE2LTClientConfig;
+import com.moakiee.ae2lt.config.TianshuUploadMatchMode;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
-import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
-import com.moakiee.ae2lt.mixin.client.VerticalButtonBarAccessor;
 import com.moakiee.ae2lt.registry.ModItems;
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -54,10 +44,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
 import appeng.client.gui.me.common.RepoSlot;
 import org.lwjgl.glfw.GLFW;
-import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -113,12 +101,32 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
         widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
             @Override
+            public boolean mouseClicked(double x, double y, int button) {
+                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
+                boolean rightClick = button == GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
+                if (rightClick && visible && active && isMouseOver(x, y)) {
+                    if (hasShiftDown()) {
+                        var selection = TianshuUploadSourceSelection.collect(menu);
+                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
+                    } else menu.undoLastUpload();
+                    return true;
+                }
+                return super.mouseClicked(x, y, button);
+            }
+
+            @Override
             public List<Component> getTooltipMessage() {
-                return menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
+                var lines = new java.util.ArrayList<Component>(menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
                         && TianshuUploadTriggerClient.shouldTrigger()
                         ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
                                 Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
-                        : super.getTooltipMessage();
+                        : super.getTooltipMessage());
+                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+                lines.add(Component.translatable(menu.canUndoUpload
+                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+                return lines;
             }
         });
 
@@ -211,10 +219,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         modeTabs.forEach((mode, button) -> button.setSelected(mode == selected));
         if (menu.hasTriggeredUploadAck()
                 && TianshuRecipeTransferContext.isEncodingResultReady(
-                        menu, firstEncodedPattern())
-                && menu.consumeTriggeredUpload()) {
-            openUploadScreen(menu.consumeDirectUploadRequest());
-            return;
+                        menu, firstEncodedPattern())) {
+            uploadAfterEncoding();
+            if (minecraft.screen != this) return;
         }
         boolean processing = selected == TianshuEncodingMode.PROCESSING;
         boolean shifted = hasShiftDown();
@@ -266,24 +273,40 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 .map(Slot::getItem).filter(item -> !item.isEmpty()).findFirst().orElse(ItemStack.EMPTY);
     }
 
-    private void openUploadScreen(boolean directUploadRequested) {
+    private void uploadAfterEncoding() {
         var stack = firstEncodedPattern();
         if (stack.isEmpty()) return;
         // The server is authoritative for validating a closed-loop payload. Routing by the
         // item type here keeps the shared upload button responsive even when the client cannot
         // decode a registry-backed payload and lets the server report a proper upload failure.
-        if (stack.getItem() instanceof ClosedLoopPatternItem
-                || com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
-            menu.uploadEncodedPattern();
-            return;
+        TianshuPatternUploadRouting.Route route;
+        if (stack.getItem() instanceof ClosedLoopPatternItem) {
+            route = TianshuPatternUploadRouting.Route.CLOSED_LOOP_STORAGE;
+        } else if (com.moakiee.ae2lt.integration.useless.UselessModCompat.isOmniversalPattern(stack)) {
+            route = TianshuPatternUploadRouting.Route.OMNIVERSAL_FURNACE;
+        } else {
+            route = minecraft.level != null
+                    ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
+                    : TianshuPatternUploadRouting.Route.INVALID;
         }
-        var route = minecraft.level != null
-                ? TianshuPatternUploadRouting.classify(stack, minecraft.level)
-                : TianshuPatternUploadRouting.Route.INVALID;
+        TianshuUploadTargetData target = null;
+        if (route == TianshuPatternUploadRouting.Route.PROCESSING_PROVIDER
+                && AE2LTClientConfig.uploadMatchMode() != TianshuUploadMatchMode.OFF) {
+            if (!menu.requestUploadTargetsAfterEncoding() || !menu.hasFreshUploadTargetsAfterEncoding()) return;
+            target = TianshuDirectUploadClient.findAutomaticTarget(menu);
+        }
+        if (!menu.consumeTriggeredUpload()) return;
+        boolean directUploadRequested = menu.consumeDirectUploadRequest();
         switch (route) {
             case CLOSED_LOOP_STORAGE, CRAFTING_ASSEMBLER, OMNIVERSAL_FURNACE -> menu.uploadEncodedPattern();
-            case PROCESSING_PROVIDER -> switchToScreen(
-                    new TianshuUploadTargetScreen<>(this, directUploadRequested));
+            case PROCESSING_PROVIDER -> {
+                if (target != null) {
+                    menu.uploadTianshuPatternToTarget(target.group(), true);
+                    TianshuDirectUploadClient.awaitResult(menu, target.group().name());
+                } else {
+                    switchToScreen(new TianshuUploadTargetScreen<>(this, directUploadRequested));
+                }
+            }
             case INVALID -> { }
         }
     }
@@ -295,16 +318,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         switchToScreen(new TianshuUploadTargetScreen<>(this, true));
         return true;
     }
-
-
-
-
-
-
-
-
-
-
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -351,8 +364,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-
-
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
         var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
@@ -391,8 +402,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
     }
 
-
-
     private boolean isClosedLoopMemberSlot(Slot slot) {
         return slot != null
                 && menu.getSlotSemantic(slot) == Ae2ltSlotSemantics.TIANSHU_CLOSED_LOOP_MEMBER;
@@ -410,9 +419,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     /** Also used by the dedicated maintenance overview for zero-stock entries. */
-
-
-
 
     @Override
     public void renderSlot(GuiGraphics graphics, Slot slot) {
@@ -449,7 +455,6 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             poseStack.popPose();
         }
 
-
     }
 
     /**
@@ -459,19 +464,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
      * every interaction except opening the maintenance editor is swallowed above.
      */
 
-
     /** Filters the visible view without deleting entries from AE2's client repository. */
-
-
-
-
-
-
-
-
-
-
-
 
     @Override
     protected List<Component> getTooltipFromContainerItem(ItemStack stack) {

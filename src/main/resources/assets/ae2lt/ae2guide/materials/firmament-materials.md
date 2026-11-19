@@ -45,11 +45,23 @@ Conditions:
 
 > Each qualifying Annihilation Plane generates independently, so several can be run in parallel to scale up output.
 
+### Bulk Plane Placement
+
+Build your cables on the topmost layer of the world, hold a stack of Annihilation Planes, and **sneak-right-click the top of a cable** to install upward-facing planes on nearby adjacent cables at the same height. Each use installs up to 64 planes within 8 horizontal blocks of the clicked position. Existing parts are preserved. Each installation consumes one plane from your hand; placement stops when the stack runs out.
+
+Bulk placement only installs planes. It preserves the original generation conditions and rates of Firmament Dust and Sky Stone Dust, along with plane power use and channel requirements. Cables with a plane already installed can also serve as a starting point.
+
 ## Firmament Conversion Core
 
 Most refining steps rely on the **Firmament Conversion Core**. This block cannot be crafted and exists only inside the **Firmament Starship**, a structure that floats above the outer End islands — travel beyond the central island to find one. The core is indestructible, cannot be mined or moved, and only operates inside the starship structure, so use it right where it stands.
 
 The core consumes neither energy nor lightning, and each job finishes after a short wait: right-click it with a material in hand to insert, then right-click with an **empty hand** to collect the result. It accepts up to three inputs at once and produces the outputs defined by each recipe. Hoppers and pipes can insert materials and extract products through any side, so an automated production line can be built right on the starship.
+
+The ordinary core processes **one recipe copy per cycle**, with a capacity of 64 items in each input and output slot.
+
+**Sneak-right-click** the core while holding **one Lightning Collapse Matrix** to consume the matrix and upgrade it in place to an **Advanced Firmament Conversion Core**. The advanced core holds **256 items per input slot** and **64 per output slot**, and completes up to **16 copies of the same recipe per cycle**, limited by available materials and output room. Upgrading preserves inventory and processing progress. A matrix mark appears on the top face.
+
+Every copy consumes its full ingredients and produces the original outputs. Essence and alloy ingots take about 2 seconds per cycle, module bases 5 seconds, and spirit core activation 10 seconds. The advanced core still requires a Firmament Starship. Keep inputs stocked and extract outputs to reduce the wait for bulk processing.
 
 ## Refined Materials
 

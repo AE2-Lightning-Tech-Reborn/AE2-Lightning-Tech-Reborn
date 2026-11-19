@@ -19,6 +19,8 @@ public final class UselessModCompat {
     private static final Logger LOG = LoggerFactory.getLogger(UselessModCompat.class);
     private static final ResourceLocation PATTERN_ID =
             ResourceLocation.fromNamespaceAndPath("useless_mod", "omniversal_pattern");
+    private static final ResourceLocation ICON_ID =
+            ResourceLocation.fromNamespaceAndPath("useless_mod", "omniversal_mold_hub");
     private static boolean reportedFailure;
 
     private UselessModCompat() {
@@ -34,7 +36,10 @@ public final class UselessModCompat {
     }
 
     public static ItemStack icon() {
-        return isLoaded() ? new ItemStack(BuiltInRegistries.ITEM.get(PATTERN_ID)) : ItemStack.EMPTY;
+        // TabButton renders through AE2's Shift-to-output hook. A bare encoded pattern has
+        // no recipe data and third-party getOutput mixins may throw while decoding it.
+        // The mold hub is a normal block item and needs no encoded payload to render safely.
+        return isLoaded() ? new ItemStack(BuiltInRegistries.ITEM.get(ICON_ID)) : ItemStack.EMPTY;
     }
 
     public static long recipeGeneration() {

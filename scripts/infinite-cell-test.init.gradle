@@ -1,0 +1,16 @@
+// ./gradlew -I scripts/infinite-cell-test.init.gradle runGameTestServer
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/InfiniteCellRegressionGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                            'de.mari_023', 'top.theillusivec4.curios']
+                    || (dep.group == 'curse.maven' && dep.name in [
+                            'applied-energistics-2-223794', 'applied-flux-965012', 'glodium-957920']))
+        }
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_infinite_cell'
+            gameDirectory = project.layout.buildDirectory.dir('infinite-cell-regression').get().asFile
+        }
+    }
+}

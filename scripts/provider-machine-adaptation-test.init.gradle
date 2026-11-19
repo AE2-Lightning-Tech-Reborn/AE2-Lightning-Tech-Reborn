@@ -1,0 +1,41 @@
+// ./gradlew -I scripts/provider-machine-adaptation-test.init.gradle runGameTestServer
+// Optional: -Pae2ltProviderReturnThunderboltJar=/path/to/the/matching/thunderbolt.jar
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes([
+                'com/moakiee/ae2lt/debug/ProviderMekanismReturnGameTests.java',
+                'com/moakiee/ae2lt/debug/ProviderMachineAdaptationGameTests.java',
+                'com/moakiee/ae2lt/debug/ProviderReturnFilterGameTests.java'])
+        sourceSets.test.java.setIncludes([
+                'com/moakiee/ae2lt/integration/mekanism/**',
+                'com/moakiee/ae2lt/integration/industrialforegoing/**',
+                'com/moakiee/ae2lt/logic/provider/**',
+                'com/moakiee/ae2lt/menu/OverloadedPatternProviderMenuSyncIdTest.java',
+                'com/moakiee/ae2lt/logic/config/MemoryCardModeCodecTest.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'top.theillusivec4.curios', 'de.mari_023']
+                    || dep.name in ['thunderbolt-core-1631756', 'mekanism-268560',
+                                    'mekanism-extras-1026040'])
+        }
+        dependencies.add('runtimeOnly', 'curse.maven:mekanism-more-machine-1275257:8659501')
+
+        dependencies.add('runtimeOnly', 'curse.maven:industrial-foregoing-266515:8370717')
+        dependencies.add('runtimeOnly', 'curse.maven:titanium-287342:8760562')
+        dependencies.add('testRuntimeOnly', 'curse.maven:titanium-287342:8760562')
+
+        def localThunderbolt = providers.gradleProperty('ae2ltProviderReturnThunderboltJar').orNull
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { dep ->
+                    dep.group == 'com.moakiee.thunderbolt' || dep.name == 'thunderbolt-core-1631756'
+                }
+                dependencies.add(name, files(localThunderbolt))
+            }
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('provider-machine-adaptation-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_provider_mekanism,ae2lt_machine_adaptation,ae2lt'
+        }
+    }
+}

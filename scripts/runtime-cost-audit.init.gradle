@@ -1,0 +1,26 @@
+// ./gradlew -I scripts/runtime-cost-audit.init.gradle runProviderCostAudit runInterfacePlanCostAudit
+// Optional: -Pae2ltCostAuditJfrDirectory=/absolute/path records each audit separately.
+allprojects {
+    afterEvaluate {
+        sourceSets.create('runtimeCostAudit') {
+            java.srcDir 'scripts/benchmarks'
+            java.include '**/ProviderCostAudit.java', '**/InterfacePlanCostAudit.java'
+            compileClasspath += sourceSets.main.output + sourceSets.test.compileClasspath
+            runtimeClasspath = output + sourceSets.main.runtimeClasspath + configurations.testRuntimeClasspath
+        }
+        [runProviderCostAudit: 'com.moakiee.ae2lt.logic.provider.ProviderCostAudit',
+         runInterfacePlanCostAudit: 'com.moakiee.ae2lt.blockentity.InterfacePlanCostAudit'].each { name, entryPoint ->
+            tasks.register(name, JavaExec) {
+                group = 'verification'
+                description = 'Measures warmed runtime cost without treating it as server MSPT.'
+                classpath = sourceSets.runtimeCostAudit.runtimeClasspath
+                mainClass = entryPoint
+                jvmArgs '-Xms512m', '-Xmx2g'
+                def recordingDirectory = providers.gradleProperty('ae2ltCostAuditJfrDirectory').orNull
+                if (recordingDirectory != null) {
+                    jvmArgs "-XX:StartFlightRecording=filename=${recordingDirectory}/${name}.jfr,settings=profile,dumponexit=true"
+                }
+            }
+        }
+    }
+}

@@ -23,7 +23,6 @@ import com.moakiee.ae2lt.config.AE2LTCommonConfig;
 import com.moakiee.ae2lt.config.AE2LTConfigMigration;
 import com.moakiee.ae2lt.blockentity.AtmosphericIonizerBlockEntity;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
-import com.moakiee.ae2lt.blockentity.FirmamentConversionCoreBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningAssemblyChamberBlockEntity;
 import com.moakiee.ae2lt.blockentity.LightningCollectorBlockEntity;
 import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
@@ -242,6 +241,7 @@ public class AE2LightningTech {
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_THERMAL_CONTROL_UNIT_T2);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1);
                         output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2);
+                        output.accept(ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3);
                         output.accept(ModItems.MATTER_WARPING_MATRIX_PATTERN_STORAGE_UPGRADE);
 
                         // 基础材料与中间产物
@@ -792,6 +792,13 @@ public class AE2LightningTech {
                 ModBlockEntities.PIGMEE_PATTERN_PROVIDER.get(),
                 (blockEntity, context) -> blockEntity.getReturnInventory());
 
+        // Match vanilla interfaces: storage buses use ME_STORAGE to access
+        // the grid, or the interface inventory when stocking is configured.
+        event.registerBlockEntity(
+                AECapabilities.ME_STORAGE,
+                ModBlockEntities.OVERLOADED_INTERFACE.get(),
+                (blockEntity, context) -> blockEntity.getInterfaceLogic().getInventory());
+
         event.registerBlock(
                 AECapabilities.GENERIC_INTERNAL_INV,
                 (level, pos, state, blockEntity, context) -> {
@@ -817,10 +824,21 @@ public class AE2LightningTech {
         FrequencyApi.setProvider(new FrequencyApiBridge());
         BatchExecutor.registerBatchEligibilityRule(BatchPatternEligibility::isEligible);
         event.enqueueWork(() -> {
+            com.moakiee.ae2lt.compat.mmcr.MmcrBatchIntegration.initialize();
+            com.moakiee.thunderbolt.api.crafting.CraftingPlanningEngines.registerExactBackend(
+                    com.moakiee.thunderbolt.core.crafting.planner.ThunderboltV2PlanningEngine.ID,
+                    com.moakiee.ae2lt.crafting.big.TianshuExactCraftingBackend.INSTANCE);
+            com.moakiee.ae2lt.logic.management.RemoteDeviceLocator.register();
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class,
+                    com.moakiee.ae2lt.logic.management.NetworkDeviceIndex.class);
             com.moakiee.ae2lt.crafting.big.UselessBigIntegerCompat.initialize();
             appeng.api.networking.GridServices.register(
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class,
                     com.moakiee.ae2lt.logic.craft.migration.PatternMigrationGridService.class);
+            appeng.api.networking.GridServices.register(
+                    com.moakiee.ae2lt.logic.energy.WirelessEnergyGridService.class,
+                    com.moakiee.ae2lt.logic.energy.WirelessEnergyGridService.class);
             // Thunderbolt keeps controller discovery content-agnostic. Register the
             // AE2LT controller family before any grid can be created so infinite
             // channel mode can use AE2's native pathing with these nodes as roots.
@@ -1100,6 +1118,8 @@ public class AE2LightningTech {
             StorageCells.addCellHandler(BulkLightningCellHandler.INSTANCE);
             StorageCells.addCellHandler(FixedInfiniteCellHandler.INSTANCE);
             ModItems.registerStorageCellModels();
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.CRYSTAL_CATALYZER.get(), 1);
+            Upgrades.add(AEItems.REDSTONE_CARD, ModBlocks.TESLA_COIL.get(), 1);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get(),
                     LightningSimulationChamberBlockEntity.SPEED_CARD_SLOTS);
             Upgrades.add(AEItems.SPEED_CARD, ModBlocks.LIGHTNING_ASSEMBLY_CHAMBER.get(),
@@ -1195,6 +1215,8 @@ public class AE2LightningTech {
     private void onServerStarting(ServerStartingEvent event) {
         WirelessFrequencyManager.onServerStart(event.getServer());
         WirelessLinkRegistry.onServerStart(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer());
         var recipeConflicts = RecipeConflictScanner.scan(event.getServer().getRecipeManager());
         if (recipeConflicts.isEmpty()) {
             LOG.info("[AE2LT recipe conflict scan] no conflicts found");
@@ -1207,8 +1229,11 @@ public class AE2LightningTech {
     }
 
     private void onServerStopped(ServerStoppedEvent event) {
+        com.moakiee.ae2lt.logic.management.PowerTelemetry.clear();
         WirelessIoPerformanceProbe.finish(event.getServer());
         WirelessLinkRegistry.onServerStop();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.stop();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.stop();
         WirelessFrequencyManager.onServerStop();
         CRAFTING_CORE_REGISTRY.clear();
         com.moakiee.ae2lt.registry.ModDamageTypes.clearCache();
@@ -1220,6 +1245,10 @@ public class AE2LightningTech {
 
     private void onServerTickPost(ServerTickEvent.Post event) {
         CRAFTING_CORE_REGISTRY.tickAll();
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tickValidations(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tickBulkConnections(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyAdmissions.get(event.getServer()).tick(event.getServer());
+        com.moakiee.ae2lt.logic.energy.WirelessEnergyEndpoints.get(event.getServer()).tick(event.getServer());
         WirelessFrequencyManager.flushPendingDeviceNotifications();
         var registry = WirelessLinkRegistry.get();
         if (registry != null) {

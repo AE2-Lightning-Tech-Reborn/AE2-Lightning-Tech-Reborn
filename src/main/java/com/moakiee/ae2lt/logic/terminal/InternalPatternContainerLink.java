@@ -6,6 +6,7 @@ import appeng.api.networking.IGridConnection;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.IManagedGridNode;
+import appeng.api.networking.crafting.ICraftingProvider;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -51,6 +52,9 @@ public final class InternalPatternContainerLink {
                 .setInWorldNode(false)
                 .setVisualRepresentation(visualRepresentation)
                 .setIdlePowerUsage(0.0D);
+        if (owner instanceof ICraftingProvider provider) {
+            managedNode.addService(ICraftingProvider.class, provider);
+        }
         managedNode.create(level, owner.getBlockPos());
         connection = GridHelper.createConnection(managedNode.getNode(), targetNode);
         linkedPortNode = targetNode;
@@ -74,5 +78,13 @@ public final class InternalPatternContainerLink {
 
     public boolean isActive() {
         return connection != null && managedNode != null && managedNode.isActive();
+    }
+
+    public boolean requestCraftingUpdate() {
+        if (managedNode != null && managedNode.isReady()) {
+            ICraftingProvider.requestUpdate(managedNode);
+            return true;
+        }
+        return false;
     }
 }

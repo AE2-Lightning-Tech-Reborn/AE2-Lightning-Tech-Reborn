@@ -35,7 +35,7 @@ Install matrices in the right slot below the arrow. The interval starts at 5 tic
 
 ## Power
 
-Each extraction costs **32 AE**, independent of the amount moved, plus **4 AE/t** idle power, adjusted by the AE2 power multiplier. Transfers pause when power is insufficient.
+Transfer cost is the resource amount divided by its amount per operation, or **1 AE per item** and **8 AE per bucket** of fluid, plus **1 AE/t** idle power. The AE2 power multiplier applies. Insufficient power limits transfers to the affordable amount; transfers pause when no amount can be afforded.
 
 ## Controls and automation
 

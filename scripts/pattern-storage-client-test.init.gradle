@@ -1,0 +1,38 @@
+// Run pattern-storage-test.init.gradle first to create the disposable seed world.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/TianshuPatternStorageGameTests.java', '**/TianshuPatternStorageClientProbe.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics'])
+        }
+        def directory = layout.buildDirectory.dir('pattern-storage-client').get().asFile
+        def report = new File(directory, 'result.txt')
+        neoForge.runs.client {
+            gameDirectory = directory
+            logLevel = org.slf4j.event.Level.INFO
+            systemProperty 'ae2lt.patternStorageProbe', 'true'
+            systemProperty 'ae2lt.patternStorageReport', report.absolutePath
+            programArguments.addAll '--username', 'StorageQA', '--quickPlaySingleplayer', 'StorageQA',
+                    '--width', '960', '--height', '720'
+        }
+        def prepare = tasks.register('preparePatternStorageProbeWorld') {
+            doLast {
+                def seed = layout.buildDirectory.file('pattern-storage-gametest/world/level.dat').get().asFile
+                if (!seed.isFile()) throw new GradleException('Run the pattern storage GameTests first')
+                def target = new File(directory, 'saves/StorageQA/level.dat')
+                target.parentFile.mkdirs()
+                if (!target.exists()) java.nio.file.Files.copy(seed.toPath(), target.toPath())
+                new File(directory, 'options.txt').text = 'onboardAccessibility:false\ntutorialStep:none\npauseOnLostFocus:false\nrenderDistance:3\nlang:zh_cn\nguiScale:2\n'
+                report.delete()
+            }
+        }
+        tasks.named('runClient').configure {
+            dependsOn prepare
+            doLast {
+                if (!report.isFile() || !report.text.startsWith('PASS:')) {
+                    throw new GradleException("Pattern storage client probe failed; inspect ${report}")
+                }
+            }
+        }
+    }
+}

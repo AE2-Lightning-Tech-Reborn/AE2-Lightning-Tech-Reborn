@@ -369,7 +369,16 @@ public class OverloadedInterfaceLogic extends InterfaceLogic {
         }
 
         public ConfigInventory cfg() {
-            return logic.getConfig();
+            // Inventory decorators can read this proxy while getConfig() is
+            // still constructing their storage wrapper (e.g. Thaumic Energistics).
+            // Re-entering that getter would start the same wrapping again.
+            // Read the current field, not a cached original, so replacement
+            // config inventories and their restrictions remain visible.
+            try {
+                return (ConfigInventory) F_CONFIG.get(logic);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Failed to read interface config", e);
+            }
         }
 
         public long capForSlot(int slot) {

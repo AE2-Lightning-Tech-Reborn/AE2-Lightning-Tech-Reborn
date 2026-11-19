@@ -16,6 +16,7 @@ import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.AETextField;
 import appeng.menu.SlotSemantics;
+import appeng.client.gui.style.PaletteColor;
 
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 
@@ -29,6 +30,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     private final TextureToggleButton wirelessStrategyButton;
     private final TextureToggleButton wirelessSpeedButton;
     private final TextureToggleButton filteredImportButton;
+    private final Button machineAdaptationButton;
     private final AETextField machineParallelism;
     private final Button applyParallelism;
     private int lastSyncedParallelism;
@@ -65,6 +67,9 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         this.filteredImportButton.setTooltipOff(
                 List.of(Component.translatable("ae2lt.gui.filtered_import.off")));
         widgets.add("filteredImport", this.filteredImportButton);
+
+        machineAdaptationButton = widgets.addButton("machineAdaptation",
+                Component.empty(), menu::clientToggleMachineAdaptation);
 
         machineParallelism = widgets.addTextField("machineParallelism");
         machineParallelism.setMaxLength(10);
@@ -128,6 +133,11 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         this.wirelessSpeedButton.setVisibility(wirelessTuningVisible);
         this.wirelessSpeedButton.active = wirelessTuningActive;
 
+        machineAdaptationButton.setMessage(Component.translatable(menu.isMachineAdaptationEnabled()
+                ? "ae2lt.gui.machine_adaptation.on" : "ae2lt.gui.machine_adaptation.off"));
+        machineAdaptationButton.setTooltip(Tooltip.create(Component.translatable(
+                "ae2lt.gui.machine_adaptation.tooltip")));
+
         this.filteredImportButton.setState(menu.isFilteredImport());
         this.filteredImportButton.setVisibility(menu.isFilteredImportVisible());
 
@@ -151,7 +161,7 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
 
         boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
-        int wirelessColor = menu.isWirelessMode() ? 0x404040 : 0x909090;
+        int wirelessColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
         if (wirelessTuningVisible) {
             guiGraphics.drawString(
                     font,
@@ -174,24 +184,24 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                     Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
                     LABEL_X,
                     FILTER_Y,
-                    0x404040,
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
                     false);
         }
         if (wirelessTuningVisible) {
             guiGraphics.drawString(font,
                     Component.translatable("ae2lt.gui.provider_advanced.machine_parallelism"),
-                    14, 105, wirelessColor, false);
+                    14, 129, wirelessColor, false);
             guiGraphics.drawString(font,
                     Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
-                    14, 147, 0x707070, false);
+                    14, 171, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
         if (wirelessTuningVisible && !menu.isWirelessMode()) {
             guiGraphics.drawString(
                     font,
                     Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
                     14,
-                    161,
-                    0x707070,
+                    185,
+                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
                     false);
         }
     }

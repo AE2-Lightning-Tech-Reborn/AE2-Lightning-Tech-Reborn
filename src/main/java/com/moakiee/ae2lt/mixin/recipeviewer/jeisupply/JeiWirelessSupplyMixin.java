@@ -3,45 +3,27 @@ package com.moakiee.ae2lt.mixin.recipeviewer.jeisupply;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
-import mezz.jei.common.transfer.RecipeTransferUtil;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Coerce;
 
-/**
- * Optional hook for JEI builds that still transfer through {@code RecipeTransferUtil}.
- * JEI 19.64 moved that call into {@code RecipeTransferService}; the plugin skips this
- * mixin there, and {@link JeiWirelessSupplyServiceMixin} wraps the live call instead.
- */
+/** Wraps the legacy handler call used before JEI 19.52 introduced transfer contexts. */
 @Pseudo
-@Mixin(value = RecipeTransferUtil.class, remap = false)
+@Mixin(targets = "mezz.jei.common.transfer.RecipeTransferUtil", remap = false)
 public abstract class JeiWirelessSupplyMixin {
-    @WrapOperation(method = "transferRecipe(Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;Lmezz/jei/api/gui/IRecipeLayoutDrawable;Lnet/minecraft/world/entity/player/Player;ZZ)Ljava/util/Optional;",
+    @WrapOperation(method = "transferRecipe(Lmezz/jei/api/recipe/transfer/IRecipeTransferManager;Lnet/minecraft/world/inventory/AbstractContainerMenu;Lmezz/jei/api/gui/IRecipeLayoutDrawable;Lnet/minecraft/world/entity/player/Player;ZZ)Ljava/util/Optional;",
             remap = false, at = @At(value = "INVOKE", remap = false,
-            target = "Lmezz/jei/api/recipe/transfer/IRecipeTransferHandler;transferRecipe(Lmezz/jei/api/recipe/transfer/IRecipeTransferContext;Z)Lmezz/jei/api/recipe/transfer/IRecipeTransferError;"), require = 1)
+            target = "Lmezz/jei/api/recipe/transfer/IRecipeTransferHandler;transferRecipe(Lnet/minecraft/world/inventory/AbstractContainerMenu;Ljava/lang/Object;Lmezz/jei/api/gui/ingredient/IRecipeSlotsView;Lnet/minecraft/world/entity/player/Player;ZZ)Lmezz/jei/api/recipe/transfer/IRecipeTransferError;"), require = 1)
     private static IRecipeTransferError ae2lt$supply(IRecipeTransferHandler<AbstractContainerMenu, Object> handler,
-            @Coerce Object context, boolean doTransfer, Operation<IRecipeTransferError> original) {
-        var access = (JeiWirelessSupplyContextAccessor) context;
-        return JeiWirelessSupplyClient.transfer(handler, access.ae2lt$getContainer(), access.ae2lt$getRecipe(),
-                access.ae2lt$getRecipeSlots(), access.ae2lt$getPlayer(), access.ae2lt$isMaxTransfer(), doTransfer,
-                (maximum, take, partialSlots) -> original.call(handler,
-                        partialSlots == null ? context : ae2lt$withSlots(context, partialSlots, maximum), take));
-    }
-
-    private static Object ae2lt$withSlots(Object context, mezz.jei.api.gui.ingredient.IRecipeSlotsView slots, boolean maximum) {
-        try {
-            var api = Class.forName("mezz.jei.api.recipe.transfer.IRecipeTransferContext");
-            var source = java.lang.reflect.Proxy.newProxyInstance(api.getClassLoader(), new Class<?>[]{api},
-                    (proxy, method, args) -> method.getName().equals("isMaxTransfer")
-                            ? maximum : method.invoke(context, args));
-            return context.getClass().getMethod("copyWithRecipeSlots",
-                    api, mezz.jei.api.gui.ingredient.IRecipeSlotsView.class).invoke(null, source, slots);
-        } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("Cannot preserve JEI transfer context for partial refill", error);
-        }
+            AbstractContainerMenu menu, Object recipe, IRecipeSlotsView slots, Player player,
+            boolean maximum, boolean doTransfer, Operation<IRecipeTransferError> original) {
+        return JeiWirelessSupplyClient.transfer(handler, menu, recipe, slots, player, maximum, doTransfer,
+                (max, take, partialSlots) -> original.call(handler, menu, recipe,
+                        partialSlots == null ? slots : partialSlots, player, max, take));
     }
 }

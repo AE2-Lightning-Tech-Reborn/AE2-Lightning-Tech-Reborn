@@ -23,7 +23,6 @@ import appeng.api.stacks.GenericStack;
 import appeng.crafting.inv.ICraftingInventory;
 import appeng.crafting.inv.ListCraftingInventory;
 
-import com.moakiee.ae2lt.crafting.timewheel.allocation.CraftingInputAllocation;
 import com.moakiee.thunderbolt.core.crafting.pattern.FuzzyPatternInputs;
 import com.moakiee.thunderbolt.core.crafting.support.CraftingPatternDelegates;
 

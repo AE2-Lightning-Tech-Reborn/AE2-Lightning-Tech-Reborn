@@ -43,6 +43,7 @@ public final class BatchPatternEligibility {
                 continue;
             }
             return current instanceof IMolecularAssemblerSupportedPattern
+                    || com.moakiee.ae2lt.compat.mmcr.MmcrBatchIntegration.isBatchPattern(current)
                     || current.supportsPushInputsToExternalInventory();
         }
         return false;

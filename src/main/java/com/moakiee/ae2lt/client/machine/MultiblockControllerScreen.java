@@ -1,7 +1,10 @@
 package com.moakiee.ae2lt.client.machine;
 
+import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
+import com.moakiee.ae2lt.logic.compute.ComputeTier;
 import java.util.Locale;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -10,137 +13,108 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.block.Block;
 
-/** Shared chrome for multiblock controller screens: status strip, data rows, gauge. */
-public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu>
-        extends AbstractContainerScreen<T> {
+public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
+    protected static final int BLUE = 221, RED = 228, AMBER = 235, GREEN = 242;
+    private static final int BAR_WIDTH = 150;
+    private final ResourceLocation atlas;
+    private final int machineIconV;
 
-    protected static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AE2LightningTech.MODID, "textures/guis/multiblock_controller.png");
+    protected MultiblockControllerScreen(T menu, Inventory inventory, Component title, String atlasName, int machineIconV) {
+        super(menu, inventory, title);
+        atlas = ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/" + atlasName + ".png");
+        this.machineIconV = machineIconV;
+        imageWidth = 186;
+        imageHeight = 220;
+    }
 
-    // Texture regions: title 2-14, status recess 18-34, divider 36-46, body recess 50-132, footer 134-162
-    protected static final int TEXT_X = 12;
-    protected static final int VALUE_RIGHT = 197;
-    protected static final int TITLE_Y = 5;
-    protected static final int STATUS_TEXT_Y = 22;
-    protected static final int ROW_Y = 56;
-    protected static final int LINE_H = 13;
-    protected static final int HINT_GAP = 17;
-    protected static final int FOOTER_ROW_Y = 138;
-    protected static final int FOOTER_MID_Y = 144;
-
-    protected static final int COL_TITLE = 0x2A2E3F;
-    protected static final int COL_LABEL = 0x4E5370;
-    protected static final int COL_VALUE = 0x14161F;
-    protected static final int COL_MUTED = 0x565C78;
-    protected static final int COL_GREEN = 0x1C6B34;
-    protected static final int COL_AMBER = 0x7A5E14;
-    protected static final int COL_RED = 0x8F2B23;
-    protected static final int COL_BLUE = 0x1F4E79;
-
-    protected MultiblockControllerScreen(T menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        imageWidth = 209;
-        imageHeight = 167;
-        inventoryLabelY = 10_000;
-        titleLabelY = 10_000;
+    protected static int textColor() {
+        return AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR);
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(atlas, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderTooltip(guiGraphics, mouseX, mouseY);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
     }
 
-    protected void drawTitle(GuiGraphics guiGraphics) {
-        guiGraphics.drawString(font, title, TEXT_X - 4, TITLE_Y, COL_TITLE, false);
-    }
-
-    /** Status strip line with an indicator dot, inside the upper recess. */
-    protected void drawStatus(GuiGraphics guiGraphics, Component text, int color) {
-        guiGraphics.fill(TEXT_X, 24, TEXT_X + 4, 28, 0xFF000000 | color);
-        guiGraphics.drawString(font, text, TEXT_X + 8, STATUS_TEXT_Y, color, false);
-    }
-
-    /** Data row: label on the left, value right-aligned. */
-    protected void drawRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
-        guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y, valueColor, false);
-    }
-
-    /** A longer summary uses a second line so translated labels never overlap its value. */
-    protected void drawStackedRow(GuiGraphics guiGraphics, int y, Component label, String value, int valueColor) {
-        guiGraphics.drawString(font, label, TEXT_X, y, COL_LABEL, false);
-        guiGraphics.drawString(font, value, VALUE_RIGHT - font.width(value), y + LINE_H, valueColor, false);
-    }
-
-    /** Word-wrapped issue text at the top of the body recess, with a muted hint below. */
-    protected void drawUnformed(GuiGraphics guiGraphics, Component issue, String hintKey) {
-        int y = ROW_Y;
-        for (var line : font.split(issue, VALUE_RIGHT - TEXT_X)) {
-            guiGraphics.drawString(font, line, TEXT_X, y, COL_RED, false);
-            y += 11;
+    protected void drawHeader(GuiGraphics graphics, ComputeTier tier, Block core, Component name, boolean formed, boolean warning) {
+        text(graphics, title.getString(), 28, 8, 145);
+        if (tier != null && core != null) {
+            int frameV = switch (tier) {
+                case BASELINE -> 105;
+                case QUANTUM -> 71;
+                case OVERLOAD -> 37;
+                case MULTIDIMENSIONAL -> 3;
+            };
+            graphics.blit(atlas, 20, 36, 188, frameV, 22, 32, 256, 256);
+            var sprite = minecraft.getBlockRenderer().getBlockModelShaper().getParticleIcon(core.defaultBlockState());
+            graphics.blit(23, 44, 0, 16, 16, sprite);
         }
-        guiGraphics.drawString(font, Component.translatable(hintKey),
-                TEXT_X, y - 11 + HINT_GAP, COL_MUTED, false);
+        graphics.blit(atlas, 110, 44, 215, machineIconV, 16, 16, 256, 256);
+        graphics.blit(atlas, 56, 56, 216, !formed ? 40 : warning ? 50 : 60, 8, 8, 256, 256);
+        text(graphics, name.getString(), 55, 42, 46);
+        String state = !formed ? "unformed" : warning ? "warning" : "ready";
+        text(graphics, Component.translatable("ae2lt.controller." + state).getString(), 67, 56, 35);
     }
 
-    /** Footer gauge: recessed frame, quarter ticks, beveled fill; markLo/markHi < 0 hides the target zone. */
-    protected void drawGauge(GuiGraphics guiGraphics, double fill, int fillColor,
-            double markLo, double markHi) {
-        int x0 = TEXT_X, y0 = 149, w = VALUE_RIGHT - TEXT_X, h = 10;
-
-        // frame in the texture's recess style: dark top/left, white bottom/right
-        guiGraphics.fill(x0 - 1, y0 - 1, x0 + w + 1, y0, 0xFF696D88);
-        guiGraphics.fill(x0 - 1, y0 - 1, x0, y0 + h + 1, 0xFF696D88);
-        guiGraphics.fill(x0 - 1, y0 + h, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
-        guiGraphics.fill(x0 + w, y0, x0 + w + 1, y0 + h + 1, 0xFFF2F2F2);
-
-        // well with quarter ticks, matching the texture's recess tone
-        guiGraphics.fill(x0, y0, x0 + w, y0 + h, 0xFF9A9FB4);
-        for (int i = 1; i < 4; i++) {
-            int tx = x0 + w * i / 4;
-            guiGraphics.fill(tx, y0, tx + 1, y0 + h, 0xFF868BA4);
-        }
-
-        // target-zone bed, visible until covered by the fill
-        int lo = x0 + (int) Math.round(w * markLo);
-        int hi = x0 + (int) Math.round(w * markHi);
-        if (markLo >= 0.0D) {
-            guiGraphics.fill(lo, y0, hi, y0 + h, 0xFF79A186);
-        }
-
-        // beveled fill: highlight / body / shade
-        int fw = Math.max(0, Math.min(w, (int) Math.round(w * fill)));
-        if (fw > 0) {
-            guiGraphics.fill(x0, y0, x0 + fw, y0 + 1, mix(fillColor, 0xFFFFFF, 0.45D));
-            guiGraphics.fill(x0, y0 + 1, x0 + fw, y0 + h - 1, fillColor);
-            guiGraphics.fill(x0, y0 + h - 1, x0 + fw, y0 + h, mix(fillColor, 0x000000, 0.30D));
-        }
-
-        // target-zone boundary pins, always on top
-        if (markLo >= 0.0D) {
-            guiGraphics.fill(lo, y0, lo + 1, y0 + h, 0xFFF2F2F2);
-            guiGraphics.fill(hi - 1, y0, hi, y0 + h, 0xFFF2F2F2);
+    protected void metric(GuiGraphics graphics, int row, String label, String value, double fraction, int barV) {
+        int offset = row * 39;
+        text(graphics, Component.translatable(label).getString(), 31, 82 + offset, 136);
+        int valueWidth = Math.min(150, font.width(value));
+        text(graphics, value, 168 - valueWidth, 94 + offset, 150);
+        int barY = 104 + offset;
+        if (fraction == Double.POSITIVE_INFINITY) {
+            for (int start = 0; start < BAR_WIDTH; start += 12) {
+                graphics.blit(atlas, 18 + start, barY, 1 + start, barV, Math.min(6, BAR_WIDTH - start), 5, 256, 256);
+            }
+        } else if (fraction > 0) {
+            int width = Math.clamp(Math.round(BAR_WIDTH * fraction), 1, BAR_WIDTH);
+            graphics.blit(atlas, 18, barY, 1, barV, width, 5, 256, 256);
         }
     }
 
-    private static int mix(int color, int target, double k) {
-        int r = (int) Math.round(((color >> 16) & 0xFF) * (1.0D - k) + ((target >> 16) & 0xFF) * k);
-        int g = (int) Math.round(((color >> 8) & 0xFF) * (1.0D - k) + ((target >> 8) & 0xFF) * k);
-        int b = (int) Math.round((color & 0xFF) * (1.0D - k) + (target & 0xFF) * k);
-        return 0xFF000000 | r << 16 | g << 8 | b;
+    protected void markHeatRange(GuiGraphics graphics, double low, double high) {
+        for (double edge : new double[] {low, high}) {
+            int marker = 18 + (int) Math.round(BAR_WIDTH * edge);
+            graphics.fill(marker, 103, marker + 1, 110, 0xFFF2F2F2);
+        }
+    }
+
+    protected void text(GuiGraphics graphics, String value, int x, int y, int width) {
+        float scale = Math.min(1F, (float) width / Math.max(1, font.width(value)));
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(scale, scale, 1F);
+        graphics.drawString(font, value, 0, 0, textColor(), false);
+        graphics.pose().popPose();
+    }
+
+protected void drawUnformed(GuiGraphics graphics, Component issue) {
+        var lines = font.split(issue, 135);
+        int linesPerPanel = Math.max(2, Math.ceilDiv(lines.size(), 3));
+        float step = 21F / linesPerPanel;
+        float scale = Math.min(1F, step / font.lineHeight);
+        for (int index = 0; index < lines.size(); index++) {
+            float y = 82 + (index / linesPerPanel) * 39 + (index % linesPerPanel) * step;
+            graphics.pose().pushPose();
+            graphics.pose().translate(31, y, 0);
+            graphics.pose().scale(scale, scale, 1F);
+            graphics.drawString(font, lines.get(index), 0, 0, textColor(), false);
+            graphics.pose().popPose();
+        }
+        text(graphics, Component.translatable("ae2lt.matrix.gui.hint_unformed").getString(), 16, 195, 154);
     }
 
     protected static String formatCount(long value) {
-        return value == Long.MAX_VALUE || value == Integer.MAX_VALUE
-                ? "∞" : String.format(Locale.ROOT, "%,d", value);
+        return value == Long.MAX_VALUE ? "∞" : String.format(Locale.ROOT, "%,d", value);
     }
 
     protected static String percent(double value) {

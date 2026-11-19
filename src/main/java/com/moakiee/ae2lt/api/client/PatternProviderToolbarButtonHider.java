@@ -54,7 +54,8 @@ public final class PatternProviderToolbarButtonHider {
         return previousSize - buttons.size();
     }
 
-    private static boolean shouldHideToolbarButton(Object button) {
+    /** The same compatibility predicate used by AE2LT's toolbar, without modifying the list. */
+    public static boolean shouldHideToolbarButton(Object button) {
         if (button == null) {
             return false;
         }

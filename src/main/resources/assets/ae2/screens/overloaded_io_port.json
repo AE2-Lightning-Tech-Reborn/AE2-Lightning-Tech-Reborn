@@ -15,6 +15,11 @@
     ]
   },
   "slots": {
+    "TOOLBOX": {
+      "bottom": 60,
+      "right": 1,
+      "grid": "BREAK_AFTER_3COLS"
+    },
     "AE2LT_OVERLOADED_IO_FILTER": {
       "left": 66,
       "top": 53
@@ -52,6 +57,12 @@
     }
   },
   "widgets": {
+    "toolbox": {
+      "right": 2,
+      "bottom": 66,
+      "width": 59,
+      "height": 66
+    },
     "operationMode": {
       "left": 80,
       "top": 17

@@ -1,9 +1,11 @@
 package com.moakiee.ae2lt.logic.transfer;
 
 import appeng.api.config.Actionable;
+import appeng.api.networking.energy.IEnergySource;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.storage.MEStorage;
+import appeng.api.storage.StorageHelper;
 
 /** One native storage batch. Work never scales with the number of items or buckets. */
 public final class OverloadedIOTransfer {
@@ -14,21 +16,24 @@ public final class OverloadedIOTransfer {
     private static final Result NO_POWER = new Result(0, 0, true);
 
     public static Result move(MEStorage source, MEStorage destination, AEKey key,
-                              IActionSource actionSource, java.util.function.BooleanSupplier pay) {
-        return move(source, destination, key, actionSource, pay, Long.MAX_VALUE);
+                              IActionSource actionSource, IEnergySource energy) {
+        return move(source, destination, key, actionSource, energy, Long.MAX_VALUE);
     }
 
     public static Result move(MEStorage source, MEStorage destination, AEKey key,
-                              IActionSource actionSource, java.util.function.BooleanSupplier pay, long cap) {
+                              IActionSource actionSource, IEnergySource energy, long cap) {
         if (cap <= 0) return NONE;
         long available = source.extract(key, cap, Actionable.SIMULATE, actionSource);
         if (available <= 0) return NONE;
         long accepted = destination.insert(key, available, Actionable.SIMULATE, actionSource);
         if (accepted <= 0) return NONE;
-        if (!pay.getAsBoolean()) return NO_POWER;
-        long extracted = source.extract(key, Math.min(available, accepted), Actionable.MODULATE, actionSource);
+        // Match ExtendedAE's inherited AE2 IO-port pricing, including partial power and rounding.
+        long affordable = StorageHelper.poweredInsert(energy, destination, key, Math.min(available, accepted),
+                actionSource, Actionable.SIMULATE);
+        if (affordable <= 0) return NO_POWER;
+        long extracted = source.extract(key, affordable, Actionable.MODULATE, actionSource);
         if (extracted <= 0) return NONE;
-        long inserted = destination.insert(key, extracted, Actionable.MODULATE, actionSource);
+        long inserted = StorageHelper.poweredInsert(energy, destination, key, extracted, actionSource);
         long remainder = extracted - inserted;
         if (remainder > 0) remainder -= source.insert(key, remainder, Actionable.MODULATE, actionSource);
         return new Result(inserted, remainder, false);

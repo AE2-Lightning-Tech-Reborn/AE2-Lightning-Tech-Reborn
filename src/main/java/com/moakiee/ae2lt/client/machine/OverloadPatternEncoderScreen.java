@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client.machine;
 
+import appeng.client.gui.style.PaletteColor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.OverloadPatternEncoderMenu;
 import com.moakiee.ae2lt.overload.runtime.model.MatchMode;
+import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 /**
  * Client-side screen for the overload pattern encoder.
@@ -91,8 +93,8 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, SCREEN_TITLE, 8, 6, 0x404040, false);
-        graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
+        graphics.drawString(font, SCREEN_TITLE, 8, 6, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
+        graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
     }
 
     @Override
@@ -168,7 +170,7 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         graphics.renderItem(entry.stack(), slotX + 1, contentY + 1);
         graphics.renderItemDecorations(font, entry.stack(), slotX + 1, contentY + 1);
 
-        graphics.drawString(font, entryLabel(entry), textX, contentY + 5, 0x404040, false);
+        graphics.drawString(font, entryLabel(entry), textX, contentY + 5, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
 
         renderModeSwitch(graphics, switchX, contentY + 3, entry.mode());
     }

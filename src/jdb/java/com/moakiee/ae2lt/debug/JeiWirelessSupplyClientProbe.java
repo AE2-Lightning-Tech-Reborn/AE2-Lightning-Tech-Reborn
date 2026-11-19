@@ -18,7 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.common.Internal;
-import mezz.jei.common.transfer.RecipeTransferService;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -110,22 +109,47 @@ public final class JeiWirelessSupplyClientProbe {
     private static boolean preview() {
         var mc = Minecraft.getInstance();
         var before = WirelessJeiInventoryPlan.copy(mc.player.getInventory().items);
-        var error = transferService().getTransferRecipeError(containerScreen(mc), layout, mc.player);
+        @SuppressWarnings("unchecked")
+        var error = (java.util.Optional<mezz.jei.api.recipe.transfer.IRecipeTransferError>) transfer("getTransferRecipeError");
         check(java.util.stream.IntStream.range(0, 36).allMatch(i -> ItemStack.matches(before.get(i), mc.player.getInventory().getItem(i))),
                 "JEI client preview must restore every stack");
         return error.isEmpty() || error.get().getType().allowsTransfer;
     }
     private static void fill(boolean maximum) {
         var mc = Minecraft.getInstance();
-        var service = transferService();
-        var screen = containerScreen(mc);
-        boolean transferred = service.transferRecipe(screen, layout, mc.player, maximum);
+        boolean transferred = (boolean) transfer("transferRecipe", maximum);
         check(!transferred, "wireless refill waits for server before normal JEI transfer");
-        check(!service.transferRecipe(screen, layout, mc.player, maximum), "rapid second click remains pending");
+        check(!(boolean) transfer("transferRecipe", maximum), "rapid second click remains pending");
         delay = 30; timeout = 0; phase++;
     }
-    private static RecipeTransferService transferService() {
-        return new RecipeTransferService(Internal.getJeiRuntime().getRecipeTransferManager());
+    private static Object transfer(String method, boolean... maximum) {
+        var mc = Minecraft.getInstance();
+        var manager = Internal.getJeiRuntime().getRecipeTransferManager();
+        var types = new java.util.ArrayList<Class<?>>();
+        var args = new java.util.ArrayList<Object>();
+        try {
+            Class<?> entry;
+            Object service;
+            try {
+                entry = Class.forName("mezz.jei.common.transfer.RecipeTransferService");
+                service = entry.getConstructor(mezz.jei.api.recipe.transfer.IRecipeTransferManager.class).newInstance(manager);
+                types.add(AbstractContainerScreen.class);
+                args.add(containerScreen(mc));
+            } catch (ClassNotFoundException legacy) {
+                entry = Class.forName("mezz.jei.common.transfer.RecipeTransferUtil");
+                service = null;
+                types.add(mezz.jei.api.recipe.transfer.IRecipeTransferManager.class);
+                args.add(manager);
+                types.add(net.minecraft.world.inventory.AbstractContainerMenu.class);
+                args.add(mc.player.containerMenu);
+            }
+            types.add(IRecipeLayoutDrawable.class); args.add(layout);
+            types.add(net.minecraft.world.entity.player.Player.class); args.add(mc.player);
+            if (maximum.length > 0) { types.add(boolean.class); args.add(maximum[0]); }
+            return entry.getMethod(method, types.toArray(Class<?>[]::new)).invoke(service, args.toArray());
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("Cannot invoke JEI transfer probe", error);
+        }
     }
 
     private static AbstractContainerScreen<?> containerScreen(Minecraft minecraft) {

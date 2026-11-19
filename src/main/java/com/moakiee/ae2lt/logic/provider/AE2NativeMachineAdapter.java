@@ -14,12 +14,14 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import appeng.api.AECapabilities;
 import appeng.api.behaviors.ExternalStorageStrategy;
+import appeng.api.behaviors.GenericInternalInventory;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.ICraftingMachine;
@@ -34,7 +36,11 @@ import appeng.parts.automation.StackWorldBehaviors;
 
 import com.google.common.util.concurrent.Runnables;
 
+import com.moakiee.ae2lt.integration.mekanism.MekanismOutputChemicalStorage;
+import com.moakiee.ae2lt.integration.mekanism.MekanismOutputFluidHandler;
 import com.moakiee.ae2lt.integration.mekanism.MekanismOutputItemHandler;
+import com.moakiee.ae2lt.integration.industrialforegoing.IndustrialForegoingOutputFluidHandler;
+import com.moakiee.ae2lt.integration.industrialforegoing.IndustrialForegoingOutputItemHandler;
 
 /**
  * Built-in fallback {@link MachineAdapter} that handles any target reachable
@@ -60,6 +66,10 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
      * don't trigger a block-entity swap (rare, but some mods do this).
      */
     private static final int WRAPPER_REFRESH_TICKS = 20;
+
+    /** Applied Mekanistics chemical key type; compared by id so appmek stays optional. */
+    private static final ResourceLocation MEKANISM_CHEMICAL_KEY_TYPE =
+            ResourceLocation.fromNamespaceAndPath("appmek", "chemical");
 
     private final Map<TargetFaceKey, StorageCacheEntry> storageCache = new HashMap<>();
 
@@ -94,6 +104,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
         private final Direction face;
         private Map<AEKeyType, MEStorage> wrappers;
         private long wrapperCreatedTick;
+        private boolean adapted;
 
         StorageCacheEntry(BlockEntity be, Map<AEKeyType, ExternalStorageStrategy> strategies,
                           Direction face) {
@@ -111,23 +122,42 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
          * The map is never empty when non-null.
          */
         @Nullable
-        Map<AEKeyType, MEStorage> getWrappers(long gameTick) {
-            if (wrappers == null || gameTick - wrapperCreatedTick >= WRAPPER_REFRESH_TICKS) {
-                rebuildWrappers(gameTick);
+        Map<AEKeyType, MEStorage> getWrappers(long gameTick, boolean machineAdaptationEnabled) {
+            if (wrappers == null || adapted != machineAdaptationEnabled
+                    || gameTick - wrapperCreatedTick >= WRAPPER_REFRESH_TICKS) {
+                rebuildWrappers(gameTick, machineAdaptationEnabled);
             }
             return wrappers;
         }
 
-        private void rebuildWrappers(long gameTick) {
+        private void rebuildWrappers(long gameTick, boolean machineAdaptationEnabled) {
+            adapted = machineAdaptationEnabled;
             var map = new IdentityHashMap<AEKeyType, MEStorage>(strategies.size());
             for (var entry : strategies.entrySet()) {
                 var wrapper = entry.getValue().createWrapper(false, Runnables.doNothing());
                 var blockEntity = blockEntityRef.get();
-                if (wrapper != null && entry.getKey() == AEKeyType.items()
-                        && blockEntity != null
+                if (machineAdaptationEnabled && wrapper != null && blockEntity != null
                         && net.neoforged.fml.ModList.get() != null
                         && net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
-                    wrapper = MekanismOutputItemHandler.restrict(blockEntity, face, wrapper);
+                    if (entry.getKey() == AEKeyType.items()) {
+                        wrapper = MekanismOutputItemHandler.restrict(blockEntity, face, wrapper);
+                    } else if (entry.getKey() == AEKeyType.fluids()) {
+                        wrapper = MekanismOutputFluidHandler.restrict(blockEntity, face, wrapper);
+                    } else if (MEKANISM_CHEMICAL_KEY_TYPE.equals(entry.getKey().getId())) {
+                        // Mekanism registers secondary/extra chemical tanks (purification,
+                        // injection, compressing, infusing) as OUTPUT too; keep them in.
+                        wrapper = MekanismOutputChemicalStorage.restrict(blockEntity, face, wrapper);
+                    }
+                }
+                if (machineAdaptationEnabled && wrapper != null
+                        && (entry.getKey() == AEKeyType.fluids() || entry.getKey() == AEKeyType.items())
+                        && blockEntity != null
+                        && net.neoforged.fml.ModList.get() != null
+                        && net.neoforged.fml.ModList.get().isLoaded("industrialforegoing")
+                        && net.neoforged.fml.ModList.get().isLoaded("titanium")) {
+                    wrapper = entry.getKey() == AEKeyType.items()
+                            ? IndustrialForegoingOutputItemHandler.restrict(blockEntity, face, wrapper)
+                            : IndustrialForegoingOutputFluidHandler.restrict(blockEntity, face, wrapper);
                 }
                 if (wrapper != null) {
                     map.put(entry.getKey(), wrapper);
@@ -195,6 +225,34 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
     public boolean supportsBatch(
             ServerLevel level, BlockPos pos, Direction face, IPatternDetails pattern) {
         return ICraftingMachine.of(level, pos, face) == null;
+    }
+
+    @Override
+    public boolean hasUnboundedInputCapacity(
+            ServerLevel level, BlockPos pos, Direction face, KeyCounter[] inputs) {
+        if (!level.isLoaded(pos) || ICraftingMachine.of(level, pos, face) != null) return false;
+        return hasUnboundedInputCapacity(level.getCapability(AECapabilities.ME_STORAGE, pos, face), inputs);
+    }
+
+    static boolean hasUnboundedInputCapacity(@Nullable MEStorage storage, KeyCounter[] inputs) {
+        if (!(storage instanceof GenericInternalInventory inventory) || !inventory.canInsert()) return false;
+        var assigned = new java.util.HashSet<Integer>();
+        var keys = new java.util.HashSet<AEKey>();
+        for (var counter : inputs) for (var entry : counter) {
+            if (entry.getLongValue() <= 0L || !keys.add(entry.getKey())) continue;
+            var key = entry.getKey();
+            if (inventory.getMaxAmount(key) != Long.MAX_VALUE) return false;
+            int selected = -1;
+            for (int slot = 0; slot < inventory.size(); slot++) {
+                if (assigned.contains(slot) || !inventory.isAllowedIn(slot, key)) continue;
+                var stored = inventory.getKey(slot);
+                if (key.equals(stored)) { selected = slot; break; }
+                if (stored == null && selected < 0) selected = slot;
+            }
+            if (selected < 0) return false;
+            assigned.add(selected);
+        }
+        return !keys.isEmpty();
     }
 
     // ---- pushCopies -------------------------------------------------------------
@@ -335,6 +393,14 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
             AllowedOutputFilter allowedOutputs,
             IActionSource source,
             OutputSink sink) {
+        return extractOutputs(level, pos, face, allowedOutputs, source, sink, true);
+    }
+
+    @Override
+    public OutputReturnResult extractOutputs(
+            ServerLevel level, BlockPos pos, Direction face,
+            AllowedOutputFilter allowedOutputs, IActionSource source, OutputSink sink,
+            boolean machineAdaptationEnabled) {
         // Match PatternProviderTarget's resolution order: a native MEStorage
         // capability is the authoritative target. Only adapt platform item/fluid
         // capabilities when no native storage exists. Scanning both could extract
@@ -342,7 +408,7 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
         var directStorage = resolveDirectStorage(level, pos, face);
         var storages = preferredExtractionStorages(
                 directStorage,
-                () -> resolveExternalStorages(level, pos, face));
+                () -> resolveExternalStorages(level, pos, face, machineAdaptationEnabled));
         return extractOutputsFromStorages(
                 storages, allowedOutputs, source, sink);
     }
@@ -439,12 +505,12 @@ final class AE2NativeMachineAdapter implements MachineAdapter {
     }
 
     private List<MEStorage> resolveExternalStorages(
-            ServerLevel level, BlockPos pos, Direction face) {
+            ServerLevel level, BlockPos pos, Direction face, boolean machineAdaptationEnabled) {
         var cached = resolveCache(level, pos, face);
         if (cached == null) {
             return List.of();
         }
-        var wrappers = cached.getWrappers(level.getGameTime());
+        var wrappers = cached.getWrappers(level.getGameTime(), machineAdaptationEnabled);
         return wrappers == null ? List.of() : List.copyOf(wrappers.values());
     }
 

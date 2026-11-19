@@ -3,6 +3,7 @@ package com.moakiee.ae2lt.debug;
 import java.util.*;
 import java.util.function.Consumer;
 import appeng.api.config.*;
+import appeng.api.networking.energy.IEnergySource;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.*;
 import appeng.api.storage.*;
@@ -46,6 +47,18 @@ public final class OverloadedIOPortGameTests {
     private static final AEKey STONE = AEItemKey.of(Items.STONE);
     private static final IActionSource SOURCE = IActionSource.empty();
     private static final long BASE_CAP = 8_388_608L;
+    private static final IEnergySource UNLIMITED_POWER = (amount, mode, multiplier) -> amount;
+
+    private static final class TestEnergy implements IEnergySource {
+        double stored;
+        int payments;
+        TestEnergy(double stored) { this.stored = stored; }
+        @Override public double extractAEPower(double amount, Actionable mode, PowerMultiplier multiplier) {
+            double extracted = Math.min(stored, multiplier.multiply(amount));
+            if (mode == Actionable.MODULATE) { stored -= extracted; payments++; }
+            return multiplier.divide(extracted);
+        }
+    }
 
     static final class Store implements StorageCell {
         final Map<AEKey,Long> amounts = new LinkedHashMap<>();
@@ -249,7 +262,8 @@ public final class OverloadedIOPortGameTests {
             be.getFilterInventory().setItemDirect(0,filter(true,false,STONE));
             be.getInternalInventory().setItemDirect(0,cell(destination));tick(be);
             h.assertTrue(destination.amounts.getOrDefault(dirt,0L)==2000 && !destination.amounts.containsKey(STONE),"blacklist applies to network-to-cell transfers immediately");
-            h.assertTrue(network.amounts.get(STONE)==1000 && destination.probes==1,"ignored keys do not spend the attempt budget");
+            h.assertTrue(network.amounts.get(STONE)==1000 && destination.probes==3 && be.getLastBatches()==1,
+                    "only the permitted key is probed for storage and power and spends a batch");
             h.assertTrue(!be.getInternalInventory().getStackInSlot(0).isEmpty(),"filtered completion does not mean physically full");h.succeed();
         });
     }
@@ -372,34 +386,61 @@ public final class OverloadedIOPortGameTests {
     @GameTest(template="pigmee_station_empty")
     public static void trillionItemsOneBatch(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,1_000_000_000_000L);
-        int[] payments={0};var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{payments[0]++;return true;});
+        var energy=new TestEnergy(1_000_000_000_000L);
+        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,energy);
         h.assertTrue(result.inserted()==1_000_000_000_000L && result.remainder()==0,"no item-count throttle");
         h.assertTrue(from.amounts.isEmpty()&&to.amounts.get(STONE)==result.inserted(),"exact conservation");
-        h.assertTrue(from.extractCalls==2&&to.insertCalls==2&&payments[0]==1,"constant calls and one power payment");h.succeed();
+        h.assertTrue(from.extractCalls==2&&to.insertCalls==4&&energy.payments==1&&energy.stored==0,
+                "constant storage calls and quantity-based power payment");h.succeed();
     }
     @GameTest(template="pigmee_station_empty")
     public static void nativeLongLimitDoesNotOverflow(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,Long.MAX_VALUE);
-        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
+        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,UNLIMITED_POWER);
         h.assertTrue(r.inserted()==Long.MAX_VALUE&&from.amounts.isEmpty()&&to.amounts.get(STONE)==Long.MAX_VALUE,"exact native long batch");h.succeed();
     }
     @GameTest(template="pigmee_station_empty")
     public static void partialCapacityAndRollback(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,1000L);to.capacity=37;
-        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
+        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,UNLIMITED_POWER);
         h.assertTrue(r.inserted()==37&&from.amounts.get(STONE)==963&&to.amounts.get(STONE)==37,"capacity bound before extraction");
-        to.amounts.clear();to.rejectActual=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
+        to.amounts.clear();to.rejectActual=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,UNLIMITED_POWER);
         h.assertTrue(r.inserted()==0&&r.remainder()==0&&from.amounts.get(STONE)==963,"sim/actual mismatch refunded");
-        from.rejectRefund=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true);
+        from.rejectRefund=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,UNLIMITED_POWER);
         h.assertTrue(r.remainder()==37&&from.amounts.get(STONE)==926,"unrefundable remainder remains owned");h.succeed();
     }
     @GameTest(template="pigmee_station_empty")
     public static void deniedExtractionAndInsufficientPowerDoNotMove(GameTestHelper h) {
         var from=new Store();var to=new Store();from.amounts.put(STONE,999L);from.extract=false;
-        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{throw new AssertionError("paid for denied extraction");});
+        var r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,(amount,mode,multiplier)->{throw new AssertionError("paid for denied extraction");});
         h.assertTrue(r.inserted()==0&&to.amounts.isEmpty(),"extraction permissions honored");
-        from.extract=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->false);
-        h.assertTrue(from.amounts.get(STONE)==999&&to.amounts.isEmpty(),"no power means no mutation");h.succeed();
+        from.extract=true;r=OverloadedIOTransfer.move(from,to,STONE,SOURCE,IEnergySource.empty());
+        h.assertTrue(r.powerBlocked()&&from.extractCalls==2&&from.amounts.get(STONE)==999&&to.amounts.isEmpty(),
+                "no power means no mutation");h.succeed();
+    }
+    @GameTest(template="pigmee_station_empty")
+    public static void transferPowerMatchesAe2PoweredInsertAcrossResourceTypes(GameTestHelper h) {
+        AEKey[] keys={STONE,AEFluidKey.of(Fluids.WATER),LightningKey.HIGH_VOLTAGE};
+        for (var key:keys) {
+            for (long amount:new long[]{1,125,1000,1_000_000_000_000L}) {
+                for (double budget:new double[]{0,0.05,0.2,1,7.5,25,1000}) {
+                    var expected=new Store();var referenceEnergy=new TestEnergy(budget);
+                    long expectedAmount=StorageHelper.poweredInsert(referenceEnergy,expected,key,amount,SOURCE);
+                    var from=new Store();from.amounts.put(key,amount);var to=new Store();var energy=new TestEnergy(budget);
+                    var result=OverloadedIOTransfer.move(from,to,key,SOURCE,energy);
+                    h.assertTrue(result.inserted()==expectedAmount && result.remainder()==0
+                                    && to.amounts.getOrDefault(key,0L)==expectedAmount
+                                    && from.amounts.getOrDefault(key,0L)==amount-expectedAmount
+                                    && Math.abs(energy.stored-referenceEnergy.stored)<1e-6,
+                            "AE2 power/rounding parity for "+key+", amount="+amount+", budget="+budget);
+                }
+            }
+        }
+        var from=new Store();var to=new Store();from.amounts.put(STONE,1000L);to.insert=false;
+        var energy=new TestEnergy(1000);
+        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,energy);
+        h.assertTrue(!result.powerBlocked()&&from.amounts.get(STONE)==1000&&energy.stored==1000
+                &&energy.payments==0,"rejected storage does not consume power or report power loss");h.succeed();
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
     public static void actualItemCellAndDriveTransferAndPersist(GameTestHelper h) {
@@ -611,24 +652,27 @@ public final class OverloadedIOPortGameTests {
         });
     }
     @GameTest(template="pigmee_station_empty",timeoutTicks=160)
-    public static void nativeEnergyChargeIsPerBatchAndPreservesIdleReserve(GameTestHelper h) {
+    public static void nativeEnergyChargeMatchesExtendedIoAndLimitsPartialTransfers(GameTestHelper h) {
         h.setBlock(POS,ModBlocks.OVERLOADED_IO_PORT.get());h.setBlock(POS.below(),AEBlocks.ENERGY_CELL.block());
         var battery=(appeng.blockentity.networking.EnergyCellBlockEntity)h.getBlockEntity(POS.below());
         battery.injectAEPower(10000,Actionable.MODULATE);
         OverloadedIOPortBlockEntity be=h.getBlockEntity(POS);
         h.startSequence().thenWaitUntil(()->h.assertTrue(be.getMainNode().isActive(),"finite energy network boots"))
                 .thenExecute(()->{
-                    var target=new Store();mount(be,target);var from=new Store();from.amounts.put(STONE,1_000_000_000_000L);
+                    h.assertTrue(be.getMainNode().getNode().getIdlePowerUsage()==1,"Extended IO idle drain is 1 AE/t");
+                    var target=new Store();mount(be,target);var from=new Store();from.amounts.put(STONE,1000L);
                     be.getMatrixInventory().setItemDirect(0,new ItemStack(ModItems.LIGHTNING_COLLAPSE_MATRIX.get(),8));
                     var energy=be.getMainNode().getGrid().getEnergyService();double before=energy.getStoredPower();
                     be.getInternalInventory().setItemDirect(0,cell(from));tick(be);
-                    h.assertTrue(Math.abs(before-energy.getStoredPower()-32)<0.0001,"trillion items costs exactly 32 AE");
-                    h.assertTrue(target.amounts.get(STONE)==1_000_000_000_000L,"finite energy can afford large batch");
-                    energy.extractAEPower(energy.getStoredPower()-20,Actionable.MODULATE,PowerMultiplier.ONE);
-                    var another=new Store();another.amounts.put(STONE,1000L);
-                    setMode(be,OperationMode.EMPTY,FullnessMode.HALF);be.getInternalInventory().setItemDirect(0,cell(another));
+                    h.assertTrue(Math.abs(before-energy.getStoredPower()-1000)<0.0001,"1000 items cost exactly 1000 AE");
+                    h.assertTrue(target.amounts.get(STONE)==1000L,"finite energy pays by quantity");
                     h.runAfterDelay(5,()->{
-                        tick(be);h.assertTrue(another.amounts.get(STONE)==1000&&!be.getInternalInventory().getStackInSlot(0).isEmpty(),"low power does not extract or eject HALF cell");h.succeed();
+                        energy.extractAEPower(energy.getStoredPower()-20,Actionable.MODULATE,PowerMultiplier.ONE);
+                        var another=new Store();another.amounts.put(STONE,1000L);
+                        setMode(be,OperationMode.EMPTY,FullnessMode.HALF);be.getInternalInventory().setItemDirect(0,cell(another));
+                        tick(be);
+                        h.assertTrue(another.amounts.get(STONE)==980&&target.amounts.get(STONE)==1020
+                                &&!be.getInternalInventory().getStackInSlot(0).isEmpty(),"low power moves only affordable items and retains HALF cell");h.succeed();
                     });
                 });
     }
@@ -788,12 +832,14 @@ public final class OverloadedIOPortGameTests {
     }
     @GameTest(template="pigmee_station_empty")
     public static void cappedTransferRollbackConservesRemainder(GameTestHelper h) {
-        var from=new Store();var to=new Store();from.amounts.put(STONE,20_000_000L);to.rejectActual=true;int[] paid={0};
-        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{paid[0]++;return true;},BASE_CAP);
-        h.assertTrue(result.inserted()==0 && result.remainder()==0 && from.amounts.get(STONE)==20_000_000 && paid[0]==1,"capped rejected insertion refunds the entire extracted batch");
-        from.rejectRefund=true;result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->true,BASE_CAP);
+        var from=new Store();var to=new Store();from.amounts.put(STONE,20_000_000L);to.rejectActual=true;
+        var energy=new TestEnergy(20_000_000);
+        var result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,energy,BASE_CAP);
+        h.assertTrue(result.inserted()==0 && result.remainder()==0 && from.amounts.get(STONE)==20_000_000
+                && energy.payments==1&&energy.stored==20_000_000-BASE_CAP,"capped rejected insertion refunds the entire extracted batch");
+        from.rejectRefund=true;result=OverloadedIOTransfer.move(from,to,STONE,SOURCE,UNLIMITED_POWER,BASE_CAP);
         h.assertTrue(result.remainder()==BASE_CAP && from.amounts.get(STONE)==20_000_000-BASE_CAP && to.amounts.isEmpty(),"unrefundable pending amount is capped and conserves total resources");
-        var noWork=OverloadedIOTransfer.move(from,to,STONE,SOURCE,()->{throw new AssertionError("zero cap must not charge");},0);
+        var noWork=OverloadedIOTransfer.move(from,to,STONE,SOURCE,(amount,mode,multiplier)->{throw new AssertionError("zero cap must not charge");},0);
         h.assertTrue(noWork.inserted()==0 && noWork.remainder()==0,"zero cap does no work");h.succeed();
     }
 

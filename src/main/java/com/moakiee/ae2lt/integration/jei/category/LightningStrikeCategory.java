@@ -41,12 +41,12 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
             RecipeType.create(AE2LightningTech.MODID, "lightning_strike", LightningStrikeRecipe.class);
 
     private static final int WIDTH = 178;
-    private static final int HEIGHT = 118;
+    private static final int HEIGHT = 110;
 
-    private static final int PREVIEW_X = 2;
+    private static final int PREVIEW_X = 4;
     private static final int PREVIEW_Y = 14;
-    private static final int PREVIEW_W = 100;
-    private static final int PREVIEW_H = 102;
+    private static final int PREVIEW_W = 96;
+    private static final int PREVIEW_H = 92;
 
     private static final int CENTER_INPUT_X = 104;
     private static final int CENTER_INPUT_Y = 14;

@@ -23,6 +23,7 @@ docs/*
 !docs/alpha-vs-main-2026-10-05.md
 !docs/io-simplification-20261015.md
 !docs/io-simplification-20261015.json
+!docs/provider-machine-adaptation.zh-CN.md
 
 # Bundled source mirrors / references
 Source Code/
@@ -50,7 +51,7 @@ logs/
 
 # Java
 *.class
-scripts/__pycache__/
+__pycache__/
 
 # Runtime / temporary files
 run/
@@ -86,3 +87,4 @@ run-cell-workbench-gametest/
 /run-pattern-migration-gametest/
 /run-pattern-migration-client/
 !docs/tianshu-pattern-migration.md
+!docs/tianshu-omniversal-tab-crash-2026-11-07.md

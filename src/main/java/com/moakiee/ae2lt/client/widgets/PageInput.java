@@ -1,26 +1,18 @@
 package com.moakiee.ae2lt.client.widgets;
 
+/** Compatibility entry point for shared paging input semantics. */
 public final class PageInput {
-    private PageInput() {
-    }
+    private PageInput() {}
 
     public static boolean handleScroll(double scrollY, Runnable previous, Runnable next) {
-        if (scrollY > 0) {
-            previous.run();
-            return true;
-        }
-        if (scrollY < 0) {
-            next.run();
-            return true;
-        }
-        return false;
+        return com.moakiee.ae2lt.api.client.PageInput.handleScroll(scrollY, previous, next);
     }
 
     public static boolean isNextClick(int button, boolean handlingRightClick) {
-        return button == 0 && !handlingRightClick;
+        return com.moakiee.ae2lt.api.client.PageInput.isNextClick(button, handlingRightClick);
     }
 
     public static boolean isPreviousClick(int button, boolean handlingRightClick) {
-        return button == 1 || handlingRightClick;
+        return com.moakiee.ae2lt.api.client.PageInput.isPreviousClick(button, handlingRightClick);
     }
 }

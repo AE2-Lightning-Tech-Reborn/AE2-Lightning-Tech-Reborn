@@ -1,6 +1,5 @@
 package com.moakiee.ae2lt.crafting.big;
 
-import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.*;

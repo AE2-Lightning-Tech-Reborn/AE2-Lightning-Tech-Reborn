@@ -7,6 +7,15 @@ public final class PhaseFlightPlayerState {
     private PhaseFlightPlayerState() {
     }
 
+    /**
+     * The client cache belongs to Minecraft.player, not every LocalPlayer subclass. Free cameras
+     * can share the real player's profile/UUID and report isLocalPlayer() without owning that cache.
+     * The client-only mixin supplies the identity check without loading client classes on a server.
+     */
+    public static boolean isLocalClientPlayer(Player player) {
+        return player instanceof ClientAccess access && access.ae2lt$isLocalClientPlayer();
+    }
+
     /** Starts controlling flight without changing the player's current vanilla flying intent. */
     public static void activate(Player player) {
         if (player instanceof Access access && !access.ae2lt$isPhaseFlightControlled()) {
@@ -107,6 +116,10 @@ public final class PhaseFlightPlayerState {
         } else if (player != null) {
             player.getAbilities().flying = flying;
         }
+    }
+
+    public interface ClientAccess {
+        boolean ae2lt$isLocalClientPlayer();
     }
 
     public interface Access {

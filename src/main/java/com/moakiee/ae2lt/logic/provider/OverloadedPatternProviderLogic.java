@@ -656,7 +656,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
                             result.outcome());
                 },
                 connection -> isConnectionAlive(connection, server),
-                connection -> connectionsDirty = true);
+                connection -> connectionsDirty = true,
+                connection -> {
+                    var targetLevel = server.getLevel(connection.dimension());
+                    return targetLevel != null && connection.hasUnboundedInputCapacity(targetLevel, oneCopyTemplate);
+                });
     }
 
     private BatchTargetDispatchResult tryPushBatchToConnection(
@@ -760,6 +764,7 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
                 patternHandle,
                 targetMaxCraft,
                 batchSupported,
+                context.target().hasUnboundedInputCapacity(context.level(), oneCopyTemplate),
                 () -> isBatchTargetBlocked(context, patternHandle),
                 copies -> pushBatchChunk(
                         context,
@@ -785,10 +790,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
                 context.level(), pattern);
         var result = context.target().pushPatternStep(
                 patternHandle,
-                maxCraft,
+                Math.min(maxCraft, context.target().batchCopyLimit(context.level())),
                 context.level().getGameTime(),
                 batchSupported,
                 preserveBatchHistoryOnRejection,
+                context.target().hasUnboundedInputCapacity(context.level(), oneCopyTemplate),
                 () -> isBatchTargetBlocked(context, patternHandle),
                 copies -> pushBatchChunk(
                         context,
@@ -820,8 +826,12 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
             return ProviderTarget.BatchChunk.REJECTED;
         }
 
-        double requestedCost = oneCopyCost * copies;
         var grid = gridNode.getGrid();
+        if (context.target().hasUnboundedInputCapacity(context.level(), oneCopyTemplate)) {
+            copies = PowerCostUtil.maxAffordableCopies(grid, oneCopyCost, copies);
+            if (copies <= 0) return ProviderTarget.BatchChunk.GLOBAL_ABORT;
+        }
+        double requestedCost = oneCopyCost * copies;
         if (!Double.isFinite(requestedCost)
                 || !PowerCostUtil.canAfford(grid, requestedCost)) {
             return ProviderTarget.BatchChunk.GLOBAL_ABORT;

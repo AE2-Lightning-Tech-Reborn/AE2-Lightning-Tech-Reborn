@@ -14,7 +14,7 @@ class FrequencyTerminalButtonSourceContractTest {
                 "src/main/java/com/moakiee/ae2lt/client/ae2wtlib/FrequencyTerminalButton.java"));
 
         assertTrue(source.contains("screen instanceof IUniversalTerminalCapable terminalScreen"));
-        assertTrue(source.contains("var host = terminalScreen.getHost()"));
+        assertTrue(source.contains("var host = findTerminalHost(screen)"));
         assertTrue(source.contains("host.getUpgrades()"));
         assertTrue(source.contains("upgrades.getStackInSlot(slot)"));
         assertFalse(source.contains("getSlots(SlotSemantics.UPGRADE)"));

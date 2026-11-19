@@ -40,7 +40,7 @@ The following blocks are placed by auto-build:
 | <ItemLink id="ae2lt:matter_warping_matrix_constraint_frame" /> | 132 |
 | <ItemLink id="ae2lt:matter_warping_matrix_glass" /> | 44 |
 | <ItemLink id="ae2lt:matter_warping_matrix_port" /> | 1 |
-| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" /> or <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> | 1–50 |
+| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" />, <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" />, or <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t3" /> | 1–50 |
 
 The minimum manual core configuration is:
 
@@ -62,7 +62,7 @@ These quantities apply when only the Controller has been placed and every other 
 | <ItemLink id="ae2lt:matter_warping_matrix_constraint_frame" /> | 132 | Includes the two Port candidates not used by the Port |
 | <ItemLink id="ae2lt:matter_warping_matrix_glass" /> | 44 | Fixed observation layer |
 | <ItemLink id="ae2lt:matter_warping_matrix_port" /> | 1 | Placed opposite the Controller unless a Port already exists |
-| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" /> or <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" /> | 1–50 | At least 1 is required; additional storages in the player inventory are inserted into empty bays, up to 50 |
+| <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t1" />, <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t2" />, or <ItemLink id="ae2lt:matter_warping_matrix_pattern_storage_t3" /> | 1–50 | At least 1 is required; additional storages in the player inventory are inserted into empty bays, up to 50 |
 
 The Controller is already in the world and is not consumed by the button. A complete structure also requires the following manually placed components:
 

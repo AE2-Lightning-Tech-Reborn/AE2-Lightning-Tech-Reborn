@@ -1,4 +1,10 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "appflux"
+    }
+  ],
   "type": "ae2lt:lightning_assembly",
   "priority": 0,
   "inputs": [
@@ -24,7 +30,19 @@
       "ingredient": {
         "item": "ae2lt:lightning_collapse_matrix"
       },
-      "count": 4
+      "count": 2
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:entangled_topological_lattice"
+      },
+      "count": 1
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:overloaded_power_supply"
+      },
+      "count": 1
     }
   ],
   "result": {

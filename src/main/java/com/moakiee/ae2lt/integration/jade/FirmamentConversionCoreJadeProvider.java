@@ -20,6 +20,9 @@ public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvi
     private static final String TAG_INACTIVE_CORE_OUTPUT = "InactiveCoreOutput";
     private static final String TAG_PROGRESS = "Progress";
     private static final String TAG_PROCESS_TIME = "ProcessTime";
+    private static final String TAG_ADVANCED = "Advanced";
+    private static final String TAG_BATCH_SIZE = "BatchSize";
+    private static final String TAG_INPUT_LIMIT = "InputLimit";
 
     @Override
     public ResourceLocation getUid() {
@@ -33,6 +36,9 @@ public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvi
             data.putBoolean(TAG_INACTIVE_CORE_OUTPUT, core.hasInactiveSpiritCoreOutput());
             data.putInt(TAG_PROGRESS, core.getProgress());
             data.putInt(TAG_PROCESS_TIME, core.getProcessTime());
+            data.putBoolean(TAG_ADVANCED, core.isAdvanced());
+            data.putInt(TAG_BATCH_SIZE, core.getBatchSize());
+            data.putInt(TAG_INPUT_LIMIT, core.getInventory().getSlotLimit(0));
         }
     }
 
@@ -51,6 +57,13 @@ public class FirmamentConversionCoreJadeProvider implements IBlockComponentProvi
         if (data.getBoolean(TAG_INACTIVE_CORE_OUTPUT)) {
             tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.inactive_core_output"));
         }
+        tooltip.add(Component.translatable(data.getBoolean(TAG_ADVANCED)
+                ? "jade.ae2lt.firmament_conversion_core.advanced"
+                : "jade.ae2lt.firmament_conversion_core.upgrade_hint"));
+        tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.capacity",
+                data.getInt(TAG_INPUT_LIMIT), 64));
+        tooltip.add(Component.translatable("jade.ae2lt.firmament_conversion_core.batch",
+                data.getInt(TAG_BATCH_SIZE)));
 
         int processTime = data.getInt(TAG_PROCESS_TIME);
         if (processTime <= 0) {

@@ -15,7 +15,7 @@ final class TianshuUploadSourceSelection {
         var recipeContext = TianshuRecipeTransferContext.snapshotFor(menu);
         if (!recipeContext.sourceKey().isBlank()) {
             return new Selection(
-                    recipeContext.sourceKey(), recipeContext.defaultAliases(), true);
+                    recipeContext.sourceKey(), recipeContext.defaultAliases(), true, recipeContext.machineIds());
         }
         // An encoded pattern does not retain its originating recipe type. Do not present its
         // primary output ID/name as recipe metadata: a manually inserted pattern must leave both
@@ -24,12 +24,16 @@ final class TianshuUploadSourceSelection {
     }
 
     record Selection(
-            String sourceKey, List<String> defaultAliases, boolean selectFirstDefault) {
+            String sourceKey, List<String> defaultAliases, boolean selectFirstDefault, List<String> machineIds) {
+        Selection(String sourceKey, List<String> defaultAliases, boolean selectFirstDefault) {
+            this(sourceKey, defaultAliases, selectFirstDefault, List.of());
+        }
         private static final Selection EMPTY = new Selection("", List.of(), false);
 
         Selection {
             sourceKey = sourceKey == null ? "" : sourceKey;
             defaultAliases = defaultAliases == null ? List.of() : List.copyOf(defaultAliases);
+            machineIds = machineIds == null ? List.of() : List.copyOf(machineIds);
         }
 
         String savedAlias() {

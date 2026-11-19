@@ -1,0 +1,13 @@
+// Apply after wireless-energy-test.init.gradle; this probe creates fixtures only in an isolated QA save.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/energy/RemoteDeviceClientProbe.java'])
+        neoForge.runs.create('remoteDeviceClient') {
+            client()
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('remoteDeviceClientDirectory').getOrElse('remote-device-client')).get().asFile
+            programArguments.addAll '--username', 'RemoteDeviceQA', '--quickPlaySingleplayer', 'RemoteDeviceQA'
+            systemProperty 'ae2lt.remoteDeviceClientProbe', 'true'
+            jvmArguments.add '-Xmx1536m'
+        }
+    }
+}

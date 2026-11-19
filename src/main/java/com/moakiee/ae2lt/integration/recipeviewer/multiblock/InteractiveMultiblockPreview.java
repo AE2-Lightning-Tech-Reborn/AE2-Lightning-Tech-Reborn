@@ -8,25 +8,29 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
-/**
- * Viewer-neutral, interactive orthographic 3D multiblock preview.
- *
- * <p>The viewport is an LDLib2 {@code Scene}. Toolbar, material list, and detail
- * panel stay local so JEI and EMI can keep owning their ingredient slots.</p>
- */
+import appeng.client.render.overlay.OverlayRenderType;
+
+/** Viewer-neutral, interactive orthographic 3D multiblock preview. */
 public final class InteractiveMultiblockPreview {
     public static final int DEFAULT_WIDTH = 300;
     public static final int DEFAULT_HEIGHT = 184;
@@ -42,7 +46,13 @@ public final class InteractiveMultiblockPreview {
     private static final int PANEL_TAB_HEIGHT = 15;
     private static final int MATERIAL_ROW_HEIGHT = 26;
 
+    private static final float DEFAULT_YAW = 225.0F;
+    private static final float DEFAULT_PITCH = 30.0F;
+    private static final float MIN_ZOOM = 0.35F;
+    private static final float MAX_ZOOM = 3.5F;
     private static final float AUTO_ROTATION_PER_TICK = 0.35F;
+    private static final float MODEL_Z = 80.0F;
+    private static final float DEPTH_SCALE_FACTOR = 0.1F;
 
     private static final int PANEL_BACKGROUND = 0xFF181818;
     private static final int VIEW_BACKGROUND = 0xFF101010;
@@ -52,6 +62,8 @@ public final class InteractiveMultiblockPreview {
     private static final int TEXT_COLOR = 0xFFFFFFFF;
     private static final int MUTED_TEXT_COLOR = 0xFFD0D0D0;
     private static final int FOOTER_TEXT_COLOR = 0xFF000000;
+    private static final int SELECTED_GLOW_ALPHA = 132;
+    private static final int HOVERED_GLOW_ALPHA = 190;
 
     private final MultiblockStructureRecipe recipe;
     private final int width;
@@ -61,7 +73,7 @@ public final class InteractiveMultiblockPreview {
     private final int panelHeight;
     private final int viewWidth;
     private final int viewHeight;
-    private final LdlibMultiblockScene scene;
+    private final float baseScale;
     private final SlotDelegate slots;
 
     private final UiRect resetButton = new UiRect(2, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
@@ -71,6 +83,11 @@ public final class InteractiveMultiblockPreview {
     private final UiRect layerDownButton = new UiRect(76, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
     private final UiRect layerUpButton = new UiRect(145, TOOLBAR_Y, 16, TOOLBAR_HEIGHT);
 
+    private float yaw = DEFAULT_YAW;
+    private float pitch = DEFAULT_PITCH;
+    private float zoom = 1.0F;
+    private float panX;
+    private float panY;
     private boolean autoRotate = true;
     private boolean hideShell;
     private LayerMode layerMode = LayerMode.FULL;
@@ -97,19 +114,25 @@ public final class InteractiveMultiblockPreview {
         this.viewHeight = panelHeight;
         this.layer = (recipe.sizeY() - 1) / 2;
         this.slots = slots;
-        this.scene = new LdlibMultiblockScene(recipe);
+
+        float horizontal = (float) Math.hypot(recipe.sizeX(), recipe.sizeZ());
+        float projectedHeight = recipe.sizeY() * 0.866F + horizontal * 0.5F;
+        float widthScale = viewWidth * 0.90F / Math.max(1.0F, horizontal);
+        float heightScale = viewHeight * 0.90F / Math.max(1.0F, projectedHeight);
+        this.baseScale = Math.min(widthScale, heightScale);
     }
 
     public void drawWidget(GuiGraphics guiGraphics, double mouseX, double mouseY) {
         Minecraft minecraft = Minecraft.getInstance();
         Font font = minecraft.font;
 
+        hoveredCell = inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)
+                ? pickCell(mouseX, mouseY)
+                : null;
+
         drawHeader(guiGraphics, font);
         drawToolbar(guiGraphics, font, mouseX, mouseY);
-        drawViewport(guiGraphics, mouseX, mouseY);
-        hoveredCell = inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)
-                ? scene.pick()
-                : null;
+        drawViewport(guiGraphics);
         drawPanel(guiGraphics, font, mouseX, mouseY);
         drawFooter(guiGraphics, font);
     }
@@ -209,36 +232,107 @@ public final class InteractiveMultiblockPreview {
                 rect.contains(mouseX, mouseY));
     }
 
-    private void drawViewport(GuiGraphics guiGraphics, double mouseX, double mouseY) {
+    private void drawViewport(GuiGraphics guiGraphics) {
         guiGraphics.fill(VIEW_X, VIEW_Y, VIEW_X + viewWidth, VIEW_Y + viewHeight, VIEW_BACKGROUND);
         guiGraphics.renderOutline(VIEW_X, VIEW_Y, viewWidth, viewHeight, BORDER_COLOR);
-        scene.render(
+        enableLocalScissor(
                 guiGraphics,
                 VIEW_X + 1,
                 VIEW_Y + 1,
-                Math.max(1, viewWidth - 2),
-                Math.max(1, viewHeight - 2),
-                mouseX,
-                mouseY,
-                visibilityKey(),
-                visiblePositions(),
-                scene.yaw(),
-                scene.pitch());
-        Lighting.setupFor3DItems();
-    }
+                VIEW_X + viewWidth - 1,
+                VIEW_Y + viewHeight - 1);
 
-    private int visibilityKey() {
-        return (hideShell ? 1 : 0) | (layer << 2) | (layerMode.ordinal() << 16);
-    }
+        Minecraft client = Minecraft.getInstance();
+        var bufferSource = client.renderBuffers().bufferSource();
+        var blockRenderer = client.getBlockRenderer();
+        PoseStack pose = guiGraphics.pose();
+        float scale = renderScale();
 
-    private List<BlockPos> visiblePositions() {
-        var positions = new ArrayList<BlockPos>();
+        pose.pushPose();
+        pose.translate(viewCenterX() + panX, viewCenterY() + panY, MODEL_Z);
+        pose.scale(scale, -scale, scale * DEPTH_SCALE_FACTOR);
+        pose.mulPose(Axis.XP.rotationDegrees(pitch));
+        pose.mulPose(Axis.YP.rotationDegrees(yaw));
+        pose.translate(-recipe.sizeX() / 2.0F, -recipe.sizeY() / 2.0F, -recipe.sizeZ() / 2.0F);
+
         for (var cell : recipe.cells()) {
-            if (isVisible(cell)) {
-                positions.add(cell.localPos());
+            if (!isVisible(cell) || cell.state().getRenderShape() == RenderShape.ENTITYBLOCK_ANIMATED) {
+                continue;
             }
+            pose.pushPose();
+            pose.translate(cell.localPos().getX(), cell.localPos().getY(), cell.localPos().getZ());
+            blockRenderer.renderSingleBlock(
+                    cell.state(),
+                    pose,
+                    bufferSource,
+                    LightTexture.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY,
+                    ModelData.EMPTY,
+                    null);
+            pose.popPose();
         }
-        return positions;
+        bufferSource.endBatch();
+
+        if (selectedCell != null && selectedCell != hoveredCell && isVisible(selectedCell)) {
+            renderGlowCube(pose, bufferSource, selectedCell, SELECTED_GLOW_ALPHA);
+        }
+        if (hoveredCell != null && isVisible(hoveredCell)) {
+            renderGlowCube(pose, bufferSource, hoveredCell, HOVERED_GLOW_ALPHA);
+        }
+        pose.popPose();
+        bufferSource.endBatch(OverlayRenderType.getBlockHilightFace());
+        Lighting.setupFor3DItems();
+        guiGraphics.disableScissor();
+    }
+
+    private static void renderGlowCube(
+            PoseStack pose,
+            MultiBufferSource bufferSource,
+            MultiblockStructureRecipe.Cell cell,
+            int alpha) {
+        VertexConsumer consumer = bufferSource.getBuffer(OverlayRenderType.getBlockHilightFace());
+        pose.pushPose();
+        pose.translate(
+                cell.localPos().getX(),
+                cell.localPos().getY(),
+                cell.localPos().getZ());
+
+        Matrix4f matrix = pose.last().pose();
+        float low = -0.025F;
+        float high = 1.025F;
+
+        glowQuad(consumer, matrix, alpha,
+                low, low, low, high, low, low, high, low, high, low, low, high, 0.0F, -1.0F, 0.0F);
+        glowQuad(consumer, matrix, alpha,
+                low, high, high, high, high, high, high, high, low, low, high, low, 0.0F, 1.0F, 0.0F);
+        glowQuad(consumer, matrix, alpha,
+                low, low, low, low, high, low, high, high, low, high, low, low, 0.0F, 0.0F, -1.0F);
+        glowQuad(consumer, matrix, alpha,
+                high, low, high, high, high, high, low, high, high, low, low, high, 0.0F, 0.0F, 1.0F);
+        glowQuad(consumer, matrix, alpha,
+                low, low, high, low, high, high, low, high, low, low, low, low, -1.0F, 0.0F, 0.0F);
+        glowQuad(consumer, matrix, alpha,
+                high, low, low, high, high, low, high, high, high, high, low, high, 1.0F, 0.0F, 0.0F);
+        pose.popPose();
+    }
+
+    private static void glowQuad(
+            VertexConsumer consumer,
+            Matrix4f matrix,
+            int alpha,
+            float x1, float y1, float z1,
+            float x2, float y2, float z2,
+            float x3, float y3, float z3,
+            float x4, float y4, float z4,
+            float normalX, float normalY, float normalZ) {
+        consumer.addVertex(matrix, x1, y1, z1).setColor(255, 220, 0, alpha)
+                .setNormal(normalX, normalY, normalZ);
+        consumer.addVertex(matrix, x2, y2, z2).setColor(255, 220, 0, alpha)
+                .setNormal(normalX, normalY, normalZ);
+        consumer.addVertex(matrix, x3, y3, z3).setColor(255, 220, 0, alpha)
+                .setNormal(normalX, normalY, normalZ);
+        consumer.addVertex(matrix, x4, y4, z4).setColor(255, 220, 0, alpha)
+                .setNormal(normalX, normalY, normalZ);
     }
 
     private void drawPanel(GuiGraphics guiGraphics, Font font, double mouseX, double mouseY) {
@@ -435,7 +529,7 @@ public final class InteractiveMultiblockPreview {
         }
 
         if (inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)) {
-            MultiblockStructureRecipe.Cell hovered = scene.pick();
+            MultiblockStructureRecipe.Cell hovered = pickCell(mouseX, mouseY);
             if (hovered != null) {
                 tooltip.add(hovered.state().getBlock().getName());
                 tooltip.add(Component.translatable("jei.ae2lt.multiblock.role_label", hovered.role()));
@@ -520,7 +614,7 @@ public final class InteractiveMultiblockPreview {
         if (inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)) {
             autoRotate = false;
             if (button == 0) {
-                selectedCell = scene.pick();
+                selectedCell = pickCell(mouseX, mouseY);
                 panelTab = selectedCell == null ? PanelTab.MATERIALS : PanelTab.DETAILS;
             }
             return true;
@@ -537,8 +631,13 @@ public final class InteractiveMultiblockPreview {
         if (!inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)) {
             return false;
         }
-        if (button == 2 || button == 0) {
-            scene.drag(button == 0 && Screen.hasShiftDown() ? 2 : button, dragX, dragY);
+        if (button == 2 || (button == 0 && Screen.hasShiftDown())) {
+            panX += (float) dragX;
+            panY += (float) dragY;
+            clampPan();
+        } else if (button == 0) {
+            yaw = wrapDegrees(yaw + (float) dragX * 0.8F);
+            pitch = Mth.clamp(pitch + (float) dragY * 0.8F, -85.0F, 85.0F);
         } else {
             return false;
         }
@@ -548,7 +647,14 @@ public final class InteractiveMultiblockPreview {
 
     public boolean handleMouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (inside(VIEW_X, VIEW_Y, viewWidth, viewHeight, mouseX, mouseY)) {
-            scene.scroll(scrollY);
+            float oldZoom = zoom;
+            zoom = Mth.clamp((float) (zoom * Math.exp(scrollY * 0.12D)), MIN_ZOOM, MAX_ZOOM);
+            float ratio = zoom / oldZoom;
+            float relativeX = (float) mouseX - viewCenterX();
+            float relativeY = (float) mouseY - viewCenterY();
+            panX = relativeX - ratio * (relativeX - panX);
+            panY = relativeY - ratio * (relativeY - panY);
+            clampPan();
             autoRotate = false;
             return true;
         }
@@ -568,7 +674,7 @@ public final class InteractiveMultiblockPreview {
             transientPressedButton = null;
         }
         if (autoRotate) {
-            scene.setYaw(wrapDegrees(scene.yaw() + AUTO_ROTATION_PER_TICK));
+            yaw = wrapDegrees(yaw + AUTO_ROTATION_PER_TICK);
         }
     }
 
@@ -663,6 +769,63 @@ public final class InteractiveMultiblockPreview {
         return null;
     }
 
+    private MultiblockStructureRecipe.Cell pickCell(double mouseX, double mouseY) {
+        MultiblockStructureRecipe.Cell closest = null;
+        float closestDepth = Float.NEGATIVE_INFINITY;
+        for (var cell : recipe.cells()) {
+            if (!isVisible(cell)) {
+                continue;
+            }
+            ProjectedBounds bounds = project(cell);
+            float padding = Math.max(1.0F, renderScale() * 0.08F);
+            if (mouseX >= bounds.minX() - padding
+                    && mouseX <= bounds.maxX() + padding
+                    && mouseY >= bounds.minY() - padding
+                    && mouseY <= bounds.maxY() + padding
+                    && bounds.depth() > closestDepth) {
+                closest = cell;
+                closestDepth = bounds.depth();
+            }
+        }
+        return closest;
+    }
+
+    private ProjectedBounds project(MultiblockStructureRecipe.Cell cell) {
+        Matrix4f transform = modelTransform();
+        float minX = Float.POSITIVE_INFINITY;
+        float minY = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+        float x = cell.localPos().getX();
+        float y = cell.localPos().getY();
+        float z = cell.localPos().getZ();
+        for (int dx = 0; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                for (int dz = 0; dz <= 1; dz++) {
+                    Vector3f point = new Vector3f(x + dx, y + dy, z + dz);
+                    transform.transformPosition(point);
+                    minX = Math.min(minX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxX = Math.max(maxX, point.x);
+                    maxY = Math.max(maxY, point.y);
+                }
+            }
+        }
+        Vector3f center = new Vector3f(x + 0.5F, y + 0.5F, z + 0.5F);
+        transform.transformPosition(center);
+        return new ProjectedBounds(minX, minY, maxX, maxY, center.z);
+    }
+
+    private Matrix4f modelTransform() {
+        float scale = renderScale();
+        return new Matrix4f()
+                .translation(viewCenterX() + panX, viewCenterY() + panY, MODEL_Z)
+                .scale(scale, -scale, scale * DEPTH_SCALE_FACTOR)
+                .rotateX((float) Math.toRadians(pitch))
+                .rotateY((float) Math.toRadians(yaw))
+                .translate(-recipe.sizeX() / 2.0F, -recipe.sizeY() / 2.0F, -recipe.sizeZ() / 2.0F);
+    }
+
     private boolean isVisible(MultiblockStructureRecipe.Cell cell) {
         if (cell.state().isAir() || (hideShell && cell.shell())) {
             return false;
@@ -697,7 +860,16 @@ public final class InteractiveMultiblockPreview {
     }
 
     private void resetCamera() {
-        scene.resetCamera();
+        yaw = DEFAULT_YAW;
+        pitch = DEFAULT_PITCH;
+        zoom = 1.0F;
+        panX = 0.0F;
+        panY = 0.0F;
+    }
+
+    private void clampPan() {
+        panX = Mth.clamp(panX, -viewWidth * 0.65F, viewWidth * 0.65F);
+        panY = Mth.clamp(panY, -viewHeight * 0.65F, viewHeight * 0.65F);
     }
 
     private int materialRowY(int index) {
@@ -706,6 +878,18 @@ public final class InteractiveMultiblockPreview {
 
     private int maxMaterialScroll() {
         return Math.max(0, recipe.materials().size() * MATERIAL_ROW_HEIGHT - panelContentHeight());
+    }
+
+    private float renderScale() {
+        return baseScale * zoom;
+    }
+
+    private float viewCenterX() {
+        return VIEW_X + viewWidth / 2.0F;
+    }
+
+    private float viewCenterY() {
+        return VIEW_Y + viewHeight / 2.0F;
     }
 
     private int panelContentTop() {
@@ -840,6 +1024,9 @@ public final class InteractiveMultiblockPreview {
         boolean contains(double mouseX, double mouseY) {
             return inside(x, y, width, height, mouseX, mouseY);
         }
+    }
+
+    private record ProjectedBounds(float minX, float minY, float maxX, float maxY, float depth) {
     }
 
     public enum SlotKind {

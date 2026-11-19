@@ -1,0 +1,14 @@
+// Apply after wireless-energy-test.init.gradle; use only with a disposable WirelessEnergyQA save.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/energy/WirelessEnergyMenuClientProbe.java',
+                'com/moakiee/ae2lt/logic/energy/WirelessEnergyGameTests.java'])
+        neoForge.runs.create('wirelessEnergyClient') {
+            client()
+            gameDirectory = project.layout.buildDirectory.dir(providers.gradleProperty('wirelessEnergyClientDirectory').getOrElse('wireless-energy-client')).get().asFile
+            programArguments.addAll '--username', 'WirelessEnergyQA', '--quickPlaySingleplayer', 'WirelessEnergyQA'
+            systemProperty 'ae2lt.wirelessEnergyMenuProbe', 'true'
+            jvmArguments.add '-Xmx1536m'
+        }
+    }
+}

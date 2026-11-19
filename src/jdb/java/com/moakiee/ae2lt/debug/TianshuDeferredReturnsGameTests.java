@@ -17,13 +17,16 @@ import appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern;
 import appeng.crafting.CraftingPlan;
 import appeng.me.service.CraftingService;
 import com.moakiee.ae2lt.blockentity.MatrixControllerBlockEntity;
-import com.moakiee.ae2lt.blockentity.MatrixPortBlockEntity;
+import com.moakiee.ae2lt.crafting.runtime.api.DeferredCraftingProvider;
 import com.moakiee.ae2lt.crafting.matrix.core.CraftingCoreHost;
 import com.moakiee.ae2lt.crafting.matrix.core.CraftingCoreRegistry;
 import com.moakiee.ae2lt.crafting.matrix.core.MolecularCopyAssembler;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCPU;
 import com.moakiee.ae2lt.crafting.timewheel.TimeWheelCraftingCpuHost;
 import com.moakiee.ae2lt.crafting.runtime.ExecuteLoopPattern;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchDispatchMode;
+import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
+import com.moakiee.thunderbolt.api.crafting.batch.IBatchCraftingProvider;
 import com.moakiee.thunderbolt.core.crafting.batch.BatchCopyLimitPattern;
 import com.moakiee.thunderbolt.core.crafting.batch.SharedBatchInputPattern;
 import com.moakiee.thunderbolt.core.crafting.loop.ClosedLoopBatchPatternDetails;
@@ -59,7 +62,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** Real AE2 recipes, transformed dispatch code, matrix port/controller/core and CPU accounting. */
+/** Real AE2 recipes, transformed dispatch code, matrix controller/core and CPU accounting. */
 @GameTestHolder("ae2lt_deferred")
 @PrefixGameTestTemplate(false)
 public final class TianshuDeferredReturnsGameTests {
@@ -645,19 +648,38 @@ public final class TianshuDeferredReturnsGameTests {
             var clusterField = MatrixControllerBlockEntity.class.getDeclaredField("cluster");
             clusterField.setAccessible(true);
             clusterField.set(controller, cluster);
-            // Only replace world/structure discovery; dispatch uses the production port and controller.
-            var port = new MatrixPortBlockEntity(BlockPos.ZERO,
-                    ModBlocks.MATTER_WARPING_MATRIX_PORT.get().defaultBlockState()) {
-                @Override public MatrixControllerBlockEntity getController() { return controller; }
-                @Override public boolean isFormed() { return true; }
+            // World/structure discovery is outside this fixture; execute through the real controller.
+            class MatrixProvider implements IBatchCraftingProvider, DeferredCraftingProvider {
+                @Override public List<IPatternDetails> getAvailablePatterns() { return patterns; }
+                @Override public boolean isBusy() { return controller.isMatrixBusy(); }
                 @Override public long getBatchCapacity(IPatternDetails details) {
-                    return batch ? super.getBatchCapacity(details) : 0L;
+                    return batch ? controller.getBatchCapacity(details) : 0L;
                 }
-            };
+                @Override public BatchDispatchMode getBatchDispatchMode(IPatternDetails details) {
+                    return controller.getBatchDispatchMode();
+                }
+                @Override public boolean supportsSharedBatchInputs() { return true; }
+                @Override public long pushBatch(IPatternDetails details, KeyCounter[] inputs, long maxCraft) {
+                    return controller.pushBatch(details, inputs, maxCraft);
+                }
+                @Override public long pushBatch(IPatternDetails details, KeyCounter[] inputs, long maxCraft,
+                                                BatchJobView job) {
+                    var returns = job instanceof DeferredCraftingProvider.Job deferred
+                            ? deferred.deferredOutputSink() : null;
+                    return controller.pushBatch(details, inputs, maxCraft, returns);
+                }
+                @Override public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs, OutputSink returns) {
+                    return controller.pushPattern(details, inputs, returns);
+                }
+                @Override public boolean pushPattern(IPatternDetails details, KeyCounter[] inputs) {
+                    return controller.pushPattern(details, inputs);
+                }
+            }
+            var matrixProvider = new MatrixProvider();
             service = new CraftingService(grid, storage, energy) {
                 @Override public Iterable<ICraftingProvider> getProviders(IPatternDetails details) {
                     providerQueries++;
-                    return List.of(externalProvider != null ? externalProvider : port);
+                    return List.of(externalProvider != null ? externalProvider : matrixProvider);
                 }
             };
             gridValues.put("getCraftingService", service);

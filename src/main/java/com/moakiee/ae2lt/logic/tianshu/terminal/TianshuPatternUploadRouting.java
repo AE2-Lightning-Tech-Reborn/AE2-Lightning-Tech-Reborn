@@ -21,6 +21,8 @@ public final class TianshuPatternUploadRouting {
             ResourceLocation.fromNamespaceAndPath("extendedae", "assembler_matrix_pattern"),
             ResourceLocation.fromNamespaceAndPath(
                     "extendedae_plus", "assembler_matrix_pattern_plus"),
+            ResourceLocation.fromNamespaceAndPath(
+                    "extendedae_plus", "super_assembler_matrix_frame"),
             ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l4"),
             ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l6"),
             ResourceLocation.fromNamespaceAndPath("neoecoae", "crafting_system_l9"),

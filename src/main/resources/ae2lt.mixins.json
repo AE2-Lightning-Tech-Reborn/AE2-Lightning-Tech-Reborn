@@ -4,11 +4,18 @@
   "package": "com.moakiee.ae2lt.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "mmcr.PatternBatchPlanningMixin",
     "InscriberProcessorRecipeLoaderMixin",
     "RainbowPigmeeRecipeManagerMixin",
     "OverloadAlloyAnvilFallingMixin",
     "OverloadAlloyAnvilMenuMixin",
     "ServerLevelMixin",
+    "WirelessTerminalCoverageMixin",
+    "WirelessEnergyTargetRemovalMixin",
+    "WirelessEnergyMachineTickMixin",
+    "WirelessEnergyObservationRemovalMixin",
+    "ConstructionStickPlacementMixin",
+    "RunningNetworkFeFallbackMixin",
     "CraftingCalculationReportMixin",
     "CraftConfirmMenuReportMixin",
     "CraftConfirmReplanMixin",
@@ -47,6 +54,7 @@
     "thunderbolt.accessor.CraftingCpuLogicAccessor",
     "thunderbolt.accessor.AdvCraftingCpuAccessor",
     "thunderbolt.TimeWheelCraftingCPUMenuMixin",
+    "thunderbolt.TianshuPlanningServiceMixin",
     "thunderbolt.TimeWheelBatchInputAllocationMixin",
     "thunderbolt.CraftingCpuLogicMixin",
     "thunderbolt.AdvCraftingCpuLogicMixin",
@@ -55,11 +63,12 @@
     "ShulkerBulletMixin",
     "big.BigTerminalMenuMixin",
     "big.BigCraftAmountMenuMixin",
-    "big.BigCraftConfirmMenuMixin",
-    "big.BigCraftingPlanSummaryMixin",
     "big.BigCraftingStatusEntryMixin",
     "big.BigCpuListEntryMixin",
-    "TianshuStonecutterMenuMixin"
+    "TianshuStonecutterMenuMixin",
+    "RemoteDeviceMenuOpenerMixin",
+    "RemoteDeviceMenuValidityMixin",
+    "RemoteDevicePacketGuardMixin"
   ],
   "client": [
     "client.LightningBoltRendererMixin",
@@ -73,6 +82,9 @@
     "client.CableBusBakedModelMixin",
     "client.SettingToggleButtonMixin",
     "client.PatternProviderScreenAccessor",
+    "client.ProviderScreenWidgetOwnershipMixin",
+    "client.ProviderWidgetContainerMixin",
+    "client.UpgradesPanelAccessor",
     "client.RailgunHumanoidModelMixin",
     "client.AEBaseScreenAccessor",
     "client.VerticalButtonBarAccessor",
@@ -86,7 +98,9 @@
     "client.BigCraftAmountScreenMixin",
     "client.BigCraftingStatusTableMixin",
     "client.BigTerminalAmountMixin",
-    "client.BigCpuListMixin"
+    "client.BigCpuListMixin",
+    "client.RemoteDeviceClientMenuMixin",
+    "client.RemoteDeviceScreenExclusionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

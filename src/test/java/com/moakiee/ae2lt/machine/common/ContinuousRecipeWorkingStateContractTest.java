@@ -32,7 +32,7 @@ class ContinuousRecipeWorkingStateContractTest {
         assertCompletionDoesNotMarkIdle(
                 "TeslaCoilBlockEntity.java",
                 "public boolean commitLockedMode()",
-                "public void openMenu(");
+                "public MachineRedstoneControl getRedstoneControl()");
     }
 
     @Test

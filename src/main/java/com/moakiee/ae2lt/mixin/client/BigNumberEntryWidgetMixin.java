@@ -38,14 +38,23 @@ public abstract class BigNumberEntryWidgetMixin implements BigNumberEntry {
     }
 
     @Unique private boolean ae2lt$big;
+    @Unique private boolean ae2lt$exact;
 
     public void ae2lt$enableBig() {
-        if (!ae2lt$big) {
-            ae2lt$big = true;
+        ae2lt$setExtendedRange(true, true);
+    }
+
+    public void ae2lt$setExtendedRange(boolean enabled, boolean exact) {
+        if (ae2lt$big == enabled && ae2lt$exact == exact) return;
+        ae2lt$big = enabled;
+        ae2lt$exact = exact;
+        if (enabled) {
             textField.setMaxLength(5000);
             decimalFormat.setMaximumIntegerDigits(5000);
-            validate();
         }
+        // Keep the typed value when access is revoked; native validation must reject it,
+        // rather than truncating it into a different, apparently valid order.
+        validate();
     }
 
     public Optional<BigInteger> ae2lt$getBig() {
@@ -56,6 +65,8 @@ public abstract class BigNumberEntryWidgetMixin implements BigNumberEntry {
             if (value.precision() - (long) value.scale() > 4933 || value.scale() > 5000)
                 return Optional.empty();
             var amount = BigAmounts.nonNegative(value.toBigIntegerExact());
+            if (ae2lt$big && !ae2lt$exact && amount.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0)
+                return Optional.empty();
             return amount.compareTo(BigInteger.valueOf(minValue)) < 0
                     ? Optional.empty()
                     : Optional.of(amount);

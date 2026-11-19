@@ -42,6 +42,7 @@ public final class MultiblockStructureRecipes {
         Block port = ModBlocks.MATTER_WARPING_MATRIX_PORT.get();
         Block patternT1 = ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T1.get();
         Block patternT2 = ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T2.get();
+        Block patternT3 = ModBlocks.MATTER_WARPING_MATRIX_PATTERN_STORAGE_T3.get();
         Block blank = ModBlocks.TIANSHU_BLANK_UNIT.get();
         Block threadT1 = ModBlocks.MATTER_WARPING_MATRIX_THREAD_UNIT_T1.get();
 
@@ -107,7 +108,7 @@ public final class MultiblockStructureRecipes {
                             pos,
                             displayed,
                             patternRole,
-                            List.of(Blocks.AIR, patternT1, patternT2),
+                            List.of(Blocks.AIR, patternT1, patternT2, patternT3),
                             List.of(patternRule),
                             false));
                 }

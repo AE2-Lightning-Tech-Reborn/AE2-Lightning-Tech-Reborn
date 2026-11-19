@@ -133,8 +133,8 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
         buf.writeVarInt(profile.amplifierUnitCount());
         buf.writeVarInt(profile.coolingUnitCount());
         buf.writeVarInt(scaleValue(profile.coolPower()));
-        buf.writeVarInt(scaleHeat(snapshot.normalizedHeat()));
-        buf.writeVarInt(scaleValue(snapshot.efficiencyFactor()));
+        buf.writeVarInt(scaleFraction(snapshot.normalizedHeat()));
+        buf.writeVarInt(scaleFraction(snapshot.efficiencyFactor()));
         buf.writeVarInt(be.getAvailableProviderCalls());
         buf.writeVarInt(saturate(snapshot.operationsPerTick()));
     }
@@ -241,11 +241,11 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
     }
 
     public double getNormalizedHeat() {
-        return unscaleHeat(heatSlot.get());
+        return unscaleFraction(heatSlot.get());
     }
 
     public double getEfficiencyFactor() {
-        return unscaleValue(efficiencySlot.get());
+        return unscaleFraction(efficiencySlot.get());
     }
 
     public int getProviderCallsRemaining() {
@@ -274,8 +274,8 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
         amplifierUnitCountSlot.set(profile.amplifierUnitCount());
         coolingUnitCountSlot.set(profile.coolingUnitCount());
         coolingPowerSlot.set(scaleValue(profile.coolPower()));
-        heatSlot.set(scaleHeat(snapshot.normalizedHeat()));
-        efficiencySlot.set(scaleValue(snapshot.efficiencyFactor()));
+        heatSlot.set(scaleFraction(snapshot.normalizedHeat()));
+        efficiencySlot.set(scaleFraction(snapshot.efficiencyFactor()));
         providerCallsRemainingSlot.set(host.getAvailableProviderCalls());
         setOperationsPerTick(saturate(snapshot.operationsPerTick()));
     }
@@ -318,7 +318,7 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
         return value / 10.0D;
     }
 
-    private static int scaleHeat(double value) {
+    private static int scaleFraction(double value) {
         if (Double.isNaN(value) || value <= 0.0D) {
             return 0;
         }
@@ -326,7 +326,7 @@ public class MatrixControllerMenu extends AbstractContainerMenu implements Matri
         return scaled >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.round(scaled);
     }
 
-    private static double unscaleHeat(int value) {
+    private static double unscaleFraction(int value) {
         return value / 1000.0D;
     }
 

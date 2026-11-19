@@ -41,10 +41,13 @@ The **Wireless Overloaded Controller** is an [Overloaded ME Controller](overload
   <BlockImage id="ae2lt:advanced_wireless_overloaded_controller" scale="4" />
 </Row>
 
-The **Advanced Wireless Overloaded Controller** is the upgraded variant with two key improvements:
+The **Advanced Wireless Overloaded Controller** provides the following features:
 
 * **Cross-dimension support**: Wireless Receivers in other dimensions can connect to it
-* **Unlimited channel capacity**: removes the per-receiver channel limit entirely (this does not mean truly infinite channels; read carefully!)
+* **No per-receiver channel limit**: the network remains subject to its AE2 channel mode and controller capacity
+* **Frequency-card links**: connect ME devices and parts directly with an [Overloaded Frequency Card](overloaded-frequency-card.md)
+* **Wireless FE power**: with Applied Flux installed, supply compatible machines from FE stored in the network
+* **Network management**: inspect ME devices, FE power records, and frequency connections, with remote actions for supported devices
 
 ### Wireless Receiver
 
@@ -67,12 +70,38 @@ The **Wireless Receiver** is the counterpart that connects to a remote Wireless 
 
 Once connected, the receiver acts as if it were physically cabled to the controller. Devices attached to the receiver's local network gain access to the controller's ME network, including channels, storage, and crafting.
 
+## Frequency Screen
+
+The Advanced Wireless Overloaded Controller and Overloaded Frequency Card share the same top navigation. Hover over an icon to display its page name.
+
+| Page | Purpose |
+|------|---------|
+| Overview | Inspect the current frequency, connection status, access level, and network channels; cards also provide auto-connect switches |
+| Frequency | Search and bind an existing frequency, create a frequency, or disconnect the current binding |
+| Members | Inspect membership and change roles or remove members where permitted |
+| Network management | Switch between the ME devices, FE power, and Frequency connections views |
+| Frequency settings | Edit the frequency name, color, and security settings; owners can delete the frequency |
+
+Settings and member actions depend on the player's role. Administrators can edit names and colors and manage lower-ranking members. Changing security, passwords, owner or administrator roles, and deleting frequencies requires owner access. Deleting a frequency is irreversible and removes its associated wireless connections. Use **Disconnect** when changing only the frequency of the current device or card, rather than deleting the frequency.
+
+### Network Management
+
+* **ME devices** lists network devices and their operating states. Select a device to locate it or open its native screen remotely. The remote screen provides a return button for network management.
+* **FE power** lists power paths, sources, targets, and actual delivery rates. Records include frequency wireless power and other supported power methods. **Unbind wireless endpoint** removes only the selected frequency's wireless power connection, preserving ME links.
+* **Frequency connections** lists wireless channel connection points and their loaded state for inspecting receiver and frequency-card links.
+
+Lists support search, sorting, and grouping by device type. Search by name, type, mod ID, dimension, or coordinates, separating multiple terms with spaces. Expand a group to select an individual device. **Locate** displays coordinates and highlights a locatable device for 15 seconds; click the coordinate message to copy it.
+
+The FE power view offers 1t, 1s, 5s, 30s, and 1min measurement windows. All values are average actual output in **FE/t**, including periods with no output. They do not represent stored energy or a device's rated input limit.
+
+Remote actions require an available target and sufficient permissions. Supported native screens can be opened across dimensions, but network management does not force-load target chunks. Devices without remote-menu support cannot be configured this way. A frequency card requires an available advanced wireless transmitter before network management can be opened.
+
 ## Frequency Security
 
 Frequencies support access control:
 
 | Level | Behavior |
-|-------|----------|
+|------|----------|
 | Public | Anyone can bind a receiver to this frequency |
 | Private | Only the frequency owner and allowed members can bind |
 | Encrypted | Requires a password to bind |

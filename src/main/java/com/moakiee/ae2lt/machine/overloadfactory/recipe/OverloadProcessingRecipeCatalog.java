@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.WeakHashMap;
 
 import com.mojang.logging.LogUtils;
+import com.moakiee.ae2lt.compat.OptionalIntegrationGuard;
 import com.moakiee.ae2lt.registry.ModRecipeTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -26,6 +27,8 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
  */
 @EventBusSubscriber(modid = "ae2lt")
 public final class OverloadProcessingRecipeCatalog {
+    private static final OptionalIntegrationGuard REACTION_COMPAT =
+            new OptionalIntegrationGuard("AdvancedAE reaction recipes");
     private static final Map<RecipeManager, Snapshot> CACHE = new WeakHashMap<>();
     private static final Comparator<RecipeHolder<OverloadProcessingRecipe>> ORDER = Comparator
             .<RecipeHolder<OverloadProcessingRecipe>>comparingInt(holder -> holder.value().priority()).reversed()
@@ -45,7 +48,7 @@ public final class OverloadProcessingRecipeCatalog {
         if (previous != null && previous.sources() == manager.getRecipes()) return previous.recipes();
         var nativeRecipes = manager.getAllRecipesFor(ModRecipeTypes.OVERLOAD_PROCESSING_TYPE.get());
         List<? extends RecipeHolder<?>> reactions = ModList.get() != null && ModList.get().isLoaded("advanced_ae")
-                ? AdvancedAeReactionAdapter.sourceRecipes(manager) : List.of();
+                ? REACTION_COMPAT.get(() -> AdvancedAeReactionAdapter.sourceRecipes(manager), List.of()) : List.of();
         return recipes(manager, nativeRecipes, reactions);
     }
 
@@ -75,6 +78,12 @@ public final class OverloadProcessingRecipeCatalog {
     static synchronized List<RecipeHolder<OverloadProcessingRecipe>> recipes(
             RecipeManager manager, List<RecipeHolder<OverloadProcessingRecipe>> nativeRecipes,
             List<? extends RecipeHolder<?>> reactions) {
+        return recipes(manager, nativeRecipes, reactions, REACTION_COMPAT);
+    }
+
+    static synchronized List<RecipeHolder<OverloadProcessingRecipe>> recipes(
+            RecipeManager manager, List<RecipeHolder<OverloadProcessingRecipe>> nativeRecipes,
+            List<? extends RecipeHolder<?>> reactions, OptionalIntegrationGuard reactionCompat) {
         Snapshot previous = CACHE.get(manager);
         if (previous != null && previous.sources() == manager.getRecipes()
                 && sameHolders(previous.nativeRecipes(), nativeRecipes)
@@ -82,13 +91,8 @@ public final class OverloadProcessingRecipeCatalog {
             return previous.recipes();
         }
         var recipes = new ArrayList<>(nativeRecipes);
-        for (var holder : reactions) {
-            try {
-                recipes.add(AdvancedAeReactionAdapter.convert(holder));
-            } catch (IllegalArgumentException e) {
-                LogUtils.getLogger().warn("Overload factory cannot borrow reaction {}: {}", holder.id(), e.getMessage());
-            }
-        }
+        // Build separately: an API failure must not expose a partially converted source catalog.
+        recipes.addAll(reactionCompat.get(() -> borrowReactions(reactions), List.of()));
         recipes.sort(ORDER);
         var result = List.copyOf(recipes);
         var displayed = new ArrayList<>(nativeRecipes);
@@ -98,6 +102,19 @@ public final class OverloadProcessingRecipeCatalog {
         CACHE.put(manager, new Snapshot(manager.getRecipes(), List.copyOf(nativeRecipes), List.copyOf(reactions),
                 result, List.copyOf(displayed), Map.copyOf(byId)));
         return result;
+    }
+
+    private static List<RecipeHolder<OverloadProcessingRecipe>> borrowReactions(
+            List<? extends RecipeHolder<?>> reactions) {
+        var borrowed = new ArrayList<RecipeHolder<OverloadProcessingRecipe>>();
+        for (var holder : reactions) {
+            try {
+                borrowed.add(AdvancedAeReactionAdapter.convert(holder));
+            } catch (IllegalArgumentException e) {
+                LogUtils.getLogger().warn("Overload factory cannot borrow reaction {}: {}", holder.id(), e.getMessage());
+            }
+        }
+        return borrowed;
     }
 
     private static boolean sameHolders(List<? extends RecipeHolder<?>> left, List<? extends RecipeHolder<?>> right) {

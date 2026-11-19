@@ -15,6 +15,12 @@ item_ids:
 
 The **Lightning Simulation Room** is one of the core processing machines of this mod, suited to conversions with 1~3 inputs. Most mid-game recipes are crafted here.
 
+## Obtaining
+
+The early-game lightning transformation recipe still produces 1 Simulation Room from **32 Overload Processors, 32 Overload Alloy Ingots, and 16 Overload Crystal Blocks**.
+
+Once you have a [Lightning Assembly Chamber](lightning-assembly-chamber.md), process the same materials there for **1,000,000 FE** and **4 High Voltage Lightning** to automate production of Simulation Rooms.
+
 ## Slots and Capacity
 
 | Slot | Capacity | Notes |

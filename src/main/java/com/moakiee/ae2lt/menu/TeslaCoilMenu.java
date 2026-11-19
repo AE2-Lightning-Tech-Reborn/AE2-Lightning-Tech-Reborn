@@ -11,7 +11,6 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import appeng.menu.AEBaseMenu;
 import appeng.menu.guisync.GuiSync;
 import appeng.menu.implementations.MenuTypeBuilder;
 
@@ -21,7 +20,7 @@ import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilInventory;
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilMode;
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilStatus;
 
-public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
+public class TeslaCoilMenu extends RedstoneMachineMenu<TeslaCoilBlockEntity> implements FrequencyBindingMenu {
     public static final MenuType<TeslaCoilMenu> TYPE = MenuTypeBuilder
             .create(TeslaCoilMenu::new, TeslaCoilBlockEntity.class)
             .withMenuTitle(host -> Component.translatable("block.ae2lt.tesla_coil"))
@@ -72,6 +71,7 @@ public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
                 Ae2ltSlotSemantics.TESLA_COIL_MATRIX);
         Ae2ltSlotBackgrounds.withBackground(this.matrixSlot, Ae2ltSlotBackgrounds.LIGHTNING_COLLAPSE_MATRIX);
 
+        setupUpgrades(host.getUpgrades());
         createPlayerInventorySlots(playerInventory);
 
         registerClientAction("cycleMode", this::cycleMode);
@@ -226,6 +226,8 @@ public class TeslaCoilMenu extends AEBaseMenu implements FrequencyBindingMenu {
     }
 
     private ItemStack moveFromPlayerInventory(ItemStack stack) {
+        stack = moveIntoRedstoneUpgrade(stack);
+        if (stack.isEmpty()) return stack;
         if (host.getInventory().isLightningCollapseMatrix(stack)) {
             return moveIntoSlots(stack, List.of(matrixSlot));
         }

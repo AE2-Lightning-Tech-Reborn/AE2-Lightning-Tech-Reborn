@@ -10,7 +10,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.ScreenStyle;
 
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
@@ -18,7 +17,7 @@ import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.TeslaCoilMenu;
 
-public class TeslaCoilScreen extends AEBaseScreen<TeslaCoilMenu> {
+public class TeslaCoilScreen extends RedstoneMachineScreen<TeslaCoilMenu> {
     private final TeslaCoilEnergyBar energyBar;
     private TeslaCoilModeButton modeButton;
 

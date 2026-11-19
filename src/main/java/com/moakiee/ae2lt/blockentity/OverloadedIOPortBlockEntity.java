@@ -7,7 +7,6 @@ import appeng.api.config.*;
 import appeng.api.inventories.ISegmentedInventory;
 import appeng.api.inventories.InternalInventory;
 import appeng.api.networking.GridFlags;
-import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.security.IActionSource;
@@ -29,7 +28,6 @@ import appeng.util.inv.filter.AEItemFilters;
 import com.moakiee.ae2lt.logic.transfer.OverloadedIOTransfer;
 import com.moakiee.ae2lt.logic.transfer.OverloadedIOPortThroughput;
 import com.moakiee.ae2lt.item.OverloadedFilterComponentItem;
-import com.moakiee.ae2lt.logic.energy.PowerCostUtil;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModDataComponents;
@@ -57,7 +55,6 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
     public static final int MAX_BATCHES = OverloadedIOPortThroughput.MAX_ATTEMPTS;
     public static final int MAX_MATRICES = OverloadedIOPortThroughput.MAX_MATRICES;
     private static final String LAST_BATCH_TICK = "lastBatchTick";
-    public static final double BATCH_AE = 32;
     private static final String PENDING = "pendingTransfer";
     private static final String FILTER = "filterInventory";
     private static final String MATRIX = "matrix";
@@ -102,7 +99,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 return stack.is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get());
             }
         });
-        getMainNode().setFlags(GridFlags.REQUIRE_CHANNEL).setIdlePowerUsage(4)
+        getMainNode().setFlags(GridFlags.REQUIRE_CHANNEL).setIdlePowerUsage(1)
                 .addService(IGridTickable.class, this);
     }
 
@@ -210,7 +207,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         int attempts = 0;
         int batchLimit = getBatchLimit();
         long transferCap = getTransferCap();
-        java.util.function.BooleanSupplier payment = () -> pay(grid);
+        var energy = grid.getEnergyService();
         while (attempts < batchLimit && doneCount < CELL_SLOTS) {
             int slot = nextSlot;
             nextSlot = (nextSlot + 1) % CELL_SLOTS;
@@ -242,7 +239,7 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
                 var from = mode == OperationMode.EMPTY ? scan.cell : grid.getStorageService().getInventory();
                 var to = mode == OperationMode.EMPTY ? grid.getStorageService().getInventory() : scan.cell;
                 long nativeCap = OverloadedIOPortThroughput.nativeAmountCap(transferCap, key.getAmountPerOperation());
-                var result = OverloadedIOTransfer.move(from, to, key, source, payment, nativeCap);
+                var result = OverloadedIOTransfer.move(from, to, key, source, energy, nativeCap);
                 if (result.inserted() > 0 || result.remainder() > 0) {
                     progressed = true;
                     scan.moved = true;
@@ -293,11 +290,6 @@ public class OverloadedIOPortBlockEntity extends AENetworkedInvBlockEntity
         }
         status = noPower ? Status.NO_POWER : progressed ? Status.ACTIVE : Status.BLOCKED;
         return progressed || unfinished ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
-    }
-    private boolean pay(IGrid grid) {
-        if (!PowerCostUtil.canAfford(grid, BATCH_AE)) return false;
-        return grid.getEnergyService().extractAEPower(BATCH_AE, Actionable.MODULATE, PowerMultiplier.CONFIG)
-                + 1e-6 >= BATCH_AE;
     }
     private List<AEKey> keys(KeyCounter counter) {
         var result = new ArrayList<AEKey>();

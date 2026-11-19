@@ -3,6 +3,8 @@ package com.moakiee.ae2lt.logic.energy;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Proxy;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import appeng.api.config.Actionable;
 import appeng.api.networking.IGrid;
@@ -11,11 +13,15 @@ import appeng.api.stacks.AEItemKey;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Items;
+import net.neoforged.fml.loading.LoadingModList;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class PowerCostServiceAccessTest {
-    @BeforeAll static void bootstrap() { SharedConstants.tryDetectVersion(); Bootstrap.bootStrap(); }
+    @BeforeAll static void bootstrap() {
+        if (LoadingModList.get() == null) LoadingModList.of(List.of(), List.of(), List.of(), List.of(), Map.of());
+        SharedConstants.tryDetectVersion(); Bootstrap.bootStrap();
+    }
 
     private static final class Energy {
         double stored = 100, idle = 4;
@@ -70,6 +76,21 @@ class PowerCostServiceAccessTest {
         assertEquals(84, first.stored);
         assertEquals(2, first.lookups.get());
         assertEquals(1, second.lookups.get());
+    }
+
+    @Test void countedBatchUsesTheAffordablePrefixAndPreservesIdlePower() {
+        var energy = new Energy();
+        int copies = PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096);
+        assertEquals(32, copies);
+        assertEquals(100, energy.stored);
+        assertTrue(PowerCostUtil.canAfford(energy.grid, 3.0 * copies));
+        PowerCostUtil.consumeRaw(energy.grid, 3.0 * copies);
+        assertEquals(4, energy.stored);
+        assertEquals(0, PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096));
+        energy.stored = 100;
+        energy.idle = 10;
+        assertEquals(30, PowerCostUtil.maxAffordableCopies(energy.grid, 3.0, 4096));
+        assertEquals(0, PowerCostUtil.maxAffordableCopies(energy.grid, Double.POSITIVE_INFINITY, 4096));
     }
 
     @Test void failedLookupDoesNotPublishAnIncompleteCachedGrid() {

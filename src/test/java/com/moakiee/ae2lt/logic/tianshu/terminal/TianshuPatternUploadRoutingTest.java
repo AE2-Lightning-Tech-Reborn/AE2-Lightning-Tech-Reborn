@@ -41,6 +41,7 @@ class TianshuPatternUploadRoutingTest {
         assertCraftingGroup("extendedae", "ex_molecular_assembler");
         assertCraftingGroup("extendedae", "assembler_matrix_pattern");
         assertCraftingGroup("extendedae_plus", "assembler_matrix_pattern_plus");
+        assertCraftingGroup("extendedae_plus", "super_assembler_matrix_frame");
         assertCraftingGroup("neoecoae", "crafting_system_l4");
         assertCraftingGroup("neoecoae", "crafting_system_l6");
         assertCraftingGroup("neoecoae", "crafting_system_l9");
@@ -112,7 +113,10 @@ class TianshuPatternUploadRoutingTest {
         assertTrue(upload.contains("boundUploadTargets.get(group)"));
         assertTrue(upload.contains("binding.slot()"));
         assertFalse(upload.contains("refreshUploadTargetsNow()"));
-        assertFalse(upload.contains("getTerminalGroup()"));
+        assertTrue(upload.contains("activeTargets.stream().noneMatch(active -> active == target)"));
+        assertTrue(upload.contains("target.getGrid() != grid || !target.isVisibleInTerminal()"));
+        assertTrue(upload.contains("!TianshuUploadTargetGroupMatcher.matches(group, target.getTerminalGroup())"));
+        assertTrue(upload.contains("uploadToProvider(player, target, binding.slot(), stack)"));
         assertFalse(upload.contains("firstFreePatternSlot("));
         assertTrue(menu.contains("summary.slots.add(new BoundUploadSlot(target, i))"));
     }

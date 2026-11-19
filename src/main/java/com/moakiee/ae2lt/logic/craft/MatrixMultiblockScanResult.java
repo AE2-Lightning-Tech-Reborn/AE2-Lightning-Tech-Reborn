@@ -95,9 +95,12 @@ public final class MatrixMultiblockScanResult {
     public MatrixPatternRepository createEmptyPatternRepository() {
         var units = new ArrayList<MatrixPatternStorageUnit>();
         for (var tier : patternStorageTiers()) {
-            units.add(tier == MatrixPatternStorageTier.T2
-                    ? MatrixPatternStorageUnit.t2()
-                    : MatrixPatternStorageUnit.t1());
+            units.add(switch (tier) {
+                case T1 -> MatrixPatternStorageUnit.t1();
+                case T2 -> MatrixPatternStorageUnit.t2();
+                case T3 -> MatrixPatternStorageUnit.t3();
+                case CUSTOM -> throw new IllegalStateException("A physical storage has no tier");
+            });
         }
         return new MatrixPatternRepository(units);
     }

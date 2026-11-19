@@ -32,6 +32,12 @@ public final class TeslaCoilLogic implements IGridTickable {
             return TickRateModulation.SLEEP;
         }
 
+        if (!host.getRedstoneControl().isEnabled()) {
+            host.setWorking(false);
+            // Both block halves forward neighbor updates to wake this node.
+            return TickRateModulation.SLEEP;
+        }
+
         boolean charging = rechargeFromAppliedFlux();
         TickRateModulation processing = tickProcessing();
         return charging ? TickRateModulation.URGENT : processing;

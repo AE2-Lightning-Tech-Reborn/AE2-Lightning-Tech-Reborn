@@ -25,7 +25,13 @@ import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEItems;
 
+import mekanism.api.Action;
+import mekanism.api.AutomationType;
 import mekanism.api.RelativeSide;
+import mekanism.api.chemical.ChemicalStack;
+import mekanism.api.chemical.IChemicalTank;
+import mekanism.api.chemical.IMekanismChemicalHandler;
+import mekanism.common.registries.MekanismChemicals;
 import mekanism.api.inventory.IInventorySlot;
 import mekanism.common.inventory.slot.BasicInventorySlot;
 import mekanism.common.lib.transmitter.TransmissionType;
@@ -45,34 +51,99 @@ import com.moakiee.ae2lt.registry.ModBlocks;
 public final class ProviderMekanismReturnGameTests {
     private static final BlockPos POS = new BlockPos(2, 2, 2);
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentUnfilteredReturnPreservesInfuserAuxiliarySlots(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", false, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentFilteredReturnPreservesMatchingAuxiliaryItems(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", false, true);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessUnfilteredReturnPreservesInfuserAuxiliarySlots(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", true, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessFilteredReturnPreservesMatchingAuxiliaryItems(GameTestHelper helper) {
         check(helper, "mekanism:basic_infusing_factory", true, true);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void adjacentReturnPreservesInfiniteReactionFactoryEnergySlot(GameTestHelper helper) {
         checkReactionFactory(helper, false, false);
     }
 
-    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 280)
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
     public static void wirelessReturnPreservesInfiniteReactionFactoryEnergySlot(GameTestHelper helper) {
         checkReactionFactory(helper, true, true);
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
+    public static void adjacentReturnPreservesCompressorSecondaryChemical(GameTestHelper helper) {
+        checkSecondaryChemical(helper, "mekanism:osmium_compressor", false);
+    }
+
+    @GameTest(templateNamespace = "ae2lt", template = "wireless_io_empty", timeoutTicks = 420)
+    public static void wirelessReturnPreservesInfuserInfusionChemical(GameTestHelper helper) {
+        checkSecondaryChemical(helper, "mekanism:metallurgic_infuser", true);
+    }
+
+    /**
+     * Mekanism registers the secondary chemical tank of compressors/infusers as
+     * INPUT, OUTPUT and INPUT_OUTPUT at once. Unfiltered AUTO used to drain it
+     * through Applied Mekanistics because no chemical restriction existed.
+     */
+    private static void checkSecondaryChemical(GameTestHelper helper, String blockId, boolean wireless) {
+        if (!net.neoforged.fml.ModList.get().isLoaded("appmek")) {
+            org.slf4j.LoggerFactory.getLogger("ae2lt").info("Skipping chemical return regression: appmek is absent");
+            helper.succeed();
+            return;
+        }
+        helper.setBlock(POS.east(), AEBlocks.CREATIVE_ENERGY_CELL.block());
+        helper.setBlock(POS, ModBlocks.OVERLOADED_PATTERN_PROVIDER.get().defaultBlockState()
+                .setValue(PatternProviderBlock.PUSH_DIRECTION, PushDirection.SOUTH));
+        var provider = (OverloadedPatternProviderBlockEntity) helper.getBlockEntity(POS);
+        provider.setFilteredImport(false);
+        provider.setReturnMode(ReturnMode.AUTO);
+
+        var machinePos = wireless ? POS.offset(4, 0, 0) : POS.south();
+        helper.setBlock(machinePos, BuiltInRegistries.BLOCK.get(ResourceLocation.parse(blockId)));
+        var machine = (ISideConfiguration) helper.getBlockEntity(machinePos);
+        var config = machine.getConfig().getConfig(TransmissionType.CHEMICAL);
+        helper.assertTrue(config != null, "machine must have a chemical config");
+        IChemicalTank tank = ((IMekanismChemicalHandler) machine).getChemicalTanks(null).getFirst();
+        var side = RelativeSide.fromDirections(machine.getDirection(), Direction.NORTH);
+        config.setDataType(DataType.OUTPUT, side);
+        machine.getConfig().sideChanged(TransmissionType.CHEMICAL, side);
+        if (wireless) {
+            provider.setProviderMode(ProviderMode.WIRELESS);
+            helper.assertTrue(provider.addOrUpdateConnection(helper.getLevel().dimension(),
+                    helper.absolutePos(machinePos), Direction.NORTH), "wireless machine must bind");
+        }
+        var chemical = blockId.endsWith("infuser") ? MekanismChemicals.REDSTONE : MekanismChemicals.OSMIUM;
+
+        helper.runAfterDelay(40, () -> {
+            helper.assertTrue(provider.getMainNode().isActive(), "provider must be active");
+            tank.insert(new ChemicalStack(chemical, 100), Action.EXECUTE, AutomationType.INTERNAL);
+            helper.assertTrue(tank.getStored() == 100, "secondary tank must accept the test chemical");
+            var raw = helper.getLevel().getCapability(mekanism.common.capabilities.Capabilities.CHEMICAL.block(),
+                    helper.absolutePos(machinePos), Direction.NORTH);
+            helper.assertTrue(raw != null && raw.extractChemical(100, Action.SIMULATE).getAmount() == 100,
+                    "secondary tank must be externally extractable to reproduce the original bug");
+        });
+        helper.runAfterDelay(320, () -> {
+            helper.assertTrue(tank.getStored() == 100,
+                    "AUTO must leave the secondary chemical in its tank, stored=" + tank.getStored());
+            provider.setMachineAdaptationEnabled(false);
+        });
+        helper.runAfterDelay(410, () -> {
+            helper.assertTrue(tank.getStored() < 100,
+                    "disabling adaptation restores generic AUTO extraction of the secondary chemical");
+            helper.succeed();
+        });
     }
 
     private static void checkReactionFactory(GameTestHelper helper, boolean wireless, boolean filtered) {
@@ -144,12 +215,20 @@ public final class ProviderMekanismReturnGameTests {
                     "changing side config must not make the energy slot an output");
             setSide(machine, config, side, DataType.INPUT_OUTPUT);
         });
-        helper.runAfterDelay(240, () -> {
+        // An idle sweep backs off to 128 ticks. The side changes at tick 160;
+        // allow a complete sweep plus return-buffer/network transfer before asserting.
+        helper.runAfterDelay(320, () -> {
             helper.assertTrue(output.isEmpty() && stored(provider) == 23,
                     "real output must still return after switching to combined item I/O");
             helper.assertTrue(input.getCount() == 11 && auxiliary.getCount() == 17
                             && energy.getCount() == (energy == auxiliary ? 17 : 9),
                     "returning products must preserve input, auxiliary and energy contents");
+            provider.setMachineAdaptationEnabled(false);
+            setSide(machine, config, side, protectedType);
+        });
+        helper.runAfterDelay(390, () -> {
+            helper.assertTrue(auxiliary.isEmpty() && stored(provider) == 40,
+                    "disabling adaptation restores generic AUTO extraction of the auxiliary slot");
             helper.succeed();
         });
     }

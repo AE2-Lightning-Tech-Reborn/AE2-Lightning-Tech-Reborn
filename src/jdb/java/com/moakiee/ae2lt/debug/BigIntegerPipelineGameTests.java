@@ -640,8 +640,8 @@ public final class BigIntegerPipelineGameTests {
         var amountMenu = new appeng.menu.me.crafting.CraftAmountMenu(117, player.getInventory(), host);
         require(((BigAmountMenu) amountMenu).ae2lt$bigAvailable(), "ordinary terminal did not enable exact amounts");
         var confirm = new appeng.menu.me.crafting.CraftConfirmMenu(118, player.getInventory(), host);
-        ((BigConfirmMenu) confirm).ae2lt$planBig(target, BigInteger.valueOf(60));
-        require(((BigConfirmMenu) confirm).ae2lt$isBig(), "ordinary confirmation did not select exact planning");
+        ((com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) confirm).thunderbolt$planRequest(target, BigInteger.ONE.shiftLeft(63), appeng.api.networking.crafting.CalculationStrategy.CRAFT_LESS);
+        require(((com.moakiee.thunderbolt.api.crafting.CraftingRequestMenu) confirm).thunderbolt$isExactRequest(), "ordinary confirmation did not select exact planning");
         var future = BigCraftingService.preview(cpu.getGrid(), h.getLevel(), target, BigInteger.valueOf(60), SOURCE);
         int[] phase = {0};
         long[] receiptAt = {0};

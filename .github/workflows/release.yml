@@ -109,6 +109,8 @@ jobs:
 
   publish-platforms:
     name: Publish to CurseForge and Modrinth
+    # Add this marker to the release body to publish only on GitHub.
+    if: ${{ !contains(github.event.release.body, '<!-- github-only -->') }}
     needs: [build, upload-github-release]
     runs-on: ubuntu-latest
     permissions:
@@ -144,5 +146,4 @@ jobs:
           game-versions: ${{ needs.build.outputs.game_version }}
           dependencies: |
             thunderbolt-core(required){modrinth:M5jhzZXH}{curseforge:1631756}
-            ldlib(required){modrinth:B1CBVXHX}{curseforge:626676}
           changelog: ${{ github.event.release.body }}

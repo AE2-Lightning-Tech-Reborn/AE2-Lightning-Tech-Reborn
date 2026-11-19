@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
@@ -84,6 +83,4 @@ public record RailgunFirePacket(
         ctx.enqueueWork(() -> RailgunClientBridge.fire(p));
     }
 
-    /** Compile-time guard on unused imports. */
-    @SuppressWarnings("unused") private static final Object _IMPORT_GUARD = ByteBufCodecs.BYTE;
 }

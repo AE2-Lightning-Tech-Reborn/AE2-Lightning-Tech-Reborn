@@ -8,6 +8,7 @@ import appeng.api.crafting.IPatternDetails;
 public final class MatrixPatternStorageUnit implements MatrixPatternCore {
     public static final int T1_CAPACITY = 36;
     public static final int T2_CAPACITY = 72;
+    public static final int T3_CAPACITY = 288;
 
     private final MatrixPatternStorageTier tier;
     private final IPatternDetails[] slots;
@@ -30,6 +31,10 @@ public final class MatrixPatternStorageUnit implements MatrixPatternCore {
 
     public static MatrixPatternStorageUnit t2() {
         return new MatrixPatternStorageUnit(MatrixPatternStorageTier.T2, T2_CAPACITY);
+    }
+
+    public static MatrixPatternStorageUnit t3() {
+        return new MatrixPatternStorageUnit(MatrixPatternStorageTier.T3, T3_CAPACITY);
     }
 
     public MatrixPatternStorageTier tier() {
@@ -107,6 +112,17 @@ public final class MatrixPatternStorageUnit implements MatrixPatternCore {
         for (int i = 0; i < slots.length; i++) {
             upgraded.slots[i] = slots[i];
         }
+        return upgraded;
+    }
+
+    public boolean canUpgradeToT3() {
+        return tier == MatrixPatternStorageTier.T2;
+    }
+
+    public MatrixPatternStorageUnit upgradeToT3() {
+        if (!canUpgradeToT3()) return this;
+        var upgraded = MatrixPatternStorageUnit.t3();
+        System.arraycopy(slots, 0, upgraded.slots, 0, slots.length);
         return upgraded;
     }
 

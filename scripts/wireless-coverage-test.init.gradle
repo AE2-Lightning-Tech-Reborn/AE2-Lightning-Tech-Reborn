@@ -1,0 +1,30 @@
+// ./gradlew -I scripts/wireless-coverage-test.init.gradle test runGameTestServer
+// -PwirelessCoverageApiOnly=true also verifies standalone Tianshu without the optional WTLib mod.
+// -PwirelessCoverageThunderboltJar=/path/to/matching-thunderbolt.jar for local release dependencies.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['**/WirelessControllerCoverageGameTests.java',
+                '**/WirelessCoverageWtChecks.java', '**/TianshuQuantumBridgeGameTests.java'])
+        tasks.named('test', Test) {
+            include '**/*Wireless*Test*.class', '**/*Frequency*Test*.class', '**/*TianshuTerminal*Test*.class'
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios'])
+        }
+        def apiOnly = providers.gradleProperty('wirelessCoverageApiOnly').getOrElse('false').toBoolean()
+        if (apiOnly) configurations.runtimeOnly.dependencies.removeIf { it.name == 'ae2wtlib' }
+        def localThunderbolt = providers.gradleProperty('wirelessCoverageThunderboltJar').orNull
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+                dependencies.add(name, project.files(project.file(localThunderbolt)))
+            }
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir(apiOnly
+                    ? 'wireless-coverage-api-gametest' : 'wireless-coverage-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt'
+        }
+    }
+}

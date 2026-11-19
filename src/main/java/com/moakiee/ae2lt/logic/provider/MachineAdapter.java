@@ -62,6 +62,12 @@ public interface MachineAdapter {
         return true;
     }
 
+    /** Explicit input-capacity declaration, never inferred from successful insertion probes. */
+    default boolean hasUnboundedInputCapacity(
+            ServerLevel level, BlockPos pos, Direction face, KeyCounter[] inputs) {
+        return false;
+    }
+
     /**
      * Attempt to push up to {@code maxCopies} copies of the pattern's inputs.
      *
@@ -169,5 +175,13 @@ public interface MachineAdapter {
             IActionSource source,
             OutputSink sink) {
         return OutputReturnResult.UNAVAILABLE;
+    }
+
+    /** Per-provider opt-out for built-in machine-specific AUTO return protection. */
+    default OutputReturnResult extractOutputs(
+            ServerLevel level, BlockPos pos, Direction face,
+            AllowedOutputFilter allowedOutputs, IActionSource source, OutputSink sink,
+            boolean machineAdaptationEnabled) {
+        return extractOutputs(level, pos, face, allowedOutputs, source, sink);
     }
 }

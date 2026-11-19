@@ -1,0 +1,30 @@
+// Focused unit, real-server and native UI checks. Optional local TB artifact for offline work.
+allprojects {
+    afterEvaluate {
+        def localThunderbolt = project.findProperty('uploadWorkflowThunderboltJar')
+        if (localThunderbolt) {
+            ['compileOnly', 'runtimeOnly', 'testRuntimeOnly'].each { name ->
+                configurations.getByName(name).dependencies.removeIf { it.group == 'com.moakiee.thunderbolt' }
+                project.dependencies.add(name, project.files(localThunderbolt))
+            }
+        }
+        sourceSets.jdb.java.setIncludes([
+                'com/moakiee/ae2lt/client/tianshu/TianshuUploadAliasClientProbe.java',
+                'com/moakiee/ae2lt/debug/TianshuPatternUploadGameTests.java',
+                'com/moakiee/ae2lt/debug/TianshuJdbHarness.java'])
+        tasks.withType(Test).configureEach {
+            include '**/UploadAlias*Test*', '**/TianshuUpload*Test*',
+                    '**/TianshuRecipe*Test*', '**/RecipeViewerMixinPluginTest*',
+                    '**/TianshuPatternEncodingTermMenuSourceContractTest*'
+        }
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            dep.group != null && !(dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'de.mari_023', 'top.theillusivec4.curios', 'mezz.jei', 'dev.emi']
+                    || dep.name == 'ae2-jei-integration-1074338')
+        }
+        neoForge.runs.gameTestServer {
+            gameDirectory = project.layout.buildDirectory.dir('tianshu-upload-workflow-gametest').get().asFile
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt,ae2lt_upload_retention'
+        }
+    }
+}

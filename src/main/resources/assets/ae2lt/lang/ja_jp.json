@@ -1,5 +1,8 @@
 {
   "itemGroup.ae2lt": "AE2 ライトニングテック",
+  "ae2lt.controller.unformed": "未形成",
+  "ae2lt.controller.warning": "注意",
+  "ae2lt.controller.ready": "準備完了",
   "structure.ae2lt.alien_starship": "異星の宇宙船",
   "message.ae2lt.config_migrated_v2": "[AE2 ライトニングテック] このアップデートで再調整された値を適用するため、ae2lt-common.toml を既定値にリセットしました。設定を変更していた場合は、新しいファイルで再設定してください。",
   "message.ae2lt.config_migrated_v2.matrix": "[AE2 ライトニングテック] オーバーロード加工工場のマトリクススロット上限が32個になりました。32個を超える既存スタックは保持されますが、並列処理に寄与するのは32個までです。GUIを開いて余分なマトリクスを取り出してください。",
@@ -865,5 +868,7 @@
   "ae2lt.tianshu.gui.thunderbolt.unavailable": "Thunderbolt：オプション連携が読み込まれていません",
   "item.ae2lt.closed_loop_pattern": "閉ループパターン",
   "ae2lt.tianshu.closed_loop.members": "構成パターン",
-  "ae2lt.tianshu.closed_loop.result": "結果"
+  "ae2lt.tianshu.closed_loop.result": "結果",
+  "ae2lt.gui.status.redstone_paused": "レッドストーン信号により停止中",
+  "ae2lt.gui.tesla_coil.status.redstone_paused": "レッドストーン信号により停止中"
 }

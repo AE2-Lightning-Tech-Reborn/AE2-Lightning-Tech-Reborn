@@ -1,0 +1,20 @@
+// Apply after wireless-energy-test.init.gradle. Each run requires a fresh disposable directory.
+allprojects {
+    afterEvaluate {
+        sourceSets.jdb.java.setIncludes(['com/moakiee/ae2lt/logic/energy/WirelessEnergyBenchmarkGameTests.java',
+                'com/moakiee/ae2lt/logic/energy/WirelessEnergyTestMachine.java'])
+        neoForge.runs.gameTestServer {
+            jvmArguments.addAll('-Xms1g', '-Xmx4g')
+            if (project.hasProperty('feBenchJfr')) {
+                def recording = project.file(project.property('feBenchJfr')).absolutePath
+                jvmArguments.add("-XX:StartFlightRecording=filename=${recording},settings=profile,dumponexit=true")
+            }
+            ['targets': '256', 'warmup': '300', 'samples': '1200', 'queries': '0', 'affinity': '0',
+             'bind': 'true', 'saturated': 'false', 'highBudget': 'false', 'scenario': 'custom', 'gitHead': 'unknown'].each { key, fallback ->
+                systemProperty "ae2lt.feBench.${key}", providers.gradleProperty("feBench${key.capitalize()}").getOrElse(fallback)
+            }
+            systemProperty 'ae2lt.feBench.report', project.file(providers.gradleProperty('feBenchReport')
+                    .getOrElse('build/reports/fe-benchmark/custom.json')).absolutePath
+        }
+    }
+}

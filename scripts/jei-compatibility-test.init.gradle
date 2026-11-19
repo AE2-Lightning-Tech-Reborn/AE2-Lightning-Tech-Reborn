@@ -1,0 +1,46 @@
+// ./gradlew -I scripts/jei-compatibility-test.init.gradle jeiCompatibilityTest \
+//   -PjeiCompatJars=/path/to/old-jei.jar:/path/to/new-jei.jar
+// Each unchanged published jar is transformed and verified in its own JVM.
+allprojects {
+    afterEvaluate {
+        sourceSets.create('jeiCompatTest') {
+            compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+            runtimeClasspath += output + compileClasspath
+        }
+        dependencies.add('jeiCompatTestImplementation', 'org.ow2.asm:asm-analysis:9.8')
+        dependencies.add('jeiCompatTestImplementation', 'org.ow2.asm:asm-util:9.8')
+        def jars = (project.findProperty('jeiCompatJars') ?: '').split(File.pathSeparator).findAll { it }
+        def matrix = tasks.register('jeiCompatibilityTest') {
+            group = 'verification'
+            doFirst { if (jars.isEmpty()) throw new GradleException('Supply published JEI jars using -PjeiCompatJars') }
+        }
+        jars.eachWithIndex { path, index ->
+            def jar = project.file(path)
+            def resultDir = project.layout.buildDirectory.dir("jei-compatibility/${jar.name}").get().asFile
+            def run = tasks.register("jeiCompatibilityCase${index}", JavaExec) {
+                dependsOn tasks.named('classes'), tasks.named('jeiCompatTestClasses')
+                javaLauncher = project.javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+                mainClass = 'diagnostic.JeiCompatibilityHarness'
+                classpath = project.files(resultDir, jar) + sourceSets.jeiCompatTest.runtimeClasspath.filter {
+                    !(it.path.contains('/mezz.jei/') || it.name.startsWith('jei-'))
+                }
+                jvmArgs '-Xverify:all', '-Dmixin.service=diagnostic.HarnessService'
+                doFirst {
+                    resultDir.mkdirs()
+                    boolean modern
+                    new java.util.zip.ZipFile(jar).withCloseable {
+                        modern = it.getEntry('mezz/jei/api/recipe/transfer/IRecipeTransferContext.class') != null
+                    }
+                    def mixins = ['jei.JeiRecipeTransferButtonControllerMixin', 'jei.JeiMultiblockLayoutMixin',
+                            modern ? 'jeisupply.JeiWirelessSupplyServiceMixin' : 'jeisupply.JeiWirelessSupplyMixin']
+                    new File(resultDir, 'diagnostic.mixins.json').text = groovy.json.JsonOutput.toJson([
+                            required: true, minVersion: '0.8', package: 'com.moakiee.ae2lt.mixin.recipeviewer',
+                            compatibilityLevel: 'JAVA_21', client: mixins, injectors: [defaultRequire: 1]])
+                    args resultDir.absolutePath, modern ? 'modern' : 'legacy'
+                    workingDir resultDir
+                }
+            }
+            matrix.configure { dependsOn run }
+        }
+    }
+}

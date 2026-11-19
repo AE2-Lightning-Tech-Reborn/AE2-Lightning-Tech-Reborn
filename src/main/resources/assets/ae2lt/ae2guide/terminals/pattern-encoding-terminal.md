@@ -56,9 +56,31 @@ With a pattern in the encoded-pattern slot, the **Upload** button sends it to it
 * **Processing patterns** open the provider-selection screen: all visible Pattern Providers on the network are listed grouped by name, showing provider counts and free slots per group, with search by name, item, or tooltip.
 * **Closed-loop patterns** upload to the bound Tianshu's Closed-Loop Pattern Storage.
 
-The provider-selection screen also supports **alias mappings**. A JEI/EMI transfer uses the recipe type or viewer category as its source key; without viewer context, the pattern's primary output is used instead. The saved alias becomes the provider filter so similar recipes can locate their target faster. Filtering supports left-anchored item-ID matching, plus contains and wildcard matching for names and tooltips; pinyin matching is also available when Just Enough Characters is installed. Shift + right-click a list entry to bind that machine's name as an alias directly.
-
 The terminal settings configure an **upload trigger**: holding a chosen key (or no key) while encoding automatically enters the matching upload flow; it can also be set to manual upload only. The manual upload button always remains available.
+
+### Manage Upload Aliases
+
+**Shift + right-click the encode button** opens management in wired and wireless terminals. The upload picker and Tianshu settings also provide an entry.
+
+Search, add, edit or delete mappings by source. Adding or editing uses the upload provider list; fill the source manually or use + on a JEI/EMI recipe page. Left click or Shift + right click a provider to fill the draft alias, including full providers, or type an alias manually. Confirm saves the draft; Cancel discards it without uploading a pattern. Back or Esc asks before discarding a changed draft, and conflicting replacements still require confirmation.
+
+The top button cycles a client-wide policy, defaulting to **Off**:
+
+* **Off**: choose processing-pattern targets manually.
+* **Saved aliases**: use only an explicitly saved alias for the current recipe source.
+* **Any match**: prefer a saved alias, then the registry IDs of JEI's left-column machines or EMI workstations. When machine metadata exists, do not fall back to broader name guesses. Without machine metadata, retain the existing candidate rules.
+
+Automatic upload requires exactly one matching group that can accept the pattern. All machine candidates are evaluated together, including full groups when checking ambiguity. Missing, ambiguous or full targets keep the picker open. Normal and Alt recipe-viewer uploads share this policy. Existing crafting, closed-loop and omniversal routes retain their own routing.
+
+**Export clipboard** copies all saved aliases as JSON. **Import clipboard** validates the whole document before merging; conflicting replacements require confirmation. Other mappings and the automatic upload mode are preserved. Settings are local to each player and shared across their worlds and servers.
+
+The upload picker also supports saving the current filter or Shift + right-clicking a group to bind it. Aliases filter names or icon IDs, not physical machine addresses. Deleting one source leaves other sources using the same alias intact.
+
+### Undo the Last Upload
+
+**Right-click the encode button** to return your last successfully uploaded pattern in this menu session to the empty encoded-pattern slot. Only one receipt is retained; closing the menu clears it. Undo does not refund another blank pattern.
+
+The server isolates receipts per player menu and rejects disconnected targets, removed/replaced/changed patterns and changed closed-loop repositories. Even an identical replacement inserted by another player cannot satisfy an old receipt. Target lists also bind the original encoded pattern, preventing an old request from uploading a replacement from a shared wired terminal.
 
 ### Direct Encoding and Upload from JEI or EMI
 
@@ -69,7 +91,7 @@ Prepare a blank pattern in the Tianshu Pattern Encoding Terminal and use any non
 The direct-upload result depends on the pattern type:
 
 * **Crafting, stonecutting, and smithing patterns** follow their normal automatic routing. When no selection is needed, the current JEI or EMI recipe page remains open and the upload result appears in the action bar, making consecutive transfers easier.
-* **Processing, advanced, and overload patterns** use the same initial filter as the provider-selection screen: a saved alias for the current recipe type or category takes priority; otherwise the first default alias supplied by the viewer is used. If the filter produces exactly one candidate group with a free slot, the pattern uploads in the background and the current recipe page remains open. No candidate, multiple candidates, or a sole full candidate opens the provider-selection screen directly; returning from it goes back to the terminal.
+* **Processing, advanced, and overload patterns** follow the three-state policy above. The default opens the picker. When enabled, only one unambiguous writable target uploads in the background while preserving the recipe page.
 * **Closed-loop mode** does not use this direct-upload shortcut. A JEI/EMI transfer only marks the primary output and starts closed-loop discovery; finish configuring, encoding, and uploading the closed-loop pattern normally.
 
 <a name="closed-loop-patterns"></a>

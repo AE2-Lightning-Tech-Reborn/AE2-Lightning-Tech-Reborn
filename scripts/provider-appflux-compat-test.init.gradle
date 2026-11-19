@@ -1,0 +1,50 @@
+// Use from AE2LT or AE2LTPP. Pins the versions from latest (3).log without
+// raising the published mod's minimum supported AE2 / AppliedFlux versions.
+// -I <this-file> -PproviderCompatBuildDir=build/provider-compat test jar
+// -PproviderAppFlux=false exercises the same build without AppliedFlux at runtime.
+gradle.beforeProject { project ->
+    def output = project.findProperty('providerCompatBuildDir')
+    if (output) {
+        project.layout.buildDirectory.set(project.file(output))
+    }
+}
+
+allprojects {
+    afterEvaluate {
+        boolean withAppFlux = providers.gradleProperty('providerAppFlux').getOrElse('true').toBoolean()
+        repositories.maven {
+            url = uri('https://modmaven.dev/')
+            content { includeGroup 'org.appliedenergistics' }
+        }
+        def curseRepository = repositories.maven {
+            name = 'ProviderCompatCurseMaven'
+            url = uri('https://www.cursemaven.com')
+        }
+        repositories.exclusiveContent {
+            forRepository { curseRepository }
+            filter { includeModule 'curse.maven', 'applied-flux-965012' }
+        }
+        configurations.configureEach {
+            resolutionStrategy.dependencySubstitution {
+                substitute module('curse.maven:applied-energistics-2-223794') using module('org.appliedenergistics:appliedenergistics2:19.2.18')
+            }
+            resolutionStrategy.force 'org.appliedenergistics:appliedenergistics2:19.2.18',
+                    'curse.maven:applied-flux-965012:9288549'
+        }
+        if (withAppFlux) {
+            dependencies.add('runtimeOnly', 'curse.maven:applied-flux-965012:9288549')
+            dependencies.add('runtimeOnly', 'curse.maven:glodium-957920:5821676')
+        } else {
+            configurations.matching { it.name.toLowerCase().endsWith('runtimeclasspath') }.configureEach {
+                exclude group: 'curse.maven', module: 'applied-flux-965012'
+            }
+        }
+        tasks.withType(Test).configureEach {
+            inputs.property('providerAppFlux', withAppFlux)
+            systemProperty 'ae2lt.test.expectAppFlux', String.valueOf(withAppFlux)
+            def profile = withAppFlux ? 'provider-appflux' : 'provider-no-appflux'
+            reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/${profile}"))
+            reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/${profile}"))
+        }
+    }
+}

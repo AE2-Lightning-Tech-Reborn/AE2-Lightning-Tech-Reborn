@@ -1,0 +1,27 @@
+// Run a real AdvancedAE release or the absence profile in a disposable GameTest world.
+// ./gradlew -I scripts/advancedae-compat-test.init.gradle -Pae2ltAdvancedAeJar=/path/to/AdvancedAE.jar runGameTestServer
+// Omit ae2ltAdvancedAeJar to verify optional-mod absence.
+allprojects {
+    afterEvaluate {
+        def jarPath = providers.gradleProperty('ae2ltAdvancedAeJar').orNull
+        def present = jarPath != null && !jarPath.isBlank()
+        if (present && !file(jarPath).isFile()) {
+            throw new GradleException("AdvancedAE JAR not found: ${jarPath}")
+        }
+        sourceSets.jdb.java.setIncludes(present ? [
+                '**/AdvancedAeCompatibilityGameTests.java', '**/OverloadFactoryReactionGameTests.java'
+        ] : ['**/AdvancedAeAbsentGameTests.java'])
+        configurations.runtimeOnly.dependencies.removeIf { dep ->
+            !(dep.group == null || dep.group in ['com.moakiee.thunderbolt', 'org.appliedenergistics',
+                    'top.theillusivec4.curios', 'de.mari_023']
+                    || (present && dep.group == 'curse.maven'
+                        && dep.name in ['geckolib-388172', 'glodium-957920']))
+        }
+        if (present) dependencies.add('runtimeOnly', files(jarPath))
+        def profile = present ? file(jarPath).name.replaceAll(/[^a-zA-Z0-9_.-]/, '_') : 'absent'
+        neoForge.runs.gameTestServer {
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'ae2lt_advancedae'
+            gameDirectory = project.layout.buildDirectory.dir("advancedae-compat-${profile}").get().asFile
+        }
+    }
+}

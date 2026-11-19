@@ -149,6 +149,21 @@ class MatrixCraftingClusterTest {
     }
 
     @Test
+    void executionCoreAcceptsProviderValidatedPatternWithoutItsOwnPatternCatalog() {
+        var assembler = new FakeAssembler();
+        var cluster = new MatrixCraftingCluster(
+                () -> true,
+                List.of(),
+                List.of(new FakeCraftCore(MatrixCraftingUnit.stableCore(),
+                        MatrixCraftingUnit.t1Threader())),
+                new FakeHost(), assembler, new CraftingCoreRegistry(),
+                MatrixCraftingEnergy.UNLIMITED);
+
+        assertTrue(cluster.pushSingle(PATTERN, emptyInputs()));
+        assertEquals(1, assembler.calls);
+    }
+
+    @Test
     void providerCallFuseProtectsHighThroughputMatrixFromNonBatchCpu() {
         var host = new FakeHost();
         var assembler = new FakeAssembler();

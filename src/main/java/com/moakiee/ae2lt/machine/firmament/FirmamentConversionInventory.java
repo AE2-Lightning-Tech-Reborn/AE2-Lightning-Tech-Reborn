@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.machine.firmament;
 
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -29,15 +30,22 @@ public class FirmamentConversionInventory extends LargeStackItemHandler {
     public static final int OUTPUT_SLOT_COUNT = 4;
     public static final int SLOT_COUNT = 7;
     public static final int SLOT_LIMIT = 64;
+    public static final int ADVANCED_INPUT_SLOT_LIMIT = 256;
+    private final BooleanSupplier advanced;
 
     public FirmamentConversionInventory(@Nullable Runnable changeListener) {
+        this(changeListener, () -> false);
+    }
+
+    public FirmamentConversionInventory(@Nullable Runnable changeListener, BooleanSupplier advanced) {
         super(SLOT_COUNT, changeListener);
+        this.advanced = java.util.Objects.requireNonNull(advanced, "advanced");
     }
 
     @Override
     public int getSlotLimit(int slot) {
         validateSlotIndex(slot);
-        return SLOT_LIMIT;
+        return isInputSlot(slot) && advanced.getAsBoolean() ? ADVANCED_INPUT_SLOT_LIMIT : SLOT_LIMIT;
     }
 
     @Override

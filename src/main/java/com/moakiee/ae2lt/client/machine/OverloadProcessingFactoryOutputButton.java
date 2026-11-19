@@ -15,12 +15,18 @@ import appeng.client.gui.widgets.IconButton;
 
 public class OverloadProcessingFactoryOutputButton extends IconButton {
     private final Component sideLabel;
+    private final String tooltipPrefix;
     private ItemStack display = ItemStack.EMPTY;
     private boolean on;
 
     public OverloadProcessingFactoryOutputButton(Component sideLabel, OnPress onPress) {
+        this(sideLabel, onPress, "ae2lt.gui.overload_factory.output_side");
+    }
+
+    protected OverloadProcessingFactoryOutputButton(Component sideLabel, OnPress onPress, String tooltipPrefix) {
         super(onPress);
         this.sideLabel = sideLabel;
+        this.tooltipPrefix = tooltipPrefix;
     }
 
     public void setDisplay(@Nullable ItemLike itemLike) {
@@ -45,9 +51,7 @@ public class OverloadProcessingFactoryOutputButton extends IconButton {
     public List<Component> getTooltipMessage() {
         return List.of(
                 sideLabel,
-                Component.translatable(on
-                        ? "ae2lt.gui.overload_factory.output_side.enabled"
-                        : "ae2lt.gui.overload_factory.output_side.disabled"));
+                Component.translatable(tooltipPrefix + (on ? ".enabled" : ".disabled")));
     }
 
     @Override

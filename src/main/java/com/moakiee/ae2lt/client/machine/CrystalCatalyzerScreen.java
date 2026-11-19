@@ -12,7 +12,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import appeng.api.config.ActionItems;
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.ActionButton;
@@ -24,7 +23,7 @@ import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import com.moakiee.ae2lt.menu.CrystalCatalyzerMenu;
 
-public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
+public class CrystalCatalyzerScreen extends RedstoneMachineScreen<CrystalCatalyzerMenu> {
     private final ToggleButton autoExportButton;
     private final ActionButton configureOutputButton;
     private final TextureToggleButton modeButton;
@@ -86,7 +85,10 @@ public class CrystalCatalyzerScreen extends AEBaseScreen<CrystalCatalyzerMenu> {
                         LightningStatusLines.progress(menu.getProgress()))
                 : List.of(
                         LightningStatusLines.title(),
-                        LightningStatusLines.status(menu.isWorking()),
+                        menu.redstonePaused
+                                ? Component.translatable("ae2lt.gui.status.label",
+                                        Component.translatable("ae2lt.gui.status.redstone_paused"))
+                                : LightningStatusLines.status(menu.isWorking()),
                         LightningStatusLines.progress(menu.getProgress()),
                         LightningStatusLines.energy(menu.getStoredEnergy(), menu.getEnergyCapacity()),
                         LightningStatusLines.highVoltage(menu.getHighVoltageAvailable()),

@@ -13,7 +13,6 @@ import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.TabButton;
-import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.menu.MachineOutputConfigMenu;
 import appeng.menu.AEBaseMenu;
@@ -27,16 +26,24 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     private final OverloadProcessingFactoryOutputButton rightButton;
     private final OverloadProcessingFactoryOutputButton topButton;
     private final OverloadProcessingFactoryOutputButton bottomButton;
+    private final String buttonTooltipPrefix;
 
     public MachineOutputConfigScreen(P parent, Component label) {
-        super(parent, "/screens/overload_processing_output_config.json");
+        this(parent, label, "/screens/overload_processing_output_config.json",
+                "ae2lt.gui.overload_factory.output_side.clear", "ae2lt.gui.overload_factory.output_side");
+    }
+
+    protected MachineOutputConfigScreen(P parent, Component label, String stylePath,
+            String clearKey, String buttonTooltipPrefix) {
+        super(parent, stylePath);
+        this.buttonTooltipPrefix = buttonTooltipPrefix;
 
         widgets.add("return", new TabButton(Icon.BACK, label, btn -> returnToParent()));
 
         var clear = new ActionButton(appeng.api.config.ActionItems.S_CLOSE, button -> menu.clientClearOutputSides());
         clear.setHalfSize(true);
         clear.setDisableBackground(true);
-        clear.setMessage(Component.translatable("ae2lt.gui.overload_factory.output_side.clear"));
+        clear.setMessage(Component.translatable(clearKey));
         widgets.add("clear", clear);
 
         this.frontButton = addSideButton("front", RelativeSide.FRONT, "gui.tooltips.ae2.SideFront");
@@ -55,7 +62,12 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     @Override
     protected void init() {
         super.init();
-        setSlotsHidden(SlotSemantics.TOOLBOX, true);
+        for (var slot : menu.slots) {
+            var semantic = menu.getSlotSemantic(slot);
+            if (semantic != null) {
+                setSlotsHidden(semantic, true);
+            }
+        }
     }
 
     @Override
@@ -89,7 +101,7 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
     private OverloadProcessingFactoryOutputButton addSideButton(String widgetId, RelativeSide side, String labelKey) {
         var button = new OverloadProcessingFactoryOutputButton(
                 Component.translatable(labelKey),
-                press -> menu.clientToggleOutputSide(side));
+                press -> menu.clientToggleOutputSide(side), buttonTooltipPrefix);
         widgets.add(widgetId, button);
         return button;
     }

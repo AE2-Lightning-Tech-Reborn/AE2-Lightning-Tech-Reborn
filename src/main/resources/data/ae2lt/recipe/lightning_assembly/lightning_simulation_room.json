@@ -1,0 +1,31 @@
+{
+  "type": "ae2lt:lightning_assembly",
+  "priority": 0,
+  "inputs": [
+    {
+      "ingredient": {
+        "item": "ae2lt:overload_processor"
+      },
+      "count": 32
+    },
+    {
+      "ingredient": {
+        "tag": "c:ingots/overload_alloy"
+      },
+      "count": 32
+    },
+    {
+      "ingredient": {
+        "item": "ae2lt:overload_crystal_block"
+      },
+      "count": 16
+    }
+  ],
+  "result": {
+    "id": "ae2lt:lightning_simulation_room",
+    "count": 1
+  },
+  "totalEnergy": 1000000,
+  "lightningCost": 4,
+  "lightningTier": "high_voltage"
+}

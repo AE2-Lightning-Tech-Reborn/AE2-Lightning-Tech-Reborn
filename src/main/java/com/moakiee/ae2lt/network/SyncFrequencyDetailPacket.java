@@ -5,7 +5,6 @@ import com.moakiee.ae2lt.grid.WirelessFrequencyManager;
 import com.moakiee.ae2lt.menu.FrequencyMenu;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -113,7 +112,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
         boolean hasReceiver = false;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.containerMenu instanceof FrequencyMenu fm
-                    && fm.getCurrentFrequencyId() == frequencyId) {
+                    && fm.usesLocalConnectionList() && fm.getCurrentFrequencyId() == frequencyId) {
                 hasReceiver = true;
                 break;
             }
@@ -123,7 +122,7 @@ public record SyncFrequencyDetailPacket(int frequencyId, byte syncType, Compound
         SyncFrequencyDetailPacket pkt = forConnections(frequencyId, server);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.containerMenu instanceof FrequencyMenu fm
-                    && fm.getCurrentFrequencyId() == frequencyId) {
+                    && fm.usesLocalConnectionList() && fm.getCurrentFrequencyId() == frequencyId) {
                 PacketDistributor.sendToPlayer(player, pkt);
             }
         }

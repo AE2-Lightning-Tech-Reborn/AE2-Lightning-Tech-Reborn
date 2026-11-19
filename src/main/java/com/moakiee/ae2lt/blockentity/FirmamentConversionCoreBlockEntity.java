@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -15,12 +16,16 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.block.FirmamentConversionCoreBlock;
+import com.moakiee.ae2lt.logic.world.PlayerWorldActions;
 import com.moakiee.ae2lt.machine.firmament.FirmamentConversionAutomationInventory;
 import com.moakiee.ae2lt.machine.firmament.FirmamentConversionInventory;
 import com.moakiee.ae2lt.machine.firmament.recipe.FirmamentConversionLockedRecipe;
@@ -31,6 +36,7 @@ import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.util.NativeStackDropHelper;
 
 public class FirmamentConversionCoreBlockEntity extends BlockEntity {
+    public static final int MAX_BATCH_SIZE = 16;
     private static final ResourceLocation FIRMAMENT_STARSHIP_ID =
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "firmament_starship");
     private static final String TAG_INVENTORY = "Inventory";
@@ -39,7 +45,7 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
     private static final String TAG_INITIAL_LOOT_ROLLED = "InitialLootRolled";
 
     private final FirmamentConversionInventory inventory =
-            new FirmamentConversionInventory(this::onInventoryChanged);
+            new FirmamentConversionInventory(this::onInventoryChanged, this::isAdvanced);
     private final FirmamentConversionAutomationInventory automationInventory =
             new FirmamentConversionAutomationInventory(inventory);
     private FirmamentConversionLockedRecipe lockedRecipe;
@@ -60,6 +66,36 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
 
     public FirmamentConversionInventory getInventory() {
         return inventory;
+    }
+
+    public boolean isAdvanced() {
+        return getBlockState().getValue(FirmamentConversionCoreBlock.ADVANCED);
+    }
+
+    public int getBatchSize() {
+        return isAdvanced() ? MAX_BATCH_SIZE : 1;
+    }
+
+    public boolean tryUpgrade(Player player, InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        if (!(level instanceof ServerLevel) || isAdvanced() || !player.isShiftKeyDown()
+                || !player.getAbilities().mayBuild || player.isSpectator()
+                || !held.is(ModItems.LIGHTNING_COLLAPSE_MATRIX.get())
+                || !player.mayUseItemAt(worldPosition, Direction.UP, held)
+                || !PlayerWorldActions.mayInteract(player, level, worldPosition,
+                        hand, Direction.UP, Vec3.atCenterOf(worldPosition))) {
+            return false;
+        }
+        if (!level.setBlock(worldPosition,
+                getBlockState().setValue(FirmamentConversionCoreBlock.ADVANCED, true),
+                Block.UPDATE_ALL)) {
+            return false;
+        }
+        if (!player.getAbilities().instabuild) {
+            held.shrink(1);
+        }
+        setChanged();
+        return true;
     }
 
     public IItemHandlerModifiable getAutomationInventory() {
@@ -183,8 +219,23 @@ public class FirmamentConversionCoreBlockEntity extends BlockEntity {
 
         progress++;
         if (progress >= lockedRecipe.processTime()) {
-            if (!completeLockedRecipe(lockedRecipe, candidate.get())) {
-                abortProcessing();
+            // Complete whole recipe copies, rechecking materials and output room after each one.
+            // Keep the same locked recipe throughout this batch, even after completion clears the field.
+            var completingRecipe = lockedRecipe;
+            int batchSize = getBatchSize();
+            for (int batch = 0; batch < batchSize; batch++) {
+                if (!completeLockedRecipe(completingRecipe, candidate.get())) {
+                    abortProcessing();
+                    break;
+                }
+                if (batch + 1 == batchSize) {
+                    break;
+                }
+                candidate = FirmamentConversionRecipeService.findLockedRecipeMatch(
+                        level, inventory, completingRecipe);
+                if (candidate.isEmpty()) {
+                    break;
+                }
             }
         } else {
             setChanged();

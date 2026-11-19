@@ -123,6 +123,19 @@ public final class PowerCostUtil {
         return OverloadedIoCost.amountForOperations(requested, amountPerOperation(key), affordableOps);
     }
 
+    /** Bound a counted pattern submission by its already computed per-copy price, without growth probes. */
+    public static int maxAffordableCopies(@Nullable IGrid grid, double oneCopyCost, int requested) {
+        if (requested <= 0 || !Double.isFinite(oneCopyCost) || oneCopyCost < 0.0) return 0;
+        if (oneCopyCost == 0.0) return requested;
+        if (grid == null) return 0;
+        var energy = grid.getEnergyService();
+        double reserve = idleReserveForIdlePowerUsage(energy.getIdlePowerUsage());
+        double requestedPower = Math.min(Double.MAX_VALUE, oneCopyCost * requested + reserve);
+        double available = energy.extractAEPower(requestedPower, Actionable.SIMULATE, PowerMultiplier.CONFIG);
+        double affordable = Math.floor(Math.max(0.0, available - reserve) / oneCopyCost);
+        return (int) Math.min(requested, affordable);
+    }
+
     private static long amountPerOperation(AEKey key) {
         if (AEItemKey.is(key)) {
             return OverloadedIoCost.ITEMS_PER_OPERATION;

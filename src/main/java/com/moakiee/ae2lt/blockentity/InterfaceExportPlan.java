@@ -3,6 +3,11 @@ package com.moakiee.ae2lt.blockentity;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import org.jetbrains.annotations.Nullable;
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
@@ -28,6 +33,9 @@ final class InterfaceExportPlan {
     private final int[] inputSlots;
     private final int[] claimedSlots;
     private final ExportDrainObservation[] drains;
+    private final ItemMatcher[] itemMatchers;
+    private final Reference2IntOpenHashMap<Item> firstItemCandidate;
+    private final int[] nextItemCandidate;
     private IItemHandler observedHandler;
     private boolean orderDirty;
 
@@ -44,6 +52,9 @@ final class InterfaceExportPlan {
         if (yieldRefill == null) {
             order = representative = nextDuplicate = previousKey = nextKey = inputSlots = claimedSlots = null;
             drains = null;
+            itemMatchers = null;
+            firstItemCandidate = null;
+            nextItemCandidate = null;
             return;
         }
         int size = entries.size();
@@ -54,6 +65,10 @@ final class InterfaceExportPlan {
         inputSlots = new int[size];
         claimedSlots = new int[size];
         drains = new ExportDrainObservation[size];
+        itemMatchers = new ItemMatcher[size];
+        firstItemCandidate = new Reference2IntOpenHashMap<>();
+        firstItemCandidate.defaultReturnValue(-1);
+        nextItemCandidate = new int[size];
         var groups = new LinkedHashMap<AEKey, List<Integer>>();
         for (int i = 0; i < size; i++) groups.computeIfAbsent(entries.get(i).key(), ignored -> new ArrayList<>()).add(i);
         previousKey = new int[size];
@@ -62,6 +77,7 @@ final class InterfaceExportPlan {
         int position = 0;
         for (var indices : groups.values()) {
             int key = indices.getFirst();
+            if (entries.get(key).key() instanceof AEItemKey itemKey) itemMatchers[key] = new ItemMatcher(itemKey);
             previousKey[key] = lastKey;
             if (lastKey < 0) firstKey = key;
             else nextKey[lastKey] = key;
@@ -73,6 +89,14 @@ final class InterfaceExportPlan {
                 if (previous >= 0) nextDuplicate[previous] = index;
                 previous = index;
             }
+        }
+        // Preserve configuration order within each item. Resident-key lookup
+        // skips unrelated item types without caching any live inventory state.
+        for (int i = size - 1; i >= 0; i--) {
+            if (itemMatchers[i] == null) continue;
+            var item = itemMatchers[i].key.getReadOnlyStack().getItem();
+            nextItemCandidate[i] = firstItemCandidate.getInt(item);
+            firstItemCandidate.put(item, i);
         }
     }
 
@@ -115,9 +139,9 @@ final class InterfaceExportPlan {
         if (drains == null || handler == null) return;
         int canonical = representative[index];
         int slot = inputSlot(handler, canonical);
-        if (slot < 0 || !(entries.get(canonical).key() instanceof AEItemKey key)) return;
+        if (slot < 0 || itemMatchers[canonical] == null) return;
         var stack = handler.getStackInSlot(slot);
-        if (!key.matches(stack)) return;
+        if (!itemMatchers[canonical].matches(stack)) return;
         var observation = drain(canonical, slot);
         observation.inserted(stack.getCount(), inserted, now);
     }
@@ -141,7 +165,7 @@ final class InterfaceExportPlan {
             int slot = inputSlot(handler, index);
             if (slot < 0) continue;
             var resident = handler.getStackInSlot(slot);
-            if (waiting.matches(resident)) continue;
+            if (itemMatchers[index].matches(resident)) continue;
             if (resident.isEmpty()) {
                 transfer.untilTick = Math.min(transfer.untilTick, now);
                 continue;
@@ -153,9 +177,9 @@ final class InterfaceExportPlan {
                 continue;
             }
             int occupying = -1;
-            for (int candidate = 0; candidate < entries.size(); candidate++) {
-                if (representative[candidate] == candidate && entries.get(candidate).key() instanceof AEItemKey key
-                        && key.matches(resident) && inputSlot(handler, candidate) == slot) {
+            for (int candidate = firstItemCandidate.getInt(resident.getItem()); candidate >= 0;
+                    candidate = nextItemCandidate[candidate]) {
+                if (itemMatchers[candidate].matches(resident) && inputSlot(handler, candidate) == slot) {
                     occupying = candidate;
                     break;
                 }
@@ -201,6 +225,31 @@ final class InterfaceExportPlan {
             }
         }
         return result;
+    }
+
+    /** Fast rejection using immutable configuration components; positive matches still use AE2. */
+    static final class ItemMatcher {
+        private final AEItemKey key;
+        private final DataComponentType<?> discriminator;
+        private final Object value;
+
+        ItemMatcher(AEItemKey key) {
+            this.key = key;
+            var expected = key.getReadOnlyStack();
+            var patch = expected.getComponentsPatch().entrySet();
+            discriminator = patch.isEmpty() ? null : patch.iterator().next().getKey();
+            value = discriminator == null ? null : expected.get(discriminator);
+        }
+
+        boolean matches(ItemStack stack) {
+            if (discriminator == null) return key.matches(stack);
+            if (stack.isEmpty() || stack.getItem() != key.getReadOnlyStack().getItem()) return false;
+            // Read the live stack on every call, including in-place component changes.
+            // This only rejects mismatches; AE2 still checks added/unlisted components
+            // and preserves the exact prototype/patch equality rules on success.
+            if (!Objects.equals(value, stack.get(discriminator))) return false;
+            return key.matches(stack);
+        }
     }
 
     static final class ExportDrainObservation {

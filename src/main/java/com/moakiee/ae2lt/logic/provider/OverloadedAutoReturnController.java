@@ -70,7 +70,8 @@ final class OverloadedAutoReturnController {
                         targetLevel,
                         allowedOutputs,
                         environment.actionSource(),
-                        outputSink);
+                        outputSink,
+                        provider.isMachineAdaptationEnabled());
             }
             sweep.recordPeriodic(target, gameTick, result);
         }
@@ -97,7 +98,8 @@ final class OverloadedAutoReturnController {
                     targetLevel,
                     allowedOutputs,
                     environment.actionSource(),
-                    outputSink);
+                    outputSink,
+                    environment.provider().isMachineAdaptationEnabled());
         }
         // Demand is activity even if the machine has not produced an output yet.
         // It must never advance the idle sweep backoff.
