@@ -1,0 +1,13 @@
+{
+  "name": "reactor-prototype",
+  "version": "0.5.0-u5",
+  "private": true,
+  "description": "奇点里的宇宙：增量玩法规则核原型（原初与凝聚时代）",
+  "type": "module",
+  "scripts": {
+    "test": "node test/core.test.js && node test/web.test.js && node test/bundle.test.js",
+    "build:web": "node scripts/build-web.js",
+    "run": "node src/cli.js run",
+    "sweep": "node src/cli.js sweep"
+  }
+}
