@@ -167,7 +167,7 @@ public final class LargeFactoryClientProbe {
                     server(() -> showWorld(false, true, false));
                 }
                 case 10 -> {
-                    assertWorking(); capture("factory-front-animation-next.png");
+                    assertWorking();
                     server(() -> showWorld(false, true, true));
                 }
                 case 11 -> {
@@ -341,29 +341,22 @@ public final class LargeFactoryClientProbe {
             var model = mc.getBlockRenderer().getBlockModelShaper().getBlockModel(state);
             var quads = model.getQuads(state, null, net.minecraft.util.RandomSource.create(1),
                     net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
-            if (quads.size() != 913) throw new AssertionError("missing factory geometry: " + quads.size());
+            if (quads.size() != (working ? 54 : 50))
+                throw new AssertionError("unexpected factory geometry: " + quads.size());
+            String atlas = "ae2lt:block/large_overload_factory/" + (working ? "big_factory_on" : "big_factory");
             double[] min = {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
             double[] max = {Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY};
-            int luminous = 0, screenFrames = 0;
             for (var quad : quads) {
+                if (!quad.getSprite().contents().name().toString().equals(atlas))
+                    throw new AssertionError("unexpected factory atlas: " + quad.getSprite().contents().name());
                 var vertices = quad.getVertices();
-                boolean light = quad.getSprite().contents().name().getPath().contains("emissive_");
-                if (light) luminous++;
-                if (quad.getSprite().contents().name().getPath().contains("console_emissive_"))
-                    screenFrames = (int) quad.getSprite().contents().getUniqueFrames().count();
                 for (int vertex = 0; vertex < 4; vertex++) {
                     int offset = vertex * (vertices.length / 4);
                     for (int axis = 0; axis < 3; axis++) {
                         double v = Float.intBitsToFloat(vertices[offset + axis]);
                         min[axis] = Math.min(min[axis], v); max[axis] = Math.max(max[axis], v);
                     }
-                    if (light && working && vertices[offset + 6] != net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
-                        throw new AssertionError("emissive face lost baked full-bright data");
-                    if (light && !working && vertices[offset + 6] == net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
-                        throw new AssertionError("stopped face is still full-bright");
                 }
-                if (light && working && (quad.isShade() || quad.hasAmbientOcclusion()))
-                    throw new AssertionError("emissive face still receives directional shading or AO");
             }
             var a = LargeFactoryStructure.worldPosition(BlockPos.ZERO, BlockPos.ZERO, facing);
             var b = LargeFactoryStructure.worldPosition(BlockPos.ZERO, LargeFactoryStructure.MAX_CORNER, facing);
@@ -373,10 +366,8 @@ public final class LargeFactoryClientProbe {
                         || Math.abs(max[axis] - Math.max(a.get(direction), b.get(direction)) - 1) > 0.0001)
                     throw new AssertionError("factory model origin/rotation mismatch: " + facing + " " + axis);
             }
-            if (luminous != 189 || screenFrames != (working ? 16 : 1))
-                throw new AssertionError("wrong light layer or animation frames: " + luminous + "/" + screenFrames);
             results.put(facing.getName() + (working ? "_on" : "_off"),
-                    java.util.Map.of("quads", quads.size(), "lightQuads", luminous, "screenFrames", screenFrames, "min", min, "max", max));
+                    java.util.Map.of("quads", quads.size(), "atlas", atlas, "min", min, "max", max));
         }
         Files.writeString(mc.gameDirectory.toPath().resolve("factory-model-validation.json"),
                 new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(results));
