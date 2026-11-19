@@ -1,5 +1,8 @@
 {
   "ae2lt.wireless_coverage.bound": "Wireless device linked to this ME network",
+  "ae2lt.controller.unformed": "Fault",
+  "ae2lt.controller.warning": "Warn",
+  "ae2lt.controller.ready": "Ready",
   "tooltip.ae2lt.wireless_coverage.same_dimension": "ME network wireless coverage: entire dimension",
   "tooltip.ae2lt.wireless_coverage.all_dimensions": "ME network wireless coverage: all dimensions",
   "tooltip.ae2lt.wireless_coverage.bind": "Right-click with a wireless terminal to link it",

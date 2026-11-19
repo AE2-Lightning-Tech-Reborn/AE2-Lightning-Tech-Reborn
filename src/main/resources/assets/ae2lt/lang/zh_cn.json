@@ -1,5 +1,8 @@
 {
   "ae2lt.wireless_coverage.bound": "无线设备已绑定到此 ME 网络",
+  "ae2lt.controller.unformed": "未成形",
+  "ae2lt.controller.warning": "提示",
+  "ae2lt.controller.ready": "就绪",
   "tooltip.ae2lt.wireless_coverage.same_dimension": "ME 网络无线覆盖：整个所在维度",
   "tooltip.ae2lt.wireless_coverage.all_dimensions": "ME 网络无线覆盖：所有维度",
   "tooltip.ae2lt.wireless_coverage.bind": "手持无线终端右键绑定网络",
