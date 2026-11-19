@@ -8,6 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class CpuInternalCoreCalculatorTest {
+    @Test
+    void storageGaugeUsesTheBestLegalSlotAllocationForEachTier() {
+        assertEquals(1_665L << 20, CpuInternalCoreCalculator.maximumStorage(CpuMainCoreTier.BASELINE));
+        assertEquals(23L * GIB, CpuInternalCoreCalculator.maximumStorage(CpuMainCoreTier.QUANTUM));
+        assertEquals(768L * GIB, CpuInternalCoreCalculator.maximumStorage(CpuMainCoreTier.OVERLOAD));
+        assertEquals(Long.MAX_VALUE, CpuInternalCoreCalculator.maximumStorage(CpuMainCoreTier.MULTIDIMENSIONAL));
+    }
+
     private static final long MIB = 1024L * 1024L;
     private static final long GIB = 1024L * MIB;
 
