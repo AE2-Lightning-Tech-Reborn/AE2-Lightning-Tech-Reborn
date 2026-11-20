@@ -312,6 +312,11 @@ public class OverloadedPatternProviderLogic extends PatternProviderLogic
         alertGridTick();
     }
 
+    @Override
+    public List<IPatternDetails> getAvailablePatterns() {
+        return ((PatternProviderLogicAccessor) this).getPatterns();
+    }
+
     // ---- pushPattern override ---------------------------------------------------
 
     @Override

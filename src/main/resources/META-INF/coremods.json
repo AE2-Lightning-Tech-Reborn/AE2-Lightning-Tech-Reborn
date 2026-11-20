@@ -1,0 +1,5 @@
+{
+  "ae2lt_pccard_constructor": "coremods/pccard_constructor.js",
+  "ae2lt_ctnh_resource_location": "coremods/ctnh_resource_location.js",
+  "ae2lt_avaritia_singularity_timer": "coremods/avaritia_singularity_timer.js"
+}
