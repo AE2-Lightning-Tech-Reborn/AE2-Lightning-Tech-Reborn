@@ -85,6 +85,7 @@
     "RemoteDevicePacketGuardMixin"
   ],
   "client": [
+    "client.CtnhEnergyEncodingStyleMixin",
     "client.LightningBoltRendererMixin",
     "client.CraftConfirmReportRoutingMixin",
     "client.CraftConfirmScreenAccessor",

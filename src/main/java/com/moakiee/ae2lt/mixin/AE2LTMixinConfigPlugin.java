@@ -44,6 +44,7 @@ public final class AE2LTMixinConfigPlugin implements IMixinConfigPlugin {
         String simpleName = separator >= 0 ? mixinClassName.substring(separator + 1) : mixinClassName;
         if (simpleName.equals("ForgeFluxNetworkTelemetryMixin")) return isModLoaded("appflux") && isModLoaded("fluxnetworks");
         if (simpleName.equals("OmniUpgradesAE2CompatMixin")) return isModLoaded("omni_upgrades");
+        if (simpleName.equals("CtnhEnergyEncodingStyleMixin")) return isModLoaded("ctnhenergy");
         String requiredMod = REQUIRED_MODS.get(simpleName);
         return requiredMod == null || isModLoaded(requiredMod);
     }
