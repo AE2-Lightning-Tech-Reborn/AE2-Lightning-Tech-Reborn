@@ -162,7 +162,7 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
 
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
-        preview.render(graphics, mouseX - leftPos, mouseY - topPos, scrollbar.getCurrentScroll());
+        preview.render(graphics, mouseX, mouseY, scrollbar.getCurrentScroll());
     }
 
     private void updateDirections() {

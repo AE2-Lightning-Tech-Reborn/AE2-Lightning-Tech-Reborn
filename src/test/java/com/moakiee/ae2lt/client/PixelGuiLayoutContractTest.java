@@ -100,8 +100,7 @@ final class PixelGuiLayoutContractTest {
         assertTrue(screen.contains("TEXT_ON_DARK_BG = 0xFFFFFFFF"));
         assertTrue(screen.contains("BUTTON_TEXT = TEXT_ON_DARK_BG"));
         assertTrue(screen.contains("renderSelectedTabTexture"));
-        assertTrue(screen.contains("renderTabIcons"));
-        assertTrue(screen.contains("tabDisplayStack"));
+        assertTrue(screen.contains("unadornedItemIcon(() -> tabDisplayStack(tab))"));
         assertTrue(screen.contains("defaultTabStack"));
         assertTrue(screen.contains("selectedDeviceStack"));
         assertTrue(screen.contains("\"ae2\", \"textures/guis/checkbox.png\""));

@@ -68,8 +68,8 @@ final class MekanismProtectionContractTest {
                 "src/main/resources/data/ae2lt/advancement/main/radiation_assimilation.json"));
 
         assertTrue(integration.contains("float healthBefore = player.getHealth()"));
-        assertTrue(integration.contains("player.getHealth() > healthBefore"));
-        assertTrue(integration.contains("CelestweaveAdvancementService.awardRadiationAssimilation(player)"));
+        assertTrue(integration.contains("player.getHealth() > healthBefore && player instanceof ServerPlayer serverPlayer"));
+        assertTrue(integration.contains("CelestweaveAdvancementService.awardRadiationAssimilation(serverPlayer)"));
         assertTrue(advancement.contains("\"trigger\": \"minecraft:impossible\""));
         assertTrue(advancement.contains("\"frame\": \"challenge\""));
         assertTrue(advancement.contains("\"hidden\": true"));

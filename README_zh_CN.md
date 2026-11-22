@@ -63,6 +63,8 @@ ECO、Data 与天枢分别维护自己的规划器、规划界面和执行器；
 |------|----------|
 | Applied Energistics 2 | 必需 |
 | Jade、Flywheel、Ponder | 可选 |
+| LDLib2 | 客户端和服务端必装，支持 2.2.46.a 及以上的 2.x 版本 |
+| Just Enough Items | 客户端可选，需 19.51.0.417 或更高版本 |
 | Advanced AE、ExtendedAE、Applied Flux、AE2 JEI Integration | 可选联动 |
 
 ## 问题反馈

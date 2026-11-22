@@ -372,7 +372,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
         pose.pushPose();
         try {
             pose.translate(offsetX, offsetY, 0);
-            workArea.getWidget().render(graphics, mouseX - offsetX, mouseY - offsetY, partialTicks);
+            workArea.getWidget().render(graphics, mouseX, mouseY, partialTicks);
         } finally {
             pose.popPose();
         }
@@ -523,7 +523,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             // The anvil cost line is vanilla AnvilScreen label rendering, reused as-is.
             anvilCostView.renderCost(graphics, compact ? 92 : 8, imageHeight - 109, compact ? 93 : 160, mouseX, mouseY);
         }
-        workPageLabels.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
+        workPageLabels.getWidget().render(graphics, mouseX, mouseY, 0);
     }
 
     @Override public boolean keyPressed(int key, int scanCode, int modifiers) {
@@ -616,7 +616,7 @@ public class TianshuCraftingTermScreen<M extends TianshuCraftingTermMenu> extend
             pose.pushPose();
             try {
                 pose.translate(getX(), getY(), 0);
-                cellUi.getWidget().render(graphics, mouseX - getX(), mouseY - getY(), partialTick);
+                cellUi.getWidget().render(graphics, mouseX, mouseY, partialTick);
             } finally {
                 pose.popPose();
             }

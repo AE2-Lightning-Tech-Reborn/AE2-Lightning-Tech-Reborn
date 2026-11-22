@@ -16,7 +16,7 @@ import java.util.Set;
 import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Scroller;
-import dev.vfyjxf.taffy.style.TaffyDisplay;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -37,7 +37,8 @@ import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
-import com.moakiee.ae2lt.client.ldlib.LdlibSlotScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibSlotHost;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import com.moakiee.ae2lt.menu.MatrixPortMenu;
 import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
@@ -48,10 +49,10 @@ import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
  * pattern in it has an input or output whose display name matches the ordered search tokens.
  * Matching patterns are highlighted while the other patterns in that retained row are dimmed.</p>
  *
- * <p>The LDLib UI tree reuses one slot view per visible cell. The views follow the
- * filtered window while each menu slot keeps its original server index.</p>
+ * <p>The native container draws the visible warehouse window and handles slot input.
+ * Each physical slot keeps its original server index.</p>
  */
-public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
+public class MatrixPortScreen extends AbstractContainerScreen<MatrixPortMenu> implements LdlibSlotHost {
     private static final int MATCH_HIGHLIGHT = 0x8A00FF00;
     private static final int NON_MATCH_HIGHLIGHT = 0x6A000000;
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
@@ -96,7 +97,7 @@ public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
     private MatrixSearchField searchField;
     private Scroller scroller;
     private boolean draggingScrollbar;
-    private final List<PatternSlotView> patternSlotViews = new ArrayList<>();
+    private ModularUI background;
     private int scrollRow;
     private long lastPatternContentRevision;
     private MatrixMigrationWidget migration;
@@ -118,10 +119,11 @@ public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
 
     @Override
     protected void init() {
+        releaseBackground();
         super.init();
         draggingScrollbar = false;
         migration = new MatrixMigrationWidget(menu, leftPos - 18, topPos);
-        LdlibScreens.embedWithSlots(this, buildRoot(), playerMenuSlots, this::addRenderableWidget);
+        background = LdlibScreens.localLayer(buildRoot(), GUI_WIDTH, GUI_HEIGHT);
         searchField = new MatrixSearchField();
         searchField.setPosition(leftPos + SEARCH_X, topPos + SEARCH_Y);
         searchField.setResponder(ignored -> refreshList(true));
@@ -151,23 +153,6 @@ public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
         scroller = LdlibScreens.displayThumbScroller(thumb, thumb, HANDLE_HEIGHT, SCROLLBAR_HEIGHT);
         root.addChild(LdlibScreens.at(scroller, SCROLLBAR_X, SCROLLBAR_Y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT));
 
-        // Complete all native search fills and the thumb before drawing any slot contents.
-        var patternArea = new UIElement();
-        root.addChild(LdlibScreens.at(patternArea,
-                PATTERN_AREA_X, PATTERN_AREA_Y, PATTERN_AREA_WIDTH, PATTERN_AREA_HEIGHT));
-        var patternGrid = new UIElement().setAllowHitTest(false);
-        patternGrid.layout(l -> l.display(TaffyDisplay.GRID).gapAll(SLOT_SPACING - SLOT_SIZE)
-                .gridTemplateColumns("repeat(" + MatrixPortMenu.COLUMNS + ", " + SLOT_SIZE + "px)")
-                .gridTemplateRows("repeat(" + MatrixPortMenu.VISIBLE_ROWS + ", " + SLOT_SIZE + "px)"));
-        patternArea.addChild(LdlibScreens.at(patternGrid,
-                MatrixPortMenu.PATTERN_X - PATTERN_AREA_X, MatrixPortMenu.PATTERN_Y - PATTERN_AREA_Y,
-                MatrixPortMenu.COLUMNS * SLOT_SPACING, MatrixPortMenu.VISIBLE_ROWS * SLOT_SPACING));
-        patternSlotViews.clear();
-        for (int cell = 0; cell < MatrixPortMenu.COLUMNS * MatrixPortMenu.VISIBLE_ROWS; cell++) {
-            var view = new PatternSlotView();
-            patternSlotViews.add(view);
-            patternGrid.addChild(view);
-        }
         return root;
     }
 
@@ -296,7 +281,42 @@ public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Drawn by the LDLib tree.
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(leftPos, topPos, 0);
+            background.getWidget().render(graphics, mouseX, mouseY, partialTick);
+        } finally {
+            pose.popPose();
+        }
+    }
+
+    private void releaseBackground() {
+        if (background != null && !background.isRemoved()) {
+            background.onRemoved();
+        }
+    }
+
+    @Override
+    public void removed() {
+        releaseBackground();
+        super.removed();
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // A scroll or filter edit can move the slot under the pointer before the next render.
+        var window = minecraft.getWindow();
+        double x = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+        double y = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+        hoveredSlot = null;
+        for (var slot : visibleMenuSlots) {
+            if (slot.isActive() && isHovering(slot.x, slot.y, SLOT_SIZE, SLOT_SIZE, x, y)) {
+                hoveredSlot = slot;
+                break;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -482,38 +502,6 @@ public class MatrixPortScreen extends LdlibSlotScreen<MatrixPortMenu> {
         visibleMenuSlots.clear();
         visibleMenuSlots.addAll(visiblePatternSlots);
         visibleMenuSlots.addAll(playerMenuSlots);
-        for (int cell = 0; cell < patternSlotViews.size(); cell++) {
-            var view = patternSlotViews.get(cell);
-            view.assigned = cell < visiblePatternSlots.size();
-            if (view.assigned) {
-                LdlibScreens.bindExistingSlot(menu, view, visiblePatternSlots.get(cell));
-            } else {
-                LdlibScreens.unbindExistingSlot(menu, view);
-            }
-        }
-    }
-
-    private final class PatternSlotView extends LdlibScreens.ExistingMenuSlot {
-        private boolean assigned;
-
-        private PatternSlotView() {
-            layout(l -> l.width(SLOT_SIZE).height(SLOT_SIZE).paddingAll(0));
-            style(s -> s.background(IGuiTexture.EMPTY));
-            slotStyle(s -> s.showItemTooltips(false));
-        }
-
-        @Override
-        public boolean isVisible() {
-            // Keep the grid cell laid out even while it has no physical slot.
-            return assigned && super.isVisible();
-        }
-
-        @Override
-        public ItemStack getValue() {
-            return getSlot() instanceof MatrixPortMenu.MatrixPatternSlot pattern
-                    ? pattern.getDisplayStack()
-                    : super.getValue();
-        }
     }
 
     private void syncScroller() {

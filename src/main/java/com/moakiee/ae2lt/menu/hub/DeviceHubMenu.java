@@ -72,6 +72,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     private List<Integer> moduleCounts = List.of();
     private List<Boolean> moduleEnabled = List.of();
     private int selectedModuleIndex = -1;
+    private long statusRevision;
     private List<String> moduleConfigKeys = List.of();
     private List<String> moduleConfigLabels = List.of();
     private List<String> moduleConfigValues = List.of();
@@ -238,6 +239,10 @@ public class DeviceHubMenu extends AbstractContainerMenu {
     }
 
     // ── Client-side: receive sync packet ──
+    public long getStatusRevision() {
+        return statusRevision;
+    }
+
     public void receiveSync(
             String name,
             boolean hasCore,
@@ -275,6 +280,7 @@ public class DeviceHubMenu extends AbstractContainerMenu {
         this.moduleConfigLabels = List.copyOf(moduleConfigLabels);
         this.moduleConfigValues = List.copyOf(moduleConfigValues);
         this.moduleConfigEditable = List.copyOf(moduleConfigEditable);
+        statusRevision++;
     }
 
     // ── Client-side accessors ──

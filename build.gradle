@@ -419,9 +419,9 @@ def aliasProbeWorld = tasks.register('prepareTianshuUploadAliasWorld') {
 tasks.matching { it.name == 'runTianshuUploadAliasClient' }.configureEach {
     dependsOn aliasProbeWorld
     def report = layout.buildDirectory.file('tianshu-upload-alias-client/upload-alias-probe.txt')
+    def options = layout.buildDirectory.file('tianshu-upload-alias-client/options.txt').get().asFile
     doFirst {
         report.get().asFile.parentFile.mkdirs()
-        def options = layout.buildDirectory.file('tianshu-upload-alias-client/options.txt').get().asFile
         if (!options.isFile()) options.setText('onboardAccessibility:false\npauseOnLostFocus:false\nrenderDistance:4\nsimulationDistance:2\nmaxFps:60\ntutorialStep:none\nlang:zh_cn\n', 'UTF-8')
         report.get().asFile.setText('TIANSHU_ALIAS_QA RUNNING\n', 'UTF-8')
     }

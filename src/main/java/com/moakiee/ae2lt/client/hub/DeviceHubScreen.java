@@ -6,7 +6,6 @@ import static com.moakiee.ae2lt.client.ldlib.LdlibScreens.either;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 import com.lowdragmc.lowdraglib2.gui.LDLibFonts;
 import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
@@ -43,7 +42,7 @@ import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
 /**
  * Device hub (Celestweave armor pieces and railgun). LDLib lays out the foreground,
- * refreshed from the synced menu every frame and drawn after the native container.
+ * refreshed when the synced menu changes and drawn after the native container.
  * Atlas backgrounds stay in the background pass; actions go through
  * {@link DeviceHubActionPacket} as before.
  */
@@ -173,6 +172,9 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
     private int scrollOffset = 0;
     private int configScrollOffset = 0;
+    private long renderedRevision = -1;
+    private int renderedTab;
+    private int renderedAvailability;
     private int lastConfigTab = -1;
     private int lastConfigModule = -1;
     private int frameMouseX;
@@ -193,6 +195,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         super.init();
         this.titleLabelX = 0;
         this.titleLabelY = -100;
+        renderedRevision = -1;
         tabButtons.clear();
         moduleEntries = List.of();
         configEntries = List.of();
@@ -411,7 +414,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         if (moduleScroller != null && x >= 8 && x <= 168 && y >= 78 && y <= 142) {
             scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
                     scrollOffset - (int) Math.signum(scrollY), menu.getModuleNameKeys().size(), MODULE_VISIBLE_ROWS);
-            refresh();
+            syncScroller(moduleScroller, moduleRows, scrollOffset, MODULE_VISIBLE_ROWS);
             return true;
         }
         int configCount = configCount();
@@ -419,7 +422,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                 && x >= 8 && x <= 175 && y >= CONFIG_HEADER_Y && y <= GUI_HEIGHT) {
             configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
                     configScrollOffset - (int) Math.signum(scrollY), configCount, CONFIG_VISIBLE_ROWS);
-            refresh();
+            syncScroller(configScroller, configRows, configScrollOffset, CONFIG_VISIBLE_ROWS);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -428,16 +431,21 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     // ---- state --------------------------------------------------------------------------
 
     private void refresh() {
-        if (devicePanel == null) {
+        int selectedTab = menu.getSelectedTab();
+        int availability = menu.getTabAvailability();
+        long revision = menu.getStatusRevision();
+        if (revision == renderedRevision && selectedTab == renderedTab && availability == renderedAvailability) {
             return;
         }
+        renderedRevision = revision;
+        renderedTab = selectedTab;
+        renderedAvailability = availability;
         refreshTabButtons();
 
-        int selectedTab = menu.getSelectedTab();
         boolean railgunTab = selectedTab == DeviceHubMenu.TAB_RAILGUN;
         resetConfigScrollWhenSelectionChanges(selectedTab, railgunTab ? -1 : menu.getSelectedModuleIndex());
 
-        boolean hasDevice = (menu.getTabAvailability() & (1 << selectedTab)) != 0;
+        boolean hasDevice = (availability & (1 << selectedTab)) != 0;
         noDevice.setDisplay(!hasDevice);
         devicePanel.setDisplay(hasDevice);
         if (!hasDevice) {
@@ -739,13 +747,9 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     }
 
     private UIElement unboundedLabel(Component text) {
-        return unboundedLabel(() -> text);
-    }
-
-    private UIElement unboundedLabel(Supplier<Component> text) {
         return new UIElement().setAllowHitTest(false).style(style -> style.overflowVisible(true).background(
                 (graphics, mouseX, mouseY, x, y, width, height, ticks) ->
-                        LDLibFonts.drawText(graphics, font, text.get().getVisualOrderText(),
+                        LDLibFonts.drawText(graphics, font, text.getVisualOrderText(),
                                 x, y, TEXT_ON_DARK_BG, false)));
     }
 
@@ -765,7 +769,7 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         int rowWidth = MODULE_LIST_RIGHT - MODULE_LIST_X + 1;
         element.addChild(at(band, 0, 0, rowWidth, MODULE_ROW_H));
         int nameWidth = entry.showToggle() ? MODULE_CHECKBOX_X - MODULE_LIST_X - 6 : MODULE_LIST_RIGHT - MODULE_LIST_X;
-        var name = unboundedLabel(() -> Component.literal(FittingText.withEllipsis(
+        var name = unboundedLabel(Component.literal(FittingText.withEllipsis(
                 font, moduleName(entry.nameKey(), entry.count()).getString(), nameWidth)));
         element.addChild(at(name, 1, 3, nameWidth, 9));
         if (entry.showToggle()) {
@@ -800,11 +804,13 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
                     : valueButton(BUTTON_DISABLED, BUTTON_FILL_DISABLED);
             var hover = entry.editable() ? valueButton(BUTTON_BORDER_HOVER, BUTTON_FILL_HOVER) : idle;
             button.style(style -> style.background(either(button::isHover, hover, idle)));
+            String fitted = FittingText.withEllipsis(font, entry.value().getString(), CONFIG_BUTTON_W - 4);
+            var valueText = Component.literal(fitted).getVisualOrderText();
+            int textOffset = (CONFIG_BUTTON_W - font.width(fitted)) / 2;
             var value = new UIElement().setAllowHitTest(false).style(s -> s.background(
                     (graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
-                        String fitted = FittingText.withEllipsis(font, entry.value().getString(), CONFIG_BUTTON_W - 4);
-                        LDLibFonts.drawText(graphics, font, Component.literal(fitted).getVisualOrderText(),
-                                x + (CONFIG_BUTTON_W - font.width(fitted)) / 2, y + 2,
+                        LDLibFonts.drawText(graphics, font, valueText,
+                                x + textOffset, y + 2,
                                 entry.editable() ? BUTTON_TEXT : TEXT_ON_DARK_BG, false);
                     }));
             button.addChild(at(value, 0, 0, CONFIG_BUTTON_W, CONFIG_BUTTON_H));

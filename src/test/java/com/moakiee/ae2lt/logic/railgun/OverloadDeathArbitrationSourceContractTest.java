@@ -55,7 +55,7 @@ class OverloadDeathArbitrationSourceContractTest {
         String mixinConfig = source("src/main/resources/ae2lt.mixins.json");
 
         assertTrue(armorHandler.contains("data.contains(TAG_PROTECTED_TICK)"));
-        assertTrue(armorHandler.contains("protectBeforeDeathSideEffect(ServerPlayer player)"));
+        assertTrue(armorHandler.contains("protectBeforeDeathSideEffect(LivingEntity player)"));
         assertTrue(armorHandler.contains("ArmorShieldPayment.pay("));
         String payment = source("src/main/java/com/moakiee/ae2lt/celestweave/service/ArmorShieldPayment.java");
         assertTrue(payment.contains("ArmorEnergyService.consumeActiveCostPayment("));
@@ -68,7 +68,7 @@ class OverloadDeathArbitrationSourceContractTest {
 
         assertTrue(livingMixin.contains("@Inject(method = \"dropAllDeathLoot\""));
         assertTrue(livingMixin.contains(
-                "CelestweaveArmorUndyingHandler.protectBeforeDeathSideEffect(player)"));
+                "CelestweaveArmorUndyingHandler.protectBeforeDeathSideEffect(entity)"));
 
         assertTrue(levelMixin.contains("@Inject(method = \"broadcastEntityEvent\""));
         assertTrue(levelMixin.contains("eventId == EntityEvent.DEATH"));

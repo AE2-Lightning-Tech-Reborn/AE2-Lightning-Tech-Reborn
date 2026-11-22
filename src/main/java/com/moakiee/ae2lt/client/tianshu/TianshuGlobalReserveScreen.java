@@ -286,7 +286,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         valueColumn.setText(Component.translatable(view == View.RULES
                 ? "ae2lt.tianshu.maintenance.column.target" : "ae2lt.tianshu.maintenance.column.reserve"));
 
-        entryList.render(graphics, mouseX - leftPos, mouseY - topPos);
+        entryList.render(graphics, mouseX, mouseY);
 
         boolean available = menu.isMaintenanceAvailable();
         boolean empty = entryList.isEmpty();
@@ -302,7 +302,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
         }
         addHint.setVisible(view == View.RESERVES && available);
         overflowMessage.setVisible(menu.isMaintenanceSummaryOverflow());
-        foreground.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
+        foreground.getWidget().render(graphics, mouseX, mouseY, 0);
     }
 
     private final class OverviewRow extends TianshuMaintenanceList.Row {
@@ -632,7 +632,7 @@ public final class TianshuGlobalReserveScreen<M extends MEStorageMenu & TianshuM
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
             var stock = Component.translatable("ae2lt.tianshu.reserve.current_protected",
                     compactAmount(entry.key(), visibleStock()), compactAmount(entry.key(), protectedStock()));
-            details.render(graphics, mouseX - leftPos, mouseY - topPos,
+            details.render(graphics, mouseX, mouseY,
                     Component.literal(font.plainSubstrByWidth(stock.getString(), 187)));
         }
 

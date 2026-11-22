@@ -99,7 +99,7 @@ abstract class TianshuEncodingModePanel implements ICompositeWidget {
         pose.pushPose();
         try {
             pose.translate(bounds.getX() + x, bounds.getY() + y, 0);
-            panelUi().getWidget().render(graphics, mouse.getX() - x, mouse.getY() - y, 0);
+            panelUi().getWidget().render(graphics, bounds.getX() + mouse.getX(), bounds.getY() + mouse.getY(), 0);
         } finally {
             pose.popPose();
         }

@@ -82,7 +82,6 @@
     "client.BlitterAccessor",
     "client.GuiGraphicsBatchAccessor",
     "client.EditBoxAccessor",
-    "client.AbstractContainerScreenAccessor",
     "client.ScreenAccessor",
     "client.CraftErrorScreenReplanLabelMixin",
     "client.CableBusContainerRenderMixin",

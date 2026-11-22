@@ -168,7 +168,7 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         pose.pushPose();
         try {
             pose.translate(leftPos, topPos, 0);
-            backgroundUI.getWidget().render(gfx, mouseX - leftPos, mouseY - topPos, partialTick);
+            backgroundUI.getWidget().render(gfx, mouseX, mouseY, partialTick);
         } finally {
             pose.popPose();
         }

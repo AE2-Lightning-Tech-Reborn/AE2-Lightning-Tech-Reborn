@@ -204,8 +204,8 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
                 topology ? PaletteColor.DEFAULT_TEXT_COLOR : PaletteColor.ERROR).toARGB());
         for (var column : topologyColumns) column.setVisible(topology);
 
-        entryList.render(graphics, mouseX - leftPos, mouseY - topPos);
-        foreground.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
+        entryList.render(graphics, mouseX, mouseY);
+        foreground.getWidget().render(graphics, mouseX, mouseY, 0);
     }
 
     private static Component reserveText(long amount, ReservedStockMatchMode mode) {
@@ -612,7 +612,7 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         @Override
         public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-            details.render(graphics, mouseX - leftPos, mouseY - topPos,
+            details.render(graphics, mouseX, mouseY,
                     Component.translatable("ae2lt.tianshu.reserve.current_stock",
                             compactAmount(reserve.key, reserve.storedAmount)));
         }

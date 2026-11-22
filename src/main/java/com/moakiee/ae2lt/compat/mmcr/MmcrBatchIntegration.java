@@ -7,7 +7,6 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
-import com.moakiee.ae2lt.logic.provider.ProviderTarget;
 import com.moakiee.ae2lt.mixin.PatternProviderLogicAccessor;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchJobView;
 import com.moakiee.thunderbolt.api.crafting.batch.BatchProviderAdapters;
@@ -23,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -112,7 +112,7 @@ public final class MmcrBatchIntegration {
         private final PatternProviderLogic provider;
         private final BlockEntity host;
         private final ServerLevel level;
-        private boolean uncertain;
+        private final Settlement settlement = new Settlement();
 
         private Endpoint(Access api, PatternProviderLogic provider, BlockEntity host, ServerLevel level) {
             this.api = api;
@@ -122,11 +122,16 @@ public final class MmcrBatchIntegration {
         }
 
         @Override public List<IPatternDetails> getAvailablePatterns() { return provider.getAvailablePatterns(); }
-        @Override public boolean isBusy() { return uncertain || provider.isBusy() || !current(); }
+        @Override
+        public boolean isBusy() {
+            return !current() || provider.isBusy() || settlement.waiting(level.getGameTime(),
+                    () -> !Boolean.TRUE.equals(call(api.hasPendingReturns, call(api.machine, host)))
+                            && Boolean.TRUE.equals(call(api.queueEmpty, call(api.queue, host))));
+        }
 
         @Override
         public long getBatchCapacity(IPatternDetails details) {
-            if (uncertain || !current() || !isBatchPattern(details) || provider.isBusy()) return 0L;
+            if (!isBatchPattern(details) || isBusy()) return 0L;
             // MMCR publishes its recipe bound; preparation also checks the live idle-lane bound.
             // Unsafe/nonlinear recipes retain MMCR's ordinary one-pattern path.
             return liveLimit(details);
@@ -135,7 +140,7 @@ public final class MmcrBatchIntegration {
         @Override
         public @Nullable PreparedBatch prepareBatch(IPatternDetails details, KeyCounter[] prototype,
                 long maxCraft, BatchJobView job) {
-            if (uncertain || !current() || prototype == null || !isBatchPattern(details)) return unavailable();
+            if (prototype == null || !isBatchPattern(details) || isBusy()) return unavailable();
             var current = view(details);
             if (!current.idle()) return unavailable();
             long limit = Math.min(Math.min(maxCraft, liveLimit(details)), current.maximum());
@@ -159,37 +164,29 @@ public final class MmcrBatchIntegration {
         public long pushBatch(IPatternDetails details, KeyCounter[] prototype, long maxCraft) {
             // Callers bypassing PreparedBatch still submit exactly one owned slice within the live limit.
             if (maxCraft <= 0L) return 0L;
-            if (uncertain || !current() || !isBatchPattern(details)) return maxCraft;
-            View current;
-            try { current = view(details); }
-            catch (RuntimeException | LinkageError incompatible) { return maxCraft; }
-            if (!current.idle()) return maxCraft;
-            long limit = Math.min(liveLimit(details), current.maximum());
-            if (maxCraft > limit) return maxCraft;
             return dispatch(details, prototype, maxCraft);
         }
 
         private long dispatch(IPatternDetails details, KeyCounter[] prototype, long copies) {
-            if (uncertain || !current() || copies > liveLimit(details)) return copies;
+            if (prototype == null || isBusy() || copies > liveLimit(details)) return copies;
             View before;
             try { before = view(details); }
             catch (RuntimeException | LinkageError incompatible) { return copies; }
             if (!before.idle() || copies > before.maximum()) return copies;
-            if (!available(details)) return copies;
             // The published native limits replace capacity learning. Submit the prepared slice once;
             // a refusal owns nothing, while uncertain acceptance must never be retried or refunded.
-            var result = push(details, prototype, copies, before);
-            return copies - result.ownedCopies();
+            return push(details, prototype, copies, before) ? 0L : copies;
         }
 
-        private ProviderTarget.BatchChunk push(IPatternDetails details, KeyCounter[] prototype,
+        private boolean push(IPatternDetails details, KeyCounter[] prototype,
                 long copies, View before) {
-            Object data;
+            String recipe;
             long parallelism;
             IPatternDetails execution;
             KeyCounter[] holders, originals;
             try {
-                data = call(api.data, details);
+                var data = call(api.data, details);
+                recipe = call(api.recipe, data).toString();
                 long absolute = Math.multiplyExact(((Number) call(api.multiplier, data)).longValue(), copies);
                 parallelism = Math.multiplyExact(absolute,
                         ((Number) call(api.crafts, data)).longValue());
@@ -198,7 +195,7 @@ public final class MmcrBatchIntegration {
                 originals = copy(holders, 1L);
             } catch (RuntimeException | LinkageError invalidInputs) {
                 // No native call has happened: CPU ownership is intact and the whole slice can return.
-                return ProviderTarget.BatchChunk.REJECTED;
+                return false;
             }
             boolean accepted;
             try {
@@ -210,18 +207,21 @@ public final class MmcrBatchIntegration {
                 if (!same(holders, originals)) {
                     throw new IllegalStateException("MMCR rejected a start after changing input ownership");
                 }
-                return ProviderTarget.BatchChunk.REJECTED;
+                return false;
             }
-            String recipe = call(api.recipe, data).toString();
-            boolean complete = view(details).provesStart(before, recipe, parallelism);
-            // Native true owns the complete holder packet even if payment paused. Such a packet
-            // is settled exactly once, but must never be used as evidence for a larger next batch.
+            // Native true transferred the entire slice. A failed observation cannot undo that transfer.
+            boolean complete = false;
+            try {
+                complete = view(details).provesStart(before, recipe, parallelism);
+            } catch (RuntimeException | LinkageError unavailable) {
+                LogUtils.getLogger().debug("Could not observe accepted MMCR start", unavailable);
+            }
             if (!complete) {
-                uncertain = true;
+                settlement.pause(level.getGameTime());
                 LogUtils.getLogger().warn("AE2LT paused MMCR batch dispatch at {}: materials were accepted "
                         + "but a complete native start was not confirmed", host.getBlockPos());
             }
-            return new ProviderTarget.BatchChunk(copies, complete, false);
+            return true;
         }
 
         private long liveLimit(IPatternDetails details) {
@@ -246,11 +246,6 @@ public final class MmcrBatchIntegration {
         private boolean current() {
             return !host.isRemoved() && host.getLevel() == level && level.getServer().isSameThread()
                     && level.isLoaded(host.getBlockPos()) && level.getBlockEntity(host.getBlockPos()) == host;
-        }
-
-        private boolean available(IPatternDetails pattern) {
-            try { return !uncertain && current() && !provider.isBusy() && view(pattern).idle(); }
-            catch (RuntimeException | LinkageError incompatible) { return false; }
         }
 
         private View view(IPatternDetails details) {
@@ -333,6 +328,29 @@ public final class MmcrBatchIntegration {
                 }
             }
             return new View(idle, maximum, Set.copyOf(controllers), Map.copyOf(states));
+        }
+    }
+
+    /** After native acceptance, wait for MMCR to settle its own queues before admitting new work. */
+    static final class Settlement {
+        private boolean paused;
+        private long lastProbe;
+
+        void pause(long tick) {
+            paused = true;
+            lastProbe = tick;
+        }
+
+        boolean waiting(long tick, BooleanSupplier queuesEmpty) {
+            if (paused && tick != lastProbe) {
+                lastProbe = tick;
+                try {
+                    paused = !queuesEmpty.getAsBoolean();
+                } catch (RuntimeException | LinkageError unavailable) {
+                    // Keep the gate closed until the next tick. The accepted slice belongs to MMCR.
+                }
+            }
+            return paused;
         }
     }
 
@@ -430,6 +448,9 @@ public final class MmcrBatchIntegration {
         final Constructor<?> binding = type("compat.appliedenergistics2.loaded.pattern.PatternBatchBinding")
                 .getConstructor(ResourceLocation.class, ResourceLocation.class, long.class);
         final Method node = host.getMethod("getMainNode"), links = host.getMethod("linkedControllerPositions");
+        final Method machine = host.getMethod("craftingMachine"), queue = host.getMethod("pendingPatterns");
+        final Method hasPendingReturns = machine.getReturnType().getMethod("hasPendingReturns");
+        final Method queueEmpty = queue.getReturnType().getMethod("isEmpty");
         final Method isBatchHost = planning.getMethod("isBatchHost", PatternProviderLogicHost.class);
         final Method capture = planning.getMethod("capture", appeng.api.networking.IGrid.class);
         final Method limits = capture.getReturnType().getMethod("limits");

@@ -60,9 +60,9 @@ final class TianshuPatternConfigPreview {
         maxScroll = Math.max(0, entries.size() - VISIBLE_ROWS);
     }
 
-    void render(GuiGraphics graphics, int localMouseX, int localMouseY, int scrollOffset) {
+    void render(GuiGraphics graphics, int mouseX, int mouseY, int scrollOffset) {
         LdlibScreens.scrollVirtualRows(rows, scrollOffset, maxScroll);
-        ui.getWidget().render(graphics, localMouseX, localMouseY, 0);
+        ui.getWidget().render(graphics, mouseX, mouseY, 0);
     }
 
     void onRemoved() {

@@ -76,7 +76,7 @@ public class LdlibAe2Widget extends Button implements ITooltip {
         pose.pushPose();
         try {
             pose.translate(getX(), getY(), 0.0F);
-            modularUI.getWidget().render(guiGraphics, mouseX - getX(), mouseY - getY(), partialTick);
+            modularUI.getWidget().render(guiGraphics, mouseX, mouseY, partialTick);
         } finally {
             pose.popPose();
         }

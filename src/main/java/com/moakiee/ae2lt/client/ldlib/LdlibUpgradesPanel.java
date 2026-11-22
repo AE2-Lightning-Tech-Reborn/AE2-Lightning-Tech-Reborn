@@ -118,7 +118,7 @@ public final class LdlibUpgradesPanel implements ICompositeWidget {
         }
         var bounds = getBounds();
         background.render(graphics, origin.getX() + bounds.getX(), origin.getY() + bounds.getY(),
-                mouse.getX(), mouse.getY(), 0);
+                screen.getX() + mouse.getX(), screen.getY() + mouse.getY(), 0);
     }
 
     private BackgroundLayer buildBackground(int count) {

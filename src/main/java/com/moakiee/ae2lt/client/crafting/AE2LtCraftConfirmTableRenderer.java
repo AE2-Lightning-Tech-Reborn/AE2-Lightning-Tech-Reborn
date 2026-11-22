@@ -123,7 +123,7 @@ final class AE2LtCraftConfirmTableRenderer {
             int index = start + i;
             cells.get(i).update(font, index < entries.size() ? entries.get(index) : null, color);
         }
-        table.getWidget().render(graphics, localX, localY, 0);
+        table.getWidget().render(graphics, mouseX, mouseY, 0);
         hoveredStack = getStackAt(mouseX, mouseY, entries, scroll);
         var hovered = entryAt(entries, scroll, cellAt(localX, localY));
         if (hovered != null) {

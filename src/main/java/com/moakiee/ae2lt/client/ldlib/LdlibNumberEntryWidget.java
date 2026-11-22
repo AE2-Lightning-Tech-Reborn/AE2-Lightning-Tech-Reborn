@@ -226,7 +226,7 @@ public final class LdlibNumberEntryWidget extends NumberEntryWidget {
         pose.pushPose();
         try {
             pose.translate(screen.getX(), screen.getY(), 0);
-            unitLayer.getWidget().render(graphics, mouse.getX(), mouse.getY(), 0);
+            unitLayer.getWidget().render(graphics, screen.getX() + mouse.getX(), screen.getY() + mouse.getY(), 0);
         } finally {
             pose.popPose();
         }

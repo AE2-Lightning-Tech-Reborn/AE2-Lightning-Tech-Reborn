@@ -153,7 +153,7 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     @Override
     public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
-        foreground.getWidget().render(guiGraphics, mouseX - leftPos, mouseY - topPos, 0);
+        foreground.getWidget().render(guiGraphics, mouseX, mouseY, 0);
     }
 
     @Override

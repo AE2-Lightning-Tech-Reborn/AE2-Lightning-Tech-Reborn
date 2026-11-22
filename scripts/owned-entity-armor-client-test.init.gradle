@@ -13,9 +13,10 @@ allprojects {
             programArguments.addAll '--username', 'ArmorOwnerQA', '--quickPlaySingleplayer', 'OwnedArmorQA',
                     '--width', '1280', '--height', '720'
         }
+        def seedWorld = providers.gradleProperty('ownedArmorSeedWorld')
         def prepare = tasks.register('prepareOwnedArmorClientWorld') {
             doLast {
-                def source = new File(providers.gradleProperty('ownedArmorSeedWorld').get(), 'level.dat').toPath()
+                def source = new File(seedWorld.get(), 'level.dat').toPath()
                 def target = directory.toPath().resolve('saves/OwnedArmorQA/level.dat')
                 java.nio.file.Files.createDirectories(target.parent)
                 if (!java.nio.file.Files.exists(target)) java.nio.file.Files.copy(source, target)

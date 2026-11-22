@@ -456,7 +456,7 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             pageCount.setText(Component.translatable("ae2lt.tianshu.closed_loop.page_count",
                     rows == 0 ? 0 : scrollbar.getCurrentScroll() + 1, rows));
         }
-        detailsUi.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
+        detailsUi.getWidget().render(graphics, mouseX, mouseY, 0);
     }
 
     private void updateSlotRows(List<AppEngSlot> slots, boolean members) {

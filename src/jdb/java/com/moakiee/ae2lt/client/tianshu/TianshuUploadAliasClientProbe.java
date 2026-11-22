@@ -6,6 +6,7 @@ import appeng.api.util.AEColor;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
 import appeng.client.gui.widgets.AETextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEParts;
@@ -190,9 +191,9 @@ public final class TianshuUploadAliasClientProbe {
                 case 9 -> {
                     var terminal = (TianshuPatternEncodingTermScreen<?>) mc.screen;
                     var button = terminal.children().stream()
-                            .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
+                            .filter(c -> c instanceof LdlibAe2Button a && a.getTooltipMessage().stream()
                                     .anyMatch(t -> t.getString().equals(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.encode_management").getString())))
-                            .map(c -> (appeng.client.gui.widgets.ActionButton)c).findFirst().orElseThrow();
+                            .map(c -> (LdlibAe2Button)c).findFirst().orElseThrow();
                     require(terminal.mouseClicked(button.getX() + 2, button.getY() + 2, 1),
                             "screen dispatches encode right click without re-encoding");
                     terminal.mouseReleased(button.getX() + 2, button.getY() + 2, 1);
@@ -609,9 +610,9 @@ public final class TianshuUploadAliasClientProbe {
         watchingEncoding = true;
         staleSnapshotInjected = false;
         var button = encodingScreen.children().stream()
-                .filter(c -> c instanceof appeng.client.gui.widgets.ActionButton a && a.getTooltipMessage().stream()
+                .filter(c -> c instanceof LdlibAe2Button a && a.getTooltipMessage().stream()
                         .anyMatch(t -> t.getString().equals(net.minecraft.network.chat.Component.translatable("ae2lt.tianshu.upload.encode_management").getString())))
-                .map(c -> (appeng.client.gui.widgets.ActionButton) c).findFirst().orElseThrow();
+                .map(c -> (LdlibAe2Button) c).findFirst().orElseThrow();
         require(encodingScreen.mouseClicked(button.getX() + 2, button.getY() + 2, 0), "normal encode click handled");
         encodingScreen.mouseReleased(button.getX() + 2, button.getY() + 2, 0);
     }

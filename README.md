@@ -57,6 +57,8 @@ Anything outside `com.moakiee.ae2lt.api.*` is internal and may change between mi
 |-----|----------|
 | Applied Energistics 2 | Required |
 | Jade, Flywheel, Ponder | Optional |
+| LDLib2 | Required on client and server, 2.2.46.a or later in the 2.x series |
+| Just Enough Items | Optional on the client, 19.51.0.417 or later |
 | Advanced AE, ExtendedAE, Applied Flux, AE2 JEI Integration | Optional integrations |
 
 ## Issues

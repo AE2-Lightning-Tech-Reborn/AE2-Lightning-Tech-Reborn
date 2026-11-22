@@ -134,7 +134,7 @@ public class OverloadPatternEncoderScreen extends AbstractContainerScreen<Overlo
         pose.pushPose();
         try {
             pose.translate(leftPos, topPos, 0);
-            contentUI.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, partialTick);
+            contentUI.getWidget().render(graphics, mouseX, mouseY, partialTick);
         } finally {
             pose.popPose();
         }

@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.client.ldlib;
 
 import java.time.Duration;
+import java.util.function.IntSupplier;
 
 import appeng.client.Point;
 import appeng.client.gui.ICompositeWidget;
@@ -16,6 +17,7 @@ import net.minecraft.util.Mth;
 /** Draws an LDLib thumb texture with native row input in an AE2 style JSON position. */
 public final class LdlibRowScroller implements ICompositeWidget {
     private final Scrollbar.Style style;
+    private final IntSupplier handleHeight;
     private final IGuiTexture thumb;
     private final IGuiTexture disabledThumb;
     private final EventRepeater pageRepeater = new EventRepeater(Duration.ofMillis(250), Duration.ofMillis(150));
@@ -36,7 +38,12 @@ public final class LdlibRowScroller implements ICompositeWidget {
     }
 
     public LdlibRowScroller(Scrollbar.Style style) {
+        this(style, style::handleHeight);
+    }
+
+    LdlibRowScroller(Scrollbar.Style style, IntSupplier handleHeight) {
         this.style = style;
+        this.handleHeight = handleHeight;
         this.thumb = (graphics, mouseX, mouseY, x, y, width, height, ticks) ->
                 Blitter.guiSprite(style.enabledSprite()).dest(Math.round(x), Math.round(y)).blit(graphics);
         this.disabledThumb = (graphics, mouseX, mouseY, x, y, width, height, ticks) ->
@@ -74,6 +81,9 @@ public final class LdlibRowScroller implements ICompositeWidget {
         this.min = min;
         this.max = Math.max(min, max);
         this.pageSize = pageSize;
+        if (this.max == min) {
+            stopTracking();
+        }
         setCurrentScroll(row);
     }
 
@@ -97,7 +107,7 @@ public final class LdlibRowScroller implements ICompositeWidget {
     }
 
     private int thumbTravel() {
-        return height - style.handleHeight();
+        return Math.max(0, height - handleHeight.getAsInt());
     }
 
     private int thumbOffset() {
@@ -108,21 +118,21 @@ public final class LdlibRowScroller implements ICompositeWidget {
     public void drawForegroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
         var texture = max > min ? thumb : disabledThumb;
         texture.draw(graphics, mouse.getX(), mouse.getY(), position.getX(), position.getY() + thumbOffset(),
-                style.handleWidth(), style.handleHeight(), 0);
+                style.handleWidth(), handleHeight.getAsInt(), 0);
     }
 
     @Override
     public boolean onMouseDown(Point mouse, int button) {
-        if (button != 0) {
+        if (!visible || button != 0) {
             return false;
         }
-        dragOffset = -1;
-        if (max == min) {
+        stopTracking();
+        if (max == min || thumbTravel() == 0) {
             return true;
         }
         int y = mouse.getY() - position.getY();
         int thumbY = thumbOffset();
-        if (y < thumbY || y >= thumbY + style.handleHeight()) {
+        if (y < thumbY || y >= thumbY + handleHeight.getAsInt()) {
             int direction = y < thumbY ? -1 : 1;
             pageBy(direction);
             pageRepeater.repeat(() -> pageBy(direction));
@@ -144,7 +154,7 @@ public final class LdlibRowScroller implements ICompositeWidget {
     @Override
     public boolean onMouseDrag(Point mouse, int button) {
         int travel = thumbTravel();
-        if (dragOffset < 0 || max == min || pageRepeater.isRepeating()) {
+        if (button != 0 || dragOffset < 0 || max == min || travel == 0) {
             return false;
         }
         double offset = mouse.getY() - position.getY() - dragOffset;
@@ -156,20 +166,24 @@ public final class LdlibRowScroller implements ICompositeWidget {
     @Override
     public boolean onMouseUp(Point mouse, int button) {
         if (button == 0) {
-            pageRepeater.stop();
-            dragOffset = -1;
+            stopTracking();
         }
         return false;
     }
 
+    private void stopTracking() {
+        pageRepeater.stop();
+        dragOffset = -1;
+    }
+
     @Override
     public boolean wantsAllMouseUpEvents() {
-        return true;
+        return dragOffset >= 0 || pageRepeater.isRepeating();
     }
 
     @Override
     public boolean onMouseWheel(Point mouse, double delta) {
-        if (max == min) {
+        if (!visible || max == min) {
             return false;
         }
         setCurrentScroll((int) (row - Mth.clamp(delta, -1, 1) * pageSize));
@@ -192,5 +206,8 @@ public final class LdlibRowScroller implements ICompositeWidget {
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+        if (!visible) {
+            stopTracking();
+        }
     }
 }

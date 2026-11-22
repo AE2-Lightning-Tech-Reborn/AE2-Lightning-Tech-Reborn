@@ -112,7 +112,7 @@ public final class BackgroundLayer {
         pose.pushPose();
         try {
             pose.translate(x, y, 0);
-            ui.getWidget().render(graphics, mouseX - x, mouseY - y, ticks);
+            ui.getWidget().render(graphics, mouseX, mouseY, ticks);
         } finally {
             pose.popPose();
         }
