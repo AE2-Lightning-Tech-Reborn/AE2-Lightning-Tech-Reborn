@@ -1,7 +1,6 @@
 {
   "ae2lt.pack.legacy_modules.assets": "LT Legacy Module Appearance",
-  "ae2lt.pack.legacy_modules.recipes": "LT Legacy Module Recipes",
-  "ae2lt.pack.legacy_modules.description": "The resource pack restores legacy module names and icons. The data pack restores seven standalone module recipes.",
+  "ae2lt.pack.legacy_modules.description": "Restores legacy module names and icons.",
   "ae2lt.celestweave.config.dash_distance": "Dash distance",
   "ae2lt.celestweave.config.swim_speed": "Swimming speed",
   "ae2lt.celestweave.config.underwater_speed": "Underwater movement speed",

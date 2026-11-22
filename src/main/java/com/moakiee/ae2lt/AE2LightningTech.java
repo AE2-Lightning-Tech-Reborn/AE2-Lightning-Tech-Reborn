@@ -370,10 +370,9 @@ public class AE2LightningTech {
                     .build());
 
     private static void addLegacyModulePack(AddPackFindersEvent event) {
-        var type = event.getPackType();
-        String title = type == PackType.CLIENT_RESOURCES ? "ae2lt.pack.legacy_modules.assets" : "ae2lt.pack.legacy_modules.recipes";
-        event.addPackFinders(ResourceLocation.fromNamespaceAndPath(MODID, "packs/legacy_modules"), type,
-                Component.translatable(title), PackSource.FEATURE, false, Pack.Position.TOP);
+        event.addPackFinders(ResourceLocation.fromNamespaceAndPath(MODID, "packs/legacy_modules"),
+                PackType.CLIENT_RESOURCES, Component.translatable("ae2lt.pack.legacy_modules.assets"),
+                PackSource.BUILT_IN, false, Pack.Position.TOP);
     }
 
     public AE2LightningTech(IEventBus modEventBus, ModContainer modContainer) {

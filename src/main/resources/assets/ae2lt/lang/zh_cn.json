@@ -1,7 +1,6 @@
 {
   "ae2lt.pack.legacy_modules.assets": "LT 旧版模块外观",
-  "ae2lt.pack.legacy_modules.recipes": "LT 旧版模块配方",
-  "ae2lt.pack.legacy_modules.description": "资源包恢复旧模块名称和图标，数据包恢复七条独立模块配方。",
+  "ae2lt.pack.legacy_modules.description": "恢复旧版模块名称和图标。",
   "ae2lt.celestweave.config.dash_distance": "冲刺距离",
   "ae2lt.celestweave.config.swim_speed": "游泳姿态速度",
   "ae2lt.celestweave.config.underwater_speed": "普通水下移动速度",

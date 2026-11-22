@@ -1,7 +1,6 @@
 {
   "pack": {
     "pack_format": 34,
-    "supported_formats": [34, 48],
     "description": { "translate": "ae2lt.pack.legacy_modules.description" }
   }
 }
