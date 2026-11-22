@@ -3,9 +3,10 @@ package com.moakiee.ae2lt.client.machine;
 import java.util.ArrayList;
 import java.util.List;
 
-import appeng.client.gui.Icon;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.widgets.IconButton;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.InputTransferMenu;
 import net.minecraft.Util;
@@ -14,21 +15,28 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 /** Immediate local feedback, with authoritative inventory changes coming from the server. */
-final class InputTransferButton extends IconButton {
+final class InputTransferButton extends LdlibAe2Button {
     private static final ResourceLocation ICON_TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/buttons/input_transfer.png");
+    private static final LdlibStyleSprite ATLAS = new LdlibStyleSprite(ICON_TEXTURE, 16, 16);
+    private static final SpriteTexture ICON = ATLAS.full();
+    private static final SpriteTexture DISABLED_ICON = ATLAS.full().setColor(0x7FFFFFFF);
 
     private final InputTransferMenu menu;
     private long sentAt = -1;
     private int sentRevision;
 
     InputTransferButton(InputTransferMenu menu) {
-        super(button -> ((InputTransferButton) button).transfer());
+        super(16, Component.translatable("ae2lt.gui.input_transfer.title"), menu::clientTransferInputs);
         this.menu = menu;
-        setMessage(Component.translatable("ae2lt.gui.input_transfer.title"));
+        toolbarFace(IGuiTexture.dynamic(() -> active ? ICON : DISABLED_ICON), false);
     }
 
-    private void transfer() {
+    @Override
+    public void onPress() {
+        if (!active || !visible) {
+            return;
+        }
         sentAt = Util.getMillis();
         sentRevision = menu.getInputTransferRevision();
         active = false;
@@ -39,21 +47,10 @@ final class InputTransferButton extends IconButton {
         return sentAt >= 0 && menu.getInputTransferRevision() == sentRevision && Util.getMillis() - sentAt < 3000;
     }
 
-    @Override protected Icon getIcon() { return null; }
-
-    @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    @Override
+    public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         active = !pending() && (sentAt < 0 || Util.getMillis() - sentAt >= 200);
         super.renderWidget(graphics, mouseX, mouseY, partialTick);
-        if (!visible) {
-            return;
-        }
-
-        int yOffset = isHovered() ? 1 : 0;
-        var blitter = Blitter.texture(ICON_TEXTURE, 16, 16).src(0, 0, 16, 16);
-        if (!active) {
-            blitter.opacity(0.5F);
-        }
-        blitter.dest(getX(), getY() + 1 + yOffset).zOffset(3).blit(graphics);
     }
 
     @Override public List<Component> getTooltipMessage() {

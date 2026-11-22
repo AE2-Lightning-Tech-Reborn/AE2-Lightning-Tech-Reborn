@@ -36,6 +36,8 @@ class RecipeViewerMixinPluginTest {
         assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
         assertTrue(plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
+        assertTrue(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockSlotHoverMixin"));
         assertFalse(plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiEncodePatternTransferMixin"));
     }
@@ -50,6 +52,8 @@ class RecipeViewerMixinPluginTest {
         assertFalse(applies(plugin, "JeiWirelessSupplyContextAccessor"));
         assertFalse(plugin.shouldApplyMixin("unused",
                 "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiRecipeTransferButtonControllerMixin"));
+        assertFalse(plugin.shouldApplyMixin("unused",
+                "com.moakiee.ae2lt.mixin.recipeviewer.jei.JeiMultiblockSlotHoverMixin"));
     }
 
     private static boolean applies(RecipeViewerMixinPlugin plugin, String mixin) {

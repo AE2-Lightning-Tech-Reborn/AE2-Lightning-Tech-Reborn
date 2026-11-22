@@ -15,7 +15,9 @@
     "TianshuTerminalMergeMixin",
     "TianshuTerminalRecipeMixin"
   ],
-  "client": ["client.TianshuMagnetScreenMixin"],
+  "client": [
+    "client.WirelessUpgradesScrollbarMixin"
+  ],
   "injectors": {
     "defaultRequire": 0
   }

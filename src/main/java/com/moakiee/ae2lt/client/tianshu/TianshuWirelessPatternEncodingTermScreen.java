@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.client.gui.style.ScreenStyle;
-import de.mari_023.ae2wtlib.api.gui.ScrollingUpgradesPanel;
+import com.moakiee.ae2lt.integration.ae2wtlib.client.WirelessUpgradesPanel;
 import de.mari_023.ae2wtlib.api.terminal.IUniversalTerminalCapable;
 import de.mari_023.ae2wtlib.api.terminal.WTMenuHost;
 import com.moakiee.ae2lt.menu.TianshuWirelessPatternEncodingTermMenu;
@@ -12,7 +12,7 @@ import net.minecraft.world.entity.player.Inventory;
 public final class TianshuWirelessPatternEncodingTermScreen
         extends TianshuPatternEncodingTermScreen<TianshuWirelessPatternEncodingTermMenu>
         implements IUniversalTerminalCapable {
-    private final ScrollingUpgradesPanel upgradesPanel;
+    private final WirelessUpgradesPanel upgradesPanel;
 
     public TianshuWirelessPatternEncodingTermScreen(
             TianshuWirelessPatternEncodingTermMenu menu,
@@ -23,13 +23,22 @@ public final class TianshuWirelessPatternEncodingTermScreen
         if (menu.isWUT()) {
             addToLeftToolbar(cycleTerminalButton());
         }
-        upgradesPanel = addUpgradePanel(widgets, menu);
+        upgradesPanel = WirelessUpgradesPanel.attach(widgets, menu, getHost());
     }
 
     @Override
     public void init() {
         super.init();
         upgradesPanel.setMaxRows(Math.max(2, getVisibleRows()));
+    }
+
+    @Override
+    public void removed() {
+        try {
+            upgradesPanel.onRemoved();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override

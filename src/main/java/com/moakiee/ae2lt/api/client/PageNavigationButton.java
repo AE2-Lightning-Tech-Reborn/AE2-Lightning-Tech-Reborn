@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.Blitter;
+import com.moakiee.ae2lt.client.ldlib.LdlibControlSprite;
 import appeng.client.gui.widgets.IconButton;
 
 import com.moakiee.ae2lt.AE2LightningTech;
@@ -86,9 +87,10 @@ public class PageNavigationButton extends IconButton {
         if (!active) {
             blitter.opacity(0.5F);
         }
-        blitter.dest(getX(), getY() + 1 + yOffset)
-                .zOffset(3)
-                .blit(guiGraphics);
+        blitter.dest(getX(), getY() + 1 + yOffset).zOffset(3);
+        if (!LdlibControlSprite.draw(blitter, guiGraphics)) {
+            blitter.blit(guiGraphics);
+        }
     }
 
     @Override

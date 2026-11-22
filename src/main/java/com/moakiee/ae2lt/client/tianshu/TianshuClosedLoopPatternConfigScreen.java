@@ -1,15 +1,24 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
-import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.IconButton;
-import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.TabButton;
+import com.lowdragmc.lowdraglib2.gui.ui.rendering.GUIContext;
+import com.lowdragmc.lowdraglib2.gui.texture.VanillaSpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.moakiee.ae2lt.client.ldlib.BackgroundLayer;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarHost;
+import appeng.client.gui.Icon;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
 import appeng.menu.SlotSemantics;
 import appeng.menu.slot.AppEngSlot;
 import appeng.client.gui.style.PaletteColor;
@@ -20,9 +29,10 @@ import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import dev.vfyjxf.taffy.style.FlexDirection;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +40,7 @@ import org.lwjgl.glfw.GLFW;
 
 /** Server-backed, paged editor for one closed-loop pattern draft. */
 final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
-        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> implements LdlibToolbarHost {
     private static final int SLOT_X = 13;
     private static final int ROW_SLOT_Y_OFFSET = 4;
     private static final int HIDDEN_SLOT = -10000;
@@ -45,6 +55,7 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
     private static final int MEMBER_DOWN_X = 150;
     private static final int ROLE_X = 111;
     private static final int ROLE_WIDTH = 54;
+    private static final VanillaSpriteTexture ROLE_BACKGROUND = VanillaSpriteTexture.of("ae2:button_disabled");
     private static final int FOOTER_TEXT_WIDTH = 168;
     private static final int SETTINGS_FIELD_X = 96;
     private static final int SETTINGS_FIELD_WIDTH = 69;
@@ -52,47 +63,100 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
     private static final int SETTINGS_STORED_ROW_Y =
             SETTINGS_EXECUTION_ROW_Y + TianshuPatternConfigLayout.ROW_HEIGHT;
 
-    private final Scrollbar scrollbar;
-    private final List<AE2Button> pageButtons;
-    private final AETextField[] memberAmounts = new AETextField[TianshuPatternConfigLayout.VISIBLE_ROWS];
+    private final BackgroundLayer background = TianshuPatternConfigLayout.createBackground();
+    private final LdlibRowScroller scrollbar;
+    private final List<LdlibAe2Button> pageButtons;
+    private final LdlibAe2TextField[] memberAmounts = new LdlibAe2TextField[TianshuPatternConfigLayout.VISIBLE_ROWS];
     private final int[] memberRows = new int[TianshuPatternConfigLayout.VISIBLE_ROWS];
-    private final ArrowButton[] memberUp = new ArrowButton[TianshuPatternConfigLayout.VISIBLE_ROWS];
-    private final ArrowButton[] memberDown = new ArrowButton[TianshuPatternConfigLayout.VISIBLE_ROWS];
-    private final Button[] outputRoles = new Button[TianshuPatternConfigLayout.VISIBLE_ROWS];
+    private final LdlibAe2Button[] memberUp = new LdlibAe2Button[TianshuPatternConfigLayout.VISIBLE_ROWS];
+    private final LdlibAe2Button[] memberDown = new LdlibAe2Button[TianshuPatternConfigLayout.VISIBLE_ROWS];
     private Page page = Page.MEMBERS;
-    private AETextField executionMultiplier;
-    private AETextField storedMultiplier;
-    private ArrowButton previousCandidate;
-    private ArrowButton nextCandidate;
+    private LdlibAe2TextField executionMultiplier;
+    private LdlibAe2TextField storedMultiplier;
+    private LdlibAe2Button previousCandidate;
+    private LdlibAe2Button nextCandidate;
     private boolean syncingFields;
     @Nullable private ClosedLoopResultPage.Kind requestedResultKind;
     private int requestedResultRevision = Integer.MIN_VALUE;
     private int requestedResultOffset = -1;
+    private final SlotRow[] slotRows = new SlotRow[TianshuPatternConfigLayout.VISIBLE_ROWS];
+    private UIElement detailsRoot;
+    private UIElement slotRowsRoot;
+    private UIElement resultRowsRoot;
+    private UIElement settingsRoot;
+    private ModularUI detailsUi;
+    private Label draftStatus;
+    private Label pageCount;
+    private Label candidate;
+    @Nullable private ClosedLoopResultPage displayedResultPage;
 
     TianshuClosedLoopPatternConfigScreen(TianshuPatternEncodingTermScreen<M> parent) {
         super(parent, "/screens/tianshu_closed_loop_pattern_config.json");
         imageWidth = TianshuPatternConfigLayout.GUI_WIDTH;
         imageHeight = TianshuPatternConfigLayout.GUI_HEIGHT;
 
-        widgets.add("button_back", new TabButton(Icon.BACK,
-                Component.translatable("gui.back"), ignored -> closeEditor()));
+        widgets.add("button_back", LdlibAe2Button.back(Component.translatable("gui.back"), this::closeEditor));
         pageButtons = List.of(
-                widgets.addButton("page_members", pageLabel(Page.MEMBERS),
+                LdlibAe2Button.addText(widgets, style, "page_members", pageLabel(Page.MEMBERS),
                         () -> setPage(Page.MEMBERS)),
-                widgets.addButton("page_outputs", pageLabel(Page.OUTPUTS),
+                LdlibAe2Button.addText(widgets, style, "page_outputs", pageLabel(Page.OUTPUTS),
                         () -> setPage(Page.OUTPUTS)),
-                widgets.addButton("page_inputs", pageLabel(Page.EXTERNAL_INPUTS),
+                LdlibAe2Button.addText(widgets, style, "page_inputs", pageLabel(Page.EXTERNAL_INPUTS),
                         () -> setPage(Page.EXTERNAL_INPUTS)),
-                widgets.addButton("page_seeds", pageLabel(Page.SEEDS),
+                LdlibAe2Button.addText(widgets, style, "page_seeds", pageLabel(Page.SEEDS),
                         () -> setPage(Page.SEEDS)),
-                widgets.addButton("page_settings", pageLabel(Page.SETTINGS),
+                LdlibAe2Button.addText(widgets, style, "page_settings", pageLabel(Page.SETTINGS),
                         () -> setPage(Page.SETTINGS)));
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "scrollbar");
+    }
+
+    private void releaseEditorLayers() {
+        var previous = detailsUi;
+        detailsUi = null;
+        try {
+            if (previous != null) {
+                previous.onRemoved();
+            }
+        } finally {
+            background.onRemoved();
+        }
+    }
+
+    @Override
+    protected void onReturnToParent() {
+        try {
+            releaseEditorLayers();
+        } finally {
+            super.onReturnToParent();
+        }
+    }
+
+    @Override
+    public void removed() {
+        try {
+            releaseEditorLayers();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override
     protected void init() {
+        for (var field : memberAmounts) {
+            if (field != null) field.dispose();
+        }
+        for (var buttons : List.of(memberUp, memberDown)) {
+            for (var button : buttons) {
+                if (button != null) button.dispose();
+            }
+        }
+        if (executionMultiplier != null) executionMultiplier.dispose();
+        if (storedMultiplier != null) storedMultiplier.dispose();
+        if (previousCandidate != null) previousCandidate.dispose();
+        if (nextCandidate != null) nextCandidate.dispose();
+        releaseEditorLayers();
         super.init();
+        initDetails();
         scrollbar.setHeight(TianshuPatternConfigLayout.SCROLLBAR_HEIGHT);
         for (int row = 0; row < TianshuPatternConfigLayout.VISIBLE_ROWS; row++) {
             final int visibleRow = row;
@@ -105,21 +169,19 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             amount.setResponder(value -> submitMemberAmount(visibleRow, value));
             memberAmounts[row] = amount;
 
-            memberUp[row] = addRenderableWidget(new ArrowButton(
+            memberUp[row] = addRenderableWidget(LdlibAe2Button.toolbar(
                     Icon.ARROW_UP,
                     Component.translatable("ae2lt.tianshu.closed_loop.move_up"),
-                    ignored -> moveMember(visibleRow, -1)));
+                    () -> moveMember(visibleRow, -1)));
+            memberUp[row].setMessage(Component.empty());
             memberUp[row].setPosition(leftPos + MEMBER_UP_X, topPos + rowY + 4);
-            memberDown[row] = addRenderableWidget(new ArrowButton(
+            memberDown[row] = addRenderableWidget(LdlibAe2Button.toolbar(
                     Icon.ARROW_DOWN,
                     Component.translatable("ae2lt.tianshu.closed_loop.move_down"),
-                    ignored -> moveMember(visibleRow, 1)));
+                    () -> moveMember(visibleRow, 1)));
+            memberDown[row].setMessage(Component.empty());
             memberDown[row].setPosition(leftPos + MEMBER_DOWN_X, topPos + rowY + 4);
 
-            var role = new AE2Button(leftPos + ROLE_X, topPos + rowY + 4, ROLE_WIDTH, 16,
-                    Component.empty(), ignored -> {
-                    });
-            outputRoles[row] = addRenderableWidget(role);
         }
 
         executionMultiplier = numberBox(SETTINGS_FIELD_X, SETTINGS_EXECUTION_ROW_Y,
@@ -133,22 +195,25 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         storedMultiplier.setTooltipMessage(List.of(Component.translatable(
                 "ae2lt.tianshu.terminal.closed_loop.stored_task_multiplier.tooltip")));
 
-        previousCandidate = addRenderableWidget(new ArrowButton(
+        previousCandidate = addRenderableWidget(LdlibAe2Button.toolbar(
                 Icon.ARROW_LEFT,
                 Component.translatable("ae2lt.tianshu.closed_loop.previous_candidate"),
-                ignored -> menu.selectClosedLoopCandidate(-1)));
+                () -> menu.selectClosedLoopCandidate(-1)));
+        previousCandidate.setMessage(Component.empty());
         previousCandidate.setPosition(leftPos + 116, topPos + TianshuPatternConfigLayout.HEADER_HEIGHT + 4);
-        nextCandidate = addRenderableWidget(new ArrowButton(
+        nextCandidate = addRenderableWidget(LdlibAe2Button.toolbar(
                 Icon.ARROW_RIGHT,
                 Component.translatable("ae2lt.tianshu.closed_loop.next_candidate"),
-                ignored -> menu.selectClosedLoopCandidate(1)));
+                () -> menu.selectClosedLoopCandidate(1)));
+        nextCandidate.setMessage(Component.empty());
         nextCandidate.setPosition(leftPos + 145, topPos + TianshuPatternConfigLayout.HEADER_HEIGHT + 4);
 
         hideParentSlots();
         configurePage();
+        scrollbar.setOnScrollChanged(this::refreshVisiblePage);
     }
 
-    private AETextField numberBox(int x, int y, int value) {
+    private LdlibAe2TextField numberBox(int x, int y, int value) {
         var field = numberField(x, y, SETTINGS_FIELD_WIDTH);
         field.setMaxLength(9);
         field.setFilter(TianshuClosedLoopPatternConfigScreen::isPositiveIntDraft);
@@ -158,10 +223,9 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         return field;
     }
 
-    private AETextField numberField(int x, int y, int width) {
-        var field = new AETextField(style, font, leftPos + x, topPos + y,
-                width, NUMBER_FIELD_HEIGHT);
-        field.setBordered(false);
+    private LdlibAe2TextField numberField(int x, int y, int width) {
+        var field = LdlibAe2TextField.create(width, NUMBER_FIELD_HEIGHT, style);
+        field.setPosition(leftPos + x, topPos + y);
         return addRenderableWidget(field);
     }
 
@@ -190,14 +254,16 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             pageButtons.get(i).setMessage(pageLabel(value).copy().withStyle(
                     value == page ? ChatFormatting.GREEN : ChatFormatting.WHITE));
         }
-        updateVisibleSlots();
-        updateControls();
-        requestVisibleResultPage();
+        refreshVisiblePage();
     }
 
     @Override
     protected void updateBeforeRender() {
         super.updateBeforeRender();
+        refreshVisiblePage();
+    }
+
+    private void refreshVisiblePage() {
         updateVisibleSlots();
         updateControls();
         requestVisibleResultPage();
@@ -236,29 +302,21 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         int scroll = scrollbar.getCurrentScroll();
         for (int visible = 0; visible < TianshuPatternConfigLayout.VISIBLE_ROWS; visible++) {
             int memberIndex = scroll + visible;
-            memberRows[visible] = memberIndex;
             boolean memberPage = page == Page.MEMBERS
                     && memberIndex < TianshuPatternEncodingTermMenu.CLOSED_LOOP_MEMBER_SLOTS;
+            var amount = memberAmounts[visible];
+            memberRows[visible] = memberIndex;
             var memberSlot = memberPage ? menu.getClosedLoopMemberSlots().get(memberIndex) : null;
             boolean memberPresent = memberSlot != null && !memberSlot.getItem().isEmpty();
-            memberAmounts[visible].setVisible(memberPage);
-            memberAmounts[visible].active = memberPresent;
-            memberAmounts[visible].setEditable(memberPresent);
+            amount.setVisible(memberPage);
+            amount.active = memberPresent;
+            amount.setEditable(memberPresent);
             memberUp[visible].visible = memberPage;
             memberDown[visible].visible = memberPage;
             memberUp[visible].active = memberPresent && memberIndex > 0;
             memberDown[visible].active = memberPresent
                     && memberIndex + 1 < TianshuPatternEncodingTermMenu.CLOSED_LOOP_MEMBER_SLOTS;
 
-            int outputIndex = scroll + visible;
-            boolean outputPage = page == Page.OUTPUTS
-                    && outputIndex < TianshuPatternEncodingTermMenu.CLOSED_LOOP_OUTPUT_SLOTS;
-            boolean outputPresent = outputPage
-                    && !menu.getClosedLoopOutputSlots().get(outputIndex).getItem().isEmpty();
-            outputRoles[visible].visible = outputPresent;
-            outputRoles[visible].active = false;
-            if (outputPage) outputRoles[visible].setMessage(roleLabel(
-                    menu.closedLoopDraftSync.outputRole(outputIndex)));
         }
         boolean settings = page == Page.SETTINGS;
         executionMultiplier.setVisible(settings);
@@ -322,83 +380,211 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         }
     }
 
+    private void initDetails() {
+        int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        detailsRoot = new UIElement();
+        slotRowsRoot = addRowsGroup();
+        resultRowsRoot = addRowsGroup();
+        settingsRoot = addDetailsGroup();
+        for (int visible = 0; visible < slotRows.length; visible++) {
+            var slotRow = new SlotRow(textColor);
+            slotRows[visible] = slotRow;
+            slotRowsRoot.addChild(slotRow);
+        }
+        draftStatus = addLabel(detailsRoot, Component.empty(), 0xFF666666, 8, 161, FOOTER_TEXT_WIDTH);
+        pageCount = addLabel(detailsRoot, Component.empty(), textColor, 8, 173, FOOTER_TEXT_WIDTH);
+        candidate = addLabel(settingsRoot, Component.empty(), textColor,
+                12, TianshuPatternConfigLayout.HEADER_HEIGHT + 8, FOOTER_TEXT_WIDTH);
+        addLabel(settingsRoot, Component.translatable("ae2lt.tianshu.closed_loop.execution_multiplier"),
+                textColor, 12, SETTINGS_EXECUTION_ROW_Y + 2, FOOTER_TEXT_WIDTH);
+        addLabel(settingsRoot, Component.translatable("ae2lt.tianshu.closed_loop.stored_multiplier"),
+                textColor, 12, SETTINGS_STORED_ROW_Y + 2, FOOTER_TEXT_WIDTH);
+        detailsUi = LdlibScreens.localLayer(detailsRoot, imageWidth, imageHeight);
+        // AE2 renders tooltips after restoring the screen-space pose.
+        detailsUi.setDrawTooltips(false);
+        displayedResultPage = null;
+    }
+
+    private UIElement addDetailsGroup() {
+        var group = new UIElement().setAllowHitTest(false);
+        detailsRoot.addChild(LdlibScreens.at(group, 0, 0, imageWidth, imageHeight));
+        return group;
+    }
+
+    private UIElement addRowsGroup() {
+        var group = new UIElement().setAllowHitTest(false).layout(l -> l.flexDirection(FlexDirection.COLUMN));
+        detailsRoot.addChild(LdlibScreens.at(group, 0, TianshuPatternConfigLayout.HEADER_HEIGHT, imageWidth,
+                TianshuPatternConfigLayout.VISIBLE_ROWS * TianshuPatternConfigLayout.ROW_HEIGHT));
+        return group;
+    }
+
+    private static void styleRow(UIElement row) {
+        row.setAllowHitTest(false);
+        row.layout(l -> l.widthPercent(100).height(TianshuPatternConfigLayout.ROW_HEIGHT).flexShrink(0));
+    }
+
+    private static Label addLabel(UIElement parent, Component text, int color, int x, int y, int width) {
+        var label = LdlibScreens.label(text, color);
+        label.setAllowHitTest(false);
+        label.textStyle(style -> style.textWrap(TextWrap.NONE));
+        parent.addChild(LdlibScreens.at(label, x, y, width, 9));
+        return label;
+    }
+
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
+        boolean settings = page == Page.SETTINGS;
+        slotRowsRoot.setVisible(page == Page.MEMBERS || page == Page.OUTPUTS);
+        resultRowsRoot.setVisible(page == Page.EXTERNAL_INPUTS || page == Page.SEEDS);
+        settingsRoot.setVisible(settings);
         switch (page) {
-            case MEMBERS -> drawMemberRows(graphics);
-            case OUTPUTS -> drawOutputRows(
-                    graphics, menu.getClosedLoopOutputSlots(), ROLE_X - NAME_X - 4);
-            case EXTERNAL_INPUTS -> drawResultRows(
-                    graphics, ClosedLoopResultPage.Kind.EXTERNAL_INPUTS);
-            case SEEDS -> drawResultRows(graphics, ClosedLoopResultPage.Kind.SEEDS);
-            case SETTINGS -> drawSettings(graphics);
+            case MEMBERS -> updateSlotRows(menu.getClosedLoopMemberSlots(), true);
+            case OUTPUTS -> updateSlotRows(menu.getClosedLoopOutputSlots(), false);
+            case EXTERNAL_INPUTS -> drawResultRows(ClosedLoopResultPage.Kind.EXTERNAL_INPUTS);
+            case SEEDS -> drawResultRows(ClosedLoopResultPage.Kind.SEEDS);
+            case SETTINGS -> candidate.setText(Component.translatable("ae2lt.tianshu.closed_loop.candidate",
+                    menu.closedLoopCandidateCount == 0 ? 0 : menu.closedLoopCandidateIndex + 1,
+                    menu.closedLoopCandidateCount));
         }
         var status = Component.translatable("ae2lt.tianshu.closed_loop.status."
                 + menu.closedLoopDraftStatus.name().toLowerCase(Locale.ROOT));
-        int color = statusColor(menu.closedLoopDraftStatus);
-        graphics.drawString(font, font.plainSubstrByWidth(status.getString(), FOOTER_TEXT_WIDTH),
-                8, 161, color, false);
-        if (page != Page.SETTINGS) {
+        draftStatus.setText(Component.literal(font.plainSubstrByWidth(status.getString(), FOOTER_TEXT_WIDTH)));
+        draftStatus.getTextStyle().textColor(0xFF000000 | statusColor(menu.closedLoopDraftStatus));
+        pageCount.setVisible(!settings);
+        if (!settings) {
             int rows = currentRowCount();
-            graphics.drawString(font,
-                    Component.translatable("ae2lt.tianshu.closed_loop.page_count",
-                            rows == 0 ? 0 : scrollbar.getCurrentScroll() + 1, rows),
-                    8, 173, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+            pageCount.setText(Component.translatable("ae2lt.tianshu.closed_loop.page_count",
+                    rows == 0 ? 0 : scrollbar.getCurrentScroll() + 1, rows));
         }
+        detailsUi.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
     }
 
-    private void drawMemberRows(GuiGraphics graphics) {
+    private void updateSlotRows(List<AppEngSlot> slots, boolean members) {
         int scroll = scrollbar.getCurrentScroll();
-        for (int visible = 0; visible < TianshuPatternConfigLayout.VISIBLE_ROWS; visible++) {
+        for (int visible = 0; visible < slotRows.length; visible++) {
             int index = scroll + visible;
-            if (index >= menu.getClosedLoopMemberSlots().size()) break;
-            int y = TianshuPatternConfigLayout.HEADER_HEIGHT
-                    + visible * TianshuPatternConfigLayout.ROW_HEIGHT + 8;
-            var stack = menu.getClosedLoopMemberSlots().get(index).getItem();
-            graphics.drawString(font, Integer.toString(index + 1), NAME_X, y, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            if (!stack.isEmpty()) {
-                graphics.drawString(font,
-                        font.plainSubstrByWidth(stack.getHoverName().getString(), MEMBER_NAME_WIDTH),
-                        NAME_X + 13, y, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+            var row = slotRows[visible];
+            row.setVisible(index < slots.size());
+            if (index < slots.size()) {
+                var stack = slots.get(index).getItem();
+                var role = members || stack.isEmpty() ? null : roleLabel(menu.closedLoopDraftSync.outputRole(index));
+                row.update(font, index, stack, members, role);
             }
         }
     }
 
-    private void drawOutputRows(GuiGraphics graphics, List<AppEngSlot> slots, int width) {
-        int scroll = scrollbar.getCurrentScroll();
-        for (int visible = 0; visible < TianshuPatternConfigLayout.VISIBLE_ROWS; visible++) {
-            int index = scroll + visible;
-            if (index >= slots.size()) break;
-            var stack = slots.get(index).getItem();
-            if (stack.isEmpty()) continue;
-            int y = TianshuPatternConfigLayout.HEADER_HEIGHT
-                    + visible * TianshuPatternConfigLayout.ROW_HEIGHT + 8;
-            var generic = GenericStack.fromItemStack(stack);
-            var name = generic != null && generic.what() != null
-                    ? generic.what().getDisplayName().getString() : stack.getHoverName().getString();
-            graphics.drawString(font, font.plainSubstrByWidth(name, width),
-                    NAME_X, y, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
+    private static final class SlotRow extends UIElement {
+        private static final int OUTPUT_NAME_WIDTH = ROLE_X - NAME_X - 4;
+        private final Label number;
+        private final Label memberName;
+        private final Label outputName;
+        private Component roleMessage = Component.empty();
+        private final Button role = new Button() {
+            @Override
+            public void drawBackgroundAdditional(GUIContext context) {
+                super.drawBackgroundAdditional(context);
+                float x = getPositionX();
+                float y = getPositionY();
+                var message = roleMessage;
+                context.postRendering(post -> renderRoleText(post, message, x, y));
+            }
+        };
+
+        private SlotRow(int textColor) {
+            number = addLabel(this, Component.empty(), textColor, NAME_X, 8, 13);
+            memberName = addLabel(this, Component.empty(), textColor, NAME_X + 13, 8, MEMBER_NAME_WIDTH);
+            outputName = addLabel(this, Component.empty(), textColor, NAME_X, 8, OUTPUT_NAME_WIDTH);
+            styleRow(this);
+            role.setActive(false);
+            role.setAllowHitTest(false);
+            role.setFocusable(false);
+            role.noText();
+            role.buttonStyle(s -> s.baseTexture(ROLE_BACKGROUND).hoverTexture(ROLE_BACKGROUND)
+                    .pressedTexture(ROLE_BACKGROUND));
+            addChild(LdlibScreens.at(role, ROLE_X, 4, ROLE_WIDTH, 16));
+        }
+
+        private static void renderRoleText(GUIContext context, Component message, float x, float y) {
+            var graphics = context.graphics;
+            graphics.flush();
+            var pose = graphics.pose();
+            var origin = pose.last().pose().transformPosition(x, y, 0, new org.joml.Vector3f());
+            pose.pushPose();
+            try {
+                // Native button text clips in screen coordinates, without applying the current pose.
+                pose.last().pose().identity();
+                pose.translate(0, 0, origin.z());
+                int left = (int) origin.x();
+                int top = (int) origin.y();
+                AE2Button.renderButtonText(graphics, context.mc.font, message,
+                        left + 2, top, left + ROLE_WIDTH - 2, top + 16, -1, 0xFF413F54);
+            } finally {
+                try {
+                    graphics.flush();
+                } finally {
+                    pose.popPose();
+                }
+            }
+        }
+
+        private void update(Font font, int index, ItemStack stack, boolean members, @Nullable Component outputRole) {
+            number.setVisible(members);
+            memberName.setVisible(members && !stack.isEmpty());
+            outputName.setVisible(!members && !stack.isEmpty());
+            role.setVisible(outputRole != null);
+            if (outputRole != null) {
+                roleMessage = outputRole;
+            }
+            if (members) {
+                number.setText(Component.literal(Integer.toString(index + 1)));
+                if (!stack.isEmpty()) {
+                    memberName.setText(Component.literal(
+                            font.plainSubstrByWidth(stack.getHoverName().getString(), MEMBER_NAME_WIDTH)));
+                }
+            } else if (!stack.isEmpty()) {
+                var generic = GenericStack.fromItemStack(stack);
+                var name = generic != null && generic.what() != null
+                        ? generic.what().getDisplayName() : stack.getHoverName();
+                outputName.setText(Component.literal(font.plainSubstrByWidth(name.getString(), OUTPUT_NAME_WIDTH)));
+            }
         }
     }
 
-    private void drawResultRows(GuiGraphics graphics, ClosedLoopResultPage.Kind kind) {
+    private void drawResultRows(ClosedLoopResultPage.Kind kind) {
         var resultPage = menu.getClosedLoopResultPage(kind, scrollbar.getCurrentScroll());
-        if (resultPage == null) return;
-        for (int visible = 0; visible < resultPage.entries().size(); visible++) {
-            var entry = resultPage.entries().get(visible);
-            int rowY = TianshuPatternConfigLayout.HEADER_HEIGHT
-                    + visible * TianshuPatternConfigLayout.ROW_HEIGHT;
-            graphics.renderItem(GenericStack.wrapInItemStack(entry), SLOT_X, rowY + ROW_SLOT_Y_OFFSET);
-            graphics.drawString(font,
-                    font.plainSubstrByWidth(entry.what().getDisplayName().getString(), RESULT_NAME_WIDTH),
-                    NAME_X, rowY + 8, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            var poseStack = graphics.pose();
-            poseStack.pushPose();
-            poseStack.translate(0, 0, 100);
-            StackSizeRenderer.renderSizeLabel(graphics, font, SLOT_X, rowY + ROW_SLOT_Y_OFFSET,
-                    entry.what().formatAmount(entry.amount(), AmountFormat.SLOT), false);
-            poseStack.popPose();
+        if (resultPage == displayedResultPage) return;
+        displayedResultPage = resultPage;
+        resultRowsRoot.clearAllChildren();
+        if (resultPage != null) {
+            for (var entry : resultPage.entries()) {
+                resultRowsRoot.addChild(resultRow(font, entry));
+            }
         }
+    }
+
+    private UIElement resultRow(Font font, GenericStack entry) {
+        int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        var row = new UIElement();
+        styleRow(row);
+        var stack = GenericStack.wrapInItemStack(entry);
+        String formatted = entry.what().formatAmount(entry.amount(), AmountFormat.SLOT);
+        var icon = new UIElement().setAllowHitTest(false).style(s -> s.background(
+                (graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+                    graphics.renderItem(stack, (int) x, (int) y);
+                    var pose = graphics.pose();
+                    pose.pushPose();
+                    try {
+                        pose.translate(0, 0, 100);
+                        LargeStackCountRenderer.renderTerminalLabel(graphics, font, x, y, formatted, false);
+                    } finally {
+                        pose.popPose();
+                    }
+                }));
+        row.addChild(LdlibScreens.at(icon, SLOT_X, ROW_SLOT_Y_OFFSET, 16, 16));
+
+        var name = Component.literal(font.plainSubstrByWidth(entry.what().getDisplayName().getString(), RESULT_NAME_WIDTH));
+        addLabel(row, name, textColor, NAME_X, 8, RESULT_NAME_WIDTH);
+        return row;
     }
 
     private void requestVisibleResultPage() {
@@ -419,34 +605,16 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         menu.requestClosedLoopResultPage(kind, offset);
     }
 
-    private void drawSettings(GuiGraphics graphics) {
-        int top = TianshuPatternConfigLayout.HEADER_HEIGHT;
-        graphics.drawString(font,
-                Component.translatable("ae2lt.tianshu.closed_loop.candidate",
-                        menu.closedLoopCandidateCount == 0 ? 0 : menu.closedLoopCandidateIndex + 1,
-                        menu.closedLoopCandidateCount),
-                12, top + 8, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        graphics.drawString(font,
-                Component.translatable("ae2lt.tianshu.closed_loop.execution_multiplier"),
-                12, SETTINGS_EXECUTION_ROW_Y + 2, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        graphics.drawString(font,
-                Component.translatable("ae2lt.tianshu.closed_loop.stored_multiplier"),
-                12, SETTINGS_STORED_ROW_Y + 2, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-    }
-
     @Override
     public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
-        TianshuPatternConfigLayout.drawBackground(graphics, offsetX, offsetY);
+        background.render(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         if (deltaY != 0 && page != Page.SETTINGS) {
             scrollbar.setCurrentScroll(scrollbar.getCurrentScroll() + (deltaY > 0 ? -1 : 1));
-            updateVisibleSlots();
-            updateControls();
-            requestVisibleResultPage();
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
@@ -480,17 +648,14 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
             default -> null;
         };
         int localX = x - leftPos;
-        int localY = y - topPos;
-        int resultTop = TianshuPatternConfigLayout.HEADER_HEIGHT + ROW_SLOT_Y_OFFSET;
-        int visible = (localY - resultTop) / TianshuPatternConfigLayout.ROW_HEIGHT;
-        if (kind != null && localX >= SLOT_X && localX < SLOT_X + 16
-                && localY >= resultTop
-                && visible >= 0 && visible < TianshuPatternConfigLayout.VISIBLE_ROWS) {
+        int relativeY = y - topPos - TianshuPatternConfigLayout.HEADER_HEIGHT - ROW_SLOT_Y_OFFSET;
+        int row = relativeY / TianshuPatternConfigLayout.ROW_HEIGHT;
+        if (kind != null && localX >= SLOT_X && localX < SLOT_X + 16 && relativeY >= 0
+                && row < TianshuPatternConfigLayout.VISIBLE_ROWS
+                && relativeY % TianshuPatternConfigLayout.ROW_HEIGHT < 16) {
             var resultPage = menu.getClosedLoopResultPage(kind, scrollbar.getCurrentScroll());
-            if (resultPage != null && visible < resultPage.entries().size()
-                    && localY < resultTop + visible * TianshuPatternConfigLayout.ROW_HEIGHT + 16) {
-                graphics.renderTooltip(font,
-                        GenericStack.wrapInItemStack(resultPage.entries().get(visible)), x, y);
+            if (resultPage != null && row < resultPage.entries().size()) {
+                graphics.renderTooltip(font, GenericStack.wrapInItemStack(resultPage.entries().get(row)), x, y);
                 return;
             }
         }
@@ -596,24 +761,4 @@ final class TianshuClosedLoopPatternConfigScreen<M extends TianshuPatternEncodin
         SETTINGS
     }
 
-    private static final class ArrowButton extends IconButton {
-        private final Icon icon;
-        private final Component tooltip;
-
-        private ArrowButton(Icon icon, Component tooltip, Button.OnPress onPress) {
-            super(onPress);
-            this.icon = icon;
-            this.tooltip = tooltip;
-        }
-
-        @Override
-        protected Icon getIcon() {
-            return icon;
-        }
-
-        @Override
-        public List<Component> getTooltipMessage() {
-            return List.of(tooltip);
-        }
-    }
 }

@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client.render;
 
+import com.lowdragmc.lowdraglib2.utils.ColorUtils;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.registry.ModFumos;
 import com.moakiee.ae2lt.blockentity.FumoBlockEntity;
@@ -41,10 +42,12 @@ public final class RainbowPigmeeColors {
     }
 
     private static int brighten(int color) {
-        int r = color >> 16 & 255, g = color >> 8 & 255, b = color & 255;
+        int r = ColorUtils.redI(color);
+        int g = ColorUtils.greenI(color);
+        int b = ColorUtils.blueI(color);
         float scale = 255.0F / Math.max(1, Math.max(r, Math.max(g, b)));
         // Preserve each dye's hue; keep a light floor instead of cycling into near-black.
-        return FastColor.ARGB32.color(255,
+        return ColorUtils.color(255,
                 Math.round(48 + r * scale * 207 / 255),
                 Math.round(48 + g * scale * 207 / 255),
                 Math.round(48 + b * scale * 207 / 255));

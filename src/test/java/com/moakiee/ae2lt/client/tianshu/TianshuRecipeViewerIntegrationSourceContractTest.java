@@ -228,7 +228,7 @@ class TianshuRecipeViewerIntegrationSourceContractTest {
         assertTrue(screen.contains("isClosedLoopMemberSlot(slot) && slot.hasItem()"));
         assertTrue(screen.contains("menu.closedLoopDraftSync.copies(slot.getContainerSlot())"));
         assertTrue(screen.contains("Long.toString(copies)"));
-        assertTrue(screen.contains("StackSizeRenderer.renderSizeLabel("));
+        assertTrue(screen.contains("LargeStackCountRenderer.renderTerminalLabel("));
     }
 
     @Test

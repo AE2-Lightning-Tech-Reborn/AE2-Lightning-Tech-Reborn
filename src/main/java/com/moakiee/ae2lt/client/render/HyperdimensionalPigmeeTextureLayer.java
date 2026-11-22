@@ -2,19 +2,17 @@ package com.moakiee.ae2lt.client.render;
 
 import java.util.List;
 
+import com.lowdragmc.lowdraglib2.client.model.ModelFactory;
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.block.FumoBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -24,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Draws the sparse Hyperdimensional Pigmee markings over the portal shell.
  */
 final class HyperdimensionalPigmeeTextureLayer {
-    static final ModelResourceLocation MODEL = ModelResourceLocation.standalone(
+    static final LdlibStandaloneModel MODEL = new LdlibStandaloneModel(
             ResourceLocation.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "block/hyperdimensional_pigmee_fumo_overlay"));
@@ -42,7 +40,8 @@ final class HyperdimensionalPigmeeTextureLayer {
             int packedOverlay) {
         poseStack.pushPose();
         poseStack.translate(0.5F, 0.5F, 0.5F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(rotationFor(state)));
+        var facing = state.getOptionalValue(FumoBlock.FACING).orElse(Direction.NORTH);
+        poseStack.mulPose(ModelFactory.getQuaternion(facing));
         poseStack.translate(-0.5F, -0.5F, -0.5F);
         render(poseStack, buffers, packedOverlay);
         poseStack.popPose();
@@ -61,8 +60,7 @@ final class HyperdimensionalPigmeeTextureLayer {
             PoseStack poseStack,
             MultiBufferSource buffers,
             int packedOverlay) {
-        Minecraft minecraft = Minecraft.getInstance();
-        BakedModel model = minecraft.getModelManager().getModel(MODEL);
+        var model = MODEL.bakedModel();
         VertexConsumer consumer = buffers.getBuffer(
                 RenderType.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS));
         RandomSource random = RandomSource.create();
@@ -112,20 +110,5 @@ final class HyperdimensionalPigmeeTextureLayer {
                     packedOverlay);
         }
         poseStack.popPose();
-    }
-
-    private static float rotationFor(BlockState state) {
-        if (!state.hasProperty(com.moakiee.ae2lt.block.FumoBlock.FACING)) {
-            return 0.0F;
-        }
-        Direction facing = state.getValue(com.moakiee.ae2lt.block.FumoBlock.FACING);
-        return switch (facing) {
-            // Blockstate Y rotations are baked with a negative Y-axis quaternion.
-            // PoseStack rotations must therefore use the inverse-signed angle.
-            case SOUTH -> -180.0F;
-            case WEST -> -270.0F;
-            case EAST -> -90.0F;
-            default -> 0.0F;
-        };
     }
 }

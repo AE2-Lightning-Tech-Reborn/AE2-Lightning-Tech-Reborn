@@ -1,8 +1,8 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -11,51 +11,44 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-import appeng.api.config.ActionItems;
-import appeng.api.upgrades.Upgrades;
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.ToggleButton;
-import appeng.client.gui.widgets.ToolboxPanel;
-import appeng.client.gui.widgets.UpgradesPanel;
-import appeng.core.localization.GuiText;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolboxPanel;
+import com.moakiee.ae2lt.client.ldlib.LdlibUpgradesPanel;
 import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
-import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.LightningSimulationChamberMenu;
 
-public class LightningSimulationChamberScreen extends AEBaseScreen<LightningSimulationChamberMenu> {
-    private final LightningSimulationEnergyBar energyBar;
-    private final LightningSimulationProcessWidget processWidget;
-    private final ToggleButton autoExportButton;
-    private final ActionButton configureOutputButton;
+public class LightningSimulationChamberScreen extends LdlibAeScreen<LightningSimulationChamberMenu> {
+    private final LdlibAe2Button configureOutputButton;
 
     public LightningSimulationChamberScreen(
             LightningSimulationChamberMenu menu, Inventory playerInventory, Component title, ScreenStyle style) {
         super(menu, playerInventory, title, style);
 
-        widgets.add("upgrades", new UpgradesPanel(
+        widgets.add("upgrades", LdlibUpgradesPanel.forMachine(
                 menu.getSlots(SlotSemantics.UPGRADE),
-                this::getCompatibleUpgrades));
+                () -> menu.getHost().getUpgrades().getUpgradableItem()));
 
         // 网络工具适配：玩家手持 NetworkTool 打开 GUI 时显示 toolbox 面板
         if (menu.getToolbox().isPresent()) {
-            this.widgets.add("toolbox", new ToolboxPanel(style, menu.getToolbox().getName()));
+            this.widgets.add("toolbox", new LdlibToolboxPanel(style, menu.getToolbox().getName()));
         }
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
 
-        this.processWidget = new LightningSimulationProcessWidget(menu, style.getImage("processOverlay"));
-        widgets.add("processArea", processWidget);
+        widgets.add("processArea", MachineGauges.stagedConvergingProgress(
+                style.getImage("processOverlay"), menu::getProgress, 20));
 
-        this.energyBar = new LightningSimulationEnergyBar(menu, style.getImage("energyBar"));
-        widgets.add("energyBar", energyBar);
+        widgets.add("energyBar", MachineGauges.energyBar(style.getImage("energyBar"),
+                menu::getStoredEnergy, menu::getEnergyCapacity,
+                "ae2lt.gui.lightning_simulation.energy.tooltip"));
 
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
+        widgets.add("lightningStatus", MachineGauges.statusIcon(() -> List.of(
                 LightningStatusLines.title(),
                 LightningStatusLines.status(menu.isWorking()),
                 LightningStatusLines.progress(menu.getProgress()),
@@ -66,24 +59,18 @@ public class LightningSimulationChamberScreen extends AEBaseScreen<LightningSimu
                 menu.getLightningDemandMessage(),
                 menu.getSubstitutionMessage())));
 
-        this.autoExportButton = new ToggleButton(
-                Icon.AUTO_EXPORT_ON,
-                Icon.AUTO_EXPORT_OFF,
-                state -> menu.clientToggleAutoExport());
-        this.autoExportButton.setTooltipOn(List.of(
-                Component.translatable("ae2lt.gui.lightning_simulation.auto_export.title"),
-                Component.translatable("ae2lt.gui.lightning_simulation.auto_export.on")));
-        this.autoExportButton.setTooltipOff(List.of(
-                Component.translatable("ae2lt.gui.lightning_simulation.auto_export.title"),
-                Component.translatable("ae2lt.gui.lightning_simulation.auto_export.off")));
         addToLeftToolbar(new InputTransferButton(menu));
-        addToLeftToolbar(this.autoExportButton);
+        addToLeftToolbar(new MachineAutoExportButton("ae2lt.gui.lightning_simulation.auto_export",
+                menu::isAutoExportEnabled, menu::clientToggleAutoExport));
 
-        this.configureOutputButton = new ActionButton(
-                ActionItems.COG,
-                () -> switchToScreen(new LightningSimulationOutputConfigScreen(this)));
-        this.configureOutputButton.setMessage(
-                Component.translatable("ae2lt.gui.lightning_simulation.configure_output"));
+        this.configureOutputButton = LdlibAe2Button.toolbar(
+                Icon.COG, Component.translatable("ae2lt.gui.lightning_simulation.configure_output"),
+                () -> {
+                    var next = new LightningSimulationOutputConfigScreen(this);
+                    releaseUpgradePanels();
+                    releaseBackground();
+                    switchToScreen(next);
+                });
         addToLeftToolbar(this.configureOutputButton);
     }
 
@@ -100,18 +87,10 @@ public class LightningSimulationChamberScreen extends AEBaseScreen<LightningSimu
         return lines;
     }
 
-    private List<Component> getCompatibleUpgrades() {
-        var list = new ArrayList<Component>();
-        list.add(GuiText.CompatibleUpgrades.text());
-        list.addAll(Upgrades.getTooltipLinesForMachine(menu.getHost().getUpgrades().getUpgradableItem()));
-        return list;
-    }
-
     @Override
     protected void updateBeforeRender() {
         super.updateBeforeRender();
 
-        this.autoExportButton.setState(menu.isAutoExportEnabled());
         this.configureOutputButton.setVisibility(menu.isAutoExportEnabled());
     }
 

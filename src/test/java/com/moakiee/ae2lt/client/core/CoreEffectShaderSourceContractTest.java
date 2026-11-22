@@ -66,8 +66,10 @@ class CoreEffectShaderSourceContractTest {
                 "src/main/java/com/moakiee/ae2lt/client/core/CoreEffectBackend.java"));
         String renderTypes = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/core/CoreEffectRenderTypes.java"));
-        String nativeShaders = Files.readString(Path.of(
+        String ldlibShaders = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/core/CoreEffectShaders.java"));
+        String registration = Files.readString(Path.of(
+                "src/main/java/com/moakiee/ae2lt/client/ldlib/LdlibShaders.java"));
 
         assertAll(
                 () -> assertTrue(backend.contains("detectCompatibleVeil()")),
@@ -78,13 +80,17 @@ class CoreEffectShaderSourceContractTest {
                 () -> assertTrue(backend.contains("installedVersion.compareTo(MAXIMUM_VEIL_VERSION) >= 0")),
                 () -> assertTrue(renderTypes.contains("RuntimeException | LinkageError")),
                 () -> assertTrue(renderTypes.contains("CoreEffectBackend.disableVeil(exception)")),
-                () -> assertFalse(nativeShaders.contains(
+                () -> assertFalse(ldlibShaders.contains(
                         "LOGGER.info(\"Veil detected; using the Veil core-effect shader backend\");\n"
                                 + "            return;")),
-                () -> assertTrue(nativeShaders.contains(
+                () -> assertTrue(ldlibShaders.contains(
                         "registerShader(event, TIANSHU_SHADER, TIANSHU);")),
-                () -> assertTrue(nativeShaders.contains(
-                        "registerShader(event, MATRIX_SHADER, MATRIX);")));
+                () -> assertTrue(ldlibShaders.contains(
+                        "registerShader(event, MATRIX_SHADER, MATRIX);")),
+                () -> assertTrue(ldlibShaders.contains(
+                        "LdlibShaders.register(event, location, DefaultVertexFormat.POSITION_COLOR_NORMAL, \"EffectTime\"")),
+                () -> assertTrue(registration.contains("LDShaderHolder.create(resources, location, format)")),
+                () -> assertTrue(registration.contains("event.registerShader(holder.baseInstance, onLoaded)")));
     }
 
     @Test

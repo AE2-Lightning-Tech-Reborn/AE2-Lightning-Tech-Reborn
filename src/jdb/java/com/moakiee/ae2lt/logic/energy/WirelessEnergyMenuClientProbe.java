@@ -5,6 +5,7 @@ import appeng.api.networking.security.IActionSource;
 import appeng.blockentity.misc.InterfaceBlockEntity;
 import appeng.blockentity.storage.DriveBlockEntity;
 import appeng.client.gui.widgets.AETextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import appeng.client.gui.widgets.Scrollbar;
 import appeng.core.definitions.AEBlocks;
 import com.moakiee.ae2lt.blockentity.AdvancedWirelessOverloadedControllerBlockEntity;
@@ -236,7 +237,7 @@ public final class WirelessEnergyMenuClientProbe {
                         require((int)frequencyField("selectionScroll") > 0, "native scrollbar drag updates rows");
                         return;
                     }
-                    var input = (AETextField)frequencyField("selectionSearchField");
+                    var input = (LdlibAe2TextField)frequencyField("selectionSearchField");
                     if (input.getValue().isEmpty()) {
                         var bounds = input.getTooltipArea();
                         mc.screen.mouseClicked(bounds.getX() + 10, bounds.getY() + 6, 0);
@@ -262,11 +263,11 @@ public final class WirelessEnergyMenuClientProbe {
                 case 32 -> nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_CREATE);
                 case 33 -> {
                     assertFrame();
-                    if (((AETextField)frequencyField("nameField")).getValue().isEmpty()) {
-                        ((AETextField)frequencyField("nameField")).setValue("Created QA");
+                    if (((LdlibAe2TextField)frequencyField("nameField")).getValue().isEmpty()) {
+                        ((LdlibAe2TextField)frequencyField("nameField")).setValue("Created QA");
                         for (int i = 0; frequencyField("editSecurity") != FrequencySecurityLevel.ENCRYPTED && i < 3; i++)
                             clickKey("ae2lt.gui.security." + ((FrequencySecurityLevel)frequencyField("editSecurity")).name().toLowerCase(java.util.Locale.ROOT));
-                        ((AETextField)frequencyField("passwordField")).setValue("created-password"); return;
+                        ((LdlibAe2TextField)frequencyField("passwordField")).setValue("created-password"); return;
                     }
                     capture("frequency-create.png"); clickKey("ae2lt.gui.button.create");
                 }
@@ -276,7 +277,7 @@ public final class WirelessEnergyMenuClientProbe {
                 }
                 case 35 -> {
                     assertFrame(); capture("frequency-settings.png");
-                    ((AETextField)frequencyField("nameField")).setValue("Renamed QA");
+                    ((LdlibAe2TextField)frequencyField("nameField")).setValue("Renamed QA");
                     int blueSwatchX = frameLeft + com.moakiee.ae2lt.client.gui.FrequencyNavigation.WIDTH - 122 + 2 * 16 + 7;
                     require(mc.screen.mouseClicked(blueSwatchX, frameTop + 115, 0), "edit color swatch click");
                     mc.screen.mouseReleased(blueSwatchX, frameTop + 115, 0); clickKey("ae2lt.gui.button.apply");
@@ -285,12 +286,12 @@ public final class WirelessEnergyMenuClientProbe {
                     require(com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.getFrequency(frequency).name().equals("Renamed QA")
                             && com.moakiee.ae2lt.client.frequency.ClientFrequencyCache.getFrequency(frequency).color() == 0x0033FF,
                             "settings name/color apply round-trip");
-                    ((AETextField)frequencyField("nameField")).setValue("Unapplied draft");
+                    ((LdlibAe2TextField)frequencyField("nameField")).setValue("Unapplied draft");
                     clickKey("ae2lt.gui.button.delete");
                 }
                 case 37 -> { require((boolean)frequencyField("deleteConfirmOpen"), "delete confirmation"); capture("frequency-delete-confirm.png"); clickKey("ae2lt.gui.button.cancel"); }
                 case 38 -> { require(!(boolean)frequencyField("deleteConfirmOpen")
-                        && ((AETextField)frequencyField("nameField")).getValue().equals("Unapplied draft"), "delete cancel preserves form draft"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY); }
+                        && ((LdlibAe2TextField)frequencyField("nameField")).getValue().equals("Unapplied draft"), "delete cancel preserves form draft"); nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_ENERGY); }
                 case 39 -> {
                     assertFrame(); require((int)field("window") == 4 && (int)field("sort") == 0, "frequency-to-power restores time window and sort");
                     search("barrel");
@@ -319,7 +320,7 @@ public final class WirelessEnergyMenuClientProbe {
                     nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION);
                 }
                 case 46 -> {
-                    ((AETextField)frequencyField("selectionSearchField")).setValue("Renamed");
+                    ((LdlibAe2TextField)frequencyField("selectionSearchField")).setValue("Renamed");
                     nav(com.moakiee.ae2lt.menu.FrequencyPage.TAB_SETTING);
                 }
                 case 47 -> {
@@ -327,7 +328,7 @@ public final class WirelessEnergyMenuClientProbe {
                 }
                 case 48 -> {
                     require(frequencyField("currentTab") == com.moakiee.ae2lt.menu.FrequencyPage.TAB_SELECTION
-                            && ((AETextField)frequencyField("selectionSearchField")).getValue().equals("Renamed"), "settings returns to frequency list with search retained");
+                            && ((LdlibAe2TextField)frequencyField("selectionSearchField")).getValue().equals("Renamed"), "settings returns to frequency list with search retained");
                     capture("frequency-merged-return.png"); clickKey("ae2lt.gui.button.disconnect");
                 }
                 case 49 -> {
@@ -345,7 +346,7 @@ public final class WirelessEnergyMenuClientProbe {
                             "connection actions restored after reconnect");
                     server(() -> require(((AdvancedWirelessOverloadedControllerBlockEntity)mc.getSingleplayerServer().overworld()
                             .getBlockEntity(CONTROLLER)).getFrequencyId() == frequency, "server controller reconnected"));
-                    ((AETextField)frequencyField("selectionSearchField")).setValue("");
+                    ((LdlibAe2TextField)frequencyField("selectionSearchField")).setValue("");
                 }
                 case 51 -> {
                     assertFrame(); capture("frequency-merged-list.png");

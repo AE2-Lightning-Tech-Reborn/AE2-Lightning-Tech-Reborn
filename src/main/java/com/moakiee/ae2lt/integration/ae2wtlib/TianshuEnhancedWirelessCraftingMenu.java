@@ -144,7 +144,7 @@ public final class TianshuEnhancedWirelessCraftingMenu extends TianshuWirelessCr
 
     @Override public void onServerDataSync(it.unimi.dsi.fastutil.shorts.ShortSet fields) {
         super.onServerDataSync(fields);
-        // Native MagnetScreen reads modes from MagnetHost's actual terminal stack.
+        // The magnet controls read their mode from MagnetHost's terminal stack.
         var stack = wirelessHost.getItemStack();
         if (fields.contains((short) 171)) stack.set(AE2wtlibComponents.PICKUP_MODE, pickupMode);
         if (fields.contains((short) 172)) stack.set(AE2wtlibComponents.INSERT_MODE, insertMode);

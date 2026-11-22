@@ -1,39 +1,61 @@
 package com.moakiee.ae2lt.client.hub;
 
 import appeng.client.gui.style.PaletteColor;
-import java.util.List;
+import static com.moakiee.ae2lt.client.ldlib.LdlibScreens.at;
+import static com.moakiee.ae2lt.client.ldlib.LdlibScreens.either;
 
-import net.minecraft.client.gui.Font;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import com.lowdragmc.lowdraglib2.gui.LDLibFonts;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Scroller;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.VirtualScrollerView;
+import com.lowdragmc.lowdraglib2.gui.util.UISoundUtils;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
+import com.moakiee.ae2lt.client.gui.FittingText;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.menu.hub.DeviceHubDisplayRules;
 import com.moakiee.ae2lt.menu.hub.DeviceHubMenu;
 import com.moakiee.ae2lt.network.hub.DeviceHubActionPacket;
-import com.moakiee.ae2lt.celestweave.BaseCelestweaveArmorItem;
 import com.moakiee.ae2lt.registry.ModItems;
 import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
+/**
+ * Device hub (Celestweave armor pieces and railgun). LDLib lays out the foreground,
+ * refreshed from the synced menu every frame and drawn after the native container.
+ * Atlas backgrounds stay in the background pass; actions go through
+ * {@link DeviceHubActionPacket} as before.
+ */
 public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/armor_settings_gui.png");
     private static final ResourceLocation CHECKBOX_TEXTURE = ResourceLocation.fromNamespaceAndPath(
             "ae2", "textures/guis/checkbox.png");
+    private static final LdlibStyleSprite ATLAS = new LdlibStyleSprite(TEXTURE, 256, 256);
+    private static final LdlibStyleSprite CHECKBOX_ATLAS = new LdlibStyleSprite(CHECKBOX_TEXTURE, 64, 64);
 
-    private static final int TEXTURE_SIZE = 256;
-    private static final int CHECKBOX_TEXTURE_SIZE = 64;
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 223;
 
@@ -50,7 +72,6 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private static final int BUTTON_TEXT = TEXT_ON_DARK_BG;
 
     private static final int TAB_COUNT = 5;
-    private static final int TAB_Y = 0;
     private static final int TAB_WIDTH = 31;
     private static final int TAB_HEIGHT = 25;
     private static final int TAB_ICON_SIZE = 16;
@@ -112,6 +133,14 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
     private static final int CHECKBOX_OFF_SRC_Y = 28;
     private static final int CHECKBOX_ON_SRC_Y = 40;
 
+    private static final IGuiTexture CHECKBOX_OFF = CHECKBOX_ATLAS.slice(0, CHECKBOX_OFF_SRC_Y,
+            CHECKBOX_WIDTH, CHECKBOX_HEIGHT);
+    private static final IGuiTexture CHECKBOX_ON = CHECKBOX_ATLAS.slice(0, CHECKBOX_ON_SRC_Y,
+            CHECKBOX_WIDTH, CHECKBOX_HEIGHT);
+    private static final IGuiTexture THUMB = tex(SCROLL_SRC_X, SCROLL_SRC_Y, SCROLL_SRC_W, SCROLL_SRC_H);
+    private static final IGuiTexture THUMB_HOVER = ATLAS.fixedSlice(
+            SCROLL_SRC_X, SCROLL_HOVER_SRC_Y, SCROLL_SRC_W, SCROLL_HOVER_SRC_H);
+
     private static final String[] TAB_LABEL_KEYS = {
             "ae2lt.device_hub.tab.helmet",
             "ae2lt.device_hub.tab.chestplate",
@@ -127,10 +156,27 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
             "ae2lt.device_hub.tab.required.railgun"
     };
 
+    private final List<Button> tabButtons = new ArrayList<>(TAB_COUNT);
+    private ModularUI embeddedUI;
+    private VirtualScrollerView<ModuleEntry> moduleRows;
+    private VirtualScrollerView<ConfigEntry> configRows;
+    private List<ModuleEntry> moduleEntries = List.of();
+    private List<ConfigEntry> configEntries = List.of();
+    private Label noDevice;
+    private UIElement devicePanel;
+    private Label deviceName;
+    private Label statusLine;
+    private Label moduleHeader;
+    private Label configHeader;
+    private Scroller moduleScroller;
+    private Scroller configScroller;
+
     private int scrollOffset = 0;
     private int configScrollOffset = 0;
     private int lastConfigTab = -1;
     private int lastConfigModule = -1;
+    private int frameMouseX;
+    private int frameMouseY;
 
     public DeviceHubScreen(DeviceHubMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -141,98 +187,340 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
     @Override
     protected void init() {
+        if (embeddedUI != null && !embeddedUI.isRemoved()) {
+            embeddedUI.onRemoved();
+        }
         super.init();
         this.titleLabelX = 0;
         this.titleLabelY = -100;
+        tabButtons.clear();
+        moduleEntries = List.of();
+        configEntries = List.of();
+        // Keep the tree in the input/narration lists; its foreground is drawn after the container.
+        embeddedUI = LdlibScreens.embed(this, buildRoot(), this::addWidget);
+        embeddedUI.setDrawTooltips(false);
+        refresh();
     }
 
     @Override
     protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        ATLAS.draw(gfx, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT);
         renderSelectedTabTexture(gfx, menu.getSelectedTab());
-    }
-
-    @Override
-    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
-        renderBackground(gfx, mouseX, mouseY, partialTick);
-        super.render(gfx, mouseX, mouseY, partialTick);
-
-        int selectedTab = menu.getSelectedTab();
-        int tabMask = menu.getTabAvailability();
-        boolean railgunTab = selectedTab == DeviceHubMenu.TAB_RAILGUN;
-        resetConfigScrollWhenSelectionChanges(
-                selectedTab,
-                railgunTab ? -1 : menu.getSelectedModuleIndex());
-
-        renderTabIcons(gfx);
-
-        boolean hasDevice = (tabMask & (1 << selectedTab)) != 0;
-        if (!hasDevice) {
-            gfx.drawString(font, Component.translatable("ae2lt.device_hub.no_device"),
-                    leftPos + STATUS_X, topPos + STATUS_Y + 9, TEXT_ON_DARK_BG, false);
-            renderTabTooltips(gfx, mouseX, mouseY, tabMask);
-            renderTooltip(gfx, mouseX, mouseY);
-            return;
-        }
-
-        renderStatusPanel(gfx, railgunTab);
-        renderModuleList(gfx, mouseX, mouseY, railgunTab);
-
-        if (railgunTab) {
-            renderRailgunSettings(gfx, mouseX, mouseY);
-        } else {
-            renderModuleConfig(gfx, mouseX, mouseY);
-        }
-
-        renderTabTooltips(gfx, mouseX, mouseY, tabMask);
-        renderTooltip(gfx, mouseX, mouseY);
     }
 
     @Override
     protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
     }
 
+    @Override
+    public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+        frameMouseX = mouseX;
+        frameMouseY = mouseY;
+        renderBackground(gfx, mouseX, mouseY, partialTick);
+        super.render(gfx, mouseX, mouseY, partialTick);
+        refresh();
+        embeddedUI.getWidget().render(gfx, mouseX, mouseY, partialTick);
+        renderTabTooltips(gfx, mouseX, mouseY);
+        renderTooltip(gfx, mouseX, mouseY);
+    }
+
+    private void renderTabTooltips(GuiGraphics gfx, int mouseX, int mouseY) {
+        int availability = menu.getTabAvailability();
+        for (int tab = 0; tab < TAB_COUNT; tab++) {
+            if (!within(mouseX - leftPos, mouseY - topPos, TAB_X[tab], 0, TAB_WIDTH, TAB_HEIGHT)) {
+                continue;
+            }
+            boolean available = (availability & (1 << tab)) != 0;
+            ItemStack stack = available ? tabStack(tab) : ItemStack.EMPTY;
+            if (!stack.isEmpty()) {
+                gfx.renderTooltip(font, stack, mouseX, mouseY);
+            } else {
+                gfx.renderTooltip(font, Component.translatable(
+                        available ? TAB_LABEL_KEYS[tab] : TAB_REQUIRED_KEYS[tab]), mouseX, mouseY);
+            }
+            return;
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 258) {
+            cycleTab((modifiers & 1) != 0 ? -1 : 1);
+            return true;
+        }
+        if (keyCode == 263) {
+            cycleTab(-1);
+            return true;
+        }
+        if (keyCode == 262) {
+            cycleTab(1);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    // ---- LDLib tree ---------------------------------------------------------------------
+
+    private UIElement buildRoot() {
+        var root = new UIElement();
+        root.layout(l -> l.width(GUI_WIDTH).height(GUI_HEIGHT));
+
+        for (int i = 0; i < TAB_COUNT; i++) {
+            root.addChild(buildTab(i));
+        }
+
+        noDevice = at(label(Component.translatable("ae2lt.device_hub.no_device"), TEXT_ON_DARK_BG),
+                STATUS_X, STATUS_Y + 9, STATUS_RIGHT - STATUS_X, 9);
+        root.addChild(noDevice);
+
+        // This container overlaps the tabs; only its children should participate in hit testing.
+        devicePanel = at(new UIElement().setAllowHitTest(false), 0, 0, GUI_WIDTH, GUI_HEIGHT);
+        root.addChild(devicePanel);
+
+        devicePanel.addChild(at(LdlibScreens.unadornedItemIcon(this::selectedDeviceStack),
+                STATUS_ICON_X, STATUS_ICON_Y, 16, 16));
+        deviceName = at(label(Component.empty(), TEXT_ON_DARK_BG),
+                STATUS_TEXT_X, STATUS_NAME_Y, STATUS_RIGHT - STATUS_TEXT_X, 9);
+        statusLine = at(label(Component.empty(), TEXT_ON_DARK_BG),
+                STATUS_TEXT_X, STATUS_LINE_Y, STATUS_RIGHT - STATUS_TEXT_X, 9);
+        devicePanel.addChildren(deviceName, statusLine);
+
+        moduleHeader = at(label(Component.translatable("ae2lt.device_hub.modules"),
+                AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)),
+                MODULE_HEADER_X, MODULE_HEADER_Y, STATUS_RIGHT - MODULE_HEADER_X, 9);
+        devicePanel.addChild(moduleHeader);
+        moduleRows = LdlibScreens.virtualRows(MODULE_ROW_H, this::moduleRow);
+        allowRowOverflow(moduleRows);
+        devicePanel.addChild(at(moduleRows, MODULE_LIST_X - 1, MODULE_LIST_Y - 1,
+                MODULE_LIST_RIGHT - MODULE_LIST_X + 1, MODULE_ROW_H * MODULE_VISIBLE_ROWS));
+        moduleScroller = LdlibScreens.displayThumbScroller(THUMB, THUMB_HOVER, SCROLL_SRC_H, SCROLL_H);
+        renderScrollBar(devicePanel, moduleScroller, SCROLL_Y, SCROLL_H);
+
+        configHeader = at(label(Component.empty(),
+                AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)),
+                CONFIG_X, CONFIG_HEADER_Y, STATUS_RIGHT - CONFIG_X, 9);
+        devicePanel.addChild(configHeader);
+        configRows = LdlibScreens.virtualRows(CONFIG_ROW_H, this::configRow);
+        allowRowOverflow(configRows);
+        devicePanel.addChild(at(configRows, CONFIG_ROW_X, CONFIG_Y - 2,
+                CONFIG_BUTTON_X + CONFIG_BUTTON_W + 1 - CONFIG_ROW_X, CONFIG_ROW_H * CONFIG_VISIBLE_ROWS));
+        renderConfigScrollBar(devicePanel);
+        return root;
+    }
+
+    private static void allowRowOverflow(VirtualScrollerView<?> rows) {
+        rows.style(style -> style.overflowVisible(true));
+        rows.verticalContainer.style(style -> style.overflowVisible(true));
+        rows.viewPort(view -> view.style(style -> style.overflowVisible(true)));
+        rows.viewContainer.style(style -> style.overflowVisible(true));
+    }
+
+    private UIElement buildTab(int tab) {
+        var element = new UIElement();
+        var button = new Button().noText();
+        tabButtons.add(button);
+        button.buttonStyle(style -> style.baseTexture(IGuiTexture.EMPTY)
+                .hoverTexture(IGuiTexture.EMPTY).pressedTexture(IGuiTexture.EMPTY));
+        button.addChild(at(LdlibScreens.unadornedItemIcon(() -> tabDisplayStack(tab)),
+                (TAB_WIDTH - TAB_ICON_SIZE) / 2, 5, TAB_ICON_SIZE, TAB_ICON_SIZE));
+        button.setOnClick(event -> sendAction(DeviceHubActionPacket.ACTION_SELECT_TAB, tab));
+        element.addChild(at(button, 0, 0, TAB_WIDTH, TAB_HEIGHT));
+        return at(element, TAB_X[tab], 0, TAB_WIDTH, TAB_HEIGHT);
+    }
+
+    /** Raised-tab sprite shown behind the selected tab. */
     private void renderSelectedTabTexture(GuiGraphics gfx, int selectedTab) {
         if (selectedTab < 0 || selectedTab >= TAB_COUNT) {
             return;
         }
-        gfx.blit(TEXTURE,
-                leftPos + TAB_X[selectedTab],
-                topPos + TAB_Y,
-                TAB_ACTIVE_SRC_X[selectedTab],
-                TAB_ACTIVE_SRC_Y,
-                TAB_WIDTH,
-                TAB_ACTIVE_H,
-                TEXTURE_SIZE,
-                TEXTURE_SIZE);
+        ATLAS.draw(gfx, leftPos + TAB_X[selectedTab], topPos,
+                TAB_ACTIVE_SRC_X[selectedTab], TAB_ACTIVE_SRC_Y, TAB_WIDTH, TAB_ACTIVE_H);
     }
 
-    private void renderTabIcons(GuiGraphics gfx) {
-        for (int i = 0; i < TAB_COUNT; i++) {
-            int x = leftPos + TAB_X[i];
-            ItemStack stack = tabDisplayStack(i);
-            if (!stack.isEmpty()) {
-                int iconX = x + (TAB_WIDTH - TAB_ICON_SIZE) / 2;
-                gfx.renderItem(stack, iconX, topPos + 5);
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int selectedTab = menu.getSelectedTab();
+        if (button == 0 && selectedTab == lastConfigTab
+                && (menu.getTabAvailability() & (1 << selectedTab)) != 0
+                && (clickConfig(mouseX - leftPos, mouseY - topPos)
+                        || clickModule(mouseX - leftPos, mouseY - topPos))) {
+            playClick();
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private boolean clickConfig(double x, double y) {
+        boolean railgun = menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN;
+        if (!railgun && lastConfigModule != menu.getSelectedModuleIndex()) {
+            return false;
+        }
+        int count = configCount();
+        int first = DeviceHubDisplayRules.clampScrollOffset(configScrollOffset, count, CONFIG_VISIBLE_ROWS);
+        for (int row = 0; row < CONFIG_VISIBLE_ROWS && first + row < count; row++) {
+            int index = first + row;
+            int top = CONFIG_Y + row * CONFIG_ROW_H;
+            boolean checkbox = railgun && index != RAILGUN_SETTING_EXECUTION_MODE;
+            if (checkbox ? within(x, y, MODULE_CHECKBOX_X, top, CHECKBOX_WIDTH, CHECKBOX_HEIGHT)
+                    : within(x, y, CONFIG_BUTTON_X, top - 1, CONFIG_BUTTON_W, CONFIG_BUTTON_H)) {
+                if (railgun) {
+                    sendAction(railgunSettingAction(index), 0);
+                } else if (menu.getModuleConfigEditable().get(index)) {
+                    sendAction(DeviceHubActionPacket.ACTION_CYCLE_MODULE_CONFIG, index);
+                } else {
+                    return false;
+                }
+                return true;
             }
         }
+        return false;
     }
 
-    private void renderStatusPanel(GuiGraphics gfx, boolean railgunTab) {
-        int x = leftPos + STATUS_TEXT_X;
-        ItemStack stack = selectedDeviceStack();
-        if (!stack.isEmpty()) {
-            gfx.renderItem(stack, leftPos + STATUS_ICON_X, topPos + STATUS_ICON_Y);
+    private boolean clickModule(double x, double y) {
+        if (menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN) {
+            return false;
+        }
+        int count = menu.getModuleNameKeys().size();
+        int first = DeviceHubDisplayRules.clampScrollOffset(scrollOffset, count, MODULE_VISIBLE_ROWS);
+        for (int row = 0; row < MODULE_VISIBLE_ROWS && first + row < count; row++) {
+            int top = MODULE_LIST_Y + row * MODULE_ROW_H;
+            if (within(x, y, MODULE_CHECKBOX_X, top + 1, CHECKBOX_WIDTH, CHECKBOX_HEIGHT)) {
+                sendAction(DeviceHubActionPacket.ACTION_TOGGLE_MODULE, first + row);
+                return true;
+            }
+            if (within(x, y, MODULE_LIST_X, top, MODULE_LIST_RIGHT - MODULE_LIST_X, MODULE_ROW_H)) {
+                sendAction(DeviceHubActionPacket.ACTION_SELECT_MODULE, first + row);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean within(double x, double y, int left, int top, int width, int height) {
+        return x >= left && x <= left + width && y >= top && y <= top + height;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double x = mouseX - leftPos;
+        double y = mouseY - topPos;
+        if (moduleScroller != null && x >= 8 && x <= 168 && y >= 78 && y <= 142) {
+            scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
+                    scrollOffset - (int) Math.signum(scrollY), menu.getModuleNameKeys().size(), MODULE_VISIBLE_ROWS);
+            refresh();
+            return true;
+        }
+        int configCount = configCount();
+        if (configScroller != null && configCount > 0
+                && x >= 8 && x <= 175 && y >= CONFIG_HEADER_Y && y <= GUI_HEIGHT) {
+            configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
+                    configScrollOffset - (int) Math.signum(scrollY), configCount, CONFIG_VISIBLE_ROWS);
+            refresh();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    // ---- state --------------------------------------------------------------------------
+
+    private void refresh() {
+        if (devicePanel == null) {
+            return;
+        }
+        refreshTabButtons();
+
+        int selectedTab = menu.getSelectedTab();
+        boolean railgunTab = selectedTab == DeviceHubMenu.TAB_RAILGUN;
+        resetConfigScrollWhenSelectionChanges(selectedTab, railgunTab ? -1 : menu.getSelectedModuleIndex());
+
+        boolean hasDevice = (menu.getTabAvailability() & (1 << selectedTab)) != 0;
+        noDevice.setDisplay(!hasDevice);
+        devicePanel.setDisplay(hasDevice);
+        if (!hasDevice) {
+            return;
         }
 
-        String deviceName = menu.getDeviceName();
-        if (!deviceName.isEmpty()) {
-            gfx.drawString(font, Component.literal(truncate(font, deviceName, STATUS_RIGHT - STATUS_TEXT_X)),
-                    x, topPos + STATUS_NAME_Y, TEXT_ON_DARK_BG, false);
-        }
+        int headerColor = AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR);
+        moduleHeader.textStyle(style -> style.textColor(headerColor));
+        configHeader.textStyle(style -> style.textColor(headerColor));
+        String name = menu.getDeviceName();
+        deviceName.setText(Component.literal(FittingText.withEllipsis(
+                font, name, STATUS_RIGHT - STATUS_TEXT_X)));
+        deviceName.setDisplay(!name.isEmpty());
+        statusLine.setText(Component.translatable("ae2lt.device_hub.status.line", statusText(railgunTab)));
 
-        Component statusLine = Component.translatable("ae2lt.device_hub.status.line", statusText(railgunTab));
-        gfx.drawString(font, statusLine, x, topPos + STATUS_LINE_Y, TEXT_ON_DARK_BG, false);
+        updateModuleRows(railgunTab);
+
+        configHeader.setText(Component.translatable(railgunTab
+                ? "ae2lt.device_hub.settings"
+                : "ae2lt.celestweave.screen.module_options"));
+        updateConfigRows(railgunTab);
+    }
+
+    private void updateModuleRows(boolean railgunTab) {
+        var keys = menu.getModuleNameKeys();
+        var counts = menu.getModuleCounts();
+        var flags = menu.getModuleEnabled();
+        var items = new ArrayList<ModuleEntry>(keys.size());
+        for (int index = 0; index < keys.size(); index++) {
+            int count = index < counts.size() ? counts.get(index) : 1;
+            boolean enabled = index < flags.size() && flags.get(index);
+            items.add(new ModuleEntry(index, keys.get(index), count, enabled, !railgunTab));
+        }
+        if (!items.equals(moduleEntries)) {
+            moduleEntries = List.copyOf(items);
+            moduleRows.setItems(moduleEntries);
+        }
+        scrollOffset = DeviceHubDisplayRules.clampScrollOffset(scrollOffset, items.size(), MODULE_VISIBLE_ROWS);
+        moduleScroller.setDisplay(items.size() > MODULE_VISIBLE_ROWS);
+        syncScroller(moduleScroller, moduleRows, scrollOffset, MODULE_VISIBLE_ROWS);
+    }
+
+    private void updateConfigRows(boolean railgunTab) {
+        int count = configCount();
+        var items = new ArrayList<ConfigEntry>(count);
+        for (int index = 0; index < count; index++) {
+            if (railgunTab) {
+                boolean checkbox = index != RAILGUN_SETTING_EXECUTION_MODE;
+                var value = checkbox ? Component.empty() : Component.translatable(menu.getExecutionMode().translationKey());
+                items.add(new ConfigEntry(index, railgunSettingLabel(index), value, checkbox, railgunSettingEnabled(index),
+                        true));
+            } else {
+                items.add(new ConfigEntry(index, moduleConfigLabel(index), Component.literal(menu.getModuleConfigValues().get(index)),
+                        false, false, menu.getModuleConfigEditable().get(index)));
+            }
+        }
+        if (!items.equals(configEntries)) {
+            configEntries = List.copyOf(items);
+            configRows.setItems(configEntries);
+        }
+        if (count > 0) {
+            configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(configScrollOffset, count, CONFIG_VISIBLE_ROWS);
+        }
+        configScroller.setDisplay(railgunTab || count > CONFIG_VISIBLE_ROWS);
+        syncScroller(configScroller, configRows, configScrollOffset, CONFIG_VISIBLE_ROWS);
+    }
+
+    /** Updates whether each tab can be selected; icon stacks are read during drawing. */
+    private void refreshTabButtons() {
+        int availability = menu.getTabAvailability();
+        int selectedTab = menu.getSelectedTab();
+        for (int i = 0; i < TAB_COUNT; i++) {
+            tabButtons.get(i).setActive((availability & (1 << i)) != 0 && i != selectedTab);
+        }
+    }
+
+    private void syncScroller(Scroller scroller, VirtualScrollerView<?> rows, int offset, int visibleRows) {
+        int max = Math.max(0, rows.getItemCount() - visibleRows);
+        int height = scroller == moduleScroller ? SCROLL_H : CONFIG_SCROLL_H;
+        LdlibScreens.syncRowThumb(scroller, offset, max);
+        LdlibScreens.positionThumbPixels(scroller,
+                (height - SCROLL_SRC_H) * offset / Math.max(1, max), SCROLL_SRC_H);
+        LdlibScreens.scrollVirtualRows(rows, offset, max);
+    }
+
+    private int configCount() {
+        return menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN ? railgunSettingCount() : moduleConfigCount();
     }
 
     private Component statusText(boolean railgunTab) {
@@ -244,136 +532,6 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return Component.translatable(menu.isPowered()
                 ? "ae2lt.device_hub.status.normal"
                 : "ae2lt.device_hub.status.unpowered");
-    }
-
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY, boolean railgunTab) {
-        List<String> moduleNameKeys = menu.getModuleNameKeys();
-        List<Integer> moduleCounts = menu.getModuleCounts();
-        List<Boolean> moduleEnabled = menu.getModuleEnabled();
-
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.modules"),
-                leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-
-        scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                scrollOffset, moduleNameKeys.size(), MODULE_VISIBLE_ROWS);
-        int selectedModuleIndex = menu.getSelectedModuleIndex();
-        for (int i = 0; i < Math.min(moduleNameKeys.size(), MODULE_VISIBLE_ROWS); i++) {
-            int idx = i + scrollOffset;
-            if (idx >= moduleNameKeys.size()) {
-                break;
-            }
-
-            int rowY = topPos + MODULE_LIST_Y + i * MODULE_ROW_H;
-            boolean hovered = mouseX >= leftPos + MODULE_LIST_X
-                    && mouseX < leftPos + MODULE_LIST_RIGHT
-                    && mouseY >= rowY
-                    && mouseY < rowY + MODULE_ROW_H;
-            if (hovered || idx == selectedModuleIndex) {
-                gfx.fill(leftPos + MODULE_LIST_X - 1, rowY - 1,
-                        leftPos + MODULE_LIST_RIGHT, rowY + MODULE_ROW_H - 1,
-                        idx == selectedModuleIndex ? ROW_SELECTED : ROW_HOVER);
-            }
-
-            int count = idx < moduleCounts.size() ? moduleCounts.get(idx) : 1;
-            int nameMaxWidth = railgunTab
-                    ? MODULE_LIST_RIGHT - MODULE_LIST_X
-                    : MODULE_CHECKBOX_X - MODULE_LIST_X - 6;
-            String name = truncate(font, moduleName(moduleNameKeys.get(idx), count).getString(), nameMaxWidth);
-            gfx.drawString(font, Component.literal(name), leftPos + MODULE_LIST_X, rowY + 2, TEXT_ON_DARK_BG, false);
-
-            if (!railgunTab) {
-                boolean enabled = idx < moduleEnabled.size() && moduleEnabled.get(idx);
-                drawCheckbox(gfx, leftPos + MODULE_CHECKBOX_X, rowY + 1, enabled);
-            }
-
-            if (i < Math.min(moduleNameKeys.size(), MODULE_VISIBLE_ROWS) - 1) {
-                gfx.fill(leftPos + MODULE_LIST_X,
-                        rowY + MODULE_ROW_H - 1,
-                        leftPos + MODULE_LIST_RIGHT,
-                        rowY + MODULE_ROW_H,
-                        ROW_DIVIDER);
-            }
-        }
-
-        if (moduleNameKeys.size() > MODULE_VISIBLE_ROWS) {
-            renderScrollBar(gfx, moduleNameKeys.size(), mouseX, mouseY);
-        }
-    }
-
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
-        renderScrollBar(
-                gfx,
-                moduleCount,
-                MODULE_VISIBLE_ROWS,
-                scrollOffset,
-                SCROLL_X,
-                SCROLL_Y,
-                SCROLL_H,
-                mouseX,
-                mouseY);
-    }
-
-    private void renderModuleConfig(GuiGraphics gfx, int mouseX, int mouseY) {
-        int x = leftPos + CONFIG_ROW_X;
-        int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.celestweave.screen.module_options"),
-                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-        int count = moduleConfigCount();
-        if (count <= 0) {
-            return;
-        }
-
-        configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                configScrollOffset, count, CONFIG_VISIBLE_ROWS);
-        int rowY = y;
-        for (int i = 0; i < Math.min(count, CONFIG_VISIBLE_ROWS); i++) {
-            int configIndex = i + configScrollOffset;
-            if (configIndex >= count) {
-                break;
-            }
-            String value = menu.getModuleConfigValues().get(configIndex);
-            boolean editable = menu.getModuleConfigEditable().get(configIndex);
-            gfx.drawString(font, moduleConfigLabel(configIndex),
-                    x, rowY + 1, TEXT_ON_DARK_BG, false);
-            drawConfigValueButton(gfx, leftPos + CONFIG_BUTTON_X, rowY - 1, value, editable, mouseX, mouseY);
-            rowY += CONFIG_ROW_H;
-        }
-        if (count > CONFIG_VISIBLE_ROWS) {
-            renderConfigScrollBar(gfx, count, mouseX, mouseY);
-        }
-    }
-
-    private void renderRailgunSettings(GuiGraphics gfx, int mouseX, int mouseY) {
-        int x = leftPos + CONFIG_ROW_X;
-        int y = topPos + CONFIG_Y;
-        gfx.drawString(font, Component.translatable("ae2lt.device_hub.settings"),
-                leftPos + CONFIG_X, topPos + CONFIG_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-
-        configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                configScrollOffset, railgunSettingCount(), CONFIG_VISIBLE_ROWS);
-        int rowY = y;
-        for (int i = 0; i < CONFIG_VISIBLE_ROWS; i++) {
-            int settingIndex = i + configScrollOffset;
-            if (settingIndex >= railgunSettingCount()) {
-                break;
-            }
-            Component label = railgunSettingLabel(settingIndex);
-            if (settingIndex != RAILGUN_SETTING_EXECUTION_MODE) {
-                drawSettingRow(gfx, x, rowY, label, railgunSettingEnabled(settingIndex));
-            } else {
-                gfx.drawString(font, label, x, rowY + 1, TEXT_ON_DARK_BG, false);
-                drawConfigValueButton(
-                        gfx,
-                        leftPos + CONFIG_BUTTON_X,
-                        rowY - 1,
-                        railgunSettingValue(settingIndex),
-                        true,
-                        mouseX,
-                        mouseY);
-            }
-            rowY += CONFIG_ROW_H;
-        }
-        renderConfigScrollBar(gfx, railgunSettingCount(), mouseX, mouseY);
     }
 
     private int railgunSettingCount() {
@@ -407,73 +565,17 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         };
     }
 
-    private String railgunSettingValue(int settingIndex) {
-        String key = switch (settingIndex) {
-            case RAILGUN_SETTING_EXECUTION_MODE -> menu.getExecutionMode().translationKey();
-            default -> "";
+    private static int railgunSettingAction(int settingIndex) {
+        return switch (settingIndex) {
+            case RAILGUN_SETTING_EHV_BEAM -> DeviceHubActionPacket.ACTION_TOGGLE_EHV_BEAM;
+            case RAILGUN_SETTING_TERRAIN -> DeviceHubActionPacket.ACTION_TOGGLE_TERRAIN;
+            case RAILGUN_SETTING_PVP -> DeviceHubActionPacket.ACTION_TOGGLE_PVP;
+            case RAILGUN_SETTING_SOUND -> DeviceHubActionPacket.ACTION_TOGGLE_SOUND;
+            case RAILGUN_SETTING_CHAIN_DAMAGE -> DeviceHubActionPacket.ACTION_TOGGLE_CHAIN_DAMAGE;
+            case RAILGUN_SETTING_CHARGED_SPLASH -> DeviceHubActionPacket.ACTION_TOGGLE_CHARGED_SPLASH;
+            case RAILGUN_SETTING_EXECUTION_MODE -> DeviceHubActionPacket.ACTION_CYCLE_EXECUTION_MODE;
+            default -> -1;
         };
-        return key.isEmpty() ? "" : Component.translatable(key).getString();
-    }
-
-    private void drawSettingRow(GuiGraphics gfx, int x, int y, Component label, boolean on) {
-        gfx.drawString(font, label, x, y + 1, TEXT_ON_DARK_BG, false);
-        drawCheckbox(gfx, leftPos + MODULE_CHECKBOX_X, y, on);
-    }
-
-    private void drawCheckbox(GuiGraphics gfx, int x, int y, boolean checked) {
-        gfx.blit(CHECKBOX_TEXTURE,
-                x,
-                y,
-                0,
-                checked ? CHECKBOX_ON_SRC_Y : CHECKBOX_OFF_SRC_Y,
-                CHECKBOX_WIDTH,
-                CHECKBOX_HEIGHT,
-                CHECKBOX_TEXTURE_SIZE,
-                CHECKBOX_TEXTURE_SIZE);
-    }
-
-    private void drawConfigValueButton(
-            GuiGraphics gfx, int x, int y, String value, boolean editable, int mouseX, int mouseY) {
-        boolean hovered = editable
-                && mouseX >= x
-                && mouseX <= x + CONFIG_BUTTON_W
-                && mouseY >= y
-                && mouseY <= y + CONFIG_BUTTON_H;
-        int borderColor = editable ? hovered ? BUTTON_BORDER_HOVER : BUTTON_BORDER : BUTTON_DISABLED;
-        int fillColor = editable ? hovered ? BUTTON_FILL_HOVER : BUTTON_FILL : BUTTON_FILL_DISABLED;
-        gfx.fill(x - 1, y - 1, x + CONFIG_BUTTON_W + 1, y + CONFIG_BUTTON_H + 1, borderColor);
-        gfx.fill(x, y, x + CONFIG_BUTTON_W, y + CONFIG_BUTTON_H, fillColor);
-        String text = truncate(font, value, CONFIG_BUTTON_W - 4);
-        int textColor = editable ? BUTTON_TEXT : TEXT_ON_DARK_BG;
-        gfx.drawString(font, Component.literal(text),
-                x + (CONFIG_BUTTON_W - font.width(text)) / 2, y + 2, textColor, false);
-    }
-
-    private boolean mouseClickedModuleConfig(double mouseX, double mouseY) {
-        int count = moduleConfigCount();
-        if (count <= 0) {
-            return false;
-        }
-        int rowY = topPos + CONFIG_Y;
-        int buttonX = leftPos + CONFIG_BUTTON_X;
-        for (int i = 0; i < Math.min(count, CONFIG_VISIBLE_ROWS); i++) {
-            int configIndex = i + configScrollOffset;
-            if (configIndex >= count) {
-                break;
-            }
-            boolean editable = menu.getModuleConfigEditable().get(configIndex);
-            if (editable
-                    && mouseX >= buttonX
-                    && mouseX <= buttonX + CONFIG_BUTTON_W
-                    && mouseY >= rowY - 1
-                    && mouseY <= rowY - 1 + CONFIG_BUTTON_H) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
-                        DeviceHubActionPacket.ACTION_CYCLE_MODULE_CONFIG, configIndex));
-                return true;
-            }
-            rowY += CONFIG_ROW_H;
-        }
-        return false;
     }
 
     private int moduleConfigCount() {
@@ -499,204 +601,15 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         return name;
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) {
-            return super.mouseClicked(mouseX, mouseY, button);
-        }
-
-        int tabMask = menu.getTabAvailability();
-        int selectedTab = menu.getSelectedTab();
-
-        for (int i = 0; i < TAB_COUNT; i++) {
-            int tx = leftPos + TAB_X[i];
-            int ty = topPos + TAB_Y;
-            if (mouseX >= tx && mouseX <= tx + TAB_WIDTH && mouseY >= ty && mouseY <= ty + TAB_HEIGHT) {
-                if ((tabMask & (1 << i)) != 0 && i != selectedTab) {
-                    PacketDistributor.sendToServer(new DeviceHubActionPacket(
-                            DeviceHubActionPacket.ACTION_SELECT_TAB, i));
-                    playClick();
-                }
-                return true;
-            }
-        }
-
-        boolean railgunTab = selectedTab == DeviceHubMenu.TAB_RAILGUN;
-        if (!railgunTab) {
-            if (mouseClickedModuleConfig(mouseX, mouseY)) {
-                playClick();
-                return true;
-            }
-            if (mouseClickedModule(mouseX, mouseY, false)) {
-                playClick();
-                return true;
-            }
-        } else {
-            if (mouseClickedRailgunSettings(mouseX, mouseY)) {
-                playClick();
-                return true;
-            }
-        }
-
-        return super.mouseClicked(mouseX, mouseY, button);
+    /** The settings list reuses the module list's left-hand scrollbar track and sprites. */
+    private void renderConfigScrollBar(UIElement parent) {
+        configScroller = LdlibScreens.displayThumbScroller(THUMB, THUMB_HOVER, SCROLL_SRC_H, CONFIG_SCROLL_H);
+        renderScrollBar(parent, configScroller, CONFIG_SCROLL_Y, CONFIG_SCROLL_H);
     }
 
-    private boolean mouseClickedModule(double mouseX, double mouseY, boolean railgunTab) {
-        List<String> moduleNames = menu.getModuleNameKeys();
-        scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                scrollOffset, moduleNames.size(), MODULE_VISIBLE_ROWS);
-
-        for (int i = 0; i < Math.min(moduleNames.size(), MODULE_VISIBLE_ROWS); i++) {
-            int idx = i + scrollOffset;
-            int rowY = topPos + MODULE_LIST_Y + i * MODULE_ROW_H;
-            int checkboxX = leftPos + MODULE_CHECKBOX_X;
-            if (!railgunTab
-                    && mouseX >= checkboxX
-                    && mouseX <= checkboxX + CHECKBOX_WIDTH
-                    && mouseY >= rowY + 1
-                    && mouseY <= rowY + 1 + CHECKBOX_HEIGHT) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
-                        DeviceHubActionPacket.ACTION_TOGGLE_MODULE, idx));
-                return true;
-            }
-            if (mouseX >= leftPos + MODULE_LIST_X
-                    && mouseX <= leftPos + MODULE_LIST_RIGHT
-                    && mouseY >= rowY
-                    && mouseY <= rowY + MODULE_ROW_H) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
-                        DeviceHubActionPacket.ACTION_SELECT_MODULE, idx));
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean mouseClickedRailgunSettings(double mouseX, double mouseY) {
-        int checkboxX = leftPos + MODULE_CHECKBOX_X;
-        int buttonX = leftPos + CONFIG_BUTTON_X;
-        int rowY = topPos + CONFIG_Y;
-        for (int i = 0; i < CONFIG_VISIBLE_ROWS; i++) {
-            int settingIndex = i + configScrollOffset;
-            if (settingIndex >= railgunSettingCount()) {
-                break;
-            }
-            boolean checkboxSetting = settingIndex != RAILGUN_SETTING_EXECUTION_MODE;
-            int controlX = checkboxSetting ? checkboxX : buttonX;
-            int controlWidth = checkboxSetting ? CHECKBOX_WIDTH : CONFIG_BUTTON_W;
-            if (mouseX >= controlX
-                    && mouseX <= controlX + controlWidth
-                    && mouseY >= rowY - (checkboxSetting ? 0 : 1)
-                    && mouseY <= rowY - (checkboxSetting ? 0 : 1)
-                            + (checkboxSetting ? CHECKBOX_HEIGHT : CONFIG_BUTTON_H)) {
-                int action = switch (settingIndex) {
-                    case RAILGUN_SETTING_EHV_BEAM -> DeviceHubActionPacket.ACTION_TOGGLE_EHV_BEAM;
-                    case RAILGUN_SETTING_TERRAIN -> DeviceHubActionPacket.ACTION_TOGGLE_TERRAIN;
-                    case RAILGUN_SETTING_PVP -> DeviceHubActionPacket.ACTION_TOGGLE_PVP;
-                    case RAILGUN_SETTING_SOUND -> DeviceHubActionPacket.ACTION_TOGGLE_SOUND;
-                    case RAILGUN_SETTING_CHAIN_DAMAGE -> DeviceHubActionPacket.ACTION_TOGGLE_CHAIN_DAMAGE;
-                    case RAILGUN_SETTING_CHARGED_SPLASH ->
-                        DeviceHubActionPacket.ACTION_TOGGLE_CHARGED_SPLASH;
-                    case RAILGUN_SETTING_EXECUTION_MODE ->
-                        DeviceHubActionPacket.ACTION_CYCLE_EXECUTION_MODE;
-                    default -> -1;
-                };
-                if (action >= 0) {
-                    PacketDistributor.sendToServer(new DeviceHubActionPacket(action, 0));
-                    return true;
-                }
-            }
-            rowY += CONFIG_ROW_H;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 258) {
-            cycleTab((modifiers & 1) != 0 ? -1 : 1);
-            return true;
-        }
-        if (keyCode == 263) {
-            cycleTab(-1);
-            return true;
-        }
-        if (keyCode == 262) {
-            cycleTab(1);
-            return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (mouseX >= leftPos + 8
-                && mouseX <= leftPos + 168
-                && mouseY >= topPos + 78
-                && mouseY <= topPos + 142) {
-            List<String> moduleNames = menu.getModuleNameKeys();
-            scrollOffset = scroll(scrollOffset, scrollY);
-            scrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                    scrollOffset, moduleNames.size(), MODULE_VISIBLE_ROWS);
-            return true;
-        }
-
-        int configCount = menu.getSelectedTab() == DeviceHubMenu.TAB_RAILGUN
-                ? railgunSettingCount()
-                : moduleConfigCount();
-        if (configCount > 0
-                && mouseX >= leftPos + 8
-                && mouseX <= leftPos + 175
-                && mouseY >= topPos + CONFIG_HEADER_Y
-                && mouseY <= topPos + GUI_HEIGHT) {
-            configScrollOffset = scroll(configScrollOffset, scrollY);
-            configScrollOffset = DeviceHubDisplayRules.clampScrollOffset(
-                    configScrollOffset, configCount, CONFIG_VISIBLE_ROWS);
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-    }
-
-    private void renderConfigScrollBar(GuiGraphics gfx, int configCount, int mouseX, int mouseY) {
-        renderScrollBar(
-                gfx,
-                configCount,
-                CONFIG_VISIBLE_ROWS,
-                configScrollOffset,
-                SCROLL_X,
-                CONFIG_SCROLL_Y,
-                CONFIG_SCROLL_H,
-                mouseX,
-                mouseY);
-    }
-
-    private void renderScrollBar(
-            GuiGraphics gfx,
-            int itemCount,
-            int visibleRows,
-            int offset,
-            int relativeX,
-            int relativeY,
-            int height,
-            int mouseX,
-            int mouseY) {
-        int thumbRange = height - SCROLL_SRC_H;
-        int thumbY = topPos + relativeY
-                + thumbRange * offset / Math.max(1, itemCount - visibleRows);
-        int thumbX = leftPos + relativeX;
-        boolean hovered = mouseX >= thumbX
-                && mouseX < thumbX + SCROLL_SRC_W
-                && mouseY >= thumbY
-                && mouseY < thumbY + SCROLL_SRC_H;
-        gfx.blit(
-                TEXTURE,
-                thumbX,
-                thumbY,
-                SCROLL_SRC_X,
-                hovered ? SCROLL_HOVER_SRC_Y : SCROLL_SRC_Y,
-                SCROLL_SRC_W,
-                hovered ? SCROLL_HOVER_SRC_H : SCROLL_SRC_H,
-                TEXTURE_SIZE,
-                TEXTURE_SIZE);
+    private void renderScrollBar(UIElement parent, Scroller scroller, int relativeY, int height) {
+        scroller.scrollerStyle(s -> s.scrollBarSize(SCROLL_SRC_H * 100.0F / height));
+        parent.addChild(at(scroller, SCROLL_X, relativeY, SCROLL_SRC_W, height));
     }
 
     private void resetConfigScrollWhenSelectionChanges(int selectedTab, int selectedModule) {
@@ -708,47 +621,13 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         configScrollOffset = 0;
     }
 
-    private static int scroll(int offset, double scrollY) {
-        if (scrollY > 0 && offset > 0) {
-            return offset - 1;
-        }
-        if (scrollY < 0) {
-            return offset + 1;
-        }
-        return offset;
-    }
-
-    private void renderTabTooltips(GuiGraphics gfx, int mouseX, int mouseY, int tabMask) {
-        for (int i = 0; i < TAB_COUNT; i++) {
-            int tx = leftPos + TAB_X[i];
-            boolean available = (tabMask & (1 << i)) != 0;
-            if (mouseX >= tx
-                    && mouseX <= tx + TAB_WIDTH
-                    && mouseY >= topPos + TAB_Y
-                    && mouseY <= topPos + TAB_Y + TAB_HEIGHT) {
-                if (available) {
-                    ItemStack stack = tabStack(i);
-                    if (!stack.isEmpty()) {
-                        gfx.renderTooltip(font, stack, mouseX, mouseY);
-                    } else {
-                        gfx.renderTooltip(font, Component.translatable(TAB_LABEL_KEYS[i]), mouseX, mouseY);
-                    }
-                } else {
-                    gfx.renderTooltip(font, Component.translatable(TAB_REQUIRED_KEYS[i]), mouseX, mouseY);
-                }
-                return;
-            }
-        }
-    }
-
     private void cycleTab(int dir) {
         int current = menu.getSelectedTab();
         int tabMask = menu.getTabAvailability();
         for (int attempt = 0; attempt < TAB_COUNT; attempt++) {
             current = (current + dir + TAB_COUNT) % TAB_COUNT;
             if ((tabMask & (1 << current)) != 0) {
-                PacketDistributor.sendToServer(new DeviceHubActionPacket(
-                        DeviceHubActionPacket.ACTION_SELECT_TAB, current));
+                sendAction(DeviceHubActionPacket.ACTION_SELECT_TAB, current);
                 playClick();
                 return;
             }
@@ -757,20 +636,31 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
 
     private void playClick() {
         if (minecraft != null && minecraft.getSoundManager() != null) {
-            minecraft.getSoundManager().play(
-                    SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.0F));
+            UISoundUtils.playButtonClickSound();
         }
     }
 
-    private static String truncate(Font font, String text, int maxWidth) {
-        if (maxWidth <= 0) {
-            return "";
-        }
-        if (font.width(text) <= maxWidth) {
-            return text;
-        }
-        int ellipsisWidth = font.width("...");
-        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - ellipsisWidth)) + "...";
+    private static void sendAction(int action, int value) {
+        PacketDistributor.sendToServer(new DeviceHubActionPacket(action, value));
+    }
+
+    private static IGuiTexture tex(int u, int v, int width, int height) {
+        return ATLAS.slice(u, v, width, height);
+    }
+
+    private static UIElement checkbox(boolean on) {
+        return new UIElement().setAllowHitTest(false)
+                .style(style -> style.background(on ? CHECKBOX_ON : CHECKBOX_OFF));
+    }
+
+    private static IGuiTexture valueButton(int border, int fill) {
+        return (graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+            int buttonX = (int) x;
+            int buttonY = (int) y;
+            graphics.fill(buttonX - 1, buttonY - 1,
+                    buttonX + CONFIG_BUTTON_W + 1, buttonY + CONFIG_BUTTON_H + 1, border);
+            graphics.fill(buttonX, buttonY, buttonX + CONFIG_BUTTON_W, buttonY + CONFIG_BUTTON_H, fill);
+        };
     }
 
     private ItemStack selectedDeviceStack() {
@@ -820,5 +710,109 @@ public class DeviceHubScreen extends AbstractContainerScreen<DeviceHubMenu> {
         }
         ItemStack offhand = player.getOffhandItem();
         return offhand.getItem() instanceof ElectromagneticRailgunItem ? offhand : ItemStack.EMPTY;
+    }
+
+    // ---- rows ---------------------------------------------------------------------------
+
+    private static boolean inVisibleWindow(int index, int first, int visibleRows) {
+        return index >= first && index - first < visibleRows;
+    }
+
+    private boolean moduleHovered(int index) {
+        if (!inVisibleWindow(index, scrollOffset, MODULE_VISIBLE_ROWS)) {
+            return false;
+        }
+        int rowY = topPos + MODULE_LIST_Y + (index - scrollOffset) * MODULE_ROW_H;
+        return frameMouseX >= leftPos + MODULE_LIST_X && frameMouseX < leftPos + MODULE_LIST_RIGHT
+                && frameMouseY >= rowY && frameMouseY < rowY + MODULE_ROW_H;
+    }
+
+    private static Label label(Component text, int color) {
+        var label = LdlibScreens.label(text, color);
+        label.textStyle(style -> style.textWrap(TextWrap.NONE));
+        return label;
+    }
+
+    private UIElement unboundedLabel(Component text) {
+        return unboundedLabel(() -> text);
+    }
+
+    private UIElement unboundedLabel(Supplier<Component> text) {
+        return new UIElement().setAllowHitTest(false).style(style -> style.overflowVisible(true).background(
+                (graphics, mouseX, mouseY, x, y, width, height, ticks) ->
+                        LDLibFonts.drawText(graphics, font, text.get().getVisualOrderText(),
+                                x, y, TEXT_ON_DARK_BG, false)));
+    }
+
+    private UIElement moduleRow(ModuleEntry entry) {
+        var element = new UIElement() {
+            @Override
+            public boolean isVisible() {
+                return super.isVisible() && inVisibleWindow(entry.index(), scrollOffset, MODULE_VISIBLE_ROWS);
+            }
+        };
+        element.layout(l -> l.widthPercent(100).height(MODULE_ROW_H + 1));
+        element.style(style -> style.overflowVisible(true));
+        var band = new UIElement().setAllowHitTest(false);
+        band.style(style -> style.background(either(() -> entry.index() == menu.getSelectedModuleIndex(),
+                LdlibScreens.solid(() -> ROW_SELECTED),
+                either(() -> moduleHovered(entry.index()), LdlibScreens.solid(() -> ROW_HOVER), IGuiTexture.EMPTY))));
+        int rowWidth = MODULE_LIST_RIGHT - MODULE_LIST_X + 1;
+        element.addChild(at(band, 0, 0, rowWidth, MODULE_ROW_H));
+        int nameWidth = entry.showToggle() ? MODULE_CHECKBOX_X - MODULE_LIST_X - 6 : MODULE_LIST_RIGHT - MODULE_LIST_X;
+        var name = unboundedLabel(() -> Component.literal(FittingText.withEllipsis(
+                font, moduleName(entry.nameKey(), entry.count()).getString(), nameWidth)));
+        element.addChild(at(name, 1, 3, nameWidth, 9));
+        if (entry.showToggle()) {
+            var toggle = checkbox(entry.enabled());
+            element.addChild(at(toggle, MODULE_CHECKBOX_X - MODULE_LIST_X + 1, 2, CHECKBOX_WIDTH, CHECKBOX_HEIGHT));
+        }
+        var divider = new UIElement().setAllowHitTest(false);
+        divider.style(style -> style.background(either(
+                () -> entry.index() + 1 < Math.min(moduleRows.getItemCount(), scrollOffset + MODULE_VISIBLE_ROWS),
+                LdlibScreens.solid(() -> ROW_DIVIDER), IGuiTexture.EMPTY)));
+        element.addChild(at(divider, 1, MODULE_ROW_H, rowWidth - 1, 1));
+        return element;
+    }
+
+    private UIElement configRow(ConfigEntry entry) {
+        var row = new UIElement() {
+            @Override
+            public boolean isVisible() {
+                return super.isVisible() && inVisibleWindow(entry.index(), configScrollOffset, CONFIG_VISIBLE_ROWS);
+            }
+        };
+        row.layout(l -> l.widthPercent(100).height(CONFIG_ROW_H));
+        row.style(style -> style.overflowVisible(true));
+        row.addChild(at(unboundedLabel(entry.label()), 0, 3, CONFIG_BUTTON_X - CONFIG_ROW_X - 2, 9));
+
+        if (entry.checkbox()) {
+            var toggle = checkbox(entry.enabled());
+            row.addChild(at(toggle, MODULE_CHECKBOX_X - CONFIG_ROW_X, 2, CHECKBOX_WIDTH, CHECKBOX_HEIGHT));
+        } else {
+            var button = new UIElement();
+            var idle = entry.editable() ? valueButton(BUTTON_BORDER, BUTTON_FILL)
+                    : valueButton(BUTTON_DISABLED, BUTTON_FILL_DISABLED);
+            var hover = entry.editable() ? valueButton(BUTTON_BORDER_HOVER, BUTTON_FILL_HOVER) : idle;
+            button.style(style -> style.background(either(button::isHover, hover, idle)));
+            var value = new UIElement().setAllowHitTest(false).style(s -> s.background(
+                    (graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+                        String fitted = FittingText.withEllipsis(font, entry.value().getString(), CONFIG_BUTTON_W - 4);
+                        LDLibFonts.drawText(graphics, font, Component.literal(fitted).getVisualOrderText(),
+                                x + (CONFIG_BUTTON_W - font.width(fitted)) / 2, y + 2,
+                                entry.editable() ? BUTTON_TEXT : TEXT_ON_DARK_BG, false);
+                    }));
+            button.addChild(at(value, 0, 0, CONFIG_BUTTON_W, CONFIG_BUTTON_H));
+            row.addChild(at(button, CONFIG_BUTTON_X - CONFIG_ROW_X, 1,
+                    CONFIG_BUTTON_W + 1, CONFIG_BUTTON_H + 1));
+        }
+        return row;
+    }
+
+    private record ModuleEntry(int index, String nameKey, int count, boolean enabled, boolean showToggle) {
+    }
+
+    private record ConfigEntry(int index, Component label, Component value, boolean checkbox, boolean enabled,
+            boolean editable) {
     }
 }

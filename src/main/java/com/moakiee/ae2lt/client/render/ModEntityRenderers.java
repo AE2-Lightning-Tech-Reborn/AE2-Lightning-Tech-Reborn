@@ -73,8 +73,8 @@ public final class ModEntityRenderers {
 
     @SubscribeEvent
     public static void registerAdditionalModels(ModelEvent.RegisterAdditional event) {
-        event.register(PigmeeMolecularAssemblerRenderer.LIGHTS_MODEL);
-        event.register(HyperdimensionalPigmeeTextureLayer.MODEL);
+        PigmeeMolecularAssemblerRenderer.LIGHTS_MODEL.onAdditionalModel(event::register);
+        HyperdimensionalPigmeeTextureLayer.MODEL.onAdditionalModel(event::register);
     }
 
     @SubscribeEvent

@@ -2,6 +2,8 @@ package com.moakiee.ae2lt.client.gui;
 
 import java.util.function.ToIntFunction;
 
+import net.minecraft.client.gui.Font;
+
 /**
  * Width-aware text shortening for fixed-size GUI surfaces.
  */
@@ -9,6 +11,16 @@ public final class FittingText {
     private static final String ELLIPSIS = "...";
 
     private FittingText() {
+    }
+
+    public static String withEllipsis(Font font, String text, int maxWidth) {
+        if (maxWidth <= 0) {
+            return "";
+        }
+        if (font.width(text) <= maxWidth) {
+            return text;
+        }
+        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width(ELLIPSIS))) + ELLIPSIS;
     }
 
     public static String fit(String text, int maxWidth, ToIntFunction<String> width) {

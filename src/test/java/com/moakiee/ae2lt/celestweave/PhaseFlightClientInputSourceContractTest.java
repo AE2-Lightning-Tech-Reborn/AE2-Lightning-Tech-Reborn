@@ -68,10 +68,11 @@ class PhaseFlightClientInputSourceContractTest {
         String screen = Files.readString(Path.of(
                 "src/main/java/com/moakiee/ae2lt/client/hub/DeviceHubScreen.java"));
         assertTrue(screen.contains("CONFIG_VISIBLE_ROWS = 3"));
-        assertTrue(screen.contains("Math.min(count, CONFIG_VISIBLE_ROWS)"));
+        assertTrue(screen.contains("CONFIG_ROW_H * CONFIG_VISIBLE_ROWS"));
+        assertTrue(screen.contains("configRows.setItems(configEntries)"));
         assertTrue(screen.contains("renderConfigScrollBar"));
         assertTrue(screen.contains("configScrollOffset"));
-        assertTrue(screen.contains("ACTION_CYCLE_MODULE_CONFIG, configIndex"));
+        assertTrue(screen.contains("ACTION_CYCLE_MODULE_CONFIG, index"));
         assertFalse(screen.contains("Math.min(count, 2)"));
     }
 }

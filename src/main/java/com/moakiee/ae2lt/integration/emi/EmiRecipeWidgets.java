@@ -1,10 +1,10 @@
 package com.moakiee.ae2lt.integration.emi;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import com.moakiee.ae2lt.me.key.LightningKey;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
-import dev.emi.emi.api.widget.TextWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.network.chat.Component;
@@ -34,9 +34,22 @@ final class EmiRecipeWidgets {
         return EmiStack.of(stack.getFluid(), stack.getComponentsPatch(), stack.getAmount());
     }
 
-    static void centeredText(WidgetHolder widgets, Component text, int centerX, int y) {
-        widgets.addText(text, centerX, y, TEXT_COLOR, false)
-                .horizontalAlign(TextWidget.Alignment.CENTER);
+    /** Page decoration (machine art, process overlay, captions) sized to the widget holder. */
+    static RecipeDecor decor(WidgetHolder widgets) {
+        return RecipeDecor.forEmi(widgets.getWidth(), widgets.getHeight());
+    }
+
+    /** Paints LDLib2 textures at EMI's native widget and buffer boundaries. */
+    static void addDecor(WidgetHolder widgets, RecipeDecor decor) {
+        for (var drawable : decor.drawables()) {
+            widgets.addDrawable(drawable.x(), drawable.y(), drawable.width(), drawable.height(),
+                    (graphics, mouseX, mouseY, delta) -> drawable.texture().draw(
+                            graphics, mouseX, mouseY, 0, 0, drawable.width(), drawable.height(), delta));
+        }
+    }
+
+    static void addFillingArrow(WidgetHolder widgets, int x, int y, int millis) {
+        widgets.addFillingArrow(x, y, millis);
     }
 
     static SlotWidget addLargeStackSlot(

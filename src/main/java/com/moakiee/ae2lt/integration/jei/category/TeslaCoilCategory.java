@@ -1,12 +1,10 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
-import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.AE2LightningTech;
@@ -20,7 +18,6 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
@@ -42,8 +39,6 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
     private static final int OUTPUT_X = 118;
     private static final int OUTPUT_Y = ROW_Y;
     private static final int ICON_SIZE = 16;
-    private static final int ICON_FRAME_H = 16;
-    private static final int ICON_SHEET_H = 96;
     private static final int ICON_FRAMES = 6;
     private static final long ICON_FRAME_MS = 100L;
     private static final long PROCESS_CYCLE_MS = 1500L;
@@ -55,8 +50,6 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/crystal_catalyzer.png");
     private static final int ARROW_U = 176;
     private static final int ARROW_V = 18;
-    private static final int ARROW_TEX_W = 256;
-    private static final int ARROW_TEX_H = 256;
 
     private static final ResourceLocation HV_LIGHTNING_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/item/high_voltage_lightning.png");
@@ -64,9 +57,10 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
             ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/item/extreme_high_voltage_lightning.png");
 
     private final IDrawable icon;
+    private final JeiRecipeDecor<Page> decor = new JeiRecipeDecor<>(TeslaCoilCategory::decor);
 
-    public TeslaCoilCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.TESLA_COIL.get()));
+    public TeslaCoilCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.TESLA_COIL.toStack());
     }
 
     @Override
@@ -114,81 +108,30 @@ public class TeslaCoilCategory implements IRecipeCategory<TeslaCoilCategory.Page
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
+        decor.draw(page, guiGraphics, mouseX, mouseY);
+    }
+
+    /** Looping arrow, animated lightning output icon and info text as an LDLib2 decoration. */
+    private static RecipeDecor decor(Page page) {
         TeslaCoilMode mode = page.mode;
-        Font font = Minecraft.getInstance().font;
-
-        drawArrow(guiGraphics);
-        drawLightningIcon(
-                guiGraphics,
-                mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE ? EHV_LIGHTNING_TEXTURE : HV_LIGHTNING_TEXTURE,
-                OUTPUT_X,
-                OUTPUT_Y);
-
-        Component modeText = Component.translatable(
-                "jei.ae2lt.tesla_coil.mode_label",
-                Component.translatable(mode.translationKey()));
-        drawCentered(guiGraphics, font, modeText, TEXT_LINES[0]);
-
-        Component energyText = Component.translatable(
-                "jei.ae2lt.tesla_coil.energy",
-                formatCompactEnergy(mode.totalEnergy()));
-        drawCentered(guiGraphics, font, energyText, TEXT_LINES[1]);
-
-        Component inputText;
-        if (mode == TeslaCoilMode.HIGH_VOLTAGE) {
-            inputText = Component.translatable(
-                    "jei.ae2lt.tesla_coil.consume_dust",
-                    mode.requiredDust());
-        } else {
-            inputText = Component.translatable(
-                    "jei.ae2lt.tesla_coil.consume_hv",
-                    mode.requiredHighVoltage());
-        }
-        drawCentered(guiGraphics, font, inputText, TEXT_LINES[2]);
-
-        Component outputText = Component.translatable(
-                mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE
-                        ? "jei.ae2lt.tesla_coil.output_ehv"
-                        : "jei.ae2lt.tesla_coil.output_hv");
-        drawCentered(guiGraphics, font, outputText, TEXT_LINES[3]);
-    }
-
-    private static void drawCentered(GuiGraphics guiGraphics, Font font, Component text, int y) {
-        int x = (WIDTH - font.width(text)) / 2;
-        guiGraphics.drawString(font, text, x, y, TEXT_COLOR, false);
-    }
-
-    private static void drawArrow(GuiGraphics guiGraphics) {
-        long elapsed = Util.getMillis() % PROCESS_CYCLE_MS;
-        double progress = elapsed / (double) PROCESS_CYCLE_MS;
-        int fillW = Mth.clamp((int) Math.ceil(progress * ARROW_W), 0, ARROW_W);
-        if (fillW <= 0) {
-            return;
-        }
-        guiGraphics.blit(
-                ARROW_TEXTURE,
-                ARROW_X,
-                ARROW_Y,
-                ARROW_U,
-                ARROW_V,
-                fillW,
-                ARROW_H,
-                ARROW_TEX_W,
-                ARROW_TEX_H);
-    }
-
-    private static void drawLightningIcon(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y) {
-        int frame = (int) ((Util.getMillis() / ICON_FRAME_MS) % ICON_FRAMES);
-        guiGraphics.blit(
-                texture,
-                x,
-                y,
-                0,
-                frame * ICON_FRAME_H,
-                ICON_SIZE,
-                ICON_SIZE,
-                ICON_SIZE,
-                ICON_SHEET_H);
+        return RecipeDecor.of(WIDTH, HEIGHT)
+                .horizontalReveal(ARROW_TEXTURE, ARROW_X, ARROW_Y, ARROW_W, ARROW_H, ARROW_U, ARROW_V, PROCESS_CYCLE_MS)
+                .frames(mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE ? EHV_LIGHTNING_TEXTURE : HV_LIGHTNING_TEXTURE,
+                        OUTPUT_X, OUTPUT_Y, ICON_SIZE, ICON_FRAMES, ICON_FRAME_MS)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.tesla_coil.mode_label",
+                        Component.translatable(mode.translationKey())), TEXT_LINES[0], TEXT_COLOR)
+                .centeredText(() -> Component.translatable(
+                        "jei.ae2lt.tesla_coil.energy",
+                        formatCompactEnergy(mode.totalEnergy())), TEXT_LINES[1], TEXT_COLOR)
+                .centeredText(() -> mode == TeslaCoilMode.HIGH_VOLTAGE
+                                ? Component.translatable("jei.ae2lt.tesla_coil.consume_dust", mode.requiredDust())
+                                : Component.translatable("jei.ae2lt.tesla_coil.consume_hv", mode.requiredHighVoltage()),
+                        TEXT_LINES[2], TEXT_COLOR)
+                .centeredText(Component.translatable(
+                        mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE
+                                ? "jei.ae2lt.tesla_coil.output_ehv"
+                                : "jei.ae2lt.tesla_coil.output_hv"), TEXT_LINES[3], TEXT_COLOR);
     }
 
     private static String formatCompactEnergy(long energy) {

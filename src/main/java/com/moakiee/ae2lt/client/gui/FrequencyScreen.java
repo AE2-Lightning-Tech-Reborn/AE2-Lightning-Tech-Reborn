@@ -1,5 +1,10 @@
 package com.moakiee.ae2lt.client.gui;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -12,8 +17,6 @@ import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.style.StyleManager;
 import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.Scrollbar;
 import appeng.client.gui.widgets.TabButton;
 import appeng.client.gui.widgets.ToggleButton;
 import appeng.core.network.serverbound.SwitchGuisPacket;
@@ -59,12 +62,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private static final ResourceLocation TEXTURE_HOME = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_home.png");
+    private static final LdlibStyleSprite ATLAS_HOME = new LdlibStyleSprite(TEXTURE_HOME, 256, 256);
     private static final ResourceLocation TEXTURE_SELECTION = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_selection.png");
+    private static final LdlibStyleSprite ATLAS_SELECTION = new LdlibStyleSprite(TEXTURE_SELECTION, 256, 256);
     private static final ResourceLocation TEXTURE_LIST = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_list.png");
+    private static final LdlibStyleSprite ATLAS_LIST = new LdlibStyleSprite(TEXTURE_LIST, 256, 256);
     private static final ResourceLocation TEXTURE_FORM = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/wireless_overloaded_form.png");
+    private static final LdlibStyleSprite ATLAS_FORM = new LdlibStyleSprite(TEXTURE_FORM, 256, 256);
 
     private static final int GUI_WIDTH = FrequencyNavigation.WIDTH;
     private static final int GUI_HEIGHT = FrequencyNavigation.HEIGHT;
@@ -118,11 +125,11 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
      */
     private final java.util.List<AbstractWidget> currentRowButtons = new java.util.ArrayList<>();
 
-    private AETextField nameField;
-    private AETextField selectionSearchField;
+    private LdlibAe2TextField nameField;
+    private LdlibAe2TextField selectionSearchField;
     private FrequencyPage formPage;
     private int formFrequency;
-    private AETextField passwordField;
+    private LdlibAe2TextField passwordField;
     private FrequencySecurityLevel editSecurity = FrequencySecurityLevel.PRIVATE;
     private int editColor = 0x1E90FF;
 
@@ -189,29 +196,18 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
     }
 
-    private AETextField makeAe2Field(int x, int y, int width, int height) {
-        AETextField field = new WideTextField(x, y, width, height);
-        field.setBordered(false);
-        return field;
+    private final List<LdlibAe2TextField> ownedTextFields = new ArrayList<>();
+
+    private void releaseTextFields() {
+        ownedTextFields.forEach(LdlibAe2TextField::dispose);
+        ownedTextFields.clear();
     }
 
-    /** Tiles AE2's native text-field middle beyond its 126-pixel default limit. */
-    private class WideTextField extends AETextField {
-        private boolean editable = true;
-        @Override public void setEditable(boolean editable) { this.editable = editable; super.setEditable(editable); }
-        WideTextField(int x, int y, int width, int height) { super(ae2Style, FrequencyScreen.this.font, x, y, width, height); }
-        @Override public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            if (isVisible()) {
-                var bounds = getTooltipArea();
-                int variant = !editable ? 12 : isFocused() ? 24 : 0;
-                for (int x = 127; x < bounds.getWidth() - 1; x += 126) {
-                    int width = Math.min(126, bounds.getWidth() - 1 - x);
-                    Blitter.texture("guis/text_field.png", 128, 128)
-                            .src(1, variant, width, 12).dest(bounds.getX() + x, bounds.getY()).blit(graphics);
-                }
-            }
-            super.renderWidget(graphics, mouseX, mouseY, partialTick);
-        }
+    private LdlibAe2TextField makeAe2Field(int x, int y, int width, int height) {
+        var field = LdlibAe2TextField.create(width, height, ae2Style);
+        field.setPosition(x, y);
+        ownedTextFields.add(field);
+        return field;
     }
 
     private static final String PASSWORD_SENTINEL = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
@@ -221,14 +217,18 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     private int passwordPromptFreqId = 0;
     private String passwordPromptFreqName = "";
     private boolean passwordPromptLocksScreen = false;
-    private AETextField passwordPromptField;
+    private LdlibAe2TextField passwordPromptField;
 
     private String selectionSearchQuery = "";
 
-    private final class PristinePasswordField extends WideTextField {
+    private final class PristinePasswordField extends LdlibAe2TextField {
         PristinePasswordField(int x, int y, int width, int height) {
-            super(x, y, width, height);
-            setBordered(false);
+            super(width, height, true);
+            ownedTextFields.add(this);
+            setPosition(x, y);
+            useFramedEditor(ae2Style.getColor(PaletteColor.TEXTFIELD_TEXT).toARGB(),
+                    ae2Style.getColor(PaletteColor.TEXTFIELD_PLACEHOLDER).toARGB());
+            setSelectionColor(ae2Style.getColor(PaletteColor.TEXTFIELD_SELECTION).toARGB());
         }
 
         @Override
@@ -254,6 +254,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         boolean restoreSearchFocus = currentTab == FrequencyPage.TAB_SELECTION
                 && selectionSearchField != null && selectionSearchField.isFocused();
         int searchCursor = restoreSearchFocus ? selectionSearchField.getCursorPosition() : 0;
+        releaseTextFields();
         clearWidgets();
         currentRowButtons.clear();
         currentScrollbar = null;
@@ -299,7 +300,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
         if (restoreSearchFocus && selectionSearchField != null) {
             setFocused(selectionSearchField); selectionSearchField.setFocused(true);
-            selectionSearchField.moveCursorTo(searchCursor, false);
+            selectionSearchField.moveCursorTo(searchCursor);
         }
     }
 
@@ -478,7 +479,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int srcX = this.active && isHoveredOrFocused() ? 22 : 0;
             int srcY = this.selected ? 40 : 28;
             SWITCH_BLITTER.copy().src(srcX, srcY, 22, 12).dest(getX(), getY()).blit(g);
-            if (!this.active) g.fill(getX(), getY(), getX() + this.width, getY() + this.height, 0x66000000);
+            if (!this.active) LdlibScreens.fillRect(g, getX(), getY(), getX() + this.width, getY() + this.height, 0x66000000);
         }
 
         @Override
@@ -552,7 +553,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     private void initSelectionTab(int x0, int y0) {
         int searchX = x0 + 8;
-        AETextField searchField = selectionSearchField = makeAe2Field(searchX, y0 + 22, GUI_WIDTH - 16, INPUT_HEIGHT);
+        LdlibAe2TextField searchField = selectionSearchField = makeAe2Field(searchX, y0 + 22, GUI_WIDTH - 16, INPUT_HEIGHT);
         searchField.setMaxLength(32);
         searchField.setValue(selectionSearchQuery);
         searchField.setResponder(value -> {
@@ -767,6 +768,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     }
 
     private void rebuildMemberPopupWidgets() {
+        releaseTextFields();
         clearWidgets();
         int x0 = leftPos;
         int y0 = topPos;
@@ -855,11 +857,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         nameField = makeAe2Field(x0 + 12, y0 + 34, INPUT_MAX_WIDTH, INPUT_HEIGHT);
         nameField.setMaxLength(WirelessFrequency.MAX_NAME_LENGTH);
         nameField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.name"));
-        nameField.setValue(savedName); nameField.setEditable(canEdit); addRenderableWidget(nameField);
+        nameField.setValue(savedName);
+        nameField.setEditable(canEdit, true);
+        addRenderableWidget(nameField);
         passwordField = new PristinePasswordField(x0 + 12, y0 + 88, INPUT_MAX_WIDTH, INPUT_HEIGHT);
         passwordField.setMaxLength(WirelessFrequency.MAX_PASSWORD_LENGTH);
         passwordField.setPlaceholder(Component.translatable("ae2lt.gui.frequency.password"));
-        passwordField.setValue(savedPassword); passwordField.setEditable(canSecure);
+        passwordField.setValue(savedPassword);
+        passwordField.setEditable(canSecure, true);
         passwordField.setVisible(editSecurity == FrequencySecurityLevel.ENCRYPTED); addRenderableWidget(passwordField);
         var security = addRenderableWidget(new AE2Button(x0 + GUI_WIDTH - 104, y0 + 52, 92, 18, getSecurityLabel(editSecurity), btn -> {
             editSecurity = FrequencySecurityLevel.VALUES[(editSecurity.ordinal() + 1) % FrequencySecurityLevel.VALUES.length];
@@ -905,16 +910,16 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        ResourceLocation bg = switch (currentTab) {
-            case TAB_SELECTION -> TEXTURE_SELECTION;
-            case TAB_MEMBER, TAB_CONNECTION -> TEXTURE_LIST;
-            case TAB_CREATE, TAB_SETTING -> TEXTURE_FORM;
-            default -> passwordPromptFreqId > 0 ? TEXTURE_FORM : TEXTURE_HOME;
+        LdlibStyleSprite bg = switch (currentTab) {
+            case TAB_SELECTION -> ATLAS_SELECTION;
+            case TAB_MEMBER, TAB_CONNECTION -> ATLAS_LIST;
+            case TAB_CREATE, TAB_SETTING -> ATLAS_FORM;
+            default -> passwordPromptFreqId > 0 ? ATLAS_FORM : ATLAS_HOME;
         };
-        if (bg == TEXTURE_HOME) {
+        if (bg == ATLAS_HOME) {
             drawHomeBackground(g);
         } else {
-            g.blit(bg, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+            bg.draw(g, leftPos, topPos, 0, 0, imageWidth, imageHeight);
         }
 
         if (currentTab == FrequencyPage.TAB_HOME
@@ -923,7 +928,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, 46);
                 drawWell(g, leftPos + 6, topPos + 85, GUI_WIDTH - 12, 32);
                 drawWell(g, leftPos + 6, topPos + 139, GUI_WIDTH - 12, 30);
-                g.fill(leftPos + GUI_WIDTH / 2, topPos + 142, leftPos + GUI_WIDTH / 2 + 1, topPos + 166, 0xFF878FA5);
+                LdlibScreens.fillRect(g, leftPos + GUI_WIDTH / 2, topPos + 142, leftPos + GUI_WIDTH / 2 + 1, topPos + 166, 0xFF878FA5);
             } else {
                 int upperH = freqMenu().isController() ? 86 : 70;
                 drawWell(g, leftPos + 6, topPos + 23, GUI_WIDTH - 12, upperH);
@@ -936,8 +941,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int visible = Math.min(ITEMS_PER_PAGE_LIST,
                     Math.max(0, ClientFrequencyCache.getConnections(freqMenu().getCurrentFrequencyId()).size() - connectionScroll));
             for (int i = 0; i < visible; i++) {
-                g.blit(TEXTURE_LIST, leftPos + LIST_ROW_X, topPos + LIST_ROW_FIRST_Y + i * LIST_ROW_HEIGHT,
-                        0, 208, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT, 256, 256);
+                ATLAS_LIST.draw(g, leftPos + LIST_ROW_X, topPos + LIST_ROW_FIRST_Y + i * LIST_ROW_HEIGHT,
+                        0, 208, LIST_ROW_WIDTH, LIST_ROW_BUTTON_HEIGHT);
             }
         }
 
@@ -960,16 +965,17 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 int y = HOME_BACKGROUND_ROWS[row];
                 int u = HOME_TEXTURE_COLUMNS[column];
                 int v = HOME_TEXTURE_ROWS[row];
-                g.blit(TEXTURE_HOME, leftPos + x, topPos + y,
+                ATLAS_HOME.draw(g, leftPos + x, topPos + y,
                         HOME_BACKGROUND_COLUMNS[column + 1] - x, HOME_BACKGROUND_ROWS[row + 1] - y,
-                        u, v, HOME_TEXTURE_COLUMNS[column + 1] - u, row == 1 ? 1 : HOME_TEXTURE_ROWS[row + 1] - v,
-                        256, 256);
+                        u, v, HOME_TEXTURE_COLUMNS[column + 1] - u, row == 1 ? 1 : HOME_TEXTURE_ROWS[row + 1] - v);
             }
         }
     }
 
     private void drawModalBackdrop(GuiGraphics g, int panelX, int panelY, int panelW, int panelH) {
-        g.fill(leftPos + 2, topPos + 18, leftPos + GUI_WIDTH - 2, topPos + imageHeight - 3, 0x5810121A);
+        LdlibScreens.fillRect(g, leftPos + 2, topPos + 18, leftPos + GUI_WIDTH - 2, topPos + imageHeight - 3, 0x5810121A);
+        // AE2's panel blits draw immediately, so submit the buffered dimming layer first.
+        g.flush();
         BackgroundGenerator.draw(panelW, panelH, g, panelX, panelY);
         drawWell(g, panelX + 8, panelY + 8, panelW - 16, 18);
     }
@@ -988,9 +994,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     /** Matches the new home texture's light outline and two-pixel inner top shadow. */
     private static void drawWell(GuiGraphics g, int x, int y, int width, int height) {
-        g.fill(x, y, x + width, y + height, 0xFFF2F2F2);
-        g.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF9A9FB4);
-        g.fill(x + 1, y + 1, x + width - 1, y + 3, 0xFF696D88);
+        LdlibScreens.fillRect(g, x, y, x + width, y + height, 0xFFF2F2F2);
+        LdlibScreens.fillRect(g, x + 1, y + 1, x + width - 1, y + height - 1, 0xFF9A9FB4);
+        LdlibScreens.fillRect(g, x + 1, y + 1, x + width - 1, y + 3, 0xFF696D88);
     }
 
     @Override
@@ -1037,8 +1043,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int badgeRgb = popupIsStranger || popupMemberAccess.getFormatting().getColor() == null
                     ? 0xFF555555
                     : (0xFF000000 | popupMemberAccess.getFormatting().getColor());
-            g.fill(startX, 40, startX + 6, 46, 0xFF202430);
-            g.fill(startX + 1, 41, startX + 5, 45, badgeRgb);
+            LdlibScreens.fillRect(g, startX, 40, startX + 6, 46, 0xFF202430);
+            LdlibScreens.fillRect(g, startX + 1, 41, startX + 5, 45, badgeRgb);
             g.drawString(font, fitted, startX + 10, 39, textColor(), false);
         }
 
@@ -1054,8 +1060,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 int bgW = Math.min(imageWidth - 8, textW + 8);
                 int bgX = (imageWidth - bgW) / 2;
                 int bgY = imageHeight - 40;
-                g.fill(bgX, bgY, bgX + bgW, bgY + 12, 0xD0202028);
-                g.fill(bgX, bgY, bgX + bgW, bgY + 1, 0xFFD04848);
+                LdlibScreens.fillRect(g, bgX, bgY, bgX + bgW, bgY + 12, 0xD0202028);
+                LdlibScreens.fillRect(g, bgX, bgY, bgX + bgW, bgY + 1, 0xFFD04848);
                 drawFlatCentered(g, display, imageWidth / 2, bgY + 2, 0xFFFFB4B4);
                 if (!full.equals(fitted)) {
                     addFittedTooltip(bgX, bgY, bgW, 12, inlineError);
@@ -1139,10 +1145,10 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                     imageWidth - 18, textColor());
             boolean chAuto = freqMenu().isAutoConnect();
             boolean feAuto = freqMenu().isAutoConnectEnergy();
-            g.fill(13, 152, 17, 156, chAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
+            LdlibScreens.fillRect(g, 13, 152, 17, 156, chAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_channel_" + (chAuto ? "on" : "off")),
                     20, 150, 68, chAuto ? COL_GREEN : textColor());
-            g.fill(125, 152, 129, 156, feAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
+            LdlibScreens.fillRect(g, 125, 152, 129, 156, feAuto ? (0xFF000000 | COL_GREEN) : 0xFF5A6075);
             drawFlatFitted(g, Component.translatable("ae2lt.gui.home.auto_energy_"
                             + (!OverloadedFrequencyCardItem.isAutoConnectEnergyAvailable() ? "unavailable" : feAuto ? "on" : "off")),
                     132, 150, 68, feAuto ? COL_GREEN : textColor());
@@ -1193,8 +1199,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         if (badgeColor != null) {
             int bx = rightX - 9;
             int by = y + 1;
-            g.fill(bx, by, bx + 6, by + 6, 0xFF202430);
-            g.fill(bx + 1, by + 1, bx + 5, by + 5, badgeColor);
+            LdlibScreens.fillRect(g, bx, by, bx + 6, by + 6, 0xFF202430);
+            LdlibScreens.fillRect(g, bx + 1, by + 1, bx + 5, by + 5, badgeColor);
         }
         g.drawString(font, fitted, rightX, y, valueColor, false);
         if (!full.equals(fitted)) {
@@ -1202,7 +1208,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
         }
         if (divider) {
             int divY = y + (step == 16 ? 12 : 11);
-            g.fill(12, divY, GUI_WIDTH - 12, divY + 1, 0xFF878FA5);
+            LdlibScreens.fillRect(g, 12, divY, GUI_WIDTH - 12, divY + 1, 0xFF878FA5);
         }
     }
 
@@ -1222,8 +1228,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int labelPrefixW = font.width(Component.translatable("ae2lt.gui.frequency.current").append(": "));
             drawFlat(g, Component.translatable("ae2lt.gui.frequency.current").append(": "), leftX, 37, textColor());
             int swatchX = leftX + labelPrefixW;
-            g.fill(swatchX, 38, swatchX + 6, 44, 0xFF202430);
-            g.fill(swatchX + 1, 39, swatchX + 5, 43, 0xFF000000 | (current.color() & 0xFFFFFF));
+            LdlibScreens.fillRect(g, swatchX, 38, swatchX + 6, 44, 0xFF202430);
+            LdlibScreens.fillRect(g, swatchX + 1, 39, swatchX + 5, 43, 0xFF000000 | (current.color() & 0xFFFFFF));
             drawFlatFitted(g, current.name(), swatchX + 9, 37, Math.max(20, rightX - swatchX - 16), textColor());
         } else {
             drawFlatFitted(g, left, leftX, 37, Math.max(20, rightX - 24), textColor());
@@ -1285,14 +1291,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
         // Live preview card inside the lower recessed well
         int px = 12, py = 143, pw = INPUT_MAX_WIDTH, ph = 22;
-        g.fill(px, py, px + pw, py + ph, 0xFF878FA5);
-        g.fill(px, py, px + pw, py + 1, 0xFF565B70);
-        g.fill(px, py, px + 1, py + ph, 0xFF565B70);
-        g.fill(px, py + ph - 1, px + pw, py + ph, 0xFFDADEEB);
-        g.fill(px + pw - 1, py, px + pw, py + ph, 0xFFDADEEB);
+        LdlibScreens.fillRect(g, px, py, px + pw, py + ph, 0xFF878FA5);
+        LdlibScreens.fillRect(g, px, py, px + pw, py + 1, 0xFF565B70);
+        LdlibScreens.fillRect(g, px, py, px + 1, py + ph, 0xFF565B70);
+        LdlibScreens.fillRect(g, px, py + ph - 1, px + pw, py + ph, 0xFFDADEEB);
+        LdlibScreens.fillRect(g, px + pw - 1, py, px + pw, py + ph, 0xFFDADEEB);
 
-        g.fill(px + 6, py + 7, px + 14, py + 15, 0xFF202430);
-        g.fill(px + 7, py + 8, px + 13, py + 14, editColor | 0xFF000000);
+        LdlibScreens.fillRect(g, px + 6, py + 7, px + 14, py + 15, 0xFF202430);
+        LdlibScreens.fillRect(g, px + 7, py + 8, px + 13, py + 14, editColor | 0xFF000000);
         String previewName = (nameField != null && !nameField.getValue().isBlank())
                 ? nameField.getValue()
                 : Component.translatable("ae2lt.gui.frequency.name").getString();
@@ -1320,14 +1326,14 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (currentTab == FrequencyPage.TAB_SELECTION && selectionSearchField != null
-                    && selectionSearchField.isVisible() && selectionSearchField.isMouseOver(mouseX, mouseY)) {
+                    && selectionSearchField.visible && selectionSearchField.isMouseOver(mouseX, mouseY)) {
                 selectionSearchField.setValue("");
                 setFocused(selectionSearchField);
                 selectionSearchField.setFocused(true);
                 return true;
             }
             if ((currentTab == FrequencyPage.TAB_CREATE || currentTab == FrequencyPage.TAB_SETTING)
-                    && nameField != null && nameField.isVisible() && nameField.isMouseOver(mouseX, mouseY)) {
+                    && nameField != null && nameField.visible && nameField.isMouseOver(mouseX, mouseY)) {
                 nameField.setValue("");
                 setFocused(nameField);
                 nameField.setFocused(true);
@@ -1428,9 +1434,9 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             boolean selected = swatchColor == editColor;
             boolean hovered = active && isHoveredOrFocused();
-            g.fill(x, y, x + w, y + h, selected ? 0xFFFFFFFF : hovered ? 0xFFDAFFFF : 0xFF363B4E);
-            g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF202430);
-            g.fill(x + 2, y + 2, x + w - 2, y + h - 2, swatchColor | 0xFF000000);
+            LdlibScreens.fillRect(g, x, y, x + w, y + h, selected ? 0xFFFFFFFF : hovered ? 0xFFDAFFFF : 0xFF363B4E);
+            LdlibScreens.fillRect(g, x + 1, y + 1, x + w - 1, y + h - 1, 0xFF202430);
+            LdlibScreens.fillRect(g, x + 2, y + 2, x + w - 2, y + h - 2, swatchColor | 0xFF000000);
         }
     }
 
@@ -1467,12 +1473,12 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int x = getX(), y = getY(), w = getWidth(), h = getHeight();
             boolean hover = active && isHoveredOrFocused();
             if (bound) {
-                g.fill(x, y, x + w, y + h, hover ? 0xFF88C0F4 : 0xFF78B0E4);
-                g.fill(x, y, x + w, y + 1, 0xFFDAFFFF);
-                g.fill(x, y + h - 1, x + w, y + h, 0xFF5282B8);
-                g.fill(x, y, x + 2, y + h, 0xFF1864AB);
+                LdlibScreens.fillRect(g, x, y, x + w, y + h, hover ? 0xFF88C0F4 : 0xFF78B0E4);
+                LdlibScreens.fillRect(g, x, y, x + w, y + 1, 0xFFDAFFFF);
+                LdlibScreens.fillRect(g, x, y + h - 1, x + w, y + h, 0xFF5282B8);
+                LdlibScreens.fillRect(g, x, y, x + 2, y + h, 0xFF1864AB);
             } else {
-                g.blit(TEXTURE_SELECTION, x, y, 0, hover ? 232 : 208, w, h, 256, 256);
+                ATLAS_SELECTION.draw(g, x, y, 0, hover ? 232 : 208, w, h);
             }
 
             TextColor styleColor = getMessage().getStyle().getColor();
@@ -1480,8 +1486,8 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             int textX = x + 6;
             if (styleColor != null) {
                 int rgb = 0xFF000000 | styleColor.getValue();
-                g.fill(x + 6, y + (h - 6) / 2, x + 12, y + (h - 6) / 2 + 6, 0xFF202430);
-                g.fill(x + 7, y + (h - 6) / 2 + 1, x + 11, y + (h - 6) / 2 + 5, rgb);
+                LdlibScreens.fillRect(g, x + 6, y + (h - 6) / 2, x + 12, y + (h - 6) / 2 + 6, 0xFF202430);
+                LdlibScreens.fillRect(g, x + 7, y + (h - 6) / 2 + 1, x + 11, y + (h - 6) / 2 + 5, rgb);
                 textX = x + 16;
             }
 
@@ -1494,7 +1500,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
                 int bw = font.width(boundLabel) + 6;
                 int bx = x + w - bw - 4;
                 int by = y + (h - 12) / 2;
-                g.fill(bx, by, bx + bw, by + 12, 0x44183858);
+                LdlibScreens.fillRect(g, bx, by, bx + bw, by + 12, 0x44183858);
                 g.drawString(font, boundLabel, bx + 3, textY, 0xFF102840, false);
             }
         }
@@ -1502,7 +1508,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
 
     /** Bridges the native composite widget into this container screen's event routing. */
     private final class ScrollbarWidget extends AbstractWidget {
-        private final Scrollbar delegate = new Scrollbar(Scrollbar.SMALL);
+        private final LdlibRowScroller delegate = new LdlibRowScroller();
         private final java.util.function.IntConsumer onScroll;
         private int lastScroll;
 
@@ -1526,7 +1532,7 @@ public class FrequencyScreen extends AbstractContainerScreen<FrequencyMenu> {
             sync(); return handled;
         }
         @Override protected void renderWidget(GuiGraphics g, int mx, int my, float partialTick) {
-            SmallScrollbarTrack.draw(g, delegate, 0, 0);
+            SmallScrollbarTrack.draw(g, delegate.getBounds(), 0, 0);
             delegate.drawForegroundLayer(g, delegate.getBounds(), new Point(mx, my));
         }
         @Override public boolean mouseClicked(double x, double y, int button) {

@@ -6,13 +6,15 @@
 
 package com.moakiee.ae2lt.client.tianshu;
 
-import appeng.api.config.ActionItems;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.client.Point;
 import appeng.client.gui.Icon;
+import appeng.api.config.ActionItems;
 import appeng.client.gui.WidgetContainer;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.ToggleButton;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
@@ -20,26 +22,33 @@ import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.inventory.Slot;
 
 final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 0, 124, 66);
+    private static final SpriteTexture BG =
+            PATTERN_MODES_ATLAS.slice(0, 0, 124, 66);
+    private static final ColorRectTexture FLUID_SUBSTITUTION_HIGHLIGHT = new ColorRectTexture(0xFF7AC25F);
 
-    private final ActionButton clearButton;
-    private final ToggleButton substitutionsButton;
-    private final ToggleButton fluidSubstitutionsButton;
+    private final LdlibAe2Button clearButton;
+    private final LdlibAe2Button substitutionsButton;
+    private final LdlibAe2Button fluidSubstitutionsButton;
+    private final UIElement[] fluidHighlights;
 
     TianshuCraftingEncodingPanel(
             TianshuPatternEncodingTermScreen<?> screen,
             WidgetContainer widgets) {
-        super(screen, widgets);
+        super(screen, widgets, BG);
+        fluidHighlights = new UIElement[menu.getCraftingGridSlots().length];
+        for (int i = 0; i < fluidHighlights.length; i++) {
+            var highlight = new UIElement().setAllowHitTest(false).setVisible(false)
+                    .style(style -> style.background(FLUID_SUBSTITUTION_HIGHLIGHT));
+            fluidHighlights[i] = highlight;
+            panelRoot.addChild(LdlibScreens.at(highlight, 0, 0, 16, 16));
+        }
 
-        clearButton = new ActionButton(ActionItems.S_CLOSE, action -> menu.clear());
-        clearButton.setHalfSize(true);
-        clearButton.setDisableBackground(true);
+        clearButton = LdlibAe2Button.small(Icon.S_CLEAR, ActionItems.S_CLOSE, menu::clear);
         widgets.add("craftingClearPattern", clearButton);
 
-        substitutionsButton = createCraftingSubstitutionButton();
+        substitutionsButton = createItemSubstitutionButton("craftingSubstitutions");
         fluidSubstitutionsButton = createCraftingFluidSubstitutionButton();
     }
 
@@ -53,64 +62,35 @@ final class TianshuCraftingEncodingPanel extends TianshuEncodingModePanel {
         return GuiText.CraftingPattern.text();
     }
 
-    private ToggleButton createCraftingSubstitutionButton() {
-        var button = new ToggleButton(
-                Icon.S_SUBSTITUTION_ENABLED,
-                Icon.S_SUBSTITUTION_DISABLED,
-                menu::setSubstitute);
-        button.setHalfSize(true);
-        button.setDisableBackground(true);
-        button.setTooltipOn(List.of(
-                ButtonToolTips.SubstitutionsOn.text(),
-                ButtonToolTips.SubstitutionsDescEnabled.text()));
-        button.setTooltipOff(List.of(
-                ButtonToolTips.SubstitutionsOff.text(),
-                ButtonToolTips.SubstitutionsDescDisabled.text()));
-        widgets.add("craftingSubstitutions", button);
-        return button;
-    }
-
-    private ToggleButton createCraftingFluidSubstitutionButton() {
-        var button = new ToggleButton(
-                Icon.S_FLUID_SUBSTITUTION_ENABLED,
-                Icon.S_FLUID_SUBSTITUTION_DISABLED,
-                menu::setSubstituteFluids);
-        button.setHalfSize(true);
-        button.setDisableBackground(true);
-        button.setTooltipOn(List.of(
-                ButtonToolTips.FluidSubstitutions.text(),
-                ButtonToolTips.FluidSubstitutionsDescEnabled.text()));
-        button.setTooltipOff(List.of(
-                ButtonToolTips.FluidSubstitutions.text(),
-                ButtonToolTips.FluidSubstitutionsDescDisabled.text()));
+    private LdlibAe2Button createCraftingFluidSubstitutionButton() {
+        var label = ButtonToolTips.FluidSubstitutions.text();
+        var enabled = List.<Component>of(label, ButtonToolTips.FluidSubstitutionsDescEnabled.text());
+        var disabled = List.<Component>of(label, ButtonToolTips.FluidSubstitutionsDescDisabled.text());
+        var button = LdlibAe2Button.bareIcon(8,
+                () -> menu.substituteFluids ? Icon.S_FLUID_SUBSTITUTION_ENABLED : Icon.S_FLUID_SUBSTITUTION_DISABLED,
+                label, () -> menu.setSubstituteFluids(!menu.substituteFluids),
+                () -> menu.substituteFluids ? enabled : disabled);
         widgets.add("craftingFluidSubstitutions", button);
         return button;
     }
 
     @Override
     public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 8, bounds.getY() + bounds.getHeight() - 165).blit(graphics);
-
         var absoluteMouseX = bounds.getX() + mouse.getX();
         var absoluteMouseY = bounds.getY() + mouse.getY();
-        if (menu.substituteFluids
-                && fluidSubstitutionsButton.isMouseOver(absoluteMouseX, absoluteMouseY)) {
-            for (var slotIndex : menu.slotsSupportingFluidSubstitution) {
-                drawSlotGreenBackground(bounds, graphics, menu.getCraftingGridSlots()[slotIndex]);
+        boolean showHighlights = menu.substituteFluids
+                && fluidSubstitutionsButton.isMouseOver(absoluteMouseX, absoluteMouseY);
+        var slots = menu.getCraftingGridSlots();
+        for (int i = 0; i < fluidHighlights.length; i++) {
+            var highlight = fluidHighlights[i];
+            boolean show = showHighlights && menu.slotsSupportingFluidSubstitution.contains(i);
+            highlight.setVisible(show);
+            if (show) {
+                var slot = slots[i];
+                highlight.layout(layout -> layout.left(slot.x - x).top(slot.y - y));
             }
         }
-    }
-
-    private void drawSlotGreenBackground(Rect2i bounds, GuiGraphics graphics, Slot slot) {
-        int slotX = bounds.getX() + slot.x;
-        int slotY = bounds.getY() + slot.y;
-        graphics.fill(slotX, slotY, slotX + 16, slotY + 16, 0xFF7AC25F);
-    }
-
-    @Override
-    public void updateBeforeRender() {
-        substitutionsButton.setState(menu.substitute);
-        fluidSubstitutionsButton.setState(menu.substituteFluids);
+        super.drawBackgroundLayer(graphics, bounds, mouse);
     }
 
     @Override

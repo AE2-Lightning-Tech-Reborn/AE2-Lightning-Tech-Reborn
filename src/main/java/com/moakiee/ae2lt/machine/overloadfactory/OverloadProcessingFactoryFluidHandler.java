@@ -4,12 +4,13 @@ import java.util.Objects;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 public final class OverloadProcessingFactoryFluidHandler implements IFluidHandler {
-    private final NotifyingFluidTank inputTank;
-    private final NotifyingFluidTank outputTank;
+    private final FluidTank inputTank;
+    private final FluidTank outputTank;
 
-    public OverloadProcessingFactoryFluidHandler(NotifyingFluidTank inputTank, NotifyingFluidTank outputTank) {
+    public OverloadProcessingFactoryFluidHandler(FluidTank inputTank, FluidTank outputTank) {
         this.inputTank = Objects.requireNonNull(inputTank, "inputTank");
         this.outputTank = Objects.requireNonNull(outputTank, "outputTank");
     }

@@ -16,8 +16,8 @@ final class TianshuUploadAliasConfirmScreen<M extends MEStorageMenu> extends Tia
     TianshuUploadAliasConfirmScreen(AEBaseScreen<M> parent, Component message, String action, Runnable accepted) {
         super(parent, "/screens/tianshu_upload_alias_confirm.json", "confirm");
         this.message = message;
-        cancel = widgets.addButton("cancel", text("cancel"), this::onClose);
-        confirm = widgets.addButton("confirm", text(action), () -> { returnToParent(); accepted.run(); });
+        cancel = addTextButton("cancel", text("cancel"), this::onClose);
+        confirm = addTextButton("confirm", text(action), () -> { returnToParent(); accepted.run(); });
     }
 
     @Override

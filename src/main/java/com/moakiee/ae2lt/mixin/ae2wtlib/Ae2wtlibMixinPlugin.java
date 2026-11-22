@@ -33,7 +33,8 @@ public final class Ae2wtlibMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (mixinClassName.endsWith(".WTMenuHostQuantumBridgeMixin")) {
+        if (mixinClassName.endsWith(".WTMenuHostQuantumBridgeMixin")
+                || mixinClassName.endsWith(".WirelessUpgradesScrollbarMixin")) {
             return ae2wtlibApiPresent;
         }
         return ae2wtlibPresent;

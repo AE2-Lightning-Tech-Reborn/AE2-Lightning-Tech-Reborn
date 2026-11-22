@@ -1,11 +1,11 @@
 package com.moakiee.ae2lt.integration.emi;
 
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import com.moakiee.ae2lt.blockentity.CrystalCatalyzerBlockEntity;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -29,7 +29,9 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addTexture(TEXTURE, 0, 0, WIDTH, 62, 22, 14);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .texture(TEXTURE, 0, 0, WIDTH, 62, 22, 14));
+
         var fluidInput = recipe.fluidInput();
         var fluidSlot = widgets.addTank(fluid, 4, 4, 16, 53, Math.max(1, fluidInput.getAmount()))
                 .drawBack(false)
@@ -50,77 +52,41 @@ final class EmiCrystalCatalyzerRecipe extends EmiBackedRecipe<CrystalCatalyzerRe
                             perInstance));
         }
 
-        int matrixMultiplier = CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER;
         EmiRecipeWidgets.addLargeStackSlot(widgets, outputs.getFirst(), 95, 16)
                 .drawBack(false)
                 .recipeContext(this)
                 .appendTooltip(Component.translatable(
                         "jei.ae2lt.crystal_catalyzer.output_parallel"));
 
-        widgets.addAnimatedTexture(
-                TEXTURE,
-                52,
-                19,
-                35,
-                10,
-                176,
-                18,
-                recipe.mode() == Mode.CRYSTAL ? 1_000 : 2_000,
-                true,
-                false,
-                false);
-
         // Keep the status lines inside the panel when EMI clamps its height.
         boolean compactText = widgets.getHeight() < HEIGHT;
         int firstLineY = compactText ? 60 : 64;
         int lineSpacing = compactText ? 8 : 10;
-
-        statusText(
-                widgets,
-                Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.energyPerCycle())),
-                firstLineY,
-                compactText);
-        statusText(
-                widgets,
-                Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.time",
-                        Component.translatable(recipe.mode().translationKey()),
-                        recipe.mode() == Mode.CRYSTAL ? "1s" : "2s"),
-                firstLineY + lineSpacing,
-                compactText);
-        statusText(
-                widgets,
-                Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.lightning",
-                        recipe.lightningCost(),
-                        EmiRecipeWidgets.tierName(recipe.lightningTier())),
-                firstLineY + lineSpacing * 2,
-                compactText);
-        statusText(
-                widgets,
-                Component.translatable(
-                        "jei.ae2lt.crystal_catalyzer.matrix_note",
-                        matrixMultiplier),
-                firstLineY + lineSpacing * 3,
-                compactText);
+        var decor = EmiRecipeWidgets.decor(widgets)
+                .horizontalRevealWallClock(TEXTURE, 52, 19, 35, 10, 176, 18,
+                        recipe.mode() == Mode.CRYSTAL ? 1_000 : 2_000);
+        statusText(decor, Component.translatable(
+                "jei.ae2lt.crystal_catalyzer.energy",
+                EmiRecipeWidgets.compactEnergy(recipe.energyPerCycle())), firstLineY, compactText);
+        statusText(decor, Component.translatable(
+                "jei.ae2lt.crystal_catalyzer.time",
+                Component.translatable(recipe.mode().translationKey()),
+                recipe.mode() == Mode.CRYSTAL ? "1s" : "2s"), firstLineY + lineSpacing, compactText);
+        statusText(decor, Component.translatable(
+                "jei.ae2lt.crystal_catalyzer.lightning",
+                recipe.lightningCost(),
+                EmiRecipeWidgets.tierName(recipe.lightningTier())), firstLineY + lineSpacing * 2, compactText);
+        statusText(decor, Component.translatable(
+                "jei.ae2lt.crystal_catalyzer.matrix_note",
+                CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER), firstLineY + lineSpacing * 3, compactText);
+        EmiRecipeWidgets.addDecor(widgets, decor);
     }
 
-    private static void statusText(WidgetHolder widgets, Component text, int y, boolean compact) {
-        if (!compact) {
-            EmiRecipeWidgets.centeredText(widgets, text, WIDTH / 2, y);
-            return;
+    private static void statusText(RecipeDecor decor, Component text, int y, boolean compact) {
+        if (compact) {
+            decor.scaledCenteredText(text, y, 8, EmiRecipeWidgets.TEXT_COLOR, 0.8f);
+        } else {
+            decor.centeredText(text, y, EmiRecipeWidgets.TEXT_COLOR);
         }
-
-        widgets.addDrawable(0, y, WIDTH, 8, (graphics, mouseX, mouseY, delta) -> {
-            var font = Minecraft.getInstance().font;
-            float scale = 0.8f;
-            graphics.pose().pushPose();
-            graphics.pose().scale(scale, scale, 1);
-            int x = Math.round((WIDTH / 2f) / scale - font.width(text) / 2f);
-            graphics.drawString(font, text, x, 0, EmiRecipeWidgets.TEXT_COLOR, false);
-            graphics.pose().popPose();
-        });
     }
 }

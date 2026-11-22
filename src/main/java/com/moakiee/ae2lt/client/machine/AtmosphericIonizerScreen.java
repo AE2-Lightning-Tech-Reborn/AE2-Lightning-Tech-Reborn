@@ -1,21 +1,20 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 
 import java.util.List;
 
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.ScreenStyle;
 
-import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.AtmosphericIonizerMenu;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-public class AtmosphericIonizerScreen extends AEBaseScreen<AtmosphericIonizerMenu> {
-    private final AtmosphericIonizerEnergyBar energyBar;
+public class AtmosphericIonizerScreen extends LdlibAeScreen<AtmosphericIonizerMenu> {
 
     public AtmosphericIonizerScreen(
             AtmosphericIonizerMenu menu,
@@ -26,10 +25,11 @@ public class AtmosphericIonizerScreen extends AEBaseScreen<AtmosphericIonizerMen
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
 
-        this.energyBar = new AtmosphericIonizerEnergyBar(menu, style.getImage("energyBar"));
-        widgets.add("energyBar", energyBar);
+        widgets.add("energyBar", MachineGauges.energyBar(style.getImage("energyBar"),
+                menu::getConsumedEnergy, menu::getTotalEnergyRequired,
+                "ae2lt.gui.atmospheric_ionizer.energy.tooltip"));
 
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
+        widgets.add("lightningStatus", MachineGauges.statusIcon(() -> List.of(
                 LightningStatusLines.title(),
                 menu.getStatusMessage(),
                 LightningStatusLines.progress(menu.getProgress()),

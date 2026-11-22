@@ -1,7 +1,7 @@
 package com.moakiee.ae2lt.debug;
 
 import appeng.api.orientation.RelativeSide;
-import appeng.client.gui.widgets.ActionButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.menu.MenuOpener;
 import appeng.menu.locator.MenuLocators;
 import com.moakiee.ae2lt.client.machine.*;
@@ -113,7 +113,7 @@ public final class MachineOutputConfigClientProbe {
                     requireHiddenSlots(mc);
                     mc.resizeDisplay();
                     requireHiddenSlots(mc);
-                    require(output.children().stream().filter(OverloadProcessingFactoryOutputButton.class::isInstance).count() == 6,
+                    require(output.children().stream().filter(MachineOutputSideButton.class::isInstance).count() == 6,
                             "Expected six output side buttons");
                     previousFront = menu(mc).isOutputSideEnabled(RelativeSide.FRONT);
                     frontButton(mc).onPress();
@@ -125,7 +125,7 @@ public final class MachineOutputConfigClientProbe {
                             + (previousFront ? "disabled" : "enabled"));
                     require(frontButton(mc).getTooltipMessage().get(1).getString().equals(expected.getString()), "Wrong side tooltip");
                     Screenshot.grab(mc.gameDirectory, "machine-output-" + machine + ".png", mc.getMainRenderTarget(), ignored -> {});
-                    mc.screen.children().stream().filter(ActionButton.class::isInstance).map(ActionButton.class::cast)
+                    mc.screen.children().stream().filter(LdlibAe2Button.class::isInstance).map(LdlibAe2Button.class::cast)
                             .filter(button -> button.getMessage().getString().equals(Component.translatable(
                                     "ae2lt.gui." + CLEAR_KEYS[machine] + ".output_side.clear").getString()))
                             .findFirst().orElseThrow().onPress();
@@ -162,9 +162,9 @@ public final class MachineOutputConfigClientProbe {
         }
     }
 
-    private static OverloadProcessingFactoryOutputButton frontButton(Minecraft mc) {
-        return mc.screen.children().stream().filter(OverloadProcessingFactoryOutputButton.class::isInstance)
-                .map(OverloadProcessingFactoryOutputButton.class::cast)
+    private static MachineOutputSideButton frontButton(Minecraft mc) {
+        return mc.screen.children().stream().filter(MachineOutputSideButton.class::isInstance)
+                .map(MachineOutputSideButton.class::cast)
                 .filter(button -> button.getTooltipMessage().getFirst().getString().equals(
                         Component.translatable("gui.tooltips.ae2.SideFront").getString())).findFirst().orElseThrow();
     }

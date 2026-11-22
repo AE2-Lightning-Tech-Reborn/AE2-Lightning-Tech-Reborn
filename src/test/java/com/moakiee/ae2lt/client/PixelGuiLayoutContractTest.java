@@ -27,8 +27,7 @@ final class PixelGuiLayoutContractTest {
                 "src/main/java/com/moakiee/ae2lt/menu/OverloadDeviceWorkbenchMenu.java"));
 
         assertTrue(screen.contains("\"textures/gui/overload_workplace_gui.png\""));
-        assertTrue(screen.contains("TEXTURE_WIDTH = 320"));
-        assertTrue(screen.contains("TEXTURE_HEIGHT = 256"));
+        assertTrue(screen.contains("new LdlibStyleSprite(TEXTURE, 320, 256)"));
         assertTrue(screen.contains("GUI_WIDTH = 176"));
         assertTrue(screen.contains("GUI_HEIGHT = 245"));
         assertTrue(screen.contains("AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)"));
@@ -146,7 +145,7 @@ final class PixelGuiLayoutContractTest {
                 "src/main/resources/assets/ae2/screens/tianshu_upload_targets.json"));
 
         assertTrue(screen.contains("\"textures/gui/tianshu_upload_targets.png\""));
-        assertTrue(screen.contains("TEXTURE_SIZE = 256"));
+        assertTrue(screen.contains("new LdlibStyleSprite(TEXTURE, 256, 256)"));
         assertTrue(screen.contains("GUI_WIDTH = 190"));
         assertTrue(screen.contains("GUI_HEADER_HEIGHT = 33"));
         assertTrue(screen.contains("GUI_FOOTER_HEIGHT = 18"));
@@ -155,7 +154,7 @@ final class PixelGuiLayoutContractTest {
         assertTrue(screen.contains("ROW_TEXTURE_WIDTH = 158"));
         assertTrue(screen.contains("ROW_NORMAL_TEXTURE_Y = 222"));
         assertTrue(screen.contains("ROW_SELECTED_TEXTURE_Y = 239"));
-        assertTrue(screen.contains("Scrollbar.SMALL"));
+        assertTrue(screen.contains("LdlibRowScroller.add("));
         assertTrue(screen.contains("visibleRows * ROW_HEIGHT - 1"));
         assertTrue(screen.contains("HIDDEN_SLOT_POS = -10_000"));
         assertTrue(screen.contains("protected void updateBeforeRender()"));
@@ -188,7 +187,7 @@ final class PixelGuiLayoutContractTest {
                 "src/main/resources/assets/ae2/screens/tianshu_overload_pattern_config.json"));
 
         assertTrue(layout.contains("\"textures/gui/tianshu_pattern_config.png\""));
-        assertTrue(layout.contains("TEXTURE_SIZE = 256"));
+        assertTrue(layout.contains("new LdlibStyleSprite(TEXTURE, 256, 256)"));
         assertTrue(layout.contains("GUI_WIDTH = 190"));
         assertTrue(layout.contains("HEADER_HEIGHT = 32"));
         assertTrue(layout.contains("ROW_HEIGHT = 25"));
@@ -200,7 +199,7 @@ final class PixelGuiLayoutContractTest {
         assertTrue(layout.contains("SCROLLBAR_HEIGHT = 129"));
 
         for (String screen : List.of(advanced, overload)) {
-            assertTrue(screen.contains("TianshuPatternConfigLayout.drawBackground"));
+            assertTrue(screen.contains("TianshuPatternConfigLayout.createBackground()"));
             assertFalse(screen.contains("graphics.fill(offsetX"));
         }
 
@@ -244,18 +243,18 @@ final class PixelGuiLayoutContractTest {
         assertFalse(terminal.contains("TianshuMaintenanceIntroScreen"));
         assertTrue(menu.contains("lastMaintenanceSummaryTick != Integer.MIN_VALUE"));
 
-        assertTrue(overview.contains("widgets.addTextField(\"search\")"));
-        assertTrue(overview.contains("widgets.addScrollBar(\"scrollbar\", Scrollbar.SMALL)"));
-        assertTrue(overview.contains("widgets.addButton("));
-        assertTrue(overview.contains("new TabButton("));
-        assertTrue(rule.contains("widgets.addTextField("));
-        assertTrue(rule.contains("widgets.addCheckbox("));
-        assertTrue(rule.contains("widgets.addScrollBar(\"scrollbar\", Scrollbar.SMALL)"));
-        assertTrue(rule.contains("widgets.addButton("));
-        assertTrue(overview.contains("widgets.addButton(\"delete\""));
+        assertTrue(overview.contains("LdlibAe2TextField.add(widgets, style, \"search\")"));
+        assertTrue(overview.contains("LdlibRowScroller.add(widgets, \"scrollbar\")"));
+        assertTrue(overview.contains("LdlibAe2Button.addText(widgets, style, "));
+        assertTrue(overview.contains("LdlibAe2Button.back("));
+        assertTrue(rule.contains("LdlibAe2TextField.add(widgets, style, "));
+        assertTrue(rule.contains("LdlibAe2Checkbox.add(widgets, style, "));
+        assertTrue(rule.contains("LdlibRowScroller.add(widgets, \"scrollbar\")"));
+        assertTrue(rule.contains("LdlibAe2Button.addText(widgets, style, "));
+        assertTrue(overview.contains("LdlibAe2Button.addText(widgets, style, \"delete\""));
         assertTrue(overview.contains(
                 "menu.sendGlobalReserve(entry.key(), 0L, entry.globalMode())"));
-        assertTrue(rule.contains("widgets.addButton(\"delete\""));
+        assertTrue(rule.contains("LdlibAe2Button.addText(widgets, style, \"delete\""));
         assertTrue(rule.contains("if (global) globalAmount = 0L"));
         assertTrue(rule.contains("else ruleAmount = 0L"));
 
@@ -272,7 +271,8 @@ final class PixelGuiLayoutContractTest {
         assertTrue(overviewStyle.contains("\"srcRect\": [0, 0, 207, 248]"));
         assertTrue(overviewStyle.contains("\"scrollbar\": { \"left\": 192, \"top\": 50"));
         assertTrue(overview.contains("LIST_RIGHT = 187"));
-        assertTrue(overview.contains("LIST_CENTER_X = (LIST_LEFT + LIST_RIGHT) / 2"));
+        assertTrue(overview.contains("LIST_LEFT, EMPTY_TEXT_Y, LIST_RIGHT - LIST_LEFT"));
+        assertTrue(overview.contains("emptyMessage.textStyle(style -> style.textAlignHorizontal(Horizontal.CENTER)"));
         assertTrue(overview.contains("CONTENT_TEXT_LEFT = 37"));
         assertTrue(overview.contains("STOCK_COLUMN_RIGHT = 143"));
         assertTrue(overview.contains("VALUE_COLUMN_RIGHT = 184"));
@@ -310,6 +310,18 @@ final class PixelGuiLayoutContractTest {
 
         assertTrue(overview.contains("\"/screens/tianshu_reserve_edit_expanded.json\""));
         assertTrue(rule.contains("\"/screens/tianshu_reserve_edit_expanded.json\""));
+    }
+
+    @Test
+    void machineInputTransferKeepsItsToolbarPosition() throws Exception {
+        Path screens = Path.of("src/main/java/com/moakiee/ae2lt/client/machine");
+        for (String name : List.of("LightningAssemblyChamberScreen", "LightningSimulationChamberScreen",
+                "OverloadProcessingFactoryScreen", "MiningFactoryScreen")) {
+            String screen = Files.readString(screens.resolve(name + ".java"));
+            int transfer = screen.indexOf("addToLeftToolbar(new InputTransferButton(menu))");
+            int export = screen.indexOf("addToLeftToolbar(new MachineAutoExportButton(");
+            assertTrue(transfer >= 0 && export > transfer, name + " must put input transfer before auto-export");
+        }
     }
 
     private static void assertSprite(Path texture, int expectedWidth, int expectedHeight) throws Exception {

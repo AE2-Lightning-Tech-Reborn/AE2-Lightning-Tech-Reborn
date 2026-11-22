@@ -1,5 +1,7 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
+
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.core.Direction;
@@ -9,24 +11,22 @@ import net.minecraft.world.level.ItemLike;
 import appeng.api.orientation.RelativeSide;
 import appeng.blockentity.AEBaseBlockEntity;
 import appeng.blockentity.networking.CableBusBlockEntity;
-import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.TabButton;
+import appeng.client.gui.AEBaseScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.menu.MachineOutputConfigMenu;
 import appeng.menu.AEBaseMenu;
-import appeng.client.gui.AEBaseScreen;
 
 public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfigMenu, P extends AEBaseScreen<M>>
-        extends AESubScreen<M, P> {
-    private final OverloadProcessingFactoryOutputButton frontButton;
-    private final OverloadProcessingFactoryOutputButton backButton;
-    private final OverloadProcessingFactoryOutputButton leftButton;
-    private final OverloadProcessingFactoryOutputButton rightButton;
-    private final OverloadProcessingFactoryOutputButton topButton;
-    private final OverloadProcessingFactoryOutputButton bottomButton;
+        extends LdlibAeSubScreen<M, P> {
     private final String buttonTooltipPrefix;
+    private final MachineOutputSideButton frontButton;
+    private final MachineOutputSideButton backButton;
+    private final MachineOutputSideButton leftButton;
+    private final MachineOutputSideButton rightButton;
+    private final MachineOutputSideButton topButton;
+    private final MachineOutputSideButton bottomButton;
 
     public MachineOutputConfigScreen(P parent, Component label) {
         this(parent, label, "/screens/overload_processing_output_config.json",
@@ -38,13 +38,9 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
         super(parent, stylePath);
         this.buttonTooltipPrefix = buttonTooltipPrefix;
 
-        widgets.add("return", new TabButton(Icon.BACK, label, btn -> returnToParent()));
+        widgets.add("return", LdlibAe2Button.back(label, this::returnToParent));
 
-        var clear = new ActionButton(appeng.api.config.ActionItems.S_CLOSE, button -> menu.clientClearOutputSides());
-        clear.setHalfSize(true);
-        clear.setDisableBackground(true);
-        clear.setMessage(Component.translatable(clearKey));
-        widgets.add("clear", clear);
+        widgets.add("clear", LdlibAe2Button.clear(Component.translatable(clearKey), menu::clientClearOutputSides));
 
         this.frontButton = addSideButton("front", RelativeSide.FRONT, "gui.tooltips.ae2.SideFront");
         this.backButton = addSideButton("back", RelativeSide.BACK, "gui.tooltips.ae2.SideBack");
@@ -98,10 +94,11 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    private OverloadProcessingFactoryOutputButton addSideButton(String widgetId, RelativeSide side, String labelKey) {
-        var button = new OverloadProcessingFactoryOutputButton(
+    private MachineOutputSideButton addSideButton(String widgetId, RelativeSide side, String labelKey) {
+        var button = new MachineOutputSideButton(
                 Component.translatable(labelKey),
-                press -> menu.clientToggleOutputSide(side), buttonTooltipPrefix);
+                buttonTooltipPrefix,
+                () -> menu.clientToggleOutputSide(side));
         widgets.add(widgetId, button);
         return button;
     }
@@ -118,7 +115,7 @@ public class MachineOutputConfigScreen<M extends AEBaseMenu & MachineOutputConfi
         }
     }
 
-    private OverloadProcessingFactoryOutputButton getButton(RelativeSide side) {
+    private MachineOutputSideButton getButton(RelativeSide side) {
         return switch (side) {
             case FRONT -> frontButton;
             case BACK -> backButton;

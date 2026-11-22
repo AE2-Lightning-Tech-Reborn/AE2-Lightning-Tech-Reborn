@@ -1,56 +1,61 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.moakiee.ae2lt.client.ldlib.BackgroundLayer;
+
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.math.Size;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.TabButton;
+import appeng.client.gui.style.PaletteColor;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarHost;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
 import appeng.menu.SlotSemantics;
 import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.logic.tianshu.terminal.ProcessingPatternEncodingType;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
-import com.mojang.datafixers.util.Pair;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.pedroksl.advanced_ae.AdvancedAE;
-import net.pedroksl.advanced_ae.client.gui.widgets.DirectionInputButton;
 import net.pedroksl.advanced_ae.common.definitions.AAEText;
 
 /**
  * Popup arming the next processing encode as an AdvancedAE pattern.
- * Reuses AdvancedAE's direction widgets; only construct when AdvancedAE is loaded.
+ * Uses AdvancedAE's direction textures and translations.
  */
 final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingTermMenu>
-        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
-    private static final int ROW_CONTENT_Y_OFFSET = 4;
+        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> implements LdlibToolbarHost {
     private static final int BUTTONS_LEFT = 34;
     private static final int BUTTONS_Y_OFFSET = 5;
     private static final int DIR_BUTTON_WIDTH = 12;
     private static final int DIR_BUTTON_HEIGHT = 14;
-    private static final int DIR_COUNT = 7;
+    private static final Direction[] DIRECTIONS = {
+            null, Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.UP, Direction.DOWN
+    };
 
-    private final Scrollbar scrollbar;
+    private final BackgroundLayer background = TianshuPatternConfigLayout.createBackground();
+    private final LdlibRowScroller scrollbar;
     private final List<Row> rows = new ArrayList<>();
-    private final List<DirectionInputButton[]> rowButtons = new ArrayList<>();
+    private final DirectionButton[][] rowButtons =
+            new DirectionButton[TianshuPatternConfigLayout.VISIBLE_ROWS][DIRECTIONS.length];
+    private TianshuPatternConfigPreview preview;
 
     TianshuAdvancedPatternConfigScreen(TianshuPatternEncodingTermScreen<M> parent) {
         super(parent, "/screens/tianshu_advanced_pattern_config.json");
         imageWidth = TianshuPatternConfigLayout.GUI_WIDTH;
         imageHeight = TianshuPatternConfigLayout.GUI_HEIGHT;
 
-        widgets.add("button_back", new TabButton(Icon.BACK,
-                Component.translatable("gui.back"), ignored -> returnToParent()));
-        widgets.addButton("save",
+        widgets.add("button_back", LdlibAe2Button.back(Component.translatable("gui.back"), this::returnToParent));
+        LdlibAe2Button.addText(widgets, style, "save",
                 Component.translatable("ae2lt.tianshu.pattern_config.done"), this::confirm);
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "scrollbar");
 
         collectRows();
     }
@@ -69,36 +74,68 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     @Override
-    protected void init() {
-        super.init();
-        rowButtons.clear();
-        for (var row : rows) {
-            var buttons = new DirectionInputButton[DIR_COUNT];
-            for (int i = 0; i < DIR_COUNT; i++) {
-                var button = new DirectionInputButton(0, 0, DIR_BUTTON_WIDTH, DIR_BUTTON_HEIGHT,
-                        directionTextures(i), this::directionPressed);
-                button.setTooltip(Tooltip.create(directionLabel(i)));
-                button.setKey(row.key);
-                button.setIndex(i);
-                button.visible = false;
-                buttons[i] = addRenderableWidget(button);
+    protected void onReturnToParent() {
+        if (preview != null) {
+            preview.onRemoved();
+        }
+        background.onRemoved();
+        super.onReturnToParent();
+    }
+
+    @Override
+    public void removed() {
+        try {
+            if (preview != null) {
+                preview.onRemoved();
             }
-            rowButtons.add(buttons);
+        } finally {
+            try {
+                background.onRemoved();
+            } finally {
+                super.removed();
+            }
+        }
+    }
+
+    @Override
+    protected void init() {
+        for (var row : rowButtons) {
+            for (var button : row) {
+                if (button != null) button.dispose();
+            }
+        }
+        if (preview != null) {
+            preview.onRemoved();
+        }
+        background.onRemoved();
+        super.init();
+        var entries = rows.stream().<TianshuPatternConfigPreview.Entry>map(row ->
+                new TianshuPatternConfigPreview.Slot(row.key)).toList();
+        preview = new TianshuPatternConfigPreview(style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), 0, entries);
+        for (int visible = 0; visible < Math.min(rowButtons.length, rows.size()); visible++) {
+            int visibleIndex = visible;
+            for (int column = 0; column < DIRECTIONS.length; column++) {
+                int directionIndex = column;
+                var button = new DirectionButton(column, () -> selectDirection(visibleIndex, directionIndex));
+                button.setPosition(leftPos + BUTTONS_LEFT + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET
+                                + column * (DIR_BUTTON_WIDTH + 1),
+                        topPos + TianshuPatternConfigLayout.rowY(visible) + BUTTONS_Y_OFFSET);
+                rowButtons[visible][column] = addRenderableWidget(button);
+            }
         }
         scrollbar.setHeight(TianshuPatternConfigLayout.SCROLLBAR_HEIGHT);
         scrollbar.setRange(0, Math.max(0, rows.size() - TianshuPatternConfigLayout.VISIBLE_ROWS), 2);
+        scrollbar.setOnScrollChanged(this::updateDirections);
+        updateDirections();
         setSlotsHidden(SlotSemantics.TOOLBOX, true);
     }
 
-    private void directionPressed(Button pressed) {
-        var button = (DirectionInputButton) pressed;
-        var direction = button.getDirection();
-        int encoded = direction == null ? 0 : direction.ordinal() + 1;
-        for (var row : rows) {
-            if (row.key.equals(button.getKey())) {
-                row.direction = encoded;
-                break;
-            }
+    private void selectDirection(int visible, int column) {
+        int index = scrollbar.getCurrentScroll() + visible;
+        if (index < rows.size()) {
+            var direction = DIRECTIONS[column];
+            rows.get(index).direction = direction == null ? 0 : direction.ordinal() + 1;
+            updateDirections();
         }
     }
 
@@ -125,47 +162,24 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
 
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
-        for (var buttons : rowButtons) {
-            for (var button : buttons) button.visible = false;
-        }
+        preview.render(graphics, mouseX - leftPos, mouseY - topPos, scrollbar.getCurrentScroll());
+    }
+
+    private void updateDirections() {
         int scroll = scrollbar.getCurrentScroll();
-        for (int visible = 0; visible < TianshuPatternConfigLayout.VISIBLE_ROWS; visible++) {
-            int index = scroll + visible;
-            if (index >= rows.size()) break;
-            var row = rows.get(index);
-            int rowY = TianshuPatternConfigLayout.HEADER_HEIGHT
-                    + visible * TianshuPatternConfigLayout.ROW_HEIGHT;
-            graphics.renderItem(row.key.wrapForDisplayOrFilter(),
-                    TianshuPatternConfigLayout.ROW_LEFT + 2
-                            + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET,
-                    rowY + ROW_CONTENT_Y_OFFSET);
-            var buttons = rowButtons.get(index);
-            int highlighted = columnForDirection(row.direction);
-            for (int col = 0; col < DIR_COUNT; col++) {
-                var button = buttons[col];
-                button.setPosition(leftPos + BUTTONS_LEFT
-                                + TianshuPatternConfigLayout.ROW_CONTENT_X_OFFSET
-                                + col * (DIR_BUTTON_WIDTH + 1),
-                        topPos + rowY + BUTTONS_Y_OFFSET);
-                button.setHighlighted(col == highlighted);
-                button.visible = true;
+        for (int visible = 0; visible < Math.min(rowButtons.length, rows.size()); visible++) {
+            var buttons = rowButtons[visible];
+            int highlighted = columnForDirection(rows.get(scroll + visible).direction);
+            for (int col = 0; col < buttons.length; col++) {
+                buttons[col].highlighted = col == highlighted;
             }
-        }
-        if (rows.isEmpty()) {
-            var text = Component.translatable("ae2lt.tianshu.pattern_config.empty");
-            graphics.drawString(font, text,
-                    (TianshuPatternConfigLayout.GUI_WIDTH - font.width(text)) / 2,
-                    TianshuPatternConfigLayout.HEADER_HEIGHT
-                            + (TianshuPatternConfigLayout.VISIBLE_ROWS
-                            * TianshuPatternConfigLayout.ROW_HEIGHT) / 2 - 4,
-                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
         }
     }
 
     @Override
     public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
-        TianshuPatternConfigLayout.drawBackground(graphics, offsetX, offsetY);
+        background.render(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
     }
 
     @Override
@@ -183,30 +197,36 @@ final class TianshuAdvancedPatternConfigScreen<M extends TianshuPatternEncodingT
     }
 
     private static int columnForDirection(int direction) {
-        if (direction <= 0 || direction > 6) return 0;
-        return switch (Direction.values()[direction - 1]) {
-            case NORTH -> 1;
-            case EAST -> 2;
-            case SOUTH -> 3;
-            case WEST -> 4;
-            case UP -> 5;
-            case DOWN -> 6;
-        };
+        for (int column = 1; column < DIRECTIONS.length; column++) {
+            if (DIRECTIONS[column].ordinal() + 1 == direction) return column;
+        }
+        return 0;
     }
 
-    private static Pair<ResourceLocation, ResourceLocation> directionTextures(int index) {
-        var name = switch (index) {
-            case 1 -> "north";
-            case 2 -> "east";
-            case 3 -> "south";
-            case 4 -> "west";
-            case 5 -> "up";
-            case 6 -> "down";
-            default -> "any";
-        };
-        return new Pair<>(
-                AdvancedAE.makeId("textures/guis/" + name + "_button.png"),
-                AdvancedAE.makeId("textures/guis/" + name + "_button_selected.png"));
+    private static final class DirectionButton extends LdlibAe2Button {
+        private boolean highlighted;
+
+        private DirectionButton(int column, Runnable action) {
+            super(DIR_BUTTON_WIDTH, DIR_BUTTON_HEIGHT, directionLabel(column), action);
+            var direction = DIRECTIONS[column];
+            String name = direction == null ? "any" : direction.getName();
+            var normal = texture(name + "_button.png");
+            var selected = texture(name + "_button_selected.png");
+            var face = IGuiTexture.dynamic(() -> highlighted ? selected : normal);
+            control.buttonStyle(style -> style.baseTexture(face).hoverTexture(face).pressedTexture(face));
+            setTooltip(Tooltip.create(getMessage()));
+            setMessage(Component.empty());
+        }
+
+        private static IGuiTexture texture(String file) {
+            return new LdlibStyleSprite(AdvancedAE.makeId("textures/guis/" + file), Size.of(16, 16),
+                    0, 0, DIR_BUTTON_WIDTH, DIR_BUTTON_HEIGHT).full();
+        }
+
+        @Override
+        public boolean isTooltipAreaVisible() {
+            return false;
+        }
     }
 
     private static Component directionLabel(int index) {

@@ -38,8 +38,8 @@ class TianshuMaintainableViewSourceContractTest {
         assertFalse(overview.contains("getParent(), menu.getMaintenanceEditorData()"));
         assertFalse(overview.contains("getParent().requestMaintenanceEditorFor(summary.key())"));
 
-        int clickHandler = overview.indexOf("public boolean mouseClicked");
-        int rulesBranch = overview.indexOf("if (view == View.RULES)", clickHandler);
+        int clickHandler = overview.indexOf("private void openEntry(OverviewEntry entry)");
+        int rulesBranch = overview.indexOf("if (entry.view() == View.RULES)", clickHandler);
         int reservesBranch = overview.indexOf("} else {", rulesBranch);
         assertTrue(clickHandler >= 0 && rulesBranch > clickHandler && reservesBranch > rulesBranch);
         assertFalse(overview.substring(rulesBranch, reservesBranch).contains("returnToParent()"));

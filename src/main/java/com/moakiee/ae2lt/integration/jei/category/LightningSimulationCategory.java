@@ -1,9 +1,10 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +23,6 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
@@ -54,12 +54,10 @@ public class LightningSimulationCategory implements IRecipeCategory<LightningSim
     private static final int HEIGHT = SUBSTITUTION_TEXT_Y + 10;         // 96, with room for the last text line
 
     private final IDrawable icon;
-    private final IDrawable background;
+    private final JeiRecipeDecor<LightningSimulationRecipe> decor = new JeiRecipeDecor<>(LightningSimulationCategory::decor);
 
-    public LightningSimulationCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.get()));
-        this.background = guiHelper.createDrawable(
-                BACKGROUND_TEXTURE, BACKGROUND_U, BACKGROUND_V, BACKGROUND_WIDTH, BACKGROUND_HEIGHT);
+    public LightningSimulationCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.LIGHTNING_SIMULATION_CHAMBER.toStack());
     }
 
     @Override
@@ -112,33 +110,33 @@ public class LightningSimulationCategory implements IRecipeCategory<LightningSim
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        background.draw(guiGraphics);
-        // Do not draw the runtime process overlay in JEI; the background already shows the static chamber.
+        decor.draw(recipe, guiGraphics, mouseX, mouseY);
+    }
 
-        var font = Minecraft.getInstance().font;
-        var energyText = Component.translatable(
-                "jei.ae2lt.lightning_simulation.energy",
-                formatCompactEnergy(recipe.totalEnergy()));
-        int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
-        var lightningText = Component.translatable(
-                "jei.ae2lt.lightning_simulation.lightning",
-                recipe.lightningCost(),
-                Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
+    /** Machine art and info text as an LDLib2 decoration (no live process overlay in JEI). */
+    private static RecipeDecor decor(LightningSimulationRecipe recipe) {
+        var decor = RecipeDecor.of(WIDTH, HEIGHT)
+                .texture(BACKGROUND_TEXTURE, 0, 0, BACKGROUND_WIDTH, BACKGROUND_HEIGHT,
+                        BACKGROUND_U, BACKGROUND_V)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.lightning_simulation.energy",
+                        formatCompactEnergy(recipe.totalEnergy())), ENERGY_TEXT_Y, 0x404040)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.lightning_simulation.lightning",
+                        recipe.lightningCost(),
+                        Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
-                        : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
-        int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+                        : "ae2lt.gui.lightning_simulation.tier.high_voltage")), LIGHTNING_TEXT_Y, 0x404040);
         if (recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE) {
-            var substitutionText = Component.translatable(
+            decor.centeredText(Component.translatable(
                     "jei.ae2lt.lightning_simulation.substitution",
                     LightningSimulationRecipeService.getEquivalentHighVoltageCost(
                             recipe.lightningTier(),
-                            recipe.lightningCost()));
-            int substitutionX = (WIDTH - font.width(substitutionText)) / 2;
-            guiGraphics.drawString(font, substitutionText, substitutionX, SUBSTITUTION_TEXT_Y, 0x404040, false);
+                            recipe.lightningCost())), SUBSTITUTION_TEXT_Y, 0x404040);
         }
+        return decor;
     }
+
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())

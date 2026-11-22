@@ -5,16 +5,20 @@
  */
 package com.moakiee.ae2lt.client.tianshu;
 
-import appeng.api.client.AEKeyRendering;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import appeng.client.gui.Icon;
 import appeng.api.config.ActionItems;
+import appeng.api.client.AEKeyRendering;
 import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.GenericStack;
 import appeng.client.Point;
 import appeng.client.gui.ICompositeWidget;
 import appeng.client.gui.WidgetContainer;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.Scrollbar;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
 import com.moakiee.ae2lt.integration.useless.UselessModCompat;
 import com.moakiee.ae2lt.logic.tianshu.terminal.OmniversalPatternDraft;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
@@ -30,14 +34,20 @@ import net.minecraft.network.chat.Component;
 /** Editable inputs, outputs and mold filters, validated together when encoding. */
 final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
     private static final int ROWS = 3;
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 70, 124, 66);
-    private static final Blitter ARROW_COVER = Blitter.texture("guis/pattern_modes.png").src(73, 77, 23, 16);
-    private static final Blitter MOLD_SLOT = Blitter.texture("guis/pattern_modes.png").src(15, 76, 18, 18);
+    private static final int WIDTH = 124;
+    private static final int HEIGHT = 66;
+    private static final SpriteTexture BG =
+            TianshuEncodingModePanel.PATTERN_MODES_ATLAS.slice(0, 70, 124, 66);
+    private static final SpriteTexture ARROW_COVER =
+            TianshuEncodingModePanel.PATTERN_MODES_ATLAS.slice(73, 77, 23, 16);
+    private static final SpriteTexture MOLD_SLOT =
+            TianshuEncodingModePanel.PATTERN_MODES_ATLAS.slice(15, 76, 18, 18);
     private final TianshuPatternEncodingTermMenu menu;
     private final TianshuPatternEncodingTermScreen<?> screen;
-    private final Scrollbar scrollbar;
-    private final ActionButton clearButton;
-    private final ActionButton cycleOutputButton;
+    private final LdlibRowScroller scrollbar;
+    private final ModularUI panelUi;
+    private final LdlibAe2Button clearButton;
+    private final LdlibAe2Button cycleOutputButton;
     private OmniversalPatternDraft observedDraft;
     private long observedGeneration = Long.MIN_VALUE;
     private UselessModCompat.Preview preview = UselessModCompat.Preview.EMPTY;
@@ -49,23 +59,20 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
                                   WidgetContainer widgets) {
         this.screen = screen;
         menu = screen.getMenu();
-        scrollbar = widgets.addScrollBar("omniversalScrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "omniversalScrollbar");
         scrollbar.setCaptureMouseWheel(false);
         scrollbar.setRange(0, menu.getOmniversalInputSlots().length / 3 - ROWS, 1);
-        clearButton = new ActionButton(ActionItems.S_CLOSE, menu::clearOmniversalDraft);
-        clearButton.setHalfSize(true);
-        clearButton.setDisableBackground(true);
+        clearButton = LdlibAe2Button.small(Icon.S_CLEAR, ActionItems.S_CLOSE, menu::clearOmniversalDraft);
         widgets.add("omniversalClear", clearButton);
-        cycleOutputButton = new ActionButton(ActionItems.S_CYCLE_PROCESSING_OUTPUT,
-                action -> menu.cycleOmniversalOutput());
-        cycleOutputButton.setHalfSize(true);
-        cycleOutputButton.setDisableBackground(true);
+        cycleOutputButton = LdlibAe2Button.small(Icon.S_CYCLE,
+                ActionItems.S_CYCLE_PROCESSING_OUTPUT, menu::cycleOmniversalOutput);
         widgets.add("omniversalCycleOutput", cycleOutputButton);
+        panelUi = buildPanel();
     }
 
     @Override public void setPosition(Point position) { x = position.getX(); y = position.getY(); }
     @Override public void setSize(int width, int height) { }
-    @Override public Rect2i getBounds() { return new Rect2i(x, y, 124, 66); }
+    @Override public Rect2i getBounds() { return new Rect2i(x, y, WIDTH, HEIGHT); }
     @Override public boolean isVisible() { return visible; }
 
     void setVisible(boolean visible) {
@@ -111,34 +118,65 @@ final class TianshuOmniversalEncodingPanel implements ICompositeWidget {
         }
     }
 
+    private ModularUI buildPanel() {
+        var root = new UIElement();
+        root.addChildren(sprite(BG, -1, 1, WIDTH, HEIGHT), sprite(ARROW_COVER, 72, 26, 23, 16));
+        for (int row = 0; row < ROWS; row++) {
+            root.addChild(sprite(MOLD_SLOT, columnX(3) - 1, 7 + row * 18, 18, 18));
+        }
+        var ui = LdlibScreens.localLayer(root, WIDTH, HEIGHT);
+        ui.setDrawTooltips(false);
+        return ui;
+    }
+
+    private static UIElement sprite(SpriteTexture texture, int x, int y, int width, int height) {
+        var element = new UIElement().setAllowHitTest(false).style(style -> style.background(texture));
+        return LdlibScreens.at(element, x, y, width, height);
+    }
+
     @Override
     public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        int px = bounds.getX() + x, py = bounds.getY() + y;
-        BG.dest(px - 1, py + 1).blit(graphics);
-        ARROW_COVER.dest(px - 1 + 73, py + 1 + 25).blit(graphics);
-        for (int row = 0; row < ROWS; row++) {
-            MOLD_SLOT.dest(px + columnX(3) - 1, py + 7 + row * 18).blit(graphics);
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(bounds.getX() + x, bounds.getY() + y, 0);
+            panelUi.getWidget().render(graphics, mouse.getX() - x, mouse.getY() - y, 0);
+        } finally {
+            pose.popPose();
         }
     }
 
     List<Component> tooltipAt(int mouseX, int mouseY) {
-        if (!visible || mouseX < x || mouseX >= x + 124 || mouseY < y || mouseY >= y + 66) return null;
-        int row = (mouseY - y - 8) / 18;
-        if (mouseY >= y + 8 && row < ROWS) {
+        int localX = mouseX - x;
+        int localY = mouseY - y;
+        if (!visible || localX < 0 || localX >= WIDTH || localY < 0 || localY >= HEIGHT) {
+            return List.of();
+        }
+        if (localY >= 8 && localY < 8 + ROWS * 18) {
+            int row = (localY - 8) / 18;
             for (int column = 0; column < 5; column++) {
-                if (mouseX < x + columnX(column) || mouseX >= x + columnX(column) + 16) continue;
-                if (column != 3) return null; // AE2 supplies the editable fake-slot tooltip.
-                var stack = moldAt(scrollbar.getCurrentScroll() + row);
-                if (stack != null) {
-                    var lines = new ArrayList<>(AEKeyRendering.getTooltip(stack.what()));
-                    lines.add(Component.literal(stack.what().formatAmount(stack.amount(), AmountFormat.FULL))
-                            .withStyle(ChatFormatting.GRAY));
-                    if (column == 3) lines.add(Component.translatable("ae2lt.tianshu.omniversal.molds.tooltip")
-                            .withStyle(ChatFormatting.GOLD));
-                    return lines;
+                int left = columnX(column);
+                if (localX >= left && localX < left + 16) {
+                    return column == 3 ? moldTooltip(row) : List.of();
                 }
             }
         }
+        return statusTooltip();
+    }
+
+    private List<Component> moldTooltip(int visibleRow) {
+        var stack = moldAt(scrollbar.getCurrentScroll() + visibleRow);
+        if (stack == null) {
+            return statusTooltip();
+        }
+        var lines = new ArrayList<>(AEKeyRendering.getTooltip(stack.what()));
+        lines.add(Component.literal(stack.what().formatAmount(stack.amount(), AmountFormat.FULL))
+                .withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("ae2lt.tianshu.omniversal.molds.tooltip").withStyle(ChatFormatting.GOLD));
+        return lines;
+    }
+
+    private List<Component> statusTooltip() {
         var lines = new ArrayList<Component>();
         lines.add(Component.translatable(menu.omniversalStatus));
         if (!preview.recipeId().isEmpty()) lines.add(Component.literal(preview.recipeId())

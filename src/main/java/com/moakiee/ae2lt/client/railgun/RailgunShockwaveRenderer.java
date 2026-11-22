@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.client.railgun;
 
 import java.util.ArrayList;
 
+import com.lowdragmc.lowdraglib2.math.interpolate.Eases;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -113,8 +114,7 @@ public final class RailgunShockwaveRenderer {
         var matrix = stack.last().pose();
         for (Burst burst : ACTIVE) {
             float t = 1.0F - (float) burst.remaining / (float) burst.totalLifetime;
-            // Ease-out expansion: fast initial growth, slower at the end.
-            float radius = burst.maxRadius * (1.0F - (1.0F - t) * (1.0F - t));
+            float radius = burst.maxRadius * Eases.QUAD_OUT.interpolate(t);
             float ringFade = 1.0F - t;
             float ringWidth = burst.maxRadius * 0.18F * (1.0F - t * 0.5F);
             if (gameTick - burst.lastOcclusionTick >= OCCLUSION_REFRESH_TICKS) {

@@ -6,6 +6,7 @@ import appeng.api.util.AEColor;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
 import appeng.client.gui.widgets.AETextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import appeng.core.definitions.AEBlocks;
 import appeng.core.definitions.AEParts;
 import appeng.menu.MenuOpener;
@@ -597,12 +598,12 @@ public final class TianshuUploadAliasClientProbe {
         String shared = AE2LTClientConfig.findUploadAlias(FIRST);
         require(AE2LTClientConfig.setUploadAlias(SECOND, shared), "seed same alias on second source");
         invoke(list, "refresh");
-        input(list, "search").setValue(FIRST);
+        ((AETextField) field(list, "search")).setValue(FIRST);
         require(((List<?>) field(list, "filtered")).size() == 1, "search filters by source");
         // Returning through settings creates a fresh management screen with no selection.
         require(list.mouseClicked(list.getGuiLeft() + 12,
                 list.getGuiTop() + (int) field(list, "listTop") + 2, 0), "select filtered alias record");
-        input(list, "search").setValue("");
+        ((AETextField) field(list, "search")).setValue("");
         press(list, "edit");
         var edit = (TianshuUploadAliasEditScreen<?>) mc.screen;
         input(edit, "source").setValue(SECOND);
@@ -771,7 +772,7 @@ public final class TianshuUploadAliasClientProbe {
         return field.get(target);
     }
 
-    private static AETextField input(Object screen, String name) throws Exception { return (AETextField) field(screen, name); }
+    private static LdlibAe2TextField input(Object screen, String name) throws Exception { return (LdlibAe2TextField) field(screen, name); }
     private static void press(Object screen, String name) throws Exception {
         var button = (Button) field(screen, name);
         require(button.active && button.visible, "button accessible: " + name);

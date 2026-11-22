@@ -1,12 +1,12 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.integration.jei.LightningJeiIngredients;
-import com.moakiee.ae2lt.integration.jei.MultiblockPreviewWidget;
+import com.moakiee.ae2lt.integration.recipeviewer.multiblock.RotatingStructurePreview;
 import com.moakiee.ae2lt.lightning.strike.LightningStrikeRecipe;
 import com.moakiee.ae2lt.lightning.strike.StructureRequirement;
 import com.moakiee.ae2lt.me.key.LightningKey;
@@ -21,13 +21,10 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 
 /**
  * JEI category for the data-driven multiblock lightning-strike recipes.
@@ -68,7 +65,8 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
 
     public LightningStrikeCategory(IGuiHelper guiHelper) {
         this.background = guiHelper.createBlankDrawable(WIDTH, HEIGHT);
-        this.icon = guiHelper.createDrawableIngredient(LightningJeiIngredients.TYPE, LightningKey.HIGH_VOLTAGE);
+        this.icon = guiHelper.createDrawableIngredient(
+                com.moakiee.ae2lt.integration.jei.LightningJeiIngredients.TYPE, LightningKey.HIGH_VOLTAGE);
     }
 
     @Override
@@ -133,20 +131,32 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
 
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, LightningStrikeRecipe recipe, IFocusGroup focuses) {
-        builder.addRecipeArrow().setPosition(ARROW_X, ARROW_Y);
+        JeiRecipeDecor.addArrow(builder, ARROW_X, ARROW_Y);
 
-        var widgetBuilder = MultiblockPreviewWidget.builder(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H);
+        var preview = RotatingStructurePreview.lightningStrike(recipe, PREVIEW_W, PREVIEW_H);
+        builder.addWidget(new mezz.jei.api.gui.widgets.IRecipeWidget() {
+            private final net.minecraft.client.gui.navigation.ScreenPosition position =
+                    new net.minecraft.client.gui.navigation.ScreenPosition(PREVIEW_X, PREVIEW_Y);
+            private float rotation;
 
-        // y=0 layer requirements at their world offsets.
-        for (StructureRequirement req : recipe.requirements()) {
-            widgetBuilder.addBlock(req.block(), req.offset());
-        }
-        // The consumed center block.
-        widgetBuilder.addBlock(recipe.centerInput(), BlockPos.ZERO);
-        // The implicit lightning rod at (0, +1, 0).
-        widgetBuilder.addBlock(Blocks.LIGHTNING_ROD, new BlockPos(0, 1, 0));
+            @Override
+            public net.minecraft.client.gui.navigation.ScreenPosition getPosition() {
+                return position;
+            }
 
-        builder.addWidget(widgetBuilder.build());
+            @Override
+            public void drawWidget(GuiGraphics graphics, double mouseX, double mouseY) {
+                preview.draw(graphics, 0, 0, rotation);
+            }
+
+            @Override
+            public void tick() {
+                rotation += 0.4F;
+                if (rotation >= 360F) {
+                    rotation -= 360F;
+                }
+            }
+        });
     }
 
     @Override
@@ -156,7 +166,7 @@ public class LightningStrikeCategory implements IRecipeCategory<LightningStrikeR
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        var font = Minecraft.getInstance().font;
+        var font = net.minecraft.client.Minecraft.getInstance().font;
 
         Component lightningLabel = recipe.requiresNaturalLightning()
                 ? Component.translatable("jei.ae2lt.lightning_strike.natural_only")

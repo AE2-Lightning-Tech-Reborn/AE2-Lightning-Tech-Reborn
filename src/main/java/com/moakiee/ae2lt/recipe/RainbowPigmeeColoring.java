@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.lowdragmc.lowdraglib2.utils.ColorUtils;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -108,11 +110,14 @@ public final class RainbowPigmeeColoring {
     private static DyeColor nearestColor(int rgb) {
         DyeColor nearest = DyeColor.WHITE;
         int distance = Integer.MAX_VALUE;
+        int sourceRed = ColorUtils.redI(rgb);
+        int sourceGreen = ColorUtils.greenI(rgb);
+        int sourceBlue = ColorUtils.blueI(rgb);
         for (var color : COLORS) {
             int candidate = color.getTextureDiffuseColor();
-            int red = ((rgb >> 16) & 255) - ((candidate >> 16) & 255);
-            int green = ((rgb >> 8) & 255) - ((candidate >> 8) & 255);
-            int blue = (rgb & 255) - (candidate & 255);
+            int red = sourceRed - ColorUtils.redI(candidate);
+            int green = sourceGreen - ColorUtils.greenI(candidate);
+            int blue = sourceBlue - ColorUtils.blueI(candidate);
             int squared = red * red + green * green + blue * blue;
             if (squared < distance) {
                 nearest = color;

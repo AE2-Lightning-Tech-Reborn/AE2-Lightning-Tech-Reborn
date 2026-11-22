@@ -6,44 +6,38 @@
 
 package com.moakiee.ae2lt.client.tianshu;
 
-import appeng.api.config.ActionItems;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.client.Point;
 import appeng.client.gui.Icon;
+import appeng.api.config.ActionItems;
 import appeng.client.gui.WidgetContainer;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.Scrollbar;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 
 final class TianshuProcessingEncodingPanel extends TianshuEncodingModePanel {
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 70, 124, 66);
+    private static final SpriteTexture BG =
+            PATTERN_MODES_ATLAS.slice(0, 70, 124, 66);
 
-    private final ActionButton clearButton;
-    private final ActionButton cycleOutputButton;
-    private final Scrollbar scrollbar;
+    private final LdlibAe2Button clearButton;
+    private final LdlibAe2Button cycleOutputButton;
+    private final LdlibRowScroller scrollbar;
 
     TianshuProcessingEncodingPanel(
             TianshuPatternEncodingTermScreen<?> screen,
             WidgetContainer widgets) {
-        super(screen, widgets);
+        super(screen, widgets, BG);
 
-        clearButton = new ActionButton(ActionItems.S_CLOSE, action -> menu.clear());
-        clearButton.setHalfSize(true);
-        clearButton.setDisableBackground(true);
+        clearButton = LdlibAe2Button.small(Icon.S_CLEAR, ActionItems.S_CLOSE, menu::clear);
         widgets.add("processingClearPattern", clearButton);
 
-        cycleOutputButton = new ActionButton(
-                ActionItems.S_CYCLE_PROCESSING_OUTPUT,
-                action -> menu.cycleProcessingOutput());
-        cycleOutputButton.setHalfSize(true);
-        cycleOutputButton.setDisableBackground(true);
+        cycleOutputButton = LdlibAe2Button.small(Icon.S_CYCLE,
+                ActionItems.S_CYCLE_PROCESSING_OUTPUT, menu::cycleProcessingOutput);
         widgets.add("processingCycleOutput", cycleOutputButton);
 
-        scrollbar = widgets.addScrollBar("processingPatternModeScrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "processingPatternModeScrollbar");
         scrollbar.setRange(0, menu.getProcessingInputSlots().length / 3 - 3, 3);
         scrollbar.setCaptureMouseWheel(false);
     }
@@ -67,11 +61,6 @@ final class TianshuProcessingEncodingPanel extends TianshuEncodingModePanel {
         }
 
         updateTooltipVisibility();
-    }
-
-    @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 8, bounds.getY() + bounds.getHeight() - 165).blit(graphics);
     }
 
     @Override

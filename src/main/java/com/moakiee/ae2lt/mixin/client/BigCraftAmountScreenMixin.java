@@ -1,11 +1,19 @@
 package com.moakiee.ae2lt.mixin.client;
 
 import appeng.client.gui.AEBaseScreen;
+import appeng.client.gui.NumberEntryType;
+import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.me.crafting.CraftAmountScreen;
 import appeng.client.gui.style.ScreenStyle;
+import appeng.client.gui.widgets.AE2Button;
 import appeng.client.gui.widgets.NumberEntryWidget;
 import appeng.menu.me.crafting.CraftAmountMenu;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.moakiee.ae2lt.client.crafting.AE2LtCraftAmountScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibResizableTextButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibNumberEntryWidget;
 import com.moakiee.ae2lt.client.widgets.BigNumberEntry;
 import com.moakiee.ae2lt.crafting.big.BigAmountMenu;
 import com.moakiee.ae2lt.network.tianshu.ConfirmBigAmountPacket;
@@ -32,23 +40,65 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
         super(m, i, t, s);
     }
 
+    @WrapOperation(method = "<init>", at = @At(value = "INVOKE",
+            target = "Lappeng/client/gui/WidgetContainer;addButton(Ljava/lang/String;Lnet/minecraft/network/chat/Component;Ljava/lang/Runnable;)Lappeng/client/gui/widgets/AE2Button;"))
+    private AE2Button ae2lt$createNextButton(WidgetContainer widgets, String id, Component label,
+            Runnable action, Operation<AE2Button> original) {
+        if ((Object) this instanceof AE2LtCraftAmountScreen) {
+            var button = new LdlibResizableTextButton(label, action);
+            widgets.add(id, button);
+            return button;
+        }
+        return original.call(widgets, id, label, action);
+    }
+
+    @WrapOperation(method = "<init>", at = @At(value = "INVOKE",
+            target = "Lappeng/client/gui/WidgetContainer;addNumberEntryWidget(Ljava/lang/String;Lappeng/client/gui/NumberEntryType;)Lappeng/client/gui/widgets/NumberEntryWidget;"))
+    private NumberEntryWidget ae2lt$createAmount(WidgetContainer widgets, String id, NumberEntryType type,
+            Operation<NumberEntryWidget> original) {
+        if ((Object) this instanceof AE2LtCraftAmountScreen) {
+            var target = menu.getWhatToCraft();
+            var amount = new LdlibNumberEntryWidget(style,
+                    target == null ? type : NumberEntryType.of(target.what()), true);
+            widgets.add(id, amount);
+            return amount;
+        }
+        return original.call(widgets, id, type);
+    }
+
     @Inject(method = "updateBeforeRender", at = @At("TAIL"))
     private void ae2lt$update(CallbackInfo ci) {
         if (!(menu instanceof BigAmountMenu big)) return;
+        if (big.ae2lt$bigAvailable() && ((Object) this).getClass() == CraftAmountScreen.class) {
+            var whatToCraft = menu.getWhatToCraft();
+            if (whatToCraft != null) {
+                switchToScreen(new AE2LtCraftAmountScreen(menu, getTitle(), style));
+            }
+            return;
+        }
         var widget = (BigNumberEntry) amountToCraft;
-        widget.ae2lt$setExtendedRange(big.ae2lt$longAvailable(), big.ae2lt$bigAvailable());
+        ae2lt$syncAmountRange(big, widget);
         if (!big.ae2lt$longAvailable()) return;
         if (!ae2lt$restored && !big.ae2lt$initialAmount().isEmpty()) {
             widget.ae2lt$setBig(new BigInteger(big.ae2lt$initialAmount()));
             ae2lt$restored = true;
         }
-        next.active = widget.ae2lt$getBig().isPresent();
+        next.active = !ae2lt$hasRejectedEdit() && widget.ae2lt$getBig().isPresent();
     }
 
     @Inject(method = "confirm", at = @At("HEAD"), cancellable = true)
     private void ae2lt$confirm(CallbackInfo ci) {
-        if (!(menu instanceof BigAmountMenu big) || !big.ae2lt$longAvailable()) return;
-        var n = ((BigNumberEntry) amountToCraft).ae2lt$getBig();
+        if (!(menu instanceof BigAmountMenu big)) return;
+        var widget = (BigNumberEntry) amountToCraft;
+        if (amountToCraft instanceof LdlibNumberEntryWidget) {
+            ae2lt$syncAmountRange(big, widget);
+            if (ae2lt$hasRejectedEdit()) {
+                ci.cancel();
+                return;
+            }
+        }
+        if (!big.ae2lt$longAvailable()) return;
+        var n = widget.ae2lt$getBig();
         if (n.isEmpty()) {
             ci.cancel();
             return;
@@ -64,5 +114,19 @@ public abstract class BigCraftAmountScreenMixin extends AEBaseScreen<CraftAmount
                             hasShiftDown()));
             ci.cancel();
         }
+    }
+
+    @Unique
+    private void ae2lt$syncAmountRange(BigAmountMenu big, BigNumberEntry widget) {
+        if (amountToCraft instanceof LdlibNumberEntryWidget ldlib) {
+            ldlib.setExtendedRange(big.ae2lt$longAvailable(), big.ae2lt$bigAvailable());
+        } else {
+            widget.ae2lt$setExtendedRange(big.ae2lt$longAvailable(), big.ae2lt$bigAvailable());
+        }
+    }
+
+    @Unique
+    private boolean ae2lt$hasRejectedEdit() {
+        return amountToCraft instanceof LdlibNumberEntryWidget ldlib && ldlib.hasRejectedEdit();
     }
 }

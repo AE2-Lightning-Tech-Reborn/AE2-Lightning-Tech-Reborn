@@ -1,14 +1,13 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -25,7 +24,6 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.neoforge.NeoForgeTypes;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
@@ -48,8 +46,6 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     private static final int BACKGROUND_HEIGHT = 62;
     private static final int WIDTH = BACKGROUND_WIDTH;
 
-    private static final int TEXTURE_WIDTH = 256;
-    private static final int TEXTURE_HEIGHT = 256;
 
     // category 坐标 = GUI 坐标 − 背景偏移
     private static final int FLUID_X = 26 - BACKGROUND_U;   // 4
@@ -78,12 +74,10 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
     private static final int HEIGHT = MATRIX_TEXT_Y + 10;               // 104
 
     private final IDrawable icon;
-    private final IDrawable background;
+    private final JeiRecipeDecor<CrystalCatalyzerRecipe> decor = new JeiRecipeDecor<>(CrystalCatalyzerCategory::decor);
 
-    public CrystalCatalyzerCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.CRYSTAL_CATALYZER.get()));
-        this.background = guiHelper.createDrawable(
-                BACKGROUND_TEXTURE, BACKGROUND_U, BACKGROUND_V, BACKGROUND_WIDTH, BACKGROUND_HEIGHT);
+    public CrystalCatalyzerCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.CRYSTAL_CATALYZER.toStack());
     }
 
     @Override
@@ -158,59 +152,36 @@ public class CrystalCatalyzerCategory implements IRecipeCategory<CrystalCatalyze
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        background.draw(guiGraphics);
-        drawProcessOverlay(guiGraphics, recipe.mode());
+        decor.draw(recipe, guiGraphics, mouseX, mouseY);
+    }
 
-        var font = Minecraft.getInstance().font;
-
-        var energyText = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.energy",
-                formatCompactEnergy(recipe.energyPerCycle()));
-        int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
-
+    /** Machine art, looping process arrow and info text as an LDLib2 decoration. */
+    private static RecipeDecor decor(CrystalCatalyzerRecipe recipe) {
         String timeStr = recipe.mode() == Mode.CRYSTAL ? "1s" : "2s";
-        var timeText = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.time",
-                Component.translatable(recipe.mode().translationKey()), timeStr);
-        int timeX = (WIDTH - font.width(timeText)) / 2;
-        guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, 0x404040, false);
-
-        var lightningText = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.lightning",
-                recipe.lightningCost(),
-                Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
+        return RecipeDecor.of(WIDTH, HEIGHT)
+                .texture(BACKGROUND_TEXTURE, 0, 0, BACKGROUND_WIDTH, BACKGROUND_HEIGHT,
+                        BACKGROUND_U, BACKGROUND_V)
+                .horizontalReveal(BACKGROUND_TEXTURE, PROCESS_X, PROCESS_Y,
+                        PROCESS_OVERLAY_WIDTH, PROCESS_OVERLAY_HEIGHT, PROCESS_OVERLAY_U, PROCESS_OVERLAY_V,
+                        recipe.mode() == Mode.CRYSTAL ? PROCESS_CYCLE_MS_CRYSTAL : PROCESS_CYCLE_MS_DUST)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.crystal_catalyzer.energy",
+                        formatCompactEnergy(recipe.energyPerCycle())), ENERGY_TEXT_Y, 0x404040)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.crystal_catalyzer.time",
+                        Component.translatable(recipe.mode().translationKey()), timeStr), TIME_TEXT_Y, 0x404040)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.crystal_catalyzer.lightning",
+                        recipe.lightningCost(),
+                        Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
-                        : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
-        int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
-
-        var matrixText = Component.translatable(
-                "jei.ae2lt.crystal_catalyzer.matrix_note",
-                CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER);
-        int matrixX = (WIDTH - font.width(matrixText)) / 2;
-        guiGraphics.drawString(font, matrixText, matrixX, MATRIX_TEXT_Y, 0x404040, false);
+                        : "ae2lt.gui.lightning_simulation.tier.high_voltage")), LIGHTNING_TEXT_Y, 0x404040)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.crystal_catalyzer.matrix_note",
+                        CrystalCatalyzerBlockEntity.MATRIX_OUTPUT_MULTIPLIER), MATRIX_TEXT_Y, 0x404040);
     }
 
-    private void drawProcessOverlay(GuiGraphics guiGraphics, Mode mode) {
-        long cycleMs = mode == Mode.CRYSTAL ? PROCESS_CYCLE_MS_CRYSTAL : PROCESS_CYCLE_MS_DUST;
-        long elapsed = Util.getMillis() % cycleMs;
-        double progress = elapsed / (double) cycleMs;
-        int width = Mth.clamp((int) Math.ceil(progress * PROCESS_OVERLAY_WIDTH), 0, PROCESS_OVERLAY_WIDTH);
-        if (width <= 0) {
-            return;
-        }
-        guiGraphics.blit(
-                BACKGROUND_TEXTURE,
-                PROCESS_X,
-                PROCESS_Y,
-                PROCESS_OVERLAY_U,
-                PROCESS_OVERLAY_V,
-                width,
-                PROCESS_OVERLAY_HEIGHT,
-                TEXTURE_WIDTH,
-                TEXTURE_HEIGHT);
-    }
+
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())

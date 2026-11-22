@@ -4,16 +4,15 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.moakiee.ae2lt.integration.recipeviewer.multiblock.RotatingStructurePreview;
 import com.moakiee.ae2lt.lightning.strike.LightningStrikeRecipe;
 import com.moakiee.ae2lt.lightning.strike.StructureRequirement;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 
 final class EmiLightningStrikeRecipe extends EmiBackedRecipe<LightningStrikeRecipe> {
     private static final int WIDTH = 178;
@@ -60,16 +59,25 @@ final class EmiLightningStrikeRecipe extends EmiBackedRecipe<LightningStrikeReci
                 EmiRecipeWidgets.TEXT_COLOR,
                 false);
 
-        var preview = new EmiLightningStrikePreviewWidget.Builder(4, 14, 96, 92);
-        for (StructureRequirement requirement : recipe.requirements()) {
-            preview.addBlock(requirement.block(), requirement.offset());
-        }
-        preview.addBlock(recipe.centerInput(), BlockPos.ZERO);
-        preview.addBlock(Blocks.LIGHTNING_ROD, new BlockPos(0, 1, 0));
-        widgets.add(preview.build());
+        var preview = RotatingStructurePreview.lightningStrike(recipe, 96, 92);
+        widgets.add(new dev.emi.emi.api.widget.Widget() {
+            private final dev.emi.emi.api.widget.Bounds bounds =
+                    new dev.emi.emi.api.widget.Bounds(4, 14, 96, 92);
+
+            @Override
+            public dev.emi.emi.api.widget.Bounds getBounds() {
+                return bounds;
+            }
+
+            @Override
+            public void render(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+                float rotation = (net.minecraft.Util.getMillis() * 0.024F) % 360F;
+                preview.draw(graphics, bounds.x(), bounds.y(), rotation);
+            }
+        });
 
         EmiRecipeWidgets.addSlot(widgets, EmiStack.of(recipe.centerInput()), 104, 14);
-        widgets.addFillingArrow(124, 15, 2_000);
+        EmiRecipeWidgets.addFillingArrow(widgets, 124, 15, 2_000);
         EmiRecipeWidgets.addSlot(widgets, outputs.getFirst(), 156, 14).recipeContext(this);
 
         int index = 0;

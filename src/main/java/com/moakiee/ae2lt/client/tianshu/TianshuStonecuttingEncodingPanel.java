@@ -6,134 +6,93 @@
 
 package com.moakiee.ae2lt.client.tianshu;
 
+import java.util.Objects;
+
 import appeng.client.Point;
 import appeng.client.gui.Icon;
 import appeng.client.gui.Tooltip;
 import appeng.client.gui.WidgetContainer;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.widgets.Scrollbar;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
-import java.util.Objects;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.util.UISoundUtils;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
 import org.jetbrains.annotations.Nullable;
 
 final class TianshuStonecuttingEncodingPanel extends TianshuEncodingModePanel {
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 140, 124, 66);
-    private static final Blitter BG_SLOT = BG.copy().src(124, 140, 20, 22);
-    private static final Blitter BG_SLOT_SELECTED = BG.copy().src(124, 162, 20, 22);
-    private static final Blitter BG_SLOT_HOVER = BG.copy().src(124, 184, 20, 22);
-
+    private static final SpriteTexture BG =
+            PATTERN_MODES_ATLAS.slice(0, 140, 124, 66);
     private static final int COLUMNS = 4;
-    private static final int ROWS = 2;
+    private static final int GRID_X = 26;
+    private static final int GRID_Y = 12;
 
-    private final Scrollbar scrollbar;
+    private final LdlibRowScroller scrollbar;
+    private final TianshuStonecuttingRecipeGrid recipeGrid;
 
     TianshuStonecuttingEncodingPanel(
             TianshuPatternEncodingTermScreen<?> screen,
             WidgetContainer widgets) {
-        super(screen, widgets);
-        scrollbar = widgets.addScrollBar("stonecuttingPatternModeScrollbar", Scrollbar.SMALL);
+        super(screen, widgets, BG);
+        scrollbar = LdlibRowScroller.add(widgets, "stonecuttingPatternModeScrollbar");
         scrollbar.setRange(0, 0, COLUMNS);
         scrollbar.setCaptureMouseWheel(false);
+        recipeGrid = new TianshuStonecuttingRecipeGrid(this::recipeCell);
+        panelRoot.addChild(LdlibScreens.at(recipeGrid.element(), GRID_X, GRID_Y,
+                COLUMNS * TianshuStonecuttingRecipeGrid.CELL_WIDTH,
+                TianshuStonecuttingRecipeGrid.VISIBLE_ROWS * TianshuStonecuttingRecipeGrid.CELL_HEIGHT));
     }
 
     @Override
     public void updateBeforeRender() {
-        var totalRows = (menu.getStonecuttingRecipes().size() + COLUMNS - 1) / COLUMNS;
-        scrollbar.setRange(0, totalRows - ROWS, ROWS);
-    }
-
-    @Override
-    public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        BG.dest(bounds.getX() + 8, bounds.getY() + bounds.getHeight() - 165).blit(graphics);
-        drawRecipes(graphics, bounds, mouse);
+        panelUi();
+        recipeGrid.update(menu.getStonecuttingRecipes(), COLUMNS, scrollbar);
     }
 
     private RegistryAccess getRegistryAccess() {
         return Objects.requireNonNull(Minecraft.getInstance().level).registryAccess();
     }
 
-    private void drawRecipes(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        var recipes = menu.getStonecuttingRecipes();
-        var startIndex = scrollbar.getCurrentScroll() * COLUMNS;
-        var endIndex = startIndex + ROWS * COLUMNS;
-        var selectedRecipe = menu.getStonecuttingRecipeId();
-
-        for (int i = startIndex; i < endIndex && i < recipes.size(); i++) {
-            var slotBounds = getRecipeBounds(i - startIndex);
-            var recipe = recipes.get(i);
-            boolean selected = selectedRecipe != null && selectedRecipe.equals(recipe.id());
-
-            Blitter background = selected
-                    ? BG_SLOT_SELECTED
-                    : mouse.isIn(slotBounds) ? BG_SLOT_HOVER : BG_SLOT;
-            var renderX = bounds.getX() + slotBounds.getX();
-            var renderY = bounds.getY() + slotBounds.getY();
-            background.dest(renderX, renderY).blit(graphics);
-
-            ItemStack result = recipe.value().getResultItem(getRegistryAccess());
-            var itemY = renderY + (selected || mouse.isIn(slotBounds) ? 3 : 2);
-            graphics.renderItem(result, renderX + 2, itemY);
-            graphics.renderItemDecorations(Minecraft.getInstance().font, result, renderX + 2, itemY);
-        }
+    private TianshuStonecuttingRecipeGrid.Cell recipeCell(TianshuStonecuttingRecipeGrid.Entry entry) {
+        var recipe = entry.recipe();
+        return new TianshuStonecuttingRecipeGrid.Cell(() -> recipe.value().getResultItem(getRegistryAccess()),
+                () -> recipe.id().equals(menu.getStonecuttingRecipeId()), null);
     }
 
     @Override
     public boolean onMouseDown(Point mousePosition, int button) {
-        var recipe = getRecipeAt(mousePosition);
+        var recipe = recipeAt(mousePosition.getX(), mousePosition.getY());
         if (recipe == null) {
             return false;
         }
         menu.setStonecuttingRecipeId(recipe.id());
-        Minecraft.getInstance().getSoundManager()
-                .play(SimpleSoundInstance.forUI(SoundEvents.UI_STONECUTTER_SELECT_RECIPE, 1.0F));
+        UISoundUtils.playSound(SoundEvents.UI_STONECUTTER_SELECT_RECIPE);
         return true;
     }
 
     @Nullable
     @Override
     public Tooltip getTooltip(int mouseX, int mouseY) {
-        var recipe = getRecipeAt(new Point(mouseX, mouseY));
-        if (recipe == null) {
-            return null;
-        }
-        var result = recipe.value().getResultItem(getRegistryAccess());
-        return new Tooltip(screen.getTooltipFromContainerItem(result));
+        var recipe = recipeAt(mouseX, mouseY);
+        return recipe == null ? null : new Tooltip(screen.getTooltipFromContainerItem(
+                recipe.value().getResultItem(getRegistryAccess())));
     }
 
     @Nullable
-    private RecipeHolder<StonecutterRecipe> getRecipeAt(Point point) {
-        var recipes = menu.getStonecuttingRecipes();
-        if (recipes.isEmpty()) {
+    private RecipeHolder<StonecutterRecipe> recipeAt(int mouseX, int mouseY) {
+        int cell = TianshuStonecuttingRecipeGrid.cellAt(mouseX - x - GRID_X, mouseY - y - GRID_Y, COLUMNS);
+        if (cell < 0) {
             return null;
         }
-
-        var startIndex = scrollbar.getCurrentScroll() * COLUMNS;
-        var endIndex = startIndex + COLUMNS * ROWS;
-        for (int i = startIndex; i < endIndex && i < recipes.size(); i++) {
-            if (point.isIn(getRecipeBounds(i - startIndex))) {
-                return recipes.get(i);
-            }
-        }
-        return null;
-    }
-
-    private Rect2i getRecipeBounds(int index) {
-        var column = index % COLUMNS;
-        var row = index / COLUMNS;
-        int slotX = x + 26 + column * BG_SLOT.getSrcWidth();
-        int slotY = y + 12 + row * BG_SLOT.getSrcHeight();
-        return new Rect2i(slotX, slotY, BG_SLOT.getSrcWidth(), BG_SLOT.getSrcHeight());
+        var recipes = menu.getStonecuttingRecipes();
+        int index = scrollbar.getCurrentScroll() * COLUMNS + cell;
+        return index < recipes.size() ? recipes.get(index) : null;
     }
 
     @Override

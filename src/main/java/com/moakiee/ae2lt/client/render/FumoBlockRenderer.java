@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client.render;
 
+import com.lowdragmc.lowdraglib2.utils.ColorUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -82,9 +83,9 @@ public class FumoBlockRenderer implements BlockEntityRenderer<FumoBlockEntity> {
             }
         } else {
             int color = Minecraft.getInstance().getBlockColors().getColor(renderState, null, null, 0);
-            float r = (color >> 16 & 0xFF) / 255.0F;
-            float g = (color >> 8 & 0xFF) / 255.0F;
-            float b = (color & 0xFF) / 255.0F;
+            float r = ColorUtils.red(color);
+            float g = ColorUtils.green(color);
+            float b = ColorUtils.blue(color);
             PoseStack.Pose pose = poseStack.last();
 
             for (RenderType renderType : model.getRenderTypes(renderState, RAND, modelData)) {

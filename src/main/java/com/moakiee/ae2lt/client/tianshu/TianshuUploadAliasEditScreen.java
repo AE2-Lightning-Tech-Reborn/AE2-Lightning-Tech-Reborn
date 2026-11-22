@@ -1,8 +1,8 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.client.gui.AEBaseScreen;
-import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AETextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibResizableTextButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import appeng.menu.me.common.MEStorageMenu;
 import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
@@ -15,8 +15,8 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends TianshuUploadTargetScreen<M> {
-    private final AETextField source, alias;
-    private final AE2Button save, cancel;
+    private final LdlibAe2TextField source, alias;
+    private final LdlibResizableTextButton save, cancel;
     private final Component heading;
     private final String original, initialSource, initialAlias;
     private final Consumer<String> onSaved;
@@ -40,8 +40,10 @@ public final class TianshuUploadAliasEditScreen<M extends MEStorageMenu> extends
         alias.setMaxLength(1024);
         source.setValue(initialSource);
         alias.setValue(aliasValue);
-        save = widgets.addButton("save", text("save"), this::save);
-        cancel = widgets.addButton("cancel", text("cancel"), this::returnToParent);
+        save = new LdlibResizableTextButton(text("save"), this::save);
+        cancel = new LdlibResizableTextButton(text("cancel"), this::returnToParent);
+        widgets.add("save", save);
+        widgets.add("cancel", cancel);
         source.setResponder(v -> validate());
         alias.setResponder(v -> { refreshAliasQuery(); validate(); });
         validate();

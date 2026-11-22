@@ -4,7 +4,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 /**
- * 统一构造 {@link LightningStatusIconWidget} 悬浮提示的各行文本,确保所有机器展示的
+ * 统一构造 {@link com.moakiee.ae2lt.client.ldlib.MachineGauges#statusIcon} 悬浮提示的各行文本,确保所有机器展示的
  * "闪电状态" tooltip 在顺序与样式上保持一致。
  */
 public final class LightningStatusLines {

@@ -124,11 +124,11 @@ public final class CraftingReportClientProbe {
                 }
                 case 5 -> {
                     require(intField(report, "visibleRows") == 3, "small must display three rows");
-                    var scroll = ((com.moakiee.ae2lt.mixin.client.CraftConfirmScreenAccessor) (Object) report).ae2lt$getScrollbar();
+                    var scroll = (com.moakiee.ae2lt.client.ldlib.LdlibRowScroller) field(report, "scrollbar").get(report);
                     int lastRow = (menu.getPlan().getEntries().size() + 2) / 3 - 3;
                     scroll.setCurrentScroll(lastRow);
                     report.updateBeforeRender();
-                    require(scroll.getCurrentScroll() == lastRow, "native five-row clamp hid the small report's last rows");
+                    require(scroll.getCurrentScroll() == lastRow, "scroll clamp hid the small report's last rows");
                     capture("small.png");
                     styleButton().onPress();
                     var tree = buttons().stream().filter(b -> b.getClass().getName().equals(

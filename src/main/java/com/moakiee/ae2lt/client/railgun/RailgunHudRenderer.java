@@ -1,9 +1,12 @@
 package com.moakiee.ae2lt.client.railgun;
 
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.FillDirection;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ProgressBar;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -11,6 +14,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.client.ldlib.LdlibHud;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
 import com.moakiee.ae2lt.config.RailgunDefaults;
 import com.moakiee.ae2lt.item.railgun.ElectromagneticRailgunItem;
 import com.moakiee.ae2lt.registry.ModDataComponents;
@@ -33,8 +39,13 @@ public final class RailgunHudRenderer {
 
     private static final int ICON_W = 13;
     private static final int ICON_H = 19;
+    private static final IGuiTexture EMPTY = new LdlibStyleSprite(EMPTY_TEX, ICON_W, ICON_H).full();
+    private static final IGuiTexture[] FILL = new LdlibStyleSprite(FULL_TEX, ICON_W, ICON_H).verticalSlices(true);
     /** Horizontal gap between the crosshair center and the icon's left edge. */
     private static final int CROSSHAIR_OFFSET_X = 10;
+
+    private static LdlibHud hud;
+    private static ProgressBar fill;
 
     private RailgunHudRenderer() {}
 
@@ -52,28 +63,19 @@ public final class RailgunHudRenderer {
         int t3 = RailgunDefaults.CHARGE_TICKS_TIER3;
         float progress = Math.min(1.0f, (float) ticks / (float) t3);
 
-        GuiGraphics gfx = e.getGuiGraphics();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
         int x = w / 2 + CROSSHAIR_OFFSET_X;
         int y = (h - ICON_H) / 2;
 
-        // Empty bolt as the always-visible background.
-        gfx.blit(EMPTY_TEX, x, y, 0, 0, ICON_W, ICON_H, ICON_W, ICON_H);
-
-        // Reveal the lit bolt from the bottom up by sampling the matching
-        // bottom slice of the full texture; this keeps pixel alignment exact
-        // even at fractional progress values.
-        int filledH = Math.round(ICON_H * progress);
-        if (filledH > 0) {
-            int emptyTop = ICON_H - filledH;
-            gfx.blit(FULL_TEX, x, y + emptyTop, 0, emptyTop, ICON_W, filledH, ICON_W, ICON_H);
+        if (hud == null) {
+            fill = LdlibScreens.spriteProgress(FillDirection.DOWN_TO_UP, FILL);
+            var root = new UIElement().style(style -> style.background(EMPTY));
+            root.addChild(LdlibScreens.at(fill, 0, 0, ICON_W, ICON_H));
+            hud = new LdlibHud(root, ICON_W, ICON_H);
         }
-
-        ensureUserStillUsing(mc.player, stack);
+        fill.setProgress(Mth.clamp(Math.round(ICON_H * progress), 0, ICON_H));
+        hud.renderAt(e.getGuiGraphics(), e.getPartialTick(), x, y);
     }
 
-    private static void ensureUserStillUsing(LivingEntity user, ItemStack stack) {
-        // No-op; placeholder hook for future state validation.
-    }
 }

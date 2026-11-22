@@ -1,12 +1,11 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
+
 import com.moakiee.ae2lt.client.compat.JeiWirelessSupplyClient;
 
-import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.TerminalSettingsScreen;
-import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.TabButton;
 import appeng.menu.SlotSemantics;
 import appeng.menu.me.common.MEStorageMenu;
 import appeng.client.gui.style.PaletteColor;
@@ -21,11 +20,11 @@ import org.lwjgl.glfw.GLFW;
 
 /** Tianshu-specific settings linked from AE2's terminal settings screen. */
 public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
-        extends AESubScreen<M, TerminalSettingsScreen<M>> {
-    private AE2Button triggerButton;
-    private AE2Button autoUploadButton;
-    private AE2Button duplicateEncodingButton;
-    private AE2Button wirelessSupplyButton;
+        extends LdlibAeSubScreen<M, TerminalSettingsScreen<M>> {
+    private LdlibAe2Button triggerButton;
+    private LdlibAe2Button autoUploadButton;
+    private LdlibAe2Button duplicateEncodingButton;
+    private LdlibAe2Button wirelessSupplyButton;
     private final boolean patternTerminal;
 
     public TianshuTerminalSettingsScreen(TerminalSettingsScreen<M> parent) {
@@ -33,12 +32,11 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
                 ? "/screens/tianshu_terminal_settings.json" : "/screens/tianshu_crafting_settings.json");
         patternTerminal = parent.getMenu() instanceof TianshuPatternEncodingTermMenu;
         hideTerminalSlots();
-        widgets.add("back", new TabButton(Icon.BACK,
-                Component.translatable("gui.back"), ignored -> returnToParent()));
+        widgets.add("back", LdlibAe2Button.back(Component.translatable("gui.back"), this::returnToParent));
         if (patternTerminal) {
-            widgets.addButton("uploadAliases", TianshuUploadAliasScreen.text("title"), () ->
+            LdlibAe2Button.addText(widgets, style, "uploadAliases", TianshuUploadAliasScreen.text("title"), () ->
                     switchToScreen(new TianshuUploadAliasManagementScreen<>(this, "", "")));
-            autoUploadButton = widgets.addButton("autoUpload", autoUploadLabel(), () -> {
+            autoUploadButton = LdlibAe2Button.addText(widgets, style, "autoUpload", autoUploadLabel(), () -> {
                 if (AE2LTClientConfig.setUploadMatchMode(AE2LTClientConfig.uploadMatchMode().next())) {
                     autoUploadButton.setMessage(autoUploadLabel());
                     autoUploadButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
@@ -50,15 +48,15 @@ public final class TianshuTerminalSettingsScreen<M extends MEStorageMenu>
             });
             autoUploadButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                     TianshuUploadAliasScreen.text("auto_mode_help")));
-            triggerButton = widgets.addButton("uploadTrigger", triggerLabel(), this::cycleTrigger);
-            duplicateEncodingButton = widgets.addButton(
+            triggerButton = LdlibAe2Button.addText(widgets, style, "uploadTrigger", triggerLabel(), this::cycleTrigger);
+            duplicateEncodingButton = LdlibAe2Button.addText(widgets, style,
                     "duplicateEncoding", duplicateEncodingLabel(), this::toggleDuplicateEncoding);
             triggerButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                     Component.translatable("ae2lt.tianshu.settings.upload_trigger.hint")));
             duplicateEncodingButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                     Component.translatable("ae2lt.tianshu.settings.duplicate_encoding.hint")));
         }
-        wirelessSupplyButton = widgets.addButton("jeiWirelessSupply", wirelessSupplyLabel(), () -> {
+        wirelessSupplyButton = LdlibAe2Button.addText(widgets, style, "jeiWirelessSupply", wirelessSupplyLabel(), () -> {
             AE2LTClientConfig.setJeiWirelessSupply(!AE2LTClientConfig.jeiWirelessSupply());
             if (net.neoforged.fml.ModList.get().isLoaded("jei")) JeiWirelessSupplyClient.clear();
             wirelessSupplyButton.setMessage(wirelessSupplyLabel());

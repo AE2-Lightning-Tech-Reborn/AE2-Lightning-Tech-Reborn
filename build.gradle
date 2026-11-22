@@ -15,6 +15,14 @@ def githubPackagesToken = System.getenv('GITHUB_PACKAGES_TOKEN') ?: System.geten
 
 repositories {
     mavenLocal()
+    // Reuse the exact Release artifacts staged by .github/scripts/release.py for local builds.
+    maven {
+        name = 'StagedReleaseDependencies'
+        url = uri('release-dependencies/maven')
+        content {
+            includeGroup 'com.moakiee.thunderbolt'
+        }
+    }
     if (githubPackagesUser && githubPackagesToken) {
         maven {
             name = 'ThunderboltGitHubPackages'
@@ -71,6 +79,13 @@ repositories {
             includeGroup "curse.maven"
         }
     }
+    maven {
+        name = "FirstDark"
+        url = "https://maven.firstdark.dev/snapshots"
+        content {
+            includeGroup "com.lowdragmc.ldlib2"
+        }
+    }
 }
 
 base {
@@ -92,7 +107,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 sourceSets {
     jdb {
         java.srcDir 'src/jdb/java'
-        // Enabled by its dedicated init script, which supplies Extended Crafting and Cucumber.
+        // The dedicated JEI probe init script selects this source and supplies its optional mods.
         java.exclude '**/JeiWirelessSupplyExtendedCraftingProbe.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += output + sourceSets.main.runtimeClasspath
@@ -542,6 +557,28 @@ def extractAdvancedAeApi = tasks.register('extractAdvancedAeApi', Sync) {
 }
 def advancedAeRecipeApi = files(extractedAdvancedAeApi).builtBy(extractAdvancedAeApi)
 
+// Keep required LDLib on development runs even when a probe filters optional runtime mods.
+def ldlibDistribution = configurations.create('ldlibDistribution')
+configurations.compileOnly.extendsFrom(ldlibDistribution)
+configurations.runtimeOnly.extendsFrom(ldlibDistribution)
+
+// The layout API exposes its bundled Taffy/Yoga types. Compile against those exact
+// copies and let NeoForge load them from LDLib's Jar-in-Jar at runtime.
+def extractedLdlibLayoutDir = layout.buildDirectory.dir('ldlib2-layout')
+def extractLdlibLayout = tasks.register('extractLdlibLayout', Sync) {
+    from(ldlibDistribution.elements.map { artifacts ->
+        zipTree(artifacts.iterator().next().asFile)
+    }) {
+        include 'META-INF/jarjar/taffy-*.jar', 'META-INF/jarjar/yoga-*.jar'
+        eachFile { path = name.startsWith('taffy-') ? 'taffy.jar' : 'yoga.jar' }
+        includeEmptyDirs = false
+    }
+    into extractedLdlibLayoutDir
+}
+def ldlibLayoutApi = files(
+        extractedLdlibLayoutDir.map { it.file('taffy.jar') },
+        extractedLdlibLayoutDir.map { it.file('yoga.jar') }).builtBy(extractLdlibLayout)
+
 // Optional real-mod jars for JDB integration probes. Kept opt-in so normal builds and
 // published artifacts never depend on machine-local modpack paths.
 def jdbProbeModPaths = providers.gradleProperty('ae2ltJdbProbeMods')
@@ -602,6 +639,11 @@ dependencies {
     compileOnly "curse.maven:polymorph-388800:${polymorph_curse_file_id}"
     compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
     runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    // Required at runtime (see neoforge.mods.toml). The :all jar bundles yoga/taffy since LDLib2 2.2.1.
+    add('ldlibDistribution', "com.lowdragmc.ldlib2:ldlib2-neoforge-${minecraft_version}:${ldlib2_version}:all") {
+        transitive = false
+    }
+    compileOnly ldlibLayoutApi
     compileOnly "curse.maven:jade-324717:6291517"
     runtimeOnly "curse.maven:jade-324717:6291517"
     runtimeOnly "curse.maven:mekanism-268560:7904058"
@@ -1132,6 +1174,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              mod_name               : mod_name,
                              mod_license            : mod_license,
                              mod_version            : project.version,
+                             ldlib2_version_range   : ldlib2_version_range,
                              thunderbolt_version_range: thunderbolt_version_range,
                              mod_authors            : mod_authors,
                              mod_description        : mod_description]

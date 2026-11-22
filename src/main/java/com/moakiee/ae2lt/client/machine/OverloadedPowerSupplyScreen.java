@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
@@ -8,15 +9,14 @@ import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.ScreenStyle;
 
 import com.moakiee.ae2lt.blockentity.OverloadedPowerSupplyBlockEntity;
-import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.OverloadedPowerSupplyMenu;
 
-public class OverloadedPowerSupplyScreen extends AEBaseScreen<OverloadedPowerSupplyMenu> {
+public class OverloadedPowerSupplyScreen extends LdlibAeScreen<OverloadedPowerSupplyMenu> {
 
     private final TextureToggleButton modeButton;
 
@@ -34,7 +34,7 @@ public class OverloadedPowerSupplyScreen extends AEBaseScreen<OverloadedPowerSup
                 List.of(Component.translatable("ae2lt.gui.overloaded_power_supply.mode.overload")));
         addToLeftToolbar(this.modeButton);
 
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
+        widgets.add("lightningStatus", MachineGauges.statusIcon(() -> List.of(
                 LightningStatusLines.title(),
                 menu.getStatusMessage(),
                 menu.getCellMessage(),

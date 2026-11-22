@@ -1,48 +1,49 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.WeakHashMap;
+
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.integration.xei.XEITooltipContext;
+import com.lowdragmc.lowdraglib2.integration.xei.jei.ModularUIJEIWidget;
+import com.lowdragmc.lowdraglib2.integration.xei.jei.ModularUIRecipeCategory;
+import com.lowdragmc.lowdraglib2.integration.xei.jei.handler.JEIRecipeSlotHandler;
+import com.lowdragmc.lowdraglib2.integration.xei.jei.handler.JEIRecipeSlotHandler.Binding;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.moakiee.ae2lt.integration.jei.multiblock.InteractiveMultiblockWidget;
-import com.moakiee.ae2lt.integration.recipeviewer.multiblock.InteractiveMultiblockPreview;
+import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockPreviewUI;
 import com.moakiee.ae2lt.integration.recipeviewer.multiblock.MultiblockStructureRecipe;
 import com.moakiee.ae2lt.registry.ModBlocks;
 
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
-import mezz.jei.api.gui.ingredient.IRecipeSlotDrawablesView;
+import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
-import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.gui.widgets.ISlottedRecipeWidget;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
-import mezz.jei.api.recipe.category.IRecipeCategory;
+import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/** JEI category that hosts interactive construction previews for large multiblocks. */
-public final class MultiblockStructureCategory implements IRecipeCategory<MultiblockStructureRecipe> {
-    public static final int WIDTH = InteractiveMultiblockPreview.DEFAULT_WIDTH;
-    public static final int HEIGHT = InteractiveMultiblockPreview.DEFAULT_HEIGHT;
+/** Hosts a fresh LDLib2 preview per JEI layout, with native slot drawing and metadata. */
+public final class MultiblockStructureCategory extends ModularUIRecipeCategory<MultiblockStructureRecipe> {
+    public static final int WIDTH = MultiblockPreviewUI.DEFAULT_WIDTH;
+    public static final int HEIGHT = MultiblockPreviewUI.DEFAULT_HEIGHT;
 
     private static final int RECIPE_BORDER_PADDING = 4;
-    private static final int PANEL_WIDTH = 105;
-    private static final int PANEL_X = WIDTH - PANEL_WIDTH - 2;
-    private static final int PANEL_CONTENT_TOP = 48;
-    private static final int MATERIAL_ROW_STEP = 26;
-    private static final int MATERIAL_SLOT_X = PANEL_X + 4;
-    private static final int MATERIAL_SLOT_Y = PANEL_CONTENT_TOP + 4;
-    private static final int SELECTED_SLOT_X = PANEL_X + 4;
-    private static final int SELECTED_SLOT_Y = PANEL_CONTENT_TOP + 2;
-    private static final int ALTERNATIVE_SLOT_X = PANEL_X + 4;
-    private static final int ALTERNATIVE_SLOT_Y = PANEL_CONTENT_TOP + 63;
-    private static final int ALTERNATIVE_COLUMN_STEP = 23;
-    private static final int ALTERNATIVE_ROW_STEP = 21;
-    private static final int ALTERNATIVE_COLUMNS = 4;
+    private static final String TRANSFER_SLOT_PREFIX = "multiblock_transfer_";
 
     public static final RecipeType<MultiblockStructureRecipe> TYPE = RecipeType.create(
             AE2LightningTech.MODID,
@@ -50,11 +51,14 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
             MultiblockStructureRecipe.class);
 
     private final IDrawable icon;
+    // Neither side roots a discarded layout, including after its renderer refers back to its slots.
+    private final Map<IRecipeSlotDrawable, WeakReference<Layout>> layouts = new WeakHashMap<>();
+    private Layout pendingLayout;
     private int layoutHeight = HEIGHT;
 
-    public MultiblockStructureCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(
-                new ItemStack(ModBlocks.MATTER_WARPING_MATRIX_CONTROLLER.get()));
+    public MultiblockStructureCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        super(MultiblockPreviewUI::create);
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.MATTER_WARPING_MATRIX_CONTROLLER.toStack());
     }
 
     @Override
@@ -81,11 +85,21 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
     public boolean setAvailableHeight(int availableHeight, int minRecipePadding) {
         int height = Math.max(HEIGHT,
                 availableHeight - 2 * (RECIPE_BORDER_PADDING + minRecipePadding));
-        if (layoutHeight == height) {
+        if (height == layoutHeight) {
             return false;
         }
         layoutHeight = height;
         return true;
+    }
+
+    @Override
+    public ModularUI getUIForRecipe(MultiblockStructureRecipe recipe) {
+        // A recipe can have several live layouts. Do not use the base's expiring recipe cache.
+        var ui = MultiblockPreviewUI.create(recipe);
+        ui.setAllowDebugMode(false);
+        ui.setDrawTooltips(false);
+        ui.init(WIDTH, layoutHeight);
+        return ui;
     }
 
     @Override
@@ -94,111 +108,195 @@ public final class MultiblockStructureCategory implements IRecipeCategory<Multib
     }
 
     @Override
-    public void setRecipe(
-            IRecipeLayoutBuilder builder,
-            MultiblockStructureRecipe recipe,
-            IFocusGroup focuses) {
-        // Index every block associated with this structure as an output as well as a
-        // catalyst, so JEI's recipe key (R) can open the same preview as its uses key (U).
-        builder.addInvisibleIngredients(RecipeIngredientRole.OUTPUT)
-                .addItemStacks(recipe.focusStacks());
-
-        List<MultiblockStructureRecipe.MaterialEntry> materials = recipe.materials();
-        for (int i = 0; i < materials.size(); i++) {
-            var material = materials.get(i);
-            ItemStack displayStack = new ItemStack(material.block());
-            ItemStack transferStack = displayStack.copy();
-            transferStack.setCount(material.count());
-            int y = MATERIAL_SLOT_Y + i * MATERIAL_ROW_STEP;
-
-            builder.addSlot(RecipeIngredientRole.CATALYST, MATERIAL_SLOT_X, y)
-                    .setSlotName(InteractiveMultiblockWidget.MATERIAL_SLOT_PREFIX + i)
-                    .setStandardSlotBackground()
-                    .addItemStack(displayStack)
-                    .addRichTooltipCallback((slot, tooltip) -> {
-                        tooltip.add(Component.translatable(
-                                "jei.ae2lt.multiblock.count",
-                                material.count()));
-                        if (!material.note().getString().isEmpty()) {
-                            tooltip.add(material.note());
-                        }
-                    });
+    public void setRecipe(IRecipeLayoutBuilder builder, MultiblockStructureRecipe recipe, IFocusGroup focuses) {
+        var ui = getUIForRecipe(recipe);
+        var layout = new Layout(recipe, ui, JEIRecipeSlotHandler.collectBindings(ui));
+        // JEI 19.64 constructs slots and invokes displayed-update before returning from layout creation.
+        // Metadata-only indexing never reaches that callback; retain at most its current build.
+        pendingLayout = layout;
+        builder.addInvisibleIngredients(RecipeIngredientRole.OUTPUT).addItemStacks(recipe.focusStacks());
+        for (var binding : layout.bindings()) {
+            var element = binding.element();
+            var slot = builder.addSlot(binding.role(), Math.round(element.getPositionX()),
+                    Math.round(element.getPositionY()))
+                    .setSlotName(binding.name())
+                    .setStandardSlotBackground();
+            slot.addTypedIngredients(binding.ingredients());
+            // The slot callback also keeps this exact layout alive until JEI discards its slots.
+            slot.addRichTooltipCallback((view, tooltip) -> layout.appendTooltip(binding, tooltip));
+        }
+        for (int i = 0; i < recipe.materials().size(); i++) {
+            var material = recipe.materials().get(i);
             builder.addSlot(RecipeIngredientRole.INPUT)
-                    .setSlotName(InteractiveMultiblockWidget.TRANSFER_SLOT_PREFIX + i)
-                    .addItemStack(transferStack);
+                    .setSlotName(TRANSFER_SLOT_PREFIX + i)
+                    .addItemStack(new ItemStack(material.block(), material.count()));
         }
-
-        builder.addSlot(RecipeIngredientRole.CATALYST, SELECTED_SLOT_X, SELECTED_SLOT_Y)
-                .setSlotName(InteractiveMultiblockWidget.SELECTED_BLOCK_SLOT)
-                .setStandardSlotBackground()
-                .addItemStacks(recipe.focusStacks());
-
-        for (int i = 0; i < InteractiveMultiblockWidget.MAX_ALTERNATIVE_SLOTS; i++) {
-            int x = ALTERNATIVE_SLOT_X + i % ALTERNATIVE_COLUMNS * ALTERNATIVE_COLUMN_STEP;
-            int y = ALTERNATIVE_SLOT_Y + i / ALTERNATIVE_COLUMNS * ALTERNATIVE_ROW_STEP;
-            builder.addSlot(RecipeIngredientRole.CATALYST, x, y)
-                    .setSlotName(InteractiveMultiblockWidget.ALTERNATIVE_SLOT_PREFIX + i)
-                    .setStandardSlotBackground()
-                    .addItemStacks(recipe.focusStacks());
-        }
-
-        // Index 0 is the transfer button; JEI stacks the bookmark button above it.
-        // Anchor both outside the lower-right corner so neither covers the page.
         builder.moveRecipeTransferButton(WIDTH + 4, getHeight() - 14);
     }
 
     @Override
-    public void createRecipeExtras(
-            IRecipeExtrasBuilder builder,
-            MultiblockStructureRecipe recipe,
-            IFocusGroup focuses) {
-        IRecipeSlotDrawablesView slots = builder.getRecipeSlots();
-        List<IRecipeSlotDrawable> materialSlots = new ArrayList<>(recipe.materials().size());
-        for (int i = 0; i < recipe.materials().size(); i++) {
-            materialSlots.add(requireSlot(slots, InteractiveMultiblockWidget.MATERIAL_SLOT_PREFIX + i));
+    public void onDisplayedIngredientsUpdate(MultiblockStructureRecipe recipe,
+            List<IRecipeSlotDrawable> recipeSlots, IFocusGroup focuses) {
+        var layout = findLayout(recipeSlots);
+        var pending = pendingLayout;
+        if (layout == null && pending != null && pending.recipe() == recipe
+                && recipeSlots.stream().anyMatch(slot -> slot.getSlotName()
+                        .filter(name -> pending.bindings().stream().anyMatch(binding -> binding.name().equals(name)))
+                        .isPresent())) {
+            layout = pending;
+            pendingLayout = null;
+            var reference = new WeakReference<>(layout);
+            for (var slot : recipeSlots) {
+                layouts.put(slot, reference);
+            }
         }
-        List<IRecipeSlotDrawable> transferSlots = new ArrayList<>(recipe.materials().size());
-        for (int i = 0; i < recipe.materials().size(); i++) {
-            transferSlots.add(requireSlot(slots, InteractiveMultiblockWidget.TRANSFER_SLOT_PREFIX + i));
+        if (layout != null) {
+            layout.updateDisplayedIngredients();
+        } else {
+            // JEI removes claimed widget slots from later update lists. Each live layout must
+            // still sync its own bound drawables; an empty list must not consume metadata indexing.
+            var updated = new IdentityHashMap<Layout, Boolean>();
+            for (var reference : layouts.values()) {
+                var candidate = reference.get();
+                if (candidate != null && candidate.recipe() == recipe
+                        && updated.put(candidate, Boolean.TRUE) == null) {
+                    candidate.updateDisplayedIngredients();
+                }
+            }
         }
-        IRecipeSlotDrawable selectedBlockSlot = requireSlot(
-                slots,
-                InteractiveMultiblockWidget.SELECTED_BLOCK_SLOT);
-        List<IRecipeSlotDrawable> alternativeSlots = new ArrayList<>(
-                InteractiveMultiblockWidget.MAX_ALTERNATIVE_SLOTS);
-        for (int i = 0; i < InteractiveMultiblockWidget.MAX_ALTERNATIVE_SLOTS; i++) {
-            alternativeSlots.add(requireSlot(
-                    slots,
-                    InteractiveMultiblockWidget.ALTERNATIVE_SLOT_PREFIX + i));
-        }
-
-        // Extras can be created lazily after another layout changes the category size.
-        // Keep this widget's drawing and hit testing tied to its own layout rectangle.
-        int height = builder instanceof IRecipeLayoutDrawable<?> layout
-                ? layout.getRect().getHeight()
-                : getHeight();
-        var widget = new InteractiveMultiblockWidget(
-                recipe,
-                WIDTH,
-                height,
-                materialSlots,
-                selectedBlockSlot,
-                alternativeSlots);
-        List<IRecipeSlotDrawable> widgetSlots = new ArrayList<>(materialSlots);
-        widgetSlots.addAll(transferSlots);
-        widgetSlots.add(selectedBlockSlot);
-        widgetSlots.addAll(alternativeSlots);
-        builder.addSlottedWidget(widget, widgetSlots);
-        builder.addInputHandler(widget);
     }
 
-    private static IRecipeSlotDrawable requireSlot(IRecipeSlotDrawablesView slots, String name) {
-        return slots.findSlotByName(name)
-                .orElseThrow(() -> new IllegalStateException("Missing JEI slot: " + name));
+    private Layout findLayout(List<IRecipeSlotDrawable> recipeSlots) {
+        for (var slot : recipeSlots) {
+            var reference = layouts.get(slot);
+            if (reference != null) {
+                var layout = reference.get();
+                if (layout != null) {
+                    return layout;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void createRecipeExtras(IRecipeExtrasBuilder builder, MultiblockStructureRecipe recipe,
+            IFocusGroup focuses) {
+        var layout = findLayout(builder.getRecipeSlots().getSlots());
+        if (layout == null) {
+            throw new IllegalStateException("Missing multiblock layout bindings");
+        }
+        int height = builder instanceof IRecipeLayoutDrawable<?> drawable
+                ? drawable.getRect().getHeight() : getHeight();
+        var ui = layout.ui();
+        if (ui.getScreenWidth() != WIDTH || ui.getScreenHeight() != height) {
+            ui.init(WIDTH, height);
+        }
+        var widget = new ModularUIJEIWidget(ui) {
+            @Override
+            public boolean mouseClicked(double mouseX, double mouseY, int button) {
+                // JEI's press phase is the original preview's simulation phase.
+                var mouse = getWorldMouse((float) mouseX, (float) mouseY);
+                ui.refreshHoveredElement(mouse.x, mouse.y);
+                return MultiblockPreviewUI.acceptsMouseClick(ui, mouse.x, mouse.y, button);
+            }
+
+            @Override
+            public boolean mouseReleased(double mouseX, double mouseY, int button) {
+                boolean handled = super.mouseClicked(mouseX, mouseY, button);
+                super.mouseReleased(mouseX, mouseY, button);
+                return handled;
+            }
+        };
+        var slots = new IdentityHashMap<UIElement, IRecipeSlotDrawable>();
+        var visibleSlots = new ArrayList<IRecipeSlotDrawable>();
+        for (var binding : layout.bindings()) {
+            var slot = builder.getRecipeSlots().findSlotByName(binding.name())
+                    .orElseThrow(() -> new IllegalStateException("Missing JEI slot: " + binding.name()));
+            slots.put(binding.element(), slot);
+            visibleSlots.add(slot);
+            if (binding.slotUpdater() != null) {
+                binding.slotUpdater().bind(slot);
+            }
+        }
+        MultiblockPreviewUI.setSlotRenderer(ui, (context, element) -> {
+            var slot = slots.get(element);
+            slot.setPosition(Math.round(element.getPositionX()), Math.round(element.getPositionY()));
+            slot.draw(context.graphics);
+        });
+        builder.addWidget(widget);
+        builder.addGuiEventListener(widget);
+        builder.addSlottedWidget(new LayoutSlots(layout.bindings(), slots, widget), visibleSlots);
+
+        List<IRecipeSlotDrawable> transferSlots = new ArrayList<>();
+        for (int i = 0; i < recipe.materials().size(); i++) {
+            builder.getRecipeSlots().findSlotByName(TRANSFER_SLOT_PREFIX + i).ifPresent(transferSlots::add);
+        }
+        if (!transferSlots.isEmpty()) {
+            builder.addSlottedWidget(HiddenSlotsWidget.INSTANCE, transferSlots);
+        }
     }
 
     @Override
     public ResourceLocation getRegistryName(MultiblockStructureRecipe recipe) {
         return recipe.id();
+    }
+
+    private record Layout(MultiblockStructureRecipe recipe, ModularUI ui, List<Binding> bindings) {
+        private void updateDisplayedIngredients() {
+            for (var binding : bindings) {
+                if (binding.slotUpdater() != null) {
+                    binding.slotUpdater().onDisplayedIngredientsUpdate();
+                }
+            }
+        }
+
+        private void appendTooltip(Binding binding, ITooltipBuilder tooltip) {
+            var additional = XEITooltipContext.RECIPE_SLOT.collectTooltips(binding.element());
+            if (additional != null) {
+                tooltip.addAll(additional.tooltipTexts());
+                if (additional.tooltipComponent() != null) {
+                    tooltip.add(additional.tooltipComponent());
+                }
+            }
+        }
+    }
+
+    /** Same local-to-world lookup protocol as LDLib's native slotted widget. */
+    private record LayoutSlots(List<Binding> bindings, Map<UIElement, IRecipeSlotDrawable> slots,
+            ModularUIJEIWidget widget) implements ISlottedRecipeWidget {
+        @Override
+        public ScreenPosition getPosition() {
+            return HiddenSlotsWidget.POSITION;
+        }
+
+        @Override
+        public Optional<RecipeSlotUnderMouse> getSlotUnderMouse(double mouseX, double mouseY) {
+            var mouse = widget.getWorldMouse((float) mouseX, (float) mouseY);
+            widget.modularUI.refreshHoveredElement(mouse.x, mouse.y);
+            for (var binding : bindings) {
+                if (binding.isInteractive() && binding.element().isMouseOverElement(mouse.x, mouse.y)) {
+                    return Optional.of(new RecipeSlotUnderMouse(slots.get(binding.element()), 0, 0));
+                }
+            }
+            return Optional.empty();
+        }
+    }
+
+    /** Claims slots that exist only for lookup and transfer, without drawing them. */
+    private enum HiddenSlotsWidget implements ISlottedRecipeWidget {
+        INSTANCE;
+
+        private static final ScreenPosition POSITION = new ScreenPosition(0, 0);
+
+        @Override
+        public ScreenPosition getPosition() {
+            return POSITION;
+        }
+
+        @Override
+        public Optional<RecipeSlotUnderMouse> getSlotUnderMouse(double mouseX, double mouseY) {
+            return Optional.empty();
+        }
     }
 }

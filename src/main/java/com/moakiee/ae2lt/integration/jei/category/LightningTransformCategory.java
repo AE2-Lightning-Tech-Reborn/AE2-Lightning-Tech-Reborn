@@ -1,12 +1,13 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import java.util.Arrays;
 import java.util.List;
 
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
 import com.moakiee.ae2lt.integration.jei.LargeStackJeiItemRenderer;
-import com.moakiee.ae2lt.integration.jei.LightningJeiIngredients;
 import com.moakiee.ae2lt.lightning.LightningTransformRecipe;
 import com.moakiee.ae2lt.me.key.LightningKey;
 
@@ -47,12 +48,15 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
 
     private final IDrawable background;
     private final IDrawable icon;
-    private final IDrawable lightningDisplay;
+    private final JeiRecipeDecor<LightningTransformRecipe> decor = new JeiRecipeDecor<>(recipe ->
+            RecipeDecor.of(WIDTH, HEIGHT)
+                    .centeredText(Component.translatable("jei.ae2lt.lightning_transform.label"), LABEL_Y, TEXT_COLOR)
+                    .lightningIcon(CATALYST_X + 1, CATALYST_Y + 1, LightningKey.HIGH_VOLTAGE));
 
     public LightningTransformCategory(IGuiHelper guiHelper) {
         this.background = guiHelper.createBlankDrawable(WIDTH, HEIGHT);
-        this.icon = guiHelper.createDrawableIngredient(LightningJeiIngredients.TYPE, LightningKey.HIGH_VOLTAGE);
-        this.lightningDisplay = guiHelper.createDrawableIngredient(LightningJeiIngredients.TYPE, LightningKey.HIGH_VOLTAGE);
+        this.icon = guiHelper.createDrawableIngredient(
+                com.moakiee.ae2lt.integration.jei.LightningJeiIngredients.TYPE, LightningKey.HIGH_VOLTAGE);
     }
 
     @Override
@@ -109,8 +113,8 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
 
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, LightningTransformRecipe recipe, IFocusGroup focuses) {
-        builder.addRecipeArrow().setPosition(ARROW_LEFT_X, ARROW_Y);
-        builder.addRecipeArrow().setPosition(ARROW_RIGHT_X, ARROW_Y);
+        JeiRecipeDecor.addArrow(builder, ARROW_LEFT_X, ARROW_Y);
+        JeiRecipeDecor.addArrow(builder, ARROW_RIGHT_X, ARROW_Y);
     }
 
     @Override
@@ -120,11 +124,7 @@ public class LightningTransformCategory implements IRecipeCategory<LightningTran
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        var font = Minecraft.getInstance().font;
-        var label = Component.translatable("jei.ae2lt.lightning_transform.label");
-        int labelX = (WIDTH - font.width(label)) / 2;
-        guiGraphics.drawString(font, label, labelX, LABEL_Y, TEXT_COLOR, false);
-        lightningDisplay.draw(guiGraphics, CATALYST_X + 1, CATALYST_Y + 1);
+        decor.draw(recipe, guiGraphics, mouseX, mouseY);
     }
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {

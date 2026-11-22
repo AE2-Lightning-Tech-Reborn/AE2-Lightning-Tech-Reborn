@@ -7,22 +7,21 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.api.stacks.GenericStack;
-import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
 import appeng.client.gui.NumberEntryType;
 import appeng.client.gui.me.common.ClientDisplaySlot;
-import appeng.client.gui.widgets.NumberEntryWidget;
-import appeng.client.gui.widgets.TabButton;
 import appeng.core.localization.GuiText;
 import appeng.menu.SlotSemantics;
 import com.google.common.primitives.Longs;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibNumberEntryWidget;
 import com.moakiee.ae2lt.menu.TianshuPatternEncodingTermMenu;
 import guideme.PageAnchor;
 import java.util.function.Consumer;
 
 final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEncodingTermMenu>
-        extends AESubScreen<M, TianshuPatternEncodingTermScreen<M>> {
-    private final NumberEntryWidget amount;
+        extends LdlibAeSubScreen<M, TianshuPatternEncodingTermScreen<M>> {
+    private final LdlibNumberEntryWidget amount;
     private final GenericStack currentStack;
     private final Consumer<GenericStack> setter;
 
@@ -34,18 +33,18 @@ final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEnco
         this.currentStack = currentStack;
         this.setter = setter;
 
-        widgets.addButton("save", GuiText.Set.text(), this::confirm);
+        LdlibAe2Button.addText(widgets, style, "save", GuiText.Set.text(), this::confirm);
 
         var icon = getMenu().getHost().getMainMenuIcon();
-        var button = new TabButton(Icon.BACK, icon.getHoverName(), ignored -> returnToParent());
+        var button = LdlibAe2Button.back(icon.getHoverName(), this::returnToParent);
         widgets.add("back", button);
 
-        amount = widgets.addNumberEntryWidget("amountToStock", NumberEntryType.of(currentStack.what()));
+        amount = new LdlibNumberEntryWidget(style, NumberEntryType.of(currentStack.what()), false);
+        widgets.add("amountToStock", amount);
         amount.setLongValue(currentStack.amount());
         amount.setMaxValue(getMaxAmount());
         amount.setTextFieldStyle(style.getWidget("amountToStockInput"));
         amount.setMinValue(0);
-        amount.setHideValidationIcon(true);
         amount.setOnConfirm(this::confirm);
 
         addClientSideSlot(new ClientDisplaySlot(currentStack), SlotSemantics.MACHINE_OUTPUT);
@@ -54,6 +53,24 @@ final class TianshuSetProcessingPatternAmountScreen<M extends TianshuPatternEnco
     @Override
     protected PageAnchor getHelpTopic() {
         return getParent().getHelpTopic();
+    }
+
+    @Override
+    protected void onReturnToParent() {
+        try {
+            amount.releaseUnitLayer();
+        } finally {
+            super.onReturnToParent();
+        }
+    }
+
+    @Override
+    public void removed() {
+        try {
+            amount.releaseUnitLayer();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override

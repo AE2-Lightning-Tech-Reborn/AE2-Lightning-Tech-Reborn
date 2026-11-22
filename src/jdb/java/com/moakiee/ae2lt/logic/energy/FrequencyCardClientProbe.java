@@ -259,7 +259,7 @@ public final class FrequencyCardClientProbe {
     }
     private static void search(String query) throws Exception {
         var screen = Minecraft.getInstance().screen; var field = FrequencyScreen.class.getDeclaredField("selectionSearchField");
-        field.setAccessible(true); ((appeng.client.gui.widgets.AETextField) field.get(screen)).setValue(query);
+        field.setAccessible(true); ((com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField) field.get(screen)).setValue(query);
     }
     private static void assertBoundRow(String name) throws Exception {
         int marked = 0;

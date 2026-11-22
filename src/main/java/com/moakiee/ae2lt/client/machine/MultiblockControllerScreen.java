@@ -1,5 +1,10 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.LdlibText;
+import com.lowdragmc.lowdraglib2.gui.LDLibFonts;
+
 import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
@@ -18,12 +23,13 @@ import net.minecraft.world.level.block.Block;
 public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
     protected static final int BLUE = 221, RED = 228, AMBER = 235, GREEN = 242;
     private static final int BAR_WIDTH = 150;
-    private final ResourceLocation atlas;
+    private final LdlibStyleSprite atlas;
     private final int machineIconV;
 
     protected MultiblockControllerScreen(T menu, Inventory inventory, Component title, String atlasName, int machineIconV) {
         super(menu, inventory, title);
-        atlas = ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/guis/" + atlasName + ".png");
+        atlas = new LdlibStyleSprite(ResourceLocation.fromNamespaceAndPath(
+                AE2LightningTech.MODID, "textures/guis/" + atlasName + ".png"), 256, 256);
         this.machineIconV = machineIconV;
         imageWidth = 186;
         imageHeight = 220;
@@ -35,7 +41,7 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.blit(atlas, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        atlas.draw(graphics, leftPos, topPos, 0, 0, imageWidth, imageHeight);
     }
 
     @Override
@@ -54,12 +60,12 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
                 case OVERLOAD -> 37;
                 case MULTIDIMENSIONAL -> 3;
             };
-            graphics.blit(atlas, 20, 36, 188, frameV, 22, 32, 256, 256);
+            atlas.draw(graphics, 20, 36, 188, frameV, 22, 32);
             var sprite = minecraft.getBlockRenderer().getBlockModelShaper().getParticleIcon(core.defaultBlockState());
-            graphics.blit(23, 44, 0, 16, 16, sprite);
+            LdlibScreens.drawAtlasIcon(graphics, 23, 44, 0, sprite);
         }
-        graphics.blit(atlas, 110, 44, 215, machineIconV, 16, 16, 256, 256);
-        graphics.blit(atlas, 56, 56, 216, !formed ? 40 : warning ? 50 : 60, 8, 8, 256, 256);
+        atlas.draw(graphics, 110, 44, 215, machineIconV, 16, 16);
+        atlas.draw(graphics, 56, 56, 216, !formed ? 40 : warning ? 50 : 60, 8, 8);
         text(graphics, name.getString(), 55, 42, 46);
         String state = !formed ? "unformed" : warning ? "warning" : "ready";
         text(graphics, Component.translatable("ae2lt.controller." + state).getString(), 67, 56, 35);
@@ -73,18 +79,18 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
         int barY = 104 + offset;
         if (fraction == Double.POSITIVE_INFINITY) {
             for (int start = 0; start < BAR_WIDTH; start += 12) {
-                graphics.blit(atlas, 18 + start, barY, 1 + start, barV, Math.min(6, BAR_WIDTH - start), 5, 256, 256);
+                atlas.draw(graphics, 18 + start, barY, 1 + start, barV, Math.min(6, BAR_WIDTH - start), 5);
             }
         } else if (fraction > 0) {
             int width = Math.clamp(Math.round(BAR_WIDTH * fraction), 1, BAR_WIDTH);
-            graphics.blit(atlas, 18, barY, 1, barV, width, 5, 256, 256);
+            atlas.draw(graphics, 18, barY, 1, barV, width, 5);
         }
     }
 
     protected void markHeatRange(GuiGraphics graphics, double low, double high) {
         for (double edge : new double[] {low, high}) {
             int marker = 18 + (int) Math.round(BAR_WIDTH * edge);
-            graphics.fill(marker, 103, marker + 1, 110, 0xFFF2F2F2);
+            LdlibScreens.fillRect(graphics, marker, 103, marker + 1, 110, 0xFFF2F2F2);
         }
     }
 
@@ -93,11 +99,11 @@ public abstract class MultiblockControllerScreen<T extends AbstractContainerMenu
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
         graphics.pose().scale(scale, scale, 1F);
-        graphics.drawString(font, value, 0, 0, textColor(), false);
+        LdlibText.drawString(graphics, font, value, 0, 0, textColor(), false);
         graphics.pose().popPose();
     }
 
-protected void drawUnformed(GuiGraphics graphics, Component issue) {
+    protected void drawUnformed(GuiGraphics graphics, Component issue) {
         var lines = font.split(issue, 135);
         int linesPerPanel = Math.max(2, Math.ceilDiv(lines.size(), 3));
         float step = 21F / linesPerPanel;
@@ -107,7 +113,7 @@ protected void drawUnformed(GuiGraphics graphics, Component issue) {
             graphics.pose().pushPose();
             graphics.pose().translate(31, y, 0);
             graphics.pose().scale(scale, scale, 1F);
-            graphics.drawString(font, lines.get(index), 0, 0, textColor(), false);
+            LDLibFonts.drawText(graphics, font, lines.get(index), 0, 0, textColor(), false);
             graphics.pose().popPose();
         }
         text(graphics, Component.translatable("ae2lt.matrix.gui.hint_unformed").getString(), 16, 195, 154);

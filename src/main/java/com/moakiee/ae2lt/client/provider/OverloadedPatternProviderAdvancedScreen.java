@@ -1,5 +1,11 @@
 package com.moakiee.ae2lt.client.provider;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
 import java.util.List;
@@ -7,21 +13,18 @@ import java.util.List;
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
-import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
-import appeng.client.gui.widgets.AETextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
 import appeng.menu.SlotSemantics;
 import appeng.client.gui.style.PaletteColor;
 
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 
 public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedPatternProviderMenu>
-        extends AESubScreen<M, OverloadedPatternProviderScreen<M>> {
+        extends LdlibAeSubScreen<M, OverloadedPatternProviderScreen<M>> {
     private static final int LABEL_X = 38;
     private static final int STRATEGY_Y = 33;
     private static final int SPEED_Y = 57;
@@ -30,16 +33,21 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     private final TextureToggleButton wirelessStrategyButton;
     private final TextureToggleButton wirelessSpeedButton;
     private final TextureToggleButton filteredImportButton;
-    private final Button machineAdaptationButton;
-    private final AETextField machineParallelism;
-    private final Button applyParallelism;
+    private final LdlibAe2Button machineAdaptationButton;
+    private final LdlibAe2TextField machineParallelism;
+    private final LdlibAe2Button applyParallelism;
     private int lastSyncedParallelism;
+    private ModularUI foreground;
+    private List<Label> wirelessLabels;
+    private Label filterLabel;
+    private Label parallelismHint;
+    private Label wirelessHint;
 
     public OverloadedPatternProviderAdvancedScreen(OverloadedPatternProviderScreen<M> parent) {
         super(parent, "/screens/overloaded_pattern_provider_advanced.json");
 
         var backLabel = Component.translatable(parent.getMenu().getTitleTranslationKey());
-        widgets.add("return", new TabButton(Icon.BACK, backLabel, btn -> returnToParent()));
+        widgets.add("return", LdlibAe2Button.back(backLabel, this::returnToParent));
 
         this.wirelessStrategyButton = new TextureToggleButton(
                 TextureToggleButton.ButtonType.WIRELESS_STRATEGY,
@@ -68,17 +76,19 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
                 List.of(Component.translatable("ae2lt.gui.filtered_import.off")));
         widgets.add("filteredImport", this.filteredImportButton);
 
-        machineAdaptationButton = widgets.addButton("machineAdaptation",
+        machineAdaptationButton = LdlibAe2Button.addText(widgets, style, "machineAdaptation",
                 Component.empty(), menu::clientToggleMachineAdaptation);
+        machineAdaptationButton.setTooltip(Tooltip.create(Component.translatable(
+                "ae2lt.gui.machine_adaptation.tooltip")));
 
-        machineParallelism = widgets.addTextField("machineParallelism");
+        machineParallelism = LdlibAe2TextField.add(widgets, style, "machineParallelism");
         machineParallelism.setMaxLength(10);
         machineParallelism.setFilter(OverloadedPatternProviderAdvancedScreen::isParallelismDraft);
         lastSyncedParallelism = menu.machineParallelism;
         machineParallelism.setValue(Integer.toString(lastSyncedParallelism));
         machineParallelism.setTooltip(Tooltip.create(Component.translatable(
                 "ae2lt.gui.provider_advanced.machine_parallelism_tooltip")));
-        applyParallelism = widgets.addButton("applyParallelism",
+        applyParallelism = LdlibAe2Button.addText(widgets, style, "applyParallelism",
                 Component.translatable("gui.done"), this::applyParallelism);
     }
 
@@ -116,6 +126,24 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
     protected void init() {
         super.init();
         setSlotsHidden(SlotSemantics.TOOLBOX, true);
+        var root = new UIElement();
+        int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        wirelessLabels = List.of(
+                addLabel(root, "distribution", LABEL_X, STRATEGY_Y, textColor),
+                addLabel(root, "probe", LABEL_X, SPEED_Y, textColor),
+                addLabel(root, "machine_parallelism", 14, 129, textColor));
+        filterLabel = addLabel(root, "input_filter", LABEL_X, FILTER_Y, textColor);
+        parallelismHint = addLabel(root, "parallelism_hint", 14, 171, textColor);
+        wirelessHint = addLabel(root, "wireless_hint", 14, 185, textColor);
+        foreground = LdlibScreens.localLayer(root, imageWidth, imageHeight);
+    }
+
+    private Label addLabel(UIElement root, String key, int x, int y, int color) {
+        var label = LdlibScreens.label(Component.translatable("ae2lt.gui.provider_advanced." + key), color);
+        label.setAllowHitTest(false);
+        label.textStyle(style -> style.textWrap(TextWrap.NONE));
+        root.addChild(LdlibScreens.at(label, x, y, imageWidth - x, 9));
+        return label;
     }
 
     @Override
@@ -135,8 +163,6 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
 
         machineAdaptationButton.setMessage(Component.translatable(menu.isMachineAdaptationEnabled()
                 ? "ae2lt.gui.machine_adaptation.on" : "ae2lt.gui.machine_adaptation.off"));
-        machineAdaptationButton.setTooltip(Tooltip.create(Component.translatable(
-                "ae2lt.gui.machine_adaptation.tooltip")));
 
         this.filteredImportButton.setState(menu.isFilteredImport());
         this.filteredImportButton.setVisibility(menu.isFilteredImportVisible());
@@ -149,61 +175,23 @@ public final class OverloadedPatternProviderAdvancedScreen<M extends OverloadedP
             lastSyncedParallelism = menu.machineParallelism;
         }
         machineParallelism.setVisible(wirelessTuningVisible);
-        machineParallelism.setEditable(wirelessTuningActive);
+        machineParallelism.setEditable(wirelessTuningActive, true);
         applyParallelism.visible = wirelessTuningVisible;
         applyParallelism.active = wirelessTuningActive
                 && draftedParallelism() > 0
                 && draftedParallelism() != menu.machineParallelism;
+        for (var label : wirelessLabels) {
+            label.setVisible(wirelessTuningVisible);
+        }
+        filterLabel.setVisible(menu.isFilteredImportVisible());
+        parallelismHint.setVisible(wirelessTuningVisible);
+        wirelessHint.setVisible(wirelessTuningVisible && !wirelessTuningActive);
     }
 
     @Override
     public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
-
-        boolean wirelessTuningVisible = menu.isWirelessTuningVisible();
-        int wirelessColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
-        if (wirelessTuningVisible) {
-            guiGraphics.drawString(
-                    font,
-                    Component.translatable("ae2lt.gui.provider_advanced.distribution"),
-                    LABEL_X,
-                    STRATEGY_Y,
-                    wirelessColor,
-                    false);
-            guiGraphics.drawString(
-                    font,
-                    Component.translatable("ae2lt.gui.provider_advanced.probe"),
-                    LABEL_X,
-                    SPEED_Y,
-                    wirelessColor,
-                    false);
-        }
-        if (menu.isFilteredImportVisible()) {
-            guiGraphics.drawString(
-                    font,
-                    Component.translatable("ae2lt.gui.provider_advanced.input_filter"),
-                    LABEL_X,
-                    FILTER_Y,
-                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
-                    false);
-        }
-        if (wirelessTuningVisible) {
-            guiGraphics.drawString(font,
-                    Component.translatable("ae2lt.gui.provider_advanced.machine_parallelism"),
-                    14, 129, wirelessColor, false);
-            guiGraphics.drawString(font,
-                    Component.translatable("ae2lt.gui.provider_advanced.parallelism_hint"),
-                    14, 171, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        }
-        if (wirelessTuningVisible && !menu.isWirelessMode()) {
-            guiGraphics.drawString(
-                    font,
-                    Component.translatable("ae2lt.gui.provider_advanced.wireless_hint"),
-                    14,
-                    185,
-                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
-                    false);
-        }
+        foreground.getWidget().render(guiGraphics, mouseX - leftPos, mouseY - topPos, 0);
     }
 
     @Override

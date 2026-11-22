@@ -1,6 +1,7 @@
 package com.moakiee.ae2lt.integration.emi;
 
 import com.moakiee.ae2lt.machine.teslacoil.TeslaCoilMode;
+import com.moakiee.ae2lt.me.key.LightningKey;
 import com.moakiee.ae2lt.registry.ModItems;
 import dev.emi.emi.api.EmiRegistry;
 import dev.emi.emi.api.recipe.BasicEmiRecipe;
@@ -15,7 +16,6 @@ final class EmiTeslaCoilRecipe extends BasicEmiRecipe {
     private static final int WIDTH = 150;
 
     private final TeslaCoilMode mode;
-    private final EmiLightningIcon lightningIcon;
 
     private EmiTeslaCoilRecipe(TeslaCoilMode mode) {
         super(
@@ -24,7 +24,6 @@ final class EmiTeslaCoilRecipe extends BasicEmiRecipe {
                 WIDTH,
                 90);
         this.mode = mode;
-        this.lightningIcon = new EmiLightningIcon(mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE);
         if (mode == TeslaCoilMode.HIGH_VOLTAGE) {
             inputs.add(EmiStack.of(
                     ModItems.OVERLOAD_CRYSTAL_DUST.get(),
@@ -43,53 +42,26 @@ final class EmiTeslaCoilRecipe extends BasicEmiRecipe {
         if (!inputs.isEmpty()) {
             EmiRecipeWidgets.addLargeStackSlot(widgets, inputs.getFirst(), 12, 8);
         }
-        widgets.addAnimatedTexture(
-                ARROW_TEXTURE,
-                54,
-                11,
-                35,
-                10,
-                176,
-                18,
-                1_500,
-                true,
-                false,
-                false);
-        widgets.addDrawable(118, 8, 16, 16, (graphics, mouseX, mouseY, delta) ->
-                lightningIcon.render(graphics, 0, 0, delta));
-
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .horizontalRevealWallClock(ARROW_TEXTURE, 54, 11, 35, 10, 176, 18, 1_500)
+                .lightningIcon(118, 8, mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE
+                        ? LightningKey.EXTREME_HIGH_VOLTAGE : LightningKey.HIGH_VOLTAGE)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.tesla_coil.mode_label",
-                        Component.translatable(mode.translationKey())),
-                WIDTH / 2,
-                34);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+                        Component.translatable(mode.translationKey())), 34, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.tesla_coil.energy",
-                        EmiRecipeWidgets.compactEnergy(mode.totalEnergy())),
-                WIDTH / 2,
-                46);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+                        EmiRecipeWidgets.compactEnergy(mode.totalEnergy())), 46, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(
                         mode == TeslaCoilMode.HIGH_VOLTAGE
                                 ? "jei.ae2lt.tesla_coil.consume_dust"
                                 : "jei.ae2lt.tesla_coil.consume_hv",
                         mode == TeslaCoilMode.HIGH_VOLTAGE
                                 ? mode.requiredDust()
-                                : mode.requiredHighVoltage()),
-                WIDTH / 2,
-                58);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE
+                                : mode.requiredHighVoltage()), 58, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(mode == TeslaCoilMode.EXTREME_HIGH_VOLTAGE
                         ? "jei.ae2lt.tesla_coil.output_ehv"
-                        : "jei.ae2lt.tesla_coil.output_hv"),
-                WIDTH / 2,
-                70);
+                        : "jei.ae2lt.tesla_coil.output_hv"), 70, EmiRecipeWidgets.TEXT_COLOR));
     }
 
     @Override

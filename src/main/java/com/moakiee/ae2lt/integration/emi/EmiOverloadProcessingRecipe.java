@@ -38,7 +38,8 @@ final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessi
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addTexture(TEXTURE, 0, 0, WIDTH, 68, 4, 14);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .texture(TEXTURE, 0, 0, WIDTH, 68, 4, 14));
 
         for (int index = 0; index < recipe.itemInputs().size(); index++) {
             EmiRecipeWidgets.addLargeStackSlot(
@@ -83,33 +84,15 @@ final class EmiOverloadProcessingRecipe extends EmiBackedRecipe<OverloadProcessi
                     .recipeContext(this);
         }
 
-        widgets.addAnimatedTexture(
-                TEXTURE,
-                80,
-                32,
-                31,
-                10,
-                176,
-                18,
-                2_000,
-                true,
-                false,
-                false);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .horizontalRevealWallClock(TEXTURE, 80, 32, 31, 10, 176, 18, 2_000)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.overload_processing.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
-                WIDTH / 2,
-                70);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())), 70, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.overload_processing.lightning",
                         recipe.lightningCost(),
-                        EmiRecipeWidgets.tierName(recipe.lightningTier())),
-                WIDTH / 2,
-                80);
+                        EmiRecipeWidgets.tierName(recipe.lightningTier())), 80, EmiRecipeWidgets.TEXT_COLOR));
     }
 
     private static int displayCapacity(int amount, int tankCapacity) {

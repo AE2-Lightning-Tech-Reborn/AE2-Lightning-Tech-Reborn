@@ -167,7 +167,8 @@ final class CoreEffectGeometry {
                                        double stepPhase, double spinDegrees) {
         int step = (int) Math.floor(stepPhase);
         float progress = (float) (stepPhase - step);
-        float turn = smoothStep(clamp((progress - 0.12F) / 0.70F)) * 90.0F;
+        float turnProgress = Math.max(0.0F, Math.min(1.0F, (progress - 0.12F) / 0.70F));
+        float turn = turnProgress * turnProgress * (3.0F - 2.0F * turnProgress) * 90.0F;
         int axis = Math.floorMod(step, 3);
         int layer = Math.floorMod(step / 3, 3) - 1;
         float direction = (step & 1) == 0 ? 1.0F : -1.0F;
@@ -241,14 +242,6 @@ final class CoreEffectGeometry {
                 blue,
                 alpha);
         stack.popPose();
-    }
-
-    private static float clamp(float value) {
-        return Math.max(0.0F, Math.min(1.0F, value));
-    }
-
-    private static float smoothStep(float value) {
-        return value * value * (3.0F - 2.0F * value);
     }
 
 }

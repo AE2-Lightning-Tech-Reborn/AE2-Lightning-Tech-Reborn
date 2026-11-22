@@ -6,19 +6,20 @@
 
 package com.moakiee.ae2lt.client.tianshu;
 
+import appeng.client.gui.style.PaletteColor;
 import appeng.api.crafting.PatternDetailsHelper;
-import appeng.api.config.ActionItems;
 import appeng.client.Point;
 import appeng.client.gui.ICompositeWidget;
 import appeng.client.gui.Icon;
+import appeng.api.config.ActionItems;
 import appeng.client.gui.WidgetContainer;
-import appeng.client.gui.style.Blitter;
-import appeng.client.gui.style.PaletteColor;
-import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.IconButton;
-import appeng.client.gui.widgets.Scrollbar;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.LDLibFonts;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
 import com.moakiee.ae2lt.item.ClosedLoopPatternItem;
 import com.moakiee.ae2lt.logic.tianshu.terminal.SeedRefillSync;
 import com.moakiee.ae2lt.menu.Ae2ltSlotSemantics;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
@@ -34,14 +36,14 @@ import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
 
 /** Inline closed-loop editor shown in the terminal's encoding area, mirroring the processing panel. */
 final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
-    private static final Blitter BG = Blitter.texture("guis/pattern_modes.png").src(0, 70, 124, 66);
+    private static final SpriteTexture BG =
+            TianshuEncodingModePanel.PATTERN_MODES_ATLAS.slice(0, 70, 124, 66);
     // Reuse a blank part of AE2's processing panel to remove its input-to-output arrow.
-    private static final Blitter ARROW_COVER =
-            Blitter.texture("guis/pattern_modes.png").src(73, 77, 23, 16);
+    private static final SpriteTexture ARROW_COVER =
+            TianshuEncodingModePanel.PATTERN_MODES_ATLAS.slice(73, 77, 23, 16);
     private static final int ARROW_X = 73;
     private static final int ARROW_Y = 25;
     private static final int PANEL_WIDTH = 124;
@@ -58,18 +60,20 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     private static final int STATUS_HEIGHT = 7;
     private static final int LABEL_HEIGHT = 7;
     private static final float LABEL_SCALE = 0.6F;
+    private static final int LABEL_WIDTH = (int) (CONTROL_WIDTH / LABEL_SCALE);
     private static final int VISIBLE_ROWS = 3;
 
     private final TianshuPatternEncodingTermScreen<?> screen;
     private final TianshuPatternEncodingTermMenu menu;
-    private final Scrollbar scrollbar;
-    private final AE2Button detailButton;
-    private final AE2Button autoFillButton;
-    private final ActionButton clearButton;
-    private final ActionButton cycleOutputButton;
-    private final IconButton refillButton;
-    private final AETextField executionField;
-    private final AETextField storedField;
+    private final LdlibRowScroller scrollbar;
+    private final LdlibAe2Button detailButton;
+    private final LdlibAe2Button autoFillButton;
+    private final LdlibAe2Button clearButton;
+    private final LdlibAe2Button cycleOutputButton;
+    private final LdlibAe2Button refillButton;
+    private final LdlibAe2TextField executionField;
+    private final LdlibAe2TextField storedField;
+    private final ModularUI panelUi;
     private boolean visible;
     private boolean syncing;
     private int x;
@@ -81,57 +85,41 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
             Runnable openDetail) {
         this.screen = screen;
         this.menu = screen.getMenu();
-
-        scrollbar = widgets.addScrollBar("closedLoopScrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "closedLoopScrollbar");
         scrollbar.setRange(0,
                 TianshuPatternEncodingTermMenu.CLOSED_LOOP_MEMBER_SLOTS / 3 - VISIBLE_ROWS, 3);
         scrollbar.setCaptureMouseWheel(false);
 
-        detailButton = widgets.addButton("closedLoopDetail",
+        detailButton = LdlibAe2Button.addText(widgets, screen.getStyle(), "closedLoopDetail",
                 Component.translatable("ae2lt.tianshu.closed_loop.detail"), openDetail);
         detailButton.setTooltip(Tooltip.create(Component.translatable(
                 "ae2lt.tianshu.closed_loop.detail.tooltip")));
-        autoFillButton = widgets.addButton("closedLoopAutoFill",
+        autoFillButton = LdlibAe2Button.addText(widgets, screen.getStyle(), "closedLoopAutoFill",
                 Component.translatable("ae2lt.tianshu.closed_loop.auto_fill"),
                 menu::autoFillClosedLoop);
-        clearButton = new ActionButton(ActionItems.S_CLOSE, menu::clearClosedLoopDraft);
-        clearButton.setHalfSize(true);
-        clearButton.setDisableBackground(true);
+        clearButton = LdlibAe2Button.small(Icon.S_CLEAR, ActionItems.S_CLOSE, menu::clearClosedLoopDraft);
         widgets.add("closedLoopClear", clearButton);
 
-        cycleOutputButton = new ActionButton(
-                ActionItems.S_CYCLE_PROCESSING_OUTPUT,
-                ignored -> menu.cycleClosedLoopOutput());
-        cycleOutputButton.setHalfSize(true);
-        cycleOutputButton.setDisableBackground(true);
+        cycleOutputButton = LdlibAe2Button.small(Icon.S_CYCLE,
+                ActionItems.S_CYCLE_PROCESSING_OUTPUT, menu::cycleClosedLoopOutput);
         widgets.add("closedLoopCycleOutput", cycleOutputButton);
 
-        refillButton = new IconButton(btn -> menu.refillClosedLoopSeeds()) {
-            @Override
-            protected Icon getIcon() {
-                return Icon.S_ARROW_DOWN;
-            }
-
-            @Override
-            public List<Component> getTooltipMessage() {
-                return List.of(
-                        Component.translatable("ae2lt.tianshu.closed_loop.refill_seeds"),
-                        Component.translatable("ae2lt.tianshu.closed_loop.refill_seeds.tooltip")
-                                .withStyle(ChatFormatting.GRAY));
-            }
-        };
-        refillButton.setHalfSize(true);
-        refillButton.setDisableBackground(true);
+        refillButton = LdlibAe2Button.small(Icon.S_ARROW_DOWN,
+                Component.translatable("ae2lt.tianshu.closed_loop.refill_seeds"),
+                Component.translatable("ae2lt.tianshu.closed_loop.refill_seeds.tooltip").withStyle(ChatFormatting.GRAY),
+                menu::refillClosedLoopSeeds);
+        refillButton.setMessage(Component.empty());
         widgets.add("closedLoopSeedRefill", refillButton);
 
-        executionField = widgets.addTextField("closedLoopExecMultiplier");
-        storedField = widgets.addTextField("closedLoopStoredMultiplier");
+        executionField = LdlibAe2TextField.add(widgets, screen.getStyle(), "closedLoopExecMultiplier");
+        storedField = LdlibAe2TextField.add(widgets, screen.getStyle(), "closedLoopStoredMultiplier");
         for (var field : List.of(executionField, storedField)) {
             field.setMaxLength(9);
             field.setFilter(TianshuClosedLoopEncodingPanel::isPositiveIntDraft);
             field.setResponder(ignored -> submitMultipliers());
         }
         updateMultiplierTooltips();
+        panelUi = buildPanel();
     }
 
     @Override
@@ -204,46 +192,52 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         updateMultiplierTooltips();
     }
 
+    private ModularUI buildPanel() {
+        var root = new UIElement();
+        var background = new UIElement().setAllowHitTest(false).style(s -> s.background(BG));
+        var arrowCover = new UIElement().setAllowHitTest(false).style(s -> s.background(ARROW_COVER));
+        root.addChildren(LdlibScreens.at(background, -1, 1, PANEL_WIDTH, PANEL_HEIGHT),
+                LdlibScreens.at(arrowCover, ARROW_X - 1, ARROW_Y + 1, 23, 16));
+        var ui = LdlibScreens.localLayer(root, PANEL_WIDTH, PANEL_HEIGHT);
+        ui.setDrawTooltips(false);
+        return ui;
+    }
+
     @Override
     public void drawBackgroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        int panelX = bounds.getX() + x - 1;
-        int panelY = bounds.getY() + y + 1;
-        BG.dest(panelX, panelY).blit(graphics);
-        ARROW_COVER.dest(panelX + ARROW_X, panelY + ARROW_Y).blit(graphics);
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(bounds.getX() + x, bounds.getY() + y, 0);
+            panelUi.getWidget().render(graphics, mouse.getX() - x, mouse.getY() - y, 0);
+        } finally {
+            pose.popPose();
+        }
     }
 
     @Override
     public void drawForegroundLayer(GuiGraphics graphics, Rect2i bounds, Point mouse) {
-        drawScaledLabel(graphics, Component.translatable(
-                "ae2lt.tianshu.closed_loop.execution_multiplier.short"), EXEC_LABEL_Y);
-        drawScaledLabel(graphics, Component.translatable(
-                "ae2lt.tianshu.closed_loop.stored_multiplier.short"), STORED_LABEL_Y);
-        drawStatus(graphics);
+        int color = screen.getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        drawScaledText(graphics, Component.translatable("ae2lt.tianshu.closed_loop.execution_multiplier.short"),
+                EXEC_LABEL_Y, color, false);
+        drawScaledText(graphics, Component.translatable("ae2lt.tianshu.closed_loop.stored_multiplier.short"),
+                STORED_LABEL_Y, color, false);
+        drawScaledText(graphics, statusText(), STATUS_Y, 0xFF000000 | statusColor(), true);
     }
 
-    private void drawScaledLabel(GuiGraphics graphics, Component text, int labelY) {
+    private void drawScaledText(GuiGraphics graphics, Component text, int top, int color, boolean centered) {
         var font = Minecraft.getInstance().font;
+        String clipped = font.plainSubstrByWidth(text.getString(), LABEL_WIDTH);
+        float inset = centered ? (CONTROL_WIDTH - font.width(clipped) * LABEL_SCALE) / 2.0F : 0;
         var pose = graphics.pose();
         pose.pushPose();
-        pose.translate(x + CONTROL_X, y + labelY, 0);
-        pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, font.plainSubstrByWidth(
-                text.getString(), (int) (CONTROL_WIDTH / LABEL_SCALE)), 0, 0,
-                screen.getStyle().getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        pose.popPose();
-    }
-
-    private void drawStatus(GuiGraphics graphics) {
-        var font = Minecraft.getInstance().font;
-        var text = font.plainSubstrByWidth(
-                statusText().getString(), (int) (CONTROL_WIDTH / LABEL_SCALE));
-        float textWidth = font.width(text) * LABEL_SCALE;
-        var pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(x + CONTROL_X + (CONTROL_WIDTH - textWidth) / 2.0F, y + STATUS_Y, 0);
-        pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
-        graphics.drawString(font, text, 0, 0, statusColor(), false);
-        pose.popPose();
+        try {
+            pose.translate(x + CONTROL_X + inset, y + top, 0);
+            pose.scale(LABEL_SCALE, LABEL_SCALE, 1.0F);
+            LDLibFonts.drawText(graphics, font, Component.literal(clipped), 0, 0, color, false);
+        } finally {
+            pose.popPose();
+        }
     }
 
     @Override
@@ -251,27 +245,22 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
         return scrollbar.onMouseWheel(mousePosition, delta);
     }
 
-    boolean isMouseOverStatus(int mouseX, int mouseY) {
-        return visible
-                && mouseX >= x + CONTROL_X && mouseX < x + CONTROL_X + CONTROL_WIDTH
-                && mouseY >= y + STATUS_Y && mouseY < y + STATUS_Y + STATUS_HEIGHT;
-    }
-
-    @Nullable
-    List<Component> getMultiplierTooltipAt(int mouseX, int mouseY) {
-        if (!visible || mouseX < x + CONTROL_X || mouseX >= x + CONTROL_X + CONTROL_WIDTH) {
-            return null;
+    List<Component> tooltipAt(int mouseX, int mouseY) {
+        int localX = mouseX - x;
+        int localY = mouseY - y;
+        if (!visible || localX < CONTROL_X || localX >= CONTROL_X + CONTROL_WIDTH) {
+            return List.of();
         }
-        if (mouseY >= y + EXEC_LABEL_Y && mouseY < y + EXEC_LABEL_Y + LABEL_HEIGHT) {
+        if (localY >= EXEC_LABEL_Y && localY < EXEC_LABEL_Y + LABEL_HEIGHT) {
             return executionField.getTooltipMessage();
         }
-        if (mouseY >= y + STORED_LABEL_Y && mouseY < y + STORED_LABEL_Y + LABEL_HEIGHT) {
+        if (localY >= STORED_LABEL_Y && localY < STORED_LABEL_Y + LABEL_HEIGHT) {
             return storedField.getTooltipMessage();
         }
-        return null;
+        return localY >= STATUS_Y && localY < STATUS_Y + STATUS_HEIGHT ? buildStatusTooltip() : List.of();
     }
 
-    List<Component> buildStatusTooltip() {
+    private List<Component> buildStatusTooltip() {
         var lines = new ArrayList<Component>();
         lines.add(statusText());
         if (menu.uploadState == 0 && isRefillProblem(menu.seedRefillSync.state())) {
@@ -403,7 +392,7 @@ final class TianshuClosedLoopEncodingPanel implements ICompositeWidget {
     }
 
     private static List<Component> multiplierTooltip(
-            AETextField field, String titleKey, String descriptionKey) {
+            LdlibAe2TextField field, String titleKey, String descriptionKey) {
         return List.of(
                 Component.translatable(titleKey),
                 Component.translatable(

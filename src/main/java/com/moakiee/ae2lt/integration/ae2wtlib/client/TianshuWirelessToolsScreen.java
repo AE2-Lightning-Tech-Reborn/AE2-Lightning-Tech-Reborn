@@ -1,9 +1,9 @@
 package com.moakiee.ae2lt.integration.ae2wtlib.client;
 
-import appeng.client.gui.AESubScreen;
-import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
 import appeng.menu.SlotSemantics;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Checkbox;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu;
 import com.moakiee.ae2lt.integration.ae2wtlib.TianshuEnhancedWirelessCraftingMenu.WirelessPage;
 import com.moakiee.ae2lt.menu.TianshuWirelessCraftingTermMenu;
@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /** WT's settings/trash layouts bound to the current terminal container, preserving all work inputs. */
-final class TianshuWirelessToolsScreen extends AESubScreen<TianshuWirelessCraftingTermMenu, TianshuEnhancedWirelessCraftingScreen> {
+final class TianshuWirelessToolsScreen extends LdlibAeSubScreen<TianshuWirelessCraftingTermMenu, TianshuEnhancedWirelessCraftingScreen> {
     private final TianshuEnhancedWirelessCraftingMenu features;
     private final WirelessPage page;
 
@@ -31,16 +31,16 @@ final class TianshuWirelessToolsScreen extends AESubScreen<TianshuWirelessCrafti
         this.page = page;
         features = parent.features();
         features.setWirelessPage(page);
-        widgets.add("back", new TabButton(Icon.BACK, menu.getHost().getMainMenuIcon().getHoverName(), b -> returnToParent()));
+        widgets.add("back", LdlibAe2Button.back(menu.getHost().getMainMenuIcon().getHoverName(), this::returnToParent));
         if (page == WirelessPage.SETTINGS) addSettings();
     }
 
     private void addSettings() {
-        var pickBlock = widgets.addCheckbox("pickBlock", TextConstants.PICK_BLOCK, null);
-        var craftIfMissing = widgets.addCheckbox("craftIfMissing", TextConstants.CRAFT_IF_MISSING, null);
-        var restock = widgets.addCheckbox("restock", TextConstants.RESTOCK, null);
-        var magnet = widgets.addCheckbox("magnet", TextConstants.MAGNET, null);
-        var pickupToME = widgets.addCheckbox("pickupToME", TextConstants.PICKUP_TO_ME, null);
+        var pickBlock = LdlibAe2Checkbox.add(widgets, style, "pickBlock", TextConstants.PICK_BLOCK, null);
+        var craftIfMissing = LdlibAe2Checkbox.add(widgets, style, "craftIfMissing", TextConstants.CRAFT_IF_MISSING, null);
+        var restock = LdlibAe2Checkbox.add(widgets, style, "restock", TextConstants.RESTOCK, null);
+        var magnet = LdlibAe2Checkbox.add(widgets, style, "magnet", TextConstants.MAGNET, null);
+        var pickupToME = LdlibAe2Checkbox.add(widgets, style, "pickupToME", TextConstants.PICKUP_TO_ME, null);
         var stack = menu.getWirelessHost().getItemStack();
         pickBlock.setSelected(stack.getOrDefault(AE2wtlibComponents.PICK_BLOCK, false));
         craftIfMissing.setSelected(stack.getOrDefault(AE2wtlibComponents.CRAFT_IF_MISSING, false));
@@ -59,7 +59,10 @@ final class TianshuWirelessToolsScreen extends AESubScreen<TianshuWirelessCrafti
         for (var checkbox : java.util.List.of(pickBlock, craftIfMissing, restock, magnet, pickupToME)) checkbox.setChangeListener(save);
     }
 
-    @Override protected void onReturnToParent() { features.setWirelessPage(WirelessPage.MAIN); }
+    @Override protected void onReturnToParent() {
+        features.setWirelessPage(WirelessPage.MAIN);
+        super.onReturnToParent();
+    }
     @Override protected boolean shouldAddToolbar() { return false; }
     @Override public boolean keyPressed(int key, int scan, int modifiers) {
         if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) { returnToParent(); return true; }

@@ -4,15 +4,16 @@ import java.util.Objects;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 /**
  * Capability-facing fluid handler. Only exposes the single 16 B input tank,
  * and forbids extraction — drainage happens internally during recipe completion.
  */
 public final class CrystalCatalyzerFluidHandler implements IFluidHandler {
-    private final com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank tank;
+    private final FluidTank tank;
 
-    public CrystalCatalyzerFluidHandler(com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank tank) {
+    public CrystalCatalyzerFluidHandler(FluidTank tank) {
         this.tank = Objects.requireNonNull(tank, "tank");
     }
 

@@ -2,6 +2,7 @@
 .gradle/
 build/
 **/build/
+/release-dependencies/
 
 # IDE
 .idea/

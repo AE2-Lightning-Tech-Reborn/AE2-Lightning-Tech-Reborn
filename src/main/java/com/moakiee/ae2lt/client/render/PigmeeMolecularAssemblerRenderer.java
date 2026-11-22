@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.BlockItem;
@@ -25,7 +23,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 
 public final class PigmeeMolecularAssemblerRenderer
         implements BlockEntityRenderer<PigmeeMolecularAssemblerBlockEntity> {
-    public static final ModelResourceLocation LIGHTS_MODEL = ModelResourceLocation.standalone(
+    static final LdlibStandaloneModel LIGHTS_MODEL = new LdlibStandaloneModel(
             ResourceLocation.fromNamespaceAndPath(
                     AE2LightningTech.MODID,
                     "block/pigmee_molecular_assembler_lights"));
@@ -73,13 +71,12 @@ public final class PigmeeMolecularAssemblerRenderer
             int packedLight,
             int packedOverlay) {
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel lightsModel = minecraft.getModelManager().getModel(LIGHTS_MODEL);
         VertexConsumer buffer = bufferSource.getBuffer(RenderType.tripwire());
         minecraft.getBlockRenderer().getModelRenderer().renderModel(
                 poseStack.last(),
                 buffer,
                 null,
-                lightsModel,
+                LIGHTS_MODEL.bakedModel(),
                 1.0F,
                 1.0F,
                 1.0F,

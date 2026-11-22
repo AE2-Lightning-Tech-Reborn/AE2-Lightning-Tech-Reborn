@@ -13,12 +13,11 @@ import net.minecraft.world.item.ItemStack;
 import appeng.client.gui.style.ScreenStyle;
 
 import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
-import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.menu.TeslaCoilMenu;
 
 public class TeslaCoilScreen extends RedstoneMachineScreen<TeslaCoilMenu> {
-    private final TeslaCoilEnergyBar energyBar;
     private TeslaCoilModeButton modeButton;
 
     public TeslaCoilScreen(TeslaCoilMenu menu, Inventory playerInventory, Component title, ScreenStyle style) {
@@ -26,10 +25,11 @@ public class TeslaCoilScreen extends RedstoneMachineScreen<TeslaCoilMenu> {
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
 
-        this.energyBar = new TeslaCoilEnergyBar(menu, style.getImage("energyBar"));
-        widgets.add("energyBar", energyBar);
+        widgets.add("energyBar", MachineGauges.energyBar(style.getImage("energyBar"),
+                menu::getStoredEnergy, menu::getEnergyCapacity,
+                "ae2lt.gui.tesla_coil.energy.tooltip"));
 
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
+        widgets.add("lightningStatus", MachineGauges.statusIcon(() -> List.of(
                 LightningStatusLines.title(),
                 menu.getStatusMessage(),
                 LightningStatusLines.progress(menu.getProgress()),
@@ -38,7 +38,7 @@ public class TeslaCoilScreen extends RedstoneMachineScreen<TeslaCoilMenu> {
                 LightningStatusLines.extremeHighVoltage(menu.getExtremeHighVoltageAvailable()),
                 menu.getMatrixMessage())));
 
-        this.modeButton = new TeslaCoilModeButton(btn -> menu.clientCycleMode());
+        this.modeButton = new TeslaCoilModeButton(menu::clientCycleMode);
         addToLeftToolbar(this.modeButton);
     }
 

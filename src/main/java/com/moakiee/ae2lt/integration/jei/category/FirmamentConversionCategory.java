@@ -1,9 +1,10 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -20,7 +21,6 @@ import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
@@ -71,9 +71,10 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
     private static final int TEXT_COLOR = 0x404040;
 
     private final IDrawable icon;
+    private final JeiRecipeDecor<FirmamentConversionRecipe> decor = new JeiRecipeDecor<>(FirmamentConversionCategory::decor);
 
-    public FirmamentConversionCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.FIRMAMENT_CONVERSION_CORE.get()));
+    public FirmamentConversionCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.FIRMAMENT_CONVERSION_CORE.toStack());
     }
 
     @Override
@@ -144,7 +145,7 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
 
     @Override
     public void createRecipeExtras(IRecipeExtrasBuilder builder, FirmamentConversionRecipe recipe, IFocusGroup focuses) {
-        builder.addRecipeArrow().setPosition(ARROW_X, ARROW_Y);
+        JeiRecipeDecor.addArrow(builder, ARROW_X, ARROW_Y);
     }
 
     @Override
@@ -154,13 +155,17 @@ public class FirmamentConversionCategory implements IRecipeCategory<FirmamentCon
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        var font = Minecraft.getInstance().font;
-
-        String timeStr = formatProcessTime(recipe.processTime());
-        var timeText = Component.translatable("jei.ae2lt.firmament_conversion.time", timeStr);
-        int timeX = (WIDTH - font.width(timeText)) / 2;
-        guiGraphics.drawString(font, timeText, timeX, TIME_TEXT_Y, TEXT_COLOR, false);
+        decor.draw(recipe, guiGraphics, mouseX, mouseY);
     }
+
+    /** Processing-time caption rendered below the slots and arrow. */
+    private static RecipeDecor decor(FirmamentConversionRecipe recipe) {
+        return RecipeDecor.of(WIDTH, HEIGHT)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.firmament_conversion.time",
+                        formatProcessTime(recipe.processTime())), TIME_TEXT_Y, TEXT_COLOR);
+    }
+
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())

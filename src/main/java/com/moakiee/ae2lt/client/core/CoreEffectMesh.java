@@ -1,7 +1,18 @@
 package com.moakiee.ae2lt.client.core;
 
+import java.nio.ByteOrder;
+import java.util.function.Consumer;
+
+import com.lowdragmc.lowdraglib2.client.utils.RenderBufferUtils;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
+import net.minecraft.core.Direction;
+import org.joml.Vector3f;
 
 final class CoreEffectMesh {
     private static final int SPHERE_LONGITUDES = 24;
@@ -13,19 +24,65 @@ final class CoreEffectMesh {
 
     static void sphere(PoseStack stack, VertexConsumer consumer, float radius,
                        float r, float g, float b, float alpha) {
-        for (int latitude = 0; latitude < SPHERE_LATITUDES; latitude++) {
-            double theta0 = -Math.PI * 0.5D + Math.PI * latitude / SPHERE_LATITUDES;
-            double theta1 = -Math.PI * 0.5D + Math.PI * (latitude + 1) / SPHERE_LATITUDES;
-            for (int longitude = 0; longitude < SPHERE_LONGITUDES; longitude++) {
-                double phi0 = Math.PI * 2.0D * longitude / SPHERE_LONGITUDES;
-                double phi1 = Math.PI * 2.0D * (longitude + 1) / SPHERE_LONGITUDES;
+        var pose = stack.last();
+        for (var point : UnitSphere.POINTS) {
+            consumer.addVertex(pose.pose(), point.x * radius, point.y * radius, point.z * radius)
+                    .setColor(r, g, b, alpha)
+                    .setNormal(pose, point.x, point.y, point.z);
+        }
+    }
 
-                Vertex a = sphereVertex(theta0, phi0, radius);
-                Vertex b0 = sphereVertex(theta1, phi0, radius);
-                Vertex c = sphereVertex(theta1, phi1, radius);
-                Vertex d = sphereVertex(theta0, phi1, radius);
-                triangle(stack, consumer, a, b0, c, r, g, b, alpha);
-                triangle(stack, consumer, a, c, d, r, g, b, alpha);
+    private static final class UnitSphere {
+        private static final Vector3f[] POINTS = buildPoints();
+
+        private static Vector3f[] buildPoints() {
+            var points = new Vector3f[SPHERE_LATITUDES * SPHERE_LONGITUDES * 6];
+            int index = 0;
+            for (int latitude = 0; latitude < SPHERE_LATITUDES; latitude++) {
+                double theta0 = -Math.PI * 0.5D + Math.PI * latitude / SPHERE_LATITUDES;
+                double theta1 = -Math.PI * 0.5D + Math.PI * (latitude + 1) / SPHERE_LATITUDES;
+                for (int longitude = 0; longitude < SPHERE_LONGITUDES; longitude++) {
+                    double phi0 = Math.PI * 2.0D * longitude / SPHERE_LONGITUDES;
+                    double phi1 = Math.PI * 2.0D * (longitude + 1) / SPHERE_LONGITUDES;
+                    var a = normal(theta0, phi0);
+                    var b = normal(theta1, phi0);
+                    var c = normal(theta1, phi1);
+                    var d = normal(theta0, phi1);
+                    points[index++] = a;
+                    points[index++] = b;
+                    points[index++] = c;
+                    points[index++] = a;
+                    points[index++] = c;
+                    points[index++] = d;
+                }
+            }
+            return points;
+        }
+
+        private static Vector3f normal(double theta, double phi) {
+            // Preserve the native angle precision and each original float rounding point.
+            float cosTheta = (float) Math.cos(theta);
+            return new Vector3f(cosTheta * (float) Math.cos(phi), (float) Math.sin(theta),
+                    cosTheta * (float) Math.sin(phi));
+        }
+    }
+
+    private static Vector3f[] capturePositions(int count, Consumer<BufferBuilder> build) {
+        var format = DefaultVertexFormat.POSITION_COLOR;
+        int stride = format.getVertexSize();
+        int position = format.getOffset(VertexFormatElement.POSITION);
+        try (var buffer = new ByteBufferBuilder(count * stride)) {
+            var builder = new BufferBuilder(buffer, VertexFormat.Mode.TRIANGLES, format);
+            build.accept(builder);
+            try (var mesh = builder.buildOrThrow()) {
+                var vertices = mesh.vertexBuffer().order(ByteOrder.nativeOrder());
+                var points = new Vector3f[mesh.drawState().vertexCount()];
+                for (int i = 0; i < points.length; i++) {
+                    int start = i * stride + position;
+                    points[i] = new Vector3f(vertices.getFloat(start),
+                            vertices.getFloat(start + Float.BYTES), vertices.getFloat(start + 2 * Float.BYTES));
+                }
+                return points;
             }
         }
     }
@@ -89,53 +146,38 @@ final class CoreEffectMesh {
 
     static void cube(PoseStack stack, VertexConsumer consumer, float halfSize,
                      float r, float g, float b, float alpha) {
-        float low = -halfSize;
-        float high = halfSize;
-
-        quad(stack, consumer,
-                new Vertex(low, low, high, 0.0F, 0.0F, 1.0F),
-                new Vertex(high, low, high, 0.0F, 0.0F, 1.0F),
-                new Vertex(high, high, high, 0.0F, 0.0F, 1.0F),
-                new Vertex(low, high, high, 0.0F, 0.0F, 1.0F),
-                r, g, b, alpha);
-        quad(stack, consumer,
-                new Vertex(high, low, low, 0.0F, 0.0F, -1.0F),
-                new Vertex(low, low, low, 0.0F, 0.0F, -1.0F),
-                new Vertex(low, high, low, 0.0F, 0.0F, -1.0F),
-                new Vertex(high, high, low, 0.0F, 0.0F, -1.0F),
-                r, g, b, alpha);
-        quad(stack, consumer,
-                new Vertex(high, low, high, 1.0F, 0.0F, 0.0F),
-                new Vertex(high, low, low, 1.0F, 0.0F, 0.0F),
-                new Vertex(high, high, low, 1.0F, 0.0F, 0.0F),
-                new Vertex(high, high, high, 1.0F, 0.0F, 0.0F),
-                r, g, b, alpha);
-        quad(stack, consumer,
-                new Vertex(low, low, low, -1.0F, 0.0F, 0.0F),
-                new Vertex(low, low, high, -1.0F, 0.0F, 0.0F),
-                new Vertex(low, high, high, -1.0F, 0.0F, 0.0F),
-                new Vertex(low, high, low, -1.0F, 0.0F, 0.0F),
-                r, g, b, alpha);
-        quad(stack, consumer,
-                new Vertex(low, high, high, 0.0F, 1.0F, 0.0F),
-                new Vertex(high, high, high, 0.0F, 1.0F, 0.0F),
-                new Vertex(high, high, low, 0.0F, 1.0F, 0.0F),
-                new Vertex(low, high, low, 0.0F, 1.0F, 0.0F),
-                r, g, b, alpha);
-        quad(stack, consumer,
-                new Vertex(low, low, low, 0.0F, -1.0F, 0.0F),
-                new Vertex(high, low, low, 0.0F, -1.0F, 0.0F),
-                new Vertex(high, low, high, 0.0F, -1.0F, 0.0F),
-                new Vertex(low, low, high, 0.0F, -1.0F, 0.0F),
-                r, g, b, alpha);
+        var pose = stack.last();
+        for (var vertex : UnitCube.VERTICES) {
+            consumer.addVertex(pose.pose(), vertex.x * halfSize, vertex.y * halfSize, vertex.z * halfSize)
+                    .setColor(r, g, b, alpha)
+                    .setNormal(pose, vertex.nx, vertex.ny, vertex.nz);
+        }
     }
 
-    private static Vertex sphereVertex(double theta, double phi, float radius) {
-        float cosTheta = (float) Math.cos(theta);
-        float nx = cosTheta * (float) Math.cos(phi);
-        float ny = (float) Math.sin(theta);
-        float nz = cosTheta * (float) Math.sin(phi);
-        return new Vertex(nx * radius, ny * radius, nz * radius, nx, ny, nz);
+    private static final class UnitCube {
+        private static final Vertex[] VERTICES = buildVertices();
+
+        private static Vertex[] buildVertices() {
+            var points = capturePositions(36, builder -> RenderBufferUtils.shapeCube(
+                    new PoseStack(), builder, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1));
+            // Retain the original face order and triangle diagonals for the translucent core pass.
+            var faces = new Direction[] {Direction.SOUTH, Direction.NORTH, Direction.EAST,
+                    Direction.WEST, Direction.UP, Direction.DOWN};
+            int[] libraryFace = {2, 0, 1, 3, 4, 5};
+            int[] sideCorners = {1, 0, 4, 1, 4, 2};
+            int[] capCorners = {4, 2, 1, 4, 1, 0};
+            var vertices = new Vertex[36];
+            for (int face = 0; face < faces.length; face++) {
+                var normal = faces[face];
+                var corners = normal.getAxis() == Direction.Axis.Y ? capCorners : sideCorners;
+                for (int i = 0; i < corners.length; i++) {
+                    var point = points[libraryFace[face] * 6 + corners[i]];
+                    vertices[face * 6 + i] = new Vertex(point.x, point.y, point.z,
+                            normal.getStepX(), normal.getStepY(), normal.getStepZ());
+                }
+            }
+            return vertices;
+        }
     }
 
     private static Vertex ringVertex(double angle, float radius, float y,

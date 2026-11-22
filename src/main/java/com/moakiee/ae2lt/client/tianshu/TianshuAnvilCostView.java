@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /** Embeds the native anvil cost renderer, including modifications to AnvilScreen. */
-final class TianshuAnvilCostView extends AnvilScreen {
+public final class TianshuAnvilCostView extends AnvilScreen {
     private final TianshuCraftingTermMenu terminalMenu;
 
     TianshuAnvilCostView(TianshuCraftingTermMenu terminalMenu, Inventory inventory) {

@@ -1,17 +1,16 @@
 package com.moakiee.ae2lt.client.tianshu;
 
-import appeng.api.config.Settings;
-import appeng.api.config.TerminalStyle;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.LdlibTerminalStyleButton;
+
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.AESubScreen;
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.PaletteColor;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.IconButton;
-import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.SettingToggleButton;
-import appeng.client.gui.widgets.TabButton;
-import appeng.core.AEConfig;
 import appeng.menu.me.common.MEStorageMenu;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
@@ -34,11 +33,11 @@ import org.lwjgl.glfw.GLFW;
 
 /** AE2-native provider picker, also used for selecting an alias without uploading a pattern. */
 public class TianshuUploadTargetScreen<M extends MEStorageMenu>
-        extends AESubScreen<M, AEBaseScreen<M>> {
+        extends LdlibAeSubScreen<M, AEBaseScreen<M>> {
     private static final String STYLE = "/screens/tianshu_upload_targets.json";
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/tianshu_upload_targets.png");
-    private static final int TEXTURE_SIZE = 256;
+    private static final LdlibStyleSprite ATLAS = new LdlibStyleSprite(TEXTURE, 256, 256);
     private static final int GUI_WIDTH = 190;
     private static final int GUI_HEADER_HEIGHT = 33;
     private static final int GUI_FOOTER_HEIGHT = 18;
@@ -57,11 +56,11 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
     private static final int BACKGROUND_FOOTER_TEXTURE_Y = 203;
     private static final int HIDDEN_SLOT_POS = -10_000;
 
-    protected final AETextField sourceField;
-    protected final AETextField aliasField;
+    protected final LdlibAe2TextField sourceField;
+    protected final LdlibAe2TextField aliasField;
     private final TianshuPatternEncodingTermMenu uploadMenu;
     private final boolean aliasEditor;
-    private final Scrollbar scrollbar;
+    private final LdlibRowScroller scrollbar;
     private final List<String> defaultAliases = new ArrayList<>();
     private List<String> machineIds = List.of();
     private final List<IndexedTarget> filtered = new ArrayList<>();
@@ -98,22 +97,20 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         uploadMenu = (TianshuPatternEncodingTermMenu) menu;
         imageWidth = GUI_WIDTH;
 
-        addToLeftToolbar(new SettingToggleButton<>(Settings.TERMINAL_STYLE,
-                AEConfig.instance().getTerminalStyle(), this::toggleTerminalStyle));
-        widgets.add("button_back", new TabButton(Icon.BACK,
-                Component.translatable("gui.back"), ignored -> onClose()));
+        addToLeftToolbar(new LdlibTerminalStyleButton(config, this::isHandlingRightClick, this::refreshLayout));
+        widgets.add("button_back", LdlibAe2Button.back(Component.translatable("gui.back"), this::onClose));
         if (!aliasEditor) {
-            addToLeftToolbar(new AliasActionButton(Icon.ENTER,
+            addToLeftToolbar(LdlibAe2Button.toolbar(Icon.ENTER,
                     Component.translatable("ae2lt.tianshu.upload.alias.add"), this::addMapping));
-            addToLeftToolbar(new AliasActionButton(Icon.COG,
+            addToLeftToolbar(LdlibAe2Button.toolbar(Icon.COG,
                     TianshuUploadAliasScreen.text("title"), this::openAliasManagement));
         }
 
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
-        sourceField = widgets.addTextField("field_search");
+        scrollbar = LdlibRowScroller.add(widgets, "scrollbar");
+        sourceField = LdlibAe2TextField.add(widgets, this.style, "field_search");
         sourceField.setMaxLength(256);
         sourceField.setPlaceholder(Component.translatable("ae2lt.tianshu.upload.keyword"));
-        aliasField = widgets.addTextField("field_alias");
+        aliasField = LdlibAe2TextField.add(widgets, this.style, "field_alias");
         aliasField.setMaxLength(256);
         aliasField.setPlaceholder(Component.translatable("ae2lt.tianshu.upload.alias"));
 
@@ -348,40 +345,35 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
     public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
                        int mouseX, int mouseY, float partialTicks) {
         int rowAreaHeight = visibleRows * ROW_HEIGHT;
-        graphics.blit(TEXTURE, offsetX, offsetY,
-                0, 0, GUI_WIDTH, BACKGROUND_TOP_HEIGHT, TEXTURE_SIZE, TEXTURE_SIZE);
+        ATLAS.draw(graphics, offsetX, offsetY,
+                0, 0, GUI_WIDTH, BACKGROUND_TOP_HEIGHT);
 
         int stretchHeight = Math.max(0, rowAreaHeight - 3);
         if (stretchHeight > 0) {
-            graphics.blit(TEXTURE, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
+            ATLAS.draw(graphics, offsetX, offsetY + BACKGROUND_TOP_HEIGHT,
                     GUI_WIDTH, stretchHeight,
-                    0, BACKGROUND_STRETCH_TEXTURE_Y, GUI_WIDTH, 1,
-                    TEXTURE_SIZE, TEXTURE_SIZE);
+                    0, BACKGROUND_STRETCH_TEXTURE_Y, GUI_WIDTH, 1);
         }
 
         int bottomBorderY = offsetY + BACKGROUND_TOP_HEIGHT + stretchHeight;
-        graphics.blit(TEXTURE, offsetX, bottomBorderY,
-                0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1,
-                TEXTURE_SIZE, TEXTURE_SIZE);
+        ATLAS.draw(graphics, offsetX, bottomBorderY,
+                0, BACKGROUND_BOTTOM_BORDER_TEXTURE_Y, GUI_WIDTH, 1);
         if (footerHeight() > GUI_FOOTER_HEIGHT) {
-            graphics.blit(TEXTURE, offsetX, bottomBorderY + 1,
+            ATLAS.draw(graphics, offsetX, bottomBorderY + 1,
                     GUI_WIDTH, footerHeight() - GUI_FOOTER_HEIGHT,
-                    0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, 1,
-                    TEXTURE_SIZE, TEXTURE_SIZE);
+                    0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, 1);
         }
-        graphics.blit(TEXTURE, offsetX, bottomBorderY + 1 + footerHeight() - GUI_FOOTER_HEIGHT,
-                0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT,
-                TEXTURE_SIZE, TEXTURE_SIZE);
+        ATLAS.draw(graphics, offsetX, bottomBorderY + 1 + footerHeight() - GUI_FOOTER_HEIGHT,
+                0, BACKGROUND_FOOTER_TEXTURE_Y, GUI_WIDTH, GUI_FOOTER_HEIGHT);
 
         int start = scrollbar.getCurrentScroll();
         for (int row = 0; row < visibleRows; row++) {
             int index = start + row;
             int top = offsetY + GUI_HEADER_HEIGHT + row * ROW_HEIGHT;
-            graphics.blit(TEXTURE, offsetX + ROW_TEXTURE_X, top,
+            ATLAS.draw(graphics, offsetX + ROW_TEXTURE_X, top,
                     ROW_TEXTURE_X,
                     index == focusedIndex ? ROW_SELECTED_TEXTURE_Y : ROW_NORMAL_TEXTURE_Y,
-                    ROW_TEXTURE_WIDTH, ROW_HEIGHT,
-                    TEXTURE_SIZE, TEXTURE_SIZE);
+                    ROW_TEXTURE_WIDTH, ROW_HEIGHT);
         }
     }
 
@@ -604,10 +596,7 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
         if (minecraft.player != null) minecraft.player.displayClientMessage(message, false);
     }
 
-    private void toggleTerminalStyle(SettingToggleButton<TerminalStyle> button, boolean backwards) {
-        var next = button.getNextValue(backwards);
-        AEConfig.instance().setTerminalStyle(next);
-        button.set(next);
+    private void refreshLayout() {
         children().removeIf(child -> renderables.contains(child));
         renderables.clear();
         init();
@@ -619,18 +608,4 @@ public class TianshuUploadTargetScreen<M extends MEStorageMenu>
 
     private record IndexedTarget(int sourceIndex, TianshuUploadTargetData target) { }
 
-    private static final class AliasActionButton extends IconButton {
-        private final Icon icon;
-
-        private AliasActionButton(Icon icon, Component message, Runnable action) {
-            super(ignored -> action.run());
-            this.icon = icon;
-            setMessage(message);
-        }
-
-        @Override
-        protected Icon getIcon() {
-            return icon;
-        }
-    }
 }

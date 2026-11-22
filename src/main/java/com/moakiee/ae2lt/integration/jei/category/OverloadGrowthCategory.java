@@ -1,15 +1,16 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import mezz.jei.api.gui.placement.HorizontalAlignment;
+import mezz.jei.api.gui.placement.VerticalAlignment;
+
 import appeng.core.definitions.AEBlocks;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.block.BuddingOverloadCrystalBlock;
 import com.moakiee.ae2lt.registry.ModBlocks;
 import com.moakiee.ae2lt.registry.ModItems;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.gui.placement.HorizontalAlignment;
-import mezz.jei.api.gui.placement.VerticalAlignment;
 import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
@@ -57,11 +58,11 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
 
     private final int centerX = WIDTH / 2;
 
-    public OverloadGrowthCategory(IGuiHelper guiHelper) {
+    public OverloadGrowthCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
         super(
                 TYPE,
                 Component.translatable("jei.ae2lt.overload_growth.title"),
-                guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.OVERLOAD_CRYSTAL_CLUSTER.get())),
+                guiHelper.createDrawableItemStack(ModBlocks.OVERLOAD_CRYSTAL_CLUSTER.toStack()),
                 WIDTH,
                 HEIGHT);
     }
@@ -109,7 +110,7 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
             builder.addText(Component.translatable("jei.ae2lt.overload_growth.bud_growth"), WIDTH, 20)
                     .setTextAlignment(HorizontalAlignment.CENTER)
                     .setColor(BODY_COLOR);
-            builder.addRecipeArrow().setPosition(centerX - 12, 25);
+            JeiRecipeDecor.addArrow(builder, centerX - 12, 25);
         }
 
         @Override
@@ -139,7 +140,7 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
             builder.addText(Component.translatable(key), WIDTH, 20)
                     .setTextAlignment(HorizontalAlignment.CENTER)
                     .setColor(BODY_COLOR);
-            builder.addRecipeArrow().setPosition(centerX - 12, 25);
+            JeiRecipeDecor.addArrow(builder, centerX - 12, 25);
 
             if (page == Page.CLUSTER_LOOT) {
                 builder.addText(Component.translatable("jei.ae2lt.overload_growth.cluster_loot_fortune"), WIDTH, 10)
@@ -180,13 +181,10 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
             builder.addText(Component.translatable("jei.ae2lt.overload_growth.decay"), WIDTH, 20)
                     .setTextAlignment(HorizontalAlignment.CENTER)
                     .setColor(BODY_COLOR);
-            builder.addRecipeArrow().setPosition(centerX - 12, 30);
+            JeiRecipeDecor.addArrow(builder, centerX - 12, 30);
 
             int decayChancePct = 100 / BuddingOverloadCrystalBlock.DECAY_CHANCE;
-            builder.addText(
-                            Component.translatable("jei.ae2lt.overload_growth.decay_chance", decayChancePct),
-                            WIDTH,
-                            10)
+            builder.addText(Component.translatable("jei.ae2lt.overload_growth.decay_chance", decayChancePct), WIDTH, 10)
                     .setPosition(0, 50)
                     .setTextAlignment(HorizontalAlignment.CENTER)
                     .setColor(BODY_COLOR);
@@ -209,12 +207,11 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
     private class BuddingOverloadMovingView implements View {
         @Override
         public void createRecipeExtras(IRecipeExtrasBuilder builder, IFocusGroup focuses) {
-            builder.addRecipeArrow().setPosition(centerX - 12, 0);
-            builder.addScrollBoxWidget(WIDTH, HEIGHT - 20, 0, 20)
-                    .setContents(List.of(
-                            Component.translatable("jei.ae2lt.overload_growth.break_decay").withColor(BODY_COLOR),
-                            Component.translatable("jei.ae2lt.overload_growth.silk_touch").withColor(BODY_COLOR),
-                            Component.translatable("jei.ae2lt.overload_growth.flawless_note").withColor(BODY_COLOR)));
+            JeiRecipeDecor.addArrow(builder, centerX - 12, 0);
+            JeiRecipeDecor.addScrollingText(builder, WIDTH, 20, HEIGHT - 20, List.of(
+                    Component.translatable("jei.ae2lt.overload_growth.break_decay"),
+                    Component.translatable("jei.ae2lt.overload_growth.silk_touch"),
+                    Component.translatable("jei.ae2lt.overload_growth.flawless_note")), BODY_COLOR);
         }
 
         @Override
@@ -238,7 +235,6 @@ public class OverloadGrowthCategory extends AbstractRecipeCategory<OverloadGrowt
                     .setTextAlignment(HorizontalAlignment.CENTER)
                     .setLineSpacing(0)
                     .setColor(BODY_COLOR);
-
             builder.addText(Component.literal("+"), 16, 16)
                     .setPosition(centerX - 8, 40)
                     .setTextAlignment(HorizontalAlignment.CENTER)

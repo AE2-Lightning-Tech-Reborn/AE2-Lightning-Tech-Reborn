@@ -2,6 +2,7 @@ package com.moakiee.ae2lt.client.ctm;
 
 import java.util.EnumMap;
 
+import com.lowdragmc.lowdraglib2.client.model.ModelFactory;
 import org.joml.Vector3f;
 
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -9,6 +10,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.model.pipeline.QuadBakingVertexConsumer;
 
 /**
@@ -133,17 +135,19 @@ public final class CtmFaceGeometry {
     private static EnumMap<Direction, Vector3f[]> buildCorners() {
         EnumMap<Direction, Vector3f[]> map = new EnumMap<>(Direction.class);
         for (Direction facing : Direction.values()) {
-            float o = facing.getAxisDirection() == Direction.AxisDirection.NEGATIVE ? 0f : 1f;
-            Vector3f[] corners = switch (facing.getAxis()) {
-                case X -> new Vector3f[] { new Vector3f(o, 1, 1), new Vector3f(o, 0, 1),
-                        new Vector3f(o, 0, 0), new Vector3f(o, 1, 0) };
-                case Y -> new Vector3f[] { new Vector3f(1, o, 1), new Vector3f(1, o, 0),
-                        new Vector3f(0, o, 0), new Vector3f(0, o, 1) };
-                case Z -> new Vector3f[] { new Vector3f(0, 1, o), new Vector3f(0, 0, o),
-                        new Vector3f(1, 0, o), new Vector3f(1, 1, o) };
+            var rotation = ModelFactory.getQuaternion(facing);
+            if (facing == Direction.DOWN) {
+                // The bottom CTM face has an additional half-turn in texture space.
+                rotation.rotateZ(Mth.PI);
+            }
+            var corners = new Vector3f[] {
+                    new Vector3f(0.5F, 0.5F, -0.5F), new Vector3f(0.5F, -0.5F, -0.5F),
+                    new Vector3f(-0.5F, -0.5F, -0.5F), new Vector3f(-0.5F, 0.5F, -0.5F)
             };
-            if (facing.getAxisDirection() == Direction.AxisDirection.NEGATIVE) {
-                corners = new Vector3f[] { corners[3], corners[2], corners[1], corners[0] };
+            for (var corner : corners) {
+                rotation.transform(corner).add(0.5F, 0.5F, 0.5F);
+                // Snap quarter-turn roundoff away before the coordinates enter baked quads.
+                corner.set(Math.round(corner.x), Math.round(corner.y), Math.round(corner.z));
             }
             map.put(facing, corners);
         }

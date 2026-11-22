@@ -1,7 +1,16 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Icons;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibSettingButton;
 import com.moakiee.ae2lt.client.widgets.PageButton;
 import com.moakiee.ae2lt.client.widgets.PageInput;
 
@@ -10,7 +19,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.moakiee.ae2lt.blockentity.OverloadedInterfaceBlockEntity;
-import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.OverloadedInterfaceMenu;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,24 +26,18 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
-import appeng.api.config.FuzzyMode;
-import appeng.api.config.Settings;
 import appeng.client.gui.Icon;
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.ServerSettingToggleButton;
-import appeng.client.gui.widgets.SettingToggleButton;
-import appeng.client.gui.widgets.ToolboxPanel;
-import appeng.client.gui.widgets.UpgradesPanel;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolboxPanel;
+import com.moakiee.ae2lt.client.ldlib.LdlibUpgradesPanel;
 import appeng.core.definitions.AEItems;
-import appeng.core.localization.GuiText;
-import appeng.api.upgrades.Upgrades;
 import appeng.menu.SlotSemantics;
 
 
-public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceMenu> {
+public class OverloadedInterfaceScreen extends LdlibAeScreen<OverloadedInterfaceMenu> {
 
+    private static final int AMT_BTN_SIZE = 16;
     private static final int SLOTS_PER_PAGE = 18;
     private static final int COLS = 9;
     private static final int SLOT_SPACING = 18;
@@ -44,7 +46,7 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
     private static final int AMT_START_X = 8;
     private static final int PAGE_INDICATOR_Y = 18;
 
-    private final SettingToggleButton<FuzzyMode> fuzzyMode;
+    private final LdlibSettingButton fuzzyMode;
     private final TextureToggleButton modeButton;
     private final TextureToggleButton exportModeButton;
     private final TextureToggleButton importModeButton;
@@ -52,6 +54,9 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
     private final PageButton pageButton;
     private final List<SetAmountButton> amountButtons = new ArrayList<>();
     private final List<Slot> configSlots;
+    private final List<Label> unlimitedLabels = new ArrayList<>();
+    private ModularUI foreground;
+    private Label pageIndicator;
 
     private int lastKnownPage = -1;
 
@@ -63,17 +68,18 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         var upgradeSlots = menu.getSlots(SlotSemantics.UPGRADE).stream()
                 .filter(slot -> slot != filterSlot)
                 .collect(Collectors.toList());
-        widgets.add("upgrades", new UpgradesPanel(upgradeSlots, this::getCompatibleUpgrades));
+        widgets.add("upgrades", LdlibUpgradesPanel.forMachine(upgradeSlots,
+                () -> menu.getUpgrades().getUpgradableItem()));
         if (filterSlot != null) {
-            widgets.add("overloadedFilter", new UpgradesPanel(List.of(filterSlot), List::of));
+            widgets.add("overloadedFilter", new LdlibUpgradesPanel(List.of(filterSlot), List::of));
         }
         if (menu.getToolbox().isPresent()) {
-            this.widgets.add("toolbox", new ToolboxPanel(style, menu.getToolbox().getName()));
+            this.widgets.add("toolbox", new LdlibToolboxPanel(style, menu.getToolbox().getName()));
         }
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
 
-        this.fuzzyMode = new ServerSettingToggleButton<>(Settings.FUZZY_MODE, FuzzyMode.IGNORE_ALL);
+        this.fuzzyMode = LdlibSettingButton.fuzzy(menu::getFuzzyMode, this::isHandlingRightClick);
         addToLeftToolbar(this.fuzzyMode);
 
         this.pageButton = new PageButton(
@@ -105,40 +111,67 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         this.speedButton.setTooltipOff(List.of(Component.translatable("ae2lt.gui.io_speed.normal")));
         addToLeftToolbar(this.speedButton);
 
-        widgets.addOpenPriorityButton();
+        LdlibAe2Button.addOpenPriority(widgets);
 
         this.configSlots = menu.getAllConfigSlots();
         for (int i = 0; i < configSlots.size(); i++) {
             final int slotIdx = i;
-            var button = new SetAmountButton(btn -> {
+            var button = new SetAmountButton(() -> {
                 if (hasShiftDown()) {
                     menu.toggleUnlimited(configSlots.get(slotIdx).getContainerSlot());
                 } else {
                     menu.openSetAmountMenu(configSlots.get(slotIdx).getContainerSlot());
                 }
             });
-            button.setDisableBackground(true);
-            button.setMessage(Component.translatable("ae2lt.gui.set_amount.message"));
             button.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                     Component.translatable("ae2lt.gui.set_amount.tooltip")));
             amountButtons.add(button);
         }
     }
 
+    private void releaseForeground() {
+        var previous = foreground;
+        foreground = null;
+        if (previous != null) {
+            previous.onRemoved();
+        }
+    }
+
+    @Override
+    public void removed() {
+        try {
+            releaseForeground();
+        } finally {
+            super.removed();
+        }
+    }
+
     @Override
     protected void init() {
+        releaseForeground();
         super.init();
 
         for (var btn : amountButtons) {
             addRenderableWidget(btn);
         }
+        var root = new UIElement();
+        pageIndicator = LdlibScreens.pageIndicator(root, imageWidth, PAGE_INDICATOR_Y,
+                style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
+        unlimitedLabels.clear();
+        for (var slot : configSlots) {
+            var label = LdlibScreens.label(Component.literal("∞"), 0xFF00FF00);
+            label.setAllowHitTest(false);
+            label.textStyle(style -> style.textShadow(true));
+            root.addChild(LdlibScreens.at(label, slot.x + 10, slot.y - 10, font.width("∞") + 1, 9));
+            unlimitedLabels.add(label);
+        }
+        foreground = LdlibScreens.localLayer(root, imageWidth, imageHeight);
     }
 
     @Override
     protected void updateBeforeRender() {
         super.updateBeforeRender();
 
-        this.fuzzyMode.set(menu.getFuzzyMode());
         this.fuzzyMode.setVisibility(menu.hasUpgrade(AEItems.FUZZY_CARD));
 
         this.modeButton.setState(menu.interfaceMode == 1);
@@ -178,38 +211,19 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
             } else {
                 button.visible = false;
             }
+            unlimitedLabels.get(i).setVisible(button.visible && menu.isSlotUnlimited(i));
         }
 
         this.pageButton.setPage(page, menu.totalPages);
+        pageIndicator.setVisible(menu.totalPages > 1);
+        if (menu.totalPages > 1) pageIndicator.setText(Component.literal((page + 1) + "/" + menu.totalPages));
     }
 
     @Override
     public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY,
                         int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
-
-        if (menu.totalPages > 1) {
-            String pageText = (menu.currentPage + 1) + "/" + menu.totalPages;
-            int textWidth = this.font.width(pageText);
-            guiGraphics.drawString(this.font, pageText,
-                    GuiTextLayout.centeredX(this.imageWidth, textWidth),
-                    PAGE_INDICATOR_Y,
-                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
-                    false);
-        }
-
-        int page = menu.currentPage;
-        int start = page * SLOTS_PER_PAGE;
-        int end = Math.min(start + SLOTS_PER_PAGE, configSlots.size());
-        for (int i = start; i < end; i++) {
-            if (menu.isSlotUnlimited(i)) {
-                var slot = configSlots.get(i);
-                if (!slot.getItem().isEmpty()) {
-                    guiGraphics.drawString(this.font, "\u221E",
-                            slot.x + 10, slot.y - 10, 0xFF00FF00, true);
-                }
-            }
-        }
+        foreground.getWidget().render(guiGraphics, mouseX - leftPos, mouseY - topPos, 0);
     }
 
     @Override
@@ -221,22 +235,12 @@ public class OverloadedInterfaceScreen extends AEBaseScreen<OverloadedInterfaceM
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    private List<Component> getCompatibleUpgrades() {
-        var list = new ArrayList<Component>();
-        list.add(GuiText.CompatibleUpgrades.text());
-        list.addAll(Upgrades.getTooltipLinesForMachine(menu.getUpgrades().getUpgradableItem()));
-        return list;
-    }
-
-
-    static class SetAmountButton extends appeng.client.gui.widgets.IconButton {
-        public SetAmountButton(OnPress onPress) {
-            super(onPress);
-        }
-
-        @Override
-        protected Icon getIcon() {
-            return isHoveredOrFocused() ? Icon.COG : Icon.COG_DISABLED;
+    private static final class SetAmountButton extends LdlibAe2Button {
+        SetAmountButton(Runnable action) {
+            super(AMT_BTN_SIZE, Component.translatable("ae2lt.gui.set_amount.message"), action);
+            var focused = LdlibAe2Icons.texture(Icon.COG);
+            var normal = LdlibAe2Icons.texture(Icon.COG_DISABLED);
+            toolbarGlyphOnly(IGuiTexture.dynamic(() -> isHoveredOrFocused() ? focused : normal));
         }
     }
 }

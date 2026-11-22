@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import appeng.client.gui.Icon;
 import appeng.client.gui.style.Blitter;
+import com.moakiee.ae2lt.client.ldlib.LdlibControlSprite;
 import appeng.client.gui.widgets.ITooltip;
 
 /**
@@ -96,10 +97,10 @@ public class TextureToolbarButton extends Button implements ITooltip {
         var background = isHovered() ? Icon.TOOLBAR_BUTTON_BACKGROUND_HOVER
                 : isFocused() ? Icon.TOOLBAR_BUTTON_BACKGROUND_FOCUS : Icon.TOOLBAR_BUTTON_BACKGROUND;
 
-        background.getBlitter()
-                .dest(getX() - 1, getY() + yOffset, 18, 20)
-                .zOffset(2)
-                .blit(guiGraphics);
+        var frame = background.getBlitter().dest(getX() - 1, getY() + yOffset, 18, 20).zOffset(2);
+        if (!LdlibControlSprite.draw(frame, guiGraphics)) {
+            frame.blit(guiGraphics);
+        }
 
         if (this.textures.isEmpty()) {
             return;
@@ -110,7 +111,10 @@ public class TextureToolbarButton extends Button implements ITooltip {
         if (!this.active) {
             blitter.opacity(0.5f);
         }
-        blitter.dest(getX(), getY() + 1 + yOffset).zOffset(3).blit(guiGraphics);
+        blitter.dest(getX(), getY() + 1 + yOffset).zOffset(3);
+        if (!LdlibControlSprite.draw(blitter, guiGraphics)) {
+            blitter.blit(guiGraphics);
+        }
     }
 
     @Override

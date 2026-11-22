@@ -3,7 +3,9 @@ package com.moakiee.ae2lt.client.render;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.world.inventory.InventoryMenu;
 
 /**
  * Custom RenderType definitions for ae2lt overlays.
@@ -12,6 +14,16 @@ import net.minecraft.client.renderer.RenderType;
 public class Ae2ltRenderTypes extends RenderType {
 
     private static RenderType FACE_SEE_THROUGH;
+    private static final RenderType GUI_FLUID_ICON = create("ae2lt_gui_fluid_icon",
+            DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS, 1536, false, false,
+            CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(GameRenderer::getPositionTexColorShader))
+                    .setTextureState(new TextureStateShard(InventoryMenu.BLOCK_ATLAS, false, false))
+                    .setTransparencyState(NO_TRANSPARENCY)
+                    .setDepthTestState(NO_DEPTH_TEST)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .setCullState(NO_CULL)
+                    .createCompositeState(false));
 
     private Ae2ltRenderTypes(String name, VertexFormat format, VertexFormat.Mode mode,
             int bufferSize, boolean affectsCrumbling, boolean sortOnUpload,
@@ -19,14 +31,18 @@ public class Ae2ltRenderTypes extends RenderType {
         super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setup, clear);
     }
 
+    public static RenderType guiFluidIcon() {
+        return GUI_FLUID_ICON;
+    }
+
     /**
-     * A face (QUADS) render type that uses GREATER depth test,
+     * A face render type that uses GREATER depth test,
      * so geometry behind opaque blocks becomes visible (see-through effect).
      */
     public static RenderType getFaceSeeThrough() {
         if (FACE_SEE_THROUGH == null) {
             FACE_SEE_THROUGH = create("ae2lt_face_see_through",
-                    DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.QUADS, 65536, false, false,
+                    DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES, 65536, false, false,
                     CompositeState.builder()
                             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                             .setTextureState(NO_TEXTURE)

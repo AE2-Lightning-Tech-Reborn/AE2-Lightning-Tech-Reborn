@@ -1,18 +1,20 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.Horizontal;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
-import appeng.api.client.AEKeyRendering;
 import appeng.client.gui.AEBaseScreen;
-import appeng.client.gui.AESubScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeSubScreen;
 import guideme.PageAnchor;
-import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AECheckbox;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.TabButton;
-import appeng.core.localization.ButtonToolTips;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Checkbox;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import appeng.menu.SlotSemantics;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceBadge;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.InventoryMaintenanceStatus;
 import com.moakiee.ae2lt.logic.tianshu.maintenance.ReservedStockMatchMode;
@@ -26,13 +28,19 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 /** Shift-middle-click inventory-maintenance rule editor, backed by the menu-bound Tianshu. */
 public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
-        extends AESubScreen<M, AEBaseScreen<M>> {
+        extends LdlibAeSubScreen<M, AEBaseScreen<M>> {
+    private ModularUI foreground;
+    private Label topologyCaption;
+    private List<Label> topologyColumns;
+    private TianshuMaintenanceList<ReserveDraft> entryList;
+
     @Override
     protected PageAnchor getHelpTopic() {
         return TianshuMaintenanceTermScreen.terminalHelpTopic(menu, "inventory-maintenance");
@@ -45,15 +53,15 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
     private static final int VISIBLE_ROWS = 3;
 
     private final Draft draft;
-    private final AETextField lower;
-    private final AETextField upper;
-    private final AETextField perJob;
-    private final AECheckbox enabled;
-    private final Scrollbar scrollbar;
-    private final AE2Button saveButton;
-    private final AE2Button deleteButton;
-    private final AE2Button checkButton;
-    private final AE2Button cancelJobButton;
+    private final LdlibAe2TextField lower;
+    private final LdlibAe2TextField upper;
+    private final LdlibAe2TextField perJob;
+    private final LdlibAe2Checkbox enabled;
+    private final LdlibRowScroller scrollbar;
+    private final LdlibAe2Button saveButton;
+    private final LdlibAe2Button deleteButton;
+    private final LdlibAe2Button checkButton;
+    private final LdlibAe2Button cancelJobButton;
     private boolean deleteArmed;
 
     public TianshuMaintenanceRuleScreen(
@@ -64,22 +72,21 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         lower = numberField("lower", data.lowerThreshold());
         upper = numberField("upper", data.upperThreshold());
         perJob = numberField("perJob", data.amountPerJob());
-        enabled = widgets.addCheckbox("enabled",
-                Component.translatable("ae2lt.tianshu.maintenance.enabled"), () -> { });
+        enabled = LdlibAe2Checkbox.add(widgets, style, "enabled",
+                Component.translatable("ae2lt.tianshu.maintenance.enabled"), null);
         enabled.setSelected(data.enabled());
 
-        scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
+        scrollbar = LdlibRowScroller.add(widgets, "scrollbar");
         scrollbar.setCaptureMouseWheel(false);
-        checkButton = widgets.addButton("check",
+        checkButton = LdlibAe2Button.addText(widgets, style, "check",
                 Component.translatable("ae2lt.tianshu.maintenance.check_now"), this::checkNow);
-        cancelJobButton = widgets.addButton("cancelJob",
+        cancelJobButton = LdlibAe2Button.addText(widgets, style, "cancelJob",
                 Component.translatable("ae2lt.tianshu.maintenance.cancel_job"), this::cancelJob);
-        deleteButton = widgets.addButton("delete",
+        deleteButton = LdlibAe2Button.addText(widgets, style, "delete",
                 Component.translatable("ae2lt.tianshu.maintenance.delete"), this::delete);
-        widgets.addButton("cancel", Component.translatable("gui.cancel"), this::returnToParent);
-        saveButton = widgets.addButton("save", Component.translatable("gui.done"), this::save);
-        widgets.add("back", new TabButton(
-                Icon.BACK, Component.translatable("gui.back"), ignored -> returnToParent()));
+        LdlibAe2Button.addText(widgets, style, "cancel", Component.translatable("gui.cancel"), this::returnToParent);
+        saveButton = LdlibAe2Button.addText(widgets, style, "save", Component.translatable("gui.done"), this::save);
+        widgets.add("back", LdlibAe2Button.back(Component.translatable("gui.back"), this::returnToParent));
     }
 
     @Override
@@ -87,10 +94,50 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         // Preserve the parent terminal's slot positions before this sub-screen hides them.
         hideTerminalSlots();
         super.init();
+        var bounds = new Rect2i(LIST_LEFT, FIRST_ROW_Y, LIST_RIGHT - LIST_LEFT, ROW_HEIGHT * VISIBLE_ROWS);
+        entryList = new TianshuMaintenanceList<>(imageWidth, imageHeight, bounds, ROW_HEIGHT, scrollbar,
+                TopologyRow::new, this::openEntry, this::entryTooltip);
+        entryList.setEntries(draft.reserves);
+        initForeground();
     }
 
-    private AETextField numberField(String id, long initialValue) {
-        var field = widgets.addTextField(id);
+    private void initForeground() {
+        int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+        var root = new UIElement();
+        LdlibScreens.addLabel(root, Component.translatable(draft.data.ruleId() == null
+                        ? "ae2lt.tianshu.maintenance.create_title" : "ae2lt.tianshu.maintenance.edit_title"),
+                textColor, 10, 9, 158);
+        var target = draft.data.target();
+        var icon = LdlibScreens.unadornedItemIcon(target.wrapForDisplayOrFilter());
+        root.addChild(LdlibScreens.at(icon, 16, 32, 16, 16));
+        LdlibScreens.addLabel(root, Component.literal(font.plainSubstrByWidth(target.getDisplayName().getString(), 147)),
+                textColor, 39, 29, 148);
+        var stockAndStatus = Component.translatable("ae2lt.tianshu.maintenance.stock_and_status",
+                compactAmount(target, draft.data.currentStock()), Component.translatable(statusKey(draft.data.status())));
+        LdlibScreens.addLabel(root, Component.literal(font.plainSubstrByWidth(stockAndStatus.getString(), 147)),
+                0xFF000000 | statusColor(draft.data.status()), 39, 41, 148);
+        LdlibScreens.addLabel(root, Component.translatable("ae2lt.tianshu.maintenance.lower"),
+                textColor, 10, 57, 61);
+        LdlibScreens.addLabel(root, Component.translatable("ae2lt.tianshu.maintenance.upper"),
+                textColor, 73, 57, 62);
+        LdlibScreens.addLabel(root, Component.translatable("ae2lt.tianshu.maintenance.batch"),
+                textColor, 137, 57, 60);
+        topologyCaption = LdlibScreens.addLabel(root, Component.empty(), textColor, 10, 116, 181);
+        topologyCaption.textStyle(s -> s.textWrap(com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap.NONE));
+        topologyColumns = List.of(topologyColumn(root, "stock", 117, textColor),
+                topologyColumn(root, "global_short", 151, textColor),
+                topologyColumn(root, "rule_short", 179, textColor));
+        foreground = LdlibScreens.localLayer(root, imageWidth, imageHeight);
+    }
+
+    private Label topologyColumn(UIElement root, String key, int center, int textColor) {
+        var caption = Component.translatable("ae2lt.tianshu.maintenance.column." + key);
+        int width = font.width(caption);
+        return LdlibScreens.addLabel(root, caption, textColor, center - width / 2, 116, width + 1);
+    }
+
+    private LdlibAe2TextField numberField(String id, long initialValue) {
+        var field = LdlibAe2TextField.add(widgets, style, id);
         field.setMaxLength(19);
         field.setFilter(TianshuMaintenanceRuleScreen::isNonNegativeIntegerDraft);
         field.setValue(Long.toString(initialValue));
@@ -128,8 +175,6 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
     @Override
     protected void updateBeforeRender() {
         super.updateBeforeRender();
-        scrollbar.setRange(0, Math.max(0, draft.reserves.size() - VISIBLE_ROWS),
-                Math.max(1, VISIBLE_ROWS - 1));
         saveButton.active = validationError() == null;
         deleteButton.visible = draft.data.ruleId() != null;
         deleteButton.active = draft.data.ruleId() != null;
@@ -149,86 +194,18 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-        graphics.drawString(font, Component.translatable(draft.data.ruleId() == null
-                        ? "ae2lt.tianshu.maintenance.create_title"
-                        : "ae2lt.tianshu.maintenance.edit_title"),
-                10, 9, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        graphics.renderItem(draft.data.target().wrapForDisplayOrFilter(), 16, 32);
-        graphics.drawString(font,
-                font.plainSubstrByWidth(draft.data.target().getDisplayName().getString(), 147),
-                39, 29, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        var stockAndStatus = Component.translatable("ae2lt.tianshu.maintenance.stock_and_status",
-                compactAmount(draft.data.target(), draft.data.currentStock()),
-                Component.translatable(statusKey(draft.data.status())));
-        graphics.drawString(font, font.plainSubstrByWidth(stockAndStatus.getString(), 147),
-                39, 41, statusColor(draft.data.status()), false);
+        Component error = validationError();
+        boolean topology = error == null && !draft.data.recoveryPage();
+        topologyCaption.setText(error != null
+                ? Component.literal(font.plainSubstrByWidth(error.getString(), 181))
+                : Component.translatable(topology
+                        ? "ae2lt.tianshu.maintenance.topology" : "ae2lt.tianshu.maintenance.recovery_page"));
+        topologyCaption.getTextStyle().textColor(style.getColor(
+                topology ? PaletteColor.DEFAULT_TEXT_COLOR : PaletteColor.ERROR).toARGB());
+        for (var column : topologyColumns) column.setVisible(topology);
 
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.lower"),
-                10, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.upper"),
-                73, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-        graphics.drawString(font, Component.translatable("ae2lt.tianshu.maintenance.batch"),
-                137, 57, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-
-        Component validationError = validationError();
-        if (validationError != null) {
-            graphics.drawString(font,
-                    font.plainSubstrByWidth(validationError.getString(), 181),
-                    10, 116, style.getColor(PaletteColor.ERROR).toARGB(), false);
-        } else if (draft.data.recoveryPage()) {
-            graphics.drawString(font,
-                    Component.translatable("ae2lt.tianshu.maintenance.recovery_page"),
-                    10, 116, style.getColor(PaletteColor.ERROR).toARGB(), false);
-        } else {
-            graphics.drawString(font,
-                    Component.translatable("ae2lt.tianshu.maintenance.topology"),
-                    10, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            drawCentered(graphics,
-                    Component.translatable("ae2lt.tianshu.maintenance.column.stock"),
-                    117, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
-            drawCentered(graphics,
-                    Component.translatable("ae2lt.tianshu.maintenance.column.global_short"),
-                    151, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
-            drawCentered(graphics,
-                    Component.translatable("ae2lt.tianshu.maintenance.column.rule_short"),
-                    179, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
-        }
-        drawTopology(graphics, mouseX - leftPos, mouseY - topPos);
-    }
-
-    private void drawTopology(GuiGraphics graphics, int mouseX, int mouseY) {
-        int start = scrollbar.getCurrentScroll();
-        int end = Math.min(draft.reserves.size(), start + VISIBLE_ROWS);
-        for (int index = start; index < end; index++) {
-            int row = index - start;
-            int y = FIRST_ROW_Y + row * ROW_HEIGHT;
-            var entry = draft.reserves.get(index);
-            boolean hovered = mouseY >= y && mouseY < y + ROW_HEIGHT - 1
-                    && mouseX >= LIST_LEFT && mouseX < LIST_RIGHT;
-            graphics.fill(LIST_LEFT, y, LIST_RIGHT, y + ROW_HEIGHT - 1,
-                    hovered ? 0x553B719F : (row & 1) == 0 ? 0x1EFFFFFF : 0x12000000);
-            int indent = Math.min(4, entry.depth) * 4;
-            graphics.renderItem(entry.key.wrapForDisplayOrFilter(), 11 + indent, y + 1);
-            graphics.drawString(font,
-                    font.plainSubstrByWidth(entry.key.getDisplayName().getString(), 69 - indent),
-                    31 + indent, y + 4, entry.craftable ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : style.getColor(PaletteColor.ERROR).toARGB(), false);
-            drawRightAligned(graphics, Component.literal(compactAmount(entry.key, entry.storedAmount)),
-                    125, y + 4, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
-            drawRightAligned(graphics, reserveText(entry.globalAmount, entry.globalMode),
-                    158, y + 4, entry.globalAmount == 0L ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : 0x245E91);
-            drawRightAligned(graphics, reserveText(entry.ruleAmount, entry.ruleMode),
-                    185, y + 4, entry.ruleAmount == 0L ? style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB() : 0x794D91);
-        }
-    }
-
-    private void drawRightAligned(
-            GuiGraphics graphics, Component text, int right, int y, int color) {
-        graphics.drawString(font, text, right - font.width(text), y, color, false);
-    }
-
-    private void drawCentered(
-            GuiGraphics graphics, Component text, int center, int y, int color) {
-        graphics.drawString(font, text, center - font.width(text) / 2, y, color, false);
+        entryList.render(graphics, mouseX - leftPos, mouseY - topPos);
+        foreground.getWidget().render(graphics, mouseX - leftPos, mouseY - topPos, 0);
     }
 
     private static Component reserveText(long amount, ReservedStockMatchMode mode) {
@@ -236,59 +213,67 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         return Component.literal(value + (mode == ReservedStockMatchMode.IGNORE_SECONDARY ? "*" : ""));
     }
 
+    private final class TopologyRow extends TianshuMaintenanceList.Row {
+        private final Label name = label(31 - LIST_LEFT, 4, 70, Horizontal.LEFT);
+        private final Label stock = label(0, 4, 125 - LIST_LEFT, Horizontal.RIGHT);
+        private final Label global = label(0, 4, 158 - LIST_LEFT, Horizontal.RIGHT);
+        private final Label rule = label(0, 4, 185 - LIST_LEFT, Horizontal.RIGHT);
+
+        private TopologyRow(ReserveDraft entry) {
+            super(LIST_RIGHT - LIST_LEFT, ROW_HEIGHT);
+            int indent = Math.min(4, entry.depth) * 4;
+            int textColor = style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB();
+            item(entry.key.wrapForDisplayOrFilter(), 11 - LIST_LEFT + indent, 1);
+            name.layout(layout -> layout.left(31 - LIST_LEFT + indent));
+            text(name, Component.literal(font.plainSubstrByWidth(entry.key.getDisplayName().getString(),
+                    69 - indent)), entry.craftable ? textColor : style.getColor(PaletteColor.ERROR).toARGB());
+            text(stock, Component.literal(compactAmount(entry.key, entry.storedAmount)), textColor);
+            text(global, reserveText(entry.globalAmount, entry.globalMode), entry.globalAmount == 0L ? textColor : 0x245E91);
+            text(rule, reserveText(entry.ruleAmount, entry.ruleMode), entry.ruleAmount == 0L ? textColor : 0x794D91);
+        }
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE || button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            int row = (int) ((mouseY - topPos - FIRST_ROW_Y) / ROW_HEIGHT);
-            int index = scrollbar.getCurrentScroll() + row;
-            if (mouseY >= topPos + FIRST_ROW_Y
-                    && mouseY < topPos + FIRST_ROW_Y + VISIBLE_ROWS * ROW_HEIGHT
-                    && row >= 0 && row < VISIBLE_ROWS && index < draft.reserves.size()
-                    && mouseX >= leftPos + LIST_LEFT && mouseX < leftPos + LIST_RIGHT) {
-                var reserve = draft.reserves.get(index);
-                switchToScreen(new ReserveEditorScreen<>(this, reserve,
-                        draft.data.target().equals(reserve.key) ? draft.data.variants() : List.of()));
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return entryList.mouseClicked(mouseX - leftPos, mouseY - topPos, button)
+                || super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void openEntry(ReserveDraft reserve) {
+        switchToScreen(new ReserveEditorScreen<>(this, reserve,
+                draft.data.target().equals(reserve.key) ? draft.data.variants() : List.of()));
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (mouseX >= leftPos + LIST_LEFT && mouseX < leftPos + LIST_RIGHT
-                && mouseY >= topPos + FIRST_ROW_Y
-                && mouseY < topPos + FIRST_ROW_Y + VISIBLE_ROWS * ROW_HEIGHT) {
-            scrollbar.setCurrentScroll(scrollbar.getCurrentScroll() - (int) Math.signum(scrollY));
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return entryList.mouseScrolled(mouseX - leftPos, mouseY - topPos, scrollY)
+                || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
-        int row = (y - topPos - FIRST_ROW_Y) / ROW_HEIGHT;
-        int index = scrollbar.getCurrentScroll() + row;
-        if (y >= topPos + FIRST_ROW_Y && y < topPos + FIRST_ROW_Y + VISIBLE_ROWS * ROW_HEIGHT
-                && row >= 0 && row < VISIBLE_ROWS && index >= 0 && index < draft.reserves.size()
-                && x >= leftPos + LIST_LEFT && x < leftPos + LIST_RIGHT) {
-            var reserve = draft.reserves.get(index);
-            var lines = new ArrayList<Component>();
-            lines.add(reserve.key.getDisplayName());
-            lines.add(Component.translatable("ae2lt.tianshu.maintenance.tooltip.stock",
-                    compactAmount(reserve.key, reserve.storedAmount)).withStyle(ChatFormatting.GRAY));
-            lines.add(Component.translatable("ae2lt.tianshu.reserve.global_value",
-                    formatReserve(reserve.globalAmount), modeLabel(reserve.globalMode))
-                    .withStyle(ChatFormatting.BLUE));
-            lines.add(Component.translatable("ae2lt.tianshu.reserve.rule_value",
-                    formatReserve(reserve.ruleAmount), modeLabel(reserve.ruleMode))
-                    .withStyle(ChatFormatting.DARK_PURPLE));
-            lines.add(Component.translatable("ae2lt.tianshu.maintenance.click_edit_reserve")
-                    .withStyle(ChatFormatting.DARK_GRAY));
+        var lines = entryList.tooltipTextsAt(x - leftPos, y - topPos);
+        if (!lines.isEmpty()) {
             drawTooltip(graphics, x, y, lines);
             return;
         }
         super.renderTooltip(graphics, x, y);
+    }
+
+    private List<Component> entryTooltip(ReserveDraft reserve) {
+        var lines = new ArrayList<Component>();
+        lines.add(reserve.key.getDisplayName());
+        lines.add(Component.translatable("ae2lt.tianshu.maintenance.tooltip.stock",
+                compactAmount(reserve.key, reserve.storedAmount)).withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("ae2lt.tianshu.reserve.global_value",
+                formatReserve(reserve.globalAmount), modeLabel(reserve.globalMode))
+                .withStyle(ChatFormatting.BLUE));
+        lines.add(Component.translatable("ae2lt.tianshu.reserve.rule_value",
+                formatReserve(reserve.ruleAmount), modeLabel(reserve.ruleMode))
+                .withStyle(ChatFormatting.DARK_PURPLE));
+        lines.add(Component.translatable("ae2lt.tianshu.maintenance.click_edit_reserve")
+                .withStyle(ChatFormatting.DARK_GRAY));
+        return lines;
     }
 
     private Component validationError() {
@@ -346,7 +331,7 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         returnToParent();
     }
 
-    private static Long parse(AETextField field) {
+    private static Long parse(LdlibAe2TextField field) {
         try {
             return Long.parseLong(field.getValue());
         } catch (NumberFormatException ignored) {
@@ -423,25 +408,23 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
 
     /** Second-level editor. Values are committed to the parent draft only when Done is pressed. */
     private static final class ReserveEditorScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
-            extends AESubScreen<M, TianshuMaintenanceRuleScreen<M>> {
+            extends LdlibAeSubScreen<M, TianshuMaintenanceRuleScreen<M>> {
+        private TianshuReserveEditorDetails details;
+
         @Override
         protected PageAnchor getHelpTopic() {
             return TianshuMaintenanceTermScreen.terminalHelpTopic(menu,
                     global ? "global-reserves" : "inventory-maintenance");
         }
 
-        private static final int VARIANT_FIRST_ROW = 134;
-        private static final int VARIANT_ROW_HEIGHT = 17;
-        private static final int VISIBLE_VARIANTS = 3;
-
         private final ReserveDraft reserve;
         private final List<MaintenanceEditorData.VariantEntry> variants;
-        private final AETextField amount;
-        private final AE2Button scopeButton;
-        private final AE2Button modeButton;
-        private final AE2Button deleteButton;
-        private final AE2Button saveButton;
-        private final Scrollbar scrollbar;
+        private final LdlibAe2TextField amount;
+        private final LdlibAe2Button scopeButton;
+        private final LdlibAe2Button modeButton;
+        private final LdlibAe2Button deleteButton;
+        private final LdlibAe2Button saveButton;
+        private final LdlibRowScroller scrollbar;
         private boolean global = true;
         private long globalAmount;
         private ReservedStockMatchMode globalMode;
@@ -473,23 +456,22 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
             ruleAmount = state.ruleAmount;
             ruleMode = state.ruleMode;
 
-            scrollbar = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
+            scrollbar = LdlibRowScroller.add(widgets, "scrollbar");
             scrollbar.setCaptureMouseWheel(false);
-            amount = widgets.addTextField("amount");
+            amount = LdlibAe2TextField.add(widgets, style, "amount");
             amount.setMaxLength(19);
             amount.setFilter(ReserveEditorScreen::validDraft);
             amount.setValue(formatReserve(globalAmount).replace("∞", "-1"));
-            scopeButton = widgets.addButton("scope", scopeLabel(), this::toggleScope);
-            modeButton = widgets.addButton("mode", modeLabel(), this::toggleMode);
-            widgets.addButton("zero", Component.literal("0"), () -> amount.setValue("0"));
-            widgets.addButton("stack", Component.literal("64"), () -> amount.setValue("64"));
-            widgets.addButton("infinite", Component.literal("∞"), () -> amount.setValue("-1"));
-            deleteButton = widgets.addButton("delete",
+            scopeButton = LdlibAe2Button.addText(widgets, style, "scope", scopeLabel(), this::toggleScope);
+            modeButton = LdlibAe2Button.addText(widgets, style, "mode", modeLabel(), this::toggleMode);
+            LdlibAe2Button.addText(widgets, style, "zero", Component.literal("0"), () -> amount.setValue("0"));
+            LdlibAe2Button.addText(widgets, style, "stack", Component.literal("64"), () -> amount.setValue("64"));
+            LdlibAe2Button.addText(widgets, style, "infinite", Component.literal("∞"), () -> amount.setValue("-1"));
+            deleteButton = LdlibAe2Button.addText(widgets, style, "delete",
                     Component.translatable("ae2lt.tianshu.reserve.delete"), this::delete);
-            widgets.addButton("cancel", Component.translatable("gui.cancel"), this::returnToParent);
-            saveButton = widgets.addButton("save", Component.translatable("gui.done"), this::save);
-            widgets.add("back", new TabButton(
-                    Icon.BACK, Component.translatable("gui.back"), ignored -> returnToParent()));
+            LdlibAe2Button.addText(widgets, style, "cancel", Component.translatable("gui.cancel"), this::returnToParent);
+            saveButton = LdlibAe2Button.addText(widgets, style, "save", Component.translatable("gui.done"), this::save);
+            widgets.add("back", LdlibAe2Button.back(Component.translatable("gui.back"), this::returnToParent));
         }
 
         @Override
@@ -500,6 +482,37 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         @Override
         protected boolean isHovering(Slot slot, double mouseX, double mouseY) {
             return false;
+        }
+
+        @Override
+        protected void onReturnToParent() {
+            if (details != null) {
+                details.onRemoved();
+            }
+            super.onReturnToParent();
+        }
+
+        @Override
+        public void removed() {
+            try {
+                if (details != null) {
+                    details.onRemoved();
+                }
+            } finally {
+                super.removed();
+            }
+        }
+
+        @Override
+        public void init() {
+            if (details != null) {
+                details.onRemoved();
+            }
+            super.init();
+            details = new TianshuReserveEditorDetails(imageWidth, imageHeight, font, style, reserve.key,
+                    (global ? globalMode : ruleMode) == ReservedStockMatchMode.IGNORE_SECONDARY,
+                    variants.stream().map(variant -> new TianshuReserveEditorDetails.Variant(
+                            variant.key(), variant.storedAmount(), variant.craftable(), false)).toList(), scrollbar);
         }
 
         private static boolean validDraft(String value) {
@@ -548,8 +561,13 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
         }
 
         private void reopen() {
-            switchToScreen(new ReserveEditorScreen<>(getParent(), reserve, variants,
-                    new EditorState(global, globalAmount, globalMode, ruleAmount, ruleMode)));
+            var next = new ReserveEditorScreen<>(getParent(), reserve, variants,
+                    new EditorState(global, globalAmount, globalMode, ruleAmount, ruleMode));
+            if (details != null) {
+                details.onRemoved();
+            }
+            releaseBackground();
+            switchToScreen(next);
         }
 
         private Component scopeLabel() {
@@ -589,88 +607,26 @@ public final class TianshuMaintenanceRuleScreen<M extends MEStorageMenu & Tiansh
             saveButton.active = parsedAmount() != Long.MIN_VALUE;
             scopeButton.setMessage(scopeLabel());
             modeButton.setMessage(modeLabel());
-            boolean showVariants = (global ? globalMode : ruleMode)
-                    == ReservedStockMatchMode.IGNORE_SECONDARY && !variants.isEmpty();
-            scrollbar.setVisible(showVariants);
-            scrollbar.setRange(0, Math.max(0, variants.size() - VISIBLE_VARIANTS), 1);
         }
 
         @Override
         public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
             super.drawFG(graphics, offsetX, offsetY, mouseX, mouseY);
-            graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.title"),
-                    10, 9, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            graphics.renderItem(reserve.key.wrapForDisplayOrFilter(), 16, 32);
-            graphics.drawString(font,
-                    font.plainSubstrByWidth(reserve.key.getDisplayName().getString(), 147),
-                    39, 35, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            graphics.drawString(font, Component.translatable("ae2lt.tianshu.reserve.current_stock",
-                    compactAmount(reserve.key, reserve.storedAmount)), 10, 83, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-            var amountLabel = Component.translatable("ae2lt.tianshu.reserve.amount");
-            graphics.drawString(font, font.plainSubstrByWidth(amountLabel.getString(), 64),
-                    10, 99, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-
-            var selectedMode = global ? globalMode : ruleMode;
-            if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY) {
-                if (!variants.isEmpty()) {
-                    graphics.drawString(font,
-                            Component.translatable("ae2lt.tianshu.reserve.variant_title"),
-                            10, 116, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-                    int start = scrollbar.getCurrentScroll();
-                    int end = Math.min(variants.size(), start + VISIBLE_VARIANTS);
-                    for (int index = start; index < end; index++) {
-                        int y = VARIANT_FIRST_ROW + (index - start) * VARIANT_ROW_HEIGHT;
-                        var variant = variants.get(index);
-                        graphics.renderItem(variant.key().wrapForDisplayOrFilter(), 12, y);
-                        graphics.drawString(font,
-                                font.plainSubstrByWidth(
-                                        variant.key().getDisplayName().getString(), 112),
-                                33, y + 4, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-                        String stock = compactAmount(variant.key(), variant.storedAmount());
-                        graphics.drawString(font, stock, 185 - font.width(stock), y + 4,
-                                variant.craftable() ? 0x2F6D3C : style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-                    }
-                } else {
-                    var emptyText = Component.translatable(
-                            "ae2lt.tianshu.reserve.variant_empty");
-                    graphics.drawString(font, emptyText,
-                            98 - font.width(emptyText) / 2, 156, style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(), false);
-                }
-            }
+            details.render(graphics, mouseX - leftPos, mouseY - topPos,
+                    Component.translatable("ae2lt.tianshu.reserve.current_stock",
+                            compactAmount(reserve.key, reserve.storedAmount)));
         }
 
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-            var selectedMode = global ? globalMode : ruleMode;
-            if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY
-                    && !variants.isEmpty()
-                    && mouseY >= topPos + VARIANT_FIRST_ROW
-                    && mouseY < topPos + VARIANT_FIRST_ROW + VISIBLE_VARIANTS * VARIANT_ROW_HEIGHT) {
-                scrollbar.setCurrentScroll(scrollbar.getCurrentScroll() - (int) Math.signum(scrollY));
-                return true;
-            }
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            return details.scrollVariantsAtY(mouseY - topPos, scrollY)
+                    || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
 
         @Override
         protected void renderTooltip(GuiGraphics graphics, int x, int y) {
-            int row = (y - topPos - VARIANT_FIRST_ROW) / VARIANT_ROW_HEIGHT;
-            int index = scrollbar.getCurrentScroll() + row;
-            var selectedMode = global ? globalMode : ruleMode;
-            if (selectedMode == ReservedStockMatchMode.IGNORE_SECONDARY
-                    && y >= topPos + VARIANT_FIRST_ROW
-                    && y < topPos + VARIANT_FIRST_ROW + VISIBLE_VARIANTS * VARIANT_ROW_HEIGHT
-                    && row >= 0 && row < VISIBLE_VARIANTS
-                    && index >= 0 && index < variants.size()
-                    && x >= leftPos + 9 && x < leftPos + 187) {
-                var variant = variants.get(index);
-                var lines = new ArrayList<>(AEKeyRendering.getTooltip(variant.key()));
-                lines.add(Component.translatable("ae2lt.tianshu.maintenance.tooltip.stock",
-                        compactAmount(variant.key(), variant.storedAmount()))
-                        .withStyle(ChatFormatting.GRAY));
-                if (variant.craftable()) {
-                    lines.add(ButtonToolTips.Craftable.text().withStyle(ChatFormatting.GREEN));
-                }
+            var lines = details.tooltipTextsAt(x - leftPos, y - topPos);
+            if (!lines.isEmpty()) {
                 drawTooltip(graphics, x, y, lines);
                 return;
             }

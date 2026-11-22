@@ -96,6 +96,10 @@
       "left": 47,
       "top": 23
     },
+    "miningArea": {
+      "left": 25,
+      "top": 43
+    },
     "processArea": {
       "left": 44,
       "top": 46

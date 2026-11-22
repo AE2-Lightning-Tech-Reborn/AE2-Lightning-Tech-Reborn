@@ -26,7 +26,7 @@ final class CoreEffectBackend {
     static void disableVeil(Throwable cause) {
         if (veilUsable) {
             veilUsable = false;
-            LOGGER.warn("Veil core-effect backend failed; falling back to native shaders", cause);
+            LOGGER.warn("Veil core-effect backend failed; falling back to LDLib shaders", cause);
         }
     }
 
@@ -46,7 +46,7 @@ final class CoreEffectBackend {
                 || installedVersion.compareTo(MINIMUM_VEIL_VERSION) < 0
                 || installedVersion.compareTo(MAXIMUM_VEIL_VERSION) >= 0) {
             LOGGER.warn("Unsupported Veil version {} installed; AE2LT supports [4.3.0,5.0.0) "
-                    + "and will use native core-effect shaders", installedVersion);
+                    + "and will use LDLib core-effect shaders", installedVersion);
             return false;
         }
 
@@ -54,12 +54,12 @@ final class CoreEffectBackend {
             boolean compatible = VeilCoreEffectShaders.isApiCompatible();
             if (!compatible) {
                 LOGGER.warn("Veil is installed but its shader bridge API is incompatible; "
-                        + "using native core-effect shaders");
+                        + "using LDLib core-effect shaders");
             }
             return compatible;
         } catch (LinkageError | RuntimeException exception) {
             LOGGER.warn("Veil is installed but its shader bridge API is unavailable; "
-                    + "using native core-effect shaders", exception);
+                    + "using LDLib core-effect shaders", exception);
             return false;
         }
     }

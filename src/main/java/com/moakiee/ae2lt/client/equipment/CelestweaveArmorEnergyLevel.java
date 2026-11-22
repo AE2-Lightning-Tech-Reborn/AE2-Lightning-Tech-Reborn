@@ -1,5 +1,12 @@
 package com.moakiee.ae2lt.client.equipment;
 
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.FillDirection;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ProgressBar;
+import com.moakiee.ae2lt.client.ldlib.LdlibHud;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -24,6 +31,12 @@ public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
             "ae2lt", "textures/gui/hud/hud_bar.png");
     private static final ResourceLocation BAR_OVERLAY = ResourceLocation.fromNamespaceAndPath(
             "ae2lt", "textures/gui/hud/hud_bar_overlay.png");
+    private static final IGuiTexture BACKGROUND = new LdlibStyleSprite(BAR_BASE, BAR_WIDTH, BAR_HEIGHT).full();
+    private static final IGuiTexture[] FILL = new LdlibStyleSprite(BAR_OVERLAY, BAR_WIDTH, BAR_HEIGHT)
+            .horizontalSlices(1, 1, INNER_WIDTH, INNER_HEIGHT);
+
+    private LdlibHud hud;
+    private ProgressBar fill;
 
     private CelestweaveArmorEnergyLevel() {
     }
@@ -61,10 +74,14 @@ public final class CelestweaveArmorEnergyLevel implements LayeredDraw.Layer {
         int length = Mth.clamp((int) Math.round(((double) Math.min(stored, capacity) / capacity) * INNER_WIDTH),
                 0, INNER_WIDTH);
 
-        graphics.blit(BAR_BASE, x, y, 0, 0, BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
-        if (length > 0) {
-            graphics.blit(BAR_OVERLAY, x + 1, y + 1, length, INNER_HEIGHT, 1, 1, length, INNER_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
+        if (hud == null) {
+            fill = LdlibScreens.spriteProgress(FillDirection.LEFT_TO_RIGHT, FILL);
+            var root = new UIElement().style(style -> style.background(BACKGROUND));
+            root.addChild(LdlibScreens.at(fill, 1, 1, INNER_WIDTH, INNER_HEIGHT));
+            hud = new LdlibHud(root, BAR_WIDTH, BAR_HEIGHT);
         }
+        fill.setProgress(length);
+        hud.renderAt(graphics, delta, x, y);
         minecraft.gui.leftHeight += 8;
     }
 

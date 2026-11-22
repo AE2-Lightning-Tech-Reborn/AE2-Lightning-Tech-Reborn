@@ -1,18 +1,15 @@
 package com.moakiee.ae2lt.client.machine;
 
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 
 import java.util.List;
 import java.util.Locale;
 
-import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.ToggleButton;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.api.config.ActionItems;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.style.Blitter;
-import com.moakiee.ae2lt.client.gui.LightningStatusIconWidget;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.client.gui.LightningStatusLines;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity;
 import com.moakiee.ae2lt.blockentity.MiningFactoryBlockEntity.Status;
@@ -24,18 +21,18 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
-    private final Blitter miningOverlay;
-    private final ToggleButton autoExportButton;
-    private final ActionButton configureOutputButton;
+public final class MiningFactoryScreen extends LdlibAeScreen<MiningFactoryMenu> {
+    private final LdlibAe2Button configureOutputButton;
     public MiningFactoryScreen(MiningFactoryMenu menu, Inventory inventory, Component title, ScreenStyle style) {
         super(menu, inventory, title, style);
         imageWidth = 176;
         imageHeight = 183;
-        miningOverlay = style.getImage("miningOverlay");
-        widgets.add("processArea", new OverloadProcessingFactoryProgressWidget(menu::getProgress, style.getImage("processOverlay")));
-        widgets.add("energyBar", new OverloadProcessingFactoryEnergyBar(() -> menu.energy, () -> MiningFactoryBlockEntity.ENERGY_CAPACITY, style.getImage("energyBar")));
-        widgets.add("lightningStatus", new LightningStatusIconWidget(() -> List.of(
+        widgets.add("miningArea", MachineGauges.verticalProgress(style.getImage("miningOverlay"), menu::getProgress));
+        widgets.add("processArea", MachineGauges.horizontalProgress(style.getImage("processOverlay"), menu::getProgress, true));
+        widgets.add("energyBar", MachineGauges.energyBar(style.getImage("energyBar"),
+                () -> menu.energy, () -> MiningFactoryBlockEntity.ENERGY_CAPACITY,
+                "ae2lt.gui.overload_factory.energy.tooltip"));
+        widgets.add("lightningStatus", MachineGauges.statusIcon(() -> List.of(
                 LightningStatusLines.title(),
                 Component.translatable("ae2lt.gui.status.label", statusText()),
                 LightningStatusLines.progress(menu.getProgress()),
@@ -43,16 +40,12 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
                 Component.translatable("gui.ae2lt.mining_factory.lightning", menu.lightning),
                 LightningStatusLines.energy(menu.energy, MiningFactoryBlockEntity.ENERGY_CAPACITY))));
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
-        autoExportButton = new ToggleButton(Icon.AUTO_EXPORT_ON, Icon.AUTO_EXPORT_OFF,
-                state -> menu.clientToggleAutoExport());
-        autoExportButton.setTooltipOn(List.of(Component.translatable("ae2lt.gui.overload_factory.auto_export.title"),
-                Component.translatable("ae2lt.gui.overload_factory.auto_export.on")));
-        autoExportButton.setTooltipOff(List.of(Component.translatable("ae2lt.gui.overload_factory.auto_export.title"),
-                Component.translatable("ae2lt.gui.overload_factory.auto_export.off")));
         addToLeftToolbar(new InputTransferButton(menu));
-        addToLeftToolbar(autoExportButton);
-        configureOutputButton = new ActionButton(ActionItems.COG, () -> switchToScreen(createOutputConfigScreen()));
-        configureOutputButton.setMessage(Component.translatable("ae2lt.gui.overload_factory.configure_output"));
+        addToLeftToolbar(new MachineAutoExportButton("ae2lt.gui.overload_factory.auto_export",
+                menu::isAutoExportEnabled, menu::clientToggleAutoExport));
+        configureOutputButton = LdlibAe2Button.toolbar(
+                Icon.COG, Component.translatable("ae2lt.gui.overload_factory.configure_output"),
+                () -> switchToScreen(createOutputConfigScreen()));
         addToLeftToolbar(configureOutputButton);
     }
 
@@ -62,21 +55,7 @@ public final class MiningFactoryScreen extends AEBaseScreen<MiningFactoryMenu> {
 
     @Override protected void updateBeforeRender() {
         super.updateBeforeRender();
-        autoExportButton.setState(menu.isAutoExportEnabled());
         configureOutputButton.setVisibility(menu.isAutoExportEnabled());
-    }
-
-    @Override public void drawBG(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float partialTicks) {
-        super.drawBG(graphics, x, y, mouseX, mouseY, partialTicks);
-        // Reveal the falling fragments from top to bottom using the same batch progress as the arrow.
-        int filled = Math.clamp((int) Math.ceil(miningOverlay.getSrcHeight() * menu.getProgress()),
-                0, miningOverlay.getSrcHeight());
-        if (filled > 0) {
-            miningOverlay.copy()
-                    .src(miningOverlay.getSrcX(), miningOverlay.getSrcY(), miningOverlay.getSrcWidth(), filled)
-                    .dest(x + 25, y + 43, miningOverlay.getSrcWidth(), filled)
-                    .blit(graphics);
-        }
     }
 
     private Component statusText() {

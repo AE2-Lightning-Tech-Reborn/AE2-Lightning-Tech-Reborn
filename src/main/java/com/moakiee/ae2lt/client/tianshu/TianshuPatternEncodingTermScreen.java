@@ -1,16 +1,20 @@
 package com.moakiee.ae2lt.client.tianshu;
 
 import appeng.client.gui.Icon;
+import appeng.api.config.ActionItems;
 import appeng.client.gui.me.common.Repo;
-import appeng.client.gui.me.common.StackSizeRenderer;
+import com.moakiee.ae2lt.client.gui.LargeStackCountRenderer;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.ActionButton;
-import appeng.client.gui.widgets.TabButton;
-import appeng.client.gui.widgets.TabButton.Style;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Icons;
+import appeng.client.gui.widgets.IconButton;
+import appeng.client.gui.widgets.SettingToggleButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibHorizontalTab;
 import appeng.api.behaviors.ContainerItemStrategies;
 import appeng.api.behaviors.EmptyingAction;
-import appeng.api.config.ActionItems;
+import appeng.api.config.Settings;
+import appeng.api.config.ViewItems;
+import appeng.api.client.AEKeyRendering;
 import appeng.api.stacks.GenericStack;
 import appeng.core.localization.ButtonToolTips;
 import appeng.core.localization.Tooltips;
@@ -38,9 +42,15 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.texture.VanillaSpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -57,20 +67,23 @@ import org.jetbrains.annotations.Nullable;
 @IPNIgnore
 public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTermMenu>
         extends TianshuMaintenanceTermScreen<M> {
+    private static final Icon BLANK_PATTERN_HINT = Icon.BACKGROUND_BLANK_PATTERN;
     private final Map<EncodingMode, TianshuEncodingModePanel> modePanels =
             new EnumMap<>(EncodingMode.class);
-    private final Map<TianshuEncodingMode, TabButton> modeTabs =
+    private final Map<TianshuEncodingMode, LdlibHorizontalTab> modeTabs =
             new EnumMap<>(TianshuEncodingMode.class);
     private final TianshuClosedLoopEncodingPanel closedLoopPanel;
     private final TianshuOmniversalEncodingPanel omniversalPanel;
     private final List<ProcessingMultiplierButton> processingModeButtons;
-    private final AE2Button advancedEncoding;
-    private final AE2Button overloadEncoding;
+    private final LdlibAe2Button advancedEncoding;
+    private final LdlibAe2Button overloadEncoding;
     private final RepoSlot networkBlankPatternSlot;
     private final Item blankPatternItem;
     @Nullable
     private GridInventoryEntry cachedNetworkBlankPatternEntry;
     private int observedEncodingAck;
+
+    private final LdlibAe2Button encodePatternButton;
 
     public TianshuPatternEncodingTermScreen(
             M menu,
@@ -86,11 +99,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
                 case SMITHING_TABLE -> new TianshuSmithingTableEncodingPanel(this, widgets);
                 case STONECUTTING -> new TianshuStonecuttingEncodingPanel(this, widgets);
             };
-            var tabButton = new TabButton(
+            var tabButton = new LdlibHorizontalTab(
                     panel.getIcon(),
                     panel.getTabTooltip(),
-                    button -> menu.setMode(mode));
-            tabButton.setStyle(Style.HORIZONTAL);
+                    () -> menu.setMode(mode));
 
             var modeIndex = modeTabs.size();
             widgets.add("modePanel" + modeIndex, panel);
@@ -99,36 +111,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             modePanels.put(mode, panel);
         }
 
-        widgets.add("encodePattern", new ActionButton(ActionItems.ENCODE, action -> menu.encode()) {
-            @Override
-            public boolean mouseClicked(double x, double y, int button) {
-                // AEBaseScreen forwards right clicks to widgets as left clicks while setting this flag.
-                boolean rightClick = button == GLFW.GLFW_MOUSE_BUTTON_RIGHT
-                        || TianshuPatternEncodingTermScreen.this.isHandlingRightClick();
-                if (rightClick && visible && active && isMouseOver(x, y)) {
-                    if (hasShiftDown()) {
-                        var selection = TianshuUploadSourceSelection.collect(menu);
-                        switchToScreen(new TianshuUploadAliasManagementScreen<>(
-                                TianshuPatternEncodingTermScreen.this, selection.sourceKey(), selection.initialQuery()));
-                    } else menu.undoLastUpload();
-                    return true;
-                }
-                return super.mouseClicked(x, y, button);
-            }
-
-            @Override
-            public List<Component> getTooltipMessage() {
-                var lines = new java.util.ArrayList<Component>(menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL
-                        && TianshuUploadTriggerClient.shouldTrigger()
-                        ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
-                                Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
-                        : super.getTooltipMessage());
-                lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
-                lines.add(Component.translatable(menu.canUndoUpload
-                        ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
-                return lines;
-            }
-        });
+        encodePatternButton = LdlibAe2Button.toolbar(Icon.WHITE_ARROW_DOWN,
+                LdlibAe2Button.actionMessage(ActionItems.ENCODE), menu::encode, this::encodePatternTooltip);
+        widgets.add("encodePattern", encodePatternButton);
 
         addExtraTab(TianshuEncodingMode.CLOSED_LOOP, ModItems.CLOSED_LOOP_PATTERN.get().getDefaultInstance(),
                 Component.translatable("ae2lt.tianshu.terminal.mode.closed_loop"), "modeTabButton4");
@@ -171,8 +156,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
     }
 
-    private AE2Button addCompactButton(String widgetId, Component label, Runnable onPress) {
-        var button = new CompactAE2Button(label, ignored -> onPress.run());
+    private LdlibAe2Button addCompactButton(String widgetId, Component label, Runnable onPress) {
+        var bounds = getStyle().getWidget(widgetId);
+        var button = new CompactButton(bounds.getWidth(), bounds.getHeight(), label, onPress);
         widgets.add(widgetId, button);
         return button;
     }
@@ -191,8 +177,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     private void addExtraTab(
             TianshuEncodingMode mode, net.minecraft.world.item.ItemStack icon,
             Component tooltip, String widgetId) {
-        var tab = new TabButton(icon, tooltip, button -> menu.setTianshuMode(mode));
-        tab.setStyle(Style.HORIZONTAL);
+        var tab = new LdlibHorizontalTab(icon, tooltip, () -> menu.setTianshuMode(mode));
         widgets.add(widgetId, tab);
         modeTabs.put(mode, tab);
     }
@@ -249,7 +234,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         }
     }
 
-    private void updateEncodingButton(AE2Button button, ProcessingPatternEncodingType type,
+    private void updateEncodingButton(LdlibAe2Button button, ProcessingPatternEncodingType type,
                                       boolean visible, boolean enabled, String key) {
         button.visible = visible;
         button.active = enabled;
@@ -319,8 +304,32 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
         return true;
     }
 
+    private List<Component> encodePatternTooltip() {
+        var lines = new java.util.ArrayList<Component>(
+                menu.tianshuMode == TianshuEncodingMode.OMNIVERSAL && TianshuUploadTriggerClient.shouldTrigger()
+                        ? List.of(Component.translatable("ae2lt.tianshu.omniversal.encode_upload"),
+                                Component.translatable("ae2lt.tianshu.omniversal.encode_upload.tooltip"))
+                        : List.of(encodePatternButton.getMessage()));
+        lines.add(Component.translatable("ae2lt.tianshu.upload.encode_management"));
+        lines.add(Component.translatable(menu.canUndoUpload
+                ? "ae2lt.tianshu.upload.encode_undo" : "ae2lt.tianshu.upload.encode_undo_empty"));
+        return lines;
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && encodePatternButton.active
+                && encodePatternButton.isMouseOver(mouseX, mouseY)) {
+            if (hasShiftDown()) {
+                var selection = TianshuUploadSourceSelection.collect(menu);
+                switchToScreen(new TianshuUploadAliasManagementScreen<>(
+                        this, selection.sourceKey(), selection.initialQuery()));
+            } else {
+                menu.undoLastUpload();
+            }
+            return true;
+        }
+
         if (handleMaintenanceClick(button)) return true;
 
         if (minecraft.options.keyPickItem.matchesMouse(button)) {
@@ -367,19 +376,13 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     @Override
     protected void renderTooltip(GuiGraphics graphics, int x, int y) {
         var omniversalTooltip = omniversalPanel.tooltipAt(x - leftPos, y - topPos);
-        if (menu.getCarried().isEmpty() && omniversalTooltip != null) {
+        if (menu.getCarried().isEmpty() && !omniversalTooltip.isEmpty()) {
             drawTooltip(graphics, x, y, omniversalTooltip);
             return;
         }
-        var multiplierTooltip = closedLoopPanel.getMultiplierTooltipAt(
-                x - leftPos, y - topPos);
-        if (menu.getCarried().isEmpty() && multiplierTooltip != null) {
-            drawTooltip(graphics, x, y, multiplierTooltip);
-            return;
-        }
-        if (menu.getCarried().isEmpty()
-                && closedLoopPanel.isMouseOverStatus(x - leftPos, y - topPos)) {
-            drawTooltip(graphics, x, y, closedLoopPanel.buildStatusTooltip());
+        var closedLoopTooltip = closedLoopPanel.tooltipAt(x - leftPos, y - topPos);
+        if (menu.getCarried().isEmpty() && !closedLoopTooltip.isEmpty()) {
+            drawTooltip(graphics, x, y, closedLoopTooltip);
             return;
         }
         if (menu.getCarried().isEmpty() && menu.canModifyAmountForSlot(hoveredSlot)) {
@@ -423,11 +426,10 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     @Override
     public void renderSlot(GuiGraphics graphics, Slot slot) {
         if (slot == networkBlankPatternSlot && !slot.hasItem()) {
-            Icon.BACKGROUND_BLANK_PATTERN.getBlitter()
-                    .dest(slot.x, slot.y)
-                    .blit(graphics);
+            LdlibAe2Icons.texture(BLANK_PATTERN_HINT).draw(graphics, 0, 0, slot.x, slot.y,
+                    BLANK_PATTERN_HINT.width, BLANK_PATTERN_HINT.height, 0);
+            graphics.flush();
         }
-
         if (isClosedLoopMemberSlot(slot) && slot.hasItem()) {
             // Render only the pattern icon here. The standard slot decoration would add the
             // display stack's amount (1) in the same corner as the per-cycle copy count below.
@@ -437,9 +439,9 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             if (copies > 1L) {
                 var poseStack = graphics.pose();
                 poseStack.pushPose();
-                // Items render at z=100; keep the authoritative per-cycle count above the icon.
+                // Keep the amount above the item at its normal slot depth.
                 poseStack.translate(0, 0, 100);
-                StackSizeRenderer.renderSizeLabel(
+                LargeStackCountRenderer.renderTerminalLabel(
                         graphics, font, slot.x, slot.y, Long.toString(copies), false);
                 poseStack.popPose();
             }
@@ -451,7 +453,7 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
             var poseStack = graphics.pose();
             poseStack.pushPose();
             poseStack.translate(0, 0, 100);
-            StackSizeRenderer.renderSizeLabel(graphics, font, slot.x - 11, slot.y - 11, "+", false);
+            LargeStackCountRenderer.renderTerminalLabel(graphics, font, slot.x - 11, slot.y - 11, "+", false);
             poseStack.popPose();
         }
 
@@ -525,23 +527,41 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
     }
 
     /** AE2 button visuals with a compact text layer for the processing-mode controls. */
-    private record ProcessingMultiplierButton(AE2Button button, int factor, int shiftedFactor) {
+    private record ProcessingMultiplierButton(LdlibAe2Button button, int factor, int shiftedFactor) {
     }
 
-    private static final class CompactAE2Button extends AE2Button {
+    private static final class CompactButton extends LdlibAe2Button {
         private static final float TEXT_SCALE = 0.65F;
 
-        private CompactAE2Button(Component message, Button.OnPress onPress) {
-            super(message, onPress);
+        private final ModularUI text;
+        private final Label label;
+
+        private CompactButton(int width, int height, Component message, Runnable onPress) {
+            super(width, height, message, onPress);
+            var root = new UIElement();
+            label = LdlibScreens.label(message, 0xFFF2F2F2);
+            label.setAllowHitTest(false);
+            label.textStyle(style -> style.textWrap(TextWrap.NONE));
+            root.addChild(LdlibScreens.at(label, 0, 0, 1, 9));
+            text = LdlibScreens.localLayer(root, (int) Math.ceil(width / TEXT_SCALE),
+                    (int) Math.ceil(height / TEXT_SCALE));
+            var normal = VanillaSpriteTexture.of("ae2:button");
+            var highlighted = VanillaSpriteTexture.of("ae2:button_highlighted");
+            var disabled = VanillaSpriteTexture.of("ae2:button_disabled");
+            var idle = IGuiTexture.dynamic(() -> !active ? disabled : isFocused() ? highlighted : normal);
+            var hover = IGuiTexture.dynamic(() -> active ? highlighted : disabled);
+            control.buttonStyle(style -> style.baseTexture(idle).hoverTexture(hover).pressedTexture(hover));
+        }
+
+        @Override
+        public boolean isTooltipAreaVisible() {
+            return false;
         }
 
         @Override
         protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            var message = getMessage();
-            setMessage(Component.empty());
             super.renderWidget(graphics, mouseX, mouseY, partialTick);
-            setMessage(message);
-
+            var message = getMessage();
             var font = Minecraft.getInstance().font;
             int color;
             int yOffset;
@@ -558,14 +578,21 @@ public class TianshuPatternEncodingTermScreen<M extends TianshuPatternEncodingTe
 
             float virtualWidth = getWidth() / TEXT_SCALE;
             float virtualHeight = getHeight() / TEXT_SCALE;
-            float textX = (virtualWidth - font.width(message)) / 2.0F;
+            int width = font.width(message);
+            float textX = (virtualWidth - width) / 2.0F;
             float textY = (virtualHeight - 9.0F) / 2.0F + 1.0F - yOffset / TEXT_SCALE;
+            label.setText(message);
+            label.getTextStyle().textColor(color);
+            LdlibScreens.at(label, Math.round(textX), Math.round(textY), width + 1, 9);
             var pose = graphics.pose();
             pose.pushPose();
-            pose.translate(getX(), getY(), 10.0F);
-            pose.scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
-            graphics.drawString(font, message, Math.round(textX), Math.round(textY), color, false);
-            pose.popPose();
+            try {
+                pose.translate(getX(), getY(), 10.0F);
+                pose.scale(TEXT_SCALE, TEXT_SCALE, 1.0F);
+                text.getWidget().render(graphics, 0, 0, partialTick);
+            } finally {
+                pose.popPose();
+            }
         }
     }
 

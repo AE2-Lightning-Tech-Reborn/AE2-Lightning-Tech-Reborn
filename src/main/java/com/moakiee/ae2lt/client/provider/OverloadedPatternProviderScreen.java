@@ -1,5 +1,11 @@
 package com.moakiee.ae2lt.client.provider;
 
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.BackgroundLayer;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarHost;
 import com.moakiee.ae2lt.client.frequency.FrequencyBindingClient;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 import com.moakiee.ae2lt.client.widgets.PageButton;
@@ -7,27 +13,29 @@ import com.moakiee.ae2lt.client.widgets.PageInput;
 
 import java.util.List;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import appeng.api.config.ActionItems;
 import appeng.client.gui.implementations.PatternProviderScreen;
 import appeng.client.gui.style.PaletteColor;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.ActionButton;
+import appeng.client.gui.Icon;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.menu.SlotSemantics;
 
 import com.moakiee.ae2lt.api.client.PatternProviderToolbarButtonHider;
 import com.moakiee.ae2lt.api.patternprovider.PatternSlotPages;
 import com.moakiee.ae2lt.blockentity.OverloadedPatternProviderBlockEntity.ReturnMode;
-import com.moakiee.ae2lt.client.gui.GuiTextLayout;
 import com.moakiee.ae2lt.menu.OverloadedPatternProviderMenu;
 import com.moakiee.ae2lt.mixin.client.AEBaseScreenAccessor;
 import com.moakiee.ae2lt.mixin.client.PatternProviderScreenAccessor;
 import com.moakiee.ae2lt.mixin.client.VerticalButtonBarAccessor;
 
-public class OverloadedPatternProviderScreen<M extends OverloadedPatternProviderMenu> extends PatternProviderScreen<M> {
+public class OverloadedPatternProviderScreen<M extends OverloadedPatternProviderMenu>
+        extends PatternProviderScreen<M> implements LdlibToolbarHost {
 
     private static final List<Component> RETURN_TIP_OFF =
             List.of(Component.translatable("ae2lt.gui.return_mode.off"));
@@ -44,18 +52,20 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
     private final TextureToggleButton autoReturnButton;
     private final ProviderBlockingModeButton blockingModeButton;
     private final TextureToggleButton adaptiveBatchButton;
-    private final ActionButton advancedSettingsButton;
+    private final LdlibAe2Button advancedSettingsButton;
     private final PageButton pageButton;
+    private final @Nullable BackgroundLayer background;
 
     public OverloadedPatternProviderScreen(M menu, Inventory playerInventory,
                                            Component title, ScreenStyle style) {
         super(menu, playerInventory, title, style);
+        background = BackgroundLayer.fromStyle(style);
+        LdlibAe2Button.addOpenPriority(widgets);
 
         removeHiddenToolbarButtons();
         removeVanillaBlockingModeButton();
 
-        this.blockingModeButton = new ProviderBlockingModeButton(
-                btn -> menu.clientCycleBlockingMode());
+        this.blockingModeButton = new ProviderBlockingModeButton(menu::clientCycleBlockingMode);
         addToLeftToolbar(this.blockingModeButton);
 
         addToLeftToolbar(FrequencyBindingClient.createToolbarButton(menu));
@@ -83,34 +93,67 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
         this.adaptiveBatchButton.setTooltipOff(ADAPTIVE_BATCH_TIP_OFF);
         addToLeftToolbar(this.adaptiveBatchButton);
 
-        this.advancedSettingsButton = new ActionButton(
-                ActionItems.COG,
-                () -> switchToScreen(new OverloadedPatternProviderAdvancedScreen<>(this)));
-        this.advancedSettingsButton.setMessage(
-                Component.translatable("ae2lt.gui.provider_advanced.open"));
+        this.advancedSettingsButton = LdlibAe2Button.toolbar(
+                Icon.COG, Component.translatable("ae2lt.gui.provider_advanced.open"),
+                () -> {
+                    var next = new OverloadedPatternProviderAdvancedScreen<>(this);
+                    releaseProviderLayers();
+                    switchToScreen(next);
+                });
         addToLeftToolbar(this.advancedSettingsButton);
+    }
+
+    private void releaseProviderLayers() {
+        var previous = foreground;
+        foreground = null;
+        try {
+            if (previous != null) {
+                previous.onRemoved();
+            }
+        } finally {
+            if (background != null) {
+                background.onRemoved();
+            }
+        }
+    }
+
+    @Override
+    public void removed() {
+        try {
+            releaseProviderLayers();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override
     protected void init() {
+        releaseProviderLayers();
         super.init();
 
         PatternSlotPages.alignSlots(menu.getSlots(SlotSemantics.ENCODED_PATTERN));
+        var root = new UIElement();
+        pageIndicator = LdlibScreens.pageIndicator(root, imageWidth, 33,
+                style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB());
+        foreground = LdlibScreens.localLayer(root, imageWidth, imageHeight);
+    }
+
+    private ModularUI foreground;
+    private Label pageIndicator;
+
+    @Override
+    public void drawBG(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, float ticks) {
+        if (background == null) {
+            super.drawBG(graphics, x, y, mouseX, mouseY, ticks);
+        } else {
+            background.render(graphics, x, y, mouseX, mouseY, ticks);
+        }
     }
 
     @Override
     public void drawFG(GuiGraphics guiGraphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         super.drawFG(guiGraphics, offsetX, offsetY, mouseX, mouseY);
-        int tp = this.menu.getTotalPages();
-        if (tp > 1) {
-            String pageText = (this.menu.getCurrentPage() + 1) + "/" + tp;
-            int textWidth = this.font.width(pageText);
-            guiGraphics.drawString(this.font, pageText,
-                    GuiTextLayout.centeredX(this.imageWidth, textWidth),
-                    33,
-                    style.getColor(PaletteColor.DEFAULT_TEXT_COLOR).toARGB(),
-                    false);
-        }
+        foreground.getWidget().render(guiGraphics, mouseX - leftPos, mouseY - topPos, 0);
     }
 
     @Override
@@ -135,6 +178,9 @@ public class OverloadedPatternProviderScreen<M extends OverloadedPatternProvider
         this.advancedSettingsButton.setVisibility(true);
 
         this.pageButton.setPage(this.menu.getCurrentPage(), this.menu.getTotalPages());
+        int total = menu.getTotalPages();
+        pageIndicator.setVisible(total > 1);
+        if (total > 1) pageIndicator.setText(Component.literal((menu.getCurrentPage() + 1) + "/" + total));
     }
 
     @Override

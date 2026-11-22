@@ -1,5 +1,6 @@
 package com.moakiee.ae2lt.blockentity;
 
+import com.lowdragmc.lowdraglib2.misc.FluidStorage;
 import com.moakiee.ae2lt.machine.common.ManualInputTransfer;
 import com.moakiee.ae2lt.logic.transfer.ManualItemExport;
 
@@ -50,7 +51,6 @@ import com.moakiee.ae2lt.logic.transfer.AdjacentItemAutoExportHelper;
 import com.moakiee.ae2lt.logic.config.MemoryCardConfigSupport;
 import com.moakiee.ae2lt.machine.common.GridRecipeMachineHost;
 import com.moakiee.ae2lt.machine.common.LightningCollapseMatrixHost;
-import com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank;
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryAutomationInventory;
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryEnergyStorage;
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryFluidHandler;
@@ -88,10 +88,8 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
             new OverloadProcessingFactoryInventory(this::onInventoryChanged);
     private final OverloadProcessingFactoryAutomationInventory automationInventory =
             new OverloadProcessingFactoryAutomationInventory(inventory);
-    private final NotifyingFluidTank inputTank =
-            new NotifyingFluidTank(INPUT_TANK_CAPACITY, this::onTankChanged);
-    private final NotifyingFluidTank outputTank =
-            new NotifyingFluidTank(OUTPUT_TANK_CAPACITY, this::onTankChanged);
+    private final FluidStorage inputTank = new FluidStorage(INPUT_TANK_CAPACITY);
+    private final FluidStorage outputTank = new FluidStorage(OUTPUT_TANK_CAPACITY);
     private final OverloadProcessingFactoryFluidHandler fluidHandler =
             new OverloadProcessingFactoryFluidHandler(inputTank, outputTank);
     private final OverloadProcessingFactoryEnergyStorage energyStorage =
@@ -114,6 +112,8 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
 
     public OverloadProcessingFactoryBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.OVERLOAD_PROCESSING_FACTORY.get(), pos, blockState);
+        inputTank.setOnContentsChanged(this::onTankChanged);
+        outputTank.setOnContentsChanged(this::onTankChanged);
         this.logic = new OverloadProcessingFactoryLogic(this);
         getMainNode()
                 .setIdlePowerUsage(0)
@@ -197,7 +197,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
 
     /** GUI 流体槽交互:光标容器 → 指定 tank(0=input, 1=output)。成功返回 true。 */
     public boolean tryInsertFluidFromCarried(Player player, int tankIndex) {
-        NotifyingFluidTank target = resolveTankByIndex(tankIndex);
+        FluidStorage target = resolveTankByIndex(tankIndex);
         if (target == null) {
             return false;
         }
@@ -210,7 +210,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
 
     /** GUI 流体槽交互:指定 tank → 光标容器。成功返回 true。 */
     public boolean tryExtractFluidToCarried(Player player, int tankIndex) {
-        NotifyingFluidTank target = resolveTankByIndex(tankIndex);
+        FluidStorage target = resolveTankByIndex(tankIndex);
         if (target == null) {
             return false;
         }
@@ -223,7 +223,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
 
     /** GUI 清空按钮:直接清空指定 tank。 */
     public void clearFluidTank(int tankIndex) {
-        NotifyingFluidTank target = resolveTankByIndex(tankIndex);
+        FluidStorage target = resolveTankByIndex(tankIndex);
         if (target == null || target.getFluid().isEmpty()) {
             return;
         }
@@ -231,7 +231,7 @@ public class OverloadProcessingFactoryBlockEntity extends AENetworkedBlockEntity
         saveChanges();
     }
 
-    private NotifyingFluidTank resolveTankByIndex(int tankIndex) {
+    private FluidStorage resolveTankByIndex(int tankIndex) {
         return switch (tankIndex) {
             case 0 -> inputTank;
             case 1 -> outputTank;

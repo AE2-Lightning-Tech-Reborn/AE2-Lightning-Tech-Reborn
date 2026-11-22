@@ -28,3 +28,15 @@ Thunderbolt 的 `maven_artifact_id` 单独控制 Maven 包名：NeoForge 1.21.1 
 `artifact_name` 仍控制原有 JAR 名，模组 ID 为 `thunderbolt`。GitHub Release 下载文件名和 CF/MR 项目、依赖标识沿用原有配置。下游通过 `thunderbolt_artifact_id` 使用 Reborn 坐标，CI 将指定版本的原名 Release JAR 暂存到该 Maven 坐标。
 
 工作流修复必须包含在发布标签指向的提交中；直接重跑旧标签的失败任务仍使用旧配置。两种加载器分别验证并发布。
+
+## 本地复用 Release 依赖
+
+普通构建同样读取项目内的 `release-dependencies/maven`；该仓库仅用于 Thunderbolt 分组，保留原有 Maven Local 和 GitHub Packages 路径。先按上述发布流程准备 `gradle.properties` 指定的精确 Release 版本，使用[现有脚本](scripts/release.py)的入口／版本校验及 Maven 暂存逻辑生成 JAR 和 POM，之后无需 Packages 凭据即可解析已暂存的版本。下载文件名与 Reborn Maven 坐标保持原有映射，不替换版本或使用占位依赖。
+
+`release-dependencies` 是已忽略的本地生成目录，不提交其中的二进制。Windows 本机示例使用已安装的 JDK 21（与 CI 一致）和既有 D 盘 Gradle 缓存；Wrapper 使用 `JAVA_HOME`，需避免它指向其他 Java 版本：
+
+```powershell
+$env:JAVA_HOME = 'D:\Java\jdk21'
+$env:GRADLE_USER_HOME = 'D:\document\dev\gradle\.gradle'
+.\gradlew.bat --no-daemon compileJava
+```

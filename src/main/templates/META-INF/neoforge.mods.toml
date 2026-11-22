@@ -243,3 +243,10 @@ side = "CLIENT"
 # stop your mod loading on the server for example.
 #[features."${mod_id}"]
 #openGLVersion="[3.2,)"
+
+[[dependencies."${mod_id}"]]
+modId = "ldlib2"
+type = "required"
+versionRange = "${ldlib2_version_range}"
+ordering = "AFTER"
+side = "BOTH"

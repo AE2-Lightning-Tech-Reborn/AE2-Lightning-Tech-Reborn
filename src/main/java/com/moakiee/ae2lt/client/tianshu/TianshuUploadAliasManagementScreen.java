@@ -3,28 +3,31 @@ package com.moakiee.ae2lt.client.tianshu;
 import appeng.client.Point;
 import appeng.client.gui.AEBaseScreen;
 import appeng.client.gui.widgets.AE2Button;
-import appeng.client.gui.widgets.AETextField;
-import appeng.client.gui.widgets.Scrollbar;
 import appeng.menu.me.common.MEStorageMenu;
 import appeng.client.gui.style.PaletteColor;
 import com.moakiee.ae2lt.client.widgets.SmallScrollbarTrack;
+import com.moakiee.ae2lt.client.ldlib.LdlibResizableTextButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.LdlibTerminalSearchField;
 import com.moakiee.ae2lt.config.AE2LTClientConfig;
 import com.moakiee.ae2lt.config.UploadAliasRecords;
 import com.moakiee.ae2lt.config.UploadAliasClipboard;
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> extends TianshuUploadAliasScreen<M> {
-    private static final ResourceLocation LIST_TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            "ae2lt", "textures/gui/wireless_overloaded_selection.png");
+    private static final LdlibStyleSprite LIST_ATLAS = new LdlibStyleSprite(ResourceLocation.fromNamespaceAndPath(
+            "ae2lt", "textures/gui/wireless_overloaded_selection.png"), 256, 256);
     private static final int LIST_LEFT = 10;
     private static final int CELL_PADDING = 6;
-    private final AETextField search;
-    private final Scrollbar scroll;
+    private final LdlibTerminalSearchField search;
+    private final LdlibRowScroller scroll;
     private final AE2Button add, edit, delete, clear, importAliases, exportAliases;
     private final String currentSource, currentAlias;
     private List<UploadAliasRecords.Entry> all = List.of(), filtered = List.of();
@@ -39,26 +42,18 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         currentSource = source;
         currentAlias = alias;
         selected = UploadAliasRecords.normalize(source);
-        search = widgets.addTextField("search");
+        search = new LdlibTerminalSearchField(style, Minecraft.getInstance().font);
+        widgets.add("search", search);
         search.setMaxLength(256);
         search.setPlaceholder(text("search"));
-        scroll = widgets.addScrollBar("scrollbar", Scrollbar.SMALL);
-        add = widgets.addButton("add", text("add"), () -> openEditor(null));
-        edit = widgets.addButton("edit", text("edit"), () -> openEditor(selection()));
-        delete = widgets.addButton("delete", text("delete"), this::deleteSelected);
-        clear = new AE2Button(Component.literal("×"), button -> search.setValue("")) {
-            @Override
-            protected void renderButtonText(GuiGraphics g, net.minecraft.client.gui.Font font,
-                                            int padding, int color, int yOffset) {
-                g.pose().pushPose();
-                g.pose().translate(0, 1, 0);
-                super.renderButtonText(g, font, padding, color, yOffset);
-                g.pose().popPose();
-            }
-        };
+        scroll = LdlibRowScroller.add(widgets, "scrollbar");
+        add = addTextButton("add", text("add"), () -> openEditor(null));
+        edit = addTextButton("edit", text("edit"), () -> openEditor(selection()));
+        delete = addTextButton("delete", text("delete"), this::deleteSelected);
+        clear = new LdlibResizableTextButton(Component.literal("×"), () -> search.setValue(""), 1);
         widgets.add("clear", clear);
-        importAliases = widgets.addButton("importAliases", text("import"), this::importFromClipboard);
-        exportAliases = widgets.addButton("exportAliases", text("export"), this::exportToClipboard);
+        importAliases = addTextButton("importAliases", text("import"), this::importFromClipboard);
+        exportAliases = addTextButton("exportAliases", text("export"), this::exportToClipboard);
         clear.setTooltip(Tooltip.create(text("clear_search")));
         search.setResponder(value -> { filter(); revealSelection(); });
         refresh();
@@ -106,7 +101,8 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         rowHeight = compact ? 20 : 24;
         rows = Math.max(0, (imageHeight - listTop - 82) / rowHeight);
         int searchY = compact ? 24 : 28;
-        place(search, 10, searchY, imageWidth - 38);
+        search.move(new Point(leftPos + 10, topPos + searchY));
+        search.resize(imageWidth - 38, 12);
         place(clear, imageWidth - 23, searchY, 12);
         clear.setHeight(12);
         int buttonWidth = (imageWidth - 32) / 3;
@@ -238,8 +234,8 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
             boolean selectedRow = entry.source().equals(selected);
             boolean highlighted = selectedRow || index == hovered(mx, my);
             if (highlighted) {
-                g.blit(LIST_TEXTURE, LIST_LEFT + 1, top, listRight() - LIST_LEFT - 2, rowHeight,
-                        1, 233, 204, 22, 256, 256);
+                LIST_ATLAS.draw(g, LIST_LEFT + 1, top, listRight() - LIST_LEFT - 2, rowHeight,
+                        1, 233, 204, 22);
             }
             if (selectedRow) g.fill(LIST_LEFT + 1, top + 2, LIST_LEFT + 3, top + rowHeight - 2, 0xff1864ab);
             int textY = top + (rowHeight - font.lineHeight) / 2;
@@ -260,7 +256,7 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         super.drawBG(g, x, y, mx, my, partialTicks);
         int listHeight = scroll.getBounds().getHeight();
         drawRecess(g, x + LIST_LEFT, y + listTop - 1, listRight() - LIST_LEFT, listHeight + 2);
-        SmallScrollbarTrack.draw(g, scroll, x, y);
+        SmallScrollbarTrack.draw(g, scroll.getBounds(), x, y);
     }
 
     /** Use the controller's recessed panel, preserving its one-pixel rim at every size. */
@@ -271,10 +267,10 @@ public final class TianshuUploadAliasManagementScreen<M extends MEStorageMenu> e
         int[] targetY = {y, y + 1, y + height - 1, y + height};
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 3; column++) {
-                g.blit(PANEL_TEXTURE, targetX[column], targetY[row],
+                PANEL_ATLAS.draw(g, targetX[column], targetY[row],
                         targetX[column + 1] - targetX[column], targetY[row + 1] - targetY[row],
                         sourceX[column], sourceY[row], sourceX[column + 1] - sourceX[column],
-                        sourceY[row + 1] - sourceY[row], 256, 256);
+                        sourceY[row + 1] - sourceY[row]);
             }
         }
     }

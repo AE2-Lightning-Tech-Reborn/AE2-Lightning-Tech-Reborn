@@ -2,8 +2,6 @@ package com.moakiee.ae2lt.client.gui;
 
 import java.util.List;
 
-import org.joml.Matrix4f;
-
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -12,6 +10,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 
 import com.moakiee.ae2lt.menu.LargeStackAppEngSlot;
+import com.moakiee.ae2lt.mixin.client.GuiGraphicsBatchAccessor;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.moakiee.ae2lt.client.ldlib.LdlibText;
 import mezz.jei.api.gui.builder.ITooltipBuilder;
 
 /**
@@ -24,8 +25,8 @@ import mezz.jei.api.gui.builder.ITooltipBuilder;
  */
 public final class LargeStackCountRenderer {
     private static final float SCALE = 0.75F;
-    private static final int SHADOW_COLOR = 0x413f54;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int SHADOW_COLOR = 0xFF413F54;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     private LargeStackCountRenderer() {
     }
@@ -133,31 +134,45 @@ public final class LargeStackCountRenderer {
     }
 
     private static void renderLabel(GuiGraphics guiGraphics, Font font, int slotX, int slotY, String text) {
-        float inverseScale = 1.0F / SCALE;
-        int drawX = (int) ((slotX + 18.0F - font.width(text) * SCALE) * inverseScale);
-        int drawY = (int) ((slotY + 16.0F - 5.0F * SCALE) * inverseScale);
-
-        var pose = guiGraphics.pose();
-        pose.pushPose();
-        pose.translate(0, 0, 300);
-        pose.scale(SCALE, SCALE, SCALE);
-
-        drawShadowedText(pose.last().pose(), font, drawX, drawY, text);
-
-        pose.popPose();
+        drawLabel(guiGraphics, font, slotX, slotY, text, SCALE, 0, 300);
     }
 
-    private static void drawShadowedText(Matrix4f matrix, Font font, int x, int y, String text) {
-        // Use the vanilla buffered text path; RenderType.text() manages its own
-        // blend / depth state, so we deliberately do NOT toggle RenderSystem
-        // blend here -- doing so would pollute the caller's GL state machine
-        // (a common source of "exit-game-but-DWM-still-laggy" symptoms when
-        // combined with other mods that assume blend remains enabled).
-        var buffer = Minecraft.getInstance().renderBuffers().bufferSource();
-        font.drawInBatch(text, x + 1, y + 1, SHADOW_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
-        font.drawInBatch(text, x, y, TEXT_COLOR, false, matrix, buffer,
-                Font.DisplayMode.NORMAL, 0, 15728880);
-        buffer.endBatch();
+    public static void renderTerminalLabel(GuiGraphics graphics, Font font, float slotX, float slotY,
+                                           String text, boolean largeFont) {
+        RenderSystem.disableBlend();
+        try {
+            drawLabel(graphics, font, slotX, slotY, text, largeFont ? 0.85F : 0.666F, largeFont ? 0 : -1, 200);
+        } finally {
+            RenderSystem.enableBlend();
+        }
+    }
+
+    private static void drawLabel(GuiGraphics graphics, Font font, float slotX, float slotY, String text,
+                                  float scale, int inset, int depth) {
+        float inverseScale = 1.0F / scale;
+        int drawX = (int) ((slotX + inset + 18.0F - font.width(text) * scale) * inverseScale);
+        int drawY = (int) ((slotY + inset + 16.0F - 5.0F * scale) * inverseScale);
+        var pose = graphics.pose();
+        var minecraft = Minecraft.getInstance();
+        var buffer = minecraft.renderBuffers().bufferSource();
+        var textGraphics = graphics.bufferSource() == buffer ? graphics : new GuiGraphics(minecraft, buffer);
+        var batching = (GuiGraphicsBatchAccessor) (Object) textGraphics;
+        boolean wasManaged = batching.ae2lt$isManaged();
+        pose.pushPose();
+        try {
+            // A GuiGraphics flush also resets depth state; retain the original explicit endBatch instead.
+            batching.ae2lt$setManaged(true);
+            pose.translate(0, 0, depth);
+            pose.scale(scale, scale, scale);
+            if (textGraphics != graphics) {
+                textGraphics.pose().last().pose().set(pose.last().pose());
+            }
+            LdlibText.drawString(textGraphics, font, text, drawX + 1, drawY + 1, SHADOW_COLOR, false);
+            LdlibText.drawString(textGraphics, font, text, drawX, drawY, TEXT_COLOR, false);
+            buffer.endBatch();
+        } finally {
+            batching.ae2lt$setManaged(wasManaged);
+            pose.popPose();
+        }
     }
 }

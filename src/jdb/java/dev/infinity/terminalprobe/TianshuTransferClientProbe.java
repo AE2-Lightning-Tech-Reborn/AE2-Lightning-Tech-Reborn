@@ -534,7 +534,7 @@ public final class TianshuTransferClientProbe {
             try {
                 var field = com.moakiee.ae2lt.client.tianshu.TianshuCraftingTermScreen.class.getDeclaredField("anvilName");
                 field.setAccessible(true);
-                String name = ((appeng.client.gui.widgets.AETextField) field.get(mc.screen)).getValue();
+                String name = ((com.moakiee.ae2lt.client.ldlib.LdlibAe2TextField) field.get(mc.screen)).getValue();
                 if (!name.equals("Retained Anvil Rename")) throw new IllegalStateException("Client rename changed: " + name);
                 report = "PASS visible anvil editor retains renamed text";
             } catch (ReflectiveOperationException error) { throw new RuntimeException(error); }

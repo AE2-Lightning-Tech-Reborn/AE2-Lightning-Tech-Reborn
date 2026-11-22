@@ -1,27 +1,46 @@
 package com.moakiee.ae2lt.client.machine;
 
 import appeng.client.gui.style.PaletteColor;
+import static com.moakiee.ae2lt.client.ldlib.LdlibScreens.at;
+
+import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.gui.Font;
+import com.lowdragmc.lowdraglib2.gui.LDLibFonts;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.data.FillDirection;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ProgressBar;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Scroller;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.VirtualScrollerView;
+import org.lwjgl.glfw.GLFW;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.client.gui.FittingText;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
 import com.moakiee.ae2lt.menu.OverloadDeviceWorkbenchMenu;
 import com.moakiee.ae2lt.client.gui.AE2GuiPalette;
 
+/**
+ * Overload device workbench with an LDLib module list and scrollbar, and native inventory slots.
+ */
 public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<OverloadDeviceWorkbenchMenu> {
 
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID, "textures/gui/overload_workplace_gui.png");
+    private static final LdlibStyleSprite ATLAS = new LdlibStyleSprite(TEXTURE, 320, 256);
 
-    private static final int TEXTURE_WIDTH = 320;
-    private static final int TEXTURE_HEIGHT = 256;
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 245;
 
@@ -39,7 +58,6 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     private static final int MODULE_ROW_HEIGHT = 17;
     private static final int MODULE_ICON_X = 44;
     private static final int MODULE_NAME_X = 67;
-    private static final int MODULE_ITEM_Y_OFFSET = 1;
     private static final int MODULE_TEXT_Y_OFFSET = 5;
     private static final int VISIBLE_ROWS = 5;
     private static final int MODULE_ROW_SRC_X = 180;
@@ -75,8 +93,30 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     private static final int ARROW_PROGRESS_SRC_Y = 48;
     private static final int ARROW_PROGRESS_VISIBLE_OFFSET_X = 9;
     private static final int ARROW_PROGRESS_VISIBLE_WIDTH = 16;
+    private static final IGuiTexture[] INSTALL_PROGRESS = installProgressSlices();
 
-    private int scrollOffset = 0;
+    private static final IGuiTexture ROW = tex(MODULE_ROW_SRC_X, MODULE_ROW_SRC_Y, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT);
+    private static final IGuiTexture ROW_SELECTED = tex(
+            MODULE_ROW_SRC_X, MODULE_ROW_SELECTED_SRC_Y, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT);
+    private static final IGuiTexture REMOVE = tex(
+            REMOVE_BUTTON_SRC_X, REMOVE_BUTTON_SRC_Y, REMOVE_BUTTON_WIDTH, REMOVE_BUTTON_HEIGHT);
+    private static final IGuiTexture REMOVE_HOVER = tex(
+            REMOVE_BUTTON_HOVER_SRC_X, REMOVE_BUTTON_HOVER_SRC_Y, REMOVE_BUTTON_WIDTH, REMOVE_BUTTON_HOVER_HEIGHT);
+    private static final IGuiTexture THUMB = tex(
+            SCROLLBAR_THUMB_SRC_X, SCROLLBAR_THUMB_SRC_Y, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_HEIGHT);
+    private static final IGuiTexture THUMB_HOVER = tex(
+            SCROLLBAR_THUMB_SRC_X, SCROLLBAR_THUMB_HOVER_SRC_Y, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_HOVER_HEIGHT);
+
+    private ModularUI backgroundUI;
+    private Label statusLine;
+    private Label networkLine;
+    private Label noDeviceLine;
+    private Label header;
+    private Scroller scroller;
+    private VirtualScrollerView<InstalledModule> moduleList;
+    private ProgressBar installProgress;
+    private int scrollOffset;
+    private List<InstalledModule> modules = List.of();
 
     public OverloadDeviceWorkbenchScreen(OverloadDeviceWorkbenchMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -87,142 +127,59 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
     }
 
     @Override
-    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-        gfx.blit(TEXTURE, leftPos, topPos, 0, 0, GUI_WIDTH, GUI_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
-        renderStatusArea(gfx);
-        renderInstallProgress(gfx);
-        renderModuleList(gfx, mouseX, mouseY);
+    protected void init() {
+        super.init();
+        releaseBackgroundUI();
+        modules = List.of();
+        backgroundUI = LdlibScreens.localLayer(buildRoot(), imageWidth, imageHeight);
+        backgroundUI.setDrawTooltips(false);
+        refresh();
     }
 
-    private void renderStatusArea(GuiGraphics gfx) {
-        int x = leftPos + STATUS_X;
-        int y = topPos + STATUS_Y;
-
-        if (!menu.hasDeviceInserted()) {
-            gfx.drawString(font, Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
-                    x, y + 7, TEXT_ON_DARK_BG, false);
-            return;
+    @Override
+    public void removed() {
+        try {
+            super.removed();
+        } finally {
+            releaseBackgroundUI();
         }
-
-        gfx.drawString(font, menu.getStatusText(), x, y, TEXT_ON_DARK_BG, false);
-
-        boolean grid = menu.gridConnected != 0;
-        Component gridText = grid
-                ? Component.translatable("ae2lt.overload_device_workbench.screen.network.online")
-                : Component.translatable("ae2lt.overload_device_workbench.screen.network.offline");
-        gfx.drawString(font, gridText, x, y + STATUS_SECOND_LINE_Y, TEXT_ON_DARK_BG, false);
     }
 
-    private void renderInstallProgress(GuiGraphics gfx) {
-        if (menu.installProgress <= 0) {
-            return;
-        }
-
-        double ratio = (double) menu.installProgress / OverloadDeviceWorkbenchMenu.INSTALL_TICKS;
-        int visible = Math.max(1, (int) Math.ceil(ARROW_PROGRESS_VISIBLE_WIDTH * ratio));
-        int filled = Math.min(ARROW_PROGRESS_WIDTH, ARROW_PROGRESS_VISIBLE_OFFSET_X + visible);
-        gfx.blit(TEXTURE, leftPos + ARROW_PROGRESS_X, topPos + ARROW_PROGRESS_Y,
-                ARROW_PROGRESS_SRC_X, ARROW_PROGRESS_SRC_Y,
-                filled, ARROW_PROGRESS_HEIGHT,
-                TEXTURE_WIDTH, TEXTURE_HEIGHT);
-    }
-
-    private void renderModuleList(GuiGraphics gfx, int mouseX, int mouseY) {
-        List<ItemStack> modules = menu.getInstalledModuleList();
-        int listLeft = leftPos + MODULE_ROW_X;
-        int listTop = topPos + MODULE_ROW_Y;
-        int listRight = listLeft + MODULE_ROW_WIDTH;
-
-        scrollOffset = Math.max(0, Math.min(scrollOffset, Math.max(0, modules.size() - VISIBLE_ROWS)));
-
-        Component header = Component.translatable(
-                "ae2lt.overload_device_workbench.screen.module_types",
-                modules.size());
-        gfx.drawString(font, header, leftPos + MODULE_HEADER_X, topPos + MODULE_HEADER_Y, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-
-        for (int row = 0; row < VISIBLE_ROWS; row++) {
-            int moduleIndex = scrollOffset + row;
-            if (moduleIndex >= modules.size()) {
-                continue;
+    private void releaseBackgroundUI() {
+        if (backgroundUI != null) {
+            if (!backgroundUI.isRemoved()) {
+                backgroundUI.onRemoved();
             }
-
-            int rowY = listTop + row * MODULE_ROW_HEIGHT;
-            boolean hovered = mouseX >= listLeft
-                    && mouseX < listRight
-                    && mouseY >= rowY
-                    && mouseY < rowY + MODULE_ROW_HEIGHT;
-            renderModuleRowFrame(gfx, rowY, hovered);
-
-            ItemStack stack = modules.get(moduleIndex);
-            gfx.renderItem(stack, leftPos + MODULE_ICON_X, rowY + MODULE_ITEM_Y_OFFSET);
-
-            int cap = menu.getModuleMaxInstallAmount(stack);
-            String amount = cap > 0 ? "x" + stack.getCount() + "/" + cap : "x" + stack.getCount();
-            int amountWidth = font.width(amount);
-            int amountX = REMOVE_BUTTON_X - amountWidth - 4;
-            int rowTextColor = hovered ? AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR) : TEXT_ON_DARK_BG;
-            gfx.drawString(font, Component.literal(amount),
-                    leftPos + amountX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
-
-            int nameX = leftPos + MODULE_NAME_X;
-            int nameMaxWidth = leftPos + amountX - nameX - 3;
-            gfx.drawString(font, Component.literal(truncate(font, stack.getHoverName().getString(), nameMaxWidth)),
-                    nameX, rowY + MODULE_TEXT_Y_OFFSET, rowTextColor, false);
-
-            renderRemoveButton(gfx, leftPos + REMOVE_BUTTON_X, rowY + REMOVE_BUTTON_Y_OFFSET, mouseX, mouseY);
-        }
-
-        if (modules.size() > VISIBLE_ROWS) {
-            renderScrollBar(gfx, modules.size(), mouseX, mouseY);
+            backgroundUI = null;
         }
     }
 
-    private void renderModuleRowFrame(GuiGraphics gfx, int rowY, boolean selected) {
-        gfx.blit(TEXTURE, leftPos + MODULE_ROW_X, rowY,
-                MODULE_ROW_SRC_X, selected ? MODULE_ROW_SELECTED_SRC_Y : MODULE_ROW_SRC_Y,
-                MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT,
-                TEXTURE_WIDTH, TEXTURE_HEIGHT);
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        refresh();
     }
 
-    private void renderRemoveButton(GuiGraphics gfx, int x, int y, int mouseX, int mouseY) {
-        boolean hovered = mouseX >= x
-                && mouseX < x + REMOVE_BUTTON_SIZE
-                && mouseY >= y
-                && mouseY < y + REMOVE_BUTTON_SIZE;
-        gfx.blit(TEXTURE, x, y,
-                hovered ? REMOVE_BUTTON_HOVER_SRC_X : REMOVE_BUTTON_SRC_X,
-                hovered ? REMOVE_BUTTON_HOVER_SRC_Y : REMOVE_BUTTON_SRC_Y,
-                REMOVE_BUTTON_WIDTH,
-                hovered ? REMOVE_BUTTON_HOVER_HEIGHT : REMOVE_BUTTON_HEIGHT,
-                TEXTURE_WIDTH, TEXTURE_HEIGHT);
-    }
-
-    private void renderScrollBar(GuiGraphics gfx, int moduleCount, int mouseX, int mouseY) {
-        int barX = leftPos + SCROLLBAR_X;
-        int barTop = topPos + SCROLLBAR_Y;
-        int thumbSpace = SCROLLBAR_HEIGHT - SCROLLBAR_THUMB_HEIGHT;
-        int thumbY = barTop + thumbSpace * scrollOffset / Math.max(1, moduleCount - VISIBLE_ROWS);
-        boolean hovered = mouseX >= barX
-                && mouseX < barX + SCROLLBAR_WIDTH
-                && mouseY >= thumbY
-                && mouseY < thumbY + SCROLLBAR_THUMB_HEIGHT;
-        gfx.blit(TEXTURE, barX, thumbY,
-                SCROLLBAR_THUMB_SRC_X,
-                hovered ? SCROLLBAR_THUMB_HOVER_SRC_Y : SCROLLBAR_THUMB_SRC_Y,
-                SCROLLBAR_WIDTH,
-                hovered ? SCROLLBAR_THUMB_HOVER_HEIGHT : SCROLLBAR_THUMB_HEIGHT,
-                TEXTURE_WIDTH, TEXTURE_HEIGHT);
-    }
-
-    private static String truncate(Font font, String text, int maxWidth) {
-        if (maxWidth <= 0) {
-            return "";
+    @Override
+    protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
+        refresh();
+        installProgress.setProgress(installProgressPixels());
+        var pose = gfx.pose();
+        pose.pushPose();
+        try {
+            pose.translate(leftPos, topPos, 0);
+            backgroundUI.getWidget().render(gfx, mouseX - leftPos, mouseY - topPos, partialTick);
+        } finally {
+            pose.popPose();
         }
-        if (font.width(text) <= maxWidth) {
-            return text;
-        }
-        int ellipsisWidth = font.width("...");
-        return font.plainSubstrByWidth(text, Math.max(0, maxWidth - ellipsisWidth)) + "...";
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+        gfx.drawString(font, Component.translatable("block.ae2lt.overload_device_workbench"),
+                42, 6, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
+        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY,
+                AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
     }
 
     @Override
@@ -233,92 +190,250 @@ public class OverloadDeviceWorkbenchScreen extends AbstractContainerScreen<Overl
         renderTooltip(gfx, mouseX, mouseY);
     }
 
-    @Override
-    protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-        gfx.drawString(font, Component.translatable("block.ae2lt.overload_device_workbench"),
-                42, 6, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-        gfx.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR), false);
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && handleModuleListClick(mouseX, mouseY)) {
-            return true;
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    private boolean handleModuleListClick(double mouseX, double mouseY) {
-        List<ItemStack> modules = menu.getInstalledModuleList();
-        for (int row = 0; row < VISIBLE_ROWS; row++) {
-            int moduleIndex = scrollOffset + row;
-            if (moduleIndex >= modules.size()) {
-                break;
-            }
-            int rowY = topPos + MODULE_ROW_Y + row * MODULE_ROW_HEIGHT + REMOVE_BUTTON_Y_OFFSET;
-            int buttonX = leftPos + REMOVE_BUTTON_X;
-            if (mouseX >= buttonX
-                    && mouseX < buttonX + REMOVE_BUTTON_SIZE
-                    && mouseY >= rowY
-                    && mouseY < rowY + REMOVE_BUTTON_SIZE) {
-                menu.requestUninstall(moduleIndex, hasShiftDown());
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int listLeft = leftPos + MODULE_ROW_X;
-        int listTop = topPos + MODULE_ROW_Y;
-        int listRight = leftPos + SCROLLBAR_X + SCROLLBAR_WIDTH;
-        int listBottom = listTop + MODULE_ROW_HEIGHT * VISIBLE_ROWS;
-        if (mouseX >= listLeft
-                && mouseX < listRight
-                && mouseY >= listTop
-                && mouseY < listBottom) {
-            int max = Math.max(0, menu.getInstalledModuleList().size() - VISIBLE_ROWS);
-            if (scrollY > 0) {
-                scrollOffset = Math.max(0, scrollOffset - 1);
-            } else if (scrollY < 0) {
-                scrollOffset = Math.min(max, scrollOffset + 1);
-            }
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-    }
-
     private void renderModuleRowTooltip(GuiGraphics gfx, int mouseX, int mouseY) {
-        List<ItemStack> modules = menu.getInstalledModuleList();
+        var currentModules = menu.getInstalledModuleList();
         int listLeft = leftPos + MODULE_ROW_X;
         int listTop = topPos + MODULE_ROW_Y;
         int listRight = listLeft + MODULE_ROW_WIDTH;
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             int moduleIndex = scrollOffset + row;
-            if (moduleIndex >= modules.size()) {
+            if (moduleIndex >= currentModules.size()) {
                 break;
             }
             int rowY = listTop + row * MODULE_ROW_HEIGHT;
             int buttonX = leftPos + REMOVE_BUTTON_X;
             int buttonY = rowY + REMOVE_BUTTON_Y_OFFSET;
-            if (mouseX >= buttonX
-                    && mouseX < buttonX + REMOVE_BUTTON_SIZE
-                    && mouseY >= buttonY
-                    && mouseY < buttonY + REMOVE_BUTTON_SIZE) {
+            if (mouseX >= buttonX && mouseX < buttonX + REMOVE_BUTTON_SIZE
+                    && mouseY >= buttonY && mouseY < buttonY + REMOVE_BUTTON_SIZE) {
                 gfx.renderComponentTooltip(font, List.of(
-                                Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_one"),
-                                Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_all")),
+                        Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_one"),
+                        Component.translatable("ae2lt.overload_device_workbench.screen.uninstall_all")),
                         mouseX, mouseY);
                 return;
             }
-            if (mouseX >= listLeft
-                    && mouseX < listRight
-                    && mouseY >= rowY
-                    && mouseY < rowY + MODULE_ROW_HEIGHT) {
-                gfx.renderTooltip(font, modules.get(moduleIndex), mouseX, mouseY);
+            if (mouseX >= listLeft && mouseX < listRight
+                    && mouseY >= rowY && mouseY < rowY + MODULE_ROW_HEIGHT) {
+                gfx.renderTooltip(font, currentModules.get(moduleIndex), mouseX, mouseY);
                 return;
             }
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            refreshModules();
+            int row = removeRowAt(mouseX - leftPos, mouseY - topPos);
+            int index = scrollOffset + row;
+            if (row >= 0 && index < modules.size()) {
+                var current = menu.getInstalledModuleList();
+                // The menu may have received a new list since the visible rows were prepared.
+                if (index < current.size() && ItemStack.isSameItemSameComponents(
+                        modules.get(index).stack(), current.get(index))) {
+                    menu.requestUninstall(index, hasShiftDown());
+                }
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private static int removeRowAt(double x, double y) {
+        double rowY = y - MODULE_ROW_Y;
+        if (x < REMOVE_BUTTON_X || x >= REMOVE_BUTTON_X + REMOVE_BUTTON_SIZE
+                || rowY < 0 || rowY >= MODULE_ROW_HEIGHT * VISIBLE_ROWS) {
+            return -1;
+        }
+        int row = (int) (rowY / MODULE_ROW_HEIGHT);
+        double buttonY = row * MODULE_ROW_HEIGHT + REMOVE_BUTTON_Y_OFFSET;
+        return rowY >= buttonY && rowY < buttonY + REMOVE_BUTTON_SIZE ? row : -1;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double x = mouseX - leftPos;
+        double y = mouseY - topPos;
+        if (x >= MODULE_ROW_X && x < SCROLLBAR_X + SCROLLBAR_WIDTH
+                && y >= MODULE_ROW_Y && y < MODULE_ROW_Y + MODULE_ROW_HEIGHT * VISIBLE_ROWS) {
+            refreshModules();
+            setScroll(scrollOffset - (int) Math.signum(scrollY));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    // ---- LDLib tree ---------------------------------------------------------------------
+
+    private UIElement buildRoot() {
+        var root = new UIElement();
+        root.layout(l -> l.width(GUI_WIDTH).height(GUI_HEIGHT));
+        root.style(s -> s.background(tex(0, 0, GUI_WIDTH, GUI_HEIGHT)));
+
+        noDeviceLine = at(label(Component.translatable("ae2lt.overload_device_workbench.status.no_device"),
+                TEXT_ON_DARK_BG), STATUS_X, STATUS_Y + 7, GUI_WIDTH - STATUS_X - 8, 9);
+        statusLine = at(label(Component.empty(), TEXT_ON_DARK_BG), STATUS_X, STATUS_Y, GUI_WIDTH - STATUS_X - 8, 9);
+        networkLine = at(label(Component.empty(), TEXT_ON_DARK_BG),
+                STATUS_X, STATUS_Y + STATUS_SECOND_LINE_Y, GUI_WIDTH - STATUS_X - 8, 9);
+        root.addChildren(noDeviceLine, statusLine, networkLine);
+
+        installProgress = LdlibScreens.spriteProgress(FillDirection.LEFT_TO_RIGHT, INSTALL_PROGRESS);
+        root.addChild(at(installProgress,
+                ARROW_PROGRESS_X, ARROW_PROGRESS_Y, ARROW_PROGRESS_WIDTH, ARROW_PROGRESS_HEIGHT));
+
+        header = at(label(Component.empty(),
+                AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)),
+                MODULE_HEADER_X, MODULE_HEADER_Y, MODULE_ROW_WIDTH, 9);
+        root.addChild(header);
+
+        moduleList = LdlibScreens.virtualRows(MODULE_ROW_HEIGHT, ModuleRow::new);
+        // The native five-row loop has no scissor; keep overhanging item models and text intact.
+        moduleList.style(style -> style.overflowVisible(true));
+        moduleList.verticalContainer.style(style -> style.overflowVisible(true));
+        moduleList.viewPort(view -> view.style(style -> style.overflowVisible(true)));
+        moduleList.viewContainer.style(style -> style.overflowVisible(true));
+        root.addChild(at(moduleList, MODULE_ROW_X, MODULE_ROW_Y, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT * VISIBLE_ROWS));
+
+        scroller = LdlibScreens.displayThumbScroller(THUMB, THUMB_HOVER, SCROLLBAR_THUMB_HEIGHT, SCROLLBAR_HEIGHT);
+        root.addChild(at(scroller, SCROLLBAR_X, SCROLLBAR_Y, SCROLLBAR_WIDTH, SCROLLBAR_HEIGHT));
+        return root;
+    }
+
+    private int installProgressPixels() {
+        if (menu.installProgress <= 0) {
+            return 0;
+        }
+        double ratio = (double) menu.installProgress / OverloadDeviceWorkbenchMenu.INSTALL_TICKS;
+        int visible = Math.max(1, (int) Math.ceil(ARROW_PROGRESS_VISIBLE_WIDTH * ratio));
+        return Math.min(ARROW_PROGRESS_WIDTH, ARROW_PROGRESS_VISIBLE_OFFSET_X + visible);
+    }
+
+    private void refresh() {
+        if (scroller == null) {
+            return;
+        }
+        boolean device = menu.hasDeviceInserted();
+        noDeviceLine.setDisplay(!device);
+        statusLine.setDisplay(device);
+        networkLine.setDisplay(device);
+        if (device) {
+            statusLine.setText(menu.getStatusText());
+            networkLine.setText(menu.gridConnected != 0
+                    ? Component.translatable("ae2lt.overload_device_workbench.screen.network.online")
+                    : Component.translatable("ae2lt.overload_device_workbench.screen.network.offline"));
+        }
+
+        refreshModules();
+        header.setText(Component.translatable("ae2lt.overload_device_workbench.screen.module_types", modules.size()));
+        header.textStyle(style -> style.textColor(AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR)));
+        scroller.setDisplay(modules.size() > VISIBLE_ROWS);
+        setScroll(scrollOffset);
+    }
+
+    private void setScroll(int offset) {
+        int max = maxScroll();
+        scrollOffset = Mth.clamp(offset, 0, max);
+        LdlibScreens.syncRowThumb(scroller, scrollOffset, max);
+        LdlibScreens.positionThumbPixels(scroller,
+                (SCROLLBAR_HEIGHT - SCROLLBAR_THUMB_HEIGHT) * scrollOffset / Math.max(1, max),
+                SCROLLBAR_THUMB_HEIGHT);
+        LdlibScreens.scrollVirtualRows(moduleList, scrollOffset, max);
+    }
+
+    private void refreshModules() {
+        var stacks = menu.getInstalledModuleList();
+        var updated = new ArrayList<InstalledModule>(stacks.size());
+        boolean changed = stacks.size() != modules.size();
+        for (int index = 0; index < stacks.size(); index++) {
+            var stack = stacks.get(index);
+            int cap = menu.getModuleMaxInstallAmount(stack);
+            if (index < modules.size() && modules.get(index).matches(stack, cap)) {
+                updated.add(modules.get(index));
+            } else {
+                updated.add(new InstalledModule(stack.copy(), cap));
+                changed = true;
+            }
+        }
+        if (changed) {
+            modules = List.copyOf(updated);
+            moduleList.setItems(modules);
+        }
+    }
+
+    private int maxScroll() {
+        return Math.max(0, modules.size() - VISIBLE_ROWS);
+    }
+
+    private static Label label(Component text, int color) {
+        var label = LdlibScreens.label(text, color);
+        label.textStyle(s -> s.textWrap(com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap.NONE));
+        return label;
+    }
+
+    private static IGuiTexture tex(int u, int v, int width, int height) {
+        // Keep the native fixed pixel size, inherited render state, and immediate submission.
+        return (graphics, mouseX, mouseY, x, y, boxWidth, boxHeight, ticks) ->
+                ATLAS.draw(graphics, (int) x, (int) y, u, v, width, height);
+    }
+
+    private static IGuiTexture[] installProgressSlices() {
+        var slices = new IGuiTexture[ARROW_PROGRESS_WIDTH + 1];
+        slices[0] = IGuiTexture.EMPTY;
+        for (int pixels = 1; pixels <= ARROW_PROGRESS_WIDTH; pixels++) {
+            slices[pixels] = tex(ARROW_PROGRESS_SRC_X, ARROW_PROGRESS_SRC_Y, pixels, ARROW_PROGRESS_HEIGHT);
+        }
+        return slices;
+    }
+
+    private record InstalledModule(ItemStack stack, int cap) {
+        private boolean matches(ItemStack other, int otherCap) {
+            return cap == otherCap && ItemStack.matches(stack, other);
+        }
+
+        private String amount() {
+            String count = "x" + stack.getCount();
+            return cap > 0 ? count + "/" + cap : count;
+        }
+    }
+
+    private static boolean within(float mouseX, float mouseY, float x, float y, int width, int height) {
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    /** One installed-module row, preserving the native frame/icon/amount/name/button order. */
+    private final class ModuleRow extends UIElement {
+        private ModuleRow(InstalledModule module) {
+            layout(l -> l.widthPercent(100).height(MODULE_ROW_HEIGHT));
+            style(s -> s.background((graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+                var frame = within(mouseX, mouseY, x, y, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT) ? ROW_SELECTED : ROW;
+                frame.draw(graphics, mouseX, mouseY, x, y, width, height, ticks);
+            }));
+
+            var iconElement = LdlibScreens.unadornedItemIcon(module.stack());
+            addChild(at(iconElement, MODULE_ICON_X - MODULE_ROW_X, 1, 16, 16));
+            var text = new UIElement().setAllowHitTest(false).style(s -> s.background(
+                    (graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+                        String amount = module.amount();
+                        int amountX = REMOVE_BUTTON_X - MODULE_ROW_X - font.width(amount) - 4;
+                        int color = within(mouseX, mouseY, x, y, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT)
+                                ? AE2GuiPalette.color(PaletteColor.DEFAULT_TEXT_COLOR) : TEXT_ON_DARK_BG;
+                        LDLibFonts.drawText(graphics, font, Component.literal(amount).getVisualOrderText(),
+                                x + amountX, y + MODULE_TEXT_Y_OFFSET, color, false);
+                        int nameX = MODULE_NAME_X - MODULE_ROW_X;
+                        String fitted = FittingText.withEllipsis(font, module.stack().getHoverName().getString(),
+                                amountX - nameX - 3);
+                        LDLibFonts.drawText(graphics, font, Component.literal(fitted).getVisualOrderText(),
+                                x + nameX, y + MODULE_TEXT_Y_OFFSET, color, false);
+                    }));
+            addChild(at(text, 0, 0, MODULE_ROW_WIDTH, MODULE_ROW_HEIGHT));
+
+            var remove = new UIElement();
+            remove.style(s -> s.background((graphics, mouseX, mouseY, x, y, width, height, ticks) -> {
+                var texture = within(mouseX, mouseY, x, y, REMOVE_BUTTON_SIZE, REMOVE_BUTTON_SIZE)
+                        ? REMOVE_HOVER : REMOVE;
+                texture.draw(graphics, mouseX, mouseY, x, y, width, height, ticks);
+            }));
+            addChild(at(remove, REMOVE_BUTTON_X - MODULE_ROW_X, REMOVE_BUTTON_Y_OFFSET,
+                    REMOVE_BUTTON_SIZE, REMOVE_BUTTON_SIZE));
         }
     }
 }

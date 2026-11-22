@@ -1,8 +1,13 @@
 package com.moakiee.ae2lt.client.machine;
 
-import appeng.client.gui.AEBaseScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibAeScreen;
+import java.util.List;
+
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.ProgressBar;
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.moakiee.ae2lt.client.ldlib.BackgroundLayer;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.MachineGauges;
 import com.moakiee.ae2lt.AE2LightningTech;
 import com.moakiee.ae2lt.menu.PigmeeMolecularAssemblerMenu;
 import net.minecraft.client.gui.GuiGraphics;
@@ -11,10 +16,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public final class PigmeeMolecularAssemblerScreen
-        extends AEBaseScreen<PigmeeMolecularAssemblerMenu> {
+        extends LdlibAeScreen<PigmeeMolecularAssemblerMenu> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AE2LightningTech.MODID,
             "textures/gui/pigmee_molecular_assembler.png");
+    private static final LdlibStyleSprite ATLAS = new LdlibStyleSprite(TEXTURE, 256, 256);
     private static final int CRAFTING_GRID_X = 29;
     private static final int CRAFTING_GRID_Y = 43;
     private static final int CRAFTING_GRID_U = 179;
@@ -25,9 +31,11 @@ public final class PigmeeMolecularAssemblerScreen
     private static final int PATTERN_SLOT_U = 179;
     private static final int PATTERN_SLOT_V = 57;
     private static final int PATTERN_SLOT_SIZE = 16;
-    private static final int TEXTURE_SIZE = 256;
-
-    private final ProgressBar progressBar;
+    private static final SpriteTexture GRID = ATLAS.slice(
+            CRAFTING_GRID_U, CRAFTING_GRID_V, CRAFTING_GRID_SIZE, CRAFTING_GRID_SIZE);
+    private static final SpriteTexture PATTERN = ATLAS.slice(
+            PATTERN_SLOT_U, PATTERN_SLOT_V, PATTERN_SLOT_SIZE, PATTERN_SLOT_SIZE);
+    private final BackgroundLayer decorations;
 
     public PigmeeMolecularAssemblerScreen(
             PigmeeMolecularAssemblerMenu menu,
@@ -35,17 +43,26 @@ public final class PigmeeMolecularAssemblerScreen
             Component title,
             ScreenStyle style) {
         super(menu, playerInventory, title, style);
-        progressBar = new ProgressBar(
-                menu,
-                style.getImage("progressBar"),
-                ProgressBar.Direction.VERTICAL);
-        widgets.add("progressBar", progressBar);
+        decorations = new BackgroundLayer(imageWidth, imageHeight)
+                .add(GRID, CRAFTING_GRID_X, CRAFTING_GRID_Y, CRAFTING_GRID_SIZE, CRAFTING_GRID_SIZE)
+                .add(PATTERN, PATTERN_SLOT_X, PATTERN_SLOT_Y, PATTERN_SLOT_SIZE, PATTERN_SLOT_SIZE);
+        widgets.add("progressBar", MachineGauges.verticalFilledProgress(style.getImage("progressBar"), menu,
+                () -> List.of(Component.literal(menu.getCurrentProgress() + "%"))));
     }
 
     @Override
-    protected void updateBeforeRender() {
-        super.updateBeforeRender();
-        progressBar.setFullMsg(Component.literal(menu.getCurrentProgress() + "%"));
+    protected void init() {
+        decorations.onRemoved();
+        super.init();
+    }
+
+    @Override
+    public void removed() {
+        try {
+            decorations.onRemoved();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override
@@ -57,25 +74,6 @@ public final class PigmeeMolecularAssemblerScreen
             int mouseY,
             float partialTicks) {
         super.drawBG(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
-        graphics.blit(
-                TEXTURE,
-                offsetX + CRAFTING_GRID_X,
-                offsetY + CRAFTING_GRID_Y,
-                CRAFTING_GRID_U,
-                CRAFTING_GRID_V,
-                CRAFTING_GRID_SIZE,
-                CRAFTING_GRID_SIZE,
-                TEXTURE_SIZE,
-                TEXTURE_SIZE);
-        graphics.blit(
-                TEXTURE,
-                offsetX + PATTERN_SLOT_X,
-                offsetY + PATTERN_SLOT_Y,
-                PATTERN_SLOT_U,
-                PATTERN_SLOT_V,
-                PATTERN_SLOT_SIZE,
-                PATTERN_SLOT_SIZE,
-                TEXTURE_SIZE,
-                TEXTURE_SIZE);
+        decorations.render(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
     }
 }

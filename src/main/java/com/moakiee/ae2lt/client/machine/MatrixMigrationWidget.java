@@ -5,8 +5,6 @@ import com.moakiee.ae2lt.logic.craft.migration.PatternMigrationSnapshot;
 import com.moakiee.ae2lt.menu.MatrixMigrationMenu;
 import com.moakiee.ae2lt.network.MatrixPatternMigrationActionPacket;
 import java.util.Locale;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -59,13 +57,14 @@ final class MatrixMigrationWidget {
         button.setTooltip(Tooltip.create(text));
     }
 
-    void render(GuiGraphics graphics, Font font, int x, int y, int width, int color) {
+    /** One-line progress summary, or {@code null} while no migration is running. */
+    Component summary() {
         var s = menu.getMigrationSnapshot();
-        if (s.stage() == PatternMigrationSnapshot.Stage.IDLE) return;
-        String line = s.reason() == PatternMigrationSnapshot.Reason.RECOVERY
-                ? Component.translatable("ae2lt.matrix.migration.recovery_summary").getString()
-                : stage(s).getString() + " · " + Component.translatable("ae2lt.matrix.migration.counts", s.moved(), s.recovered()).getString();
-        graphics.drawString(font, font.plainSubstrByWidth(line, width), x, y, color, false);
+        if (s.stage() == PatternMigrationSnapshot.Stage.IDLE) return null;
+        return s.reason() == PatternMigrationSnapshot.Reason.RECOVERY
+                ? Component.translatable("ae2lt.matrix.migration.recovery_summary")
+                : stage(s).copy().append(" · ").append(
+                        Component.translatable("ae2lt.matrix.migration.counts", s.moved(), s.recovered()));
     }
 
     private static Component stage(PatternMigrationSnapshot s) {

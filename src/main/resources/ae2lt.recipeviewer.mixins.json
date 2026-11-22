@@ -8,6 +8,8 @@
     "useless.OmniversalPatternJeiTransferMixin",
     "jei.JeiRecipeTransferButtonControllerMixin",
     "jei.JeiMultiblockLayoutMixin",
+    "jei.JeiMultiblockSlotHoverMixin",
+    "emi.EmiMultiblockSlotBoundsMixin",
     "emi.EmiEncodePatternTransferMixin",
     "emi.EmiRecipeTransferResultAccessor",
     "jeisupply.JeiWirelessSupplyMixin",

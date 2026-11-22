@@ -12,13 +12,16 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import appeng.api.config.Settings;
-import appeng.api.config.TerminalStyle;
 import appeng.client.gui.StackWithBounds;
 import appeng.client.gui.me.crafting.CraftConfirmScreen;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.Scrollbar;
-import appeng.client.gui.widgets.SettingToggleButton;
+import com.moakiee.ae2lt.client.ldlib.BackgroundLayer;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibRowScroller;
+import com.moakiee.ae2lt.client.ldlib.LdlibStyleSprite;
+import com.moakiee.ae2lt.client.ldlib.LdlibTerminalStyleButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarHost;
 import appeng.core.localization.GuiText;
 import appeng.menu.me.crafting.CraftConfirmMenu;
 import appeng.menu.me.crafting.CraftingPlanSummary;
@@ -31,9 +34,10 @@ import com.moakiee.ae2lt.crafting.report.CraftingReportStartState;
 import com.moakiee.ae2lt.integration.eaep.EaepForceCraftingAccess;
 import com.moakiee.ae2lt.integration.jei.JeiBookmarkAccess;
 import com.moakiee.ae2lt.mixin.client.CraftConfirmScreenAccessor;
+import com.moakiee.ae2lt.mixin.client.WidgetContainerAccessor;
 
 /** Keeps native confirmation-screen integrations, including AE2 Crafting Tree's toolbar. */
-public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
+public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen implements LdlibToolbarHost {
     private static final int ROW_HEIGHT = 23;
     private static final int HEADER_HEIGHT = 27;
     private static final int FOOTER_Y = 188;
@@ -41,10 +45,11 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     private static final int VERTICAL_PADDING = 28;
 
     private AE2LtCraftConfirmTableRenderer table;
+    private BackgroundLayer reportBackground;
     private final Button start;
     private final Button selectCpu;
     private final Button bookmarkMissing;
-    private final Scrollbar scrollbar;
+    private final LdlibRowScroller scrollbar;
     private int visibleRows = 7;
 
     public AE2LtCraftConfirmScreen(
@@ -52,20 +57,46 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         super(menu, playerInventory, title, style);
         // Reuse the native widgets so integrations and this report control the same buttons.
         var nativeScreen = (CraftConfirmScreenAccessor) (Object) this;
-        scrollbar = nativeScreen.ae2lt$getScrollbar();
+        scrollbar = new LdlibRowScroller(Scrollbar.BIG);
+        ((WidgetContainerAccessor) widgets).ae2lt$getCompositeWidgets().put("scrollbar", scrollbar);
         start = nativeScreen.ae2lt$getStart();
         selectCpu = nativeScreen.ae2lt$getSelectCpu();
-        bookmarkMissing = widgets.addButton("bookmarkMissing",
+        bookmarkMissing = LdlibAe2Button.addText(widgets, style, "bookmarkMissing",
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing"), this::bookmarkMissing);
         bookmarkMissing.active = false;
         bookmarkMissing.setTooltip(Tooltip.create(
                 Component.translatable("gui.ae2lt.crafting_report.bookmark_missing.tooltip")));
-        addToLeftToolbar(new SettingToggleButton<>(Settings.TERMINAL_STYLE,
-                config.getTerminalStyle(), this::toggleTerminalStyle));
+        addToLeftToolbar(new LdlibTerminalStyleButton(config, this::isHandlingRightClick, this::rebuildWidgets));
+    }
+
+    private void releaseReportLayers() {
+        var previousTable = table;
+        table = null;
+        try {
+            if (previousTable != null) {
+                previousTable.onRemoved();
+            }
+        } finally {
+            var previousBackground = reportBackground;
+            reportBackground = null;
+            if (previousBackground != null) {
+                previousBackground.onRemoved();
+            }
+        }
+    }
+
+    @Override
+    public void removed() {
+        try {
+            releaseReportLayers();
+        } finally {
+            super.removed();
+        }
     }
 
     @Override
     protected void init() {
+        releaseReportLayers();
         int maxRows = Math.max(1,
                 (height - HEADER_HEIGHT - FOOTER_HEIGHT - VERTICAL_PADDING) / ROW_HEIGHT);
         int preferredRows = switch (config.getTerminalStyle()) {
@@ -77,20 +108,13 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
         visibleRows = Math.min(maxRows, preferredRows);
         imageHeight = HEADER_HEIGHT + visibleRows * ROW_HEIGHT + FOOTER_HEIGHT;
         table = new AE2LtCraftConfirmTableRenderer(this, visibleRows);
-        scrollbar.setHeight(visibleRows * ROW_HEIGHT);
+        reportBackground = buildReportBackground(LdlibStyleSprite.from(style.getBackground()), imageWidth, visibleRows);
         super.init();
-    }
-
-    private void toggleTerminalStyle(SettingToggleButton<TerminalStyle> button, boolean backwards) {
-        var next = button.getNextValue(backwards);
-        config.setTerminalStyle(next);
-        button.set(next);
-        rebuildWidgets();
+        scrollbar.setHeight(visibleRows * ROW_HEIGHT);
     }
 
     @Override
     protected void updateBeforeRender() {
-        int scroll = scrollbar.getCurrentScroll();
         super.updateBeforeRender();
 
         // The native implementation opens CraftErrorScreen, which already offers cancel,
@@ -146,9 +170,6 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
 
         int size = plan == null ? 0 : plan.getEntries().size();
         scrollbar.setRange(0, table.getScrollableRows(size), 1);
-        // The native screen briefly applies its fixed five-row range. Preserve the smaller
-        // report's last rows instead of letting that range clamp its scroll on every frame.
-        scrollbar.setCurrentScroll(scroll);
     }
 
 
@@ -189,32 +210,40 @@ public final class AE2LtCraftConfirmScreen extends CraftConfirmScreen {
     @Override
     public void drawBG(GuiGraphics graphics, int offsetX, int offsetY,
             int mouseX, int mouseY, float partialTicks) {
-        var background = style.getBackground().copy();
-        background.src(0, 0, imageWidth, HEADER_HEIGHT).dest(offsetX, offsetY).blit(graphics);
-        for (int row = 0; row < visibleRows; row++) {
-            // Only the first row includes the two-pixel top bevel. Repeat an interior row.
-            background.src(0, row == 0 ? HEADER_HEIGHT : HEADER_HEIGHT + ROW_HEIGHT, imageWidth, ROW_HEIGHT)
-                    .dest(offsetX, offsetY + HEADER_HEIGHT + row * ROW_HEIGHT).blit(graphics);
+        reportBackground.render(graphics, offsetX, offsetY, mouseX, mouseY, partialTicks);
+    }
+
+    private static BackgroundLayer buildReportBackground(LdlibStyleSprite atlas, int width, int rows) {
+        int footerTop = HEADER_HEIGHT + rows * ROW_HEIGHT;
+        int height = footerTop + FOOTER_HEIGHT;
+        var background = new BackgroundLayer(width, height)
+                .add(atlas.slice(0, 0, width, HEADER_HEIGHT), 0, 0, width, HEADER_HEIGHT);
+        // Only the first row includes the top bevel.
+        background.add(atlas.slice(0, HEADER_HEIGHT, width, ROW_HEIGHT), 0, HEADER_HEIGHT, width, ROW_HEIGHT);
+        if (rows > 1) {
+            int bodyTop = HEADER_HEIGHT + ROW_HEIGHT;
+            for (int y = bodyTop; y < footerTop; y += ROW_HEIGHT) {
+                int heightLeft = Math.min(ROW_HEIGHT, footerTop - y);
+                background.add(atlas.slice(0, bodyTop, width, heightLeft), 0, y, width, heightLeft);
+            }
         }
-        background.src(0, FOOTER_Y - 1, imageWidth, 1)
-                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT - 1).blit(graphics);
-        background.src(0, FOOTER_Y, imageWidth, FOOTER_HEIGHT - 8)
-                .dest(offsetX, offsetY + HEADER_HEIGHT + visibleRows * ROW_HEIGHT).blit(graphics);
-        background.src(0, 252, imageWidth, 8)
-                .dest(offsetX, offsetY + imageHeight - 8).blit(graphics);
+        return background
+                .add(atlas.slice(0, FOOTER_Y - 1, width, 1), 0, footerTop - 1, width, 1)
+                .add(atlas.slice(0, FOOTER_Y, width, FOOTER_HEIGHT - 8),
+                        0, footerTop, width, FOOTER_HEIGHT - 8)
+                .add(atlas.slice(0, FOOTER_Y + FOOTER_HEIGHT, width, 8), 0, height - 8, width, 8);
     }
 
     @Override
     public void drawFG(GuiGraphics graphics, int offsetX, int offsetY, int mouseX, int mouseY) {
         CraftingPlanSummary plan = menu.getPlan();
-        if (plan != null) {
-            table.render(graphics, mouseX, mouseY, plan.getEntries(), scrollbar.getCurrentScroll());
-        }
+        table.render(graphics, mouseX, mouseY, plan == null ? java.util.List.of() : plan.getEntries(),
+                scrollbar.getCurrentScroll());
     }
 
     @Override
     public @Nullable StackWithBounds getStackUnderMouse(double mouseX, double mouseY) {
-        StackWithBounds hovered = table.getHoveredStack();
+        var hovered = table == null ? null : table.getHoveredStack();
         return hovered != null ? hovered : super.getStackUnderMouse(mouseX, mouseY);
     }
 

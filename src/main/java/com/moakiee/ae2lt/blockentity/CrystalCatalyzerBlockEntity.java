@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.lowdragmc.lowdraglib2.misc.FluidStorage;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -25,6 +27,7 @@ import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import appeng.api.config.Actionable;
@@ -64,7 +67,6 @@ import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipe;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeCandidate;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.CrystalCatalyzerRecipeService;
 import com.moakiee.ae2lt.machine.crystalcatalyzer.recipe.Mode;
-import com.moakiee.ae2lt.machine.overloadfactory.NotifyingFluidTank;
 import com.moakiee.ae2lt.machine.overloadfactory.OverloadProcessingFactoryEnergyStorage;
 import com.moakiee.ae2lt.menu.CrystalCatalyzerMenu;
 import com.moakiee.ae2lt.registry.ModBlockEntities;
@@ -103,9 +105,8 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
             new CrystalCatalyzerInventory(this::onInventoryChanged, this::getMode, this::isPigmeeVariant);
     private final CrystalCatalyzerAutomationInventory automationInventory =
             new CrystalCatalyzerAutomationInventory(inventory);
-    private final NotifyingFluidTank tank =
-            new NotifyingFluidTank(FLUID_TANK_CAPACITY_MB,
-                    fluid -> !isPigmeeVariant() || fluid.getFluid() == Fluids.WATER, this::onTankChanged);
+    private final FluidStorage tank = new FluidStorage(FLUID_TANK_CAPACITY_MB,
+            fluid -> !isPigmeeVariant() || fluid.getFluid() == Fluids.WATER);
     private final CrystalCatalyzerFluidHandler fluidHandler =
             new CrystalCatalyzerFluidHandler(tank);
     private final OverloadProcessingFactoryEnergyStorage energyStorage =
@@ -129,6 +130,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
 
     public CrystalCatalyzerBlockEntity(BlockPos pos, BlockState blockState) {
         super(blockEntityTypeFor(blockState), pos, blockState);
+        tank.setOnContentsChanged(this::onTankChanged);
         this.logic = new CrystalCatalyzerLogic(this);
         if (!isPigmeeVariant()) {
             getMainNode()
@@ -201,7 +203,7 @@ public class CrystalCatalyzerBlockEntity extends AENetworkedBlockEntity
         return automationInventory;
     }
 
-    public NotifyingFluidTank getTank() {
+    public FluidTank getTank() {
         return tank;
     }
 

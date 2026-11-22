@@ -1,8 +1,10 @@
 package com.moakiee.ae2lt.client.easteregg;
 
+import com.lowdragmc.lowdraglib2.gui.texture.SpriteTexture;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.moakiee.ae2lt.AE2LightningTech;
+import com.moakiee.ae2lt.client.ldlib.LdlibHud;
 import com.moakiee.ae2lt.logic.world.EasterEggAudience;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -13,11 +15,16 @@ import net.minecraft.resources.ResourceLocation;
 public final class EasterEggOverlay implements LayeredDraw.Layer {
     public static final EasterEggOverlay INSTANCE = new EasterEggOverlay();
 
-    private static final ResourceLocation TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/gui/easter_egg.png");
+    private static final SpriteTexture TEXTURE = SpriteTexture.of(
+            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "textures/gui/easter_egg.png"));
+    private static final int IMAGE_WIDTH = 512;
+    private static final int IMAGE_HEIGHT = 436;
+    private static final float IMAGE_ASPECT = (float) IMAGE_WIDTH / IMAGE_HEIGHT;
 
     private static final EasterEggDisplayState STATE = new EasterEggDisplayState();
     private static GlobalPos source;
+
+    private LdlibHud hud;
 
     private EasterEggOverlay() {
     }
@@ -64,34 +71,28 @@ public final class EasterEggOverlay implements LayeredDraw.Layer {
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
 
-        int imgWidth = 512;
-        int imgHeight = 436;
-        float aspect = (float) imgWidth / imgHeight;
-
         int maxW = screenWidth * 3 / 4;
         int maxH = screenHeight * 3 / 4;
         int drawW, drawH;
-        if ((float) maxW / maxH > aspect) {
+        if ((float) maxW / maxH > IMAGE_ASPECT) {
             drawH = maxH;
-            drawW = (int) (maxH * aspect);
+            drawW = (int) (maxH * IMAGE_ASPECT);
         } else {
             drawW = maxW;
-            drawH = (int) (maxW / aspect);
+            drawH = (int) (maxW / IMAGE_ASPECT);
         }
         int x = (screenWidth - drawW) / 2;
         int y = (screenHeight - drawH) / 2;
-
-        // The plain texture blit does not enable blending. Without it the PNG's
-        // transparent pixels (and the old alpha-zero lead-in) can cover the HUD.
-        guiGraphics.flush();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-        try {
-            guiGraphics.blit(TEXTURE, x, y, drawW, drawH, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
-        } finally {
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-            RenderSystem.disableBlend();
+        if (drawW <= 0 || drawH <= 0) {
+            return;
         }
+
+        if (hud == null) {
+            var image = new UIElement().style(style -> style.background(TEXTURE));
+            hud = new LdlibHud(image, IMAGE_WIDTH, IMAGE_HEIGHT);
+        }
+        guiGraphics.flush();
+        hud.renderAt(guiGraphics, deltaTracker, x, y, drawW, drawH);
+        guiGraphics.flush();
     }
 }

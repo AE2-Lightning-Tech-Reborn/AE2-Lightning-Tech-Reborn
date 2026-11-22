@@ -1,11 +1,16 @@
 package com.moakiee.ae2lt.mixin.client;
 
 import appeng.client.gui.AEBaseScreen;
+import appeng.client.gui.WidgetContainer;
 import appeng.client.gui.me.crafting.CraftConfirmScreen;
 import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.style.StyleManager;
+import appeng.client.gui.widgets.AE2Button;
 import appeng.menu.me.crafting.CraftConfirmMenu;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moakiee.ae2lt.client.crafting.AE2LtCraftConfirmScreen;
+import com.moakiee.ae2lt.client.ldlib.LdlibResizableTextButton;
 import com.moakiee.ae2lt.crafting.report.CraftingReportMenuState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,6 +39,18 @@ public abstract class CraftConfirmReportRoutingMixin extends AEBaseScreen<CraftC
             CraftConfirmMenu menu, Inventory inventory, Component title, ScreenStyle style, CallbackInfo ci) {
         ae2lt$inventory = inventory;
         ae2lt$title = title;
+    }
+
+    @WrapOperation(method = "<init>", at = @At(value = "INVOKE",
+            target = "Lappeng/client/gui/WidgetContainer;addButton(Ljava/lang/String;Lnet/minecraft/network/chat/Component;Ljava/lang/Runnable;)Lappeng/client/gui/widgets/AE2Button;"))
+    private AE2Button ae2lt$createReportButton(WidgetContainer widgets, String id, Component title,
+                                              Runnable action, Operation<AE2Button> original) {
+        if ((Object) this instanceof AE2LtCraftConfirmScreen) {
+            var button = new LdlibResizableTextButton(title, action);
+            widgets.add(id, button);
+            return button;
+        }
+        return original.call(widgets, id, title, action);
     }
 
     @Inject(method = "updateBeforeRender", at = @At("TAIL"))

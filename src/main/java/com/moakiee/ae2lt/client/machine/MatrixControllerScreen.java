@@ -111,7 +111,12 @@ public class MatrixControllerScreen extends MultiblockControllerScreen<MatrixCon
             text(graphics, I18n.get("ae2lt.matrix.gui.label_patterns") + ": " + I18n.get("ae2lt.matrix.gui.value_patterns",
                     formatCount(menu.getPatternStorageCount()), formatCount(menu.getPatternSlotCount())), 16, 195, 154);
         }
-        if (migration != null) migration.render(graphics, font, 16, 206, 154, textColor());
+        if (migration != null) {
+            var summary = migration.summary();
+            if (summary != null) {
+                text(graphics, summary.getString(), 16, 206, 154);
+            }
+        }
     }
 
     private Component modeName() {

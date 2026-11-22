@@ -1,14 +1,13 @@
 package com.moakiee.ae2lt.integration.jei.category;
 
+import com.moakiee.ae2lt.integration.jei.JeiRecipeDecor;
+import com.moakiee.ae2lt.integration.recipeviewer.RecipeDecor;
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -24,7 +23,6 @@ import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.neoforge.NeoForgeTypes;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
@@ -44,8 +42,6 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
     private static final int BACKGROUND_HEIGHT = 68;
     private static final int WIDTH = 168;
     private static final int HEIGHT = 90;
-    private static final int TEXTURE_WIDTH = 256;
-    private static final int TEXTURE_HEIGHT = 256;
 
     private static final int INPUT_START_X = 25;
     private static final int INPUT_START_Y = 10;
@@ -74,12 +70,10 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
     private static final int LIGHTNING_TEXT_Y = 80;
 
     private final IDrawable icon;
-    private final IDrawable background;
+    private final JeiRecipeDecor<OverloadProcessingRecipe> decor = new JeiRecipeDecor<>(OverloadProcessingCategory::decor);
 
-    public OverloadProcessingCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(new ItemStack(ModBlocks.OVERLOAD_PROCESSING_FACTORY.get()));
-        this.background = guiHelper.createDrawable(
-                BACKGROUND_TEXTURE, BACKGROUND_U, BACKGROUND_V, BACKGROUND_WIDTH, BACKGROUND_HEIGHT);
+    public OverloadProcessingCategory(mezz.jei.api.helpers.IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(ModBlocks.OVERLOAD_PROCESSING_FACTORY.toStack());
     }
 
     @Override
@@ -164,44 +158,28 @@ public class OverloadProcessingCategory implements IRecipeCategory<OverloadProce
             GuiGraphics guiGraphics,
             double mouseX,
             double mouseY) {
-        background.draw(guiGraphics);
-        drawProcessOverlay(guiGraphics);
+        decor.draw(recipe, guiGraphics, mouseX, mouseY);
+    }
 
-        var font = Minecraft.getInstance().font;
-        var energyText = Component.translatable(
-                "jei.ae2lt.overload_processing.energy",
-                formatCompactEnergy(recipe.totalEnergy()));
-        int energyX = (WIDTH - font.width(energyText)) / 2;
-        guiGraphics.drawString(font, energyText, energyX, ENERGY_TEXT_Y, 0x404040, false);
-
-        var lightningText = Component.translatable(
-                "jei.ae2lt.overload_processing.lightning",
-                recipe.lightningCost(),
-                Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
+    /** Machine art, looping process arrow and info text as an LDLib2 decoration. */
+    private static RecipeDecor decor(OverloadProcessingRecipe recipe) {
+        return RecipeDecor.of(WIDTH, HEIGHT)
+                .texture(BACKGROUND_TEXTURE, 0, 0, BACKGROUND_WIDTH, BACKGROUND_HEIGHT,
+                        BACKGROUND_U, BACKGROUND_V)
+                .horizontalReveal(BACKGROUND_TEXTURE, PROCESS_X, PROCESS_Y,
+                        PROCESS_OVERLAY_WIDTH, PROCESS_OVERLAY_HEIGHT, PROCESS_OVERLAY_U, PROCESS_OVERLAY_V, PROCESS_CYCLE_MS)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.overload_processing.energy",
+                        formatCompactEnergy(recipe.totalEnergy())), ENERGY_TEXT_Y, 0x404040)
+                .centeredText(Component.translatable(
+                        "jei.ae2lt.overload_processing.lightning",
+                        recipe.lightningCost(),
+                        Component.translatable(recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE
                         ? "ae2lt.gui.lightning_simulation.tier.extreme_high_voltage"
-                        : "ae2lt.gui.lightning_simulation.tier.high_voltage"));
-        int lightningX = (WIDTH - font.width(lightningText)) / 2;
-        guiGraphics.drawString(font, lightningText, lightningX, LIGHTNING_TEXT_Y, 0x404040, false);
+                        : "ae2lt.gui.lightning_simulation.tier.high_voltage")), LIGHTNING_TEXT_Y, 0x404040);
     }
 
-    private void drawProcessOverlay(GuiGraphics guiGraphics) {
-        long elapsed = Util.getMillis() % PROCESS_CYCLE_MS;
-        double progress = elapsed / (double) PROCESS_CYCLE_MS;
-        int width = Mth.clamp((int) Math.ceil(progress * PROCESS_OVERLAY_WIDTH), 0, PROCESS_OVERLAY_WIDTH);
-        if (width <= 0) {
-            return;
-        }
-        guiGraphics.blit(
-                BACKGROUND_TEXTURE,
-                PROCESS_X,
-                PROCESS_Y,
-                PROCESS_OVERLAY_U,
-                PROCESS_OVERLAY_V,
-                width,
-                PROCESS_OVERLAY_HEIGHT,
-                TEXTURE_WIDTH,
-                TEXTURE_HEIGHT);
-    }
+
 
     private static List<ItemStack> expandIngredient(Ingredient ingredient, int count) {
         return Arrays.stream(ingredient.getItems())

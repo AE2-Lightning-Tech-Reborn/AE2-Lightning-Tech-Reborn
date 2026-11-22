@@ -3,22 +3,21 @@ package com.moakiee.ae2lt.client.render;
 import java.io.IOException;
 
 import com.moakiee.ae2lt.AE2LightningTech;
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.shaders.Uniform;
+import com.moakiee.ae2lt.client.ldlib.LdlibShaders;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
-import org.joml.Matrix4f;
 
 /** The local tick offset is interpolated before colour evaluation, once per surface pixel. */
 @EventBusSubscriber(modid = AE2LightningTech.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class RainbowPigmeeShader {
+    private static final ResourceLocation LOCATION =
+            ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "rainbow_pigmee");
+
     private static ShaderInstance shader;
 
     private RainbowPigmeeShader() {
@@ -34,24 +33,7 @@ public final class RainbowPigmeeShader {
 
     @SubscribeEvent
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
-        event.registerShader(new TickShader(event.getResourceProvider()), loaded -> shader = loaded);
-    }
-
-    private static final class TickShader extends ShaderInstance {
-        private final Uniform animationTicks;
-
-        TickShader(ResourceProvider resources) throws IOException {
-            super(resources, ResourceLocation.fromNamespaceAndPath(AE2LightningTech.MODID, "rainbow_pigmee"),
-                    DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-            animationTicks = getUniform("AnimationTicks");
-        }
-
-        @Override
-        public void setDefaultUniforms(VertexFormat.Mode mode, Matrix4f modelView, Matrix4f projection, Window window) {
-            super.setDefaultUniforms(mode, modelView, projection, window);
-            if (animationTicks != null) {
-                animationTicks.set((float) RainbowPigmeeColors.animationTicks());
-            }
-        }
+        LdlibShaders.register(event, LOCATION, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP, "AnimationTicks",
+                ticks -> ticks.set((float) RainbowPigmeeColors.animationTicks()), loaded -> shader = loaded);
     }
 }

@@ -20,7 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 import appeng.client.gui.Icon;
-import appeng.client.gui.widgets.TabButton;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
 import appeng.core.network.serverbound.SwitchGuisPacket;
 import appeng.menu.implementations.PriorityMenu;
 
@@ -56,13 +56,10 @@ public class TianshuSupercomputerControllerScreen
         addRenderableWidget(selection);
 
         var cpuPriorityLabel = Component.translatable("ae2lt.tianshu.gui.cpu_priority");
-        var priority = new TabButton(
-                Icon.PRIORITY,
-                cpuPriorityLabel,
-                ignored -> PacketDistributor.sendToServer(
+        var priority = LdlibAe2Button.tab(20, Icon.PRIORITY, cpuPriorityLabel,
+                () -> PacketDistributor.sendToServer(
                         SwitchGuisPacket.openSubMenu(PriorityMenu.TYPE)));
         priority.setTooltip(Tooltip.create(cpuPriorityLabel));
-        priority.setSize(20, 20);
         priority.setPosition(leftPos + imageWidth, topPos);
         addRenderableWidget(priority);
     }

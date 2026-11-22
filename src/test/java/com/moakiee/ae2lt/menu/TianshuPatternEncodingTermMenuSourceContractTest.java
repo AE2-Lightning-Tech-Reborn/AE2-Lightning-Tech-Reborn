@@ -218,14 +218,15 @@ class TianshuPatternEncodingTermMenuSourceContractTest {
         assertTrue(menu.contains("writeOutputCandidates(payload.netOutputs())"));
         assertFalse(menu.contains("setClosedLoopOutputRole"));
         assertFalse(config.contains("cycleOutputRole"));
-        assertTrue(config.contains("outputRoles[visible].active = false"));
+        assertTrue(config.contains("role.setActive(false)"));
+        assertTrue(config.contains("role.setAllowHitTest(false)"));
         assertTrue(menu.contains("registerClientAction(\"cycleClosedLoopOutput\""));
         assertTrue(menu.contains("rotated[i] = next.copy()"));
         assertTrue(menu.contains("snapshotClosedLoopOutputKeys()"));
         assertTrue(menu.contains("orderClosedLoopOutputs("));
         assertTrue(menu.contains("closedLoopOutputRoles[i] = i == 0 ? 1 : 2"));
-        assertTrue(panel.contains("ActionItems.S_CYCLE_PROCESSING_OUTPUT"));
-        assertTrue(panel.contains("menu.cycleClosedLoopOutput()"));
+        assertTrue(panel.contains("LdlibAe2Button.small(Icon.S_CYCLE"));
+        assertTrue(panel.contains("menu::cycleClosedLoopOutput"));
         assertTrue(panel.contains("menu.canCycleClosedLoopOutputs()"));
         assertTrue(layout.contains(
                 "\"closedLoopCycleOutput\": { \"left\": 133, \"bottom\": 176"));

@@ -49,7 +49,8 @@ final class EmiLightningAssemblyRecipe extends EmiBackedRecipe<LightningAssembly
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addTexture(TEXTURE, 0, 0, WIDTH, BACKGROUND_HEIGHT, 19, 10);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .texture(TEXTURE, 0, 0, WIDTH, BACKGROUND_HEIGHT, 19, 10));
         for (int index = 0; index < inputs.size() && index < 9; index++) {
             int x = 10 + index % 3 * 18;
             int y = 21 + index / 3 * 18;
@@ -58,21 +59,14 @@ final class EmiLightningAssemblyRecipe extends EmiBackedRecipe<LightningAssembly
         EmiRecipeWidgets.addLargeStackSlot(widgets, outputs.getFirst(), 107, 39)
                 .drawBack(false)
                 .recipeContext(this);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.lightning_assembly.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
-                WIDTH / 2,
-                80);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())), 80, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.lightning_assembly.lightning",
                         recipe.lightningCost(),
-                        EmiRecipeWidgets.tierName(recipe.lightningTier())),
-                WIDTH / 2,
-                90);
+                        EmiRecipeWidgets.tierName(recipe.lightningTier())), 90, EmiRecipeWidgets.TEXT_COLOR));
     }
 }
 
@@ -89,7 +83,8 @@ final class EmiLightningSimulationRecipe extends EmiBackedRecipe<LightningSimula
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.addTexture(TEXTURE, 0, 0, WIDTH, 64, 5, 14);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .texture(TEXTURE, 0, 0, WIDTH, 64, 5, 14));
         for (int index = 0; index < inputs.size(); index++) {
             EmiRecipeWidgets.addLargeStackSlot(widgets, inputs.get(index), 34, 8 + index * 18)
                     .drawBack(false);
@@ -97,37 +92,26 @@ final class EmiLightningSimulationRecipe extends EmiBackedRecipe<LightningSimula
         EmiRecipeWidgets.addLargeStackSlot(widgets, outputs.getFirst(), 114, 27)
                 .drawBack(false)
                 .recipeContext(this);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+        var decor = EmiRecipeWidgets.decor(widgets)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.lightning_simulation.energy",
-                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())),
-                WIDTH / 2,
-                66);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable(
+                        EmiRecipeWidgets.compactEnergy(recipe.totalEnergy())), 66, EmiRecipeWidgets.TEXT_COLOR)
+                .centeredText(Component.translatable(
                         "jei.ae2lt.lightning_simulation.lightning",
                         recipe.lightningCost(),
-                        EmiRecipeWidgets.tierName(recipe.lightningTier())),
-                WIDTH / 2,
-                76);
+                        EmiRecipeWidgets.tierName(recipe.lightningTier())), 76, EmiRecipeWidgets.TEXT_COLOR);
         if (recipe.lightningTier() == LightningKey.Tier.EXTREME_HIGH_VOLTAGE) {
-            EmiRecipeWidgets.centeredText(
-                    widgets,
-                    Component.translatable(
-                            "jei.ae2lt.lightning_simulation.substitution",
-                            LightningSimulationRecipeService.getEquivalentHighVoltageCost(
-                                    recipe.lightningTier(), recipe.lightningCost())),
-                    WIDTH / 2,
-                    86);
+            decor.centeredText(Component.translatable(
+                    "jei.ae2lt.lightning_simulation.substitution",
+                    LightningSimulationRecipeService.getEquivalentHighVoltageCost(
+                            recipe.lightningTier(), recipe.lightningCost())), 86, EmiRecipeWidgets.TEXT_COLOR);
         }
+        EmiRecipeWidgets.addDecor(widgets, decor);
     }
 }
 
 final class EmiLightningTransformRecipe extends EmiBackedRecipe<LightningTransformRecipe> {
     private static final int WIDTH = 134;
-    private static final EmiLightningIcon LIGHTNING = new EmiLightningIcon(false);
 
     EmiLightningTransformRecipe(RecipeHolder<LightningTransformRecipe> holder) {
         super(AE2LTEmiCategories.LIGHTNING_TRANSFORM, holder, WIDTH, 66);
@@ -150,17 +134,14 @@ final class EmiLightningTransformRecipe extends EmiBackedRecipe<LightningTransfo
                 x += 18;
             }
         }
-        widgets.addFillingArrow(28, 24, 2_000);
-        widgets.addFillingArrow(81, 24, 2_000);
-        widgets.addDrawable(57, 26, 16, 16, (graphics, mouseX, mouseY, delta) ->
-                LIGHTNING.render(graphics, 0, 0, delta));
+        EmiRecipeWidgets.addFillingArrow(widgets, 28, 24, 2_000);
+        EmiRecipeWidgets.addFillingArrow(widgets, 81, 24, 2_000);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .lightningIcon(57, 26, LightningKey.HIGH_VOLTAGE));
         EmiRecipeWidgets.addLargeStackSlot(widgets, outputs.getFirst(), 111, 26)
                 .recipeContext(this);
-        EmiRecipeWidgets.centeredText(
-                widgets,
-                Component.translatable("jei.ae2lt.lightning_transform.label"),
-                WIDTH / 2,
-                4);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets)
+                .centeredText(Component.translatable("jei.ae2lt.lightning_transform.label"), 4, EmiRecipeWidgets.TEXT_COLOR));
     }
 }
 
@@ -200,13 +181,10 @@ final class EmiFirmamentConversionRecipe extends EmiBackedRecipe<FirmamentConver
                             SLOT_AREA_Y + outputOffsetY + row * 18 + 1)
                     .recipeContext(this);
         }
-        widgets.addFillingArrow(46, 22, 2_000);
-        EmiRecipeWidgets.centeredText(
-                widgets,
+        EmiRecipeWidgets.addFillingArrow(widgets, 46, 22, 2_000);
+        EmiRecipeWidgets.addDecor(widgets, EmiRecipeWidgets.decor(widgets).centeredText(
                 Component.translatable(
                         "jei.ae2lt.firmament_conversion.time",
-                        EmiRecipeWidgets.processTime(recipe.processTime())),
-                WIDTH / 2,
-                64);
+                        EmiRecipeWidgets.processTime(recipe.processTime())), 64, EmiRecipeWidgets.TEXT_COLOR));
     }
 }

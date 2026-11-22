@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 
-import net.minecraft.client.Minecraft;
+import com.lowdragmc.lowdraglib2.client.model.ModelFactory;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -63,15 +62,13 @@ public final class OverloadedCableRenderHelper {
     }
 
     private static TextureAtlasSprite getCoreTexture(AEColor color) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
-        return atlas.apply(ResourceLocation.fromNamespaceAndPath(
+        return ModelFactory.getBlockSprite(ResourceLocation.fromNamespaceAndPath(
                 AE2LightningTech.MODID,
                 OVERLOAD_CABLE_CORE_TEXTURE_FOLDER + color.name().toLowerCase(Locale.ROOT)));
     }
 
     private static TextureAtlasSprite getLineTexture(AEColor color) {
-        var atlas = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS);
-        return atlas.apply(ResourceLocation.fromNamespaceAndPath(
+        return ModelFactory.getBlockSprite(ResourceLocation.fromNamespaceAndPath(
                 AE2LightningTech.MODID,
                 OVERLOAD_CABLE_LINE_TEXTURE_FOLDER + color.name().toLowerCase(Locale.ROOT)));
     }

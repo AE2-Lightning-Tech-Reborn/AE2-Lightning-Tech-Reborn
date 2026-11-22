@@ -50,12 +50,14 @@ public class OverloadCrystalClusterBlock extends Block implements SimpleWaterlog
     public OverloadCrystalClusterBlock(int height, int offset, Properties properties) {
         super(properties);
         registerDefaultState(defaultBlockState().setValue(WATERLOGGED, false).setValue(FACING, Direction.UP));
-        this.upAabb = Block.box(offset, 0.0, offset, 16 - offset, height, 16 - offset);
-        this.downAabb = Block.box(offset, 16 - height, offset, 16 - offset, 16.0, 16 - offset);
-        this.northAabb = Block.box(offset, offset, 16 - height, 16 - offset, 16 - offset, 16.0);
-        this.southAabb = Block.box(offset, offset, 0.0, 16 - offset, 16 - offset, height);
-        this.eastAabb = Block.box(0.0, offset, offset, height, 16 - offset, 16 - offset);
-        this.westAabb = Block.box(16 - height, offset, offset, 16.0, 16 - offset, 16 - offset);
+        var shapes = BlockShapeHelper.createAllFacingShapes(
+                Block.box(offset, 0.0, offset, 16 - offset, height, 16 - offset));
+        this.upAabb = shapes.get(Direction.UP);
+        this.downAabb = shapes.get(Direction.DOWN);
+        this.northAabb = shapes.get(Direction.NORTH);
+        this.southAabb = shapes.get(Direction.SOUTH);
+        this.eastAabb = shapes.get(Direction.EAST);
+        this.westAabb = shapes.get(Direction.WEST);
     }
 
     @Override

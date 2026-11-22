@@ -11,7 +11,6 @@ import dev.emi.emi.api.recipe.BasicEmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
@@ -86,21 +85,21 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
             case BUD_GROWTH -> {
                 title(widgets, "jei.ae2lt.overload_growth.bud_growth", 5);
                 EmiRecipeWidgets.addSlot(widgets, catalysts.getFirst(), CENTER_X - 40, 25);
-                widgets.addFillingArrow(CENTER_X - 12, 25, 2_000);
+                EmiRecipeWidgets.addFillingArrow(widgets, CENTER_X - 12, 25, 2_000);
                 EmiRecipeWidgets.addSlot(widgets, EmiIngredient.of(BUD_STAGES), CENTER_X + 22, 25)
                         .recipeContext(this);
             }
             case BUD_LOOT -> {
                 title(widgets, "jei.ae2lt.overload_growth.bud_loot", 5);
                 EmiRecipeWidgets.addSlot(widgets, inputs.getFirst(), CENTER_X - 40, 25);
-                widgets.addFillingArrow(CENTER_X - 12, 25, 2_000);
+                EmiRecipeWidgets.addFillingArrow(widgets, CENTER_X - 12, 25, 2_000);
                 EmiRecipeWidgets.addSlot(widgets, outputs.getFirst(), CENTER_X + 22, 25)
                         .recipeContext(this);
             }
             case CLUSTER_LOOT -> {
                 title(widgets, "jei.ae2lt.overload_growth.cluster_loot", 5);
                 EmiRecipeWidgets.addSlot(widgets, inputs.getFirst(), CENTER_X - 40, 25);
-                widgets.addFillingArrow(CENTER_X - 12, 25, 2_000);
+                EmiRecipeWidgets.addFillingArrow(widgets, CENTER_X - 12, 25, 2_000);
                 EmiRecipeWidgets.addSlot(widgets, outputs.getFirst(), CENTER_X + 22, 25)
                         .recipeContext(this);
                 title(widgets, "jei.ae2lt.overload_growth.cluster_loot_fortune", 50);
@@ -108,21 +107,19 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
             case DECAY -> {
                 title(widgets, "jei.ae2lt.overload_growth.decay", 5);
                 linkedSlots(widgets, IMPERFECT_BUDDING, IMPERFECT_DECAY_ORDER, 30);
-                widgets.addFillingArrow(CENTER_X - 12, 30, 2_000);
-                EmiRecipeWidgets.centeredText(
-                        widgets,
-                        Component.translatable(
+                EmiRecipeWidgets.addFillingArrow(widgets, CENTER_X - 12, 30, 2_000);
+                widgets.addText(Component.translatable(
                                 "jei.ae2lt.overload_growth.decay_chance",
                                 100 / BuddingOverloadCrystalBlock.DECAY_CHANCE),
-                        CENTER_X,
-                        50);
+                                CENTER_X, 50, EmiRecipeWidgets.TEXT_COLOR, false)
+                        .horizontalAlign(dev.emi.emi.api.widget.TextWidget.Alignment.CENTER);
             }
             case MOVING -> {
                 linkedSlots(widgets, BUDDING, DECAY_ORDER, 0);
-                widgets.addFillingArrow(CENTER_X - 12, 0, 2_000);
+                EmiRecipeWidgets.addFillingArrow(widgets, CENTER_X - 12, 0, 2_000);
                 widgets.addDrawable(0, 20, WIDTH, 40, (graphics, mouseX, mouseY, delta) -> {
                     int y = 0;
-                    var font = Minecraft.getInstance().font;
+                    var font = net.minecraft.client.Minecraft.getInstance().font;
                     for (String key : List.of(
                             "jei.ae2lt.overload_growth.break_decay",
                             "jei.ae2lt.overload_growth.silk_touch",
@@ -167,7 +164,8 @@ final class EmiOverloadGrowthRecipe extends BasicEmiRecipe {
     }
 
     private static void title(WidgetHolder widgets, String key, int y) {
-        EmiRecipeWidgets.centeredText(widgets, Component.translatable(key), CENTER_X, y);
+        widgets.addText(Component.translatable(key), CENTER_X, y, EmiRecipeWidgets.TEXT_COLOR, false)
+                .horizontalAlign(dev.emi.emi.api.widget.TextWidget.Alignment.CENTER);
     }
 
     @Override

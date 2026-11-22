@@ -1,12 +1,19 @@
 package com.moakiee.ae2lt.client.tianshu;
 
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Button;
+import com.moakiee.ae2lt.client.ldlib.LdlibAe2Icons;
+import com.moakiee.ae2lt.client.ldlib.LdlibScreens;
+import com.moakiee.ae2lt.client.ldlib.LdlibToolbarHost;
 import com.moakiee.ae2lt.client.widgets.TextureToggleButton;
 
 import appeng.client.gui.Icon;
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.Repo;
 import appeng.client.gui.style.ScreenStyle;
-import appeng.client.gui.widgets.IconButton;
+import appeng.client.gui.widgets.AE2Button;
+import appeng.client.gui.widgets.ActionButton;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.TabButton;
 import appeng.api.config.Settings;
@@ -46,7 +53,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** ME inventory maintenance UI shared by crafting and pattern terminal screens. */
 public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & TianshuMaintenanceMenu>
-        extends MEStorageScreen<M> {
+        extends MEStorageScreen<M> implements LdlibToolbarHost {
     static PageAnchor terminalHelpTopic(MEStorageMenu menu, String fragment) {
         String page = menu instanceof TianshuPatternEncodingTermMenu
                 ? "pattern-encoding-terminal" : "crafting-terminal";
@@ -157,7 +164,7 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
             case RED -> 0xFFDD3333;
             case GRAY -> 0xFF888888;
         };
-        graphics.fill(slot.x + 12, slot.y, slot.x + 16, slot.y + 4, color);
+        LdlibScreens.fillRect(graphics, slot.x + 12, slot.y, slot.x + 16, slot.y + 4, color);
     }
 
     private TianshuViewModeButton replaceViewModeButton() {
@@ -371,13 +378,15 @@ public abstract class TianshuMaintenanceTermScreen<M extends MEStorageMenu & Tia
         };
     }
 
-    private final class TianshuViewModeButton extends IconButton {
+    private final class TianshuViewModeButton extends LdlibAe2Button {
         private TianshuViewModeButton() {
-            super(ignored -> cycleViewMode(hasShiftDown()));
+            super(16, Component.translatable(ButtonToolTips.View.getTranslationKey()),
+                    () -> cycleViewMode(hasShiftDown()));
+            setMessage(Component.empty());
+            toolbarFace(IGuiTexture.dynamic(() -> LdlibAe2Icons.texture(getIcon())), false);
         }
 
-        @Override
-        protected Icon getIcon() {
+        private Icon getIcon() {
             if (menu.isMaintainableView()) return Icon.VIEW_MODE_CRAFTING;
             return switch (getSortDisplay()) {
                 case ALL -> Icon.VIEW_MODE_ALL;

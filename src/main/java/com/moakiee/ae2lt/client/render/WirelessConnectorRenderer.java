@@ -1,5 +1,8 @@
 package com.moakiee.ae2lt.client.render;
 
+import com.lowdragmc.lowdraglib2.client.model.ModelFactory;
+import com.lowdragmc.lowdraglib2.client.utils.RenderBufferUtils;
+import com.lowdragmc.lowdraglib2.utils.ColorUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
@@ -9,8 +12,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -74,6 +77,8 @@ public class WirelessConnectorRenderer {
     private static final int COLOR_HOST_SELECTED = 0x80FFFF00;
     // Line color: blue (ARGB)
     private static final int COLOR_LINE = 0xC00080FF;
+    private static final float FACE_OFFSET = 0.001F;
+    private static final Vector3f[][] FACE_CORNERS = buildFaceCorners();
 
     private static final int SCAN_RANGE = 64;
     /** How many game ticks between full chunk re-scans for wireless hosts. */
@@ -332,28 +337,12 @@ public class WirelessConnectorRenderer {
      */
     private static void renderInnerCube(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos pos, int color) {
-        VertexConsumer vc = buffer.getBuffer(Ae2ltRenderTypes.getFaceSeeThrough());
-        int[] c = OverlayRenderType.decomposeColor(color);
-
+        var consumer = buffer.getBuffer(Ae2ltRenderTypes.getFaceSeeThrough());
         poseStack.pushPose();
         poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
-        Matrix4f mat = poseStack.last().pose();
-
-        float lo = 0.25f, hi = 0.75f;
-
-        // DOWN (Y-)
-        quad(vc, mat, c, lo, lo, lo,  hi, lo, lo,  hi, lo, hi,  lo, lo, hi,  0, -1, 0);
-        // UP (Y+)
-        quad(vc, mat, c, lo, hi, hi,  hi, hi, hi,  hi, hi, lo,  lo, hi, lo,  0, 1, 0);
-        // NORTH (Z-)
-        quad(vc, mat, c, lo, lo, lo,  lo, hi, lo,  hi, hi, lo,  hi, lo, lo,  0, 0, -1);
-        // SOUTH (Z+)
-        quad(vc, mat, c, hi, lo, hi,  hi, hi, hi,  lo, hi, hi,  lo, lo, hi,  0, 0, 1);
-        // WEST (X-)
-        quad(vc, mat, c, lo, lo, hi,  lo, hi, hi,  lo, hi, lo,  lo, lo, lo,  -1, 0, 0);
-        // EAST (X+)
-        quad(vc, mat, c, hi, lo, lo,  hi, hi, lo,  hi, hi, hi,  hi, lo, hi,  1, 0, 0);
-
+        RenderBufferUtils.drawCubeFace(poseStack, consumer,
+                0.25f, 0.25f, 0.25f, 0.75f, 0.75f, 0.75f,
+                ColorUtils.red(color), ColorUtils.green(color), ColorUtils.blue(color), ColorUtils.alpha(color), false);
         poseStack.popPose();
     }
 
@@ -390,78 +379,44 @@ public class WirelessConnectorRenderer {
         }
     }
 
-    private static void quad(VertexConsumer vc, Matrix4f mat, int[] c,
-            float x1, float y1, float z1,
-            float x2, float y2, float z2,
-            float x3, float y3, float z3,
-            float x4, float y4, float z4,
-            float nx, float ny, float nz) {
-        vc.addVertex(mat, x1, y1, z1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-        vc.addVertex(mat, x2, y2, z2).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-        vc.addVertex(mat, x3, y3, z3).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-        vc.addVertex(mat, x4, y4, z4).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-    }
-
-
     /**
      * Render a single face overlay (quad) on the given block face.
      */
     private static void renderFaceOverlay(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos pos, Direction face, int color) {
-        VertexConsumer vc = buffer.getBuffer(OverlayRenderType.getBlockHilightFace());
-        int[] c = OverlayRenderType.decomposeColor(color);
-
+        VertexConsumer consumer = buffer.getBuffer(OverlayRenderType.getBlockHilightFace());
         poseStack.pushPose();
-        poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
-        Matrix4f mat = poseStack.last().pose();
-
-        // Slight offset to avoid z-fighting
-        float offset = 0.001f;
-
-        float nx = face.getStepX();
-        float ny = face.getStepY();
-        float nz = face.getStepZ();
-
-        switch (face) {
-            case DOWN -> {
-                vc.addVertex(mat, 0, -offset, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, -offset, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, -offset, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 0, -offset, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
+        try {
+            poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
+            var matrix = poseStack.last().pose();
+            for (var corner : FACE_CORNERS[face.ordinal()]) {
+                consumer.addVertex(matrix, corner.x, corner.y, corner.z)
+                        .setColor(color).setNormal(face.getStepX(), face.getStepY(), face.getStepZ());
             }
-            case UP -> {
-                vc.addVertex(mat, 0, 1 + offset, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, 1 + offset, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, 1 + offset, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 0, 1 + offset, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-            }
-            case NORTH -> {
-                vc.addVertex(mat, 0, 0, -offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 0, 1, -offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, 1, -offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, 0, -offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-            }
-            case SOUTH -> {
-                vc.addVertex(mat, 1, 0, 1 + offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1, 1, 1 + offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 0, 1, 1 + offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 0, 0, 1 + offset).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-            }
-            case WEST -> {
-                vc.addVertex(mat, -offset, 0, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, -offset, 1, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, -offset, 1, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, -offset, 0, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-            }
-            case EAST -> {
-                vc.addVertex(mat, 1 + offset, 0, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1 + offset, 1, 0).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1 + offset, 1, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-                vc.addVertex(mat, 1 + offset, 0, 1).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-            }
+        } finally {
+            poseStack.popPose();
         }
+    }
 
-        poseStack.popPose();
+    private static Vector3f[][] buildFaceCorners() {
+        var directions = Direction.values();
+        var corners = new Vector3f[directions.length][];
+        for (var face : directions) {
+            var rotation = ModelFactory.getQuaternion(face);
+            var quad = new Vector3f[] {
+                    new Vector3f(-0.5F, -0.5F, -0.5F), new Vector3f(-0.5F, 0.5F, -0.5F),
+                    new Vector3f(0.5F, 0.5F, -0.5F), new Vector3f(0.5F, -0.5F, -0.5F)
+            };
+            for (var corner : quad) {
+                rotation.transform(corner).add(0.5F, 0.5F, 0.5F);
+                // Snap the quarter-turn result to block corners, then offset it to avoid z-fighting.
+                corner.set(Math.round(corner.x) + face.getStepX() * FACE_OFFSET,
+                        Math.round(corner.y) + face.getStepY() * FACE_OFFSET,
+                        Math.round(corner.z) + face.getStepZ() * FACE_OFFSET);
+            }
+            corners[face.ordinal()] = quad;
+        }
+        return corners;
     }
 
     /**
@@ -469,11 +424,6 @@ public class WirelessConnectorRenderer {
      */
     private static void renderLine(PoseStack poseStack, MultiBufferSource buffer,
             BlockPos from, BlockPos to, Direction face, int color) {
-        VertexConsumer vc = buffer.getBuffer(OverlayRenderType.getBlockHilightLine());
-        int[] c = OverlayRenderType.decomposeColor(color);
-
-        Matrix4f mat = poseStack.last().pose();
-
         // Provider center
         float fx = from.getX() + 0.5f;
         float fy = from.getY() + 0.5f;
@@ -485,12 +435,16 @@ public class WirelessConnectorRenderer {
         float tz = to.getZ() + 0.5f + face.getStepZ() * 0.501f;
 
         float dx = tx - fx, dy = ty - fy, dz = tz - fz;
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 1e-6f) return;
-        float nx = dx / len, ny = dy / len, nz = dz / len;
-
-        vc.addVertex(mat, fx, fy, fz).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
-        vc.addVertex(mat, tx, ty, tz).setColor(c[1], c[2], c[3], c[0]).setNormal(nx, ny, nz);
+        if (dx * dx + dy * dy + dz * dz < 1e-12f) {
+            return;
+        }
+        float red = ColorUtils.red(color);
+        float green = ColorUtils.green(color);
+        float blue = ColorUtils.blue(color);
+        float alpha = ColorUtils.alpha(color);
+        var consumer = buffer.getBuffer(OverlayRenderType.getBlockHilightLine());
+        RenderBufferUtils.drawLine(poseStack.last(), consumer, fx, fy, fz, tx, ty, tz,
+                red, green, blue, alpha, red, green, blue, alpha);
     }
 
     // -- Item NBT helpers (client-side read-only) --
