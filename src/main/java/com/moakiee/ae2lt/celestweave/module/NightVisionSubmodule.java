@@ -23,14 +23,14 @@ public final class NightVisionSubmodule extends AbstractCelestweaveArmorSubmodul
     public static final String XRAY = "block_xray";
 
     public boolean option(ItemStack armor, String key) {
+        if (!NIGHT.equals(key) && !FOG.equals(key)) return false;
         var options = getOptions(armor);
-        return options.contains(key, net.minecraft.nbt.Tag.TAG_BYTE)
-                ? options.getBoolean(key) : !XRAY.equals(key);
+        return !options.contains(key, net.minecraft.nbt.Tag.TAG_BYTE) || options.getBoolean(key);
     }
 
     @Override
     public java.util.List<CelestweaveArmorSubmoduleConfig> getConfigs(ItemStack armor) {
-        return java.util.stream.Stream.of(NIGHT, FOG, XRAY).map(key ->
+        return java.util.stream.Stream.of(NIGHT, FOG).map(key ->
                 config(key, net.minecraft.network.chat.Component.translatable("ae2lt.vision." + key),
                         net.minecraft.nbt.ByteTag.valueOf(option(armor, key)), booleanChoices(), null)).toList();
     }

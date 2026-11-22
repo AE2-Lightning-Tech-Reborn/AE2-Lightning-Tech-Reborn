@@ -62,7 +62,7 @@ If FE or required Lightning is missing, the affected effects cannot be maintaine
 
 | Module | Effect |
 |--------|--------|
-| Visual Enhancement | Separate controls for night vision, environmental fog and selected block outlines. Bind the target editor in Controls. |
+| Visual Enhancement | Night vision and fog removal have independent switches. Both start enabled. Blindness and Darkness suspend fog removal. |
 | Life Support | Sustains hunger and underwater breathing, with personal oxygen and thermal protection in Ad Astra. The server can configure healing. |
 
 ## Chestplate Modules
@@ -75,7 +75,7 @@ If FE or required Lightning is missing, the affected effects cannot be maintaine
 | Phase Shield | Absorbs up to 1,024 damage per hit at 20,000 FE and 2 EHV per point. Includes optional reflect and Mekanism laser charging. |
 | Overload Protection | Upgrades Phase Shield with unlimited shielding and last-stand protection, sharing a 20 GFE and 16,384 EHV cost cap per 20 ticks |
 | Multidimensional Protection | Unlimited shielding and last-stand protection; neither path consumes FE or Lightning |
-| Purification | Cleanses qualifying effects on activation, blocks new effects and extinguishes fire. Shields against Mekanism radiation and heals in irradiated areas. |
+| Purification | Cleanses qualifying effects, blocks new effects and extinguishes fire. Shields against Mekanism radiation and heals in irradiated areas. Even in clean air, it converts stored dose into healing once per second. Up to 60 active game seconds bring the dose back to background, including at full health. |
 | Phase Lock | Provides four independently toggled features: Armor Lock, Flight Lock, Block External Forces and Block External Teleports; see below |
 | Lightning Compensation | Install on any armor piece to compensate missing EHV at 16 HV per EHV for the whole armor set. |
 

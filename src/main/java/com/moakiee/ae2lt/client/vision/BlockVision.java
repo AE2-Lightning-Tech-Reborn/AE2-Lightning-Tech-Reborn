@@ -13,14 +13,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Quaternionf;
 
-@EventBusSubscriber(modid = "ae2lt", value = Dist.CLIENT)
+// Kept for client debugging. Scanning and rendering are currently unregistered.
 public final class BlockVision {
     private static final int SECTION_RADIUS = 2;
     private static final int WIDTH = 2 * SECTION_RADIUS + 1;
@@ -39,7 +36,6 @@ public final class BlockVision {
         cursor = 0;
     }
 
-    @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
         var mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || !VisualEnhancement.canRender(NightVisionSubmodule.XRAY)
@@ -93,7 +89,6 @@ public final class BlockVision {
         SECTIONS.put(pos, hits);
     }
 
-    @SubscribeEvent
     public static void render(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL || SECTIONS.isEmpty()
                 || world != Minecraft.getInstance().level || !VisualEnhancement.canRender(NightVisionSubmodule.XRAY)) return;

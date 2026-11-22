@@ -9,6 +9,7 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 import mekanism.api.lasers.ILaserDissipation;
 import mekanism.api.radiation.IRadiationManager;
+import mekanism.api.radiation.capability.IRadiationEntity;
 import mekanism.api.radiation.capability.IRadiationShielding;
 import mekanism.common.capabilities.Capabilities;
 import mekanism.common.lib.radiation.RadiationScale;
@@ -35,6 +36,9 @@ import com.moakiee.ae2lt.registry.ModItems;
  * a final safety net for already accumulated radiation and direct damage calls.
  */
 public final class MekanismArmorIntegration {
+    private static final String LAST_RADIATION_PULSE = "ae2lt.last_radiation_pulse";
+    private static final String DOSE_PULSES_LEFT = "ae2lt.dose_pulses_left";
+    private static final int MAX_DOSE_PULSES = 60;
     private static final IRadiationShielding FULL_RADIATION_SHIELDING = () -> 1.0D;
     private static final CelestweaveLaserDissipation FULL_LASER_DISSIPATION =
             new CelestweaveLaserDissipation();
@@ -90,22 +94,56 @@ public final class MekanismArmorIntegration {
     }
 
     public static void tickRadiationRegeneration(LivingEntity player) {
+        long now = player.level().getGameTime();
+        int interval = MekanismProtectionRules.RADIATION_REGEN_INTERVAL_TICKS;
+        if (now % interval != 0 || !player.isAlive()) return;
         var radiationManager = IRadiationManager.INSTANCE;
-        double radiationLevel = radiationManager.getRadiationLevel(player);
-        if (!MekanismProtectionRules.shouldRegenerate(
-                player.level().getGameTime(),
-                radiationLevel,
-                radiationManager.minRadiationMagnitude(),
-                player.getHealth(),
-                player.getMaxHealth())) {
-            return;
+        if (!radiationManager.isRadiationEnabled()) return;
+        var data = player.getPersistentData();
+        long lastPulse = data.getLong(LAST_RADIATION_PULSE);
+        if (data.contains(LAST_RADIATION_PULSE) && lastPulse == now) return;
+        data.putLong(LAST_RADIATION_PULSE, now);
+        int pulsesLeft = data.getInt(DOSE_PULSES_LEFT);
+        if (lastPulse != now - interval || pulsesLeft < 1 || pulsesLeft > MAX_DOSE_PULSES) {
+            pulsesLeft = MAX_DOSE_PULSES;
         }
+        var body = player.getCapability(Capabilities.RADIATION_ENTITY);
+        double removed = cleanseDose(body, radiationManager.baselineRadiation(), pulsesLeft);
+        if (removed > 0 && pulsesLeft > 1) {
+            data.putInt(DOSE_PULSES_LEFT, pulsesLeft - 1);
+        } else {
+            data.remove(DOSE_PULSES_LEFT);
+        }
+        if (player.getHealth() >= player.getMaxHealth()) return;
+        double radiationLevel = radiationManager.getRadiationLevel(player);
+        double minimum = radiationManager.minRadiationMagnitude();
+        float healing = 0;
+        if (MekanismProtectionRules.shouldRegenerate(now, radiationLevel, minimum, player.getHealth(), player.getMaxHealth())) {
+            healing = MekanismProtectionRules.radiationHealing(RadiationScale.getScaledDoseSeverity(radiationLevel));
+        }
+        if (removed > 0) {
+            double doseHealing = MekanismProtectionRules.radiationHealing(RadiationScale.getScaledDoseSeverity(removed))
+                    * Math.min(1.0D, removed / minimum);
+            healing = Math.max(healing, (float) doseHealing);
+        }
+        if (healing <= 0) return;
         float healthBefore = player.getHealth();
-        player.heal(MekanismProtectionRules.radiationHealing(
-                RadiationScale.getScaledDoseSeverity(radiationLevel)));
+        player.heal(healing);
         if (player.getHealth() > healthBefore && player instanceof ServerPlayer serverPlayer) {
             CelestweaveAdvancementService.awardRadiationAssimilation(serverPlayer);
         }
+    }
+
+    private static double cleanseDose(IRadiationEntity body, double baseline, int pulsesLeft) {
+        if (body == null) return 0;
+        double dose = body.getRadiation();
+        if (!Double.isFinite(dose) || dose <= baseline) return 0;
+        // Re-read the dose each second so Mekanism's own decay and external treatments still apply.
+        double next = pulsesLeft == 1 ? baseline : Math.max(baseline, dose - (dose - baseline) / pulsesLeft);
+        // A sub-ULP installment can round back to the same dose. Still make measurable progress.
+        if (next == dose) next = Math.max(baseline, Math.nextDown(dose));
+        body.set(next);
+        return dose - body.getRadiation();
     }
 
     /**

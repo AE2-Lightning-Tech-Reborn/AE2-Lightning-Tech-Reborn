@@ -55,7 +55,15 @@ public final class NightVisionClientProbe {
                     require(CelestweaveArmorState.installOneModule(helmet, registries,
                             new ItemStack(ModItems.CELESTWEAVE_SUBMODULE_NIGHT_VISION.get())), "night vision rejected");
                     ArmorEnergyBuffer.write(helmet, registries, 20_000_000_000L);
-                    NightVisionSubmodule.INSTANCE.setConfig(helmet, NightVisionSubmodule.XRAY, net.minecraft.nbt.ByteTag.valueOf(true));
+                    var module = NightVisionSubmodule.INSTANCE;
+                    var data = CelestweaveArmorState.getSubmoduleData(helmet, module);
+                    var options = data.getCompound("Options");
+                    options.putBoolean(NightVisionSubmodule.XRAY, true);
+                    data.put("Options", options);
+                    CelestweaveArmorState.setSubmoduleData(helmet, module, data);
+                    require(!module.option(helmet, NightVisionSubmodule.XRAY)
+                            && !module.setConfig(helmet, NightVisionSubmodule.XRAY, net.minecraft.nbt.ByteTag.valueOf(true)),
+                            "old armor could still enable block outlines");
                     player.teleportTo(8.5, 160, 8.5);
                     player.connection.teleport(8.5, 160, 8.5, 0, 0);
                     var level = player.serverLevel();
@@ -77,9 +85,19 @@ public final class NightVisionClientProbe {
             }
             if (phase == 1) {
                 if (pending || !mc.player.hasEffect(MobEffects.NIGHT_VISION)) return;
-                if (ticks % 10 != 0) return;
+                if (++phaseTicks < 40) return;
+                var helmet = mc.player.getItemBySlot(EquipmentSlot.HEAD);
+                var module = NightVisionSubmodule.INSTANCE;
+                require(module.getConfigUI(helmet).stream().map(option -> option.key()).toList()
+                                .equals(java.util.List.of(NightVisionSubmodule.NIGHT, NightVisionSubmodule.FOG)),
+                        "unexpected visual enhancement controls");
+                require(java.util.Arrays.stream(mc.options.keyMappings).noneMatch(key -> key.getName().equals("key.ae2lt.vision_targets")),
+                        "outline editor shortcut visible");
+                require(com.moakiee.ae2lt.client.vision.VisualEnhancement.canRender(NightVisionSubmodule.FOG),
+                        "fog removal disabled on active helmet");
                 outlinePixels = countOutlinePixels(mc);
-                if (outlinePixels < 5) return;
+                require(outlinePixels == 0, "hidden outlines still rendered: " + outlinePixels);
+                phaseTicks = 0;
                 for (var effect : java.util.List.of(MobEffects.BLINDNESS, MobEffects.DARKNESS)) {
                     mc.player.addEffect(new net.minecraft.world.effect.MobEffectInstance(effect, 20));
                     require(!com.moakiee.ae2lt.client.vision.VisualEnhancement.canRender(NightVisionSubmodule.XRAY)

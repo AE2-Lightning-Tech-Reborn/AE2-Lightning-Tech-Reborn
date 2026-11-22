@@ -501,6 +501,52 @@ public final class ArmorProtectionGameTests {
         h.succeed();
     }
 
+    @GameTest(templateNamespace = "ae2lt", template = "workstation_test", timeoutTicks = 1270)
+    public static void purificationConvertsStoredDoseInCleanAir(GameTestHelper h) {
+        if (!net.neoforged.fml.ModList.get().isLoaded("mekanism")) {
+            h.succeed();
+            return;
+        }
+        var chest = armor(h, ModItems.CELESTWEAVE_SUBMODULE_PURIFICATION.get());
+        var player = equip(h, chest);
+        var manager = mekanism.api.radiation.IRadiationManager.INSTANCE;
+        require(manager.getRadiationLevel(player) < manager.minRadiationMagnitude(), "test requires clean air");
+        var body = player.getCapability(mekanism.common.capabilities.Capabilities.RADIATION_ENTITY);
+        require(body != null, "missing native entity radiation capability");
+        double baseline = manager.baselineRadiation();
+        double initial = baseline + 60.0;
+        body.set(initial);
+        player.setHealth(2);
+        player.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+        long first = h.getLevel().getGameTime();
+        h.onEachTick(() -> {
+            long now = h.getLevel().getGameTime();
+            if (now % 20 != 0) return;
+            long pulse = (now - first) / 20;
+            if (pulse == 1) player.setItemSlot(EquipmentSlot.CHEST, chest);
+            com.moakiee.ae2lt.celestweave.CelestweaveArmorUtilityHandler.tickEntityUtilities(player);
+            if (pulse == 0) {
+                require(body.getRadiation() == initial && player.getHealth() == 2, "unprotected wearer processed dose");
+            } else if (pulse == 1) {
+                require(body.getRadiation() < initial && player.getHealth() > 2, "stored dose did not heal in clean air");
+                double afterDose = body.getRadiation();
+                float afterHealth = player.getHealth();
+                com.moakiee.ae2lt.celestweave.CelestweaveArmorUtilityHandler.tickEntityUtilities(player);
+                require(body.getRadiation() == afterDose && player.getHealth() == afterHealth, "duplicate pulse");
+                player.setHealth(player.getMaxHealth());
+            } else if (pulse == 59) {
+                require(body.getRadiation() > baseline && body.getRadiation() < baseline + 1.01,
+                        "full-health cleansing did not progress gradually: " + body.getRadiation());
+            } else if (pulse == 60) {
+                require(body.getRadiation() == baseline, "dose remained after 60 pulses");
+                player.setHealth(2);
+            } else if (pulse == 61) {
+                require(body.getRadiation() == baseline && player.getHealth() == 2, "clean wearer received healing");
+                h.succeed();
+            }
+        });
+    }
+
     private static void require(boolean condition, String message) {
         if (!condition) throw new net.minecraft.gametest.framework.GameTestAssertException(message);
     }
